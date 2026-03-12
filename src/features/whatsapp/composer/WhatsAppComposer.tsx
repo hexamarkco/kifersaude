@@ -2663,12 +2663,6 @@ function WhatsAppComposerComponent({
             />
           )}
         </div>
-        {!isRecording && !audioPreviewUrl && (
-          <div className="comm-muted absolute -bottom-5 left-14 text-[10px]">
-            Formatos: * _ ~ ` &gt; -
-          </div>
-        )}
-
         {slashCommandState.active && (
           <div className="comm-popover absolute bottom-full left-14 right-14 z-[95] mb-2 overflow-hidden">
             <div className="comm-muted flex items-center justify-between gap-2 border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2 text-[11px]">

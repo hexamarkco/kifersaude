@@ -5761,7 +5761,7 @@ export default function WhatsAppInboxScreen() {
                 variant="ghost"
                 size="sm"
                 fullWidth
-                className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
+                className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
                   void updateChatArchive(chatMenuTarget.chat!.id, !chatMenuTarget.chat!.archived);
                   closeMuteSubmenuNow();
@@ -5776,7 +5776,7 @@ export default function WhatsAppInboxScreen() {
                 variant="ghost"
                 size="sm"
                 fullWidth
-                className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
+                className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
                   void markChatAsUnread(chatMenuTarget.chat!);
                   closeMuteSubmenuNow();
@@ -5791,7 +5791,7 @@ export default function WhatsAppInboxScreen() {
                 variant="ghost"
                 size="sm"
                 fullWidth
-                className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
+                className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
                   void updateChatPinned(chatMenuTarget.chat!.id, chatMenuTarget.isPinned ? 0 : Date.now());
                   closeMuteSubmenuNow();
@@ -5818,7 +5818,7 @@ export default function WhatsAppInboxScreen() {
                         variant="ghost"
                         size="sm"
                         fullWidth
-                        className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
+                        className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                         onClick={() => {
                           void updateChatMute(chatMenuTarget.chat!.id, null);
                           closeMuteSubmenuNow();
@@ -5839,7 +5839,7 @@ export default function WhatsAppInboxScreen() {
                           variant="ghost"
                           size="sm"
                           fullWidth
-                          className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
+                          className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                           onClick={openMuteSubmenu}
                         >
                           <span className="flex items-center gap-3">
@@ -5847,9 +5847,9 @@ export default function WhatsAppInboxScreen() {
                             <span>Mutar</span>
                           </span>
                           {chatMenuLayout.submenuOpensLeft ? (
-                            <ChevronLeft className="h-4 w-4 comm-muted" />
+                            <ChevronLeft className="ml-auto h-4 w-4 comm-muted" />
                           ) : (
-                            <ChevronRight className="h-4 w-4 comm-muted" />
+                            <ChevronRight className="ml-auto h-4 w-4 comm-muted" />
                           )}
                         </Button>
                         {chatMenuMuteOpen && (
@@ -5864,7 +5864,7 @@ export default function WhatsAppInboxScreen() {
                                   variant="ghost"
                                   size="sm"
                                   fullWidth
-                                  className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
+                                  className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                                   onClick={() => {
                                     const until = new Date(Date.now() + option.ms).toISOString();
                                     void updateChatMute(chatMenuTarget.chat!.id, until);
@@ -5886,7 +5886,7 @@ export default function WhatsAppInboxScreen() {
                       variant="ghost"
                       size="sm"
                       fullWidth
-                      className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+                      className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => {
                         void handleCopyChatPhone(chatMenuTarget.chat!, chatMenuTarget.phone);
                         closeMuteSubmenuNow();
@@ -5902,7 +5902,7 @@ export default function WhatsAppInboxScreen() {
                       variant="ghost"
                       size="sm"
                       fullWidth
-                      className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+                      className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => handleOpenLeadFromChat(chatMenuTarget.lead?.id)}
                       disabled={!chatMenuTarget.canOpenLead}
                     >
@@ -5914,7 +5914,7 @@ export default function WhatsAppInboxScreen() {
                         variant="ghost"
                         size="sm"
                         fullWidth
-                        className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
+                        className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() => {
                           if (chatMenuTarget.canUpdateStatus) {
                             openStatusSubmenu();
@@ -5922,14 +5922,14 @@ export default function WhatsAppInboxScreen() {
                         }}
                         disabled={!chatMenuTarget.canUpdateStatus}
                       >
-                        <span className="flex items-center gap-3">
-                          <SlidersHorizontal className="h-4 w-4" />
-                          <span>Status</span>
-                        </span>
+                          <span className="flex items-center gap-3">
+                            <SlidersHorizontal className="h-4 w-4" />
+                            <span>Status</span>
+                          </span>
                         {chatMenuLayout.submenuOpensLeft ? (
-                          <ChevronLeft className="h-4 w-4 comm-muted" />
+                          <ChevronLeft className="ml-auto h-4 w-4 comm-muted" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 comm-muted" />
+                          <ChevronRight className="ml-auto h-4 w-4 comm-muted" />
                         )}
                       </Button>
                       {chatMenuStatusOpen && chatMenuTarget.lead && (
@@ -5944,7 +5944,7 @@ export default function WhatsAppInboxScreen() {
                                 variant="ghost"
                                 size="sm"
                                 fullWidth
-                                className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
+                                className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                                 onClick={() => {
                                   void handleUpdateLeadStatus(status.nome, chatMenuTarget.lead?.id);
                                   closeMuteSubmenuNow();

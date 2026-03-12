@@ -196,6 +196,11 @@ const resolveStoredChatPreview = (message) => {
 
 const normalizeDirection = (value) => (value === 'inbound' || value === 'outbound' ? value : null);
 
+const toMillis = (value) => {
+  const parsed = new Date(cleanText(value) || '').getTime();
+  return Number.isNaN(parsed) ? Number.NaN : parsed;
+};
+
 const getChatIdVariants = (chat) => {
   const variants = new Set();
   if (chat.id) variants.add(chat.id);
@@ -332,11 +337,21 @@ const hasChanged = (chat, nextState) => {
   const currentDirection = normalizeDirection(chat.last_message_direction);
   const currentTimestamp = cleanText(chat.last_message_at) || null;
 
-  return (
-    currentPreview !== nextState.preview ||
-    currentDirection !== nextState.direction ||
-    currentTimestamp !== nextState.timestamp
-  );
+  if (currentPreview !== nextState.preview) return true;
+  if (currentDirection !== nextState.direction) return true;
+  if (currentTimestamp === nextState.timestamp) return false;
+
+  if (!currentTimestamp || !nextState.timestamp) {
+    return currentTimestamp !== nextState.timestamp;
+  }
+
+  const currentMillis = toMillis(currentTimestamp);
+  const nextMillis = toMillis(nextState.timestamp);
+  if (Number.isNaN(currentMillis) || Number.isNaN(nextMillis)) {
+    return currentTimestamp !== nextState.timestamp;
+  }
+
+  return Math.abs(currentMillis - nextMillis) >= 60 * 1000;
 };
 
 async function main() {

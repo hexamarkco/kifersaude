@@ -22,6 +22,8 @@ type DateTimePickerProps = {
 
 const WEEKDAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
 const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const YEAR_MIN = 1900;
+const YEAR_MAX = 2100;
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
@@ -51,6 +53,25 @@ const formatDateDisplay = (date: Date) => `${pad(date.getDate())}/${pad(date.get
 const clampNumber = (value: number, min: number, max: number) => {
   if (Number.isNaN(value)) return min;
   return Math.min(max, Math.max(min, value));
+};
+
+export const normalizeYearInput = (value: string) => value.replace(/\D/g, '').slice(0, 4);
+
+export const getDateTimePickerYearBounds = (minDate: Date | null, maxDate: Date | null) => {
+  const minYear = Math.max(YEAR_MIN, minDate?.getFullYear() ?? YEAR_MIN);
+  const maxYear = Math.max(minYear, Math.min(YEAR_MAX, maxDate?.getFullYear() ?? YEAR_MAX));
+
+  return {
+    min: minYear,
+    max: maxYear,
+  };
+};
+
+export const parseCommittedYearInput = (value: string, minYear = YEAR_MIN, maxYear = YEAR_MAX) => {
+  const digits = normalizeYearInput(value);
+  if (digits.length !== 4) return null;
+
+  return clampNumber(Number(digits), minYear, Math.max(minYear, maxYear));
 };
 
 const addMonths = (date: Date, monthDelta: number) =>
@@ -86,6 +107,8 @@ export default function DateTimePicker({
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<FloatingPanelPosition | null>(null);
   const [manualInputValue, setManualInputValue] = useState('');
+  const [yearInputValue, setYearInputValue] = useState('');
+  const [isEditingYear, setIsEditingYear] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -93,6 +116,7 @@ export default function DateTimePicker({
   const selectedDate = useMemo(() => parseValue(value, type), [type, value]);
   const minDate = useMemo(() => parseValue(min ?? '', type), [min, type]);
   const maxDate = useMemo(() => parseValue(max ?? '', type), [max, type]);
+  const yearBounds = useMemo(() => getDateTimePickerYearBounds(minDate, maxDate), [maxDate, minDate]);
 
   const [viewDate, setViewDate] = useState<Date>(() => {
     const baseDate = selectedDate ?? new Date();
@@ -103,6 +127,17 @@ export default function DateTimePicker({
     if (!selectedDate) return;
     setViewDate(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (isEditingYear) return;
+    setYearInputValue(String(viewDate.getFullYear()));
+  }, [isEditingYear, viewDate]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    setIsEditingYear(false);
+    setYearInputValue(String(viewDate.getFullYear()));
+  }, [isOpen, viewDate]);
 
   useEffect(() => {
     if (type === 'date') {
@@ -265,12 +300,46 @@ export default function DateTimePicker({
     setIsOpen(false);
   };
 
-  const handleViewYearChange = (rawValue: string) => {
-    const parsed = Number(rawValue);
-    if (Number.isNaN(parsed)) return;
+  const applyViewYear = (nextYear: number) => {
+    const safeYear = clampNumber(nextYear, yearBounds.min, yearBounds.max);
+    setViewDate((current) => new Date(safeYear, current.getMonth(), 1));
+    setYearInputValue(String(safeYear));
 
-    const safeYear = Math.max(1900, Math.min(2100, parsed));
-    setViewDate(new Date(safeYear, viewDate.getMonth(), 1));
+    return safeYear;
+  };
+
+  const handleViewYearChange = (rawValue: string) => {
+    const nextValue = normalizeYearInput(rawValue);
+    setYearInputValue(nextValue);
+
+    if (nextValue.length !== 4) return;
+
+    const parsedYear = parseCommittedYearInput(nextValue, yearBounds.min, yearBounds.max);
+    if (parsedYear === null) return;
+
+    applyViewYear(parsedYear);
+  };
+
+  const commitViewYearInput = () => {
+    setIsEditingYear(false);
+
+    const parsedYear = parseCommittedYearInput(yearInputValue, yearBounds.min, yearBounds.max);
+    if (parsedYear === null) {
+      setYearInputValue(String(viewDate.getFullYear()));
+      return;
+    }
+
+    applyViewYear(parsedYear);
+  };
+
+  const resetViewYearInput = () => {
+    setIsEditingYear(false);
+    setYearInputValue(String(viewDate.getFullYear()));
+  };
+
+  const stepViewYear = (yearDelta: number) => {
+    setIsEditingYear(false);
+    applyViewYear(viewDate.getFullYear() + yearDelta);
   };
 
   const ensureDateForTime = () => {
@@ -477,9 +546,41 @@ export default function DateTimePicker({
 
                 <Input
                   size="compact"
-                  value={String(viewDate.getFullYear())}
+                  value={yearInputValue}
                   onChange={(event) => handleViewYearChange(event.target.value)}
+                  onFocus={(event) => {
+                    setIsEditingYear(true);
+                    event.currentTarget.select();
+                  }}
+                  onBlur={() => commitViewYearInput()}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      commitViewYearInput();
+                      return;
+                    }
+
+                    if (event.key === 'Escape') {
+                      event.preventDefault();
+                      resetViewYearInput();
+                      event.currentTarget.blur();
+                      return;
+                    }
+
+                    if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+                      event.preventDefault();
+                      stepViewYear(event.key === 'PageUp' ? 10 : 1);
+                      return;
+                    }
+
+                    if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+                      event.preventDefault();
+                      stepViewYear(event.key === 'PageDown' ? -10 : -1);
+                    }
+                  }}
                   inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
                   placeholder="Ano"
                   aria-label="Ano"
                 />

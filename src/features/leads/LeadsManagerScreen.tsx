@@ -60,7 +60,6 @@ import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
 import LeadKanbanBoard from "./components/LeadKanbanBoard";
 import { LeadsHeader } from "./components/LeadsHeader";
-import { LeadsHeroCard } from "./components/LeadsHeroCard";
 import { LeadsSummaryCards } from "./components/LeadsSummaryCards";
 import {
   LEADS_EMPTY_STATE_STYLE,
@@ -1611,14 +1610,6 @@ export default function LeadsManager({
           onRefresh={handleRefresh}
           onToggleArchived={() => setShowArchived((current) => !current)}
           onCreateLead={handleCreateLead}
-        />
-        <LeadsHeroCard
-          showArchived={showArchived}
-          filteredLeadCount={filteredLeads.length}
-          baseLeadCount={visibleBaseLeads.length}
-          activeFilterCount={activeFilterCount}
-          scheduledCount={scheduledLeadCount}
-          viewModeLabel={viewModeLabel}
         />
         <LeadsSummaryCards
           showArchived={showArchived}

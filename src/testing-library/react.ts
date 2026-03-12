@@ -1,6 +1,5 @@
 import { createRoot, type Root } from 'react-dom/client';
-import { act } from 'react-dom/test-utils';
-import type { ReactElement } from 'react';
+import { act, type ReactElement } from 'react';
 
 type RenderResult = {
   container: HTMLElement;

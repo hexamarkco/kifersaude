@@ -1,0 +1,843 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { supabase, Contract, fetchAllPages } from "../../lib/supabase";
+import {
+  Plus,
+  Search,
+  Filter,
+  FileText,
+  Eye,
+  AlertCircle,
+  Trash2,
+  Users,
+  Calendar,
+} from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { useConfig } from "../../contexts/ConfigContext";
+import ContractForm from "../../components/ContractForm";
+import ContractDetails from "../../components/ContractDetails";
+import FilterSingleSelect from "../../components/FilterSingleSelect";
+import Pagination from "../../components/Pagination";
+import Button from "../../components/ui/Button";
+import Input from "../../components/ui/Input";
+import { useConfirmationModal } from "../../hooks/useConfirmationModal";
+import { usePanelMotion } from "../../hooks/usePanelMotion";
+import { ContractsPageSkeleton } from "../../components/ui/panelSkeletons";
+import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
+import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
+import { toast } from "../../lib/toast";
+import { getContractBonusSummary } from "../../lib/contractBonus";
+import {
+  formatContractManagerDate as formatDate,
+  getContractBadgeTone as getBadgeTone,
+  getContractDisplayName as resolveContractDisplayName,
+  getContractFidelityEndDate as getFidelityEndDate,
+  getContractNextAdjustmentDate as getNextAdjustmentDate,
+  getDaysUntilContractDate as daysUntil,
+  hasUpcomingImportantContractDate as hasUpcomingImportantDate,
+  parseContractManagerDate as parseDate,
+} from "./shared/contractsManagerUtils";
+import type {
+  ContractHolder,
+  ContractsManagerProps,
+} from "./shared/contractsManagerTypes";
+
+export default function ContractsManager({
+  leadToConvert,
+  onConvertComplete,
+  initialOperadoraFilter,
+}: ContractsManagerProps) {
+  const { role } = useAuth();
+  const { options, getRoleModulePermission } = useConfig();
+  const canEditContracts = getRoleModulePermission(role, "contracts").can_edit;
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
+  const [holders, setHolders] = useState<Record<string, ContractHolder[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("todos");
+  const [filterResponsavel, setFilterResponsavel] = useState("todos");
+  const [filterOperadora, setFilterOperadora] = useState("todas");
+  const [dateProximityFilter, setDateProximityFilter] = useState<
+    "todos" | "proximos-30"
+  >("todos");
+  const [showForm, setShowForm] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(
+    null,
+  );
+  const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const contractsRootRef = useRef<HTMLDivElement | null>(null);
+  const hasAnimatedSectionsRef = useRef(false);
+  const {
+    motionEnabled,
+    sectionDuration,
+    sectionStagger,
+    revealDistance,
+    ease,
+  } = usePanelMotion();
+  const loadingUi = useAdaptiveLoading(loading);
+  const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
+  const operadoraOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          contracts.map((contract) => contract.operadora).filter(Boolean),
+        ),
+      ).sort(),
+    [contracts],
+  );
+
+  const responsavelOptions = useMemo(
+    () => (options.lead_responsavel || []).filter((option) => option.ativo),
+    [options.lead_responsavel],
+  );
+
+  const responsavelFilterOptions = useMemo(() => {
+    const optionMap = new Map<string, string>();
+
+    responsavelOptions.forEach((option) => {
+      optionMap.set(option.value, option.label);
+    });
+
+    contracts.forEach((contract) => {
+      if (contract.responsavel && !optionMap.has(contract.responsavel)) {
+        optionMap.set(contract.responsavel, contract.responsavel);
+      }
+    });
+
+    return Array.from(optionMap.entries()).map(([value, label]) => ({
+      value,
+      label,
+    }));
+  }, [contracts, responsavelOptions]);
+
+  useEffect(() => {
+    loadContracts();
+
+    const channel = supabase
+      .channel("contracts-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "contracts",
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setContracts((current) => [payload.new as Contract, ...current]);
+          } else if (payload.eventType === "UPDATE") {
+            setContracts((current) =>
+              current.map((contract) =>
+                contract.id === (payload.new as Contract).id
+                  ? (payload.new as Contract)
+                  : contract,
+              ),
+            );
+          } else if (payload.eventType === "DELETE") {
+            setContracts((current) =>
+              current.filter(
+                (contract) => contract.id !== (payload.old as Contract).id,
+              ),
+            );
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    filterContracts();
+    setCurrentPage(1);
+  }, [
+    contracts,
+    searchTerm,
+    filterStatus,
+    filterResponsavel,
+    filterOperadora,
+    dateProximityFilter,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (leadToConvert) {
+      setShowForm(true);
+    }
+  }, [leadToConvert]);
+
+  useEffect(() => {
+    if (initialOperadoraFilter) {
+      setFilterOperadora(initialOperadoraFilter);
+    } else if (initialOperadoraFilter === undefined) {
+      setFilterOperadora("todas");
+    }
+  }, [initialOperadoraFilter]);
+
+  const loadContracts = async () => {
+    setLoading(true);
+    try {
+      const [contractsData, holdersData] = await Promise.all([
+        fetchAllPages<Contract>(
+          (from, to) =>
+            supabase
+              .from("contracts")
+              .select("*")
+              .order("created_at", { ascending: false })
+              .range(from, to) as unknown as Promise<{
+              data: Contract[] | null;
+              error: unknown;
+            }>,
+        ),
+        fetchAllPages<ContractHolder>(
+          (from, to) =>
+            supabase
+              .from("contract_holders")
+              .select(
+                "id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj",
+              )
+              .range(from, to) as unknown as Promise<{
+              data: ContractHolder[] | null;
+              error: unknown;
+            }>,
+        ),
+      ]);
+
+      const holdersMap: Record<string, ContractHolder[]> = {};
+      holdersData?.forEach((holder) => {
+        if (!holdersMap[holder.contract_id]) {
+          holdersMap[holder.contract_id] = [];
+        }
+        holdersMap[holder.contract_id].push(holder);
+      });
+
+      setContracts(contractsData || []);
+      setHolders(holdersMap);
+      return contractsData || [];
+    } catch (error) {
+      console.error("Erro ao carregar contratos:", error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleContractsUpdated = async () => {
+    const updatedContracts = await loadContracts();
+    if (!updatedContracts || !selectedContract) return;
+    const refreshed =
+      updatedContracts.find(
+        (contractItem) => contractItem.id === selectedContract.id,
+      ) || null;
+    setSelectedContract(refreshed);
+  };
+
+  const filterContracts = () => {
+    let filtered = [...contracts];
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (contract) =>
+          contract.codigo_contrato
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          contract.operadora.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          contract.produto_plano
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()),
+      );
+    }
+
+    if (filterStatus !== "todos") {
+      filtered = filtered.filter(
+        (contract) => contract.status === filterStatus,
+      );
+    }
+
+    if (filterResponsavel !== "todos") {
+      filtered = filtered.filter(
+        (contract) => contract.responsavel === filterResponsavel,
+      );
+    }
+
+    if (filterOperadora !== "todas") {
+      filtered = filtered.filter(
+        (contract) => contract.operadora === filterOperadora,
+      );
+    }
+
+    if (dateProximityFilter === "proximos-30") {
+      filtered = filtered.filter((contract) =>
+        hasUpcomingImportantDate(contract),
+      );
+    }
+
+    setFilteredContracts(filtered);
+  };
+
+  const getContractDisplayName = (contract: Contract) =>
+    resolveContractDisplayName(contract, holders);
+
+  const handleDeleteContract = async (contract: Contract) => {
+    const confirmed = await requestConfirmation({
+      title: "Excluir contrato",
+      description: `Deseja excluir o contrato ${contract.codigo_contrato}? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      cancelLabel: "Cancelar",
+      tone: "danger",
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from("contracts")
+        .delete()
+        .eq("id", contract.id);
+
+      if (error) throw error;
+
+      setSelectedContract((current) =>
+        current?.id === contract.id ? null : current,
+      );
+      setEditingContract((current) =>
+        current?.id === contract.id ? null : current,
+      );
+      loadContracts();
+    } catch (error) {
+      console.error("Erro ao excluir contrato:", error);
+      toast.error("Erro ao excluir contrato.");
+    }
+  };
+
+  const buildDateBadge = (label: string, date?: string | null) => {
+    const normalizedDate =
+      label === "Renova"
+        ? getFidelityEndDate(date)
+        : label === "Reajusta"
+          ? getNextAdjustmentDate(Number(date))
+          : parseDate(date);
+
+    const remaining = daysUntil(normalizedDate);
+    if (remaining === null || !normalizedDate) return null;
+
+    const formattedDate = normalizedDate.toLocaleDateString("pt-BR");
+    const labelText =
+      remaining === 0
+        ? `${label} hoje (${formattedDate})`
+        : remaining > 0
+          ? `${label} em ${remaining} dia${remaining === 1 ? "" : "s"} (${formattedDate})`
+          : `${label} há ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? "" : "s"} (${formattedDate})`;
+
+    return (
+      <span
+        key={`${label}-${date}`}
+        className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center ${getBadgeTone(remaining)}`}
+      >
+        {labelText}
+      </span>
+    );
+  };
+
+  const renderDateBadges = (contract: Contract) => {
+    const badges = [
+      buildDateBadge("Renova", contract.data_renovacao),
+      buildDateBadge("Reajusta", contract.mes_reajuste?.toString() || null),
+      buildDateBadge("Paga bônus", contract.previsao_pagamento_bonificacao),
+    ].filter(Boolean);
+
+    if (badges.length === 0) return null;
+
+    return <div className="flex flex-wrap gap-2">{badges}</div>;
+  };
+
+  const getBonusValue = (contract: Contract) => {
+    const summary = getContractBonusSummary(contract);
+    return summary.total > 0 ? summary.total : null;
+  };
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredContracts.length / itemsPerPage),
+  );
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedContracts = filteredContracts.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      Rascunho: "bg-gray-100 text-gray-700",
+      "Em análise": "bg-blue-100 text-blue-700",
+      "Documentos pendentes": "bg-yellow-100 text-yellow-700",
+      "Proposta enviada": "bg-purple-100 text-purple-700",
+      "Aguardando assinatura": "bg-orange-100 text-orange-700",
+      Emitido: "bg-cyan-100 text-cyan-700",
+      Ativo: "bg-green-100 text-green-700",
+      Suspenso: "bg-red-100 text-red-700",
+      Cancelado: "bg-red-100 text-red-700",
+      Encerrado: "bg-slate-100 text-slate-700",
+    };
+    return colors[status] || "bg-gray-100 text-gray-700";
+  };
+
+  useEffect(() => {
+    if (loading || hasAnimatedSectionsRef.current) {
+      return;
+    }
+
+    const root = contractsRootRef.current;
+    if (!root) {
+      return;
+    }
+
+    const sections = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-panel-animate]"),
+    );
+    if (sections.length === 0) {
+      return;
+    }
+
+    if (!motionEnabled) {
+      gsap.set(sections, {
+        autoAlpha: 1,
+        y: 0,
+        clearProps: "transform,opacity,willChange",
+      });
+      hasAnimatedSectionsRef.current = true;
+      return;
+    }
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        sections,
+        {
+          autoAlpha: 0,
+          y: revealDistance,
+          willChange: "transform,opacity",
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: sectionDuration,
+          ease,
+          stagger: sectionStagger,
+          clearProps: "transform,opacity,willChange",
+          overwrite: "auto",
+          force3D: true,
+        },
+      );
+    }, root);
+
+    hasAnimatedSectionsRef.current = true;
+
+    return () => {
+      context.revert();
+    };
+  }, [
+    ease,
+    loading,
+    motionEnabled,
+    revealDistance,
+    sectionDuration,
+    sectionStagger,
+  ]);
+
+  const hasContractsSnapshot = contracts.length > 0;
+
+  return (
+    <PanelAdaptiveLoadingFrame
+      loading={loading}
+      phase={loadingUi.phase}
+      hasContent={hasContractsSnapshot}
+      skeleton={<ContractsPageSkeleton />}
+      stageLabel="Carregando contratos..."
+      overlayLabel="Atualizando contratos..."
+      stageClassName="panel-dashboard-immersive"
+    >
+      <div
+        ref={contractsRootRef}
+        className="panel-dashboard-immersive panel-page-shell"
+      >
+        <div
+          className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          data-panel-animate
+        >
+          <h2 className="text-2xl font-bold text-slate-900">
+            Gestão de Contratos
+          </h2>
+          {canEditContracts && (
+            <Button
+              onClick={() => {
+                setEditingContract(null);
+                setShowForm(true);
+              }}
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-5 w-5" />
+              <span>Novo Contrato</span>
+            </Button>
+          )}
+        </div>
+
+        <div
+          className="panel-glass-panel mb-6 space-y-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+          data-panel-animate
+        >
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full lg:max-w-2xl">
+              <Input
+                type="text"
+                leftIcon={Search}
+                placeholder="Buscar por código, operadora ou plano..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="w-full sm:w-auto px-4 py-2 bg-slate-50 rounded-lg text-sm text-slate-600 flex items-center justify-center gap-2 border border-slate-200">
+              <span className="font-semibold text-teal-700">
+                {filteredContracts.length}
+              </span>
+              <span>contrato(s) encontrado(s)</span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                Filtros
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-slate-600">
+                    Status
+                  </label>
+                  <FilterSingleSelect
+                    icon={Filter}
+                    value={filterStatus}
+                    onChange={(value) => setFilterStatus(value)}
+                    placeholder="Todos os status"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: "todos", label: "Todos os status" },
+                      { value: "Rascunho", label: "Rascunho" },
+                      { value: "Em análise", label: "Em análise" },
+                      {
+                        value: "Documentos pendentes",
+                        label: "Documentos pendentes",
+                      },
+                      { value: "Proposta enviada", label: "Proposta enviada" },
+                      {
+                        value: "Aguardando assinatura",
+                        label: "Aguardando assinatura",
+                      },
+                      { value: "Emitido", label: "Emitido" },
+                      { value: "Ativo", label: "Ativo" },
+                      { value: "Suspenso", label: "Suspenso" },
+                      { value: "Cancelado", label: "Cancelado" },
+                      { value: "Encerrado", label: "Encerrado" },
+                    ]}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-slate-600">
+                    Responsável
+                  </label>
+                  <FilterSingleSelect
+                    icon={Users}
+                    value={filterResponsavel}
+                    onChange={(value) => setFilterResponsavel(value)}
+                    placeholder="Todos os responsáveis"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: "todos", label: "Todos os responsáveis" },
+                      ...responsavelFilterOptions.map((option) => ({
+                        value: option.value,
+                        label: option.label,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-slate-600">
+                    Operadora
+                  </label>
+                  <FilterSingleSelect
+                    icon={FileText}
+                    value={filterOperadora}
+                    onChange={(value) => setFilterOperadora(value)}
+                    placeholder="Todas as operadoras"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: "todas", label: "Todas as operadoras" },
+                      ...operadoraOptions.map((operadora) => ({
+                        value: operadora,
+                        label: operadora,
+                      })),
+                    ]}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-medium text-slate-600">
+                    Datas importantes
+                  </label>
+                  <FilterSingleSelect
+                    icon={Calendar}
+                    value={dateProximityFilter}
+                    onChange={(value) =>
+                      setDateProximityFilter(value as "todos" | "proximos-30")
+                    }
+                    placeholder="Todas as datas"
+                    includePlaceholderOption={false}
+                    options={[
+                      { value: "todos", label: "Todas as datas" },
+                      { value: "proximos-30", label: "Próximos 30 dias" },
+                    ]}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="panel-glass-panel rounded-xl border border-slate-200 bg-white shadow-sm"
+          data-panel-animate
+        >
+          <div className="grid grid-cols-1 gap-4 p-4">
+            {paginatedContracts.map((contract) => {
+              const bonusValue = getBonusValue(contract);
+
+              return (
+                <div
+                  key={contract.id}
+                  className="panel-glass-lite panel-interactive-glass rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className="text-lg font-semibold text-slate-900">
+                          {contract.codigo_contrato}
+                        </h3>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(contract.status)}`}
+                        >
+                          {contract.status}
+                        </span>
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                          {contract.modalidade}
+                        </span>
+                        {contract.comissao_multiplicador &&
+                          contract.comissao_multiplicador !== 2.8 && (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 flex items-center space-x-1">
+                              <AlertCircle className="w-3 h-3" />
+                              <span>{contract.comissao_multiplicador}x</span>
+                            </span>
+                          )}
+                        {renderDateBadges(contract)}
+                      </div>
+                      <div className="mb-3">
+                        <span className="font-medium text-slate-700">
+                          {getContractDisplayName(contract)}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 text-sm text-slate-600">
+                        <div>
+                          <span className="font-medium">Operadora:</span>{" "}
+                          {contract.operadora}
+                        </div>
+                        <div>
+                          <span className="font-medium">Plano:</span>{" "}
+                          {contract.produto_plano}
+                        </div>
+                        {contract.mensalidade_total && (
+                          <div>
+                            <span className="font-medium">Mensalidade:</span> R${" "}
+                            {contract.mensalidade_total.toLocaleString(
+                              "pt-BR",
+                              { minimumFractionDigits: 2 },
+                            )}
+                          </div>
+                        )}
+                        {contract.comissao_prevista && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">Comissão:</span>
+                            <span>
+                              R${" "}
+                              {contract.comissao_prevista.toLocaleString(
+                                "pt-BR",
+                                { minimumFractionDigits: 2 },
+                              )}
+                            </span>
+                            {contract.comissao_recebimento_adiantado ===
+                            false ? (
+                              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                Parcelada
+                              </span>
+                            ) : contract.comissao_recebimento_adiantado ? (
+                              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                Adiantada
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
+                        {bonusValue !== null && (
+                          <div>
+                            <span className="font-medium">Bonificação:</span> R${" "}
+                            {bonusValue.toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </div>
+                        )}
+                        {contract.data_renovacao && (
+                          <div>
+                            <span className="font-medium">
+                              Fim da fidelidade:
+                            </span>{" "}
+                            {formatDate(contract.data_renovacao, "monthYear")}
+                          </div>
+                        )}
+                        {contract.mes_reajuste && (
+                          <div>
+                            <span className="font-medium">
+                              Mês de reajuste:
+                            </span>{" "}
+                            {formatDate(
+                              contract.mes_reajuste?.toString(),
+                              "monthOnly",
+                            )}
+                          </div>
+                        )}
+                        {contract.previsao_recebimento_comissao && (
+                          <div>
+                            <span className="font-medium">Prev. comissão:</span>{" "}
+                            {formatDate(contract.previsao_recebimento_comissao)}
+                          </div>
+                        )}
+                        {contract.previsao_pagamento_bonificacao && (
+                          <div>
+                            <span className="font-medium">
+                              Prev. bonificação:
+                            </span>{" "}
+                            {formatDate(
+                              contract.previsao_pagamento_bonificacao,
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-sm text-slate-500 lg:text-right">
+                      <div>
+                        Responsável:{" "}
+                        <span className="font-medium text-slate-700">
+                          {contract.responsavel}
+                        </span>
+                      </div>
+                      <div className="mt-1">
+                        Criado:{" "}
+                        {new Date(contract.created_at).toLocaleDateString(
+                          "pt-BR",
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4 sm:justify-start">
+                    <Button
+                      onClick={() => setSelectedContract(contract)}
+                      variant="soft"
+                      size="sm"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>Abrir</span>
+                    </Button>
+                    {canEditContracts && (
+                      <Button
+                        onClick={() => handleDeleteContract(contract)}
+                        variant="danger"
+                        size="sm"
+                        type="button"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Excluir</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {filteredContracts.length === 0 && (
+            <div
+              className="panel-glass-panel rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm"
+              data-panel-animate
+            >
+              <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">
+                Nenhum contrato encontrado
+              </h3>
+              <p className="text-slate-600">
+                Tente ajustar os filtros ou adicione um novo contrato.
+              </p>
+            </div>
+          )}
+
+          {filteredContracts.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredContracts.length}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handleItemsPerPageChange}
+            />
+          )}
+        </div>
+
+        {showForm && (
+          <ContractForm
+            contract={editingContract}
+            leadToConvert={leadToConvert}
+            onClose={() => {
+              setShowForm(false);
+              setEditingContract(null);
+              if (onConvertComplete) onConvertComplete();
+            }}
+            onSave={() => {
+              setShowForm(false);
+              setEditingContract(null);
+              if (onConvertComplete) onConvertComplete();
+              loadContracts();
+            }}
+          />
+        )}
+
+        {selectedContract && (
+          <ContractDetails
+            contract={selectedContract}
+            onClose={() => setSelectedContract(null)}
+            onUpdate={handleContractsUpdated}
+            onDelete={handleDeleteContract}
+          />
+        )}
+        {ConfirmationDialog}
+      </div>
+    </PanelAdaptiveLoadingFrame>
+  );
+}

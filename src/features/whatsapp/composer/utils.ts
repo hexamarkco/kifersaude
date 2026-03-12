@@ -16,6 +16,12 @@ export type SlashCommandState = {
   results: QuickReplyItem[];
 };
 
+export type ApplyLinePrefixResult = {
+  value: string;
+  selectionStart: number;
+  selectionEnd: number;
+};
+
 export const normalizeQuickReplySearch = (value: string) =>
   value
     .normalize('NFD')
@@ -100,6 +106,61 @@ export const splitFollowUpLines = (text: string) =>
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+
+export const applyLinePrefix = (
+  value: string,
+  selectionStart: number,
+  selectionEnd: number,
+  prefix: string,
+): ApplyLinePrefixResult => {
+  const lines = value.split('\n');
+  const lineStarts: number[] = [];
+  let offset = 0;
+
+  for (const line of lines) {
+    lineStarts.push(offset);
+    offset += line.length + 1;
+  }
+
+  const findLineIndex = (position: number) => {
+    for (let index = lineStarts.length - 1; index >= 0; index -= 1) {
+      if (position >= lineStarts[index]) {
+        return index;
+      }
+    }
+    return 0;
+  };
+
+  const normalizedEnd =
+    selectionEnd > selectionStart && value[selectionEnd - 1] === '\n'
+      ? selectionEnd - 1
+      : selectionEnd;
+
+  const startLineIndex = findLineIndex(selectionStart);
+  const endLineIndex = findLineIndex(normalizedEnd);
+  let insertedBeforeStart = 0;
+  let insertedBeforeEnd = 0;
+
+  const nextLines = lines.map((line, index) => {
+    const shouldPrefix = index >= startLineIndex && index <= endLineIndex && line.trim().length > 0;
+    if (!shouldPrefix) {
+      return line;
+    }
+
+    if (index === startLineIndex) {
+      insertedBeforeStart += prefix.length;
+    }
+
+    insertedBeforeEnd += prefix.length;
+    return `${prefix}${line}`;
+  });
+
+  return {
+    value: nextLines.join('\n'),
+    selectionStart: selectionStart + insertedBeforeStart,
+    selectionEnd: selectionEnd + insertedBeforeEnd,
+  };
+};
 
 export const buildTextRetryPayload = (
   content: string,

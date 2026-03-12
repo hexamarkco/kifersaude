@@ -38,6 +38,7 @@ import type {
   SentMessagePayload,
 } from './types';
 import {
+  applyLinePrefix,
   buildIndexedQuickReplies,
   buildLinkPreviewRetryPayload,
   buildQuickReplyPreviewItems,
@@ -152,6 +153,7 @@ function WhatsAppComposerComponent({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
   const composerActionsMenuRef = useRef<HTMLDivElement>(null);
+  const shouldRestoreComposerFocusRef = useRef(false);
   const emojiList = ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡', '👍', '🙏', '👏', '🎉', '✅', '❤️'];
   const rewriteTones = [
     { value: 'claro', label: 'Claro e correto' },
@@ -379,6 +381,27 @@ function WhatsAppComposerComponent({
 
       const cursorPosition = start + opening.length;
       textarea.setSelectionRange(cursorPosition, cursorPosition);
+    });
+
+    handleTyping();
+  };
+
+  const applyBlockPrefix = (prefix: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setMessage((prev) => `${prev}${prefix}`);
+      return;
+    }
+
+    const start = textarea.selectionStart ?? message.length;
+    const end = textarea.selectionEnd ?? message.length;
+    const nextState = applyLinePrefix(message, start, end, prefix);
+
+    setMessage(nextState.value);
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(nextState.selectionStart, nextState.selectionEnd);
     });
 
     handleTyping();
@@ -789,6 +812,7 @@ function WhatsAppComposerComponent({
 
   useEffect(() => {
     followUpRequestIdRef.current += 1;
+    shouldRestoreComposerFocusRef.current = false;
     setShowFollowUpModal(false);
     setFollowUpDraft('');
     setFollowUpLoading(false);
@@ -845,6 +869,35 @@ function WhatsAppComposerComponent({
   useEffect(() => {
     scheduleTextareaResize();
   }, [message]);
+
+  const queueComposerFocusRestore = () => {
+    shouldRestoreComposerFocusRef.current = true;
+  };
+
+  const focusComposerTextarea = () => {
+    if (typeof window === 'undefined') return;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+        if (isSending || isRecording || audioPreviewUrl || showFollowUpModal || showRewriteModal) return;
+
+        scheduleTextareaResize();
+        textarea.focus();
+        const cursorPosition = textarea.value.length;
+        textarea.setSelectionRange(cursorPosition, cursorPosition);
+      });
+    });
+  };
+
+  useEffect(() => {
+    if (!shouldRestoreComposerFocusRef.current) return;
+    if (isSending || isRecording || audioPreviewUrl || showFollowUpModal || showRewriteModal) return;
+
+    shouldRestoreComposerFocusRef.current = false;
+    focusComposerTextarea();
+  }, [audioPreviewUrl, isRecording, isSending, message, showFollowUpModal, showRewriteModal]);
 
   useEffect(() => {
     if (!showComposerActionsMenu) {
@@ -1076,6 +1129,7 @@ function WhatsAppComposerComponent({
         setMessage('');
         if (onCancelEdit) onCancelEdit();
         if (onMessageSent) onMessageSent();
+        queueComposerFocusRestore();
       } else if (selectedFile) {
         const mediaMessageType = resolveOutgoingFileMessageType(selectedFile);
         const caption = mediaMessageType === 'sticker' ? '' : resolvedMessage;
@@ -1118,6 +1172,7 @@ function WhatsAppComposerComponent({
         setMessage('');
         if (onCancelReply) onCancelReply();
         if (onMessageSent) onMessageSent(mediaPayload);
+        queueComposerFocusRestore();
       } else if (rawMessage) {
         const currentDetectedUrl = detectedPreviewUrl;
 
@@ -1141,6 +1196,7 @@ function WhatsAppComposerComponent({
               canonical: previewCanonical,
               image: linkPreviewImage,
             });
+            queueComposerFocusRestore();
             return;
           }
         }
@@ -1150,6 +1206,7 @@ function WhatsAppComposerComponent({
         setLinkPreviewDismissedUrl(null);
         if (onCancelReply) onCancelReply();
         await sendPlainTextMessage(resolvedMessage || rawMessage, submitChatId);
+        queueComposerFocusRestore();
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -1491,6 +1548,7 @@ function WhatsAppComposerComponent({
       clearAudioPreview();
       if (onCancelReply) onCancelReply();
       if (onMessageSent) onMessageSent(audioPayload);
+      queueComposerFocusRestore();
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
       toast.error('Erro ao enviar mensagem de voz.');
@@ -1649,8 +1707,9 @@ function WhatsAppComposerComponent({
       console.error('Erro ao gerar follow-up:', error);
       setFollowUpError('Erro ao gerar follow-up.');
     } finally {
-      if (requestId !== followUpRequestIdRef.current) return;
-      setFollowUpLoading(false);
+      if (requestId === followUpRequestIdRef.current) {
+        setFollowUpLoading(false);
+      }
     }
   };
 
@@ -1704,6 +1763,7 @@ function WhatsAppComposerComponent({
       setShowFollowUpModal(false);
       setFollowUpDraft('');
       if (onCancelReply) onCancelReply();
+      queueComposerFocusRestore();
     } catch (error) {
       console.error('Erro ao enviar follow-up gerado:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar follow-up.';
@@ -1768,6 +1828,7 @@ function WhatsAppComposerComponent({
       setRewriteResult('');
       setRewriteOriginal('');
       setShowRewriteModal(false);
+      queueComposerFocusRestore();
     } finally {
       setIsSending(false);
     }
@@ -1824,6 +1885,7 @@ function WhatsAppComposerComponent({
               payload: response,
             });
           }
+          queueComposerFocusRestore();
         } catch (error) {
           console.error('Erro ao enviar localização:', error);
           toast.error('Erro ao enviar localização.');
@@ -1890,6 +1952,7 @@ function WhatsAppComposerComponent({
       setContactSearch('');
       if (onCancelReply) onCancelReply();
       if (onMessageSent) onMessageSent(contactPayload);
+      queueComposerFocusRestore();
     } catch (error) {
       console.error('Erro ao enviar contato:', error);
       toast.error('Erro ao enviar contato.');
@@ -2517,6 +2580,30 @@ function WhatsAppComposerComponent({
                   <button
                     type="button"
                     className="comm-menu-item text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      setShowComposerActionsMenu(false);
+                      applyBlockPrefix('> ');
+                    }}
+                    disabled={isSending || isRecording}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Inserir citacao</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="comm-menu-item text-sm disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => {
+                      setShowComposerActionsMenu(false);
+                      applyBlockPrefix('- ');
+                    }}
+                    disabled={isSending || isRecording}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>Inserir lista</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="comm-menu-item text-sm disabled:cursor-not-allowed disabled:opacity-60"
                     onClick={handleOpenQuickRepliesMenu}
                     disabled={isSending}
                   >
@@ -2576,6 +2663,11 @@ function WhatsAppComposerComponent({
             />
           )}
         </div>
+        {!isRecording && !audioPreviewUrl && (
+          <div className="comm-muted absolute -bottom-5 left-14 text-[10px]">
+            Formatos: * _ ~ ` &gt; -
+          </div>
+        )}
 
         {slashCommandState.active && (
           <div className="comm-popover absolute bottom-full left-14 right-14 z-[95] mb-2 overflow-hidden">

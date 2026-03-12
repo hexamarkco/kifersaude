@@ -2,6 +2,7 @@ import { test } from 'vitest';
 import assert from 'node:assert/strict';
 
 import {
+  applyLinePrefix,
   buildIndexedQuickReplies,
   buildLinkPreviewRetryPayload,
   buildSlashCommandState,
@@ -55,4 +56,28 @@ test('builds retry payloads for text and link preview sends', () => {
       quotedMessageId: 'msg-2',
     },
   );
+});
+
+test('applies quote prefix to the current line when there is no selection', () => {
+  assert.deepEqual(applyLinePrefix('Ola mundo', 4, 4, '> '), {
+    value: '> Ola mundo',
+    selectionStart: 6,
+    selectionEnd: 6,
+  });
+});
+
+test('applies list prefix to a single selected line', () => {
+  assert.deepEqual(applyLinePrefix('Primeira linha', 0, 13, '- '), {
+    value: '- Primeira linha',
+    selectionStart: 2,
+    selectionEnd: 15,
+  });
+});
+
+test('applies prefixes to multiple selected lines without touching blank lines', () => {
+  assert.deepEqual(applyLinePrefix('Linha 1\n\nLinha 2', 0, 16, '> '), {
+    value: '> Linha 1\n\n> Linha 2',
+    selectionStart: 2,
+    selectionEnd: 20,
+  });
 });

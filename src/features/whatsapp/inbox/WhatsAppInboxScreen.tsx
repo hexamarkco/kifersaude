@@ -22,11 +22,15 @@ import {
   SlidersHorizontal,
   RefreshCw,
   ChevronDown,
+  ChevronRight,
+  ChevronLeft,
   CalendarPlus,
   Loader2,
   Pin,
   Circle,
   ExternalLink,
+  BellOff,
+  Clock3,
 } from 'lucide-react';
 import { MessageInput } from '../composer/WhatsAppComposer';
 import type { SentMessagePayload } from '../composer/types';
@@ -76,6 +80,7 @@ import {
   mapReminderTypeToSchedulerType,
   resolveReminderLeadName,
 } from '../shared/reminderQuickOpen';
+import { mergeChatPreview, sanitizeTechnicalCiphertextPreview } from '../shared/chatPreview';
 import { formatWhatsAppPhoneDisplay, isLikelyBrazilLocalNumber, normalizePhoneNumber } from '../shared/phoneUtils';
 import type {
   ChatKindFilter,
@@ -418,25 +423,6 @@ export default function WhatsAppInboxScreen() {
     return (left.id || '').localeCompare(right.id || '');
   };
 
-  const shouldApplyIncomingChatPreview = (
-    currentChat: Pick<WhatsAppChat, 'last_message' | 'last_message_at'> | null | undefined,
-    incomingPreview: string | null | undefined,
-    incomingTimestamp: string | null | undefined,
-  ) => {
-    const sanitizedIncomingPreview = sanitizeTechnicalCiphertextPreview(incomingPreview) || null;
-    if (!sanitizedIncomingPreview) return false;
-    if (!currentChat?.last_message) return true;
-
-    const currentTime = currentChat.last_message_at ? new Date(currentChat.last_message_at).getTime() : 0;
-    const incomingTime = incomingTimestamp ? new Date(incomingTimestamp).getTime() : 0;
-
-    if (incomingTime > currentTime) return true;
-    if (incomingTime < currentTime) return false;
-
-    const normalizedCurrentPreview = sanitizeTechnicalCiphertextPreview(currentChat.last_message) || null;
-    return normalizedCurrentPreview === sanitizedIncomingPreview;
-  };
-
   const isClientGeneratedMessageId = (id: string) => id.startsWith('local-') || id.startsWith('msg-');
 
   const extractResponseMessageId = (value: unknown): string | null => {
@@ -638,17 +624,6 @@ export default function WhatsAppInboxScreen() {
     return false;
   };
 
-  const sanitizeTechnicalCiphertextPreview = (value: string | null | undefined) => {
-    const normalized = (value || '').trim().toLowerCase();
-    if (!normalized) return '';
-
-    if (normalized === '[mensagem criptografada]') return '';
-    if (normalized.includes('aguardando esta mensagem')) return '';
-    if (normalized.includes('waiting for this message')) return '';
-
-    return value?.trim() || '';
-  };
-
   const resolveReactionTargetChatId = (message: WhatsAppMessage) => {
     const payloadData = asMessagePayload(message.payload);
     const action = payloadData?.action;
@@ -776,7 +751,7 @@ export default function WhatsAppInboxScreen() {
     return normalizePhoneNumber(trimmed);
   };
 
-  const getChatIdVariants = (chat: WhatsAppChat) => {
+  const getChatIdVariants = (chat: Pick<WhatsAppChat, 'id' | 'is_group' | 'phone_number' | 'lid'>) => {
     const variants = new Set<string>();
     if (chat.id) variants.add(chat.id);
     if (isDirectChat(chat)) {
@@ -851,6 +826,107 @@ export default function WhatsAppInboxScreen() {
     });
 
     return Array.from(variants);
+  };
+
+  const getDirectChatMergePriority = (chatId: string, phoneNumber: string | null) => {
+    const normalized = normalizeChatId(chatId).trim().toLowerCase();
+    if (!normalized) return -1;
+
+    if (phoneNumber) {
+      if (normalized === `${phoneNumber}@s.whatsapp.net`) return 120;
+      if (normalized === `${phoneNumber}@c.us`) return 110;
+    }
+
+    if (normalized.endsWith('@s.whatsapp.net')) return 90;
+    if (normalized.endsWith('@c.us')) return 80;
+    if (normalized.endsWith('@lid')) return 20;
+    if (!normalized.includes('@')) return 10;
+    return 0;
+  };
+
+  const choosePreferredDirectChatId = (
+    primaryChat: Pick<WhatsAppChat, 'id' | 'phone_number'>,
+    secondaryChat: Pick<WhatsAppChat, 'id' | 'phone_number'>,
+  ) => {
+    const preferredPhone =
+      normalizePhoneNumber(primaryChat.phone_number || '') ||
+      normalizePhoneNumber(secondaryChat.phone_number || '') ||
+      extractPhoneFromChatId(primaryChat.id) ||
+      extractPhoneFromChatId(secondaryChat.id) ||
+      null;
+
+    const primaryScore = getDirectChatMergePriority(primaryChat.id, preferredPhone);
+    const secondaryScore = getDirectChatMergePriority(secondaryChat.id, preferredPhone);
+    return secondaryScore > primaryScore ? secondaryChat.id : primaryChat.id;
+  };
+
+  const areEquivalentDirectChats = (
+    primaryChat: Pick<WhatsAppChat, 'id' | 'is_group' | 'phone_number' | 'lid'>,
+    secondaryChat: Pick<WhatsAppChat, 'id' | 'is_group' | 'phone_number' | 'lid'>,
+  ) => {
+    if (!isDirectChat(primaryChat) || !isDirectChat(secondaryChat)) {
+      return false;
+    }
+
+    const secondaryVariants = new Set(getChatIdVariants(secondaryChat));
+    return getChatIdVariants(primaryChat).some((variant) => secondaryVariants.has(variant));
+  };
+
+  const chooseEarlierIsoTimestamp = (primary: string | null | undefined, secondary: string | null | undefined) => {
+    const primaryMillis = parseIsoTimestampMillis(primary);
+    const secondaryMillis = parseIsoTimestampMillis(secondary);
+
+    if (Number.isNaN(primaryMillis)) return secondary ?? primary ?? new Date().toISOString();
+    if (Number.isNaN(secondaryMillis)) return primary ?? secondary ?? new Date().toISOString();
+    return primaryMillis <= secondaryMillis ? (primary ?? secondary ?? new Date().toISOString()) : (secondary ?? primary ?? new Date().toISOString());
+  };
+
+  const chooseLaterIsoTimestamp = (primary: string | null | undefined, secondary: string | null | undefined) => {
+    const primaryMillis = parseIsoTimestampMillis(primary);
+    const secondaryMillis = parseIsoTimestampMillis(secondary);
+
+    if (Number.isNaN(primaryMillis)) return secondary ?? primary ?? new Date().toISOString();
+    if (Number.isNaN(secondaryMillis)) return primary ?? secondary ?? new Date().toISOString();
+    return primaryMillis >= secondaryMillis ? (primary ?? secondary ?? new Date().toISOString()) : (secondary ?? primary ?? new Date().toISOString());
+  };
+
+  const mergeRealtimeChatRows = (primaryChat: WhatsAppChat, secondaryChat: WhatsAppChat): WhatsAppChat => {
+    const preferredId =
+      areEquivalentDirectChats(primaryChat, secondaryChat)
+        ? choosePreferredDirectChatId(primaryChat, secondaryChat)
+        : primaryChat.id;
+    const preferredChat = preferredId === primaryChat.id ? primaryChat : secondaryChat;
+    const otherChat = preferredId === primaryChat.id ? secondaryChat : primaryChat;
+    const nextPreview = mergeChatPreview(
+      preferredChat,
+      {
+        preview: otherChat.last_message,
+        timestamp: otherChat.last_message_at,
+        direction: otherChat.last_message_direction ?? null,
+      },
+      'chat-row',
+    );
+
+    return {
+      ...otherChat,
+      ...preferredChat,
+      ...nextPreview,
+      id: preferredId,
+      name: preferredChat.name ?? otherChat.name ?? null,
+      phone_number: preferredChat.phone_number ?? otherChat.phone_number ?? null,
+      lid: preferredChat.lid ?? otherChat.lid ?? null,
+      created_at: chooseEarlierIsoTimestamp(preferredChat.created_at, otherChat.created_at),
+      updated_at: chooseLaterIsoTimestamp(preferredChat.updated_at, otherChat.updated_at),
+      unread_count:
+        typeof preferredChat.unread_count === 'number'
+          ? preferredChat.unread_count
+          : typeof otherChat.unread_count === 'number'
+            ? otherChat.unread_count
+            : 0,
+      archived: preferredChat.archived ?? otherChat.archived ?? false,
+      pinned: preferredChat.pinned ?? otherChat.pinned ?? null,
+      mute_until: preferredChat.mute_until ?? otherChat.mute_until ?? null,
+    };
   };
 
   const shouldFetchNewsletterName = (chat: WhatsAppChat) => {
@@ -1450,9 +1526,22 @@ export default function WhatsAppInboxScreen() {
         if (payload.eventType === 'DELETE') {
           const deletedChatId = (payload.old as { id?: string } | null)?.id;
           if (!deletedChatId) return;
+          const deletedChatSnapshot = chatsRef.current.find((chat) => chat.id === deletedChatId) ?? null;
+          const replacementChat =
+            deletedChatSnapshot && isDirectChat(deletedChatSnapshot)
+              ? chatsRef.current.find(
+                (chat) => chat.id !== deletedChatId && areEquivalentDirectChats(chat, deletedChatSnapshot),
+              ) ?? null
+              : null;
 
           setChats((prev) => prev.filter((chat) => chat.id !== deletedChatId));
-          setSelectedChat((current) => (current?.id === deletedChatId ? null : current));
+          setSelectedChat((current) => {
+            if (current?.id !== deletedChatId) {
+              return current;
+            }
+
+            return replacementChat;
+          });
           return;
         }
 
@@ -1481,8 +1570,10 @@ export default function WhatsAppInboxScreen() {
         }
 
         setChats((prev) => {
-          const existingIndex = prev.findIndex((chat) => chat.id === incomingChat.id);
-          if (existingIndex === -1) {
+          const matchingChats = prev.filter((chat) =>
+            chat.id === incomingChat.id || areEquivalentDirectChats(chat, incomingChat),
+          );
+          if (matchingChats.length === 0) {
             const next = [
               {
                 ...incomingChat,
@@ -1495,34 +1586,28 @@ export default function WhatsAppInboxScreen() {
             return next.sort(sortChatsByLatest);
           }
 
-          const existingChat = prev[existingIndex];
-          const shouldUseIncomingPreview = shouldApplyIncomingChatPreview(
-            existingChat,
-            incomingChat.last_message,
-            incomingChat.last_message_at,
+          const mergedChat = matchingChats.reduce(
+            (accumulator, chat) => mergeRealtimeChatRows(accumulator, chat),
+            incomingChat,
           );
-          const mergedChat: WhatsAppChat = {
-            ...existingChat,
-            ...incomingChat,
-            last_message:
-              shouldUseIncomingPreview
-                ? incomingChat.last_message ?? existingChat.last_message
-                : existingChat.last_message ?? incomingChat.last_message,
-            last_message_direction:
-              shouldUseIncomingPreview
-                ? incomingChat.last_message_direction ?? existingChat.last_message_direction ?? null
-                : existingChat.last_message_direction ?? incomingChat.last_message_direction ?? null,
-            unread_count:
-              typeof incomingChat.unread_count === 'number'
-                ? incomingChat.unread_count
-                : existingChat.unread_count,
-            archived: incomingChat.archived ?? existingChat.archived,
-            mute_until: incomingChat.mute_until ?? existingChat.mute_until,
-          };
-
-          const next = [...prev];
-          next[existingIndex] = mergedChat;
+          const matchedIds = new Set(matchingChats.map((chat) => chat.id));
+          const next = prev.filter((chat) => !matchedIds.has(chat.id));
+          next.unshift({
+            ...mergedChat,
+            last_message: mergedChat.last_message ?? null,
+            last_message_direction: mergedChat.last_message_direction ?? null,
+            unread_count: mergedChat.unread_count ?? 0,
+          });
           return next.sort(sortChatsByLatest);
+        });
+
+        setSelectedChat((current) => {
+          if (!current) return current;
+          if (current.id !== incomingChat.id && !areEquivalentDirectChats(current, incomingChat)) {
+            return current;
+          }
+
+          return mergeRealtimeChatRows(current, incomingChat);
         });
       })
       .subscribe();
@@ -1655,16 +1740,26 @@ export default function WhatsAppInboxScreen() {
               return chat;
             }
 
-            const messageTimestamp = message.timestamp || message.created_at || null;
-            const messageTime = messageTimestamp ? new Date(messageTimestamp).getTime() : 0;
-            const currentTime = chat.last_message_at ? new Date(chat.last_message_at).getTime() : 0;
-            if (messageTime && currentTime && messageTime < currentTime) return chat;
+            const messageTimestamp = getMessageDisplayTimestamp(message);
+            const nextPreview = preview
+              ? mergeChatPreview(
+                  chat,
+                  {
+                    preview,
+                    timestamp: messageTimestamp,
+                    direction: message.direction ?? null,
+                  },
+                  'message-event',
+                )
+              : {
+                  last_message: chat.last_message,
+                  last_message_direction: chat.last_message_direction ?? null,
+                  last_message_at: chat.last_message_at,
+                };
             const shouldUnarchive = eventType === 'INSERT' && chat.archived && !isChatMuted(chat);
             return {
               ...chat,
-              last_message: preview || chat.last_message,
-              last_message_direction: preview ? message.direction ?? chat.last_message_direction ?? null : chat.last_message_direction ?? null,
-              last_message_at: preview ? messageTimestamp || chat.last_message_at : chat.last_message_at,
+              ...nextPreview,
               archived: shouldUnarchive ? false : chat.archived,
             };
           });
@@ -1987,22 +2082,19 @@ export default function WhatsAppInboxScreen() {
       .filter((incoming) => !isStatusChat(incoming))
       .map((incoming) => {
         const previous = previousById.get(incoming.id);
-        const shouldUseIncomingPreview = shouldApplyIncomingChatPreview(
+        const nextPreview = mergeChatPreview(
           previous,
-          incoming.last_message,
-          incoming.last_message_at,
+          {
+            preview: incoming.last_message,
+            timestamp: incoming.last_message_at,
+            direction: incoming.last_message_direction ?? null,
+          },
+          'chat-row',
         );
 
         return {
           ...incoming,
-          last_message:
-            shouldUseIncomingPreview
-              ? sanitizeTechnicalCiphertextPreview(incoming.last_message) || null
-              : (previous?.last_message ?? (sanitizeTechnicalCiphertextPreview(incoming.last_message) || null)),
-          last_message_direction:
-            shouldUseIncomingPreview
-              ? incoming.last_message_direction ?? previous?.last_message_direction ?? null
-              : previous?.last_message_direction ?? incoming.last_message_direction ?? null,
+          ...nextPreview,
           unread_count:
             typeof incoming.unread_count === 'number'
               ? incoming.unread_count
@@ -2138,16 +2230,19 @@ export default function WhatsAppInboxScreen() {
           const updated = prev.map((item) => {
             const variants = getChatIdVariants(item);
             if (!variants.includes(chat.id)) return item;
-
-            const currentTime = item.last_message_at ? new Date(item.last_message_at).getTime() : 0;
-            const incomingTime = latestPreview.timestamp ? new Date(latestPreview.timestamp).getTime() : 0;
-            const shouldUpdateTime = incomingTime > 0 && (!currentTime || incomingTime >= currentTime);
+            const nextPreview = mergeChatPreview(
+              item,
+              {
+                preview: latestPreview.preview,
+                timestamp: latestPreview.timestamp,
+                direction: latestPreview.direction,
+              },
+              'message-history',
+            );
 
             return {
               ...item,
-              last_message: latestPreview.preview,
-              last_message_direction: latestPreview.direction,
-              last_message_at: shouldUpdateTime ? latestPreview.timestamp : item.last_message_at,
+              ...nextPreview,
             };
           });
 
@@ -2581,11 +2676,24 @@ export default function WhatsAppInboxScreen() {
         const updated = prev.map((chat) => {
           const variants = getChatIdVariants(chat);
           if (!variants.includes(message.chat_id)) return chat;
+          const nextPreview = preview
+            ? mergeChatPreview(
+                chat,
+                {
+                  preview,
+                  timestamp,
+                  direction: nextMessage.direction ?? null,
+                },
+                'local-message',
+              )
+            : {
+                last_message: chat.last_message,
+                last_message_direction: chat.last_message_direction ?? null,
+                last_message_at: chat.last_message_at,
+              };
           return {
             ...chat,
-            last_message: preview || chat.last_message,
-            last_message_direction: preview ? nextMessage.direction ?? chat.last_message_direction ?? null : chat.last_message_direction ?? null,
-            last_message_at: timestamp,
+            ...nextPreview,
           };
         });
 
@@ -2893,7 +3001,7 @@ export default function WhatsAppInboxScreen() {
             ...chat,
             last_message: nextPreview.preview,
             last_message_direction: nextPreview.direction,
-            last_message_at: nextPreview.timestamp || chat.last_message_at,
+            last_message_at: nextPreview.timestamp,
           };
         });
 
@@ -5645,7 +5753,7 @@ export default function WhatsAppInboxScreen() {
           {chatMenu && chatMenuLayout && chatMenuTarget?.chat && (
             <div
               ref={chatMenuRef}
-              className="fixed z-50 w-64 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl text-sm"
+              className="comm-popover fixed z-50 w-64 overflow-hidden text-sm"
               style={{ left: chatMenuLayout.left, top: chatMenuLayout.top }}
               onClick={(event) => event.stopPropagation()}
             >
@@ -5653,7 +5761,7 @@ export default function WhatsAppInboxScreen() {
                 variant="ghost"
                 size="sm"
                 fullWidth
-                className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
                   void updateChatArchive(chatMenuTarget.chat!.id, !chatMenuTarget.chat!.archived);
                   closeMuteSubmenuNow();
@@ -5662,13 +5770,13 @@ export default function WhatsAppInboxScreen() {
                 }}
               >
                 <Archive className="h-4 w-4" />
-                {chatMenuTarget.chat.archived ? 'Desarquivar' : 'Arquivar'}
+                <span>{chatMenuTarget.chat.archived ? 'Desarquivar' : 'Arquivar'}</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 fullWidth
-                className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
                   void markChatAsUnread(chatMenuTarget.chat!);
                   closeMuteSubmenuNow();
@@ -5677,13 +5785,13 @@ export default function WhatsAppInboxScreen() {
                 }}
               >
                 <Circle className="h-4 w-4" />
-                                  Marcar como não lida
+                <span>Marcar como nao lida</span>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 fullWidth
-                className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
                   void updateChatPinned(chatMenuTarget.chat!.id, chatMenuTarget.isPinned ? 0 : Date.now());
                   closeMuteSubmenuNow();
@@ -5692,15 +5800,15 @@ export default function WhatsAppInboxScreen() {
                 }}
               >
                 <Pin className="h-4 w-4" />
-                {chatMenuTarget.isPinned ? 'Desafixar' : 'Fixar'}
+                <span>{chatMenuTarget.isPinned ? 'Desafixar' : 'Fixar'}</span>
               </Button>
-              <div className="border-t border-slate-800" />
+              <div className="mx-3 border-t border-[var(--panel-border-subtle,#e7dac8)]" />
               {(() => {
                 const muteOptions = [
                   { label: '1 hora', ms: 60 * 60 * 1000 },
                   { label: '1 dia', ms: 24 * 60 * 60 * 1000 },
                   { label: '1 semana', ms: 7 * 24 * 60 * 60 * 1000 },
-                  { label: '1 mês', ms: 30 * 24 * 60 * 60 * 1000 },
+                  { label: '1 mes', ms: 30 * 24 * 60 * 60 * 1000 },
                   { label: 'Definitivo', ms: 365 * 24 * 60 * 60 * 1000 },
                 ];
                 return (
@@ -5710,7 +5818,7 @@ export default function WhatsAppInboxScreen() {
                         variant="ghost"
                         size="sm"
                         fullWidth
-                        className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                        className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
                         onClick={() => {
                           void updateChatMute(chatMenuTarget.chat!.id, null);
                           closeMuteSubmenuNow();
@@ -5718,8 +5826,8 @@ export default function WhatsAppInboxScreen() {
                           setChatMenu(null);
                         }}
                       >
-                        <Bell className="h-4 w-4" />
-                        Desmutar
+                        <BellOff className="h-4 w-4" />
+                        <span>Desmutar</span>
                       </Button>
                     ) : (
                       <div
@@ -5731,22 +5839,32 @@ export default function WhatsAppInboxScreen() {
                           variant="ghost"
                           size="sm"
                           fullWidth
-                          className="h-auto justify-between rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                          className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
                           onClick={openMuteSubmenu}
                         >
-                          <span>Mutar</span>
-                          <span className="text-xs text-slate-500">›</span>
+                          <span className="flex items-center gap-3">
+                            <Bell className="h-4 w-4" />
+                            <span>Mutar</span>
+                          </span>
+                          {chatMenuLayout.submenuOpensLeft ? (
+                            <ChevronLeft className="h-4 w-4 comm-muted" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 comm-muted" />
+                          )}
                         </Button>
                         {chatMenuMuteOpen && (
                           <div className={`absolute top-0 z-10 ${chatMenuLayout.submenuOpensLeft ? 'right-full pr-1' : 'left-full pl-1'}`}>
-                            <div className="min-w-[160px] rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
+                            <div className="comm-popover min-w-[180px] overflow-hidden">
+                              <div className="comm-popover-header px-3 py-2">
+                                <span className="comm-title text-xs font-semibold uppercase tracking-[0.08em]">Mutar</span>
+                              </div>
                               {muteOptions.map((option) => (
                                 <Button
                                   key={option.label}
                                   variant="ghost"
                                   size="sm"
                                   fullWidth
-                                  className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                                  className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
                                   onClick={() => {
                                     const until = new Date(Date.now() + option.ms).toISOString();
                                     void updateChatMute(chatMenuTarget.chat!.id, until);
@@ -5755,7 +5873,8 @@ export default function WhatsAppInboxScreen() {
                                     setChatMenu(null);
                                   }}
                                 >
-                                  {option.label}
+                                  <Clock3 className="h-4 w-4" />
+                                  <span>{option.label}</span>
                                 </Button>
                               ))}
                             </div>
@@ -5767,7 +5886,7 @@ export default function WhatsAppInboxScreen() {
                       variant="ghost"
                       size="sm"
                       fullWidth
-                      className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => {
                         void handleCopyChatPhone(chatMenuTarget.chat!, chatMenuTarget.phone);
                         closeMuteSubmenuNow();
@@ -5777,25 +5896,25 @@ export default function WhatsAppInboxScreen() {
                       disabled={!chatMenuTarget.phone}
                     >
                       <Copy className="h-4 w-4" />
-                      Copiar numero
+                      <span>Copiar numero</span>
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       fullWidth
-                      className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => handleOpenLeadFromChat(chatMenuTarget.lead?.id)}
                       disabled={!chatMenuTarget.canOpenLead}
                     >
                       <ExternalLink className="h-4 w-4" />
-                      Abrir lead/CRM
+                      <span>Abrir lead/CRM</span>
                     </Button>
                     <div className="relative" onMouseEnter={() => chatMenuTarget.canUpdateStatus && openStatusSubmenu()} onMouseLeave={closeStatusSubmenuSoon}>
                       <Button
                         variant="ghost"
                         size="sm"
                         fullWidth
-                        className="h-auto justify-between rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
                         onClick={() => {
                           if (chatMenuTarget.canUpdateStatus) {
                             openStatusSubmenu();
@@ -5803,17 +5922,21 @@ export default function WhatsAppInboxScreen() {
                         }}
                         disabled={!chatMenuTarget.canUpdateStatus}
                       >
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-3">
                           <SlidersHorizontal className="h-4 w-4" />
                           <span>Status</span>
                         </span>
-                        <span className="text-xs text-slate-500">{chatMenuLayout.submenuOpensLeft ? '<' : '>'}</span>
+                        {chatMenuLayout.submenuOpensLeft ? (
+                          <ChevronLeft className="h-4 w-4 comm-muted" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 comm-muted" />
+                        )}
                       </Button>
                       {chatMenuStatusOpen && chatMenuTarget.lead && (
                         <div className={`absolute top-0 z-10 ${chatMenuLayout.submenuOpensLeft ? 'right-full pr-1' : 'left-full pl-1'}`}>
-                          <div className="min-w-[220px] rounded-lg border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl">
-                            <div className="border-b border-slate-800 px-3 py-2 text-[11px] uppercase tracking-[0.08em] text-slate-400">
-                              Atualizar status
+                          <div className="comm-popover min-w-[220px] overflow-hidden">
+                            <div className="comm-popover-header px-3 py-2">
+                              <span className="comm-title text-xs font-semibold uppercase tracking-[0.08em]">Atualizar status</span>
                             </div>
                             {leadStatuses.map((status) => (
                               <Button
@@ -5821,7 +5944,7 @@ export default function WhatsAppInboxScreen() {
                                 variant="ghost"
                                 size="sm"
                                 fullWidth
-                                className="h-auto justify-start rounded-none border-0 px-3 py-2 text-left text-slate-100 shadow-none hover:bg-slate-800 hover:text-white"
+                                className="comm-menu-item h-auto rounded-none border-0 px-3 py-2 text-sm shadow-none"
                                 onClick={() => {
                                   void handleUpdateLeadStatus(status.nome, chatMenuTarget.lead?.id);
                                   closeMuteSubmenuNow();
@@ -5829,7 +5952,8 @@ export default function WhatsAppInboxScreen() {
                                   setChatMenu(null);
                                 }}
                               >
-                                {status.nome}
+                                <Circle className="h-4 w-4" />
+                                <span>{status.nome}</span>
                               </Button>
                             ))}
                           </div>

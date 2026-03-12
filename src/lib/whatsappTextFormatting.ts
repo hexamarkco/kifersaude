@@ -5,6 +5,16 @@ export type WhatsAppInlineToken = {
   value: string;
 };
 
+export type WhatsAppBlock =
+  | {
+      type: 'paragraph' | 'quote';
+      lines: WhatsAppInlineToken[][];
+    }
+  | {
+      type: 'list';
+      items: WhatsAppInlineToken[][];
+    };
+
 const INLINE_PATTERN = /(`[^`\n]+`|\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~)/g;
 
 const DELIMITER_TYPES: Record<string, Exclude<WhatsAppInlineTokenType, 'text'>> = {
@@ -67,4 +77,84 @@ export const parseWhatsAppInlineTokens = (source: string): WhatsAppInlineToken[]
 };
 
 export const hasWhatsAppFormatting = (source: string): boolean =>
-  parseWhatsAppInlineTokens(source).some((token) => token.type !== 'text');
+  parseWhatsAppBlocks(source).some((block) => {
+    if (block.type === 'list' || block.type === 'quote') {
+      return true;
+    }
+
+    return block.lines.some((line) => line.some((token) => token.type !== 'text'));
+  });
+
+const normalizeQuoteLine = (line: string): string | null => {
+  const trimmedStart = line.trimStart();
+  if (!trimmedStart.startsWith('>')) return null;
+
+  const content = trimmedStart.slice(1).replace(/^ /, '');
+  if (!content.trim()) return null;
+  return content;
+};
+
+const normalizeListLine = (line: string): string | null => {
+  const trimmedStart = line.trimStart();
+  if (!trimmedStart.startsWith('- ')) return null;
+
+  const content = trimmedStart.slice(2);
+  if (!content.trim()) return null;
+  return content;
+};
+
+export const parseWhatsAppBlocks = (source: string): WhatsAppBlock[] => {
+  if (!source) {
+    return [
+      {
+        type: 'paragraph',
+        lines: [[{ type: 'text', value: '' }]],
+      },
+    ];
+  }
+
+  const lines = source.split('\n');
+  const blocks: WhatsAppBlock[] = [];
+
+  const pushParagraph = (line: string) => {
+    blocks.push({
+      type: 'paragraph',
+      lines: [parseWhatsAppInlineTokens(line)],
+    });
+  };
+
+  let index = 0;
+  while (index < lines.length) {
+    const currentLine = lines[index];
+    const quoteContent = normalizeQuoteLine(currentLine);
+    if (quoteContent !== null) {
+      const quoteLines: WhatsAppInlineToken[][] = [];
+      while (index < lines.length) {
+        const nextQuote = normalizeQuoteLine(lines[index]);
+        if (nextQuote === null) break;
+        quoteLines.push(parseWhatsAppInlineTokens(nextQuote));
+        index += 1;
+      }
+      blocks.push({ type: 'quote', lines: quoteLines });
+      continue;
+    }
+
+    const listContent = normalizeListLine(currentLine);
+    if (listContent !== null) {
+      const items: WhatsAppInlineToken[][] = [];
+      while (index < lines.length) {
+        const nextItem = normalizeListLine(lines[index]);
+        if (nextItem === null) break;
+        items.push(parseWhatsAppInlineTokens(nextItem));
+        index += 1;
+      }
+      blocks.push({ type: 'list', items });
+      continue;
+    }
+
+    pushParagraph(currentLine);
+    index += 1;
+  }
+
+  return blocks;
+};

@@ -1238,6 +1238,71 @@ function resolveWhapiChatPreview(message: WhapiMessage | null | undefined): stri
   });
 }
 
+type ResolvedChatActivity = {
+  preview: string | null;
+  timestamp: string | null;
+  direction: 'inbound' | 'outbound' | null;
+};
+
+function normalizeChatActivityDirection(value: unknown): 'inbound' | 'outbound' | null {
+  if (value === 'inbound' || value === 'outbound') {
+    return value;
+  }
+
+  return null;
+}
+
+function resolveStoredChatActivity(message: {
+  type?: string | null;
+  body?: string | null;
+  payload?: unknown;
+  has_media?: boolean | null;
+  is_deleted?: boolean | null;
+  direction?: string | null;
+  timestamp?: string | null;
+  created_at?: string | null;
+}): ResolvedChatActivity {
+  const preview = resolveStoredChatPreview(message);
+  if (!preview) {
+    return {
+      preview: null,
+      timestamp: null,
+      direction: null,
+    };
+  }
+
+  return {
+    preview,
+    timestamp: toCleanText(message.timestamp) || toCleanText(message.created_at) || null,
+    direction: normalizeChatActivityDirection(message.direction),
+  };
+}
+
+function resolveWhapiChatActivity(message: WhapiMessage | null | undefined): ResolvedChatActivity {
+  if (!message) {
+    return {
+      preview: null,
+      timestamp: null,
+      direction: null,
+    };
+  }
+
+  const preview = resolveWhapiChatPreview(message);
+  if (!preview) {
+    return {
+      preview: null,
+      timestamp: null,
+      direction: null,
+    };
+  }
+
+  return {
+    preview,
+    timestamp: toIsoString(message.timestamp),
+    direction: message.from_me ? 'outbound' : 'inbound',
+  };
+}
+
 function mergeChatPreview(
   existingPreview: string | null | undefined,
   incomingPreview: string | null,
@@ -2184,7 +2249,7 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
     .eq('chat_id', normalizedChatId)
     .order('timestamp', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
-    .limit(25);
+    .limit(200);
 
   if (latestMessageError) {
     console.warn('whatsapp-webhook: erro ao recalcular último horário do chat', {
@@ -2194,30 +2259,22 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
     return;
   }
 
-  const latestMessage = (recentMessages || [])[0];
-  const nextLastMessageAt = latestMessage?.timestamp || latestMessage?.created_at || null;
-  const nextLastMessage =
+  const latestDisplayableActivity =
     (recentMessages || [])
-      .map((message) => resolveStoredChatPreview(message as {
+      .map((message) => resolveStoredChatActivity(message as {
         body?: string | null;
         type?: string | null;
         payload?: unknown;
         has_media?: boolean | null;
         is_deleted?: boolean | null;
+        direction?: string | null;
+        timestamp?: string | null;
+        created_at?: string | null;
       }))
-      .find((preview): preview is string => Boolean(preview)) ?? null;
-  const nextLastMessageDirection =
-    ((recentMessages || []).find((message) =>
-      Boolean(
-        resolveStoredChatPreview(message as {
-          body?: string | null;
-          type?: string | null;
-          payload?: unknown;
-          has_media?: boolean | null;
-          is_deleted?: boolean | null;
-        }),
-      ),
-    ) as { direction?: string | null } | undefined)?.direction ?? null;
+      .find((activity) => Boolean(activity.preview)) ?? null;
+  const nextLastMessageAt = latestDisplayableActivity?.timestamp ?? null;
+  const nextLastMessage = latestDisplayableActivity?.preview ?? null;
+  const nextLastMessageDirection = latestDisplayableActivity?.direction ?? null;
   const { error: updateError } = await supabase
     .from('whatsapp_chats')
     .update({
@@ -2435,7 +2492,18 @@ async function reconcileMessageChatFromStatus(
     existingMessage.timestamp || existingMessage.created_at || toIsoString(status.timestamp) || new Date().toISOString();
 
   await ensureStatusResolvedChatExists(normalizedTargetChatId, status.recipient_id, referenceTimestamp);
-  await refreshChatLastMessageTimestamp(currentChatId);
+  const currentChatType = getChatIdType(currentChatId);
+  const targetChatType = getChatIdType(normalizedTargetChatId);
+  const shouldMergeDuplicateDirectChats =
+    (currentChatType === 'phone' || currentChatType === 'lid') &&
+    (targetChatType === 'phone' || targetChatType === 'lid');
+
+  if (shouldMergeDuplicateDirectChats) {
+    await mergeChatMessages(currentChatId, normalizedTargetChatId);
+  } else {
+    await refreshChatLastMessageTimestamp(currentChatId);
+  }
+
   await refreshChatLastMessageTimestamp(normalizedTargetChatId);
 
   console.log('whatsapp-webhook: chat da mensagem reconciliado via status', {
@@ -2452,25 +2520,115 @@ async function reconcileMessageChatFromStatus(
 }
 
 async function mergeChatMessages(fromChatId: string, toChatId: string) {
+  const normalizedFromChatId = normalizeDirectChatId(toCleanText(fromChatId));
+  const normalizedToChatId = normalizeDirectChatId(toCleanText(toChatId));
+  if (!normalizedFromChatId || !normalizedToChatId || normalizedFromChatId === normalizedToChatId) {
+    return;
+  }
+
   console.log('whatsapp-webhook: mesclando mensagens de chats duplicados', {
-    fromChatId,
-    toChatId,
+    fromChatId: normalizedFromChatId,
+    toChatId: normalizedToChatId,
   });
+
+  const { data: sourceChat, error: sourceChatError } = await supabase
+    .from('whatsapp_chats')
+    .select('id, name, is_group, phone_number, lid, pinned, archived, mute_until, updated_at')
+    .eq('id', normalizedFromChatId)
+    .maybeSingle();
+
+  if (sourceChatError) {
+    console.error('whatsapp-webhook: erro ao carregar chat origem para mescla', sourceChatError);
+  }
+
+  const { data: targetChat, error: targetChatError } = await supabase
+    .from('whatsapp_chats')
+    .select('id, name, is_group, phone_number, lid, pinned, archived, mute_until, updated_at')
+    .eq('id', normalizedToChatId)
+    .maybeSingle();
+
+  if (targetChatError) {
+    console.error('whatsapp-webhook: erro ao carregar chat destino para mescla', targetChatError);
+  }
+
+  const { error: outboundUpdateError } = await supabase
+    .from('whatsapp_messages')
+    .update({ to_number: normalizedToChatId })
+    .eq('chat_id', normalizedFromChatId)
+    .eq('direction', 'outbound');
+
+  if (outboundUpdateError) {
+    console.error('whatsapp-webhook: erro ao atualizar destino das mensagens outbound na mescla', outboundUpdateError);
+    return;
+  }
 
   const { error: updateError } = await supabase
     .from('whatsapp_messages')
-    .update({ chat_id: toChatId })
-    .eq('chat_id', fromChatId);
+    .update({ chat_id: normalizedToChatId })
+    .eq('chat_id', normalizedFromChatId);
 
   if (updateError) {
     console.error('whatsapp-webhook: erro ao mesclar mensagens', updateError);
     return;
   }
 
+  const sourcePhoneNumber = toCleanText(sourceChat?.phone_number) || extractPhoneNumber(normalizedFromChatId) || null;
+  const targetPhoneNumber = toCleanText(targetChat?.phone_number) || extractPhoneNumber(normalizedToChatId) || null;
+  const sourceLid =
+    toCleanText(sourceChat?.lid) ||
+    (getChatIdType(normalizedFromChatId) === 'lid' ? normalizedFromChatId : null);
+  const targetLid =
+    toCleanText(targetChat?.lid) ||
+    (getChatIdType(normalizedToChatId) === 'lid' ? normalizedToChatId : null);
+
+  const targetChatPatch: Record<string, unknown> = {
+    updated_at:
+      getLatestIsoTimestamp(
+        toCleanText(targetChat?.updated_at) || null,
+        toCleanText(sourceChat?.updated_at) || null,
+        new Date().toISOString(),
+      ) ?? new Date().toISOString(),
+  };
+
+  if (!targetChat?.name && sourceChat?.name) {
+    targetChatPatch.name = sourceChat.name;
+  }
+
+  if (!targetPhoneNumber && sourcePhoneNumber) {
+    targetChatPatch.phone_number = sourcePhoneNumber;
+  }
+
+  if (!targetLid && sourceLid) {
+    targetChatPatch.lid = sourceLid;
+  }
+
+  if (typeof targetChat?.pinned !== 'number' && typeof sourceChat?.pinned === 'number') {
+    targetChatPatch.pinned = sourceChat.pinned;
+  }
+
+  if ((targetChat?.archived === null || targetChat?.archived === undefined) && sourceChat?.archived !== undefined) {
+    targetChatPatch.archived = sourceChat.archived;
+  }
+
+  if (!targetChat?.mute_until && sourceChat?.mute_until) {
+    targetChatPatch.mute_until = sourceChat.mute_until;
+  }
+
+  if (Object.keys(targetChatPatch).length > 0) {
+    const { error: patchTargetError } = await supabase
+      .from('whatsapp_chats')
+      .update(targetChatPatch)
+      .eq('id', normalizedToChatId);
+
+    if (patchTargetError) {
+      console.error('whatsapp-webhook: erro ao consolidar metadata do chat destino', patchTargetError);
+    }
+  }
+
   const { error: deleteError } = await supabase
     .from('whatsapp_chats')
     .delete()
-    .eq('id', fromChatId);
+    .eq('id', normalizedFromChatId);
 
   if (deleteError) {
     console.error('whatsapp-webhook: erro ao deletar chat duplicado', deleteError);
@@ -2770,10 +2928,12 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
         .eq('id', preferredChatId)
         .maybeSingle();
 
-      const incomingActivityAt = touchLastMessageAt ? message.timestamp ?? nowIso : null;
       const incomingPreview = touchLastMessageAt ? resolveStoredChatPreview(message) : null;
+      const incomingActivityAt = touchLastMessageAt && incomingPreview ? message.timestamp ?? nowIso : null;
       const nextLastMessageAt =
-        getLatestIsoTimestamp(existingChat?.last_message_at, incomingActivityAt) ?? existingChat?.last_message_at ?? nowIso;
+        incomingActivityAt
+          ? getLatestIsoTimestamp(existingChat?.last_message_at, incomingActivityAt) ?? existingChat?.last_message_at ?? incomingActivityAt
+          : existingChat?.last_message_at ?? null;
 
       const updateData: Record<string, unknown> = {
         name: chatName,
@@ -2817,13 +2977,14 @@ async function upsertChat(message: NormalizedMessage, options?: UpsertChatOption
     }
   }
 
-  const incomingActivityAt = touchLastMessageAt ? message.timestamp ?? nowIso : null;
   const incomingPreview = touchLastMessageAt ? resolveStoredChatPreview(message) : null;
+  const incomingActivityAt = touchLastMessageAt && incomingPreview ? message.timestamp ?? nowIso : null;
   const nextLastMessageAt =
-    getLatestIsoTimestamp(existingChatById?.last_message_at, incomingActivityAt) ??
-    existingChatById?.last_message_at ??
-    message.timestamp ??
-    nowIso;
+    incomingActivityAt
+      ? getLatestIsoTimestamp(existingChatById?.last_message_at, incomingActivityAt) ??
+        existingChatById?.last_message_at ??
+        incomingActivityAt
+      : existingChatById?.last_message_at ?? null;
 
   const { error } = await supabase.from('whatsapp_chats').upsert(
     {
@@ -3471,6 +3632,8 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
     ? toIsoString((rawCandidate as { timestamp?: unknown }).timestamp)
     : null;
   const nowIso = new Date().toISOString();
+  const incomingChatActivity = resolveWhapiChatActivity(toWhapiMessageFromChatUpdate(update));
+  const incomingActivityAt = incomingChatActivity.preview ? (incomingChatActivity.timestamp ?? referenceTimestamp ?? nowIso) : null;
   const chatType = getChatIdType(chatId);
   const isDirectChat = chatType === 'phone' || chatType === 'lid';
   const phoneNumber = isDirectChat ? extractPhoneNumber(chatId) : null;
@@ -3492,24 +3655,23 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
   }
 
   const nextLastMessageAt =
-    getLatestIsoTimestamp(existingChat?.last_message_at ?? null, referenceTimestamp, nowIso) ??
-    existingChat?.last_message_at ??
-    referenceTimestamp ??
-    nowIso;
+    incomingActivityAt
+      ? getLatestIsoTimestamp(existingChat?.last_message_at ?? null, incomingActivityAt) ??
+        existingChat?.last_message_at ??
+        incomingActivityAt
+      : existingChat?.last_message_at ?? null;
   const nextLastMessage = mergeChatPreview(
     existingChat?.last_message,
-    resolveWhapiChatPreview(toWhapiMessageFromChatUpdate(update)),
+    incomingChatActivity.preview,
     existingChat?.last_message_at,
-    referenceTimestamp,
+    incomingActivityAt,
   );
   const nextLastMessageDirection = mergeChatPreviewDirection(
     existingChat?.last_message_direction,
-    rawCandidate && typeof rawCandidate === 'object'
-      ? (((rawCandidate as { from_me?: boolean }).from_me ? 'outbound' : 'inbound') as 'inbound' | 'outbound')
-      : null,
+    incomingChatActivity.direction,
     existingChat?.last_message_at,
-    referenceTimestamp,
-    resolveWhapiChatPreview(toWhapiMessageFromChatUpdate(update)),
+    incomingActivityAt,
+    incomingChatActivity.preview,
   );
 
   const fallbackName =

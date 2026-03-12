@@ -1,12 +1,16 @@
 import { Fragment } from 'react';
-import { parseWhatsAppInlineTokens } from '../../../../lib/whatsappTextFormatting';
+import {
+  parseWhatsAppBlocks,
+  type WhatsAppBlock,
+  type WhatsAppInlineTokenType,
+} from '../../../../lib/whatsappTextFormatting';
 
 interface WhatsAppFormattedTextProps {
   text: string;
   className?: string;
 }
 
-const renderInlineToken = (tokenType: string, value: string, key: string) => {
+const renderInlineToken = (tokenType: WhatsAppInlineTokenType, value: string, key: string) => {
   if (tokenType === 'bold') {
     return (
       <strong key={key} className="font-semibold">
@@ -42,22 +46,66 @@ const renderInlineToken = (tokenType: string, value: string, key: string) => {
   return <Fragment key={key}>{value}</Fragment>;
 };
 
+const renderLine = (line: { type: WhatsAppInlineTokenType; value: string }[], blockKey: string) =>
+  line.map((token, tokenIndex) =>
+    renderInlineToken(token.type, token.value, `${blockKey}-token-${tokenIndex}`),
+  );
+
+const renderLines = (lines: { type: WhatsAppInlineTokenType; value: string }[][], blockKey: string) =>
+  lines.map((line, lineIndex) => (
+    <Fragment key={`${blockKey}-line-${lineIndex}`}>
+      {renderLine(line, `${blockKey}-${lineIndex}`)}
+      {lineIndex < lines.length - 1 && <br />}
+    </Fragment>
+  ));
+
+const renderBlock = (block: WhatsAppBlock, blockIndex: number) => {
+  const blockKey = `block-${blockIndex}`;
+
+  if (block.type === 'quote') {
+    return (
+      <div
+        key={blockKey}
+        className="comm-card rounded-r-xl rounded-l-md border-l-2 border-[var(--panel-focus,#c86f1d)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-[0.98em]"
+      >
+        {renderLines(block.lines, blockKey)}
+      </div>
+    );
+  }
+
+  if (block.type === 'list') {
+    return (
+      <ul key={blockKey} className="ml-5 list-disc space-y-1">
+        {block.items.map((item, itemIndex) => (
+          <li key={`${blockKey}-item-${itemIndex}`}>{renderLine(item, `${blockKey}-${itemIndex}`)}</li>
+        ))}
+      </ul>
+    );
+  }
+
+  const isEmptyParagraph =
+    block.lines.length === 1 &&
+    block.lines[0]?.length === 1 &&
+    block.lines[0]?.[0]?.type === 'text' &&
+    block.lines[0]?.[0]?.value === '';
+
+  if (isEmptyParagraph) {
+    return (
+      <div key={blockKey} aria-hidden="true" className="h-4">
+        <br />
+      </div>
+    );
+  }
+
+  return <div key={blockKey}>{renderLines(block.lines, blockKey)}</div>;
+};
+
 export function WhatsAppFormattedText({ text, className = '' }: WhatsAppFormattedTextProps) {
-  const lines = text.split('\n');
+  const blocks = parseWhatsAppBlocks(text);
 
   return (
-    <span className={className}>
-      {lines.map((line, lineIndex) => {
-        const tokens = parseWhatsAppInlineTokens(line);
-        return (
-          <Fragment key={`line-${lineIndex}`}>
-            {tokens.map((token, tokenIndex) =>
-              renderInlineToken(token.type, token.value, `token-${lineIndex}-${tokenIndex}`),
-            )}
-            {lineIndex < lines.length - 1 && <br />}
-          </Fragment>
-        );
-      })}
-    </span>
+    <div className={className}>
+      {blocks.map((block, blockIndex) => renderBlock(block, blockIndex))}
+    </div>
   );
 }

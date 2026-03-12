@@ -808,13 +808,6 @@ export default function LeadsManager({
     : viewMode === "kanban"
       ? "Visualize gargalos por etapa, ajuste WIP e mova leads rapidamente entre os status."
       : "Analise cada lead com contexto, proximos retornos e acoes rapidas no mesmo fluxo.";
-  const searchExamples = [
-    "status:novo",
-    "origem:indicacao",
-    "responsavel:maria",
-    "tag:urgente",
-  ];
-
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1809,37 +1802,6 @@ export default function LeadsManager({
                     ]}
                   />
                 </div>
-              </div>
-            </div>
-            <div
-              className="rounded-[1.5rem] border p-4"
-              style={LEADS_MUTED_INSET_STYLE}
-            >
-              <p
-                className="text-[11px] font-black uppercase tracking-[0.24em]"
-                style={{ color: "var(--panel-text-muted,#876f5c)" }}
-              >
-                Busca inteligente
-              </p>
-              <p
-                className="mt-2 text-sm"
-                style={{ color: "var(--panel-text-soft,#5b4635)" }}
-              >
-                Combine texto livre com tokens para refinar o funil rapidamente.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {searchExamples.map((example) => (
-                  <span
-                    key={example}
-                    className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold"
-                    style={{
-                      ...LEADS_PILL_STYLE,
-                      color: "var(--panel-accent-ink,#6f3f16)",
-                    }}
-                  >
-                    {example}
-                  </span>
-                ))}
               </div>
             </div>
           </div>

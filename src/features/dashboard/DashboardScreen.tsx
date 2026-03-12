@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useSearchParams } from "react-router-dom";
@@ -170,6 +170,11 @@ export default function DashboardScreen({
   const [dashboardOwnerFilter, setDashboardOwnerFilter] = useState(
     () => searchParams.get("dashboardOwner") || "",
   );
+  const deferredPeriodFilter = useDeferredValue(periodFilter);
+  const deferredCustomStartDate = useDeferredValue(customStartDate);
+  const deferredCustomEndDate = useDeferredValue(customEndDate);
+  const deferredDashboardOriginFilter = useDeferredValue(dashboardOriginFilter);
+  const deferredDashboardOwnerFilter = useDeferredValue(dashboardOwnerFilter);
   const loadingUi = useAdaptiveLoading(loading);
   const statusColorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -957,20 +962,23 @@ export default function DashboardScreen({
       customEndDate.length === 10 &&
       validateDashboardDate(customStartDate) &&
       validateDashboardDate(customEndDate));
+  const isEffectiveCustomPeriodValid =
+    deferredPeriodFilter !== "personalizado" ||
+    (deferredCustomStartDate.length === 10 &&
+      deferredCustomEndDate.length === 10 &&
+      validateDashboardDate(deferredCustomStartDate) &&
+      validateDashboardDate(deferredCustomEndDate));
 
-  const filterByPeriod = <T,>(
-    items: T[],
-    getDate: (item: T) => Date | null,
-  ): T[] => {
-    if (periodFilter === "todo-periodo") return items;
+  const filterByPeriod = useCallback(<T,>(items: T[], getDate: (item: T) => Date | null): T[] => {
+    if (deferredPeriodFilter === "todo-periodo") return items;
 
-    if (periodFilter === "personalizado") {
-      if (!isCustomPeriodValid) return items;
+    if (deferredPeriodFilter === "personalizado") {
+      if (!isEffectiveCustomPeriodValid) return items;
 
-      const startDate = parseDashboardDateString(customStartDate);
+      const startDate = parseDashboardDateString(deferredCustomStartDate);
       startDate.setHours(0, 0, 0, 0);
 
-      const endDate = parseDashboardDateString(customEndDate);
+      const endDate = parseDashboardDateString(deferredCustomEndDate);
       endDate.setHours(23, 59, 59, 999);
 
       return items.filter((item) => {
@@ -986,12 +994,16 @@ export default function DashboardScreen({
       if (!itemDate) return true;
       return itemDate >= startOfMonth;
     });
-  };
+  }, [deferredCustomEndDate, deferredCustomStartDate, deferredPeriodFilter, isEffectiveCustomPeriodValid]);
 
-  const periodFilteredLeads = filterByPeriod(leads, (lead) => {
-    const dateValue = lead.data_criacao || lead.created_at;
-    return parseDashboardDateValue(dateValue);
-  });
+  const periodFilteredLeads = useMemo(
+    () =>
+      filterByPeriod(leads, (lead) => {
+        const dateValue = lead.data_criacao || lead.created_at;
+        return parseDashboardDateValue(dateValue);
+      }),
+    [filterByPeriod, leads],
+  );
 
   const visibleLeadOrigins = useMemo(
     () =>
@@ -1011,24 +1023,36 @@ export default function DashboardScreen({
   const filteredLeads = useMemo(
     () =>
       periodFilteredLeads.filter((lead) => {
-        if (dashboardOriginFilter && lead.origem !== dashboardOriginFilter) {
+        if (
+          deferredDashboardOriginFilter &&
+          lead.origem !== deferredDashboardOriginFilter
+        ) {
           return false;
         }
 
-        if (dashboardOwnerFilter && lead.responsavel !== dashboardOwnerFilter) {
+        if (
+          deferredDashboardOwnerFilter &&
+          lead.responsavel !== deferredDashboardOwnerFilter
+        ) {
           return false;
         }
 
         return true;
       }),
-    [dashboardOriginFilter, dashboardOwnerFilter, periodFilteredLeads],
+    [
+      deferredDashboardOriginFilter,
+      deferredDashboardOwnerFilter,
+      periodFilteredLeads,
+    ],
   );
 
-  const activeLeadStatusNames = useMemo(
+  const activeLeadStatusNameSet = useMemo(
     () =>
-      leadStatuses
-        .filter((status) => status.ativo)
-        .map((status) => status.nome),
+      new Set(
+        leadStatuses
+          .filter((status) => status.ativo)
+          .map((status) => status.nome),
+      ),
     [leadStatuses],
   );
 
@@ -1036,9 +1060,9 @@ export default function DashboardScreen({
     () =>
       filteredLeads.filter(
         (lead) =>
-          !lead.arquivado && activeLeadStatusNames.includes(lead.status ?? ""),
+          !lead.arquivado && activeLeadStatusNameSet.has(lead.status ?? ""),
       ),
-    [activeLeadStatusNames, filteredLeads],
+    [activeLeadStatusNameSet, filteredLeads],
   );
 
   const dashboardScopedContracts = useMemo(
@@ -1047,15 +1071,15 @@ export default function DashboardScreen({
         const lead = contract.lead_id ? leadsById.get(contract.lead_id) : null;
 
         if (
-          dashboardOriginFilter &&
-          (!lead || lead.origem !== dashboardOriginFilter)
+          deferredDashboardOriginFilter &&
+          (!lead || lead.origem !== deferredDashboardOriginFilter)
         ) {
           return false;
         }
 
         if (
-          dashboardOwnerFilter &&
-          (!lead || lead.responsavel !== dashboardOwnerFilter)
+          deferredDashboardOwnerFilter &&
+          (!lead || lead.responsavel !== deferredDashboardOwnerFilter)
         ) {
           return false;
         }
@@ -1064,8 +1088,8 @@ export default function DashboardScreen({
       }),
     [
       contractsVisibleToUser,
-      dashboardOriginFilter,
-      dashboardOwnerFilter,
+      deferredDashboardOriginFilter,
+      deferredDashboardOwnerFilter,
       leadsById,
     ],
   );
@@ -1078,7 +1102,7 @@ export default function DashboardScreen({
         parseDashboardDateValue(contract.created_at)
       );
     });
-  }, [dashboardScopedContracts, periodFilter, customStartDate, customEndDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dashboardScopedContracts, filterByPeriod]);
 
   const calendarScopedContractIds = useMemo(
     () => new Set(dashboardScopedContracts.map((contract) => contract.id)),
@@ -1867,6 +1891,10 @@ export default function DashboardScreen({
   }, [calendarMonthRange, calendarView, selectedBaseDate]);
 
   const calendarViewEvents = useMemo(() => {
+    if (calendarView === "month") {
+      return calendarEvents;
+    }
+
     const events: CalendarEvent[] = [];
 
     buildAdjustmentEventsInRange(
@@ -1897,6 +1925,8 @@ export default function DashboardScreen({
   }, [
     buildAdjustmentEventsInRange,
     buildBirthdayEventsInRange,
+    calendarEvents,
+    calendarView,
     calendarViewRange,
   ]);
 

@@ -1794,15 +1794,36 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           key={day}
           type="button"
           onClick={() => setSelectedCalendarDate(date)}
-          className={`aspect-square p-2 rounded-lg border transition-all relative focus:outline-none focus:ring-2 focus:ring-teal-500/40 ${
+          className="group relative aspect-square rounded-2xl border p-2 transition-all duration-200 hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel-bg,#f8f5ef)]"
+          style={
             isSelected
-              ? 'bg-teal-600 text-white border-teal-600'
+              ? {
+                  borderColor: 'var(--panel-accent-border,#d5a25c)',
+                  background:
+                    'linear-gradient(180deg, var(--panel-accent-soft,#f6e4c7) 0%, color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 70%, var(--panel-surface,#fffdfa)) 100%)',
+                  color: 'var(--panel-accent-ink-strong,#4a2411)',
+                  boxShadow: '0 18px 30px -26px rgba(184, 92, 31, 0.55)',
+                }
               : isToday
-                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                ? {
+                    borderColor: 'var(--panel-border-strong,#9d7f5a)',
+                    background:
+                      'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 88%, transparent) 0%, var(--panel-surface,#fffdfa) 100%)',
+                    color: 'var(--panel-text,#1c1917)',
+                  }
                 : dayEvents.length > 0
-                  ? 'bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100'
-                  : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-          }`}
+                  ? {
+                      borderColor: 'var(--panel-border-subtle,#e4d5c0)',
+                      background:
+                        'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 56%, transparent) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)',
+                      color: 'var(--panel-text-soft,#5b4635)',
+                    }
+                  : {
+                      borderColor: 'var(--panel-border-subtle,#e4d5c0)',
+                      background: 'color-mix(in srgb, var(--panel-surface,#fffdfa) 92%, transparent)',
+                      color: 'var(--panel-text-soft,#5b4635)',
+                    }
+          }
         >
           <div className="text-sm font-medium">{day}</div>
           {kinds.length > 0 && (
@@ -1810,9 +1831,14 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               {kinds.map((kind) => (
                 <span
                   key={kind}
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    kind === 'adjustment' ? 'bg-teal-500' : 'bg-pink-500'
-                  } ${isSelected ? 'bg-white' : ''}`}
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{
+                    backgroundColor: isSelected
+                      ? 'var(--panel-accent-ink-strong,#4a2411)'
+                      : kind === 'adjustment'
+                        ? 'var(--panel-accent-strong,#b85c1f)'
+                        : 'var(--panel-border-strong,#9d7f5a)',
+                  }}
                 />
               ))}
             </div>
@@ -1870,9 +1896,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
   const metricColorMap: Record<typeof selectedMetric, string> = useMemo(
     () => ({
-      leads: '#0ea5e9',
-      contratos: '#8b5cf6',
-      comissoes: '#22c55e',
+      leads: '#cf7b32',
+      contratos: '#8d6b4d',
+      comissoes: '#b85c1f',
     }),
     [],
   );
@@ -1920,17 +1946,17 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
   }, [displayedMonthlySeries]);
   const monthlyVariationTone =
     (latestMonthlyPoint?.variation || 0) > 0
-      ? 'text-emerald-600'
+      ? { color: 'var(--panel-accent-green-text,#275c39)' }
       : (latestMonthlyPoint?.variation || 0) < 0
-        ? 'text-red-600'
-        : 'text-slate-700';
+        ? { color: 'var(--panel-accent-red-text,#8a3128)' }
+        : { color: 'var(--panel-text-soft,#5b4635)' };
 
   const operadoraColors = [
-    '#14b8a6',
-    '#3b82f6',
-    '#8b5cf6',
-    '#f59e0b',
-    '#10b981',
+    '#cf7b32',
+    '#9d7f5a',
+    '#d5a25c',
+    '#7a5a44',
+    '#b85c1f',
   ];
 
   const operadoraChartData = operadoraData.map((item, index) => ({
@@ -1938,6 +1964,51 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
     value: item.count,
     color: operadoraColors[index % operadoraColors.length],
   }));
+
+  const dashboardSectionStyle = {
+    borderColor: 'var(--panel-border,#d4c0a7)',
+    background:
+      'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 97%, white 3%) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 92%, var(--panel-surface-soft,#efe6d8) 8%) 100%)',
+    boxShadow: '0 26px 50px -38px rgba(26,18,13,0.38)',
+  } as const;
+
+  const dashboardInsetStyle = {
+    borderColor: 'var(--panel-border-subtle,#e4d5c0)',
+    background: 'color-mix(in srgb, var(--panel-surface,#fffdfa) 92%, transparent)',
+  } as const;
+
+  const dashboardMutedInsetStyle = {
+    borderColor: 'var(--panel-border-subtle,#e4d5c0)',
+    background:
+      'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 55%, transparent) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)',
+  } as const;
+
+  const dashboardPillStyle = {
+    borderColor: 'var(--panel-border-subtle,#e4d5c0)',
+    background: 'color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 72%, transparent)',
+  } as const;
+
+  const dashboardHeroStyle = {
+    borderColor: 'var(--panel-border,#d4c0a7)',
+    background:
+      'linear-gradient(135deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 90%, transparent) 0%, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 84%, transparent) 100%), radial-gradient(circle at top right, rgba(212,120,42,0.2), transparent 34%), radial-gradient(circle at bottom left, rgba(120,72,34,0.18), transparent 42%)',
+    boxShadow: '0 30px 54px -40px rgba(26,18,13,0.4)',
+  } as const;
+
+  const calendarLegendStyles = {
+    adjustment: {
+      dot: 'var(--panel-accent-strong,#b85c1f)',
+      background: 'var(--panel-accent-soft,#f6e4c7)',
+      border: 'var(--panel-accent-border,#d5a25c)',
+      text: 'var(--panel-accent-ink,#6f3f16)',
+    },
+    birthday: {
+      dot: 'var(--panel-border-strong,#9d7f5a)',
+      background: 'color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 82%, white)',
+      border: 'var(--panel-border,#d4c0a7)',
+      text: 'var(--panel-text-soft,#5b4635)',
+    },
+  } as const;
 
   const hasDashboardSnapshot =
     leads.length > 0 ||
@@ -2038,8 +2109,16 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       <div ref={dashboardRootRef} className="panel-dashboard-immersive panel-page-shell space-y-6">
       <div className="flex flex-col gap-4" data-panel-animate>
         <div>
-          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Dashboard</h2>
-          <p className="mt-1 text-sm text-slate-600">
+          <p
+            className="text-[11px] font-black uppercase tracking-[0.24em]"
+            style={{ color: 'var(--panel-text-muted,#876f5c)' }}
+          >
+            Visao geral
+          </p>
+          <h2 className="mt-3 text-2xl font-bold sm:text-3xl" style={{ color: 'var(--panel-text,#1c1917)' }}>
+            Dashboard
+          </h2>
+          <p className="mt-1 text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
             Visão geral do seu negócio em tempo real
           </p>
         </div>
@@ -2078,8 +2157,8 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                   className="sm:w-32"
                   invalid={Boolean(customStartDate && !validateDate(customStartDate))}
                 />
-                <span className="text-center text-xs text-slate-500 sm:hidden">até</span>
-                <span className="hidden text-sm text-slate-500 sm:inline">até</span>
+                <span className="text-center text-xs sm:hidden" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>ate</span>
+                <span className="hidden text-sm sm:inline" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>ate</span>
                 <Input
                   type="text"
                   value={customEndDate}
@@ -2124,8 +2203,14 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <div className="flex h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600">
-              <Clock className="h-4 w-4 text-slate-500" />
+            <div
+              className="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm"
+              style={{
+                ...dashboardPillStyle,
+                color: 'var(--panel-text-soft,#5b4635)',
+              }}
+            >
+              <Clock className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
               <span>{lastUpdated ? `Atualizado em ${formatLastUpdated()}` : 'Aguardando atualização...'}</span>
             </div>
             <Button
@@ -2142,10 +2227,19 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div
+          className="flex flex-col gap-3 rounded-[1.6rem] border p-4 sm:flex-row sm:items-center sm:justify-between"
+          style={{
+            borderColor: 'var(--panel-accent-red-border,#d79a8f)',
+            background: 'var(--panel-accent-red-bg,#faecea)',
+          }}
+        >
           <div className="flex items-start space-x-3">
-            <div className="mt-1 h-2 w-2 rounded-full bg-red-500"></div>
-            <p className="text-sm text-red-800">{error}</p>
+            <div
+              className="mt-1 h-2.5 w-2.5 rounded-full"
+              style={{ background: 'var(--panel-accent-red-text,#8a3128)' }}
+            />
+            <p className="text-sm" style={{ color: 'var(--panel-accent-red-text,#8a3128)' }}>{error}</p>
           </div>
           <Button type="button" onClick={loadData} variant="danger" disabled={loading}>
             Tentar novamente
@@ -2154,9 +2248,15 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
       )}
 
       {!isCustomPeriodValid && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center space-x-2">
-          <Calendar className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-          <p className="text-sm text-yellow-800">
+        <div
+          className="flex items-center space-x-2 rounded-[1.4rem] border p-3"
+          style={{
+            borderColor: 'var(--panel-accent-border,#d5a25c)',
+            background: 'var(--panel-accent-soft,#f6e4c7)',
+          }}
+        >
+          <Calendar className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }} />
+          <p className="text-sm" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }}>
             Por favor, preencha as datas de início e fim no formato DD/MM/AAAA para visualizar o período personalizado.
           </p>
         </div>
@@ -2242,11 +2342,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         )}
       </div>
 
-      <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-panel-animate>
+      <div className="panel-glass-panel rounded-[2rem] border p-6 sm:p-7" style={dashboardSectionStyle} data-panel-animate>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-slate-900">Evolução mensal</h3>
-            <p className="text-sm text-slate-500">
+            <h3 className="text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>Evolução mensal</h3>
+            <p className="text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
               Tendência por mês considerando o período selecionado e os filtros atuais.
             </p>
           </div>
@@ -2300,15 +2400,15 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         <div className="mt-4 space-y-6">
           <div className="grid gap-3 md:grid-cols-3">
             <div
-              className="rounded-2xl border p-4"
+              className="rounded-[1.6rem] border p-4"
               style={{
-                borderColor: 'var(--panel-border)',
-                background: 'linear-gradient(180deg, var(--panel-surface-muted) 0%, var(--panel-surface) 100%)',
+                ...dashboardMutedInsetStyle,
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
               }}
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
-                  <TrendingUp className="h-4 w-4 text-teal-600" />
+                  <TrendingUp className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
                   <span>Ultimo mes</span>
                 </div>
                 <span className="text-xs" style={{ color: 'var(--panel-text-muted)' }}>{latestMonthlyPoint?.label || "Sem dados"}</span>
@@ -2316,7 +2416,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
                 {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : "Sem dados"}
               </p>
-              <p className={`mt-1 text-xs font-semibold ${monthlyVariationTone}`}>
+              <p className="mt-1 text-xs font-semibold" style={monthlyVariationTone}>
                 {latestMonthlyPoint?.variation !== null && latestMonthlyPoint?.variation !== undefined
                   ? `${latestMonthlyPoint.variation > 0 ? "+" : ""}${latestMonthlyPoint.variation.toFixed(1)}% ${
                       previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : "vs mes anterior"
@@ -2326,14 +2426,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             </div>
 
             <div
-              className="rounded-2xl border p-4"
-              style={{
-                borderColor: 'var(--panel-border-subtle)',
-                background: 'var(--panel-surface)',
-              }}
+              className="rounded-[1.6rem] border p-4"
+              style={dashboardInsetStyle}
             >
               <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
-                <BadgePercent className="h-4 w-4 text-teal-600" />
+                <BadgePercent className="h-4 w-4" style={{ color: 'var(--panel-border-strong,#9d7f5a)' }} />
                 <span>Media do periodo</span>
               </div>
               <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
@@ -2345,14 +2442,11 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             </div>
 
             <div
-              className="rounded-2xl border p-4"
-              style={{
-                borderColor: 'var(--panel-border-subtle)',
-                background: 'var(--panel-surface)',
-              }}
+              className="rounded-[1.6rem] border p-4"
+              style={dashboardInsetStyle}
             >
               <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
-                <Calendar className="h-4 w-4 text-teal-600" />
+                <Calendar className="h-4 w-4" style={{ color: 'var(--panel-border-strong,#9d7f5a)' }} />
                 <span>Pico do periodo</span>
               </div>
               <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
@@ -2376,11 +2470,13 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         </div>
       </div>
 
-      <LeadFunnel leads={activeLeads} />
+      <div data-panel-animate>
+        <LeadFunnel leads={activeLeads} />
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-panel-animate>
-        <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
+        <div className="panel-glass-panel rounded-[2rem] border p-6 sm:p-7" style={dashboardSectionStyle}>
+          <h3 className="mb-5 text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
             Distribuição de Leads por Status
           </h3>
           {leadStatusData.length > 0 ? (
@@ -2391,14 +2487,14 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               onSegmentClick={handleLeadStatusSegmentClick}
             />
           ) : (
-            <div className="flex items-center justify-center h-64 text-slate-400">
+            <div className="flex h-64 items-center justify-center rounded-[1.6rem] border border-dashed text-sm" style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)', background: 'color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 62%, transparent)', color: 'var(--panel-text-muted,#876f5c)' }}>
               Nenhum lead ativo
             </div>
           )}
         </div>
 
-        <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
+        <div className="panel-glass-panel rounded-[2rem] border p-6 sm:p-7" style={dashboardSectionStyle}>
+          <h3 className="mb-5 text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
             Contratos por Operadora
           </h3>
           {operadoraChartData.length > 0 ? (
@@ -2409,7 +2505,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
               onSegmentClick={handleOperadoraSegmentClick}
             />
           ) : (
-            <div className="flex items-center justify-center h-64 text-slate-400">
+            <div className="flex h-64 items-center justify-center rounded-[1.6rem] border border-dashed text-sm" style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)', background: 'color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 62%, transparent)', color: 'var(--panel-text-muted,#876f5c)' }}>
               Nenhum contrato ativo
             </div>
           )}
@@ -2418,33 +2514,33 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
 
       {!isObserver && (
         <>
-          <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-panel-animate>
+          <div className="panel-glass-panel rounded-[2rem] border p-6 sm:p-7" style={dashboardSectionStyle} data-panel-animate>
             <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
               <div>
-                <div className="flex items-center gap-2 text-slate-900">
-                  <Calendar className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-                  <h3 className="text-lg font-semibold">Calendário de eventos</h3>
+                <div className="flex items-center gap-2" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                  <Calendar className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
+                  <h3 className="text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>Calendário de eventos</h3>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                   Reajustes e aniversários agrupados pelo período selecionado.
                 </p>
               </div>
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1">
-                  <span className="text-slate-600">{calendarMonthEventCount}</span>
+              <div className="flex flex-wrap items-center gap-3 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold" style={{ ...dashboardPillStyle, color: 'var(--panel-text-soft,#5b4635)' }}>
+                  <span style={{ color: 'var(--panel-text,#1c1917)' }}>{calendarMonthEventCount}</span>
                   <span>eventos no mês</span>
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-teal-500" /> Reajustes
+                <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold" style={{ borderColor: calendarLegendStyles.adjustment.border, background: calendarLegendStyles.adjustment.background, color: calendarLegendStyles.adjustment.text }}>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: calendarLegendStyles.adjustment.dot }} /> Reajustes
                 </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-2 w-2 rounded-full bg-pink-500" /> Aniversários
+                <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold" style={{ borderColor: calendarLegendStyles.birthday.border, background: calendarLegendStyles.birthday.background, color: calendarLegendStyles.birthday.text }}>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: calendarLegendStyles.birthday.dot }} /> Aniversarios
                 </span>
               </div>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-stretch">
-              <div className="rounded-xl border border-slate-200 p-4">
+              <div className="rounded-[1.75rem] border p-4 sm:p-5" style={dashboardInsetStyle}>
                 <div className="flex items-center justify-between mb-4">
                   <Button
                     type="button"
@@ -2460,7 +2556,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <h4 className="text-sm font-semibold text-slate-800 capitalize">
+                  <h4 className="text-sm font-semibold capitalize" style={{ color: 'var(--panel-text,#1c1917)' }}>
                     {calendarMonthLabel}
                   </h4>
                   <Button
@@ -2478,9 +2574,9 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 mb-3">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                   <span>Navegue os meses para consultar reajustes e aniversários.</span>
-                  <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1">
+                  <div className="inline-flex items-center gap-1 rounded-[1rem] border p-1" style={dashboardPillStyle}>
                     <Button
                       type="button"
                       onClick={() => {
@@ -2525,7 +2621,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                 </div>
                 <div className="grid grid-cols-7 gap-2">
                   {calendarDays.weekDays.map((day) => (
-                    <div key={day} className="text-center text-xs font-semibold text-slate-500 py-1">
+                    <div key={day} className="py-1 text-center text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                       {day}
                     </div>
                   ))}
@@ -2533,21 +2629,29 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col">
+              <div className="flex flex-col rounded-[1.75rem] border p-4 sm:p-5" style={dashboardMutedInsetStyle}>
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <div className="text-[11px] font-semibold uppercase text-slate-400">Período selecionado</div>
-                    <h4 className="text-sm font-semibold text-slate-900 mt-1">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>Período selecionado</div>
+                    <h4 className="mt-1 text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
                       {calendarViewLabel}
                     </h4>
                   </div>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                     {calendarViewEvents.length} evento{calendarViewEvents.length === 1 ? '' : 's'}
                   </span>
                 </div>
 
                 {calendarViewEvents.length === 0 ? (
-                  <div className="text-sm text-slate-500">Nenhum evento no período selecionado.</div>
+                  <div
+                    className="flex flex-1 items-center justify-center rounded-[1.4rem] border border-dashed px-4 py-10 text-sm"
+                    style={{
+                      borderColor: 'var(--panel-border-subtle,#e4d5c0)',
+                      color: 'var(--panel-text-muted,#876f5c)',
+                    }}
+                  >
+                    Nenhum evento no período selecionado.
+                  </div>
                 ) : (
                   <div className="space-y-3 flex-1 overflow-y-auto pr-1">
                     {calendarViewEvents.map((event) => {
@@ -2569,34 +2673,38 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                         const previousAgeBand = ageBandIndex > 0 ? ageBands[ageBandIndex - 1] : null;
                         const formatBandLabel = (band: { min: number; max: number | null }) =>
                           band.max === null ? `${band.min}+` : `${band.min}-${band.max}`;
-
                         return (
                           <div
                             key={event.id}
-                            className="rounded-lg border border-teal-200 bg-white p-4"
+                            className="rounded-[1.4rem] border p-4"
+                            style={{
+                              borderColor: calendarLegendStyles.adjustment.border,
+                              background:
+                                'linear-gradient(180deg, color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 50%, var(--panel-surface,#fffdfa)) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)',
+                            }}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="space-y-1">
-                                <div className="text-xs font-semibold text-teal-700">Reajuste</div>
+                                <div className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }}>Reajuste</div>
                                 {adjustment.tipo === 'idade' ? (
                                   <div>
-                                    <p className="text-sm font-semibold text-slate-900">
+                                    <p className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
                                       {adjustment.personName}
                                       {adjustment.age && ` • ${adjustment.age} anos`}
                                     </p>
-                                    <p className="text-xs text-slate-600">{adjustment.role}</p>
+                                    <p className="text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>{adjustment.role}</p>
                                     {currentAgeBand && previousAgeBand && (
-                                      <p className="text-xs text-slate-600">
+                                      <p className="text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                                         Faixa: {formatBandLabel(previousAgeBand)} {'->'}{' '}
                                         {formatBandLabel(currentAgeBand)}
                                       </p>
                                     )}
                                   </div>
                                 ) : (
-                                  <p className="text-sm font-semibold text-slate-900">Reajuste contratual</p>
+                                  <p className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>Reajuste contratual</p>
                                 )}
                                 {(adjustment.contract || holderName) && (
-                                  <div className="text-xs text-slate-600">
+                                  <div className="text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                                     {holderName && <p>Titular: {holderName}</p>}
                                     {adjustment.contract?.modalidade && (
                                       <p>Modalidade: {adjustment.contract.modalidade}</p>
@@ -2607,14 +2715,14 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                                   </div>
                                 )}
                               </div>
-                              <div className="text-right text-xs text-slate-500">
-                                <p className="font-semibold text-slate-900">
+                              <div className="text-right text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                                <p className="font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
                                   {adjustment.contract?.codigo_contrato}
                                 </p>
                                 <p>{adjustment.contract?.operadora}</p>
                               </div>
                             </div>
-                            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                            <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)' }}>
                               <Button
                                 type="button"
                                 onClick={() => handleNavigateToContract(adjustment.contract)}
@@ -2662,43 +2770,43 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
                       const birthday = event.birthday;
 
                       return (
-                        <div key={event.id} className="rounded-lg border border-pink-200 bg-white p-4">
+                        <div key={event.id} className="rounded-[1.4rem] border p-4" style={{ borderColor: calendarLegendStyles.birthday.border, background: 'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 64%, transparent) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)' }}>
                           <div className="flex items-start justify-between gap-3">
                             <div>
-                              <div className="text-xs font-semibold text-pink-700">Aniversário</div>
-                              <p className="text-sm font-semibold text-slate-900 mt-1">{birthday.nome}</p>
-                              <p className="text-xs text-slate-600 mt-0.5">
+                              <div className="text-xs font-semibold uppercase tracking-[0.16em]" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>Aniversário</div>
+                              <p className="mt-1 text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>{birthday.nome}</p>
+                              <p className="mt-0.5 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                                 {birthday.tipo}
                                 {birthday.tipo === 'Dependente' && birthday.holder && (
-                                  <span className="text-slate-500">
+                                  <span style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                                     {' '}
                                     • Titular: {birthday.holder.nome_completo}
                                   </span>
                                 )}
                               </p>
                               {birthday.isPJ && birthday.holder && (birthday.holder.razao_social || birthday.holder.nome_fantasia) && (
-                                <p className="text-xs text-blue-600 mt-1 font-medium">
+                                <p className="mt-1 text-xs font-medium" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }}>
                                   {birthday.holder.razao_social || birthday.holder.nome_fantasia}
                                 </p>
                               )}
                             </div>
-                            <div className="text-right text-xs text-slate-500">
-                              <p className="font-semibold text-slate-900">
+                            <div className="text-right text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                              <p className="font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
                                 {birthday.nextBirthday.toLocaleDateString('pt-BR')}
                               </p>
                             </div>
                           </div>
                           {birthday.contract && (
-                            <div className="pt-2 border-t border-pink-200 mt-2">
-                              <p className="text-xs text-slate-600">
+                            <div className="mt-2 border-t pt-2" style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)' }}>
+                              <p className="text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                                 <span className="font-medium">Contrato:</span> {birthday.contract.codigo_contrato}
                               </p>
-                              <p className="text-xs text-slate-600">
+                              <p className="text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                                 <span className="font-medium">Operadora:</span> {birthday.contract.operadora}
                               </p>
                             </div>
                           )}
-                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3" style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)' }}>
                             {birthday.contract && (
                               <Button
                                 type="button"
@@ -2749,16 +2857,16 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
         </>
       )}
 
-      <div className="panel-glass-hero rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 p-8 text-white shadow-lg" data-panel-animate>
-        <div className="flex items-center justify-between">
+      <div className="panel-glass-hero rounded-[2rem] border p-7 sm:p-8" style={dashboardHeroStyle} data-panel-animate>
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-2xl font-bold mb-2">Continue crescendo!</h3>
-            <p className="text-teal-50 mb-4">
+            <h3 className="text-2xl font-bold" style={{ color: 'var(--panel-text,#1c1917)' }}>Continue crescendo!</h3>
+            <p className="mt-2 text-sm sm:text-base" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
               Mantenha seu pipeline ativo e acompanhe suas métricas em tempo real
             </p>
           </div>
           <div className="hidden lg:block">
-            <TrendingUp className="w-32 h-32 opacity-20" />
+            <TrendingUp className="h-32 w-32 opacity-25" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
           </div>
         </div>
       </div>

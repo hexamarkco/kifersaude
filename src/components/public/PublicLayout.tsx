@@ -15,9 +15,8 @@ type NavigationItem = {
 };
 
 const navigationItems: NavigationItem[] = [
-  { label: 'Inicio', to: '/', end: true },
+  { label: 'Início', to: '/', end: true },
   { label: 'Planos', to: '/planos' },
-  { label: 'In?cio', to: '/', end: true },
   { label: 'Como funciona', to: '/como-funciona' },
   { label: 'Sobre', to: '/sobre' },
   { label: 'Depoimentos', to: '/depoimentos' },
@@ -26,15 +25,14 @@ const navigationItems: NavigationItem[] = [
   { label: 'Blog', to: '/blog' },
 ];
 
-  { label: 'Solicitar cota??o', to: '/cotacao' },
-  { label: 'Plano pessoa f?sica', to: '/planos/pessoa-fisica' },
-  { label: 'Plano pessoa fisica', to: '/planos/pessoa-fisica' },
+const footerLinks: NavigationItem[] = [
+  { label: 'Solicitar cotação', to: '/cotacao' },
+  { label: 'Plano pessoa física', to: '/planos/pessoa-fisica' },
   { label: 'Plano familiar', to: '/planos/familia' },
   { label: 'Plano MEI/CNPJ', to: '/planos/mei-cnpj' },
   { label: 'Portabilidade', to: '/portabilidade' },
   { label: 'Operadoras parceiras', to: '/operadoras' },
-  { label: 'Pol?tica de privacidade', to: '/politica-de-privacidade' },
-  { label: 'Politica de privacidade', to: '/politica-de-privacidade' },
+  { label: 'Política de privacidade', to: '/politica-de-privacidade' },
   { label: 'Termos de uso', to: '/termos-de-uso' },
 ];
 
@@ -245,7 +243,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       <header ref={headerRef} className="fixed inset-x-0 top-0 z-50">
         <div className="hidden border-b border-[color:rgba(111,63,22,0.1)] bg-[color:rgba(255,251,245,0.62)] backdrop-blur md:block">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--public-ink-soft)] sm:px-6 lg:px-8">
-            <p>Consultoria premium em sa?de suplementar no RJ</p>
+            <p>Consultoria premium em saúde suplementar no RJ</p>
             <div className="flex items-center gap-5">
               <a href="tel:+5521979302389" className="hover:text-[var(--public-ink)]">
                 (21) 97930-2389
@@ -264,7 +262,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                 <Heart className="h-6 w-6 text-white" />
               </span>
               <span>
-                <span className="public-display block text-[1.5rem] font-semibold leading-none text-[var(--public-ink)]">Kifer Sa?de</span>
+                <span className="public-display block text-[1.5rem] font-semibold leading-none text-[var(--public-ink)]">Kifer Saúde</span>
                 <span className="block text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--public-accent-ink)]">Concierge de planos</span>
               </span>
             </NavLink>
@@ -343,17 +341,17 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-700 to-orange-600 shadow-lg shadow-black/30">
                 <Heart className="h-5 w-5 text-white" />
               </span>
-              <span className="public-display text-[1.65rem] font-semibold text-white">Kifer Sa?de</span>
+              <span className="public-display text-[1.65rem] font-semibold text-white">Kifer Saúde</span>
             </div>
             <p className="max-w-md text-sm leading-relaxed text-slate-300">
-              Consultoria especializada para quem busca uma decis?o segura em planos de sa?de. Traduzimos regras,
-              comparamos cen?rios reais e acompanhamos sua jornada at? o p?s-venda.
+              Consultoria especializada para quem busca uma decisão segura em planos de saúde. Traduzimos regras,
+              comparamos cenários reais e acompanhamos sua jornada até o pós-venda.
             </p>
             <Link
               to="/cotacao"
               className="mt-6 inline-flex items-center gap-2 rounded-full border border-amber-500/45 bg-amber-500/15 px-4 py-2 text-sm font-bold text-amber-200 transition hover:bg-amber-500/25"
             >
-              Iniciar an?lise personalizada
+              Iniciar análise personalizada
               <ArrowUpRight className="h-4 w-4" />
             </Link>
           </div>
@@ -377,9 +375,9 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           </div>
 
           <div>
-            <h3 className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-amber-200">Links uteis</h3>
+            <h3 className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-amber-200">Links úteis</h3>
             <ul className="space-y-3 text-sm text-slate-300">
-            <h3 className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-amber-200">Links ?teis</h3>
+              {footerLinks.map((item) => (
                 <li key={item.to}>
                   <Link to={item.to} className="hover:text-white">
                     {item.label}
@@ -392,7 +390,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div>
             <h3 className="mb-4 text-xs font-black uppercase tracking-[0.22em] text-amber-200">Empresa</h3>
             <p className="text-sm leading-relaxed text-slate-300">
-              CNPJ: 46.423.078/0001-10. Corretora especializada em sa?de suplementar com foco em fam?lia, MEI e
+              CNPJ: 46.423.078/0001-10. Corretora especializada em saúde suplementar com foco em família, MEI e
               pequenas empresas.
             </p>
             <a
@@ -408,7 +406,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         </div>
 
         <div className="relative border-t border-white/10 px-4 py-5 text-center text-xs text-slate-400">
-          <p>(c) 2026 Kifer Sa?de. Todos os direitos reservados.</p>
+          <p>(c) 2026 Kifer Saúde. Todos os direitos reservados.</p>
         </div>
       </footer>
 

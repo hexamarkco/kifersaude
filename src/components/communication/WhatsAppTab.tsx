@@ -4824,7 +4824,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
         });
       }
     } catch (error) {
-      console.error('Erro ao criar lembrete rÃ¡pido no WhatsApp:', error);
+      console.error('Erro ao criar lembrete rápido no WhatsApp:', error);
       toast.error('Não foi possível criar o novo lembrete rápido.');
       void loadReminderQuickOpen({ preserveExistingItems: true });
     } finally {

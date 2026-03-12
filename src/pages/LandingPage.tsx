@@ -44,37 +44,37 @@ const profileConfigs: Array<{
 }> = [
   {
     slug: 'pf',
-    label: 'Pessoa f?sica',
+    label: 'Pessoa física',
     subtitle: 'Comparativo individual com foco em previsibilidade.',
     impact: 'Ideal para quem quer decidir sem correr risco de contratar no impulso.',
     Icon: HeartPulse,
     benefits: [
       'Rede validada por rotina de uso',
-      'Leitura de car?ncias e reajustes',
+      'Leitura de carências e reajustes',
       'Escolha orientada por custo anual real',
     ],
   },
   {
     slug: 'pme',
     label: 'PME e CNPJ',
-    subtitle: 'Estrutura??o de benef?cio de sa?de para empresas.',
+    subtitle: 'Estruturação de benefício de saúde para empresas.',
     impact: 'Ideal para empresas que querem equilibrar cobertura e sustentabilidade financeira.',
     Icon: Briefcase,
     benefits: [
-      'Apoio de elegibilidade e composi??o',
+      'Apoio de elegibilidade e composição',
       'Curadoria de operadoras por perfil de equipe',
-      'Acompanhamento de proposta e ativa??o',
+      'Acompanhamento de proposta e ativação',
     ],
   },
   {
     slug: 'adesao',
-    label: 'Coletivo por ades?o',
-    subtitle: 'Alternativa para perfis eleg?veis em entidades.',
-    impact: 'Ideal para quem busca equil?brio entre rede, cobertura e custo de entrada.',
+    label: 'Coletivo por adesão',
+    subtitle: 'Alternativa para perfis elegíveis em entidades.',
+    impact: 'Ideal para quem busca equilíbrio entre rede, cobertura e custo de entrada.',
     Icon: Building2,
     benefits: [
       'Triagem de elegibilidade de entrada',
-      'Comparativo t?cnico entre op??es de ades?o',
+      'Comparativo técnico entre opções de adesão',
       'Suporte completo da proposta ao uso inicial',
     ],
   },
@@ -82,18 +82,18 @@ const profileConfigs: Array<{
 
 const conversionBlocks = [
   {
-    title: 'Briefing r?pido',
-    text: 'Em poucos minutos entendemos contexto, prioridade e objetivo da contrata??o.',
+    title: 'Briefing rápido',
+    text: 'Em poucos minutos entendemos contexto, prioridade e objetivo da contratação.',
     Icon: ClipboardCheck,
   },
   {
     title: 'Comparativo consultivo',
-    text: 'Voc? recebe op??es filtradas com explica??o clara de riscos e vantagens.',
+    text: 'Você recebe opções filtradas com explicação clara de riscos e vantagens.',
     Icon: FileCheck2,
   },
   {
-    title: 'Decis?o com suporte',
-    text: 'Acompanhamos documenta??o, pend?ncias e ativa??o para reduzir atrito operacional.',
+    title: 'Decisão com suporte',
+    text: 'Acompanhamos documentação, pendências e ativação para reduzir atrito operacional.',
     Icon: CheckCircle2,
   },
 ];
@@ -101,19 +101,19 @@ const conversionBlocks = [
 const objectionFaq = [
   {
     question: 'A consultoria da landing tem custo?',
-    answer: 'N?o. O atendimento consultivo ? gratuito para o cliente final, incluindo comparativo e suporte de contrata??o.',
+    answer: 'Não. O atendimento consultivo é gratuito para o cliente final, incluindo comparativo e suporte de contratação.',
   },
   {
     question: 'Em quanto tempo recebo o primeiro retorno?',
-    answer: 'Em geral no mesmo dia ?til. O prazo pode variar de acordo com hor?rio do envio e complexidade do perfil.',
+    answer: 'Em geral no mesmo dia útil. O prazo pode variar de acordo com horário do envio e complexidade do perfil.',
   },
   {
-    question: 'Voc?s atendem cidade fora da capital?',
-    answer: 'Sim. A an?lise ? feita por regi?o de uso para garantir coer?ncia de rede e deslocamento.',
+    question: 'Vocês atendem cidade fora da capital?',
+    answer: 'Sim. A análise é feita por região de uso para garantir coerência de rede e deslocamento.',
   },
   {
-    question: 'Posso validar hospital e laborat?rio antes de assinar?',
-    answer: 'Sim. A valida??o acontece no produto espec?fico e na categoria correta de contrata??o.',
+    question: 'Posso validar hospital e laboratório antes de assinar?',
+    answer: 'Sim. A validação acontece no produto específico e na categoria correta de contratação.',
   },
 ];
 
@@ -140,9 +140,9 @@ const findStatusId = (statuses: LeadStatusConfig[]) => {
 
 const resolveContractTypeId = (rows: ContractTypeRow[], profile: ProfileSlug) => {
   const aliases: Record<ProfileSlug, string[]> = {
-    pf: ['pf', 'pessoa fisica', 'pessoa f?sica', 'individual'],
+    pf: ['pf', 'pessoa fisica', 'pessoa física', 'individual'],
     pme: ['pme', 'mei', 'empresa', 'empresarial', 'pj', 'cnpj'],
-    adesao: ['adesao', 'ades?o', 'coletivo por adesao', 'coletivo por ades?o', 'entidade', 'associacao', 'associa??o'],
+    adesao: ['adesao', 'adesão', 'coletivo por adesao', 'coletivo por adesão', 'entidade', 'associacao', 'associação'],
   };
 
   const targets = aliases[profile];
@@ -303,7 +303,7 @@ export default function LandingPage() {
       origem_id: findOriginId(origins),
       status_id: findStatusId(statuses),
       tipo_contratacao_id: contractTypeId,
-      observacoes: `Lead /lp | Perfil: ${selectedProfile?.label ?? formData.perfil} | Vidas: ${formData.vidas || 'n?o informado'}`,
+      observacoes: `Lead /lp | Perfil: ${selectedProfile?.label ?? formData.perfil} | Vidas: ${formData.vidas || 'não informado'}`,
       data_criacao: new Date().toISOString(),
       ultimo_contato: new Date().toISOString(),
       arquivado: false,
@@ -351,10 +351,10 @@ export default function LandingPage() {
   return (
     <div className="clinic-theme kifer-ds kifer-landing-theme min-h-screen text-slate-900">
       <Helmet>
-        <title>Landing Kifer | Cota??o para PME, PF e Ades?o</title>
+        <title>Landing Kifer | Cotação para PME, PF e Adesão</title>
         <meta
           name="description"
-          content="Landing da Kifer Sa?de focada em convers?o para PF, PME e ades?o com comparativo consultivo e atendimento r?pido."
+          content="Landing da Kifer Saúde focada em conversão para PF, PME e adesão com comparativo consultivo e atendimento rápido."
         />
         <link rel="canonical" href="https://www.kifersaude.com.br/lp" />
         {metaPixelScript ? <script type="text/javascript">{metaPixelScript}</script> : null}
@@ -367,7 +367,7 @@ export default function LandingPage() {
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-900/20">
               <BadgeCheck className="h-5 w-5" />
             </span>
-            <span className="clinic-heading text-2xl font-semibold">Kifer Sa?de</span>
+            <span className="clinic-heading text-2xl font-semibold">Kifer Saúde</span>
           </Link>
 
           <div className="flex items-center gap-3">
@@ -395,13 +395,13 @@ export default function LandingPage() {
 
           <div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
             <div className="clinic-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-700">landing de convers?o</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-700">landing de conversão</p>
               <h1 className="clinic-heading mt-4 text-5xl font-semibold leading-[0.93] text-slate-900 md:text-7xl">
-                Cota??o consultiva para PME, PF e ades?o.
+                Cotação consultiva para PME, PF e adesão.
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600">
-                Aqui voc? n?o recebe lista gen?rica de planos. Recebe um comparativo direcionado para seu perfil, com
-                orienta??o t?cnica e atendimento humano no mesmo dia ?til.
+                Aqui você não recebe lista genérica de planos. Recebe um comparativo direcionado para seu perfil, com
+                orientação técnica e atendimento humano no mesmo dia útil.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-2">
@@ -424,11 +424,11 @@ export default function LandingPage() {
               <div className="mt-8 grid gap-3 sm:grid-cols-3">
                 <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Briefing em minutos</div>
                 <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Comparativo consultivo</div>
-                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Apoio at? ativa??o</div>
+                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Apoio até ativação</div>
               </div>
 
               <div className="ks-card mt-8 rounded-2xl p-5">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-700">espa?o para foto da corretora</p>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-700">espaço para foto da corretora</p>
                 <div className="clinic-photo-slot mt-3 aspect-[5/3] rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-white p-4">
                   <div className="flex h-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-orange-300 text-center text-slate-600">
                     <Sparkles className="h-6 w-6 text-orange-500" />
@@ -439,10 +439,10 @@ export default function LandingPage() {
             </div>
 
             <article id="lead-form" className="clinic-card ks-card clinic-reveal clinic-delay-1 rounded-[2rem] p-8 lg:sticky lg:top-24">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-700">formul?rio de lead</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-700">formulário de lead</p>
               <h2 className="clinic-heading mt-3 text-4xl font-semibold text-slate-900">Receber comparativo personalizado</h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                Preenchimento r?pido para iniciar seu atendimento consultivo.
+                Preenchimento rápido para iniciar seu atendimento consultivo.
               </p>
 
               <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
@@ -570,8 +570,8 @@ export default function LandingPage() {
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl clinic-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">rotas de convers?o</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Escolha sua trilha e avance com estrat?gia</h2>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">rotas de conversão</p>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Escolha sua trilha e avance com estratégia</h2>
             </div>
 
             <div className="mt-10 grid gap-5 lg:grid-cols-3">
@@ -612,7 +612,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl clinic-reveal">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">processo</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold">Em poucas horas voc? sai da d?vida para um plano de a??o</h2>
+              <h2 className="clinic-heading mt-3 text-5xl font-semibold">Em poucas horas você sai da dúvida para um plano de ação</h2>
             </div>
 
             <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -636,18 +636,18 @@ export default function LandingPage() {
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_1fr]">
             <article className="clinic-card ks-card clinic-reveal rounded-2xl p-7">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-700">guia da jornada</p>
-              <h2 className="clinic-heading mt-3 text-4xl font-semibold text-slate-900">Espa?o premium para foto da corretora</h2>
+              <h2 className="clinic-heading mt-3 text-4xl font-semibold text-slate-900">Espaço premium para foto da corretora</h2>
               <div className="clinic-photo-slot mt-6 aspect-[4/5] rounded-2xl border border-orange-200/80 bg-gradient-to-br from-orange-100/55 to-white p-6">
                 <div className="flex h-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-300/90 text-center text-slate-600">
                   <BadgeCheck className="h-8 w-8 text-orange-600" />
                   <p className="mt-3 text-sm font-black uppercase tracking-[0.12em] text-orange-700">Foto da corretora</p>
-                  <p className="mt-2 max-w-[17rem] text-xs">Inserir retrato autoral em alta qualidade para refor?ar confian?a e autoridade.</p>
+                  <p className="mt-2 max-w-[17rem] text-xs">Inserir retrato autoral em alta qualidade para reforçar confiança e autoridade.</p>
                 </div>
               </div>
             </article>
 
             <article className="clinic-card ks-card clinic-reveal clinic-delay-1 rounded-2xl p-7">
-              <h2 className="text-2xl font-black text-slate-900">FAQ de obje??es</h2>
+              <h2 className="text-2xl font-black text-slate-900">FAQ de objeções</h2>
               <div className="mt-6 space-y-3">
                 {objectionFaq.map((item) => (
                   <details key={item.question} className="rounded-xl border border-orange-100 bg-orange-50/40 p-4">
@@ -664,12 +664,12 @@ export default function LandingPage() {
           <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-orange-700 via-orange-600 to-orange-500 p-10 text-white shadow-[0_40px_80px_-48px_rgba(124,45,18,0.65)] md:p-14">
             <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-100">pronto para come?ar?</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-100">pronto para começar?</p>
                 <h2 className="clinic-heading mt-3 text-5xl font-semibold leading-tight md:text-6xl">
                   Vamos montar seu comparativo agora.
                 </h2>
                 <p className="mt-4 max-w-2xl text-orange-50">
-                  Selecione seu perfil, envie os dados e receba retorno com orienta??o consultiva no mesmo dia ?til.
+                  Selecione seu perfil, envie os dados e receba retorno com orientação consultiva no mesmo dia útil.
                 </p>
               </div>
 
@@ -679,7 +679,7 @@ export default function LandingPage() {
                   onClick={scrollToForm}
                   className="ks-btn-secondary inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700"
                 >
-                  Ir para formul?rio
+                  Ir para formulário
                 </button>
                 <a
                   href="https://wa.me/5521979302389"
@@ -698,7 +698,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-orange-100 bg-white/85 px-4 py-7 text-sm text-slate-600 sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-3 md:flex-row">
-          <p>Landing oficial da Kifer para convers?o de leads PF, PME e ades?o.</p>
+          <p>Landing oficial da Kifer para conversão de leads PF, PME e adesão.</p>
           <div className="flex items-center gap-4">
             <Link to="/" className="font-semibold text-slate-700 hover:text-orange-700">
               Home

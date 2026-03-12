@@ -13,7 +13,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-      setError('Usu?rio ou senha inv?lidos');
+      setError('Usuário ou senha inválidos');
     setLoading(true);
 
     const { error } = await signIn(username, password);
@@ -34,8 +34,8 @@ export default function LoginPage() {
             <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[#7a3e16] to-[#c86f1d] shadow-lg shadow-[#7a3e16]/20">
               <Lock className="h-8 w-8 text-white" />
             </div>
-            <h1 className="mb-2 text-3xl font-bold text-[#1a120d]">Kifer Sa?de</h1>
-            <p className="text-[#6b5645]">Sistema de Gest?o de Leads e Contratos</p>
+            <h1 className="mb-2 text-3xl font-bold text-[#1a120d]">Kifer Saúde</h1>
+            <p className="text-[#6b5645]">Sistema de Gestão de Leads e Contratos</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -48,7 +48,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="username" className="mb-2 block text-sm font-medium text-[#5b4635]">
-                Usu?rio
+                Usuário
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-[#a38975]" />

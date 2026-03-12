@@ -88,6 +88,7 @@ export default function DateTimePicker({
   const [manualInputValue, setManualInputValue] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const selectedDate = useMemo(() => parseValue(value, type), [type, value]);
   const minDate = useMemo(() => parseValue(min ?? '', type), [min, type]);
@@ -120,7 +121,7 @@ export default function DateTimePicker({
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (!containerRef.current?.contains(target)) {
+      if (!containerRef.current?.contains(target) && !panelRef.current?.contains(target)) {
         setIsOpen(false);
       }
     };
@@ -351,6 +352,27 @@ export default function DateTimePicker({
   const todayStamp = toDateOnlyStamp(new Date());
   const selectedMonthKey = selectedDate ? `${selectedDate.getFullYear()}-${selectedDate.getMonth()}` : null;
   const currentMonthKey = `${new Date().getFullYear()}-${new Date().getMonth()}`;
+  const themeScopeClassName = useMemo(() => {
+    const themedAncestor = triggerRef.current?.closest('.painel-theme');
+
+    if (!themedAncestor) {
+      return 'painel-theme theme-light';
+    }
+
+    const classes = ['painel-theme'];
+
+    if (themedAncestor.classList.contains('theme-dark')) {
+      classes.push('theme-dark');
+    } else {
+      classes.push('theme-light');
+    }
+
+    if (themedAncestor.classList.contains('kifer-ds')) {
+      classes.push('kifer-ds');
+    }
+
+    return classes.join(' ');
+  }, [isOpen]);
 
   return (
     <div className={cx('relative', className)} ref={containerRef}>
@@ -360,8 +382,8 @@ export default function DateTimePicker({
         disabled={disabled}
         onClick={() => setIsOpen((current) => !current)}
         className={cx(
-          'panel-ui-input panel-interactive-glass relative flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-slate-300 bg-white px-3 text-left shadow-sm transition-all',
-          'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500',
+          'panel-ui-input panel-interactive-glass relative flex h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left shadow-sm transition-all',
+          'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)]',
           'disabled:cursor-not-allowed disabled:opacity-60',
           triggerClassName,
         )}
@@ -370,25 +392,46 @@ export default function DateTimePicker({
       >
         <span className="flex min-w-0 items-center gap-2">
           {type === 'datetime-local' ? (
-            <Clock className="h-[18px] w-[18px] flex-shrink-0 text-slate-400" />
+            <Clock className="h-[18px] w-[18px] flex-shrink-0 text-[var(--panel-text-subtle,#ab927b)]" />
           ) : (
-            <CalendarDays className="h-[18px] w-[18px] flex-shrink-0 text-slate-400" />
+            <CalendarDays className="h-[18px] w-[18px] flex-shrink-0 text-[var(--panel-text-subtle,#ab927b)]" />
           )}
-          <span className={cx('truncate text-sm', selectedDate ? 'font-medium text-slate-700' : 'text-slate-500')}>
+          <span
+            className={cx(
+              'truncate text-sm',
+              selectedDate ? 'font-medium text-[var(--panel-input-text,var(--panel-text-soft))]' : 'text-[var(--panel-text-muted,#876f5c)]',
+            )}
+          >
             {displayValue}
           </span>
         </span>
-        <ChevronDown className={cx('h-4 w-4 flex-shrink-0 text-slate-400 transition-transform', isOpen && 'rotate-180')} />
+        <ChevronDown
+          className={cx(
+            'h-4 w-4 flex-shrink-0 text-[var(--panel-text-subtle,#ab927b)] transition-transform',
+            isOpen && 'rotate-180',
+          )}
+        />
       </button>
 
       {isOpen && position && typeof document !== 'undefined'
         ? createPortal(
-            <div
-              className="panel-glass-panel fixed z-[130] rounded-xl border border-[color:rgba(191,113,33,0.35)] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(255,247,237,0.98))] p-3 shadow-xl shadow-[rgba(56,28,12,0.18)]"
-              style={{ top: position.top, left: position.left, width: position.width, maxHeight: position.maxHeight }}
-              role="dialog"
-              aria-label="Selecionar data"
-            >
+            <div className={themeScopeClassName}>
+              <div
+                ref={panelRef}
+                className="panel-glass-panel fixed z-[130] rounded-xl border p-3 shadow-xl"
+                style={{
+                  top: position.top,
+                  left: position.left,
+                  width: position.width,
+                  maxHeight: position.maxHeight,
+                  borderColor: 'color-mix(in srgb, var(--panel-border,#d4c0a7) 92%, transparent)',
+                  background:
+                    'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 97%, white 3%) 0%, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 72%, var(--panel-surface,#fffdfa) 28%) 100%)',
+                  boxShadow: '0 22px 52px -28px rgba(40, 20, 8, 0.45)',
+                }}
+                role="dialog"
+                aria-label="Selecionar data"
+              >
               <div className="mb-3 flex items-center justify-between gap-2">
                 <Button
                   variant="ghost"
@@ -400,7 +443,7 @@ export default function DateTimePicker({
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
 
-                <p className="text-sm font-semibold capitalize text-slate-700">{monthLabel}</p>
+                <p className="text-sm font-semibold capitalize text-[var(--panel-text,#1c1917)]">{monthLabel}</p>
 
                 <Button
                   variant="ghost"
@@ -427,7 +470,7 @@ export default function DateTimePicker({
                     ))}
                   </select>
                 ) : (
-                  <div className="rounded-lg border border-[color:rgba(191,113,33,0.18)] bg-white/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  <div className="rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
                     Escolha o mês
                   </div>
                 )}
@@ -458,11 +501,11 @@ export default function DateTimePicker({
                         disabled={disabledMonth}
                         className={cx(
                           'h-11 rounded-xl border text-sm font-semibold transition-all',
-                          'focus:outline-none focus:ring-2 focus:ring-amber-500',
-                          isSelected && 'border-orange-500 bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-900/20',
-                          !isSelected && isCurrentMonth && 'border-amber-200 bg-amber-50 text-amber-900',
-                          !isSelected && !isCurrentMonth && 'border-[color:rgba(191,113,33,0.18)] bg-white/90 text-slate-700 hover:border-amber-300 hover:bg-amber-50/80',
-                          disabledMonth && 'cursor-not-allowed opacity-40 hover:border-[color:rgba(191,113,33,0.18)] hover:bg-white/90',
+                          'focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)]',
+                          isSelected && 'border-[color:var(--panel-accent-border,#d5a25c)] bg-[var(--panel-accent-hover,#e8c089)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm',
+                          !isSelected && isCurrentMonth && 'border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)]/80 text-[var(--panel-accent-ink,#6f3f16)]',
+                          !isSelected && !isCurrentMonth && 'border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d5a25c)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
+                          disabledMonth && 'cursor-not-allowed opacity-40 hover:border-[var(--panel-border,#d4c0a7)] hover:bg-[var(--panel-surface,#fffdfa)]',
                         )}
                       >
                         {label}
@@ -474,7 +517,7 @@ export default function DateTimePicker({
                 <>
                   <div className="mb-2 grid grid-cols-7 gap-1 text-center">
                     {WEEKDAY_LABELS.map((label) => (
-                      <span key={label} className="py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      <span key={label} className="py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
                         {label}
                       </span>
                     ))}
@@ -496,11 +539,11 @@ export default function DateTimePicker({
                           disabled={isDisabledDay}
                           className={cx(
                             'h-9 rounded-lg text-sm font-medium transition-colors',
-                            'focus:outline-none focus:ring-2 focus:ring-amber-500',
-                            isSelected && 'bg-amber-600 text-white hover:bg-amber-700',
-                            !isSelected && isToday && 'bg-slate-100 text-slate-800',
-                            !isSelected && !isToday && isSameMonth && 'text-slate-700 hover:bg-slate-100',
-                            !isSelected && !isToday && !isSameMonth && 'text-slate-400 hover:bg-slate-100',
+                            'focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)]',
+                            isSelected && 'bg-[var(--panel-accent-hover,#e8c089)] text-[var(--panel-accent-ink-strong,#4a2411)] hover:bg-[var(--panel-accent-hover,#e8c089)]',
+                            !isSelected && isToday && 'bg-[var(--panel-surface-soft,#efe6d8)] text-[var(--panel-text,#1c1917)]',
+                            !isSelected && !isToday && isSameMonth && 'text-[var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
+                            !isSelected && !isToday && !isSameMonth && 'text-[var(--panel-text-subtle,#ab927b)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
                             isDisabledDay && 'cursor-not-allowed opacity-40 hover:bg-transparent',
                           )}
                         >
@@ -513,8 +556,8 @@ export default function DateTimePicker({
               )}
 
               {type === 'datetime-local' ? (
-                <div className="mt-3 border-t border-slate-200 pt-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Horário</p>
+                <div className="mt-3 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Horário</p>
                   <div className="grid grid-cols-2 gap-2">
                     <Input
                       size="compact"
@@ -535,8 +578,8 @@ export default function DateTimePicker({
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 border-t border-slate-200 pt-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="mt-3 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
                     {type === 'month' ? 'Digitar mês' : 'Digitar data'}
                   </p>
                   <div className="flex items-center gap-2">
@@ -561,7 +604,7 @@ export default function DateTimePicker({
                 </div>
               )}
 
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-200 pt-3">
+              <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
                 <Button variant="ghost" size="sm" onClick={() => applyDate(null)} disabled={!value} className="px-2">
                   Limpar
                 </Button>
@@ -586,6 +629,7 @@ export default function DateTimePicker({
                     Concluído
                   </Button>
                 </div>
+              </div>
               </div>
             </div>,
             document.body,

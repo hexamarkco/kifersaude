@@ -1,5 +1,6 @@
 import {
   startTransition,
+  useDeferredValue,
   useCallback,
   useEffect,
   useMemo,
@@ -94,6 +95,7 @@ export default function LeadsManager({
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchTerm, setSearchTerm] = useState(initialLeadIdFilter ?? "");
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [filterStatus, setFilterStatus] = useState<string[]>(
     initialStatusFilter ?? [],
   );
@@ -309,6 +311,18 @@ export default function LeadsManager({
       tokens,
     };
   }, []);
+  const deferredSearchQuery = useMemo(
+    () => parseSearchQuery(deferredSearchTerm),
+    [deferredSearchTerm, parseSearchQuery],
+  );
+  const scheduleExportTask = useCallback((task: () => void) => {
+    if (typeof window === "undefined") {
+      task();
+      return;
+    }
+
+    window.setTimeout(task, 0);
+  }, []);
 
   const fetchContractsForLeads = useCallback(
     async (leadIds: string[]) => {
@@ -505,7 +519,7 @@ export default function LeadsManager({
       );
     }
 
-    const { freeText, tokens } = parseSearchQuery(searchTerm);
+    const { freeText, tokens } = deferredSearchQuery;
 
     if (freeText) {
       const lowerSearch = freeText.toLowerCase();
@@ -682,7 +696,7 @@ export default function LeadsManager({
     return sorted;
   }, [
     leads,
-    searchTerm,
+    deferredSearchQuery,
     filterStatus,
     filterResponsavel,
     filterOrigem,
@@ -697,7 +711,6 @@ export default function LeadsManager({
     filterProximoRetornoTo,
     isObserver,
     isOriginVisibleToObserver,
-    parseSearchQuery,
     showArchived,
     sortDirection,
     sortField,
@@ -875,53 +888,55 @@ export default function LeadsManager({
         return;
       }
 
-      const headers = [
-        "ID",
-        "Nome",
-        "Telefone",
-        "Telefone (WhatsApp)",
-        "E-mail",
-        "Status",
-        "Origem",
-        "Tipo de contratação",
-        "Responsável",
-        "Cidade",
-        "Próximo retorno",
-        "Último contato",
-        "Criado em",
-        "Tags",
-        "Canal",
-        "Observações",
-      ];
-
-      const rows = leadsToExport.map((lead) => {
-        const phoneDigits = normalizePhoneNumber(lead.telefone);
-        const whatsappNumber = phoneDigits ? `55${phoneDigits}` : "";
-
-        return [
-          lead.id || "",
-          lead.nome_completo || "",
-          lead.telefone || "",
-          whatsappNumber,
-          lead.email || "",
-          lead.status || "",
-          lead.origem || "",
-          lead.tipo_contratacao || "",
-          lead.responsavel || "",
-          lead.cidade || "",
-          formatDateForExport(lead.proximo_retorno),
-          formatDateForExport(lead.ultimo_contato),
-          formatDateForExport(lead.data_criacao ?? lead.created_at),
-          Array.isArray(lead.tags) ? lead.tags.join(", ") : "",
-          lead.canal || "",
-          lead.observacoes?.trim() || "",
+      scheduleExportTask(() => {
+        const headers = [
+          "ID",
+          "Nome",
+          "Telefone",
+          "Telefone (WhatsApp)",
+          "E-mail",
+          "Status",
+          "Origem",
+          "Tipo de contratação",
+          "Responsável",
+          "Cidade",
+          "Próximo retorno",
+          "Último contato",
+          "Criado em",
+          "Tags",
+          "Canal",
+          "Observações",
         ];
-      });
 
-      const today = new Date().toISOString().slice(0, 10);
-      downloadXlsx(`leads-${fileLabel}-${today}.xlsx`, headers, rows, "Leads");
+        const rows = leadsToExport.map((lead) => {
+          const phoneDigits = normalizePhoneNumber(lead.telefone);
+          const whatsappNumber = phoneDigits ? `55${phoneDigits}` : "";
+
+          return [
+            lead.id || "",
+            lead.nome_completo || "",
+            lead.telefone || "",
+            whatsappNumber,
+            lead.email || "",
+            lead.status || "",
+            lead.origem || "",
+            lead.tipo_contratacao || "",
+            lead.responsavel || "",
+            lead.cidade || "",
+            formatDateForExport(lead.proximo_retorno),
+            formatDateForExport(lead.ultimo_contato),
+            formatDateForExport(lead.data_criacao ?? lead.created_at),
+            Array.isArray(lead.tags) ? lead.tags.join(", ") : "",
+            lead.canal || "",
+            lead.observacoes?.trim() || "",
+          ];
+        });
+
+        const today = new Date().toISOString().slice(0, 10);
+        downloadXlsx(`leads-${fileLabel}-${today}.xlsx`, headers, rows, "Leads");
+      });
     },
-    [formatDateForExport, normalizePhoneNumber],
+    [formatDateForExport, normalizePhoneNumber, scheduleExportTask],
   );
 
   const handleExportSelectedLeads = useCallback(() => {

@@ -40,6 +40,26 @@ export default function LeadKanbanBoard({
         .sort((a, b) => a.ordem - b.ordem),
     [leadStatuses],
   );
+  const leadsByStatusName = useMemo(() => {
+    const grouped = new Map<string, Lead[]>();
+
+    statusColumns.forEach((status) => {
+      grouped.set(status.nome, []);
+    });
+
+    localLeads.forEach((lead) => {
+      if (lead.arquivado || !lead.status) {
+        return;
+      }
+
+      const current = grouped.get(lead.status);
+      if (current) {
+        current.push(lead);
+      }
+    });
+
+    return grouped;
+  }, [localLeads, statusColumns]);
 
   const restrictedOriginIdsForObservers = useMemo(
     () =>
@@ -157,7 +177,13 @@ export default function LeadKanbanBoard({
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("leads.kanban.wip.v1", JSON.stringify(wipLimits));
+    const timeoutId = window.setTimeout(() => {
+      localStorage.setItem("leads.kanban.wip.v1", JSON.stringify(wipLimits));
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [wipLimits]);
 
   const handleDrop = async (newStatusId: string) => {
@@ -225,14 +251,6 @@ export default function LeadKanbanBoard({
     }
 
     setDraggedLead(null);
-  };
-
-  const getLeadsByStatus = (statusId: string) => {
-    const statusObj = statusColumns.find((status) => status.id === statusId);
-    const statusName = statusObj?.nome;
-    return localLeads.filter(
-      (lead) => lead.status === statusName && !lead.arquivado,
-    );
   };
 
   const getWipLimit = (statusId: string) => wipLimits[statusId] ?? 0;
@@ -352,7 +370,7 @@ export default function LeadKanbanBoard({
         <div className="overflow-x-auto pb-4 snap-x snap-mandatory">
           <div className="flex min-w-max gap-4">
             {statusColumns.map((column) => {
-              const columnLeads = getLeadsByStatus(column.id);
+              const columnLeads = leadsByStatusName.get(column.nome) ?? [];
               const chipColor = column.cor || "#b85c1f";
               const wipLimit = getWipLimit(column.id);
               const isOverLimit = wipLimit > 0 && columnLeads.length > wipLimit;

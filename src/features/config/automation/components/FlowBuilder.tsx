@@ -358,6 +358,7 @@ export default function FlowBuilder({
   const [isExporting, setIsExporting] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(false);
   const reactFlowWrapperRef = useRef<HTMLDivElement | null>(null);
+  const graphSyncTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const root = reactFlowWrapperRef.current?.closest(".painel-theme");
@@ -396,8 +397,8 @@ export default function FlowBuilder({
     }
   }, [baseGraph, flow.id, initializedFlowId, setNodes, setEdges]);
 
-  useEffect(() => {
-    const graph: AutoContactFlowGraph = {
+  const buildCurrentGraph = useCallback(
+    (): AutoContactFlowGraph => ({
       nodes: nodes.map(toGraphNode),
       edges: edges.map((edge) => ({
         id: edge.id,
@@ -407,9 +408,27 @@ export default function FlowBuilder({
         sourceHandle: edge.sourceHandle ?? undefined,
         targetHandle: edge.targetHandle ?? undefined,
       })),
+    }),
+    [edges, nodes],
+  );
+
+  useEffect(() => {
+    if (graphSyncTimeoutRef.current !== null) {
+      window.clearTimeout(graphSyncTimeoutRef.current);
+    }
+
+    graphSyncTimeoutRef.current = window.setTimeout(() => {
+      graphSyncTimeoutRef.current = null;
+      onChangeGraph(buildCurrentGraph());
+    }, 120);
+
+    return () => {
+      if (graphSyncTimeoutRef.current !== null) {
+        window.clearTimeout(graphSyncTimeoutRef.current);
+        graphSyncTimeoutRef.current = null;
+      }
     };
-    onChangeGraph(graph);
-  }, [nodes, edges, onChangeGraph]);
+  }, [buildCurrentGraph, onChangeGraph]);
 
   const handleConnect = useCallback(
     (connection: Connection) =>

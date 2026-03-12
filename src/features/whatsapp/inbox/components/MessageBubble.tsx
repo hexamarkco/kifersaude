@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2 } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from '../../shared/components/WhatsAppFormattedText';
@@ -93,6 +93,57 @@ export type MessagePayload = MediaPayload & {
   [key: string]: unknown;
 };
 
+function areReactionsEqual(
+  left?: Array<{ emoji: string; count: number }>,
+  right?: Array<{ emoji: string; count: number }>,
+) {
+  if (left === right) {
+    return true;
+  }
+
+  if (!left || !right || left.length !== right.length) {
+    return false;
+  }
+
+  return left.every(
+    (reaction, index) =>
+      reaction.emoji === right[index]?.emoji &&
+      reaction.count === right[index]?.count,
+  );
+}
+
+function areMessageBubblePropsEqual(
+  prev: MessageBubbleProps,
+  next: MessageBubbleProps,
+) {
+  return (
+    prev.id === next.id &&
+    prev.chatId === next.chatId &&
+    prev.body === next.body &&
+    prev.type === next.type &&
+    prev.direction === next.direction &&
+    prev.timestamp === next.timestamp &&
+    prev.ackStatus === next.ackStatus &&
+    prev.sendState === next.sendState &&
+    prev.errorMessage === next.errorMessage &&
+    prev.hasMedia === next.hasMedia &&
+    prev.payload === next.payload &&
+    areReactionsEqual(prev.reactions, next.reactions) &&
+    prev.fromName === next.fromName &&
+    prev.isDeleted === next.isDeleted &&
+    prev.deletedAt === next.deletedAt &&
+    prev.editCount === next.editCount &&
+    prev.editedAt === next.editedAt &&
+    prev.originalBody === next.originalBody &&
+    Boolean(prev.onReply) === Boolean(next.onReply) &&
+    Boolean(prev.onEdit) === Boolean(next.onEdit) &&
+    Boolean(prev.onReact) === Boolean(next.onReact) &&
+    Boolean(prev.onRetryFailed) === Boolean(next.onRetryFailed) &&
+    Boolean(prev.onDismissFailed) === Boolean(next.onDismissFailed) &&
+    Boolean(prev.onTranscriptionSaved) === Boolean(next.onTranscriptionSaved)
+  );
+}
+
 const MESSAGE_TIME_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
   timeZone: SAO_PAULO_TIMEZONE,
   hour: '2-digit',
@@ -133,7 +184,7 @@ function resolveAspectRatio(primary?: MediaPayload | null, fallback?: MediaPaylo
   return width / height;
 }
 
-export function MessageBubble({
+function MessageBubbleComponent({
   id,
   chatId,
   body,
@@ -1421,3 +1472,8 @@ export function MessageBubble({
     </div>
   );
 }
+
+export const MessageBubble = memo(
+  MessageBubbleComponent,
+  areMessageBubblePropsEqual,
+);

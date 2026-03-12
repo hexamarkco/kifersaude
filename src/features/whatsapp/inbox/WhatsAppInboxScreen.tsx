@@ -122,6 +122,7 @@ export default function WhatsAppInboxScreen() {
   const [selectedChat, setSelectedChat] = useState<WhatsAppChat | null>(null);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [loading, setLoading] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
@@ -3343,7 +3344,7 @@ export default function WhatsAppInboxScreen() {
     visibleChats,
     unreadQueue,
   } = useMemo(() => {
-    const normalizedSearchQuery = normalizeSearchText(searchQuery);
+    const normalizedSearchQuery = normalizeSearchText(deferredSearchQuery);
     const workspaceChats = chats.filter((chat) => !isStatusChat(chat));
     const chatsMatchingSearch = workspaceChats.filter((chat) => {
       if (!normalizedSearchQuery) return true;
@@ -3461,8 +3462,8 @@ export default function WhatsAppInboxScreen() {
     chatOnlyUnread,
     chatListPresentationById,
     chats,
+    deferredSearchQuery,
     prioritizeUnread,
-    searchQuery,
     showArchived,
   ]); // eslint-disable-line react-hooks/exhaustive-deps
 

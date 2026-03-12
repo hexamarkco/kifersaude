@@ -436,6 +436,8 @@ export default function WhatsAppTab() {
   const shouldScrollOnChatChangeRef = useRef(false);
   const pendingInitialScrollMessageIdRef = useRef<string | null>(null);
   const lastRenderedMessageIdRef = useRef<string | null>(null);
+  const pendingMessageIdsBelowRef = useRef<Set<string>>(new Set());
+  const messagesViewportNearBottomRef = useRef(true);
   const activeMessagesLoadIdRef = useRef(0);
   const activeChatsLoadIdRef = useRef(0);
   const lastGroupNamesSyncAtRef = useRef(0);
@@ -1955,6 +1957,8 @@ const sortChatsByLatest = (
       setReplyToMessage(null);
       setEditMessage(null);
       setPendingMessagesBelow(0);
+      pendingMessageIdsBelowRef.current.clear();
+      messagesViewportNearBottomRef.current = true;
       shouldScrollOnChatChangeRef.current = true;
       lastRenderedMessageIdRef.current = null;
 
@@ -1978,6 +1982,8 @@ const sortChatsByLatest = (
     setHasOlderMessages(false);
     setLoadedMessagesCount(0);
     setPendingMessagesBelow(0);
+    pendingMessageIdsBelowRef.current.clear();
+    messagesViewportNearBottomRef.current = true;
     lastRenderedMessageIdRef.current = null;
     setReplyToMessage(null);
     setEditMessage(null);
@@ -2053,11 +2059,17 @@ const sortChatsByLatest = (
 
     if (shouldScrollOnChatChangeRef.current) {
       shouldScrollOnChatChangeRef.current = false;
+      pendingMessageIdsBelowRef.current.clear();
+      setPendingMessagesBelow(0);
       lastRenderedMessageIdRef.current = lastRenderedMessageId;
       requestAnimationFrame(() => {
         const targetMessageId = pendingInitialScrollMessageIdRef.current;
         pendingInitialScrollMessageIdRef.current = null;
         if (targetMessageId && scrollMessageIntoView(targetMessageId, 'auto')) {
+          requestAnimationFrame(() => {
+            syncMessagesViewportBottomState();
+            syncPendingMessagesBelow();
+          });
           return;
         }
         scrollToBottom('auto');
@@ -2067,12 +2079,39 @@ const sortChatsByLatest = (
 
     if (!selectedChat) {
       lastRenderedMessageIdRef.current = null;
+      pendingMessageIdsBelowRef.current.clear();
+      messagesViewportNearBottomRef.current = true;
       setPendingMessagesBelow(0);
       return;
     }
 
-    if (lastRenderedMessageId && lastRenderedMessageIdRef.current && lastRenderedMessageId !== lastRenderedMessageIdRef.current) {
-      setPendingMessagesBelow((current) => current + 1);
+    const previousLastRenderedMessageId = lastRenderedMessageIdRef.current;
+    const previousLastRenderedMessageIndex = previousLastRenderedMessageId
+      ? visibleMessages.findIndex((message) => message.id === previousLastRenderedMessageId)
+      : -1;
+    const appendedMessages =
+      previousLastRenderedMessageIndex >= 0 ? visibleMessages.slice(previousLastRenderedMessageIndex + 1) : [];
+    const appendedInboundMessages = appendedMessages.filter((message) => message.direction === 'inbound');
+
+    if (appendedMessages.length > 0 && messagesViewportNearBottomRef.current) {
+      pendingMessageIdsBelowRef.current.clear();
+      setPendingMessagesBelow(0);
+      requestAnimationFrame(() => {
+        scrollToBottom('auto');
+        requestAnimationFrame(() => {
+          syncMessagesViewportBottomState();
+          syncPendingMessagesBelow();
+        });
+      });
+    } else if (appendedInboundMessages.length > 0) {
+      requestAnimationFrame(() => {
+        appendedInboundMessages.forEach((message) => {
+          if (!isMessageVisibleInViewport(message.id)) {
+            pendingMessageIdsBelowRef.current.add(message.id);
+          }
+        });
+        syncPendingMessagesBelow();
+      });
     }
 
     lastRenderedMessageIdRef.current = lastRenderedMessageId;
@@ -2096,16 +2135,57 @@ const sortChatsByLatest = (
   }, [messages, loadedMessagesCount, hasOlderMessages]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    messagesViewportNearBottomRef.current = true;
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
-  const handleMessagesViewportScroll = () => {
+  const getMessagesViewportDistanceFromBottom = () => {
     const viewport = messagesViewportRef.current;
-    if (!viewport) return;
-    const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-    if (distanceFromBottom <= 40) {
+    if (!viewport) return 0;
+    return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+  };
+
+  const syncMessagesViewportBottomState = () => {
+    const nearBottom = getMessagesViewportDistanceFromBottom() <= 40;
+    messagesViewportNearBottomRef.current = nearBottom;
+    return nearBottom;
+  };
+
+  const isMessageVisibleInViewport = (messageId: string) => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return false;
+
+    const target = viewport.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
+    if (!target) return false;
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+
+    return targetRect.bottom > viewportRect.top + 8 && targetRect.top < viewportRect.bottom - 8;
+  };
+
+  const syncPendingMessagesBelow = () => {
+    const nextPending = new Set<string>();
+
+    pendingMessageIdsBelowRef.current.forEach((messageId) => {
+      if (!isMessageVisibleInViewport(messageId)) {
+        nextPending.add(messageId);
+      }
+    });
+
+    pendingMessageIdsBelowRef.current = nextPending;
+    setPendingMessagesBelow(nextPending.size);
+  };
+
+  const handleMessagesViewportScroll = () => {
+    const nearBottom = syncMessagesViewportBottomState();
+    if (nearBottom) {
+      pendingMessageIdsBelowRef.current.clear();
       setPendingMessagesBelow(0);
+      return;
     }
+
+    syncPendingMessagesBelow();
   };
 
   const scheduleUnreadCountsRefresh = (delayMs: number = 250) => {
@@ -6474,6 +6554,7 @@ const groupReminderQuickOpenItems = (items: ReminderQuickOpenItem[]) => {
                     size="sm"
                     className="pointer-events-auto h-auto rounded-full px-3 py-1.5 text-xs shadow-lg"
                     onClick={() => {
+                      pendingMessageIdsBelowRef.current.clear();
                       scrollToBottom();
                       setPendingMessagesBelow(0);
                     }}

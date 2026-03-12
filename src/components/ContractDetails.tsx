@@ -11,6 +11,7 @@ import ModalShell from './ui/ModalShell';
 import Button from './ui/Button';
 import { panelInputBaseClass, panelInputStateClasses } from './ui/standards';
 import { formatDateOnly } from '../lib/dateUtils';
+import { getContractBonusSummary } from '../lib/contractBonus';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { toast } from '../lib/toast';
 
@@ -344,10 +345,9 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const defaultBonusLives = totalLivesInRecords > 0
     ? bonusEligibleLivesFromRecords
     : (contract.vidas || 1);
-  const bonusEligibleLives = contract.vidas_elegiveis_bonus ?? defaultBonusLives;
-  const bonusTotal = contract.bonus_por_vida_valor
-    ? (contract.bonus_por_vida_aplicado ? contract.bonus_por_vida_valor * bonusEligibleLives : contract.bonus_por_vida_valor)
-    : null;
+  const bonusSummary = getContractBonusSummary(contract, defaultBonusLives);
+  const bonusEligibleLives = bonusSummary.eligibleLives;
+  const bonusTotal = bonusSummary.total || null;
 
   const documentsByEntity = useMemo(() => {
     const map = new Map<string, ContractDocument[]>();
@@ -464,14 +464,23 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
 
   useEffect(() => {
     if (!contract.bonus_por_vida_aplicado) return;
-    if (totalLivesInRecords === 0) return;
-    if (contract.vidas_elegiveis_bonus === bonusEligibleLivesFromRecords) return;
+
+    if (bonusSummary.hasConfigurations) {
+      if (contract.vidas_elegiveis_bonus === bonusSummary.eligibleLives) return;
+    } else {
+      if (totalLivesInRecords === 0) return;
+      if (contract.vidas_elegiveis_bonus === bonusEligibleLivesFromRecords) return;
+    }
 
     const updateEligibleLives = async () => {
       try {
         const { error } = await supabase
           .from('contracts')
-          .update({ vidas_elegiveis_bonus: bonusEligibleLivesFromRecords })
+          .update({
+            vidas_elegiveis_bonus: bonusSummary.hasConfigurations
+              ? bonusSummary.eligibleLives
+              : bonusEligibleLivesFromRecords,
+          })
           .eq('id', contract.id);
         if (error) throw error;
         onUpdate();
@@ -483,6 +492,8 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
     updateEligibleLives();
   }, [
     bonusEligibleLivesFromRecords,
+    bonusSummary.eligibleLives,
+    bonusSummary.hasConfigurations,
     contract.bonus_por_vida_aplicado,
     contract.id,
     contract.vidas_elegiveis_bonus,
@@ -847,15 +858,28 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
               </div>
             )}
 
-            {contract.bonus_por_vida_aplicado && contract.bonus_por_vida_valor && (
+            {contract.bonus_por_vida_aplicado && bonusTotal && (
               <div className={detailDividerClass}>
                 <div className="comm-card comm-card-success p-4">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className={detailBodyStrongClass}>Bonus por vida:</span>
-                    <span className={detailMetricValueClass}>
-                      R$ {contract.bonus_por_vida_valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
+                  {bonusSummary.hasConfigurations ? (
+                    <div className="mb-3 space-y-2">
+                      {bonusSummary.configurations.map((item, index) => (
+                        <div key={item.id} className="flex items-center justify-between rounded-lg border border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2">
+                          <span className={detailBodyTextClass}>Faixa {index + 1}: {item.quantidade} vida(s)</span>
+                          <span className={detailHeadingTextClass}>
+                            R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className={detailBodyStrongClass}>Bonus por vida:</span>
+                      <span className={detailMetricValueClass}>
+                        R$ {(bonusSummary.legacyValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className={detailBodyTextClass}>Vidas elegiveis:</span>
                     <span className={detailHeadingTextClass}>{bonusEligibleLives}</span>

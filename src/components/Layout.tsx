@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { supabase, Reminder, Contract } from '../lib/supabase';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
+import { getContractBonusSummary } from '../lib/contractBonus';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
@@ -327,15 +328,12 @@ export default function Layout({
         }
 
         const bonusDate = toDate(contract.previsao_pagamento_bonificacao);
-        if (bonusDate && contract.bonus_por_vida_valor && getDateKey(bonusDate) === todayKey) {
-          const vidas = contract.vidas_elegiveis_bonus ?? contract.vidas ?? 1;
-          const totalBonus = contract.bonus_por_vida_aplicado
-            ? contract.bonus_por_vida_valor * vidas
-            : contract.bonus_por_vida_valor;
+        const bonusSummary = getContractBonusSummary(contract);
+        if (bonusDate && bonusSummary.total > 0 && getDateKey(bonusDate) === todayKey) {
           payments.push({
             id: `${contract.id}-bonus`,
             type: 'bonificacao',
-            value: totalBonus,
+            value: bonusSummary.total,
             contract,
           });
         }

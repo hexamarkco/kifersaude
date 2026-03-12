@@ -4,6 +4,7 @@ import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, DollarSign, Gift 
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { cx } from '../../lib/cx';
 import { Contract, supabase } from '../../lib/supabase';
+import { getContractBonusSummary } from '../../lib/contractBonus';
 import Button from '../ui/Button';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { CommissionCalendarSkeleton } from '../ui/panelSkeletons';
@@ -243,18 +244,15 @@ export default function CommissionCalendar() {
       }
 
       const bonusDate = toDate(contract.previsao_pagamento_bonificacao);
+      const bonusSummary = getContractBonusSummary(contract);
 
-      if (bonusDate && contract.bonus_por_vida_valor) {
-        const vidas = contract.vidas_elegiveis_bonus ?? contract.vidas ?? 1;
-        const totalBonus = contract.bonus_por_vida_aplicado
-          ? contract.bonus_por_vida_valor * vidas
-          : contract.bonus_por_vida_valor;
+      if (bonusDate && bonusSummary.total > 0) {
 
         mappedEvents.push({
           id: `${contract.id}-bonus`,
           date: getDateKey(bonusDate),
           type: 'bonificacao',
-          value: totalBonus,
+          value: bonusSummary.total,
           contract,
         });
       }

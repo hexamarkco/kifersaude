@@ -2174,8 +2174,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           label="Leads Ativos"
           value={`${leadsAtivos} / ${totalLeads}`}
           icon={Users}
-          gradient="from-blue-500 to-blue-600"
-          iconBg="bg-gradient-to-br from-blue-500 to-blue-600"
+          tone="brand"
           subtitle="Em negociação / Total"
           contextLabel="Base"
           contextValue={`${totalLeads} leads`}
@@ -2187,8 +2186,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             label="Contratos Ativos"
             value={contratosAtivos.length}
             icon={FileText}
-            gradient="from-teal-500 to-cyan-600"
-            iconBg="bg-gradient-to-br from-teal-500 to-cyan-600"
+            tone="earth"
             subtitle="Vigentes"
             contextLabel="Status"
             contextValue="Em operacao"
@@ -2201,8 +2199,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             label="Comissão Prevista"
             value={comissaoTotal}
             icon={DollarSign}
-            gradient="from-emerald-500 to-green-600"
-            iconBg="bg-gradient-to-br from-emerald-500 to-green-600"
+            tone="forest"
             prefix="R$"
             subtitle="Mensal"
             contextLabel="Recorte"
@@ -2223,8 +2220,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
           label="Taxa de Conversão"
           value={conversionRate}
           icon={Target}
-          gradient="from-violet-500 to-purple-600"
-          iconBg="bg-gradient-to-br from-violet-500 to-purple-600"
+          tone="plum"
           suffix="%"
           subtitle="Leads com status Convertido"
           contextLabel="Leitura"
@@ -2236,8 +2232,7 @@ export default function Dashboard({ onNavigateToTab, onCreateReminder }: Dashboa
             label="Ticket Médio"
             value={ticketMedio}
             icon={Activity}
-            gradient="from-orange-500 to-red-600"
-            iconBg="bg-gradient-to-br from-orange-500 to-red-600"
+            tone="copper"
             prefix="R$"
             subtitle="Por contrato"
             contextLabel="Base"

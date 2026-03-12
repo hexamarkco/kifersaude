@@ -4,7 +4,7 @@ import { cx } from '../../lib/cx';
 import Button from './Button';
 import Input from './Input';
 
-type PickerType = 'date' | 'datetime-local';
+type PickerType = 'date' | 'datetime-local' | 'month';
 
 type DateTimePickerProps = {
   value: string;
@@ -19,6 +19,7 @@ type DateTimePickerProps = {
 };
 
 const WEEKDAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
+const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
@@ -27,13 +28,20 @@ const toDateOnlyStamp = (date: Date) => new Date(date.getFullYear(), date.getMon
 const parseValue = (value: string, type: PickerType): Date | null => {
   if (!value) return null;
 
-  const parsed = type === 'date' ? new Date(`${value}T00:00:00`) : new Date(value);
+  const parsed =
+    type === 'date'
+      ? new Date(`${value}T00:00:00`)
+      : type === 'month'
+        ? new Date(`${value}-01T00:00:00`)
+        : new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
 const formatDateValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
 const formatDateTimeLocalValue = (date: Date) => `${formatDateValue(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
+const formatMonthValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
 
 const clampNumber = (value: number, min: number, max: number) => {
   if (Number.isNaN(value)) return min;
@@ -42,6 +50,9 @@ const clampNumber = (value: number, min: number, max: number) => {
 
 const addMonths = (date: Date, monthDelta: number) =>
   new Date(date.getFullYear(), date.getMonth() + monthDelta, 1);
+
+const addYears = (date: Date, yearDelta: number) =>
+  new Date(date.getFullYear() + yearDelta, date.getMonth(), 1);
 
 const getMonthCalendarDays = (monthDate: Date) => {
   const year = monthDate.getFullYear();
@@ -118,7 +129,14 @@ export default function DateTimePicker({
 
   const displayValue = useMemo(() => {
     if (!selectedDate) {
-      return placeholder ?? (type === 'date' ? 'Selecionar data' : 'Selecionar data e hora');
+      return placeholder ?? (type === 'datetime-local' ? 'Selecionar data e hora' : 'Selecionar data');
+    }
+
+    if (type === 'month') {
+      return selectedDate.toLocaleDateString('pt-BR', {
+        month: 'long',
+        year: 'numeric',
+      });
     }
 
     const datePart = selectedDate.toLocaleDateString('pt-BR');
@@ -158,6 +176,11 @@ export default function DateTimePicker({
       return;
     }
 
+    if (type === 'month') {
+      onChange(formatMonthValue(nextDate));
+      return;
+    }
+
     onChange(formatDateTimeLocalValue(nextDate));
   };
 
@@ -175,9 +198,31 @@ export default function DateTimePicker({
 
     applyDate(baseDate);
 
-    if (type === 'date') {
+    if (type !== 'datetime-local') {
       setIsOpen(false);
     }
+  };
+
+  const isMonthDisabled = (monthIndex: number) => {
+    const candidate = new Date(viewDate.getFullYear(), monthIndex, 1).getTime();
+    if (minDate && candidate < new Date(minDate.getFullYear(), minDate.getMonth(), 1).getTime()) {
+      return true;
+    }
+    if (maxDate && candidate > new Date(maxDate.getFullYear(), maxDate.getMonth(), 1).getTime()) {
+      return true;
+    }
+    return false;
+  };
+
+  const handleSelectMonth = (monthIndex: number) => {
+    if (disabled || isMonthDisabled(monthIndex)) {
+      return;
+    }
+
+    const nextDate = new Date(viewDate.getFullYear(), monthIndex, 1);
+    applyDate(nextDate);
+    setViewDate(nextDate);
+    setIsOpen(false);
   };
 
   const ensureDateForTime = () => {
@@ -214,6 +259,8 @@ export default function DateTimePicker({
   const selectedMinutes = selectedDate?.getMinutes() ?? 0;
   const selectedDayStamp = selectedDate ? toDateOnlyStamp(selectedDate) : null;
   const todayStamp = toDateOnlyStamp(new Date());
+  const selectedMonthKey = selectedDate ? `${selectedDate.getFullYear()}-${selectedDate.getMonth()}` : null;
+  const currentMonthKey = `${new Date().getFullYear()}-${new Date().getMonth()}`;
 
   return (
     <div className={cx('relative', className)} ref={containerRef}>
@@ -246,7 +293,11 @@ export default function DateTimePicker({
 
       {isOpen && (
         <div
-          className="panel-glass-panel absolute left-0 right-0 z-40 mt-2 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"
+          className={cx(
+            'panel-glass-panel absolute left-0 z-40 mt-2 rounded-xl border border-[color:rgba(191,113,33,0.35)] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(255,247,237,0.98))] p-3 shadow-xl shadow-[rgba(56,28,12,0.18)]',
+            'w-[min(24rem,calc(100vw-2rem))]',
+            type === 'month' && 'w-[min(18rem,calc(100vw-2rem))]',
+          )}
           role="dialog"
           aria-label="Selecionar data"
         >
@@ -255,8 +306,8 @@ export default function DateTimePicker({
               variant="ghost"
               size="sm"
               className="h-8 w-8 rounded-lg p-0"
-              onClick={() => setViewDate((current) => addMonths(current, -1))}
-              aria-label="Mes anterior"
+              onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, -1) : addMonths(current, -1)))}
+              aria-label={type === 'month' ? 'Ano anterior' : 'Mes anterior'}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -267,50 +318,82 @@ export default function DateTimePicker({
               variant="ghost"
               size="sm"
               className="h-8 w-8 rounded-lg p-0"
-              onClick={() => setViewDate((current) => addMonths(current, 1))}
-              aria-label="Proximo mes"
+              onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, 1) : addMonths(current, 1)))}
+              aria-label={type === 'month' ? 'Proximo ano' : 'Proximo mes'}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="mb-2 grid grid-cols-7 gap-1 text-center">
-            {WEEKDAY_LABELS.map((label) => (
-              <span key={label} className="py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                {label}
-              </span>
-            ))}
-          </div>
+          {type === 'month' ? (
+            <div className="grid grid-cols-3 gap-2">
+              {MONTH_LABELS.map((label, monthIndex) => {
+                const monthKey = `${viewDate.getFullYear()}-${monthIndex}`;
+                const isSelected = selectedMonthKey === monthKey;
+                const isCurrentMonth = currentMonthKey === monthKey;
+                const disabledMonth = isMonthDisabled(monthIndex);
 
-          <div className="grid grid-cols-7 gap-1">
-            {calendarDays.map((day) => {
-              const isSameMonth = day.getMonth() === viewDate.getMonth();
-              const dayStamp = toDateOnlyStamp(day);
-              const isSelected = selectedDayStamp === dayStamp;
-              const isToday = dayStamp === todayStamp;
-              const isDisabledDay = isDayDisabled(day);
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => handleSelectMonth(monthIndex)}
+                    disabled={disabledMonth}
+                    className={cx(
+                      'h-11 rounded-xl border text-sm font-semibold transition-all',
+                      'focus:outline-none focus:ring-2 focus:ring-amber-500',
+                      isSelected && 'border-orange-500 bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-sm shadow-orange-900/20',
+                      !isSelected && isCurrentMonth && 'border-amber-200 bg-amber-50 text-amber-900',
+                      !isSelected && !isCurrentMonth && 'border-[color:rgba(191,113,33,0.18)] bg-white/90 text-slate-700 hover:border-amber-300 hover:bg-amber-50/80',
+                      disabledMonth && 'cursor-not-allowed opacity-40 hover:border-[color:rgba(191,113,33,0.18)] hover:bg-white/90',
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 grid grid-cols-7 gap-1 text-center">
+                {WEEKDAY_LABELS.map((label) => (
+                  <span key={label} className="py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    {label}
+                  </span>
+                ))}
+              </div>
 
-              return (
-                <button
-                  key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
-                  type="button"
-                  onClick={() => handleSelectDay(day)}
-                  disabled={isDisabledDay}
-                  className={cx(
-                    'h-9 rounded-lg text-sm font-medium transition-colors',
-                    'focus:outline-none focus:ring-2 focus:ring-amber-500',
-                    isSelected && 'bg-amber-600 text-white hover:bg-amber-700',
-                    !isSelected && isToday && 'bg-slate-100 text-slate-800',
-                    !isSelected && !isToday && isSameMonth && 'text-slate-700 hover:bg-slate-100',
-                    !isSelected && !isToday && !isSameMonth && 'text-slate-400 hover:bg-slate-100',
-                    isDisabledDay && 'cursor-not-allowed opacity-40 hover:bg-transparent',
-                  )}
-                >
-                  {day.getDate()}
-                </button>
-              );
-            })}
-          </div>
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((day) => {
+                  const isSameMonth = day.getMonth() === viewDate.getMonth();
+                  const dayStamp = toDateOnlyStamp(day);
+                  const isSelected = selectedDayStamp === dayStamp;
+                  const isToday = dayStamp === todayStamp;
+                  const isDisabledDay = isDayDisabled(day);
+
+                  return (
+                    <button
+                      key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
+                      type="button"
+                      onClick={() => handleSelectDay(day)}
+                      disabled={isDisabledDay}
+                      className={cx(
+                        'h-9 rounded-lg text-sm font-medium transition-colors',
+                        'focus:outline-none focus:ring-2 focus:ring-amber-500',
+                        isSelected && 'bg-amber-600 text-white hover:bg-amber-700',
+                        !isSelected && isToday && 'bg-slate-100 text-slate-800',
+                        !isSelected && !isToday && isSameMonth && 'text-slate-700 hover:bg-slate-100',
+                        !isSelected && !isToday && !isSameMonth && 'text-slate-400 hover:bg-slate-100',
+                        isDisabledDay && 'cursor-not-allowed opacity-40 hover:bg-transparent',
+                      )}
+                    >
+                      {day.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           {type === 'datetime-local' && (
             <div className="mt-3 border-t border-slate-200 pt-3">
@@ -355,16 +438,16 @@ export default function DateTimePicker({
                   const now = new Date();
                   applyDate(now);
                   setViewDate(new Date(now.getFullYear(), now.getMonth(), 1));
-                  if (type === 'date') {
+                  if (type !== 'datetime-local') {
                     setIsOpen(false);
                   }
                 }}
               >
-                Hoje
+                {type === 'month' ? 'Este mês' : 'Hoje'}
               </Button>
 
               <Button variant="primary" size="sm" onClick={() => setIsOpen(false)}>
-                Concluido
+                Concluído
               </Button>
             </div>
           </div>

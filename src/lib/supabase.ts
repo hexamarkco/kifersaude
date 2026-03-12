@@ -127,6 +127,7 @@ export type Contract = {
   previsao_pagamento_bonificacao?: string;
   vidas?: number;
   vidas_elegiveis_bonus?: number | null;
+  bonus_por_vida_configuracoes?: ContractBonusConfiguration[] | null;
   bonus_por_vida_valor?: number;
   bonus_por_vida_aplicado?: boolean;
   responsavel: string;
@@ -255,6 +256,12 @@ export type AccessProfile = {
   is_admin: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type ContractBonusConfiguration = {
+  id: string;
+  quantidade: number;
+  valor: number;
 };
 
 export type SystemSettings = {

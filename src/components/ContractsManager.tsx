@@ -16,6 +16,7 @@ import { ContractsPageSkeleton } from './ui/panelSkeletons';
 import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading';
 import { PanelAdaptiveLoadingFrame } from './ui/panelLoading';
 import { toast } from '../lib/toast';
+import { getContractBonusSummary } from '../lib/contractBonus';
 
 type ContractsManagerProps = {
   leadToConvert?: Lead | null;
@@ -372,12 +373,8 @@ export default function ContractsManager({
   };
 
   const getBonusValue = (contract: Contract) => {
-    if (!contract.bonus_por_vida_valor) return null;
-
-    const vidas = contract.vidas_elegiveis_bonus ?? contract.vidas ?? 1;
-    return contract.bonus_por_vida_aplicado
-      ? contract.bonus_por_vida_valor * vidas
-      : contract.bonus_por_vida_valor;
+    const summary = getContractBonusSummary(contract);
+    return summary.total > 0 ? summary.total : null;
   };
 
   const totalPages = Math.max(1, Math.ceil(filteredContracts.length / itemsPerPage));

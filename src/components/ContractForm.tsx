@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages } from '../lib/supabase';
+import { supabase, Contract, Lead, ContractHolder, ContractValueAdjustment, Operadora, fetchAllPages, ContractBonusConfiguration } from '../lib/supabase';
+import { getContractBonusSummary, normalizeBonusConfigurations } from '../lib/contractBonus';
 import { normalizeSentenceCase, normalizeTitleCase } from '../lib/textNormalization';
 import { User, Plus, Trash2, TrendingUp, TrendingDown, AlertCircle, Search, Calendar, Building2 } from 'lucide-react';
 import HolderForm from './HolderForm';
@@ -26,6 +27,12 @@ type CommissionInstallment = {
   data_pagamento: string;
 };
 
+type BonusDistributionRow = {
+  id: string;
+  quantidade: string;
+  valor: string;
+};
+
 type ContractFormProps = {
   contract: Contract | null;
   leadToConvert?: Lead | null;
@@ -34,6 +41,35 @@ type ContractFormProps = {
 };
 
 export default function ContractForm({ contract, leadToConvert, onClose, onSave }: ContractFormProps) {
+  const createBonusRow = (quantidade = '', valor = ''): BonusDistributionRow => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    quantidade,
+    valor,
+  });
+
+  const getInitialBonusRows = (): BonusDistributionRow[] => {
+    const configured = normalizeBonusConfigurations(contract?.bonus_por_vida_configuracoes);
+    if (configured.length > 0) {
+      return configured.map((item) => ({
+        id: item.id,
+        quantidade: item.quantidade.toString(),
+        valor: formatCurrencyFromNumber(item.valor),
+      }));
+    }
+
+    if (contract?.bonus_por_vida_aplicado && contract?.bonus_por_vida_valor) {
+      const summary = getContractBonusSummary(contract);
+      return [
+        createBonusRow(
+          summary.eligibleLives.toString(),
+          formatCurrencyFromNumber(contract.bonus_por_vida_valor)
+        ),
+      ];
+    }
+
+    return [];
+  };
+
   const [leads, setLeads] = useState<Lead[]>([]);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const { options, leadStatuses } = useConfig();
@@ -76,6 +112,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         }))
       : []
   );
+  const [bonusDistribution, setBonusDistribution] = useState<BonusDistributionRow[]>(() => getInitialBonusRows());
   const [saving, setSaving] = useState(false);
   const [showHolderForm, setShowHolderForm] = useState(false);
   const [contractId, setContractId] = useState<string | null>(contract?.id || null);
@@ -271,6 +308,12 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
             ? formatCurrencyFromNumber(operadora.bonus_padrao)
             : prev.bonus_por_vida_valor,
       }));
+      if (operadora.bonus_por_vida && operadora.bonus_padrao > 0) {
+        setBonusDistribution((current) => {
+          if (current.length > 0) return current;
+          return [createBonusRow(formData.vidas || '1', formatCurrencyFromNumber(operadora.bonus_padrao))];
+        });
+      }
     } else {
       setFormData(prev => ({ ...prev, operadora: operadoraNome }));
     }
@@ -328,11 +371,49 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
   };
 
   const vidasNumber = parseFloat(formData.vidas || '1') || 1;
-  const eligibleLivesNumber = formData.vidas_elegiveis_bonus
-    ? Math.max(0, parseFloat(formData.vidas_elegiveis_bonus || '0') || 0)
-    : vidasNumber;
-  const bonusPorVidaValor = parseFormattedNumber(formData.bonus_por_vida_valor || '');
-  const bonusTotal = bonusPorVidaValor * eligibleLivesNumber;
+  const normalizedBonusDistribution = bonusDistribution
+    .map((row) => ({
+      id: row.id,
+      quantidade: Math.max(0, parseInt(row.quantidade || '0', 10) || 0),
+      valor: parseFormattedNumber(row.valor || ''),
+    }))
+    .filter((row) => row.quantidade > 0 && row.valor > 0);
+  const distributedBonusLives = normalizedBonusDistribution.reduce((total, row) => total + row.quantidade, 0);
+  const distributedBonusTotal = normalizedBonusDistribution.reduce((total, row) => total + (row.quantidade * row.valor), 0);
+  const livesWithoutBonus = Math.max(0, vidasNumber - distributedBonusLives);
+  const bonusTotal = distributedBonusTotal;
+
+  const handleToggleBonus = (checked: boolean) => {
+    setFormData((prev) => ({ ...prev, bonus_por_vida_aplicado: checked }));
+    if (checked && bonusDistribution.length === 0) {
+      setBonusDistribution([createBonusRow(formData.vidas || '1', formData.bonus_por_vida_valor || '')]);
+    }
+  };
+
+  const handleBonusRowChange = (id: string, field: keyof Omit<BonusDistributionRow, 'id'>, value: string) => {
+    setBonusDistribution((current) =>
+      current.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              [field]: field === 'valor' ? formatCurrencyInput(value) : value.replace(/\D/g, ''),
+            }
+          : row
+      )
+    );
+  };
+
+  const handleAddBonusRow = () => {
+    const remainingLives = Math.max(0, vidasNumber - distributedBonusLives);
+    setBonusDistribution((current) => [
+      ...current,
+      createBonusRow(remainingLives > 0 ? String(remainingLives) : '', ''),
+    ]);
+  };
+
+  const handleRemoveBonusRow = (id: string) => {
+    setBonusDistribution((current) => current.filter((row) => row.id !== id));
+  };
 
   const handleAddInstallment = () => {
     setCommissionInstallments([
@@ -432,6 +513,27 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         }
       }
 
+      if (formData.bonus_por_vida_aplicado) {
+        if (normalizedBonusDistribution.length === 0) {
+          toast.warning('Adicione ao menos uma faixa de bônus por vida.');
+          setSaving(false);
+          return;
+        }
+
+        if (distributedBonusLives > vidasNumber) {
+          toast.warning('A soma das vidas com bônus não pode ultrapassar a quantidade total de vidas.');
+          setSaving(false);
+          return;
+        }
+      }
+
+      const bonusConfigurationsPayload: ContractBonusConfiguration[] = normalizedBonusDistribution.map((row) => ({
+        id: row.id,
+        quantidade: row.quantidade,
+        valor: row.valor,
+      }));
+      const singleBonusValue = bonusConfigurationsPayload.length === 1 ? bonusConfigurationsPayload[0].valor : null;
+
       const dataToSave = {
         codigo_contrato: codigo,
         lead_id: formData.lead_id || null,
@@ -453,10 +555,15 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
         previsao_recebimento_comissao: formData.previsao_recebimento_comissao || null,
         previsao_pagamento_bonificacao: formData.previsao_pagamento_bonificacao || null,
         vidas: formData.vidas ? parseInt(formData.vidas, 10) : 1,
-        vidas_elegiveis_bonus: formData.vidas_elegiveis_bonus
-          ? parseInt(formData.vidas_elegiveis_bonus, 10)
+        vidas_elegiveis_bonus: formData.bonus_por_vida_aplicado
+          ? distributedBonusLives
           : null,
-        bonus_por_vida_valor: formData.bonus_por_vida_valor ? parseFormattedNumber(formData.bonus_por_vida_valor) : null,
+        bonus_por_vida_configuracoes: formData.bonus_por_vida_aplicado
+          ? bonusConfigurationsPayload
+          : [],
+        bonus_por_vida_valor: formData.bonus_por_vida_aplicado
+          ? singleBonusValue
+          : null,
         bonus_por_vida_aplicado: formData.bonus_por_vida_aplicado,
         responsavel: formData.responsavel,
         observacoes_internas: formData.observacoes_internas || null,
@@ -813,12 +920,11 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Fim da fidelidade
                 </label>
-                <input
+                <DateTimePicker
                   type="month"
                   value={formData.data_renovacao}
-                  onChange={(e) => setFormData({ ...formData, data_renovacao: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                  placeholder="MM/AAAA"
+                  onChange={(value) => setFormData({ ...formData, data_renovacao: value })}
+                  placeholder="Selecionar mês"
                 />
               </div>
 
@@ -979,15 +1085,23 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 <label className="block text-sm font-medium text-slate-700 mb-3">
                   Multiplicador de Comissão
                 </label>
-                <div className="rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-4">
+                <div
+                  className="rounded-2xl border p-4 sm:p-5"
+                  style={{
+                    borderColor: 'var(--panel-border,#d4c0a7)',
+                    background:
+                      'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 97%, white 3%) 0%, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 70%, var(--panel-surface,#fffdfa) 30%) 100%)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                  }}
+                >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm text-slate-600">Valor do multiplicador:</span>
+                    <span className="text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>Valor do multiplicador:</span>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-amber-700">
+                      <span className="text-2xl font-bold" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }}>
                         {formData.comissao_multiplicador}x
                       </span>
                       {parseFloat(formData.comissao_multiplicador) !== 2.8 && (
-                        <AlertCircle className="w-5 h-5 text-amber-500" />
+                        <AlertCircle className="w-5 h-5" style={{ color: 'var(--panel-accent-border,#d5a25c)' }} />
                       )}
                     </div>
                   </div>
@@ -1000,10 +1114,16 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                     onChange={(e) =>
                       setFormData({ ...formData, comissao_multiplicador: e.target.value })
                     }
-                    className="w-full h-2 appearance-none cursor-pointer rounded-lg bg-amber-200 accent-amber-600"
+                    className="w-full cursor-pointer appearance-none rounded-full"
+                    style={{
+                      height: '0.6rem',
+                      background:
+                        'linear-gradient(90deg, color-mix(in srgb, var(--panel-text,#1c1917) 92%, transparent) 0%, color-mix(in srgb, var(--panel-text,#1c1917) 92%, transparent) 100%)',
+                      accentColor: 'var(--panel-accent-strong,#b85c1f)',
+                    }}
                   />
                   <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <span className="text-xs text-slate-500">Digite o multiplicador</span>
+                    <span className="text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>Digite o multiplicador</span>
                     <input
                       type="number"
                       min="0"
@@ -1014,12 +1134,18 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                       onChange={(e) =>
                         setFormData({ ...formData, comissao_multiplicador: e.target.value })
                       }
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-transparent focus:ring-2 focus:ring-amber-500 sm:w-28"
+                      className="w-full rounded-xl px-3 py-1.5 text-sm sm:w-28"
+                      style={{
+                        border: '1px solid var(--panel-border,#d4c0a7)',
+                        background: 'var(--panel-surface-muted,#f8f2e8)',
+                        color: 'var(--panel-text,#1c1917)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+                      }}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+                  <div className="mt-2 flex items-center justify-between text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                     <span>0x</span>
-                    <span className="text-teal-600 font-medium">2.8x (padrão)</span>
+                    <span className="font-medium" style={{ color: 'var(--panel-accent-border,#d5a25c)' }}>2.8x (padrão)</span>
                     <span>10x</span>
                   </div>
                 </div>
@@ -1198,9 +1324,119 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   </div>
                 )}
               </div>
+              {false && formData.bonus_por_vida_aplicado && (
+                <div className="rounded-2xl border border-[var(--panel-border-subtle,#e8d9ca)] bg-[linear-gradient(135deg,rgba(255,247,237,0.96),rgba(255,251,245,0.92))] p-4 shadow-sm xl:col-span-2">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Distribuição do bônus</p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Cadastre uma faixa por valor. Exemplo: 1 vida com R$ 200,00 e outra com R$ 120,00.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleAddBonusRow}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Adicionar faixa
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {bonusDistribution.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-5 text-sm text-slate-600">
+                        Nenhuma faixa criada ainda. Adicione uma linha para informar quantas vidas recebem cada valor.
+                      </div>
+                    ) : (
+                      bonusDistribution.map((row, index) => {
+                        const subtotal = (parseInt(row.quantidade || '0', 10) || 0) * parseFormattedNumber(row.valor || '');
+
+                        return (
+                          <div key={row.id} className="grid grid-cols-1 gap-3 rounded-xl border border-white/80 bg-white/80 p-3 md:grid-cols-[minmax(0,150px)_minmax(0,200px)_minmax(0,1fr)_auto]">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
+                                Vidas
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={row.quantidade}
+                                onChange={(e) => handleBonusRowChange(row.id, 'quantidade', e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                placeholder="0"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
+                                Bônus por vida
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={row.valor}
+                                onChange={(e) => handleBonusRowChange(row.id, 'valor', e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                placeholder="0,00"
+                              />
+                            </div>
+
+                            <div className="flex flex-col justify-center rounded-lg bg-[rgba(120,53,15,0.05)] px-4 py-2">
+                              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                                Subtotal da faixa {index + 1}
+                              </span>
+                              <span className="text-base font-semibold text-slate-900">
+                                R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+
+                            <div className="flex items-end">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveBonusRow(row.id)}
+                                disabled={bonusDistribution.length === 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Vidas com bônus</p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900">{distributedBonusLives}</p>
+                    </div>
+                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Vidas sem bônus</p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900">{livesWithoutBonus}</p>
+                    </div>
+                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Total previsto</p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900">
+                        R$ {distributedBonusTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {distributedBonusLives > vidasNumber && (
+                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      <AlertCircle className="h-4 w-4" />
+                      A soma das faixas ultrapassa a quantidade total de vidas do contrato.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Quantidade de Vidas *
@@ -1215,16 +1451,16 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                   placeholder="1"
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  Titular + Dependentes
+                  Titular + dependentes
                 </p>
               </div>
 
               <div>
-                <label className="flex items-center space-x-2 cursor-pointer pt-6">
-                    <Checkbox
-                      checked={formData.bonus_por_vida_aplicado}
-                      onChange={(e) => setFormData({ ...formData, bonus_por_vida_aplicado: e.target.checked })}
-                    />
+                <label className="mt-4 flex items-center space-x-2 cursor-pointer">
+                  <Checkbox
+                    checked={formData.bonus_por_vida_aplicado}
+                    onChange={(e) => handleToggleBonus(e.target.checked)}
+                  />
                   <span className="text-sm font-medium text-slate-700">Aplicar Bônus por Vida</span>
                 </label>
                 <p className="text-xs text-slate-500 mt-1">
@@ -1232,7 +1468,7 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                 </p>
               </div>
 
-              {formData.bonus_por_vida_aplicado && (
+              {false && formData.bonus_por_vida_aplicado && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -1271,6 +1507,116 @@ export default function ContractForm({ contract, leadToConvert, onClose, onSave 
                       Total: R$ {bonusTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </p>
                   </div>
+                </div>
+              )}
+              {formData.bonus_por_vida_aplicado && (
+                <div className="rounded-2xl border border-[var(--panel-border-subtle,#e8d9ca)] bg-[linear-gradient(135deg,rgba(255,247,237,0.96),rgba(255,251,245,0.92))] p-4 shadow-sm xl:col-span-2">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Distribuição do bônus</p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Cadastre uma faixa por valor. Exemplo: 1 vida com R$ 200,00 e outra com R$ 120,00.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleAddBonusRow}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Adicionar faixa
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {bonusDistribution.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-slate-300 bg-white/70 px-4 py-5 text-sm text-slate-600">
+                        Nenhuma faixa criada ainda. Adicione uma linha para informar quantas vidas recebem cada valor.
+                      </div>
+                    ) : (
+                      bonusDistribution.map((row, index) => {
+                        const subtotal = (parseInt(row.quantidade || '0', 10) || 0) * parseFormattedNumber(row.valor || '');
+
+                        return (
+                          <div key={row.id} className="grid grid-cols-1 gap-3 rounded-xl border border-white/80 bg-white/80 p-3 md:grid-cols-[minmax(0,150px)_minmax(0,200px)_minmax(0,1fr)_auto]">
+                            <div>
+                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
+                                Vidas
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={row.quantidade}
+                                onChange={(e) => handleBonusRowChange(row.id, 'quantidade', e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                placeholder="0"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
+                                Bônus por vida
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={row.valor}
+                                onChange={(e) => handleBonusRowChange(row.id, 'valor', e.target.value)}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                placeholder="0,00"
+                              />
+                            </div>
+
+                            <div className="flex flex-col justify-center rounded-lg bg-[rgba(120,53,15,0.05)] px-4 py-2">
+                              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                                Subtotal da faixa {index + 1}
+                              </span>
+                              <span className="text-base font-semibold text-slate-900">
+                                R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+
+                            <div className="flex items-end">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveBonusRow(row.id)}
+                                disabled={bonusDistribution.length === 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Vidas com bônus</p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900">{distributedBonusLives}</p>
+                    </div>
+                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Vidas sem bônus</p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900">{livesWithoutBonus}</p>
+                    </div>
+                    <div className="rounded-xl border border-[rgba(120,53,15,0.08)] bg-white/80 px-4 py-3">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">Total previsto</p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900">
+                        R$ {distributedBonusTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {distributedBonusLives > vidasNumber && (
+                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      <AlertCircle className="h-4 w-4" />
+                      A soma das faixas ultrapassa a quantidade total de vidas do contrato.
+                    </div>
+                  )}
                 </div>
               )}
             </div>

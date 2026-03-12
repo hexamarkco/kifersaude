@@ -379,8 +379,8 @@ export default function HolderForm({
       >
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
           <div className="grid grid-cols-1 gap-6">
-            <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-              <h4 className="mb-4 text-base font-semibold text-slate-900">Informacoes Pessoais</h4>
+            <section className="rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#efe6d8)]/80 p-4">
+              <h4 className="mb-4 text-base font-semibold text-[var(--panel-text,#1c1917)]">Informacoes Pessoais</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="Nome Completo" required className="md:col-span-3">
                   <Input
@@ -408,7 +408,7 @@ export default function HolderForm({
                       onClick={() => void handleConsultarCPF()}
                       disabled={cpfLoading || !formData.cpf || !formData.data_nascimento}
                       aria-label="Buscar CPF"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-amber-600 disabled:opacity-50"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--panel-text-subtle,#ab927b)] transition-colors hover:text-[var(--panel-accent-strong,#b85c1f)] disabled:opacity-50"
                     >
                       <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
                     </button>
@@ -433,7 +433,7 @@ export default function HolderForm({
                   />
                 </Field>
 
-                <div className="md:col-span-3 rounded-xl border border-slate-200 bg-white p-4">
+                <div className="md:col-span-3 rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] p-4">
                   <label className="flex items-start gap-3">
                     <Checkbox
                       size="md"
@@ -443,10 +443,10 @@ export default function HolderForm({
                       }
                     />
                     <span>
-                      <span className="block text-sm font-medium text-slate-800">
+                      <span className="block text-sm font-medium text-[var(--panel-text,#1c1917)]">
                         Aplicar bonus por vida
                       </span>
-                      <span className="mt-1 block text-xs text-slate-500">
+                      <span className="mt-1 block text-xs text-[var(--panel-text-muted,#876f5c)]">
                         Marque se este titular e elegivel ao bonus por vida deste contrato.
                       </span>
                     </span>
@@ -517,8 +517,8 @@ export default function HolderForm({
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-              <h4 className="mb-4 text-base font-semibold text-slate-900">Endereco</h4>
+            <section className="rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#efe6d8)]/80 p-4">
+              <h4 className="mb-4 text-base font-semibold text-[var(--panel-text,#1c1917)]">Endereco</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="CEP">
                   <div className="relative">
@@ -536,7 +536,7 @@ export default function HolderForm({
                       type="button"
                       onClick={() => void handleCepSearch()}
                       aria-label="Buscar CEP"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-amber-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--panel-text-subtle,#ab927b)] transition-colors hover:text-[var(--panel-accent-strong,#b85c1f)]"
                     >
                       <Search className={`h-5 w-5 ${loadingCep ? 'animate-pulse' : ''}`} />
                     </button>
@@ -618,8 +618,8 @@ export default function HolderForm({
             </section>
 
             {isCNPJModalidade && (
-              <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <h4 className="mb-4 text-base font-semibold text-slate-900">
+              <section className="rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#efe6d8)]/80 p-4">
+                <h4 className="mb-4 text-base font-semibold text-[var(--panel-text,#1c1917)]">
                   Informacoes Empresariais
                 </h4>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -691,7 +691,7 @@ export default function HolderForm({
             )}
           </div>
 
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-200 pt-6">
+          <div className="mt-6 flex items-center justify-end gap-3 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-6">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancelar
             </Button>

@@ -5,6 +5,7 @@ import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
 import { cx } from '../../lib/cx';
 import { Contract, supabase } from '../../lib/supabase';
 import { getContractBonusSummary } from '../../lib/contractBonus';
+import { getCommissionInstallmentSummary } from '../../lib/contractCommission';
 import Button from '../ui/Button';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { CommissionCalendarSkeleton } from '../ui/panelSkeletons';
@@ -166,22 +167,12 @@ export default function CommissionCalendar() {
       if (commissionDate && contract.comissao_prevista) {
         const totalCommission = contract.comissao_prevista;
         const isUpfront = contract.comissao_recebimento_adiantado ?? true;
-        const customInstallments = Array.isArray(contract.comissao_parcelas)
-          ? contract.comissao_parcelas
-          : [];
+        const customInstallments = getCommissionInstallmentSummary(contract).installments;
 
         if (!isUpfront && customInstallments.length > 0) {
-          const totalPercentual = customInstallments.reduce(
-            (sum, parcel) => sum + (parcel.percentual || 0),
-            0,
-          );
-
           customInstallments.forEach((parcel, index) => {
             const parcelDate = toDate(parcel.data_pagamento) || commissionDate;
-            const parcelValue =
-              totalPercentual > 0
-                ? roundCurrency((totalCommission * (parcel.percentual || 0)) / totalPercentual)
-                : roundCurrency(totalCommission);
+            const parcelValue = roundCurrency(parcel.resolvedValue || totalCommission);
 
             mappedEvents.push({
               id: `${contract.id}-comissao-${index + 1}`,

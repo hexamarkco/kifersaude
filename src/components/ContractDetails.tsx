@@ -12,6 +12,7 @@ import Button from './ui/Button';
 import { panelInputBaseClass, panelInputStateClasses } from './ui/standards';
 import { formatDateOnly } from '../lib/dateUtils';
 import { getContractBonusSummary } from '../lib/contractBonus';
+import { getCommissionInstallmentSummary } from '../lib/contractCommission';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import { toast } from '../lib/toast';
 
@@ -87,21 +88,8 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const commissionInstallments = Array.isArray(contract.comissao_parcelas) ? contract.comissao_parcelas : [];
-  const totalCommissionPercent = commissionInstallments.reduce(
-    (sum, parcel) => sum + (parcel.percentual || 0),
-    0
-  );
   const commissionBaseValue = contract.comissao_prevista || 0;
-
-  const calculateInstallmentValue = (percentual: number) => {
-    if (commissionBaseValue > 0 && totalCommissionPercent > 0) {
-      return (commissionBaseValue * percentual) / totalCommissionPercent;
-    }
-    if (contract.mensalidade_total) {
-      return (contract.mensalidade_total * percentual) / 100;
-    }
-    return 0;
-  };
+  const commissionSummary = getCommissionInstallmentSummary(contract);
 
   const parseDate = (date?: string | null) => {
     if (!date) return null;
@@ -816,28 +804,25 @@ export default function ContractDetails({ contract, onClose, onUpdate, onDelete 
                     </div>
                     {commissionInstallments.length > 0 ? (
                       <div className="comm-card comm-card-warning space-y-2 p-3">
-                        {commissionInstallments.map((parcel, index) => (
+                        {commissionSummary.installments.map((parcel, index) => (
                           <div key={`parcel-${index}`} className="flex items-center justify-between text-xs text-[var(--panel-text-soft,#5b4635)]">
                             <div className="flex items-center gap-2">
                               <span className={detailHeadingTextClass}>Parcela {index + 1}</span>
-                              <span>{parcel.percentual?.toFixed(2)}%</span>
+                              <span>
+                                R$ {parcel.resolvedValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
                               {parcel.data_pagamento && (
                                 <span>Pagamento: {formatDateOnly(parcel.data_pagamento)}</span>
                               )}
-                              <span className={detailHeadingTextClass}>
-                                R$ {calculateInstallmentValue(parcel.percentual || 0).toLocaleString('pt-BR', {
-                                  minimumFractionDigits: 2,
-                                })}
-                              </span>
                             </div>
                           </div>
                         ))}
                         <div className="flex items-center justify-between border-t border-[var(--panel-border-subtle,#e7dac8)] pt-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
                           <span className={detailHeadingTextClass}>Total</span>
                           <span className={detailHeadingTextClass}>
-                            {totalCommissionPercent.toFixed(2)}% - R$ {commissionBaseValue.toLocaleString('pt-BR', {
+                            R$ {commissionSummary.totalResolvedValue.toLocaleString('pt-BR', {
                               minimumFractionDigits: 2,
                             })}
                           </span>

@@ -23,6 +23,7 @@ import {
 import { supabase, Reminder, Contract } from '../lib/supabase';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { getContractBonusSummary } from '../lib/contractBonus';
+import { getCommissionInstallmentSummary } from '../lib/contractCommission';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
@@ -264,24 +265,12 @@ export default function Layout({
         if (commissionDate && contract.comissao_prevista) {
           const totalCommission = contract.comissao_prevista;
           const isUpfront = contract.comissao_recebimento_adiantado ?? true;
-          const customInstallments: { percentual: number; data_pagamento: string | null }[] = Array.isArray(
-            contract.comissao_parcelas
-          )
-            ? (contract.comissao_parcelas as { percentual: number; data_pagamento: string | null }[])
-            : [];
+          const customInstallments = getCommissionInstallmentSummary(contract).installments;
 
           if (!isUpfront && customInstallments.length > 0) {
-            const totalPercentual = customInstallments.reduce(
-              (sum, parcel) => sum + (parcel.percentual || 0),
-              0
-            );
-
             customInstallments.forEach((parcel, index) => {
               const parcelDate = toDate(parcel.data_pagamento) || commissionDate;
-              const parcelValue =
-                totalPercentual > 0
-                  ? roundCurrency((totalCommission * (parcel.percentual || 0)) / totalPercentual)
-                  : roundCurrency(totalCommission);
+              const parcelValue = roundCurrency(parcel.resolvedValue || totalCommission);
 
               if (getDateKey(parcelDate) === todayKey) {
                 payments.push({

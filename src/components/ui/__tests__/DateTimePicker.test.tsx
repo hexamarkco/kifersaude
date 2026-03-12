@@ -1,8 +1,34 @@
 import assert from 'node:assert/strict';
-import { act } from 'react';
+import { act, useState } from 'react';
 import { render } from '@testing-library/react';
 import { test } from 'vitest';
 import DateTimePicker, { normalizeYearInput, parseCommittedYearInput } from '../DateTimePicker';
+
+const renderControlledPicker = (initialValue: string, type: 'date' | 'month' | 'datetime-local' = 'date') => {
+  const state = { current: initialValue };
+
+  function ControlledPicker() {
+    const [value, setValue] = useState(initialValue);
+
+    state.current = value;
+
+    return (
+      <DateTimePicker
+        value={value}
+        onChange={(nextValue) => {
+          state.current = nextValue;
+          setValue(nextValue);
+        }}
+        type={type}
+      />
+    );
+  }
+
+  return {
+    ...render(<ControlledPicker />),
+    getValue: () => state.current,
+  };
+};
 
 const setInputValue = (element: HTMLInputElement, value: string) => {
   const descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
@@ -60,6 +86,38 @@ test('allows direct typing of a distant year without forcing intermediate clamps
 
   const dialog = document.body.querySelector('[role="dialog"]');
   assert.ok(dialog?.textContent?.includes('2010'));
+
+  unmount();
+});
+
+test('lets users type a full date directly into the main input', () => {
+  const { container, getValue, unmount } = renderControlledPicker('2026-03-12', 'date');
+
+  const triggerInput = container.querySelector('input[aria-haspopup="dialog"]');
+  assert.ok(triggerInput instanceof HTMLInputElement);
+
+  focusInput(triggerInput);
+  setInputValue(triggerInput, '12032010');
+  assert.equal(triggerInput.value, '12/03/2010');
+
+  blurInput(triggerInput);
+  assert.equal(getValue(), '2010-03-12');
+
+  unmount();
+});
+
+test('lets users type a month directly into the main input', () => {
+  const { container, getValue, unmount } = renderControlledPicker('2026-03', 'month');
+
+  const triggerInput = container.querySelector('input[aria-haspopup="dialog"]');
+  assert.ok(triggerInput instanceof HTMLInputElement);
+
+  focusInput(triggerInput);
+  setInputValue(triggerInput, '201005');
+  assert.equal(triggerInput.value, '2010-05');
+
+  blurInput(triggerInput);
+  assert.equal(getValue(), '2010-05');
 
   unmount();
 });

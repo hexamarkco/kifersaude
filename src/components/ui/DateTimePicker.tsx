@@ -5,6 +5,7 @@ import { cx } from '../../lib/cx';
 import { calculateFloatingPanelPosition, type FloatingPanelPosition } from '../../lib/floatingPosition';
 import Button from './Button';
 import Input from './Input';
+import { panelInputBaseClass, panelInputSizeClasses, panelInputStateClasses } from './standards';
 
 type PickerType = 'date' | 'datetime-local' | 'month';
 
@@ -26,7 +27,7 @@ const YEAR_MIN = 1900;
 const YEAR_MAX = 2100;
 
 const pad = (value: number) => String(value).padStart(2, '0');
-
+const onlyDigits = (value: string) => value.replace(/\D/g, '');
 const toDateOnlyStamp = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 
 const parseValue = (value: string, type: PickerType): Date | null => {
@@ -49,6 +50,58 @@ const formatDateTimeLocalValue = (date: Date) => `${formatDateValue(date)}T${pad
 const formatMonthValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}`;
 
 const formatDateDisplay = (date: Date) => `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+
+const formatDateTimeDisplay = (date: Date) => `${formatDateDisplay(date)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+
+const formatDateDraftInput = (value: string) => {
+  const digits = onlyDigits(value).slice(0, 8);
+
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4, 8)}`;
+};
+
+const formatMonthDraftInput = (value: string) => {
+  const digits = onlyDigits(value).slice(0, 6);
+
+  if (digits.length <= 4) return digits;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}`;
+};
+
+const formatDateTimeDraftInput = (value: string) => {
+  const digits = onlyDigits(value).slice(0, 12);
+  const datePart = formatDateDraftInput(digits.slice(0, 8));
+  const timeDigits = digits.slice(8, 12);
+
+  if (!timeDigits) return datePart;
+  if (timeDigits.length <= 2) return `${datePart} ${timeDigits}`;
+  return `${datePart} ${timeDigits.slice(0, 2)}:${timeDigits.slice(2, 4)}`;
+};
+
+const formatPickerDraftInput = (value: string, type: PickerType) => {
+  if (type === 'month') return formatMonthDraftInput(value);
+  if (type === 'datetime-local') return formatDateTimeDraftInput(value);
+  return formatDateDraftInput(value);
+};
+
+const formatPickerInputValue = (date: Date, type: PickerType) => {
+  if (type === 'month') return formatMonthValue(date);
+  if (type === 'datetime-local') return formatDateTimeDisplay(date);
+  return formatDateDisplay(date);
+};
+
+const getPickerInputPlaceholder = (type: PickerType) => {
+  if (type === 'month') return 'AAAA-MM';
+  if (type === 'datetime-local') return 'DD/MM/AAAA HH:MM';
+  return 'DD/MM/AAAA';
+};
+
+const getPickerAriaLabel = (type: PickerType, placeholder?: string) => {
+  if (placeholder) return placeholder;
+  if (type === 'month') return 'Selecionar mês';
+  if (type === 'datetime-local') return 'Selecionar data e hora';
+  return 'Selecionar data';
+};
 
 const clampNumber = (value: number, min: number, max: number) => {
   if (Number.isNaN(value)) return min;
@@ -74,11 +127,9 @@ export const parseCommittedYearInput = (value: string, minYear = YEAR_MIN, maxYe
   return clampNumber(Number(digits), minYear, Math.max(minYear, maxYear));
 };
 
-const addMonths = (date: Date, monthDelta: number) =>
-  new Date(date.getFullYear(), date.getMonth() + monthDelta, 1);
+const addMonths = (date: Date, monthDelta: number) => new Date(date.getFullYear(), date.getMonth() + monthDelta, 1);
 
-const addYears = (date: Date, yearDelta: number) =>
-  new Date(date.getFullYear() + yearDelta, date.getMonth(), 1);
+const addYears = (date: Date, yearDelta: number) => new Date(date.getFullYear() + yearDelta, date.getMonth(), 1);
 
 const getMonthCalendarDays = (monthDate: Date) => {
   const year = monthDate.getFullYear();
@@ -107,10 +158,12 @@ export default function DateTimePicker({
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState<FloatingPanelPosition | null>(null);
   const [manualInputValue, setManualInputValue] = useState('');
+  const [isEditingInput, setIsEditingInput] = useState(false);
   const [yearInputValue, setYearInputValue] = useState('');
   const [isEditingYear, setIsEditingYear] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const selectedDate = useMemo(() => parseValue(value, type), [type, value]);
@@ -129,6 +182,11 @@ export default function DateTimePicker({
   }, [selectedDate]);
 
   useEffect(() => {
+    if (isEditingInput) return;
+    setManualInputValue(selectedDate ? formatPickerInputValue(selectedDate, type) : '');
+  }, [isEditingInput, selectedDate, type]);
+
+  useEffect(() => {
     if (isEditingYear) return;
     setYearInputValue(String(viewDate.getFullYear()));
   }, [isEditingYear, viewDate]);
@@ -138,20 +196,6 @@ export default function DateTimePicker({
     setIsEditingYear(false);
     setYearInputValue(String(viewDate.getFullYear()));
   }, [isOpen, viewDate]);
-
-  useEffect(() => {
-    if (type === 'date') {
-      setManualInputValue(selectedDate ? formatDateDisplay(selectedDate) : '');
-      return;
-    }
-
-    if (type === 'month') {
-      setManualInputValue(selectedDate ? formatMonthValue(selectedDate) : '');
-      return;
-    }
-
-    setManualInputValue('');
-  }, [selectedDate, type]);
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -210,37 +254,19 @@ export default function DateTimePicker({
     [viewDate],
   );
 
-  const displayValue = useMemo(() => {
-    if (!selectedDate) {
-      return placeholder ?? (type === 'datetime-local' ? 'Selecionar data e hora' : 'Selecionar data');
-    }
-
-    if (type === 'month') {
-      return selectedDate.toLocaleDateString('pt-BR', {
-        month: 'long',
-        year: 'numeric',
-      });
-    }
-
-    const datePart = selectedDate.toLocaleDateString('pt-BR');
-    if (type === 'date') {
-      return datePart;
-    }
-
-    const timePart = selectedDate.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    return `${datePart} ${timePart}`;
-  }, [placeholder, selectedDate, type]);
-
   const calendarDays = useMemo(() => getMonthCalendarDays(viewDate), [viewDate]);
 
   const isDayDisabled = (day: Date) => {
     const dayStamp = toDateOnlyStamp(day);
     if (minDate && dayStamp < toDateOnlyStamp(minDate)) return true;
     if (maxDate && dayStamp > toDateOnlyStamp(maxDate)) return true;
+    return false;
+  };
+
+  const isMonthDisabled = (monthIndex: number, year = viewDate.getFullYear()) => {
+    const candidate = new Date(year, monthIndex, 1).getTime();
+    if (minDate && candidate < new Date(minDate.getFullYear(), minDate.getMonth(), 1).getTime()) return true;
+    if (maxDate && candidate > new Date(maxDate.getFullYear(), maxDate.getMonth(), 1).getTime()) return true;
     return false;
   };
 
@@ -282,13 +308,6 @@ export default function DateTimePicker({
     }
   };
 
-  const isMonthDisabled = (monthIndex: number) => {
-    const candidate = new Date(viewDate.getFullYear(), monthIndex, 1).getTime();
-    if (minDate && candidate < new Date(minDate.getFullYear(), minDate.getMonth(), 1).getTime()) return true;
-    if (maxDate && candidate > new Date(maxDate.getFullYear(), maxDate.getMonth(), 1).getTime()) return true;
-    return false;
-  };
-
   const handleSelectMonth = (monthIndex: number) => {
     if (disabled || isMonthDisabled(monthIndex)) {
       return;
@@ -304,7 +323,6 @@ export default function DateTimePicker({
     const safeYear = clampNumber(nextYear, yearBounds.min, yearBounds.max);
     setViewDate((current) => new Date(safeYear, current.getMonth(), 1));
     setYearInputValue(String(safeYear));
-
     return safeYear;
   };
 
@@ -352,6 +370,18 @@ export default function DateTimePicker({
     return baseDate;
   };
 
+  const ensureDateForTypedDateTime = () => {
+    const baseDate = selectedDate ? new Date(selectedDate) : new Date();
+
+    if (!selectedDate) {
+      baseDate.setHours(9, 0, 0, 0);
+      return baseDate;
+    }
+
+    baseDate.setSeconds(0, 0);
+    return baseDate;
+  };
+
   const handleTimeChange = (part: 'hours' | 'minutes', rawValue: string) => {
     if (rawValue.trim() === '') return;
 
@@ -368,8 +398,15 @@ export default function DateTimePicker({
     applyDate(nextDate);
   };
 
-  const handleManualApply = () => {
+  const resetManualInputValue = () => {
+    setIsEditingInput(false);
+    setManualInputValue(selectedDate ? formatPickerInputValue(selectedDate, type) : '');
+  };
+
+  const commitManualInputValue = () => {
     const nextValue = manualInputValue.trim();
+    setIsEditingInput(false);
+
     if (!nextValue) {
       applyDate(null);
       return;
@@ -377,22 +414,40 @@ export default function DateTimePicker({
 
     if (type === 'month') {
       const match = nextValue.match(/^(\d{4})-(\d{2})$/);
-      if (!match) return;
+      if (!match) {
+        resetManualInputValue();
+        return;
+      }
 
       const [, yearText, monthText] = match;
       const year = Number(yearText);
       const month = Number(monthText);
-      if (month < 1 || month > 12) return;
-
       const nextDate = new Date(year, month - 1, 1);
+
+      if (
+        month < 1 ||
+        month > 12 ||
+        Number.isNaN(nextDate.getTime()) ||
+        nextDate.getFullYear() !== year ||
+        nextDate.getMonth() !== month - 1 ||
+        isMonthDisabled(month - 1, year)
+      ) {
+        resetManualInputValue();
+        return;
+      }
+
       applyDate(nextDate);
       setViewDate(new Date(year, month - 1, 1));
+      setManualInputValue(formatPickerInputValue(nextDate, type));
       return;
     }
 
     if (type === 'date') {
       const match = nextValue.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-      if (!match) return;
+      if (!match) {
+        resetManualInputValue();
+        return;
+      }
 
       const [, dayText, monthText, yearText] = match;
       const day = Number(dayText);
@@ -407,12 +462,56 @@ export default function DateTimePicker({
         nextDate.getDate() !== day ||
         isDayDisabled(nextDate)
       ) {
+        resetManualInputValue();
         return;
       }
 
       applyDate(nextDate);
       setViewDate(new Date(year, month - 1, 1));
+      setManualInputValue(formatPickerInputValue(nextDate, type));
+      return;
     }
+
+    const match = nextValue.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
+    if (!match) {
+      resetManualInputValue();
+      return;
+    }
+
+    const [, dayText, monthText, yearText, hoursText, minutesText] = match;
+    const day = Number(dayText);
+    const month = Number(monthText);
+    const year = Number(yearText);
+    const nextDate = ensureDateForTypedDateTime();
+
+    nextDate.setFullYear(year, month - 1, day);
+
+    if (hoursText && minutesText) {
+      const hours = Number(hoursText);
+      const minutes = Number(minutesText);
+
+      if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        resetManualInputValue();
+        return;
+      }
+
+      nextDate.setHours(hours, minutes, 0, 0);
+    }
+
+    if (
+      Number.isNaN(nextDate.getTime()) ||
+      nextDate.getFullYear() !== year ||
+      nextDate.getMonth() !== month - 1 ||
+      nextDate.getDate() !== day ||
+      isDayDisabled(nextDate)
+    ) {
+      resetManualInputValue();
+      return;
+    }
+
+    applyDate(nextDate);
+    setViewDate(new Date(year, month - 1, 1));
+    setManualInputValue(formatPickerInputValue(nextDate, type));
   };
 
   const selectedHours = selectedDate?.getHours() ?? 9;
@@ -445,42 +544,76 @@ export default function DateTimePicker({
 
   return (
     <div className={cx('relative', className)} ref={containerRef}>
-      <button
-        ref={triggerRef}
-        type="button"
-        disabled={disabled}
-        onClick={() => setIsOpen((current) => !current)}
-        className={cx(
-          'panel-ui-input panel-interactive-glass relative flex h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left shadow-sm transition-all',
-          'focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)]',
-          'disabled:cursor-not-allowed disabled:opacity-60',
-          triggerClassName,
-        )}
-        aria-haspopup="dialog"
-        aria-expanded={isOpen}
-      >
-        <span className="flex min-w-0 items-center gap-2">
+      <div className="relative" ref={triggerRef}>
+        <span className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[var(--panel-text-subtle,#ab927b)]">
           {type === 'datetime-local' ? (
-            <Clock className="h-[18px] w-[18px] flex-shrink-0 text-[var(--panel-text-subtle,#ab927b)]" />
+            <Clock className="h-[18px] w-[18px]" />
           ) : (
-            <CalendarDays className="h-[18px] w-[18px] flex-shrink-0 text-[var(--panel-text-subtle,#ab927b)]" />
+            <CalendarDays className="h-[18px] w-[18px]" />
           )}
-          <span
-            className={cx(
-              'truncate text-sm',
-              selectedDate ? 'font-medium text-[var(--panel-input-text,var(--panel-text-soft))]' : 'text-[var(--panel-text-muted,#876f5c)]',
-            )}
-          >
-            {displayValue}
-          </span>
         </span>
-        <ChevronDown
+
+        <input
+          ref={triggerInputRef}
+          type="text"
+          disabled={disabled}
+          value={manualInputValue}
+          onFocus={() => {
+            setIsEditingInput(true);
+            setIsOpen(true);
+          }}
+          onChange={(event) => {
+            setIsEditingInput(true);
+            setManualInputValue(formatPickerDraftInput(event.target.value, type));
+          }}
+          onBlur={() => commitManualInputValue()}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commitManualInputValue();
+              if (type !== 'datetime-local') {
+                setIsOpen(false);
+              }
+              return;
+            }
+
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              resetManualInputValue();
+              setIsOpen(false);
+              event.currentTarget.blur();
+            }
+          }}
+          placeholder={getPickerInputPlaceholder(type)}
+          aria-label={getPickerAriaLabel(type, placeholder)}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
           className={cx(
-            'h-4 w-4 flex-shrink-0 text-[var(--panel-text-subtle,#ab927b)] transition-transform',
-            isOpen && 'rotate-180',
+            panelInputBaseClass,
+            panelInputSizeClasses.default,
+            panelInputStateClasses.valid,
+            'panel-interactive-glass pl-10 pr-11',
+            manualInputValue && 'font-medium',
+            triggerClassName,
           )}
         />
-      </button>
+
+        <button
+          type="button"
+          disabled={disabled}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            setIsOpen((current) => !current);
+            triggerInputRef.current?.focus();
+          }}
+          className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-[var(--panel-text-subtle,#ab927b)] transition hover:bg-[color:rgba(244,237,227,0.9)] hover:text-[var(--panel-text,#1c1917)] focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={isOpen ? 'Fechar seletor de data' : 'Abrir seletor de data'}
+          aria-haspopup="dialog"
+          aria-expanded={isOpen}
+        >
+          <ChevronDown className={cx('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
+        </button>
+      </div>
 
       {isOpen && position && typeof document !== 'undefined'
         ? createPortal(
@@ -501,236 +634,211 @@ export default function DateTimePicker({
                 role="dialog"
                 aria-label="Selecionar data"
               >
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 rounded-lg p-0"
-                  onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, -1) : addMonths(current, -1)))}
-                  aria-label={type === 'month' ? 'Ano anterior' : 'Mês anterior'}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-
-                <p className="text-sm font-semibold capitalize text-[var(--panel-text,#1c1917)]">{monthLabel}</p>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 rounded-lg p-0"
-                  onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, 1) : addMonths(current, 1)))}
-                  aria-label={type === 'month' ? 'Próximo ano' : 'Próximo mês'}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className={cx('mb-3 grid gap-2', type === 'month' ? 'grid-cols-[1fr_auto]' : 'grid-cols-[1fr_5.5rem]')}>
-                {type !== 'month' ? (
-                  <select
-                    value={viewDate.getMonth()}
-                    onChange={(event) => setViewDate(new Date(viewDate.getFullYear(), Number(event.target.value), 1))}
-                    className="panel-ui-input h-9 rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-3 text-sm text-[var(--panel-input-text,var(--panel-text-soft))] outline-none focus:ring-2 focus:ring-amber-500"
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 rounded-lg p-0"
+                    onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, -1) : addMonths(current, -1)))}
+                    aria-label={type === 'month' ? 'Ano anterior' : 'Mês anterior'}
                   >
-                    {MONTH_LABELS.map((label, index) => (
-                      <option key={label} value={index}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
-                    Escolha o mês
-                  </div>
-                )}
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
 
-                <Input
-                  size="compact"
-                  value={yearInputValue}
-                  onChange={(event) => handleViewYearChange(event.target.value)}
-                  onFocus={(event) => {
-                    setIsEditingYear(true);
-                    event.currentTarget.select();
-                  }}
-                  onBlur={() => commitViewYearInput()}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      event.preventDefault();
-                      commitViewYearInput();
-                      return;
-                    }
+                  <p className="text-sm font-semibold capitalize text-[var(--panel-text,#1c1917)]">{monthLabel}</p>
 
-                    if (event.key === 'Escape') {
-                      event.preventDefault();
-                      resetViewYearInput();
-                      event.currentTarget.blur();
-                      return;
-                    }
-
-                    if (event.key === 'ArrowUp' || event.key === 'PageUp') {
-                      event.preventDefault();
-                      stepViewYear(event.key === 'PageUp' ? 10 : 1);
-                      return;
-                    }
-
-                    if (event.key === 'ArrowDown' || event.key === 'PageDown') {
-                      event.preventDefault();
-                      stepViewYear(event.key === 'PageDown' ? -10 : -1);
-                    }
-                  }}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  maxLength={4}
-                  placeholder="Ano"
-                  aria-label="Ano"
-                />
-              </div>
-
-              {type === 'month' ? (
-                <div className="grid grid-cols-3 gap-2">
-                  {MONTH_LABELS.map((label, monthIndex) => {
-                    const monthKey = `${viewDate.getFullYear()}-${monthIndex}`;
-                    const isSelected = selectedMonthKey === monthKey;
-                    const isCurrentMonth = currentMonthKey === monthKey;
-                    const disabledMonth = isMonthDisabled(monthIndex);
-
-                    return (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => handleSelectMonth(monthIndex)}
-                        disabled={disabledMonth}
-                        className={cx(
-                          'h-11 rounded-xl border text-sm font-semibold transition-all',
-                          'focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)]',
-                          isSelected && 'border-[color:var(--panel-accent-border,#d5a25c)] bg-[var(--panel-accent-hover,#e8c089)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm',
-                          !isSelected && isCurrentMonth && 'border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)]/80 text-[var(--panel-accent-ink,#6f3f16)]',
-                          !isSelected && !isCurrentMonth && 'border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d5a25c)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
-                          disabledMonth && 'cursor-not-allowed opacity-40 hover:border-[var(--panel-border,#d4c0a7)] hover:bg-[var(--panel-surface,#fffdfa)]',
-                        )}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 rounded-lg p-0"
+                    onClick={() => setViewDate((current) => (type === 'month' ? addYears(current, 1) : addMonths(current, 1)))}
+                    aria-label={type === 'month' ? 'Próximo ano' : 'Próximo mês'}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
-              ) : (
-                <>
-                  <div className="mb-2 grid grid-cols-7 gap-1 text-center">
-                    {WEEKDAY_LABELS.map((label) => (
-                      <span key={label} className="py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
-                        {label}
-                      </span>
-                    ))}
-                  </div>
 
-                  <div className="grid grid-cols-7 gap-1">
-                    {calendarDays.map((day) => {
-                      const isSameMonth = day.getMonth() === viewDate.getMonth();
-                      const dayStamp = toDateOnlyStamp(day);
-                      const isSelected = selectedDayStamp === dayStamp;
-                      const isToday = dayStamp === todayStamp;
-                      const isDisabledDay = isDayDisabled(day);
+                <div className={cx('mb-3 grid gap-2', type === 'month' ? 'grid-cols-[1fr_auto]' : 'grid-cols-[1fr_5.5rem]')}>
+                  {type !== 'month' ? (
+                    <select
+                      value={viewDate.getMonth()}
+                      onChange={(event) => setViewDate(new Date(viewDate.getFullYear(), Number(event.target.value), 1))}
+                      className="panel-ui-input h-9 rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-3 text-sm text-[var(--panel-input-text,var(--panel-text-soft))] outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)]"
+                    >
+                      {MONTH_LABELS.map((label, index) => (
+                        <option key={label} value={index}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
+                      Escolha o mês
+                    </div>
+                  )}
+
+                  <Input
+                    size="compact"
+                    value={yearInputValue}
+                    onChange={(event) => handleViewYearChange(event.target.value)}
+                    onFocus={(event) => {
+                      setIsEditingYear(true);
+                      event.currentTarget.select();
+                    }}
+                    onBlur={() => commitViewYearInput()}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        commitViewYearInput();
+                        return;
+                      }
+
+                      if (event.key === 'Escape') {
+                        event.preventDefault();
+                        resetViewYearInput();
+                        event.currentTarget.blur();
+                        return;
+                      }
+
+                      if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+                        event.preventDefault();
+                        stepViewYear(event.key === 'PageUp' ? 10 : 1);
+                        return;
+                      }
+
+                      if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+                        event.preventDefault();
+                        stepViewYear(event.key === 'PageDown' ? -10 : -1);
+                      }
+                    }}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={4}
+                    placeholder="Ano"
+                    aria-label="Ano"
+                  />
+                </div>
+
+                {type === 'month' ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {MONTH_LABELS.map((label, monthIndex) => {
+                      const monthKey = `${viewDate.getFullYear()}-${monthIndex}`;
+                      const isSelected = selectedMonthKey === monthKey;
+                      const isCurrentMonth = currentMonthKey === monthKey;
+                      const disabledMonth = isMonthDisabled(monthIndex);
 
                       return (
                         <button
-                          key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
+                          key={label}
                           type="button"
-                          onClick={() => handleSelectDay(day)}
-                          disabled={isDisabledDay}
+                          onClick={() => handleSelectMonth(monthIndex)}
+                          disabled={disabledMonth}
                           className={cx(
-                            'h-9 rounded-lg text-sm font-medium transition-colors',
+                            'h-11 rounded-xl border text-sm font-semibold transition-all',
                             'focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)]',
-                            isSelected && 'bg-[var(--panel-accent-hover,#e8c089)] text-[var(--panel-accent-ink-strong,#4a2411)] hover:bg-[var(--panel-accent-hover,#e8c089)]',
-                            !isSelected && isToday && 'bg-[var(--panel-surface-soft,#efe6d8)] text-[var(--panel-text,#1c1917)]',
-                            !isSelected && !isToday && isSameMonth && 'text-[var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
-                            !isSelected && !isToday && !isSameMonth && 'text-[var(--panel-text-subtle,#ab927b)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
-                            isDisabledDay && 'cursor-not-allowed opacity-40 hover:bg-transparent',
+                            isSelected && 'border-[color:var(--panel-accent-border,#d5a25c)] bg-[var(--panel-accent-hover,#e8c089)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm',
+                            !isSelected && isCurrentMonth && 'border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)]/80 text-[var(--panel-accent-ink,#6f3f16)]',
+                            !isSelected && !isCurrentMonth && 'border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d5a25c)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
+                            disabledMonth && 'cursor-not-allowed opacity-40 hover:border-[var(--panel-border,#d4c0a7)] hover:bg-[var(--panel-surface,#fffdfa)]',
                           )}
                         >
-                          {day.getDate()}
+                          {label}
                         </button>
                       );
                     })}
                   </div>
-                </>
-              )}
+                ) : (
+                  <>
+                    <div className="mb-2 grid grid-cols-7 gap-1 text-center">
+                      {WEEKDAY_LABELS.map((label) => (
+                        <span key={label} className="py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
+                          {label}
+                        </span>
+                      ))}
+                    </div>
 
-              {type === 'datetime-local' ? (
-                <div className="mt-3 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Horário</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      size="compact"
-                      value={String(selectedHours)}
-                      onChange={(event) => handleTimeChange('hours', event.target.value)}
-                      inputMode="numeric"
-                      placeholder="HH"
-                      aria-label="Hora"
-                    />
-                    <Input
-                      size="compact"
-                      value={String(selectedMinutes)}
-                      onChange={(event) => handleTimeChange('minutes', event.target.value)}
-                      inputMode="numeric"
-                      placeholder="MM"
-                      aria-label="Minutos"
-                    />
+                    <div className="grid grid-cols-7 gap-1">
+                      {calendarDays.map((day) => {
+                        const isSameMonth = day.getMonth() === viewDate.getMonth();
+                        const dayStamp = toDateOnlyStamp(day);
+                        const isSelected = selectedDayStamp === dayStamp;
+                        const isToday = dayStamp === todayStamp;
+                        const isDisabledDay = isDayDisabled(day);
+
+                        return (
+                          <button
+                            key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
+                            type="button"
+                            onClick={() => handleSelectDay(day)}
+                            disabled={isDisabledDay}
+                            className={cx(
+                              'h-9 rounded-lg text-sm font-medium transition-colors',
+                              'focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)]',
+                              isSelected && 'bg-[var(--panel-accent-hover,#e8c089)] text-[var(--panel-accent-ink-strong,#4a2411)] hover:bg-[var(--panel-accent-hover,#e8c089)]',
+                              !isSelected && isToday && 'bg-[var(--panel-surface-soft,#efe6d8)] text-[var(--panel-text,#1c1917)]',
+                              !isSelected && !isToday && isSameMonth && 'text-[var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
+                              !isSelected && !isToday && !isSameMonth && 'text-[var(--panel-text-subtle,#ab927b)] hover:bg-[var(--panel-surface-soft,#efe6d8)]',
+                              isDisabledDay && 'cursor-not-allowed opacity-40 hover:bg-transparent',
+                            )}
+                          >
+                            {day.getDate()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {type === 'datetime-local' ? (
+                  <div className="mt-3 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Horário</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        size="compact"
+                        value={String(selectedHours)}
+                        onChange={(event) => handleTimeChange('hours', event.target.value)}
+                        inputMode="numeric"
+                        placeholder="HH"
+                        aria-label="Hora"
+                      />
+                      <Input
+                        size="compact"
+                        value={String(selectedMinutes)}
+                        onChange={(event) => handleTimeChange('minutes', event.target.value)}
+                        inputMode="numeric"
+                        placeholder="MM"
+                        aria-label="Minutos"
+                      />
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="mt-3 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
-                    {type === 'month' ? 'Digitar mês' : 'Digitar data'}
-                  </p>
+                ) : null}
+
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
+                  <Button variant="ghost" size="sm" onClick={() => applyDate(null)} disabled={!value} className="px-2">
+                    Limpar
+                  </Button>
+
                   <div className="flex items-center gap-2">
-                    <Input
-                      size="compact"
-                      value={manualInputValue}
-                      onChange={(event) => setManualInputValue(event.target.value)}
-                      onBlur={handleManualApply}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') {
-                          event.preventDefault();
-                          handleManualApply();
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        const now = new Date();
+                        applyDate(now);
+                        setViewDate(new Date(now.getFullYear(), now.getMonth(), 1));
+                        if (type !== 'datetime-local') {
+                          setIsOpen(false);
                         }
                       }}
-                      placeholder={type === 'month' ? 'AAAA-MM' : 'DD/MM/AAAA'}
-                      aria-label={type === 'month' ? 'Digitar mês' : 'Digitar data'}
-                    />
-                    <Button variant="secondary" size="sm" onClick={handleManualApply}>
-                      Aplicar
+                    >
+                      {type === 'month' ? 'Este mês' : 'Hoje'}
+                    </Button>
+
+                    <Button variant="primary" size="sm" onClick={() => setIsOpen(false)}>
+                      Concluído
                     </Button>
                   </div>
                 </div>
-              )}
-
-              <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
-                <Button variant="ghost" size="sm" onClick={() => applyDate(null)} disabled={!value} className="px-2">
-                  Limpar
-                </Button>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      const now = new Date();
-                      applyDate(now);
-                      setViewDate(new Date(now.getFullYear(), now.getMonth(), 1));
-                      if (type !== 'datetime-local') {
-                        setIsOpen(false);
-                      }
-                    }}
-                  >
-                    {type === 'month' ? 'Este mês' : 'Hoje'}
-                  </Button>
-
-                  <Button variant="primary" size="sm" onClick={() => setIsOpen(false)}>
-                    Concluído
-                  </Button>
-                </div>
-              </div>
               </div>
             </div>,
             document.body,

@@ -60,7 +60,6 @@ import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
 import LeadKanbanBoard from "./components/LeadKanbanBoard";
 import { LeadsHeader } from "./components/LeadsHeader";
-import { LeadsSummaryCards } from "./components/LeadsSummaryCards";
 import {
   LEADS_EMPTY_STATE_STYLE,
   LEADS_INSET_STYLE,
@@ -745,10 +744,6 @@ export default function LeadsManager({
     [paginatedLeadIds, selectedLeadIdsSet],
   );
   const canSelectLeads = canEditLeads && viewMode === "list";
-  const visibleBaseLeads = useMemo(
-    () => leads.filter((lead) => (showArchived ? lead.arquivado : !lead.arquivado)),
-    [leads, showArchived],
-  );
   const activeFilterCount = useMemo(() => {
     let count = 0;
 
@@ -779,54 +774,6 @@ export default function LeadsManager({
     filterProximoRetornoFrom,
     filterProximoRetornoTo,
   ]);
-  const scheduledLeadCount = useMemo(() => {
-    const now = Date.now();
-
-    return filteredLeads.filter((lead) => {
-      const nextDateValue = nextReminderByLeadId.get(lead.id) ?? lead.proximo_retorno;
-      if (!nextDateValue) return false;
-
-      const parsedTime = new Date(nextDateValue).getTime();
-      return !Number.isNaN(parsedTime) && parsedTime >= now;
-    }).length;
-  }, [filteredLeads, nextReminderByLeadId]);
-  const recentContactCount = useMemo(() => {
-    const threshold = Date.now() - 7 * 24 * 60 * 60 * 1000;
-
-    return filteredLeads.filter((lead) => {
-      if (!lead.ultimo_contato) return false;
-
-      const parsedTime = new Date(lead.ultimo_contato).getTime();
-      return !Number.isNaN(parsedTime) && parsedTime >= threshold;
-    }).length;
-  }, [filteredLeads]);
-  const recentContactRate = useMemo(
-    () =>
-      filteredLeads.length > 0
-        ? Math.round((recentContactCount / filteredLeads.length) * 100)
-        : 0,
-    [filteredLeads.length, recentContactCount],
-  );
-  const ownerCount = useMemo(
-    () =>
-      new Set(
-        filteredLeads
-          .map((lead) => lead.responsavel?.trim())
-          .filter((value): value is string => Boolean(value)),
-      ).size,
-    [filteredLeads],
-  );
-  const originCount = useMemo(
-    () =>
-      new Set(
-        filteredLeads
-          .map((lead) => lead.origem?.trim())
-          .filter((value): value is string => Boolean(value)),
-      ).size,
-    [filteredLeads],
-  );
-  const viewModeLabel =
-    viewMode === "kanban" ? "Kanban estrategico" : "Lista detalhada";
   const lastUpdatedLabel = useMemo(() => {
     if (!lastUpdated) return "";
 
@@ -1595,7 +1542,7 @@ export default function LeadsManager({
     >
       <div
         ref={leadsRootRef}
-        className="panel-dashboard-immersive panel-page-shell space-y-6"
+        className="panel-dashboard-immersive panel-page-shell space-y-5"
       >
         <ObserverBanner />
         <LeadsHeader
@@ -1610,17 +1557,6 @@ export default function LeadsManager({
           onRefresh={handleRefresh}
           onToggleArchived={() => setShowArchived((current) => !current)}
           onCreateLead={handleCreateLead}
-        />
-        <LeadsSummaryCards
-          showArchived={showArchived}
-          filteredLeadCount={filteredLeads.length}
-          baseLeadCount={visibleBaseLeads.length}
-          scheduledCount={scheduledLeadCount}
-          recentContactCount={recentContactCount}
-          recentContactRate={recentContactRate}
-          ownerCount={ownerCount}
-          originCount={originCount}
-          viewModeLabel={viewModeLabel}
         />
         <div
           className="panel-glass-panel space-y-5 rounded-[2rem] border p-5 sm:p-6"

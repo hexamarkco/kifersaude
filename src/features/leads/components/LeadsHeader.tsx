@@ -35,8 +35,8 @@ export function LeadsHeader({
   onCreateLead,
 }: LeadsHeaderProps) {
   return (
-    <div className="flex flex-col gap-4" data-panel-animate>
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+    <div className="flex flex-col gap-3" data-panel-animate>
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p
             className="text-[11px] font-black uppercase tracking-[0.24em]"
@@ -112,7 +112,7 @@ export function LeadsHeader({
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Tabs
             items={VIEW_MODE_TABS}

@@ -4149,6 +4149,25 @@ export default function WhatsAppInboxScreen() {
     setChatMenuStatusOpen(false);
   };
 
+  const runDeferredChatMenuAction = useCallback((action: () => void | Promise<void>) => {
+    closeMuteSubmenuNow();
+    closeStatusSubmenuNow();
+    startTransition(() => {
+      setChatMenu(null);
+    });
+
+    if (typeof window === 'undefined') {
+      void action();
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        void action();
+      }, 0);
+    });
+  }, []);
+
   useEffect(() => {
     return () => {
       if (muteMenuCloseTimeoutRef.current !== null) {
@@ -4377,9 +4396,6 @@ export default function WhatsAppInboxScreen() {
   const handleOpenLeadFromChat = (leadId: string | null | undefined) => {
     if (!leadId) return;
     handleTabChange('leads', { leadIdFilter: leadId });
-    closeMuteSubmenuNow();
-    closeStatusSubmenuNow();
-    setChatMenu(null);
   };
 
   const handleAudioTranscriptionSaved = (messageId: string, nextPayload: WhatsAppMessagePayload) => {
@@ -6133,10 +6149,9 @@ export default function WhatsAppInboxScreen() {
                 fullWidth
                 className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
-                  void updateChatArchive(chatMenuTarget.chat!.id, !chatMenuTarget.chat!.archived);
-                  closeMuteSubmenuNow();
-                  closeStatusSubmenuNow();
-                  setChatMenu(null);
+                  runDeferredChatMenuAction(() =>
+                    updateChatArchive(chatMenuTarget.chat!.id, !chatMenuTarget.chat!.archived),
+                  );
                 }}
               >
                 <Archive className="h-4 w-4" />
@@ -6148,10 +6163,7 @@ export default function WhatsAppInboxScreen() {
                 fullWidth
                 className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
-                  void markChatAsUnread(chatMenuTarget.chat!);
-                  closeMuteSubmenuNow();
-                  closeStatusSubmenuNow();
-                  setChatMenu(null);
+                  runDeferredChatMenuAction(() => markChatAsUnread(chatMenuTarget.chat!));
                 }}
               >
                 <Circle className="h-4 w-4" />
@@ -6163,10 +6175,9 @@ export default function WhatsAppInboxScreen() {
                 fullWidth
                 className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                 onClick={() => {
-                  void updateChatPinned(chatMenuTarget.chat!.id, chatMenuTarget.isPinned ? 0 : Date.now());
-                  closeMuteSubmenuNow();
-                  closeStatusSubmenuNow();
-                  setChatMenu(null);
+                  runDeferredChatMenuAction(() =>
+                    updateChatPinned(chatMenuTarget.chat!.id, chatMenuTarget.isPinned ? 0 : Date.now()),
+                  );
                 }}
               >
                 <Pin className="h-4 w-4" />
@@ -6190,10 +6201,7 @@ export default function WhatsAppInboxScreen() {
                         fullWidth
                         className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                         onClick={() => {
-                          void updateChatMute(chatMenuTarget.chat!.id, null);
-                          closeMuteSubmenuNow();
-                          closeStatusSubmenuNow();
-                          setChatMenu(null);
+                          runDeferredChatMenuAction(() => updateChatMute(chatMenuTarget.chat!.id, null));
                         }}
                       >
                         <BellOff className="h-4 w-4" />
@@ -6237,10 +6245,7 @@ export default function WhatsAppInboxScreen() {
                                   className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                                   onClick={() => {
                                     const until = new Date(Date.now() + option.ms).toISOString();
-                                    void updateChatMute(chatMenuTarget.chat!.id, until);
-                                    closeMuteSubmenuNow();
-                                    closeStatusSubmenuNow();
-                                    setChatMenu(null);
+                                    runDeferredChatMenuAction(() => updateChatMute(chatMenuTarget.chat!.id, until));
                                   }}
                                 >
                                   <Clock3 className="h-4 w-4" />
@@ -6258,10 +6263,7 @@ export default function WhatsAppInboxScreen() {
                       fullWidth
                       className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => {
-                        void handleCopyChatPhone(chatMenuTarget.chat!, chatMenuTarget.phone);
-                        closeMuteSubmenuNow();
-                        closeStatusSubmenuNow();
-                        setChatMenu(null);
+                        runDeferredChatMenuAction(() => handleCopyChatPhone(chatMenuTarget.chat!, chatMenuTarget.phone));
                       }}
                       disabled={!chatMenuTarget.phone}
                     >
@@ -6273,7 +6275,9 @@ export default function WhatsAppInboxScreen() {
                       size="sm"
                       fullWidth
                       className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={() => handleOpenLeadFromChat(chatMenuTarget.lead?.id)}
+                      onClick={() => {
+                        runDeferredChatMenuAction(() => handleOpenLeadFromChat(chatMenuTarget.lead?.id));
+                      }}
                       disabled={!chatMenuTarget.canOpenLead}
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -6316,10 +6320,9 @@ export default function WhatsAppInboxScreen() {
                                 fullWidth
                                 className="comm-menu-item h-auto justify-start rounded-none border-0 px-3 py-2 text-sm shadow-none"
                                 onClick={() => {
-                                  void handleUpdateLeadStatus(status.nome, chatMenuTarget.lead?.id);
-                                  closeMuteSubmenuNow();
-                                  closeStatusSubmenuNow();
-                                  setChatMenu(null);
+                                  runDeferredChatMenuAction(() =>
+                                    handleUpdateLeadStatus(status.nome, chatMenuTarget.lead?.id),
+                                  );
                                 }}
                               >
                                 <Circle className="h-4 w-4" />

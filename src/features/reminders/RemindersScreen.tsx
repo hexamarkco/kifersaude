@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Calendar,
   Search,
+  Filter,
   CheckSquare,
   Square,
   Timer,
@@ -21,15 +22,14 @@ import {
   MessageCircle,
   Loader2,
   CalendarPlus,
+  Clock3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatDateTimeFullBR, isOverdue } from "../../lib/dateUtils";
 import {
   groupRemindersByPeriod,
   getPeriodLabel,
-  getPeriodColor,
   getUrgencyLevel,
-  getUrgencyStyles,
   formatEstimatedTime,
   addBusinessDaysSkippingWeekends,
   ReminderPeriod,
@@ -45,6 +45,14 @@ import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ModalShell from "../../components/ui/ModalShell";
+import {
+  PANEL_EMPTY_STATE_STYLE,
+  PANEL_INSET_STYLE,
+  PANEL_MUTED_INSET_STYLE,
+  PANEL_PILL_STYLE,
+  PANEL_SECTION_STYLE,
+  getPanelToneStyle,
+} from "../../components/ui/panelStyles";
 import { RemindersPageSkeleton } from "../../components/ui/panelSkeletons";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { toast } from "../../lib/toast";
@@ -62,6 +70,7 @@ export default function RemindersManagerEnhanced() {
     "nao-lidos",
   );
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedReminders, setSelectedReminders] = useState<Set<string>>(
     new Set(),
   );
@@ -197,6 +206,7 @@ export default function RemindersManagerEnhanced() {
 
       if (error) throw error;
       setReminders(data || []);
+      setLastUpdated(new Date());
 
       const contractIds = [
         ...new Set((data || []).map((r) => r.contract_id).filter(Boolean)),
@@ -1008,6 +1018,93 @@ export default function RemindersManagerEnhanced() {
     completed: reminders.filter((r) => r.lido).length,
   };
 
+  const activeFilterCount = [
+    filter !== "todos",
+    searchQuery.trim() !== "",
+    typeFilter !== "all",
+    priorityFilter !== "all",
+  ].filter(Boolean).length;
+
+  const lastUpdatedLabel = lastUpdated
+    ? `Atualizado em ${lastUpdated.toLocaleDateString("pt-BR")} às ${lastUpdated.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`
+    : "Aguardando atualização...";
+
+  const getReminderPriorityStyle = (prioridade: string) => {
+    const tones = {
+      baixa: "info",
+      normal: "neutral",
+      alta: "danger",
+    } as const;
+
+    return getPanelToneStyle(tones[prioridade as keyof typeof tones] ?? "neutral");
+  };
+
+  const getReminderTypeStyle = (tipo: string) => {
+    const tones = {
+      "Documentos pendentes": "warning",
+      Assinatura: "accent",
+      Ativação: "info",
+      Renovação: "warning",
+      Retorno: "neutral",
+      Tarefa: "accent",
+    } as const;
+
+    return getPanelToneStyle(tones[tipo as keyof typeof tones] ?? "neutral");
+  };
+
+  const getReminderGroupStyle = (period: ReminderPeriod) => {
+    const tones = {
+      overdue: "danger",
+      today: "accent",
+      tomorrow: "info",
+      thisWeek: "warning",
+      thisMonth: "neutral",
+      later: "neutral",
+    } as const;
+    const toneStyle = getPanelToneStyle(tones[period]);
+    const toneBackground = toneStyle.background as string;
+
+    return {
+      ...PANEL_SECTION_STYLE,
+      borderColor: toneStyle.borderColor,
+      background: `linear-gradient(180deg, ${toneBackground} 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 94%, transparent) 100%)`,
+    };
+  };
+
+  const getReminderCardStyle = (
+    urgency: ReturnType<typeof getUrgencyLevel>,
+    isRead: boolean,
+    isSelected: boolean,
+  ) => {
+    if (isRead) {
+      return {
+        ...PANEL_INSET_STYLE,
+        opacity: 0.72,
+      };
+    }
+
+    const toneByUrgency = {
+      critical: "danger",
+      high: "warning",
+      medium: "accent",
+      low: "neutral",
+    } as const;
+
+    const toneStyle = getPanelToneStyle(toneByUrgency[urgency]);
+    const borderColor = toneStyle.borderColor as string;
+
+    return {
+      ...PANEL_INSET_STYLE,
+      borderColor,
+      boxShadow: isSelected
+        ? `0 0 0 2px ${borderColor}, 0 24px 44px -34px rgba(26,18,13,0.34)`
+        : `0 0 0 1px ${borderColor}, 0 18px 34px -28px rgba(26,18,13,0.24)`,
+    };
+  };
+
   useEffect(() => {
     if (loading || hasAnimatedSectionsRef.current) {
       return;
@@ -1070,15 +1167,6 @@ export default function RemindersManagerEnhanced() {
     sectionStagger,
   ]);
 
-  const getPriorityColor = (prioridade: string) => {
-    const colors: Record<string, string> = {
-      baixa: "bg-blue-100 text-blue-700",
-      normal: "bg-slate-100 text-slate-700",
-      alta: "bg-red-100 text-red-700",
-    };
-    return colors[prioridade] || "bg-slate-100 text-slate-700";
-  };
-
   const getTipoIcon = (tipo: string) => {
     const icons: Record<string, LucideIcon> = {
       "Documentos pendentes": AlertCircle,
@@ -1107,15 +1195,17 @@ export default function RemindersManagerEnhanced() {
     const hasLeadPhone = Boolean(leadInfo?.telefone);
     const isQuickSchedulingCurrentReminder =
       quickSchedulingAction?.reminderId === reminder.id;
+    const iconToneStyle = reminder.lido
+      ? getPanelToneStyle("neutral")
+      : overdue
+        ? getPanelToneStyle("danger")
+        : getReminderTypeStyle(reminder.tipo);
 
     return (
       <div
         key={reminder.id}
-        className={`panel-glass-lite panel-interactive-glass rounded-xl border bg-white p-5 shadow-sm transition-all ${
-          reminder.lido
-            ? "border-slate-200 opacity-60"
-            : `${getUrgencyStyles(urgency)}`
-        } ${isSelected ? "ring-2 ring-teal-500" : ""}`}
+        className="panel-glass-lite panel-interactive-glass rounded-[1.6rem] border p-5 transition-all"
+        style={getReminderCardStyle(urgency, reminder.lido, isSelected)}
       >
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex min-w-0 items-start space-x-4 xl:flex-1">
@@ -1123,43 +1213,54 @@ export default function RemindersManagerEnhanced() {
               onClick={() => toggleReminderSelection(reminder.id)}
               variant="icon"
               size="icon"
-              className="mt-1 h-8 w-8 text-slate-400 hover:text-teal-600"
+              className="mt-1 h-8 w-8"
             >
               {isSelected ? (
-                <CheckSquare className="w-5 h-5 text-teal-600" />
+                <CheckSquare
+                  className="h-5 w-5"
+                  style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
+                />
               ) : (
-                <Square className="w-5 h-5" />
+                <Square
+                  className="h-5 w-5"
+                  style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                />
               )}
             </Button>
 
             <div
-              className={`p-3 rounded-lg ${
-                reminder.lido
-                  ? "bg-slate-100 text-slate-500"
-                  : overdue
-                    ? "bg-red-100 text-red-600"
-                    : "bg-teal-100 text-teal-600"
-              }`}
+              className="rounded-[1rem] border p-3"
+              style={iconToneStyle}
             >
               {getTipoIcon(reminder.tipo)}
             </div>
 
             <div className="flex-1">
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <h3 className="text-lg font-semibold text-slate-900">
+                <h3
+                  className="text-lg font-semibold"
+                  style={{ color: "var(--panel-text,#1c1917)" }}
+                >
                   {reminder.titulo}
                 </h3>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(reminder.prioridade)}`}
+                  className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                  style={getReminderPriorityStyle(reminder.prioridade)}
                 >
                   {reminder.prioridade}
                 </span>
-                <span className="px-2 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-medium">
+                <span
+                  className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                  style={getReminderTypeStyle(reminder.tipo)}
+                >
                   {reminder.tipo}
                 </span>
                 {reminder.tempo_estimado_minutos && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium flex items-center space-x-1">
-                    <Timer className="w-3 h-3" />
+                  <span
+                    className="inline-flex items-center space-x-1 rounded-full border px-2.5 py-1 text-xs font-semibold"
+                    style={getPanelToneStyle("info")}
+                  >
+                    <Timer className="h-3 w-3" />
                     <span>
                       {formatEstimatedTime(reminder.tempo_estimado_minutos)}
                     </span>
@@ -1168,32 +1269,44 @@ export default function RemindersManagerEnhanced() {
               </div>
 
               {reminder.descricao && (
-                <p className="text-slate-600 mb-3 text-sm">
+                <p
+                  className="mb-3 text-sm"
+                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                >
                   {reminder.descricao}
                 </p>
               )}
 
               {reminder.tags && reminder.tags.length > 0 && (
-                <div className="flex items-center space-x-2 mb-3">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
                   {reminder.tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="flex items-center space-x-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs"
+                      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium"
+                      style={getPanelToneStyle("info")}
                     >
-                      <Tag className="w-3 h-3" />
+                      <Tag className="h-3 w-3" />
                       <span>{tag}</span>
                     </span>
                   ))}
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
+              <div
+                className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+                style={{ color: "var(--panel-text-muted,#876f5c)" }}
+              >
                 <div className="flex items-center space-x-1">
-                  <Calendar className="w-4 h-4" />
+                  <Calendar className="h-4 w-4" />
                   <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
                 </div>
                 {overdue && !reminder.lido && (
-                  <span className="text-red-600 font-medium">Atrasado </span>
+                  <span
+                    className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                    style={getPanelToneStyle("danger")}
+                  >
+                    Atrasado
+                  </span>
                 )}
                 {(reminder.lead_id || reminder.contract_id) && (
                   <ReminderContextLink
@@ -1211,9 +1324,9 @@ export default function RemindersManagerEnhanced() {
           <div className="flex w-full flex-wrap items-center justify-end gap-2 xl:ml-4 xl:w-auto">
             <Button
               onClick={() => openLeadInWhatsAppTab(leadInfo ?? null)}
-              variant="info"
+              variant="secondary"
               size="icon"
-              className="h-9 w-9 border-sky-600 bg-sky-600 text-white hover:border-sky-700 hover:bg-sky-700"
+              className="h-9 w-9"
               title="Abrir /painel/whatsapp"
               aria-label="Abrir /painel/whatsapp"
             >
@@ -1222,9 +1335,9 @@ export default function RemindersManagerEnhanced() {
             <Button
               onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
               disabled={!hasLeadPhone}
-              variant="success"
+              variant="soft"
               size="icon"
-              className="h-9 w-9 border-emerald-600 bg-emerald-600 text-white hover:border-emerald-700 hover:bg-emerald-700"
+              className="h-9 w-9"
               title={
                 hasLeadPhone
                   ? "Abrir WhatsApp oficial"
@@ -1243,9 +1356,9 @@ export default function RemindersManagerEnhanced() {
                 <Button
                   onClick={() => handleQuickSchedule(reminder, 1)}
                   disabled={isQuickSchedulingCurrentReminder}
-                  variant="soft"
+                  variant="primary"
                   size="icon"
-                  className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
+                  className="h-9 w-9"
                   title="Agendar +1 dia util e marcar atual como lido"
                   aria-label="Agendar +1 dia util e marcar atual como lido"
                 >
@@ -1255,7 +1368,10 @@ export default function RemindersManagerEnhanced() {
                   ) : (
                     <span className="relative inline-flex">
                       <CalendarPlus className="h-4 w-4" />
-                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-teal-700 ring-1 ring-teal-200">
+                      <span
+                        className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border px-0.5 text-[9px] font-bold leading-none"
+                        style={getPanelToneStyle("neutral")}
+                      >
                         1
                       </span>
                     </span>
@@ -1264,9 +1380,9 @@ export default function RemindersManagerEnhanced() {
                 <Button
                   onClick={() => handleQuickSchedule(reminder, 2)}
                   disabled={isQuickSchedulingCurrentReminder}
-                  variant="soft"
+                  variant="primary"
                   size="icon"
-                  className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
+                  className="h-9 w-9"
                   title="Agendar +2 dias uteis e marcar atual como lido"
                   aria-label="Agendar +2 dias uteis e marcar atual como lido"
                 >
@@ -1276,7 +1392,10 @@ export default function RemindersManagerEnhanced() {
                   ) : (
                     <span className="relative inline-flex">
                       <CalendarPlus className="h-4 w-4" />
-                      <span className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-white px-0.5 text-[9px] font-bold leading-none text-teal-700 ring-1 ring-teal-200">
+                      <span
+                        className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border px-0.5 text-[9px] font-bold leading-none"
+                        style={getPanelToneStyle("neutral")}
+                      >
                         2
                       </span>
                     </span>
@@ -1286,9 +1405,9 @@ export default function RemindersManagerEnhanced() {
             )}
             <Button
               onClick={() => handleMarkAsRead(reminder.id, reminder.lido)}
-              variant="soft"
+              variant={reminder.lido ? "secondary" : "soft"}
               size="icon"
-              className="h-9 w-9 border-teal-500 bg-teal-500 text-white hover:border-teal-600 hover:bg-teal-600"
+              className="h-9 w-9"
               title={
                 reminder.lido ? "Marcar como não lido" : "Marcar como lido"
               }
@@ -1305,7 +1424,7 @@ export default function RemindersManagerEnhanced() {
                 }
                 variant="danger"
                 size="icon"
-                className="h-9 w-9 border-rose-600 bg-rose-600 text-white hover:border-rose-700 hover:bg-rose-700"
+                className="h-9 w-9"
                 title="Marcar lead como perdido e limpar lembretes"
                 aria-label="Marcar lead como perdido e limpar lembretes"
                 disabled={markingLostLeadId === leadIdForReminder}
@@ -1320,7 +1439,7 @@ export default function RemindersManagerEnhanced() {
               onClick={() => handleDelete(reminder.id)}
               variant="danger"
               size="icon"
-              className="h-9 w-9 border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700"
+              className="h-9 w-9"
               title="Excluir lembrete"
               aria-label="Excluir lembrete"
             >
@@ -1346,99 +1465,174 @@ export default function RemindersManagerEnhanced() {
     >
       <div
         ref={remindersRootRef}
-        className="panel-dashboard-immersive panel-page-shell"
+        className="panel-dashboard-immersive panel-page-shell space-y-5"
       >
         <div
-          className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3"
           data-panel-animate
         >
-          <h2 className="text-2xl font-bold text-slate-900">
-            Lembretes e Notificações
-          </h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              onClick={() => setShowCalendar(true)}
-              variant="secondary"
-              size="icon"
-              title="Ver Calendário"
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <p
+                className="text-[11px] font-black uppercase tracking-[0.24em]"
+                style={{ color: "var(--panel-text-muted,#876f5c)" }}
+              >
+                Operação de acompanhamento
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <h2
+                  className="text-2xl font-bold sm:text-3xl"
+                  style={{ color: "var(--panel-text,#1c1917)" }}
+                >
+                  Lembretes e Notificações
+                </h2>
+              </div>
+              <p
+                className="mt-1 max-w-3xl text-sm"
+                style={{ color: "var(--panel-text-muted,#876f5c)" }}
+              >
+                Priorize retornos, acompanhe urgências e avance a carteira sem
+                perder contexto do lead ou contrato vinculado.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              <span
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  ...PANEL_PILL_STYLE,
+                  color: "var(--panel-text-soft,#5b4635)",
+                }}
+              >
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                  {filteredReminders.length}
+                </span>
+                <span>lembretes no recorte</span>
+              </span>
+              <span
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  ...PANEL_PILL_STYLE,
+                  color: "var(--panel-text-soft,#5b4635)",
+                }}
+              >
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                  {activeFilterCount}
+                </span>
+                <span>{activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}</span>
+              </span>
+              <span
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  ...PANEL_PILL_STYLE,
+                  color: "var(--panel-text-soft,#5b4635)",
+                }}
+              >
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                  {viewMode === "grouped" ? "Agrupado" : "Lista"}
+                </span>
+                <span>modo atual</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+            <div
+              className="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm"
+              style={{
+                ...PANEL_PILL_STYLE,
+                color: "var(--panel-text-soft,#5b4635)",
+              }}
             >
-              <Calendar className="w-5 h-5" />
-            </Button>
-            <Button
-              onClick={() => setShowStats(!showStats)}
-              variant={showStats ? "primary" : "secondary"}
-              size="icon"
-              title="Estatísticas"
-            >
-              <BarChart3 className="w-5 h-5" />
-            </Button>
-            <Button
-              onClick={() => setFilter("nao-lidos")}
-              variant={filter === "nao-lidos" ? "primary" : "secondary"}
-              size="md"
-            >
-              Não Lidos ({stats.unread})
-            </Button>
-            <Button
-              onClick={() => setFilter("todos")}
-              variant={filter === "todos" ? "primary" : "secondary"}
-              size="md"
-            >
-              Todos ({stats.total})
-            </Button>
-            <Button
-              onClick={() => setFilter("lidos")}
-              variant={filter === "lidos" ? "primary" : "secondary"}
-              size="md"
-            >
-              Lidos ({stats.completed})
-            </Button>
+              <Clock3
+                className="h-4 w-4"
+                style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
+              />
+              <span>{lastUpdatedLabel}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                onClick={() => setShowCalendar(true)}
+                variant="secondary"
+                size="icon"
+                title="Ver calendário"
+              >
+                <Calendar className="h-5 w-5" />
+              </Button>
+              <Button
+                onClick={() => setShowStats(!showStats)}
+                variant={showStats ? "primary" : "secondary"}
+                size="icon"
+                title="Estatísticas"
+              >
+                <BarChart3 className="h-5 w-5" />
+              </Button>
+              <Button
+                onClick={() => setFilter("nao-lidos")}
+                variant={filter === "nao-lidos" ? "primary" : "secondary"}
+                size="md"
+              >
+                Não lidos ({stats.unread})
+              </Button>
+              <Button
+                onClick={() => setFilter("todos")}
+                variant={filter === "todos" ? "primary" : "secondary"}
+                size="md"
+              >
+                Todos ({stats.total})
+              </Button>
+              <Button
+                onClick={() => setFilter("lidos")}
+                variant={filter === "lidos" ? "primary" : "secondary"}
+                size="md"
+              >
+                Lidos ({stats.completed})
+              </Button>
+            </div>
           </div>
         </div>
 
         {showStats && (
           <div
-            className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5"
+            className="grid grid-cols-1 gap-4 md:grid-cols-5"
             data-panel-animate
           >
-            <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-sm text-slate-600 mb-1">Total</div>
-              <div className="text-3xl font-bold text-slate-900">
-                {stats.total}
+            {[
+              { label: "Total", value: stats.total, tone: "neutral" as const },
+              { label: "Não lidos", value: stats.unread, tone: "accent" as const },
+              { label: "Atrasados", value: stats.overdue, tone: "danger" as const },
+              { label: "Hoje", value: stats.today, tone: "warning" as const },
+              { label: "Concluídos", value: stats.completed, tone: "success" as const },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="panel-glass-panel rounded-[1.5rem] border p-4 shadow-sm"
+                style={PANEL_SECTION_STYLE}
+              >
+                <div className="mb-2 text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                  {item.label}
+                </div>
+                <div
+                  className="text-3xl font-bold"
+                  style={{ color: getPanelToneStyle(item.tone).color }}
+                >
+                  {item.value}
+                </div>
               </div>
-            </div>
-            <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-sm text-slate-600 mb-1">Não Lidos</div>
-              <div className="text-3xl font-bold text-orange-600">
-                {stats.unread}
-              </div>
-            </div>
-            <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-sm text-slate-600 mb-1">Atrasados</div>
-              <div className="text-3xl font-bold text-red-600">
-                {stats.overdue}
-              </div>
-            </div>
-            <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-sm text-slate-600 mb-1">Hoje</div>
-              <div className="text-3xl font-bold text-teal-600">
-                {stats.today}
-              </div>
-            </div>
-            <div className="panel-glass-panel rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-sm text-slate-600 mb-1">Concluídos</div>
-              <div className="text-3xl font-bold text-green-600">
-                {stats.completed}
-              </div>
-            </div>
+            ))}
           </div>
         )}
 
         <div
-          className="panel-glass-panel mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+          className="panel-glass-panel space-y-5 rounded-[2rem] border p-5 sm:p-6"
+          style={PANEL_SECTION_STYLE}
           data-panel-animate
         >
-          <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:space-x-4 sm:gap-0">
+          <div
+            className="flex flex-col gap-3 rounded-[1.7rem] border p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
+            style={PANEL_INSET_STYLE}
+          >
             <div className="relative flex-1">
               <Input
                 type="text"
@@ -1455,12 +1649,43 @@ export default function RemindersManagerEnhanced() {
                   size="icon"
                   className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="h-5 w-5" />
                 </Button>
               )}
             </div>
 
-            <div className="w-full sm:w-52">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div
+                className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-sm"
+                style={{
+                  ...PANEL_PILL_STYLE,
+                  color: "var(--panel-text-soft,#5b4635)",
+                }}
+              >
+                <span
+                  className="font-semibold"
+                  style={{ color: "var(--panel-text,#1c1917)" }}
+                >
+                  {filteredReminders.length}
+                </span>
+                <span>lembretes</span>
+              </div>
+              <Button
+                onClick={() => {
+                  setSearchQuery("");
+                  setTypeFilter("all");
+                  setPriorityFilter("all");
+                }}
+                variant="soft"
+              >
+                <Filter className="h-4 w-4" />
+                Limpar
+              </Button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="w-full">
               <FilterSingleSelect
                 icon={Tag}
                 value={typeFilter}
@@ -1481,7 +1706,7 @@ export default function RemindersManagerEnhanced() {
               />
             </div>
 
-            <div className="w-full sm:w-44">
+            <div className="w-full">
               <FilterSingleSelect
                 icon={AlertCircle}
                 value={priorityFilter}
@@ -1503,21 +1728,27 @@ export default function RemindersManagerEnhanced() {
               }
               variant="secondary"
               size="md"
+              className="w-full"
             >
-              {viewMode === "grouped" ? "Lista" : "Agrupar"}
+              {viewMode === "grouped" ? "Ver lista" : "Agrupar por período"}
             </Button>
           </div>
 
           {selectedReminders.size > 0 && (
-            <div className="flex flex-col gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-sm text-slate-600 font-medium">
+            <div
+              className="flex flex-col gap-2 rounded-[1.4rem] border px-4 py-3 sm:flex-row sm:items-center sm:gap-3"
+              style={PANEL_MUTED_INSET_STYLE}
+            >
+              <span
+                className="text-sm font-medium"
+                style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+              >
                 {selectedReminders.size} selecionado(s)
               </span>
               <Button
                 onClick={handleBatchMarkAsRead}
-                variant="primary"
+                variant="soft"
                 size="md"
-                className="bg-green-600 hover:bg-green-700"
               >
                 Marcar como lido
               </Button>
@@ -1533,9 +1764,9 @@ export default function RemindersManagerEnhanced() {
               </Button>
               {filter === "nao-lidos" && stats.unread > 0 && (
                 <Button
-                  onClick={handleMarkAllAsRead}
-                  variant="primary"
-                  size="md"
+                onClick={handleMarkAllAsRead}
+                variant="primary"
+                size="md"
                   className="sm:ml-auto"
                 >
                   Marcar todos como lido
@@ -1547,14 +1778,21 @@ export default function RemindersManagerEnhanced() {
 
         {filteredReminders.length === 0 ? (
           <div
-            className="panel-glass-panel rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm"
+            className="panel-glass-panel rounded-[1.7rem] border py-12 text-center shadow-sm"
+            style={PANEL_EMPTY_STATE_STYLE}
             data-panel-animate
           >
-            <Bell className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-slate-900 mb-2">
+            <Bell
+              className="mx-auto mb-4 h-16 w-16"
+              style={{ color: "var(--panel-text-muted,#876f5c)" }}
+            />
+            <h3
+              className="mb-2 text-lg font-medium"
+              style={{ color: "var(--panel-text,#1c1917)" }}
+            >
               Nenhum lembrete encontrado
             </h3>
-            <p className="text-slate-600">
+            <p style={{ color: "var(--panel-text-soft,#5b4635)" }}>
               {searchQuery || typeFilter !== "all" || priorityFilter !== "all"
                 ? "Tente ajustar os filtros de busca"
                 : filter === "nao-lidos"
@@ -1584,26 +1822,39 @@ export default function RemindersManagerEnhanced() {
               return (
                 <div
                   key={period}
-                  className={`panel-interactive-glass border rounded-xl ${getPeriodColor(period)}`}
+                  className="panel-glass-panel panel-interactive-glass rounded-[1.7rem] border"
+                  style={getReminderGroupStyle(period)}
                 >
                   <Button
                     onClick={() => togglePeriod(period)}
                     variant="ghost"
                     size="md"
-                    className="w-full justify-between rounded-xl px-6 py-4 hover:bg-white/50"
+                    className="w-full justify-between rounded-[1.7rem] px-6 py-4"
                   >
                     <div className="flex items-center space-x-3">
-                      <h3 className="text-lg font-semibold text-slate-900">
+                      <h3
+                        className="text-lg font-semibold"
+                        style={{ color: "var(--panel-text,#1c1917)" }}
+                      >
                         {getPeriodLabel(period)}
                       </h3>
-                      <span className="px-3 py-1 bg-white rounded-full text-sm font-medium text-slate-700">
+                      <span
+                        className="rounded-full border px-3 py-1 text-sm font-medium"
+                        style={PANEL_PILL_STYLE}
+                      >
                         {periodReminders.length}
                       </span>
                     </div>
                     {isExpanded ? (
-                      <ChevronUp className="w-5 h-5 text-slate-600" />
+                      <ChevronUp
+                        className="h-5 w-5"
+                        style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                      />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-slate-600" />
+                      <ChevronDown
+                        className="h-5 w-5"
+                        style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                      />
                     )}
                   </Button>
 
@@ -1652,20 +1903,32 @@ export default function RemindersManagerEnhanced() {
             }
           >
             <div className="flex items-start space-x-3">
-              <div className="p-3 rounded-full bg-red-100">
-                <Trash2 className="h-6 w-6 text-red-600" />
+              <div
+                className="rounded-full border p-3"
+                style={getPanelToneStyle("danger")}
+              >
+                <Trash2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm text-slate-600 mt-1">
+                <p
+                  className="mt-1 text-sm"
+                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                >
                   Tem certeza que deseja remover o lembrete
-                  <span className="font-semibold text-slate-900">
+                  <span
+                    className="font-semibold"
+                    style={{ color: "var(--panel-text,#1c1917)" }}
+                  >
                     {" "}
                     "{reminderPendingDeletion.titulo}"
                   </span>
                   ? Esta ação não pode ser desfeita.
                 </p>
                 {reminderPendingDeletion.descricao && (
-                  <p className="mt-2 text-xs text-slate-500 break-words">
+                  <p
+                    className="mt-2 break-words text-xs"
+                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                  >
                     {reminderPendingDeletion.descricao}
                   </p>
                 )}
@@ -1715,9 +1978,18 @@ export default function RemindersManagerEnhanced() {
             showCloseButton={false}
             bodyClassName="flex min-h-[180px] items-center justify-center"
           >
-            <div className="panel-glass-strong flex items-center space-x-2 rounded-lg border border-slate-200 px-4 py-3 shadow-lg">
-              <Loader2 className="h-5 w-5 animate-spin text-teal-600" />
-              <span className="text-sm font-medium text-slate-700">
+            <div
+              className="panel-glass-strong flex items-center space-x-2 rounded-[1.1rem] border px-4 py-3 shadow-lg"
+              style={PANEL_INSET_STYLE}
+            >
+              <Loader2
+                className="h-5 w-5 animate-spin"
+                style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
+              />
+              <span
+                className="text-sm font-medium"
+                style={{ color: "var(--panel-text-soft,#5b4635)" }}
+              >
                 Carregando lead...
               </span>
             </div>
@@ -1795,12 +2067,13 @@ function ReminderContextLink({
 
   if (!contextInfo) return null;
 
-  const baseClassName = "flex items-center space-x-1 text-xs text-teal-600";
+  const baseClassName = "flex items-center space-x-1 text-xs";
+  const baseStyle = { color: "var(--panel-accent-ink,#6f3f16)" } as const;
 
   if (contextInfo.type === "lead" && leadId) {
     if (isLoading) {
       return (
-        <span className={baseClassName}>
+        <span className={baseClassName} style={baseStyle}>
           <Loader2 className="h-3 w-3 animate-spin" />
           <span>Carregando lead...</span>
         </span>
@@ -1813,7 +2086,8 @@ function ReminderContextLink({
           onClick={() => onLeadClick(leadId)}
           variant="ghost"
           size="sm"
-          className="h-auto px-0 text-xs text-teal-600 hover:bg-transparent hover:text-teal-700"
+          className="h-auto px-0 text-xs hover:bg-transparent"
+          style={baseStyle}
         >
           <ExternalLink className="w-3 h-3" />
           <span>Lead: {contextInfo.label}</span>
@@ -1822,7 +2096,7 @@ function ReminderContextLink({
     }
 
     return (
-      <span className={baseClassName}>
+      <span className={baseClassName} style={baseStyle}>
         <ExternalLink className="w-3 h-3" />
         <span>Lead: {contextInfo.label}</span>
       </span>
@@ -1830,7 +2104,7 @@ function ReminderContextLink({
   }
 
   return (
-    <span className={baseClassName}>
+    <span className={baseClassName} style={baseStyle}>
       <ExternalLink className="w-3 h-3" />
       <span>Contrato: {contextInfo.label}</span>
     </span>

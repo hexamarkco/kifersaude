@@ -8,7 +8,7 @@ type PanelCardProps = {
 
 function PanelCard({ children, className = '' }: PanelCardProps) {
   return (
-    <div className={`panel-glass-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
+    <div className={`panel-glass-panel rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
       {children}
     </div>
   );
@@ -577,7 +577,7 @@ export function CommissionCalendarSkeleton() {
 
 export function TodoCalendarSkeleton() {
   return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="panel-glass-panel space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-8 w-52" />
@@ -589,7 +589,7 @@ export function TodoCalendarSkeleton() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200">
+      <div className="rounded-[1.7rem] border border-slate-200">
         <div className="flex items-center justify-between bg-slate-50 px-4 py-3">
           <Skeleton className="h-8 w-8 rounded-md" />
           <Skeleton className="h-6 w-36" />

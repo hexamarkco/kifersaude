@@ -9,11 +9,19 @@ import {
   CheckCircle2,
   Plus,
   Trash2,
+  Clock3,
 } from "lucide-react";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ModalShell from "../../components/ui/ModalShell";
+import {
+  PANEL_INSET_STYLE,
+  PANEL_MUTED_INSET_STYLE,
+  PANEL_PILL_STYLE,
+  PANEL_SECTION_STYLE,
+  getPanelToneStyle,
+} from "../../components/ui/panelStyles";
 import Textarea from "../../components/ui/Textarea";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { TodoCalendarSkeleton } from "../../components/ui/panelSkeletons";
@@ -28,6 +36,7 @@ export default function TodoCalendarScreen() {
   const [tasks, setTasks] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const date = new Date();
     date.setDate(1);
@@ -56,6 +65,7 @@ export default function TodoCalendarScreen() {
 
       if (fetchError) throw fetchError;
       setTasks(data || []);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error("Erro ao carregar tarefas:", err);
       setError("Não foi possível carregar suas tarefas. Tente novamente.");
@@ -245,6 +255,60 @@ export default function TodoCalendarScreen() {
 
   const pendingTasks = selectedDateTasks.filter((task) => !task.lido);
   const completedTasks = selectedDateTasks.filter((task) => task.lido);
+  const pendingTaskCount = tasks.filter((task) => !task.lido).length;
+  const completedTaskCount = tasks.filter((task) => task.lido).length;
+  const lastUpdatedLabel = lastUpdated
+    ? `Atualizado em ${lastUpdated.toLocaleDateString("pt-BR")} às ${lastUpdated.toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`
+    : "Aguardando atualização...";
+
+  const getCalendarCellStyle = ({
+    isSelected,
+    isToday,
+    hasTasks,
+    isRescheduling,
+  }: {
+    isSelected: boolean;
+    isToday: boolean;
+    hasTasks: boolean;
+    isRescheduling: boolean;
+  }) => {
+    if (isSelected) {
+      return {
+        borderColor: "var(--panel-accent-strong,#b85c1f)",
+        background: "var(--panel-accent-soft,#f6e4c7)",
+        color: "var(--panel-accent-ink-strong,#4a2411)",
+        boxShadow: "0 18px 34px -26px rgba(26,18,13,0.34)",
+      };
+    }
+
+    if (isToday) {
+      return {
+        ...getPanelToneStyle("accent"),
+        boxShadow: "0 14px 28px -24px rgba(26,18,13,0.18)",
+      };
+    }
+
+    if (hasTasks) {
+      return {
+        ...PANEL_INSET_STYLE,
+        borderColor: "var(--panel-accent-border,#d5a25c)",
+        background:
+          "linear-gradient(180deg, color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 52%, transparent) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)",
+      };
+    }
+
+    if (isRescheduling) {
+      return {
+        ...PANEL_INSET_STYLE,
+        borderColor: "var(--panel-accent-border,#d5a25c)",
+      };
+    }
+
+    return PANEL_INSET_STYLE;
+  };
 
   const handleDayClick = async (date: Date) => {
     if (reschedulingTaskId) {
@@ -296,33 +360,34 @@ export default function TodoCalendarScreen() {
       const isSelected = isSameDay(cellDate, selectedDate);
 
       const baseClasses =
-        "aspect-square p-2 rounded-lg border transition-all text-left flex flex-col justify-between focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500";
-
-      const stateClasses = isSelected
-        ? "bg-sky-600 text-white border-sky-600 shadow-lg"
-        : isToday
-          ? "bg-sky-50 text-sky-700 border-sky-300"
-          : dayTasks.length > 0
-            ? "border-sky-200 bg-sky-50/70 hover:bg-sky-100"
-            : reschedulingTaskId
-              ? "border-sky-300 hover:bg-sky-50"
-              : "border-slate-200 hover:bg-slate-50";
+        "aspect-square rounded-[1.1rem] border p-2 text-left transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 flex flex-col justify-between";
+      const stateStyle = getCalendarCellStyle({
+        isSelected,
+        isToday,
+        hasTasks: dayTasks.length > 0,
+        isRescheduling: Boolean(reschedulingTaskId),
+      });
 
       cells.push(
         <button
           key={day}
           onClick={() => handleDayClick(cellDate)}
-          className={`${baseClasses} ${stateClasses}`}
+          className={baseClasses}
+          style={{
+            ...stateStyle,
+            outlineColor: "var(--panel-focus,#c86f1d)",
+          }}
         >
           <div className="flex items-start justify-between gap-2">
             <span className="text-sm font-semibold">{day}</span>
             {totalCount > 0 && (
               <span
-                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+                style={
                   isSelected
-                    ? "bg-white/20 text-white"
-                    : "bg-sky-600/10 text-sky-700"
-                }`}
+                    ? getPanelToneStyle("neutral")
+                    : getPanelToneStyle("accent")
+                }
               >
                 {totalCount} tarefa(s)
               </span>
@@ -330,14 +395,20 @@ export default function TodoCalendarScreen() {
           </div>
           <div className="mt-auto text-[10px] font-semibold space-y-1">
             {pendingCount > 0 && (
-              <div className="flex items-center space-x-1 text-sky-800">
-                <Circle className="w-3 h-3" />
+              <div
+                className="flex items-center space-x-1"
+                style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+              >
+                <Circle className="h-3 w-3" />
                 <span>{pendingCount} aberto(s)</span>
               </div>
             )}
             {doneCount > 0 && (
-              <div className="flex items-center space-x-1 text-emerald-700">
-                <CheckCircle2 className="w-3 h-3" />
+              <div
+                className="flex items-center space-x-1"
+                style={{ color: "var(--panel-accent-green-text,#275c39)" }}
+              >
+                <CheckCircle2 className="h-3 w-3" />
                 <span>{doneCount} concluído(s)</span>
               </div>
             )}
@@ -351,7 +422,8 @@ export default function TodoCalendarScreen() {
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-semibold text-slate-500 uppercase tracking-wide"
+            className="text-center text-xs font-semibold uppercase tracking-wide"
+            style={{ color: "var(--panel-text-muted,#876f5c)" }}
           >
             {day}
           </div>
@@ -373,51 +445,140 @@ export default function TodoCalendarScreen() {
       overlayLabel="Atualizando tarefas..."
       stageClassName="min-h-[560px]"
     >
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-slate-900">
-              Agenda de Tarefas
-            </h2>
-            <p className="text-sm text-slate-500">
-              {reschedulingTaskId
-                ? "Selecione um dia no calendário para reagendar a tarefa"
-                : "Clique em um dia para ver e gerenciar suas tarefas."}
-            </p>
-            {reschedulingTaskId && (
-              <Button
-                onClick={() => setReschedulingTaskId(null)}
-                variant="ghost"
-                size="sm"
-                className="mt-1 h-auto px-0 text-red-600 hover:bg-transparent hover:text-red-700"
+      <section
+        className="panel-glass-panel space-y-6 rounded-[2rem] border p-6"
+        style={PANEL_SECTION_STYLE}
+      >
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+            <div>
+              <p
+                className="text-[11px] font-black uppercase tracking-[0.24em]"
+                style={{ color: "var(--panel-text-muted,#876f5c)" }}
               >
-                Cancelar reagendamento
-              </Button>
-            )}
-          </div>
-          <div className="flex items-center space-x-4 text-sm text-slate-500">
-            <div className="flex items-center space-x-2">
-              <Circle className="w-3 h-3 text-sky-500" />
-              <span>Tarefas pendentes</span>
+                Rotina operacional
+              </p>
+              <h2
+                className="mt-3 text-2xl font-bold sm:text-3xl"
+                style={{ color: "var(--panel-text,#1c1917)" }}
+              >
+                Agenda de Tarefas
+              </h2>
+              <p
+                className="mt-1 text-sm"
+                style={{ color: "var(--panel-text-muted,#876f5c)" }}
+              >
+                {reschedulingTaskId
+                  ? "Selecione um dia no calendário para reagendar a tarefa."
+                  : "Clique em um dia para abrir, reagendar e concluir tarefas com mais contexto."}
+              </p>
+              {reschedulingTaskId && (
+                <Button
+                  onClick={() => setReschedulingTaskId(null)}
+                  variant="ghost"
+                  size="sm"
+                  className="mt-1 h-auto px-0 hover:bg-transparent"
+                  style={{ color: "var(--panel-accent-red-text,#8a3128)" }}
+                >
+                  Cancelar reagendamento
+                </Button>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-              <span>Tarefas concluídas</span>
+
+            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+              <span
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  ...PANEL_PILL_STYLE,
+                  color: "var(--panel-text-soft,#5b4635)",
+                }}
+              >
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                  {tasksByMonth.length}
+                </span>
+                <span>tarefas no mês</span>
+              </span>
+              <span
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  ...PANEL_PILL_STYLE,
+                  color: "var(--panel-text-soft,#5b4635)",
+                }}
+              >
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                  {pendingTaskCount}
+                </span>
+                <span>pendentes</span>
+              </span>
+              <span
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  ...PANEL_PILL_STYLE,
+                  color: "var(--panel-text-soft,#5b4635)",
+                }}
+              >
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                  {completedTaskCount}
+                </span>
+                <span>concluídas</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+            <div
+              className="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm"
+              style={{
+                ...PANEL_PILL_STYLE,
+                color: "var(--panel-text-soft,#5b4635)",
+              }}
+            >
+              <Clock3
+                className="h-4 w-4"
+                style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
+              />
+              <span>{lastUpdatedLabel}</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+                style={getPanelToneStyle("accent")}
+              >
+                <Circle className="h-3 w-3" />
+                <span>Tarefas pendentes</span>
+              </div>
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5"
+                style={getPanelToneStyle("success")}
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                <span>Tarefas concluídas</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 border rounded-xl border-slate-200 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-slate-50">
+        <div
+          className="overflow-hidden rounded-[1.7rem] border"
+          style={PANEL_INSET_STYLE}
+        >
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={PANEL_MUTED_INSET_STYLE}
+          >
             <Button
               onClick={goToPreviousMonth}
               variant="icon"
               size="icon"
               aria-label="Mês anterior"
             >
-              <ChevronLeft className="w-5 h-5 text-slate-600" />
+              <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h3 className="text-lg font-semibold text-slate-900 capitalize">
+            <h3
+              className="text-lg font-semibold capitalize"
+              style={{ color: "var(--panel-text,#1c1917)" }}
+            >
               {currentMonth.toLocaleDateString("pt-BR", {
                 month: "long",
                 year: "numeric",
@@ -429,15 +590,18 @@ export default function TodoCalendarScreen() {
               size="icon"
               aria-label="Próximo mês"
             >
-              <ChevronRight className="w-5 h-5 text-slate-600" />
+              <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
           <div className="p-4">{renderCalendar()}</div>
         </div>
 
         {error && !isDayModalOpen && (
-          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-center space-x-2 text-sm text-red-700">
-            <AlertCircle className="w-4 h-4" />
+          <div
+            className="mt-4 flex items-center space-x-2 rounded-[1.1rem] border p-3 text-sm"
+            style={getPanelToneStyle("danger")}
+          >
+            <AlertCircle className="h-4 w-4" />
             <span>{error}</span>
           </div>
         )}
@@ -457,7 +621,10 @@ export default function TodoCalendarScreen() {
             bodyClassName="p-6"
           >
             {reschedulingTaskId && (
-              <p className="mb-4 text-sm text-sky-600">
+              <p
+                className="mb-4 text-sm"
+                style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+              >
                 Selecione um dia para reagendar a tarefa
               </p>
             )}
@@ -475,12 +642,21 @@ export default function TodoCalendarScreen() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <div className="border border-slate-200 rounded-xl p-4">
+              <div
+                className="rounded-[1.3rem] border p-4"
+                style={PANEL_INSET_STYLE}
+              >
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                  <h4
+                    className="text-sm font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                  >
                     A fazer
                   </h4>
-                  <span className="text-xs font-semibold text-sky-600">
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+                  >
                     {pendingTasks.length}
                   </span>
                 </div>
@@ -489,19 +665,27 @@ export default function TodoCalendarScreen() {
                     {pendingTasks.map((task) => (
                       <article
                         key={task.id}
-                        className={`border rounded-lg p-3 shadow-sm transition-all ${
-                          reschedulingTaskId === task.id
-                            ? "border-sky-500 bg-sky-50"
-                            : "border-sky-200 bg-white"
-                        }`}
+                        className="rounded-[1rem] border p-3 shadow-sm transition-all"
+                        style={{
+                          ...PANEL_INSET_STYLE,
+                          ...(reschedulingTaskId === task.id
+                            ? getPanelToneStyle("accent")
+                            : null),
+                        }}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-slate-800">
+                            <p
+                              className="text-sm font-semibold"
+                              style={{ color: "var(--panel-text,#1c1917)" }}
+                            >
                               {task.titulo}
                             </p>
                             {task.descricao && (
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p
+                                className="mt-1 text-xs"
+                                style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                              >
                                 {task.descricao}
                               </p>
                             )}
@@ -510,7 +694,7 @@ export default function TodoCalendarScreen() {
                             onClick={() => handleDeleteTask(task.id)}
                             variant="icon"
                             size="icon"
-                            className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                            className="h-7 w-7"
                             title="Remover tarefa"
                             type="button"
                           >
@@ -521,18 +705,18 @@ export default function TodoCalendarScreen() {
                           <div className="flex items-center gap-2">
                             <Button
                               type="button"
-                              variant="ghost"
+                              variant="soft"
                               size="sm"
-                              className="h-7 px-2 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
+                              className="h-7 px-2"
                               onClick={() => updateTaskStatus(task.id, true)}
                             >
                               <CheckCircle2 className="w-4 h-4 mr-1" /> Concluir
                             </Button>
                             <Button
                               type="button"
-                              variant="ghost"
+                              variant="secondary"
                               size="sm"
-                              className="h-7 px-2 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
+                              className="h-7 px-2"
                               onClick={() => setReschedulingTaskId(task.id)}
                               title="Reagendar tarefa"
                             >
@@ -544,18 +728,30 @@ export default function TodoCalendarScreen() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500 py-8 text-center">
+                  <div
+                    className="py-8 text-center text-sm"
+                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                  >
                     Nenhuma tarefa pendente para este dia.
                   </div>
                 )}
               </div>
 
-              <div className="border border-slate-200 rounded-xl p-4">
+              <div
+                className="rounded-[1.3rem] border p-4"
+                style={PANEL_INSET_STYLE}
+              >
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
+                  <h4
+                    className="text-sm font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                  >
                     Feito
                   </h4>
-                  <span className="text-xs font-semibold text-emerald-600">
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: "var(--panel-accent-green-text,#275c39)" }}
+                  >
                     {completedTasks.length}
                   </span>
                 </div>
@@ -564,15 +760,25 @@ export default function TodoCalendarScreen() {
                     {completedTasks.map((task) => (
                       <article
                         key={task.id}
-                        className="border border-emerald-200 bg-white rounded-lg p-3 shadow-sm"
+                        className="rounded-[1rem] border p-3 shadow-sm"
+                        style={{
+                          ...PANEL_INSET_STYLE,
+                          ...getPanelToneStyle("success"),
+                        }}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="text-sm font-semibold text-slate-800 line-through">
+                            <p
+                              className="text-sm font-semibold line-through"
+                              style={{ color: "var(--panel-text,#1c1917)" }}
+                            >
                               {task.titulo}
                             </p>
                             {task.descricao && (
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p
+                                className="mt-1 text-xs"
+                                style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                              >
                                 {task.descricao}
                               </p>
                             )}
@@ -581,14 +787,17 @@ export default function TodoCalendarScreen() {
                             onClick={() => handleDeleteTask(task.id)}
                             variant="icon"
                             size="icon"
-                            className="h-7 w-7 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                            className="h-7 w-7"
                             title="Remover tarefa"
                             type="button"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                        <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                        <div
+                          className="mt-3 flex items-center justify-between text-xs"
+                          style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                        >
                           <span>
                             {task.concluido_em
                               ? `Concluída em ${new Date(task.concluido_em).toLocaleDateString("pt-BR")}`
@@ -596,9 +805,9 @@ export default function TodoCalendarScreen() {
                           </span>
                           <Button
                             type="button"
-                            variant="ghost"
+                            variant="secondary"
                             size="sm"
-                            className="h-7 px-2 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                            className="h-7 px-2"
                             onClick={() => updateTaskStatus(task.id, false)}
                           >
                             <Circle className="w-4 h-4 mr-1" /> Reabrir
@@ -608,7 +817,10 @@ export default function TodoCalendarScreen() {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500 py-8 text-center">
+                  <div
+                    className="py-8 text-center text-sm"
+                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                  >
                     Nenhuma tarefa concluída neste dia.
                   </div>
                 )}
@@ -616,8 +828,11 @@ export default function TodoCalendarScreen() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center space-x-2 text-sm text-red-700 mt-4">
-                <AlertCircle className="w-4 h-4" />
+              <div
+                className="mt-4 flex items-center space-x-2 rounded-[1.1rem] border p-3 text-sm"
+                style={getPanelToneStyle("danger")}
+              >
+                <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
               </div>
             )}
@@ -641,7 +856,8 @@ export default function TodoCalendarScreen() {
               <div className="space-y-1">
                 <label
                   htmlFor="task-title"
-                  className="text-sm font-medium text-slate-700"
+                  className="text-sm font-medium"
+                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
                 >
                   Tarefa
                 </label>
@@ -659,7 +875,8 @@ export default function TodoCalendarScreen() {
               <div className="space-y-1">
                 <label
                   htmlFor="task-description"
-                  className="text-sm font-medium text-slate-700"
+                  className="text-sm font-medium"
+                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
                 >
                   Descrição (opcional)
                 </label>

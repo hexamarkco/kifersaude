@@ -1904,14 +1904,10 @@ export default function LeadsManager({
               </div>
             </div>
 
-            <div
-              className="rounded-[1.75rem] border"
-              style={LEADS_MUTED_INSET_STYLE}
-            >
-              {selectedLeadIds.length > 0 && (
+            {selectedLeadIds.length > 0 && (
                 <div
-                  className="flex flex-col gap-2 border-b px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between"
-                  style={{ borderColor: "var(--panel-border-subtle,#e4d5c0)" }}
+                  className="rounded-[1.4rem] border px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between"
+                  style={LEADS_MUTED_INSET_STYLE}
                 >
                   <span
                     className="text-sm font-medium"
@@ -2033,7 +2029,7 @@ export default function LeadsManager({
                     </div>
                   </div>
                 </div>
-              )}
+            )}
             <div className="grid grid-cols-1 gap-4 p-4 sm:p-5">
               {paginatedLeads.map((lead) => (
                 <div
@@ -2279,7 +2275,6 @@ export default function LeadsManager({
                 onItemsPerPageChange={handleItemsPerPageChange}
               />
             )}
-            </div>
           </div>
         )}
 

@@ -1693,6 +1693,45 @@ function buildDirectChatIdVariantsFromPhone(phoneNumber: string): string[] {
   return Array.from(chatIdVariants);
 }
 
+async function getChatRefreshVariants(chatId: string): Promise<string[]> {
+  const normalizedChatId = toCleanText(chatId);
+  if (!normalizedChatId) {
+    return [];
+  }
+
+  const variants = new Set<string>([normalizedChatId]);
+  const chatType = getChatIdType(normalizedChatId);
+  if (chatType !== 'phone' && chatType !== 'lid') {
+    return Array.from(variants);
+  }
+
+  const { data: currentChat, error: currentChatError } = await supabase
+    .from('whatsapp_chats')
+    .select('phone_number, lid')
+    .eq('id', normalizedChatId)
+    .maybeSingle();
+
+  if (currentChatError) {
+    console.warn('whatsapp-webhook: erro ao carregar variantes do chat para refresh', {
+      chatId: normalizedChatId,
+      error: currentChatError.message,
+    });
+    return Array.from(variants);
+  }
+
+  const phoneNumber = toCleanText(currentChat?.phone_number) || extractPhoneNumber(normalizedChatId) || null;
+  if (phoneNumber) {
+    buildDirectChatIdVariantsFromPhone(phoneNumber).forEach((variant) => variants.add(variant));
+  }
+
+  const lid = toCleanText(currentChat?.lid) || (chatType === 'lid' ? normalizedChatId : '');
+  if (lid) {
+    variants.add(lid);
+  }
+
+  return Array.from(variants);
+}
+
 function getDirectChatMergePriority(chatId: string, phoneNumber: string | null): number {
   const normalized = chatId.trim().toLowerCase();
   if (!normalized) return -1;
@@ -2280,10 +2319,13 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
   const normalizedChatId = toCleanText(chatId);
   if (!normalizedChatId) return;
 
+  const refreshVariants = await getChatRefreshVariants(normalizedChatId);
+  if (refreshVariants.length === 0) return;
+
   const { data: recentMessages, error: latestMessageError } = await supabase
     .from('whatsapp_messages')
     .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
-    .eq('chat_id', normalizedChatId)
+    .in('chat_id', refreshVariants)
     .order('timestamp', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .limit(200);

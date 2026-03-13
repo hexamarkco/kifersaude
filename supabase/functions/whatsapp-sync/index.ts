@@ -702,24 +702,73 @@ const resolveStoredChatPreview = (message: {
 const normalizeChatPreviewDirection = (value: string | null | undefined): 'inbound' | 'outbound' | null =>
   value === 'inbound' || value === 'outbound' ? value : null;
 
+const buildChatRefreshVariants = (chatId: string, phoneNumber?: string | null, lid?: string | null) => {
+  const variants = new Set<string>();
+  const normalizedChatId = toCleanText(chatId);
+  if (!normalizedChatId) {
+    return [];
+  }
+
+  variants.add(normalizedChatId);
+
+  if (getChatIdKind(normalizedChatId) === 'direct') {
+    const normalizedDirectChatId = normalizeDirectChatId(normalizedChatId);
+    variants.add(normalizedDirectChatId);
+
+    if (normalizedDirectChatId.endsWith('@s.whatsapp.net')) {
+      variants.add(normalizedDirectChatId.replace(/@s\.whatsapp\.net$/i, '@c.us'));
+    }
+
+    const resolvedPhoneNumber = toCleanText(phoneNumber) || extractChatPhoneNumber(normalizedChatId) || '';
+    if (resolvedPhoneNumber) {
+      variants.add(`${resolvedPhoneNumber}@s.whatsapp.net`);
+      variants.add(`${resolvedPhoneNumber}@c.us`);
+    }
+
+    const resolvedLid = toCleanText(lid) || extractChatLid(normalizedChatId) || '';
+    if (resolvedLid) {
+      variants.add(resolvedLid);
+    }
+  }
+
+  return Array.from(variants);
+};
+
 const refreshChatLastMessageState = async (chatId: string) => {
   const normalizedChatId = toCleanText(chatId);
   if (!normalizedChatId) return;
 
+  const { data: currentChat, error: currentChatError } = await supabase
+    .from('whatsapp_chats')
+    .select('phone_number, lid')
+    .eq('id', normalizedChatId)
+    .maybeSingle();
+
+  if (currentChatError) {
+    throw new Error(currentChatError.message);
+  }
+
+  const refreshVariants = buildChatRefreshVariants(
+    normalizedChatId,
+    currentChat?.phone_number ?? null,
+    currentChat?.lid ?? null,
+  );
+  if (refreshVariants.length === 0) {
+    return;
+  }
+
   const { data: recentMessages, error: recentMessagesError } = await supabase
     .from('whatsapp_messages')
     .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
-    .eq('chat_id', normalizedChatId)
+    .in('chat_id', refreshVariants)
     .order('timestamp', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
-    .limit(25);
+    .limit(200);
 
   if (recentMessagesError) {
     throw new Error(recentMessagesError.message);
   }
 
-  const latestMessage = (recentMessages || [])[0];
-  const nextLastMessageAt = latestMessage?.timestamp || latestMessage?.created_at || null;
   const latestMeaningfulMessage = (recentMessages || []).find((message) =>
     Boolean(
       resolveStoredChatPreview(message as {
@@ -730,10 +779,20 @@ const refreshChatLastMessageState = async (chatId: string) => {
         is_deleted?: boolean | null;
       }),
     ),
-  ) as { body?: string | null; type?: string | null; payload?: unknown; has_media?: boolean | null; is_deleted?: boolean | null; direction?: string | null } | undefined;
-  const nextLastMessage = latestMeaningfulMessage
-    ? resolveStoredChatPreview(latestMeaningfulMessage)
-    : null;
+  ) as
+    | {
+        body?: string | null;
+        type?: string | null;
+        payload?: unknown;
+        has_media?: boolean | null;
+        is_deleted?: boolean | null;
+        direction?: string | null;
+        timestamp?: string | null;
+        created_at?: string | null;
+      }
+    | undefined;
+  const nextLastMessage = latestMeaningfulMessage ? resolveStoredChatPreview(latestMeaningfulMessage) : null;
+  const nextLastMessageAt = latestMeaningfulMessage?.timestamp || latestMeaningfulMessage?.created_at || null;
   const nextLastMessageDirection = normalizeChatPreviewDirection(latestMeaningfulMessage?.direction ?? null);
 
   const { error: updateError } = await supabase

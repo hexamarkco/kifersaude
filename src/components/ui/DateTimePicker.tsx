@@ -575,9 +575,13 @@ export default function DateTimePicker({
           type="text"
           disabled={disabled}
           value={manualInputValue}
-          onFocus={() => {
+          onFocus={(event) => {
             setIsEditingInput(true);
             setIsOpen(true);
+
+            if (type === 'month') {
+              event.currentTarget.select();
+            }
           }}
           onChange={(event) => {
             setIsEditingInput(true);

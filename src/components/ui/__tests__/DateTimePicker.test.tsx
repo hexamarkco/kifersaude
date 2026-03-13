@@ -123,6 +123,20 @@ test('lets users type a month directly into the main input with MM/AAAA', () => 
   unmount();
 });
 
+test('selects the whole month input on focus for quick replacement', () => {
+  const { container, unmount } = renderControlledPicker('2026-03', 'month');
+
+  const triggerInput = container.querySelector('input[aria-haspopup="dialog"]');
+  assert.ok(triggerInput instanceof HTMLInputElement);
+
+  focusInput(triggerInput);
+  assert.equal(triggerInput.value, '03/2026');
+  assert.equal(triggerInput.selectionStart, 0);
+  assert.equal(triggerInput.selectionEnd, triggerInput.value.length);
+
+  unmount();
+});
+
 test('keeps accepting legacy AAAA-MM month input', () => {
   const { container, getValue, unmount } = renderControlledPicker('2026-03', 'month');
 

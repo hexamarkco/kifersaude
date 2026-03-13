@@ -2145,14 +2145,14 @@ export default function LeadsManager({
                     </div>
                   </div>
                   <div
-                    className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4"
+                    className="mt-3 flex flex-wrap items-center gap-1.5 border-t pt-3"
                     style={{ borderColor: "var(--panel-border-subtle,#e4d5c0)" }}
                   >
                     <Button
                       onClick={() => setSelectedLead(lead)}
                       variant="secondary"
                       size="sm"
-                      className="space-x-0 sm:space-x-2"
+                      className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
                       aria-label={
                         canEditLeads
                           ? "Ver e editar lead"
@@ -2170,7 +2170,7 @@ export default function LeadsManager({
                           onClick={() => handleConvertToContract(lead)}
                           variant="soft"
                           size="sm"
-                          className="hidden md:inline-flex space-x-2"
+                          className="hidden h-[30px] px-2.5 text-[11px] md:inline-flex space-x-1.5"
                         >
                           <FileText className="h-4 w-4" />
                           <span>Converter em Contrato</span>
@@ -2179,7 +2179,7 @@ export default function LeadsManager({
                           onClick={() => openReminderScheduler(lead)}
                           variant="soft"
                           size="sm"
-                          className="space-x-0 sm:space-x-2"
+                          className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
                           aria-label="Agendar lembrete"
                           type="button"
                         >
@@ -2192,7 +2192,7 @@ export default function LeadsManager({
                           onClick={() => handleDeleteLead(lead)}
                           variant="danger"
                           size="sm"
-                          className="space-x-0 sm:space-x-2"
+                          className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
                           aria-label="Excluir lead"
                           type="button"
                         >
@@ -2204,7 +2204,7 @@ export default function LeadsManager({
                             onClick={() => handleArchive(lead.id)}
                             variant="warning"
                             size="sm"
-                            className="space-x-0 sm:space-x-2 sm:ml-auto"
+                            className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5 sm:ml-auto"
                             aria-label="Arquivar lead"
                           >
                             <Archive className="h-4 w-4" />
@@ -2215,7 +2215,7 @@ export default function LeadsManager({
                             onClick={() => handleUnarchive(lead.id)}
                             variant="secondary"
                             size="sm"
-                            className="space-x-0 sm:space-x-2 sm:ml-auto"
+                            className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5 sm:ml-auto"
                             aria-label="Reativar lead"
                           >
                             <Users className="h-4 w-4" />

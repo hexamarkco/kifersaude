@@ -3075,7 +3075,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       const allRows: WhatsAppMessage[] = [];
-      const previewLimitPerBatch = Math.min(Math.max(CHAT_PREVIEW_VARIANTS_BATCH_SIZE * 6, 300), 900);
+      const previewLimitPerBatch = Math.min(Math.max(CHAT_PREVIEW_VARIANTS_BATCH_SIZE * 8, 400), 1200);
 
       for (let index = 0; index < variants.length; index += CHAT_PREVIEW_VARIANTS_BATCH_SIZE) {
         const batch = variants.slice(index, index + CHAT_PREVIEW_VARIANTS_BATCH_SIZE);
@@ -3120,22 +3120,61 @@ export default function WhatsAppInboxScreen() {
         });
       });
 
+      const unresolvedChats = sourceChats.filter((chat) => !previewByChatId.has(chat.id));
+      for (let index = 0; index < unresolvedChats.length; index += 6) {
+        if (currentLoadId && activeChatsLoadIdRef.current !== currentLoadId) return;
+
+        const batch = unresolvedChats.slice(index, index + 6);
+        const batchResults = await Promise.all(
+          batch.map(async (chat) => ({
+            chat,
+            preview: await fetchLatestPreviewForChat(chat),
+          })),
+        );
+
+        batchResults.forEach(({ chat, preview }) => {
+          if (!preview) return;
+          previewByChatId.set(chat.id, {
+            preview: preview.preview,
+            direction: preview.direction,
+            timestamp: preview.timestamp,
+          });
+        });
+      }
+
       if (previewByChatId.size === 0) return;
 
+      const correctedChats: Array<{ id: string; preview: PersistedChatPreview }> = [];
       setChats((prev) => {
         const updated = prev.map((chat) => {
           const nextPreview = previewByChatId.get(chat.id);
           if (!nextPreview) return chat;
 
+          const normalizedPreview = {
+            id: chat.id,
+            ...normalizePersistedChatPreview(nextPreview),
+          };
+          if (hasChatPreviewChanged(chat, normalizedPreview)) {
+            correctedChats.push({ id: chat.id, preview: normalizedPreview });
+          }
+
           return {
             ...chat,
-            last_message: nextPreview.preview,
-            last_message_direction: nextPreview.direction,
-            last_message_at: nextPreview.timestamp,
+            last_message: normalizedPreview.last_message,
+            last_message_direction: normalizedPreview.last_message_direction,
+            last_message_at: normalizedPreview.last_message_at,
           };
         });
 
         return updated.sort(sortChatsByLatest);
+      });
+
+      correctedChats.forEach(({ id, preview }) => {
+        queueChatPreviewPersistence(id, {
+          preview: preview.last_message,
+          timestamp: preview.last_message_at,
+          direction: preview.last_message_direction,
+        });
       });
     } catch (error) {
       console.error('Erro ao recalcular previews dos chats:', error);

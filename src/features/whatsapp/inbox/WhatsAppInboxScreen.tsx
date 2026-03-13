@@ -1,4 +1,4 @@
-import { startTransition, useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
+import { memo, startTransition, useCallback, useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { supabase, fetchAllPages, type Lead } from '../../../lib/supabase';
 import {
   Search,
@@ -122,6 +122,128 @@ type PersistedChatPreview = {
   last_message_direction: 'inbound' | 'outbound' | null;
   last_message_at: string | null;
 };
+
+type VisibleChatRowItem = {
+  chat: WhatsAppChat;
+  displayName: string;
+  kind: string;
+  typeLabel: string | null;
+  typeBadgeClass: string;
+  leadStatus: string | null;
+  leadStatusStyles: ReturnType<typeof getBadgeStyle> | null;
+  photo: string | null;
+  muted: boolean;
+  unreadWaitingLabel: string | null;
+  formattedTime: string;
+  previewText: string;
+  isSelected: boolean;
+};
+
+const OFFSCREEN_CHAT_ROW_STYLE = {
+  contentVisibility: 'auto' as const,
+  containIntrinsicSize: '96px',
+};
+
+const OFFSCREEN_MESSAGE_STYLE = {
+  contentVisibility: 'auto' as const,
+  containIntrinsicSize: '280px',
+};
+
+type InboxChatRowProps = {
+  item: VisibleChatRowItem;
+  onSelectChat: (chat: WhatsAppChat | null) => void;
+  onOpenChatContextMenu: (chatId: string, anchorRect: DOMRect, source: ChatMenuSource) => void;
+};
+
+const InboxChatRow = memo(function InboxChatRow({
+  item,
+  onSelectChat,
+  onOpenChatContextMenu,
+}: InboxChatRowProps) {
+  const handleClick = useCallback(() => {
+    onSelectChat(item.chat);
+  }, [item.chat, onSelectChat]);
+
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      onOpenChatContextMenu(item.chat.id, event.currentTarget.getBoundingClientRect(), 'row');
+    },
+    [item.chat.id, onOpenChatContextMenu],
+  );
+
+  return (
+    <div style={OFFSCREEN_CHAT_ROW_STYLE}>
+      <Button
+        variant="ghost"
+        size="sm"
+        fullWidth
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        className={`h-auto justify-start rounded-none border-b border-[var(--panel-border-subtle,#e7dac8)] p-4 text-left font-normal shadow-none transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)] ${
+          item.isSelected ? 'bg-[var(--panel-surface-muted,#f7f0e7)]' : ''
+        }`}
+      >
+        <div className="relative flex-shrink-0">
+          {item.photo && item.kind === 'direct' ? (
+            <div className="comm-avatar-shell h-12 w-12">
+              <img
+                src={item.photo}
+                alt={item.displayName}
+                className="comm-avatar-image"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          ) : (
+            <div className={`comm-avatar-shell comm-icon-chip flex h-12 w-12 items-center justify-center font-semibold ${getChatAvatarClass(item.kind)}`}>
+              {item.kind === 'group' ? (
+                <Users className="w-5 h-5" />
+              ) : item.kind === 'direct' ? (
+                <UserCircle className="w-5 h-5" />
+              ) : (
+                <MessageCircle className="w-5 h-5" />
+              )}
+            </div>
+          )}
+        </div>
+        <div className="min-w-0 flex-1 text-left">
+          <div className="mb-1 flex items-center justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <h3 className="truncate font-medium text-slate-900">{item.displayName}</h3>
+              {item.leadStatus && item.leadStatusStyles && (
+                <span className="whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px]" style={item.leadStatusStyles}>
+                  {item.leadStatus}
+                </span>
+              )}
+              {item.typeLabel && (
+                <span className={`comm-badge flex-shrink-0 text-xs ${item.typeBadgeClass}`}>
+                  {item.typeLabel}
+                </span>
+              )}
+            </div>
+            <span className="ml-2 flex-shrink-0 text-xs text-slate-500">{item.formattedTime}</span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-sm text-slate-600">{item.previewText}</p>
+            {(item.chat.pinned ?? 0) > 0 && (
+              <span className="whitespace-nowrap text-[10px] text-amber-700">Fixado</span>
+            )}
+            {item.unreadWaitingLabel && (
+              <span className="whitespace-nowrap text-[10px] text-rose-600">Aguardando {item.unreadWaitingLabel}</span>
+            )}
+            {item.muted && <span className="text-[10px] text-slate-400">Silenciado</span>}
+            {(item.chat.unread_count ?? 0) > 0 && (
+              <span className="flex-shrink-0 rounded-full bg-amber-600 px-2 py-0.5 text-[11px] text-white">
+                {item.chat.unread_count}
+              </span>
+            )}
+          </div>
+        </div>
+      </Button>
+    </div>
+  );
+}, (prev, next) => prev.item === next.item);
 
 export default function WhatsAppInboxScreen() {
   const { handleTabChange } = useOutletContext<{ handleTabChange: (tab: string, options?: { leadIdFilter?: string }) => void }>();
@@ -2827,7 +2949,7 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const formatTime = (timestamp: string | null) => {
+  const formatTime = useCallback((timestamp: string | null) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
     const now = new Date();
@@ -2842,7 +2964,7 @@ export default function WhatsAppInboxScreen() {
     } else {
       return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
     }
-  };
+  }, []);
 
   const formatPhone = formatWhatsAppPhoneDisplay;
 
@@ -2946,7 +3068,7 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const formatChatListPreview = (chat: Pick<WhatsAppChat, 'last_message' | 'last_message_direction' | 'is_group'>) => {
+  const formatChatListPreview = useCallback((chat: Pick<WhatsAppChat, 'last_message' | 'last_message_direction' | 'is_group'>) => {
     const preview = sanitizeTechnicalCiphertextPreview(chat.last_message);
     if (!preview) return 'Sem mensagens';
 
@@ -2959,7 +3081,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     return preview;
-  };
+  }, []);
 
   const normalizePersistedChatPreview = (preview: ChatPreviewCandidate) => ({
     last_message: sanitizeTechnicalCiphertextPreview(preview.preview) || null,
@@ -3181,13 +3303,13 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const formatMinutesDuration = (minutes: number) => {
+  const formatMinutesDuration = useCallback((minutes: number) => {
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     if (remainingMinutes === 0) return `${hours}h`;
     return `${hours}h ${remainingMinutes}m`;
-  };
+  }, []);
 
   const getChatDisplayNameFromId = (chatId: string) => {
     const chatKind = getWhatsAppChatKind(chatId);
@@ -3505,6 +3627,21 @@ export default function WhatsAppInboxScreen() {
     .filter(Boolean)
     .join(' • ');
 
+  const chatSearchMetadataById = useMemo(() => {
+    const map = new Map<string, { displayName: string; preview: string; chatId: string; phone: string }>();
+
+    chats.forEach((chat) => {
+      map.set(chat.id, {
+        displayName: normalizeSearchText(chatListPresentationById.get(chat.id)?.displayName || chat.id),
+        preview: normalizeSearchText(sanitizeTechnicalCiphertextPreview(chat.last_message)),
+        chatId: normalizeSearchText(chat.id),
+        phone: normalizeSearchText(chat.phone_number || extractPhoneFromChatId(chat.id)),
+      });
+    });
+
+    return map;
+  }, [chatListPresentationById, chats]);
+
   const {
     archivedCount,
     inboxCount,
@@ -3521,21 +3658,27 @@ export default function WhatsAppInboxScreen() {
     const chatsMatchingSearch = workspaceChats.filter((chat) => {
       if (!normalizedSearchQuery) return true;
 
-      const displayName = normalizeSearchText(chatListPresentationById.get(chat.id)?.displayName || chat.id);
-      const preview = normalizeSearchText(sanitizeTechnicalCiphertextPreview(chat.last_message));
-      const chatId = normalizeSearchText(chat.id);
-      const phone = normalizeSearchText(chat.phone_number || extractPhoneFromChatId(chat.id));
-      const cachedState = messagesCacheRef.current.get(chat.id);
-      const messageMatches = cachedState?.messages.some((message) =>
-        getMessageSearchHaystack(message).includes(normalizedSearchQuery),
-      );
+      const searchMetadata = chatSearchMetadataById.get(chat.id);
+      if (
+        searchMetadata && (
+          searchMetadata.displayName.includes(normalizedSearchQuery) ||
+          searchMetadata.chatId.includes(normalizedSearchQuery) ||
+          searchMetadata.phone.includes(normalizedSearchQuery) ||
+          searchMetadata.preview.includes(normalizedSearchQuery)
+        )
+      ) {
+        return true;
+      }
 
-      return (
-        displayName.includes(normalizedSearchQuery) ||
-        chatId.includes(normalizedSearchQuery) ||
-        phone.includes(normalizedSearchQuery) ||
-        preview.includes(normalizedSearchQuery) ||
-        Boolean(messageMatches)
+      if (normalizedSearchQuery.length < 3) {
+        return false;
+      }
+
+      const cachedState = messagesCacheRef.current.get(chat.id);
+      return Boolean(
+        cachedState?.messages.some((message) =>
+          getMessageSearchHaystack(message).includes(normalizedSearchQuery),
+        ),
       );
     });
 
@@ -3633,6 +3776,7 @@ export default function WhatsAppInboxScreen() {
     chatLeadStatusFilter,
     chatOnlyUnread,
     chatListPresentationById,
+    chatSearchMetadataById,
     chats,
     deferredSearchQuery,
     prioritizeUnread,
@@ -3692,7 +3836,36 @@ export default function WhatsAppInboxScreen() {
     [messages], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const selectedChatDisplayName = selectedChat ? getChatDisplayName(selectedChat) : '';
+  const selectedChatKind = selectedChat ? getChatKind(selectedChat) : null;
+  const isSelectedStatusChat = selectedChatKind === 'status';
+  const selectedChatTypeLabel = selectedChat ? getChatTypeLabel(selectedChat) : null;
+  const selectedChatTypeBadgeClass = getChatTypeBadgeClass(selectedChatKind);
+  const selectedChatIsDirect = selectedChat ? isDirectChat(selectedChat) : false;
+
+  const renderedMessageItems = useMemo(
+    () =>
+      renderedMessages.map((message, index) => {
+        const previousMessage = index > 0 ? renderedMessages[index - 1] : null;
+        const currentDayKey = getMessageDayKey(message);
+        const previousDayKey = previousMessage ? getMessageDayKey(previousMessage) : '';
+        const shouldShowDaySeparator = Boolean(currentDayKey) && currentDayKey !== previousDayKey;
+        const showAuthor = selectedChatKind === 'group' && message.direction === 'inbound' && message.author;
+
+        return {
+          message,
+          timestamp: getMessageDisplayTimestamp(message),
+          shouldShowDaySeparator,
+          daySeparatorLabel: shouldShowDaySeparator ? formatDaySeparatorLabel(message) : '',
+          authorName: showAuthor ? formatPhone(message.author!) : undefined,
+          reactions: reactionsByTargetId.get(message.id),
+        };
+      }),
+    [reactionsByTargetId, renderedMessages, selectedChatKind], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  const selectedChatDisplayName = selectedChat
+    ? chatListPresentationById.get(selectedChat.id)?.displayName || getChatDisplayName(selectedChat)
+    : '';
   const selectedLead = useMemo(() => {
     const matchKeys = getLeadMatchKeysForChat(selectedChat);
     for (const key of matchKeys) {
@@ -3804,7 +3977,7 @@ export default function WhatsAppInboxScreen() {
   }, [firstResponseSla]);
   const isDarkThemeActive =
     typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
-  const getLeadStatusBadgeStyle = (hexColor: string) => {
+  const getLeadStatusBadgeStyle = useCallback((hexColor: string) => {
     if (!isDarkThemeActive) {
       return getBadgeStyle(hexColor, 0.34);
     }
@@ -3816,7 +3989,7 @@ export default function WhatsAppInboxScreen() {
       color: preferredContrast === '#ffffff' ? '#f8fafc' : hexToRgba(hexColor, 0.95),
       borderColor: hexToRgba(hexColor, 0.58),
     };
-  };
+  }, [isDarkThemeActive]);
   const statusByName = useMemo(() => {
     const map = new Map<string, LeadStatusConfig>();
     leadStatuses.forEach((status) => map.set(status.nome, status));
@@ -3877,17 +4050,54 @@ export default function WhatsAppInboxScreen() {
     };
   }, [selectedChat, selectedChatDisplayName, selectedLead, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const getUnreadWaitingLabel = (chat: WhatsAppChat) => {
+  const getUnreadWaitingLabel = useCallback((chat: WhatsAppChat) => {
     if ((chat.unread_count ?? 0) <= 0 || !chat.last_message_at) return null;
     const messageTime = new Date(chat.last_message_at).getTime();
     if (!Number.isFinite(messageTime) || Number.isNaN(messageTime)) return null;
     const waitingMinutes = Math.max(1, Math.round((Date.now() - messageTime) / 60000));
     return formatMinutesDuration(waitingMinutes);
-  };
+  }, [formatMinutesDuration]);
 
-  function isChatMuted(chat: WhatsAppChat) {
+  const isChatMuted = useCallback((chat: WhatsAppChat) => {
     return chat.mute_until ? new Date(chat.mute_until).getTime() > Date.now() : false;
-  }
+  }, []);
+
+  const visibleChatItems = useMemo(
+    () =>
+      visibleChats.map((chat) => {
+        const chatPresentation = chatListPresentationById.get(chat.id);
+        const resolvedKind = chatPresentation?.kind ?? getChatKind(chat);
+        const leadStatus = chatPresentation?.leadStatus ?? null;
+        const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
+
+        return {
+          chat,
+          displayName: chatPresentation?.displayName || getChatDisplayName(chat),
+          kind: resolvedKind,
+          typeLabel: chatPresentation?.typeLabel ?? getChatTypeLabel(chat),
+          typeBadgeClass: chatPresentation?.typeBadgeClass ?? getChatTypeBadgeClass(resolvedKind),
+          leadStatus,
+          leadStatusStyles: statusConfig ? getLeadStatusBadgeStyle(statusConfig.cor || '#94a3b8') : null,
+          photo: chatPresentation?.photo ?? null,
+          muted: isChatMuted(chat),
+          unreadWaitingLabel: getUnreadWaitingLabel(chat),
+          formattedTime: formatTime(chat.last_message_at),
+          previewText: formatChatListPreview(chat),
+          isSelected: selectedChat?.id === chat.id,
+        } satisfies VisibleChatRowItem;
+      }),
+    [
+      chatListPresentationById,
+      formatChatListPreview,
+      formatTime,
+      getLeadStatusBadgeStyle,
+      getUnreadWaitingLabel,
+      isChatMuted,
+      selectedChat?.id,
+      statusByName,
+      visibleChats,
+    ],
+  );
 
   const clearMuteMenuCloseTimeout = () => {
     if (muteMenuCloseTimeoutRef.current !== null) {
@@ -3967,11 +4177,6 @@ export default function WhatsAppInboxScreen() {
     });
   };
 
-  const selectedChatKind = selectedChat ? getChatKind(selectedChat) : null;
-  const isSelectedStatusChat = selectedChatKind === 'status';
-  const selectedChatTypeLabel = selectedChat ? getChatTypeLabel(selectedChat) : null;
-  const selectedChatTypeBadgeClass = getChatTypeBadgeClass(selectedChatKind);
-  const selectedChatIsDirect = selectedChat ? isDirectChat(selectedChat) : false;
   const selectedChatPeerPhoneFromMessages = useMemo(() => {
     if (!selectedChat || !selectedChatIsDirect) return '';
 
@@ -5905,105 +6110,14 @@ export default function WhatsAppInboxScreen() {
                 <p className="text-sm">As mensagens do WhatsApp aparecerão aqui</p>
               </div>
             ) : (
-              visibleChats.map((chat) => {
-                const chatPresentation = chatListPresentationById.get(chat.id);
-                const chatDisplayName = chatPresentation?.displayName || getChatDisplayName(chat);
-                const chatKind = chatPresentation?.kind ?? getChatKind(chat);
-                const chatTypeLabel = chatPresentation?.typeLabel ?? getChatTypeLabel(chat);
-                const leadStatus = chatPresentation?.leadStatus ?? null;
-                const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
-                const badgeStyles = statusConfig ? getLeadStatusBadgeStyle(statusConfig.cor || '#94a3b8') : null;
-                const chatTypeBadgeClass = chatPresentation?.typeBadgeClass ?? getChatTypeBadgeClass(chatKind);
-                const chatPhoto = chatPresentation?.photo ?? null;
-
-                const muted = isChatMuted(chat);
-                const unreadWaitingLabel = getUnreadWaitingLabel(chat);
-
-                return (
-                  <Button
-                    key={chat.id}
-                    variant="ghost"
-                    size="sm"
-                    fullWidth
-                    onClick={() => selectChat(chat)}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      openChatContextMenu(chat.id, event.currentTarget.getBoundingClientRect(), 'row');
-                    }}
-                    className={`h-auto justify-start rounded-none border-b border-[var(--panel-border-subtle,#e7dac8)] p-4 text-left font-normal shadow-none transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)] ${
-                      selectedChat?.id === chat.id ? 'bg-[var(--panel-surface-muted,#f7f0e7)]' : ''
-                    }`}
-                  >
-                    <div className="relative flex-shrink-0">
-                      {chatPhoto && isDirectChat(chat) ? (
-                        <div className="comm-avatar-shell h-12 w-12">
-                          <img
-                            src={chatPhoto}
-                            alt={chatDisplayName}
-                            className="comm-avatar-image"
-                          />
-                        </div>
-                      ) : (
-                        <div className={`comm-avatar-shell comm-icon-chip flex h-12 w-12 items-center justify-center font-semibold ${
-                          getChatAvatarClass(chatKind)
-                        }`}>
-                          {chatKind === 'group' ? (
-                            <Users className="w-5 h-5" />
-                          ) : isDirectChat(chat) ? (
-                            <UserCircle className="w-5 h-5" />
-                          ) : (
-                            <MessageCircle className="w-5 h-5" />
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <h3 className="font-medium text-slate-900 truncate">
-                            {chatDisplayName}
-                          </h3>
-                          {leadStatus && badgeStyles && (
-                            <span
-                              className="text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap"
-                              style={badgeStyles}
-                            >
-                              {leadStatus}
-                            </span>
-                          )}
-                          {chatTypeLabel && (
-                            <span className={`comm-badge flex-shrink-0 text-xs ${chatTypeBadgeClass}`}>
-                              {chatTypeLabel}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-slate-500 ml-2 flex-shrink-0">
-                          {formatTime(chat.last_message_at)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm text-slate-600 truncate">
-                          {formatChatListPreview(chat)}
-                        </p>
-                        {(chat.pinned ?? 0) > 0 && (
-                          <span className="text-[10px] text-amber-700 whitespace-nowrap">Fixado</span>
-                        )}
-                        {unreadWaitingLabel && (
-                          <span className="text-[10px] text-rose-600 whitespace-nowrap">Aguardando {unreadWaitingLabel}</span>
-                        )}
-                        {muted && (
-                          <span className="text-[10px] text-slate-400">Silenciado</span>
-                        )}
-                        {(chat.unread_count ?? 0) > 0 && (
-                          <span className="flex-shrink-0 rounded-full bg-amber-600 text-white text-[11px] px-2 py-0.5">
-                            {chat.unread_count}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Button>
-                );
-              })
+              visibleChatItems.map((item) => (
+                <InboxChatRow
+                  key={item.chat.id}
+                  item={item}
+                  onSelectChat={selectChat}
+                  onOpenChatContextMenu={openChatContextMenu}
+                />
+              ))
             )}
           </div>
           {chatMenu && chatMenuLayout && chatMenuTarget?.chat && (
@@ -6386,19 +6500,9 @@ export default function WhatsAppInboxScreen() {
                                 <p>{isLoadingMessages ? 'Carregando atualizações...' : isSelectedStatusChat ? 'Nenhuma atualização de status ainda' : 'Nenhuma mensagem ainda'}</p>
                   </div>
                 ) : (
-                  renderedMessages.map((message, index) => {
-                    const previousMessage = index > 0 ? renderedMessages[index - 1] : null;
-                    const currentDayKey = getMessageDayKey(message);
-                    const previousDayKey = previousMessage ? getMessageDayKey(previousMessage) : '';
-                    const shouldShowDaySeparator = Boolean(currentDayKey) && currentDayKey !== previousDayKey;
-                    const daySeparatorLabel = shouldShowDaySeparator ? formatDaySeparatorLabel(message) : '';
-
-                    const showAuthor = selectedChatKind === 'group' && message.direction === 'inbound' && message.author;
-                    const authorName = showAuthor ? formatPhone(message.author!) : undefined;
-                    const reactions = reactionsByTargetId.get(message.id);
-
+                  renderedMessageItems.map(({ message, timestamp, shouldShowDaySeparator, daySeparatorLabel, authorName, reactions }) => {
                     return (
-                      <div key={message.id} data-message-id={message.id}>
+                      <div key={message.id} data-message-id={message.id} style={OFFSCREEN_MESSAGE_STYLE}>
                         {shouldShowDaySeparator && daySeparatorLabel && (
                           <div className="my-4 flex justify-center">
                             <span className="message-day-separator rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-[11px] font-medium text-slate-700">
@@ -6412,7 +6516,7 @@ export default function WhatsAppInboxScreen() {
                           body={message.body}
                           type={message.type}
                           direction={message.direction || 'inbound'}
-                          timestamp={getMessageDisplayTimestamp(message)}
+                          timestamp={timestamp}
                           ackStatus={message.ack_status}
                           sendState={message.send_state}
                           errorMessage={message.error_message}

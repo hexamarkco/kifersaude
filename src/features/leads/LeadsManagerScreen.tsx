@@ -1868,6 +1868,39 @@ export default function LeadsManager({
                   </span>
                   <span>paginas</span>
                 </span>
+                {canSelectLeads && paginatedLeads.length > 0 && (
+                  <label
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                    style={{
+                      ...LEADS_PILL_STYLE,
+                      color: "var(--panel-text-soft,#5b4635)",
+                    }}
+                  >
+                    <Checkbox
+                      checked={areAllPageLeadsSelected}
+                      onChange={toggleSelectAllCurrentPage}
+                    />
+                    <span>
+                      {areAllPageLeadsSelected
+                        ? "Pagina selecionada"
+                        : "Selecionar pagina"}
+                    </span>
+                  </label>
+                )}
+                {selectedLeadIds.length > 0 && (
+                  <span
+                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
+                    style={{
+                      ...LEADS_PILL_STYLE,
+                      color: "var(--panel-accent-ink,#6f3f16)",
+                    }}
+                  >
+                    <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                      {selectedLeadIds.length}
+                    </span>
+                    <span>selecionados</span>
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1875,147 +1908,132 @@ export default function LeadsManager({
               className="rounded-[1.75rem] border"
               style={LEADS_MUTED_INSET_STYLE}
             >
-            {canEditLeads && paginatedLeads.length > 0 && (
-              <div
-                className="flex flex-col gap-3 border-b px-4 py-4 lg:flex-row lg:items-center lg:justify-between sm:px-5"
-                style={{ borderColor: "var(--panel-border-subtle,#e4d5c0)" }}
-              >
-                <label
-                  className="inline-flex items-center gap-2 text-sm"
-                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
+              {selectedLeadIds.length > 0 && (
+                <div
+                  className="flex flex-col gap-2 border-b px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between"
+                  style={{ borderColor: "var(--panel-border-subtle,#e4d5c0)" }}
                 >
-                  <Checkbox
-                    checked={areAllPageLeadsSelected}
-                    onChange={toggleSelectAllCurrentPage}
-                  />
-                  Selecionar todos desta página
-                </label>
-
-                {selectedLeadIds.length > 0 && (
-                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-                    <span
-                      className="text-sm font-medium"
-                      style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
-                    >
-                      {selectedLeadIds.length} lead(s) selecionado(s)
-                    </span>
-                    <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-2">
-                      <div className="w-full xl:w-48">
-                        <FilterSingleSelect
-                          icon={Tag}
-                          value={bulkStatus}
-                          onChange={(value) => setBulkStatus(value)}
-                          placeholder="Selecionar novo status"
-                          includePlaceholderOption={false}
-                          disabled={isBulkUpdating}
-                          options={[
-                            { value: "", label: "Selecionar novo status" },
-                            ...activeLeadStatuses.map((status) => ({
-                              value: status.nome,
-                              label: status.nome,
-                            })),
-                          ]}
-                        />
-                      </div>
-                      <div className="w-full xl:w-48">
-                        <FilterSingleSelect
-                          icon={UserCircle}
-                          value={bulkResponsavel}
-                          onChange={(value) => setBulkResponsavel(value)}
-                          placeholder="Selecionar responsável"
-                          includePlaceholderOption={false}
-                          disabled={isBulkUpdating}
-                          options={[
-                            { value: "", label: "Selecionar responsável" },
-                            ...responsavelOptions.map((option) => ({
-                              value: option.value,
-                              label: option.label,
-                            })),
-                          ]}
-                        />
-                      </div>
-                      <DateTimePicker
-                        type="datetime-local"
-                        value={bulkProximoRetorno}
-                        onChange={setBulkProximoRetorno}
-                        className="w-full xl:w-56"
-                        triggerClassName="h-10 border-[var(--panel-border,#d4c0a7)]"
+                  <span
+                    className="text-sm font-medium"
+                    style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+                  >
+                    {selectedLeadIds.length} lead(s) selecionado(s)
+                  </span>
+                  <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-2">
+                    <div className="w-full xl:w-48">
+                      <FilterSingleSelect
+                        icon={Tag}
+                        value={bulkStatus}
+                        onChange={(value) => setBulkStatus(value)}
+                        placeholder="Selecionar novo status"
+                        includePlaceholderOption={false}
                         disabled={isBulkUpdating}
-                        placeholder="Proximo retorno"
+                        options={[
+                          { value: "", label: "Selecionar novo status" },
+                          ...activeLeadStatuses.map((status) => ({
+                            value: status.nome,
+                            label: status.nome,
+                          })),
+                        ]}
                       />
-                      <div className="w-full xl:w-48">
-                        <FilterSingleSelect
-                          icon={Archive}
-                          value={bulkArchiveAction}
-                          onChange={(value) =>
-                            setBulkArchiveAction(
-                              value as typeof bulkArchiveAction,
-                            )
-                          }
-                          placeholder="Ação de arquivamento"
-                          includePlaceholderOption={false}
-                          disabled={isBulkUpdating}
-                          options={[
-                            {
-                              value: "none",
-                              label: "Ação de arquivamento (opcional)",
-                            },
-                            {
-                              value: "archive",
-                              label: "Arquivar selecionados",
-                            },
-                            {
-                              value: "unarchive",
-                              label: "Reativar selecionados",
-                            },
-                          ]}
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          type="button"
-                          onClick={handleBulkStatusApply}
-                          disabled={!bulkStatus || isBulkUpdating}
-                          variant="primary"
-                        >
-                          {isBulkUpdating ? "Atualizando..." : "Aplicar Status"}
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={handleBulkDetailsApply}
-                          disabled={
-                            isBulkUpdating ||
-                            (!bulkResponsavel &&
-                              !bulkProximoRetorno &&
-                              bulkArchiveAction === "none")
-                          }
-                          variant="soft"
-                        >
-                          {isBulkUpdating ? "Aplicando..." : "Aplicar dados"}
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={handleExportSelectedLeads}
-                          disabled={isBulkUpdating}
-                          variant="secondary"
-                        >
-                          <Download className="h-4 w-4" />
-                          <span>Exportar XLSX</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={clearSelection}
-                          disabled={isBulkUpdating}
-                          variant="secondary"
-                        >
-                          Limpar
-                        </Button>
-                      </div>
+                    </div>
+                    <div className="w-full xl:w-48">
+                      <FilterSingleSelect
+                        icon={UserCircle}
+                        value={bulkResponsavel}
+                        onChange={(value) => setBulkResponsavel(value)}
+                        placeholder="Selecionar responsável"
+                        includePlaceholderOption={false}
+                        disabled={isBulkUpdating}
+                        options={[
+                          { value: "", label: "Selecionar responsável" },
+                          ...responsavelOptions.map((option) => ({
+                            value: option.value,
+                            label: option.label,
+                          })),
+                        ]}
+                      />
+                    </div>
+                    <DateTimePicker
+                      type="datetime-local"
+                      value={bulkProximoRetorno}
+                      onChange={setBulkProximoRetorno}
+                      className="w-full xl:w-56"
+                      triggerClassName="h-10 border-[var(--panel-border,#d4c0a7)]"
+                      disabled={isBulkUpdating}
+                      placeholder="Proximo retorno"
+                    />
+                    <div className="w-full xl:w-48">
+                      <FilterSingleSelect
+                        icon={Archive}
+                        value={bulkArchiveAction}
+                        onChange={(value) =>
+                          setBulkArchiveAction(
+                            value as typeof bulkArchiveAction,
+                          )
+                        }
+                        placeholder="Ação de arquivamento"
+                        includePlaceholderOption={false}
+                        disabled={isBulkUpdating}
+                        options={[
+                          {
+                            value: "none",
+                            label: "Ação de arquivamento (opcional)",
+                          },
+                          {
+                            value: "archive",
+                            label: "Arquivar selecionados",
+                          },
+                          {
+                            value: "unarchive",
+                            label: "Reativar selecionados",
+                          },
+                        ]}
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleBulkStatusApply}
+                        disabled={!bulkStatus || isBulkUpdating}
+                        variant="primary"
+                      >
+                        {isBulkUpdating ? "Atualizando..." : "Aplicar Status"}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleBulkDetailsApply}
+                        disabled={
+                          isBulkUpdating ||
+                          (!bulkResponsavel &&
+                            !bulkProximoRetorno &&
+                            bulkArchiveAction === "none")
+                        }
+                        variant="soft"
+                      >
+                        {isBulkUpdating ? "Aplicando..." : "Aplicar dados"}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleExportSelectedLeads}
+                        disabled={isBulkUpdating}
+                        variant="secondary"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>Exportar XLSX</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={clearSelection}
+                        disabled={isBulkUpdating}
+                        variant="secondary"
+                      >
+                        Limpar
+                      </Button>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
             <div className="grid grid-cols-1 gap-4 p-4 sm:p-5">
               {paginatedLeads.map((lead) => (
                 <div

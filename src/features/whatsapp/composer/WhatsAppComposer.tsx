@@ -38,7 +38,6 @@ import type {
   SentMessagePayload,
 } from './types';
 import {
-  applyLinePrefix,
   buildIndexedQuickReplies,
   buildLinkPreviewRetryPayload,
   buildQuickReplyPreviewItems,
@@ -343,6 +342,8 @@ function WhatsAppComposerComponent({
 
   const deferredMessage = useDeferredValue(message);
   const deferredQuickReplySearch = useDeferredValue(quickReplySearch);
+  const deferredRewriteResult = useDeferredValue(rewriteResult);
+  const deferredFollowUpDraft = useDeferredValue(followUpDraft);
 
   const detectedPreviewUrl = useMemo(() => {
     if (selectedFile) return null;
@@ -382,27 +383,6 @@ function WhatsAppComposerComponent({
 
       const cursorPosition = start + opening.length;
       textarea.setSelectionRange(cursorPosition, cursorPosition);
-    });
-
-    handleTyping();
-  };
-
-  const applyBlockPrefix = (prefix: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) {
-      setMessage((prev) => `${prev}${prefix}`);
-      return;
-    }
-
-    const start = textarea.selectionStart ?? message.length;
-    const end = textarea.selectionEnd ?? message.length;
-    const nextState = applyLinePrefix(message, start, end, prefix);
-
-    setMessage(nextState.value);
-
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(nextState.selectionStart, nextState.selectionEnd);
     });
 
     handleTyping();
@@ -602,12 +582,12 @@ function WhatsAppComposerComponent({
   }, []);
 
   const rewriteChunks = useMemo(
-    () => splitRewriteChunks(rewriteResult || rewriteOriginal),
-    [rewriteResult, rewriteOriginal],
+    () => splitRewriteChunks(deferredRewriteResult || rewriteOriginal),
+    [deferredRewriteResult, rewriteOriginal],
   );
   const followUpMessages = useMemo(
-    () => splitFollowUpLines(followUpDraft),
-    [followUpDraft],
+    () => splitFollowUpLines(deferredFollowUpDraft),
+    [deferredFollowUpDraft],
   );
 
   const resolveOutgoingFileMessageType = (file: File): 'image' | 'sticker' | 'video' | 'audio' | 'document' => {
@@ -2581,30 +2561,6 @@ function WhatsAppComposerComponent({
                   >
                     <Scissors className="h-4 w-4" />
                     <span>Reescrever mensagem</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="comm-menu-item text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => {
-                      setShowComposerActionsMenu(false);
-                      applyBlockPrefix('> ');
-                    }}
-                    disabled={isSending || isRecording}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Inserir citacao</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="comm-menu-item text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => {
-                      setShowComposerActionsMenu(false);
-                      applyBlockPrefix('- ');
-                    }}
-                    disabled={isSending || isRecording}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span>Inserir lista</span>
                   </button>
                   <button
                     type="button"

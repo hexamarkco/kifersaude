@@ -53,7 +53,7 @@ export const getDropdownTriggerClass = ({
   cx(
     'panel-glass-panel panel-interactive-glass relative w-full rounded-lg border text-left transition-shadow',
     'focus:border-transparent focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60',
-    compact ? 'h-8 pl-8 pr-8 text-xs' : 'h-11 pl-10 pr-10 text-sm',
+    compact ? 'h-8 pl-7 pr-7 text-xs' : 'h-11 pl-10 pr-10 text-sm',
     isDark
       ? 'border-[var(--panel-border-strong,#9d7f5a)] bg-[color:var(--panel-surface,#1b1611)] text-[var(--panel-input-text,var(--panel-text))]'
       : 'border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-input-text,var(--panel-text-soft))]',
@@ -82,8 +82,8 @@ export const getDropdownOptionClass = ({
   className,
 }: OptionOptions) =>
   cx(
-    'flex w-full items-center justify-between px-3 text-left transition-colors',
-    compact ? 'py-1.5 text-xs' : 'py-2 text-sm',
+    'flex w-full items-center justify-between text-left transition-colors',
+    compact ? 'px-2.5 py-1 text-xs' : 'px-3 py-2 text-sm',
     selected
       ? isDark
         ? 'bg-[color:var(--panel-accent-soft,#4a2a14)] font-medium text-[var(--panel-accent-foreground,#f7d7b4)]'

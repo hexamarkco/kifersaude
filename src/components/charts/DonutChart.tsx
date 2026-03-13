@@ -98,7 +98,6 @@ export default function DonutChart({
                 transformOrigin: 'center',
                 transition: 'stroke-dasharray 0.3s ease',
                 cursor: onSegmentClick ? 'pointer' : 'default',
-                filter: 'drop-shadow(0 8px 18px rgba(26,18,13,0.12))',
               }}
               onClick={() => onSegmentClick?.(segment.label)}
             />

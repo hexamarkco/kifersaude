@@ -198,8 +198,8 @@ export default function FilterSingleSelect({
 
   const isCompact = size === 'compact';
   const iconSizeClass = isCompact ? 'h-4 w-4' : 'h-5 w-5';
-  const iconOffsetClass = isCompact ? 'left-2.5' : 'left-3';
-  const chevronSizeClass = isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4';
+  const iconOffsetClass = isCompact ? 'left-2' : 'left-3';
+  const chevronSizeClass = isCompact ? 'h-3 w-3' : 'h-4 w-4';
   const labelTextClass = isCompact ? 'text-xs' : 'text-sm';
   const isDarkTheme = isPanelDarkTheme();
 
@@ -247,7 +247,9 @@ export default function FilterSingleSelect({
         </span>
         <ChevronDown
           className={cx(
-            'absolute right-3 top-1/2 -translate-y-1/2 transition-transform',
+            isCompact
+              ? 'absolute right-2 top-1/2 -translate-y-1/2 transition-transform'
+              : 'absolute right-3 top-1/2 -translate-y-1/2 transition-transform',
             isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]',
             chevronSizeClass,
             isOpen && 'rotate-180',
@@ -261,7 +263,7 @@ export default function FilterSingleSelect({
           ref={dropdownRef}
           className={getDropdownMenuClass({
             isDark: isDarkTheme,
-            className: 'max-h-72',
+            className: isCompact ? 'max-h-60 p-1' : 'max-h-72',
           })}
           style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
           role="listbox"

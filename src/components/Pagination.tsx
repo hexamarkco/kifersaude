@@ -61,7 +61,7 @@ export default function Pagination({
     <div className="panel-glass-panel flex flex-col gap-3 border-t border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-[var(--panel-text-soft,#5b4635)]">Itens por página:</span>
-        <div className="w-28">
+        <div className="w-20">
           <FilterSingleSelect
             icon={ListFilter}
             value={String(itemsPerPage)}

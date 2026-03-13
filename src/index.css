@@ -370,6 +370,11 @@
   --panel-accent-green-bg-strong: #d6ead8;
   --panel-accent-green-text: #275c39;
   --panel-accent-green-border: #95c4a1;
+  --panel-stat-icon-brand: #9f5a21;
+  --panel-stat-icon-earth: #6a5240;
+  --panel-stat-icon-forest: #2f6a42;
+  --panel-stat-icon-plum: #9b5fd1;
+  --panel-stat-icon-copper: #c26c2d;
   --panel-glass-bg: rgba(255, 253, 250, 0.88);
   --panel-glass-bg-lite: rgba(255, 253, 250, 0.93);
   --panel-glass-bg-strong: rgba(255, 253, 250, 0.97);
@@ -425,6 +430,11 @@
   --panel-accent-red-bg-strong: #7f1d1d;
   --panel-accent-red-text: #fca5a5;
   --panel-accent-red-border: #991b1b;
+  --panel-stat-icon-brand: #f4c58f;
+  --panel-stat-icon-earth: #ead9c6;
+  --panel-stat-icon-forest: #86efac;
+  --panel-stat-icon-plum: #d7b9f1;
+  --panel-stat-icon-copper: #fdba74;
   --panel-accent-pink-bg: #3b1328;
   --panel-accent-pink-bg-strong: #831843;
   --panel-accent-pink-text: #f9a8d4;

@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2 } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from '../../shared/components/WhatsAppFormattedText';
@@ -1304,30 +1305,31 @@ function MessageBubbleComponent({
           )}
         </div>
 
-        {hasActionMenu && (
-          <div
-            ref={actionMenuRef}
-            className={`message-bubble-action-menu fixed z-30 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl transition-[opacity,transform] duration-150 ease-out ${
-              actionMenuOpenUpward ? 'origin-bottom-right' : 'origin-top-right'
-            } ${
-              showActionMenu
-                ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
-                : actionMenuOpenUpward
-                  ? 'pointer-events-none -translate-y-1 scale-95 opacity-0'
-                  : 'pointer-events-none translate-y-1 scale-95 opacity-0'
-            }`}
-            style={
-              actionMenuPosition
-                ? {
-                    top: actionMenuPosition.top,
-                    left: actionMenuPosition.left,
-                    visibility: 'visible',
-                  }
-                : {
-                    visibility: showActionMenu ? 'hidden' : 'visible',
-                  }
-            }
-          >
+        {hasActionMenu && typeof document !== 'undefined'
+          ? createPortal(
+              <div
+                ref={actionMenuRef}
+                className={`message-bubble-action-menu fixed z-30 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl transition-[opacity,transform] duration-150 ease-out ${
+                  actionMenuOpenUpward ? 'origin-bottom-right' : 'origin-top-right'
+                } ${
+                  showActionMenu
+                    ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
+                    : actionMenuOpenUpward
+                      ? 'pointer-events-none -translate-y-1 scale-95 opacity-0'
+                      : 'pointer-events-none translate-y-1 scale-95 opacity-0'
+                }`}
+                style={
+                  actionMenuPosition
+                    ? {
+                        top: actionMenuPosition.top,
+                        left: actionMenuPosition.left,
+                        visibility: 'visible',
+                      }
+                    : {
+                        visibility: showActionMenu ? 'hidden' : 'visible',
+                      }
+                }
+              >
             {canReact && (
               <Button
                 variant="ghost"
@@ -1415,8 +1417,10 @@ function MessageBubbleComponent({
                 <span>Ver histórico</span>
               </Button>
             )}
-          </div>
-        )}
+              </div>,
+              document.body,
+            )
+          : null}
       </div>
 
       <MessageHistoryModal

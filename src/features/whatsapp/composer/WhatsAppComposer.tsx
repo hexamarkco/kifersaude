@@ -5,6 +5,7 @@ import {
   Mic,
   MapPin,
   Smile,
+  Search,
   MoreVertical,
   X,
   Image as ImageIcon,
@@ -13,6 +14,11 @@ import {
   Sparkles,
   Scissors,
   MessageSquare,
+  Clock3,
+  Hand,
+  Gift,
+  Heart,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   sendWhatsAppMessage,
@@ -50,26 +56,118 @@ import {
 
 const EMOJI_RECENTS_STORAGE_KEY = 'whatsapp.composer.recent-emojis';
 const MAX_RECENT_EMOJIS = 24;
-const EMOJI_CATEGORIES: Array<{ id: Exclude<EmojiCategoryId, 'recent'>; label: string; emojis: string[] }> = [
+type EmojiEntry = { value: string; keywords: string[] };
+type EmojiCategoryConfig = {
+  id: Exclude<EmojiCategoryId, 'recent'>;
+  label: string;
+  nativeLabel: string;
+  icon: LucideIcon;
+  emojis: EmojiEntry[];
+};
+
+const normalizeEmojiSearch = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim();
+
+const EMOJI_CATEGORIES: EmojiCategoryConfig[] = [
   {
     id: 'faces',
     label: 'Rostos',
-    emojis: ['😀', '😁', '😂', '🤣', '😊', '🙂', '😉', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡'],
+    nativeLabel: 'Smileys e pessoas',
+    icon: Smile,
+    emojis: [
+      { value: '😀', keywords: ['feliz', 'sorriso', 'alegre', 'grinning'] },
+      { value: '😁', keywords: ['sorrindo', 'animado', 'feliz'] },
+      { value: '😂', keywords: ['rindo', 'lagrimas', 'engracado'] },
+      { value: '🤣', keywords: ['rolando', 'rir', 'muito'] },
+      { value: '😊', keywords: ['fofo', 'sorriso', 'timido'] },
+      { value: '🙂', keywords: ['leve', 'gentil', 'ok'] },
+      { value: '😉', keywords: ['piscando', 'cantada', 'brincadeira'] },
+      { value: '😍', keywords: ['apaixonado', 'amor', 'olhos'] },
+      { value: '😘', keywords: ['beijo', 'carinho', 'amor'] },
+      { value: '😎', keywords: ['estiloso', 'legal', 'oculos'] },
+      { value: '🤩', keywords: ['encantado', 'surpreso', 'estrela'] },
+      { value: '🤔', keywords: ['pensando', 'duvida', 'hmm'] },
+      { value: '😴', keywords: ['sono', 'cansado', 'dormindo'] },
+      { value: '😅', keywords: ['alivio', 'ufa', 'nervoso'] },
+      { value: '😭', keywords: ['chorando', 'triste', 'lagrimas'] },
+      { value: '😡', keywords: ['raiva', 'bravo', 'irritado'] },
+    ],
   },
   {
     id: 'gestures',
     label: 'Gestos',
-    emojis: ['👍', '👎', '👏', '🙌', '🙏', '💪', '👀', '🤝', '✍️', '👆', '👇', '🤞', '👌', '🫶', '💥', '🔥'],
+    nativeLabel: 'Gestos e pessoas',
+    icon: Hand,
+    emojis: [
+      { value: '👍', keywords: ['joinha', 'ok', 'aprovado'] },
+      { value: '👎', keywords: ['nao', 'ruim', 'reprovado'] },
+      { value: '👏', keywords: ['aplauso', 'parabens', 'palmas'] },
+      { value: '🙌', keywords: ['celebrar', 'vitoria', 'maos'] },
+      { value: '🙏', keywords: ['obrigado', 'por favor', 'oracao'] },
+      { value: '💪', keywords: ['forca', 'treino', 'forte'] },
+      { value: '👀', keywords: ['olhando', 'vendo', 'atento'] },
+      { value: '🤝', keywords: ['acordo', 'parceria', 'cumprimento'] },
+      { value: '✍️', keywords: ['escrevendo', 'anotar', 'texto'] },
+      { value: '👆', keywords: ['apontando', 'cima', 'indicar'] },
+      { value: '👇', keywords: ['baixo', 'apontando', 'indicar'] },
+      { value: '🤞', keywords: ['torcendo', 'sorte', 'dedos'] },
+      { value: '👌', keywords: ['perfeito', 'ok', 'bom'] },
+      { value: '🫶', keywords: ['carinho', 'coracao', 'amor'] },
+      { value: '💥', keywords: ['impacto', 'boom', 'explosao'] },
+      { value: '🔥', keywords: ['quente', 'top', 'bombando'] },
+    ],
   },
   {
     id: 'objects',
     label: 'Objetos',
-    emojis: ['🎉', '🎯', '🎁', '📌', '📅', '📞', '💬', '📣', '💡', '💰', '📎', '✅', '❌', '⚠️', '📍', '📝'],
+    nativeLabel: 'Objetos',
+    icon: Gift,
+    emojis: [
+      { value: '🎉', keywords: ['festa', 'celebracao', 'confete'] },
+      { value: '🎯', keywords: ['meta', 'alvo', 'objetivo'] },
+      { value: '🎁', keywords: ['presente', 'gift', 'surpresa'] },
+      { value: '📌', keywords: ['fixar', 'pin', 'lembrete'] },
+      { value: '📅', keywords: ['agenda', 'calendario', 'data'] },
+      { value: '📞', keywords: ['telefone', 'ligacao', 'call'] },
+      { value: '💬', keywords: ['mensagem', 'chat', 'fala'] },
+      { value: '📣', keywords: ['anuncio', 'aviso', 'megafone'] },
+      { value: '💡', keywords: ['ideia', 'insight', 'lampada'] },
+      { value: '💰', keywords: ['dinheiro', 'venda', 'grana'] },
+      { value: '📎', keywords: ['anexo', 'clip', 'arquivo'] },
+      { value: '✅', keywords: ['confirmado', 'feito', 'certo'] },
+      { value: '❌', keywords: ['erro', 'cancelar', 'nao'] },
+      { value: '⚠️', keywords: ['alerta', 'atencao', 'risco'] },
+      { value: '📍', keywords: ['localizacao', 'mapa', 'pin'] },
+      { value: '📝', keywords: ['nota', 'escrever', 'rascunho'] },
+    ],
   },
   {
     id: 'symbols',
     label: 'Simbolos',
-    emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🖤', '⭐', '✨', '✔️', '☑️', '❗', '❓', '➕', '➖'],
+    nativeLabel: 'Simbolos',
+    icon: Heart,
+    emojis: [
+      { value: '❤️', keywords: ['amor', 'coracao', 'love'] },
+      { value: '🧡', keywords: ['carinho', 'laranja', 'coracao'] },
+      { value: '💛', keywords: ['amizade', 'amarelo', 'coracao'] },
+      { value: '💚', keywords: ['esperanca', 'verde', 'coracao'] },
+      { value: '💙', keywords: ['azul', 'confianca', 'coracao'] },
+      { value: '💜', keywords: ['roxo', 'afeto', 'coracao'] },
+      { value: '🤍', keywords: ['branco', 'paz', 'coracao'] },
+      { value: '🖤', keywords: ['preto', 'luto', 'coracao'] },
+      { value: '⭐', keywords: ['estrela', 'destaque', 'favorito'] },
+      { value: '✨', keywords: ['brilho', 'sparkle', 'especial'] },
+      { value: '✔️', keywords: ['check', 'confirmar', 'certo'] },
+      { value: '☑️', keywords: ['marcado', 'selecionado', 'checkbox'] },
+      { value: '❗', keywords: ['urgente', 'importante', 'atencao'] },
+      { value: '❓', keywords: ['duvida', 'pergunta', 'questao'] },
+      { value: '➕', keywords: ['somar', 'mais', 'adicionar'] },
+      { value: '➖', keywords: ['menos', 'subtrair', 'remover'] },
+    ],
   },
 ];
 
@@ -87,7 +185,7 @@ function WhatsAppComposerComponent({
   onPrepareFollowUpContext,
 }: MessageInputProps) {
   const createClientMessageId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  const [message, setMessage] = useState('');
+  const [messageDraft, setMessageDraft] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
   const [audioPreviewBlob, setAudioPreviewBlob] = useState<Blob | null>(null);
@@ -100,6 +198,7 @@ function WhatsAppComposerComponent({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [activeEmojiCategory, setActiveEmojiCategory] = useState<EmojiCategoryId>('recent');
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
+  const [emojiSearch, setEmojiSearch] = useState('');
   const [showComposerActionsMenu, setShowComposerActionsMenu] = useState(false);
   const [renderComposerActionsMenu, setRenderComposerActionsMenu] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -151,10 +250,10 @@ function WhatsAppComposerComponent({
   const followUpRequestIdRef = useRef(0);
   const linkPreviewRequestIdRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messageDraftRef = useRef('');
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
   const composerActionsMenuRef = useRef<HTMLDivElement>(null);
   const shouldRestoreComposerFocusRef = useRef(false);
-  const emojiList = ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🤔', '😴', '😅', '😭', '😡', '👍', '🙏', '👏', '🎉', '✅', '❤️'];
   const rewriteTones = [
     { value: 'claro', label: 'Claro e correto' },
     { value: 'formal', label: 'Formal' },
@@ -162,15 +261,37 @@ function WhatsAppComposerComponent({
     { value: 'curto', label: 'Curto e direto' },
     { value: 'persuasivo', label: 'Persuasivo' },
   ];
+  const normalizedEmojiSearch = useMemo(() => normalizeEmojiSearch(emojiSearch), [emojiSearch]);
   const emojiTabs = useMemo(
     () => [
-      { id: 'recent' as const, label: 'Mais usados', emojis: recentEmojis },
-      { id: 'faces' as const, label: 'Rostos', emojis: emojiList },
-      ...EMOJI_CATEGORIES.filter((category) => category.id !== 'faces'),
+      {
+        id: 'recent' as const,
+        label: 'Mais usados',
+        nativeLabel: 'Recentes',
+        icon: Clock3,
+        emojis: recentEmojis.map((emoji) => ({ value: emoji, keywords: [emoji, 'recente', 'mais usado'] })),
+      },
+      ...EMOJI_CATEGORIES,
     ],
-    [emojiList, recentEmojis],
+    [recentEmojis],
   );
   const activeEmojiTab = emojiTabs.find((tab) => tab.id === activeEmojiCategory) ?? emojiTabs[0];
+  const emojiSearchResults = useMemo(() => {
+    if (!normalizedEmojiSearch) return activeEmojiTab.emojis;
+
+    const seen = new Set<string>();
+
+    return emojiTabs.flatMap((tab) =>
+      tab.emojis.filter((entry) => {
+        if (seen.has(entry.value)) return false;
+        const matches = entry.keywords.some((keyword) => normalizeEmojiSearch(keyword).includes(normalizedEmojiSearch));
+        if (matches) {
+          seen.add(entry.value);
+        }
+        return matches;
+      }),
+    );
+  }, [activeEmojiTab.emojis, emojiTabs, normalizedEmojiSearch]);
 
   const normalizedTemplateVariables = useMemo(() => {
     const normalized = new Map<string, string>();
@@ -340,10 +461,28 @@ function WhatsAppComposerComponent({
     }
   };
 
-  const deferredMessage = useDeferredValue(message);
+  const deferredMessage = useDeferredValue(messageDraft);
   const deferredQuickReplySearch = useDeferredValue(quickReplySearch);
   const deferredRewriteResult = useDeferredValue(rewriteResult);
   const deferredFollowUpDraft = useDeferredValue(followUpDraft);
+
+  const syncComposerTextareaValue = (nextValue: string) => {
+    messageDraftRef.current = nextValue;
+
+    const textarea = textareaRef.current;
+    if (textarea && textarea.value !== nextValue) {
+      textarea.value = nextValue;
+    }
+
+    startTransition(() => {
+      setMessageDraft(nextValue);
+    });
+  };
+
+  const updateComposerDraft = (nextValue: string) => {
+    syncComposerTextareaValue(nextValue);
+    scheduleTextareaResize();
+  };
 
   const detectedPreviewUrl = useMemo(() => {
     if (selectedFile) return null;
@@ -357,20 +496,21 @@ function WhatsAppComposerComponent({
   );
 
   const applyInlineFormat = (opening: string, closing: string = opening) => {
+    const currentMessage = messageDraftRef.current;
     const textarea = textareaRef.current;
     if (!textarea) {
-      setMessage((prev) => `${prev}${opening}${closing}`);
+      updateComposerDraft(`${currentMessage}${opening}${closing}`);
       return;
     }
 
-    const start = textarea.selectionStart ?? message.length;
-    const end = textarea.selectionEnd ?? message.length;
-    const selectedText = message.slice(start, end);
+    const start = textarea.selectionStart ?? currentMessage.length;
+    const end = textarea.selectionEnd ?? currentMessage.length;
+    const selectedText = currentMessage.slice(start, end);
     const hasSelection = start !== end;
 
     const replacement = `${opening}${selectedText}${closing}`;
-    const nextMessage = `${message.slice(0, start)}${replacement}${message.slice(end)}`;
-    setMessage(nextMessage);
+    const nextMessage = `${currentMessage.slice(0, start)}${replacement}${currentMessage.slice(end)}`;
+    updateComposerDraft(nextMessage);
 
     requestAnimationFrame(() => {
       textarea.focus();
@@ -787,7 +927,7 @@ function WhatsAppComposerComponent({
 
   useEffect(() => {
     if (editMessage) {
-      setMessage(editMessage.body);
+      updateComposerDraft(editMessage.body);
     }
   }, [editMessage]);
 
@@ -849,7 +989,7 @@ function WhatsAppComposerComponent({
 
   useEffect(() => {
     scheduleTextareaResize();
-  }, [message]);
+  }, [messageDraft]);
 
   const queueComposerFocusRestore = () => {
     shouldRestoreComposerFocusRef.current = true;
@@ -878,7 +1018,7 @@ function WhatsAppComposerComponent({
 
     shouldRestoreComposerFocusRef.current = false;
     focusComposerTextarea();
-  }, [audioPreviewUrl, isRecording, isSending, message, showFollowUpModal, showRewriteModal]);
+  }, [audioPreviewUrl, isRecording, isSending, messageDraft, showFollowUpModal, showRewriteModal]);
 
   useEffect(() => {
     if (!showComposerActionsMenu) {
@@ -940,6 +1080,7 @@ function WhatsAppComposerComponent({
       const next = !prev;
       if (next) {
         setActiveEmojiCategory(recentEmojis.length > 0 ? 'recent' : 'faces');
+        setEmojiSearch('');
       }
       return next;
     });
@@ -1085,7 +1226,7 @@ function WhatsAppComposerComponent({
   };
 
   const handleSendMessage = async () => {
-    const rawMessage = message.trim();
+    const rawMessage = messageDraftRef.current.trim();
     const resolvedMessage = applyTemplateVariables(rawMessage);
     const submitChatId = chatId;
 
@@ -1107,7 +1248,7 @@ function WhatsAppComposerComponent({
           editMessageId: editMessage.id,
         });
 
-        setMessage('');
+        updateComposerDraft('');
         if (onCancelEdit) onCancelEdit();
         if (onMessageSent) onMessageSent();
         queueComposerFocusRestore();
@@ -1150,7 +1291,7 @@ function WhatsAppComposerComponent({
         };
 
         clearFile();
-        setMessage('');
+        updateComposerDraft('');
         if (onCancelReply) onCancelReply();
         if (onMessageSent) onMessageSent(mediaPayload);
         queueComposerFocusRestore();
@@ -1167,7 +1308,7 @@ function WhatsAppComposerComponent({
           const canSendPreview = linkPreviewUrl === currentDetectedUrl && !linkPreviewError && Boolean(previewTitle);
 
           if (canSendPreview) {
-            setMessage('');
+            updateComposerDraft('');
             clearLinkPreviewDraft();
             setLinkPreviewDismissedUrl(null);
             if (onCancelReply) onCancelReply();
@@ -1182,7 +1323,7 @@ function WhatsAppComposerComponent({
           }
         }
 
-        setMessage('');
+        updateComposerDraft('');
         clearLinkPreviewDraft();
         setLinkPreviewDismissedUrl(null);
         if (onCancelReply) onCancelReply();
@@ -1254,16 +1395,17 @@ function WhatsAppComposerComponent({
 
   const insertEmoji = (emoji: string) => {
     rememberRecentEmoji(emoji);
+    const currentMessage = messageDraftRef.current;
     const textarea = textareaRef.current;
     if (!textarea) {
-      setMessage((prev) => `${prev}${emoji}`);
+      updateComposerDraft(`${currentMessage}${emoji}`);
       return;
     }
 
-    const start = textarea.selectionStart ?? message.length;
-    const end = textarea.selectionEnd ?? message.length;
-    const nextMessage = `${message.slice(0, start)}${emoji}${message.slice(end)}`;
-    setMessage(nextMessage);
+    const start = textarea.selectionStart ?? currentMessage.length;
+    const end = textarea.selectionEnd ?? currentMessage.length;
+    const nextMessage = `${currentMessage.slice(0, start)}${emoji}${currentMessage.slice(end)}`;
+    updateComposerDraft(nextMessage);
 
     requestAnimationFrame(() => {
       textarea.focus();
@@ -1583,7 +1725,7 @@ function WhatsAppComposerComponent({
 
   const applyQuickReplyToDraft = (reply: { message: string }) => {
     const resolvedMessage = applyTemplateVariables(reply.message);
-    setMessage(resolvedMessage);
+    updateComposerDraft(resolvedMessage);
     setShowQuickReplies(false);
     setQuickReplySearch('');
 
@@ -1630,7 +1772,7 @@ function WhatsAppComposerComponent({
   };
 
   const handleOpenRewrite = () => {
-    const draft = message.trim();
+    const draft = messageDraftRef.current.trim();
     if (!draft) {
       toast.warning('Digite uma mensagem para reescrever.');
       return;
@@ -1718,7 +1860,7 @@ function WhatsAppComposerComponent({
       return;
     }
 
-    setMessage(followUpDraft);
+    updateComposerDraft(followUpDraft);
     setShowFollowUpModal(false);
     requestAnimationFrame(() => {
       scheduleTextareaResize();
@@ -1744,7 +1886,7 @@ function WhatsAppComposerComponent({
         await new Promise((resolve) => setTimeout(resolve, 350));
       }
 
-      setMessage('');
+      updateComposerDraft('');
       setShowFollowUpModal(false);
       setFollowUpDraft('');
       if (onCancelReply) onCancelReply();
@@ -1809,7 +1951,7 @@ function WhatsAppComposerComponent({
         await sendPlainTextMessage(chunk);
         await new Promise((resolve) => setTimeout(resolve, 350));
       }
-      setMessage('');
+      updateComposerDraft('');
       setRewriteResult('');
       setRewriteOriginal('');
       setShowRewriteModal(false);
@@ -2033,7 +2175,7 @@ function WhatsAppComposerComponent({
                 <button
                   type="button"
                   className="comm-button-link text-xs"
-                  onClick={() => setQuickReplyMessage(message)}
+                  onClick={() => setQuickReplyMessage(messageDraftRef.current)}
                 >
                   Usar texto atual
                 </button>
@@ -2149,7 +2291,7 @@ function WhatsAppComposerComponent({
               type="button"
               className="comm-button-secondary rounded-md px-3 py-2 text-sm"
               onClick={() => {
-                setMessage(rewriteResult || rewriteOriginal);
+                updateComposerDraft(rewriteResult || rewriteOriginal);
                 setShowRewriteModal(false);
               }}
             >
@@ -2486,45 +2628,66 @@ function WhatsAppComposerComponent({
             </button>
 
             {showEmojiPicker && (
-              <div className="comm-popover absolute bottom-full left-0 z-[120] mb-2 w-[22rem] overflow-hidden p-0">
-                <div className="border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2">
-                  <div className="comm-title text-sm font-medium">Emojis</div>
-                  <div className="comm-muted text-[11px]">Escolha rapido, com aba para os mais usados.</div>
+              <div className="comm-popover comm-emoji-picker absolute bottom-full left-0 z-[120] mb-2 w-[25rem] max-w-[calc(100vw-1.5rem)] overflow-hidden p-0">
+                <div className="comm-emoji-picker-tabs">
+                  {emojiTabs.map((tab) => {
+                    const Icon = tab.icon;
+
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        className={`comm-emoji-picker-tab ${activeEmojiCategory === tab.id ? 'is-active' : ''}`}
+                        onClick={() => setActiveEmojiCategory(tab.id)}
+                        aria-label={tab.label}
+                        title={tab.label}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="flex gap-1 overflow-x-auto border-b border-[var(--panel-border-subtle,#e7dac8)] px-2 py-2">
-                  {emojiTabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      className={`rounded-full px-3 py-1 text-[11px] font-medium transition ${
-                        activeEmojiCategory === tab.id
-                          ? 'bg-[var(--panel-focus,#c86f1d)] text-white'
-                          : 'bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-text-soft,#6b4f3a)] hover:bg-[var(--panel-surface-muted,#efe3d2)]'
-                      }`}
-                      onClick={() => setActiveEmojiCategory(tab.id)}
-                    >
-                      {tab.id === 'recent' ? `Mais usados${recentEmojis.length ? ` (${recentEmojis.length})` : ''}` : tab.label}
-                    </button>
-                  ))}
+                <div className="px-3 pb-3 pt-2">
+                  <label className="comm-emoji-search">
+                    <Search className="h-4 w-4" />
+                    <input
+                      type="text"
+                      value={emojiSearch}
+                      onChange={(event) => setEmojiSearch(event.target.value)}
+                      placeholder="Pesquisar emoji"
+                      aria-label="Pesquisar emoji"
+                    />
+                  </label>
                 </div>
-                <div className="panel-dropdown-scrollbar max-h-64 overflow-y-auto px-2 py-2">
-                  {activeEmojiTab.emojis.length === 0 ? (
-                    <div className="comm-muted px-2 py-6 text-center text-xs">
-                      Seus emojis mais usados vao aparecer aqui conforme voce enviar.
+                <div className="flex items-center justify-between px-4 pb-2">
+                  <div className="comm-emoji-picker-section-title">
+                    {normalizedEmojiSearch ? 'Resultados' : activeEmojiTab.nativeLabel}
+                  </div>
+                  {!normalizedEmojiSearch && activeEmojiCategory === 'recent' && recentEmojis.length > 0 ? (
+                    <div className="comm-emoji-picker-section-meta">{recentEmojis.length} usados</div>
+                  ) : null}
+                </div>
+                <div className="comm-emoji-picker-scroll panel-dropdown-scrollbar max-h-80 overflow-y-auto px-3 pb-4">
+                  {emojiSearchResults.length === 0 ? (
+                    <div className="comm-muted px-2 py-8 text-center text-xs">
+                      {normalizedEmojiSearch
+                        ? 'Nenhum emoji encontrado para essa busca.'
+                        : 'Seus emojis mais usados vao aparecer aqui conforme voce enviar.'}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-8 gap-1">
-                      {activeEmojiTab.emojis.map((emoji) => (
+                    <div className="grid grid-cols-8 gap-1.5">
+                      {emojiSearchResults.map((entry) => (
                         <button
-                          key={`${activeEmojiTab.id}-${emoji}`}
+                          key={`${activeEmojiCategory}-${entry.value}`}
                           type="button"
-                          className="comm-icon-button flex h-9 w-9 items-center justify-center rounded-xl"
+                          className="comm-emoji-picker-item"
                           onClick={() => {
-                            insertEmoji(emoji);
+                            insertEmoji(entry.value);
                             setShowEmojiPicker(false);
                           }}
+                          aria-label={`Inserir ${entry.value}`}
                         >
-                          <span className="text-lg">{emoji}</span>
+                          <span className="text-[1.65rem] leading-none">{entry.value}</span>
                         </button>
                       ))}
                     </div>
@@ -2596,11 +2759,10 @@ function WhatsAppComposerComponent({
           ) : (
             <textarea
               ref={textareaRef}
-              value={message}
+              defaultValue={messageDraft}
               onChange={(e) => {
                 const nextValue = e.target.value;
-                setMessage(nextValue);
-                scheduleTextareaResize();
+                updateComposerDraft(nextValue);
                 if (nextValue.trim()) {
                   handleTyping();
                 }
@@ -2701,7 +2863,7 @@ function WhatsAppComposerComponent({
               <Send className="w-5 h-5" />
             </button>
           </div>
-        ) : message.trim() || selectedFile ? (
+        ) : messageDraftRef.current.trim() || selectedFile ? (
           <button
             onClick={handleSendMessage}
             disabled={isSending}

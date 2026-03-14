@@ -1309,7 +1309,7 @@ function MessageBubbleComponent({
           ? createPortal(
               <div
                 ref={actionMenuRef}
-                className={`message-bubble-action-menu fixed z-30 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-xl transition-[opacity,transform] duration-150 ease-out ${
+                className={`comm-popover message-bubble-action-menu panel-dropdown-scrollbar fixed z-30 w-44 overflow-hidden p-1 transition-[opacity,transform] duration-150 ease-out ${
                   actionMenuOpenUpward ? 'origin-bottom-right' : 'origin-top-right'
                 } ${
                   showActionMenu
@@ -1336,24 +1336,24 @@ function MessageBubbleComponent({
                 size="sm"
                 fullWidth
                 onClick={() => setShowReactionPicker((previous) => !previous)}
-                className="h-auto !justify-start rounded-md border-0 px-2.5 py-2 text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
+                className="comm-menu-item comm-text h-auto rounded-md border-0 px-2.5 py-2 text-sm font-medium shadow-none"
               >
                 <span className="flex w-full items-center gap-2 text-left">
-                  <Smile className="h-4 w-4 flex-shrink-0 text-slate-500" />
+                  <Smile className="comm-muted h-4 w-4 flex-shrink-0" />
                   <span className="flex-1 text-left">Reagir</span>
                 </span>
               </Button>
             )}
 
             {canReact && showReactionPicker && (
-              <div className="mx-1 mb-1 mt-0.5 rounded-full border border-slate-200 bg-slate-50 px-1.5 py-1">
+              <div className="mx-1 mb-1 mt-0.5 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-1.5 py-1">
                 <div className="flex items-center justify-between gap-0.5">
                   {quickReactions.map((emoji) => (
                     <Button
                       key={`${id}-${emoji}`}
                       variant="icon"
                       size="icon"
-                      className="message-bubble-emoji-button h-7 w-7 rounded-full border-0 p-0 text-base shadow-none hover:bg-white"
+                      className="message-bubble-emoji-button h-7 w-7 rounded-full border-0 p-0 text-base shadow-none hover:bg-[color:var(--panel-surface,#fffdfa)]"
                       onClick={() => {
                         onReact?.(id, emoji);
                         closeActionMenu();
@@ -1375,10 +1375,10 @@ function MessageBubbleComponent({
                   onReply?.(id, body || '', fromName || 'Contato');
                   closeActionMenu();
                 }}
-                className="h-auto !justify-start rounded-md border-0 px-2.5 py-2 text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
+                className="comm-menu-item comm-text h-auto rounded-md border-0 px-2.5 py-2 text-sm font-medium shadow-none"
               >
                 <span className="flex w-full items-center gap-2 text-left">
-                  <CornerUpLeft className="h-4 w-4 flex-shrink-0 text-slate-500" />
+                  <CornerUpLeft className="comm-muted h-4 w-4 flex-shrink-0" />
                   <span className="flex-1 text-left">Responder</span>
                 </span>
               </Button>
@@ -1393,10 +1393,10 @@ function MessageBubbleComponent({
                   onEdit?.(id, body || '');
                   closeActionMenu();
                 }}
-                className="h-auto !justify-start rounded-md border-0 px-2.5 py-2 text-sm font-normal text-slate-700 shadow-none hover:bg-slate-100 hover:text-slate-900"
+                className="comm-menu-item comm-text h-auto rounded-md border-0 px-2.5 py-2 text-sm font-medium shadow-none"
               >
                 <span className="flex w-full items-center gap-2 text-left">
-                  <Edit3 className="h-4 w-4 flex-shrink-0 text-slate-500" />
+                  <Edit3 className="comm-muted h-4 w-4 flex-shrink-0" />
                   <span className="flex-1 text-left">Editar</span>
                 </span>
               </Button>
@@ -1411,9 +1411,9 @@ function MessageBubbleComponent({
                   setShowHistory(true);
                   closeActionMenu();
                 }}
-                className="h-auto !justify-start rounded-md border-0 px-2.5 py-2 text-sm font-normal text-amber-700 shadow-none hover:bg-amber-50 hover:text-amber-800"
+                className="comm-menu-item h-auto rounded-md border-0 px-2.5 py-2 text-sm font-medium text-[color:var(--panel-accent-ink,#6f3f16)] shadow-none hover:text-[color:var(--panel-accent-ink-strong,#4a2411)]"
               >
-                <History className="h-4 w-4 text-amber-700" />
+                <History className="h-4 w-4 text-[color:var(--panel-accent-ink,#6f3f16)]" />
                 <span>Ver histórico</span>
               </Button>
             )}

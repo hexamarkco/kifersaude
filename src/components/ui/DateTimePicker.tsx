@@ -627,7 +627,7 @@ export default function DateTimePicker({
             setIsOpen((current) => !current);
             triggerInputRef.current?.focus();
           }}
-          className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-[var(--panel-text-subtle,#ab927b)] transition hover:bg-[color:rgba(244,237,227,0.9)] hover:text-[var(--panel-text,#1c1917)] focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="absolute bottom-0.5 right-0.5 top-0.5 inline-flex w-10 items-center justify-center rounded-r-[calc(0.75rem-2px)] rounded-l-none border-l border-[var(--panel-border-subtle,#e4d5c0)] bg-transparent text-[var(--panel-text-subtle,#ab927b)] transition hover:bg-[color:var(--panel-surface-soft,#efe6d8)] hover:text-[var(--panel-text,#1c1917)] focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60"
           aria-label={isOpen ? 'Fechar seletor de data' : 'Abrir seletor de data'}
           aria-haspopup="dialog"
           aria-expanded={isOpen}

@@ -275,8 +275,14 @@ export default function TodoCalendarScreen() {
     hasTasks: boolean;
     isRescheduling: boolean;
   }) => {
+    const baseCellStyle = {
+      ...PANEL_INSET_STYLE,
+      color: "var(--panel-text,#1c1917)",
+    };
+
     if (isSelected) {
       return {
+        ...baseCellStyle,
         borderColor: "var(--panel-accent-strong,#b85c1f)",
         background: "var(--panel-accent-soft,#f6e4c7)",
         color: "var(--panel-accent-ink-strong,#4a2411)",
@@ -293,7 +299,7 @@ export default function TodoCalendarScreen() {
 
     if (hasTasks) {
       return {
-        ...PANEL_INSET_STYLE,
+        ...baseCellStyle,
         borderColor: "var(--panel-accent-border,#d5a25c)",
         background:
           "linear-gradient(180deg, color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 52%, transparent) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)",
@@ -302,12 +308,12 @@ export default function TodoCalendarScreen() {
 
     if (isRescheduling) {
       return {
-        ...PANEL_INSET_STYLE,
+        ...baseCellStyle,
         borderColor: "var(--panel-accent-border,#d5a25c)",
       };
     }
 
-    return PANEL_INSET_STYLE;
+    return baseCellStyle;
   };
 
   const handleDayClick = async (date: Date) => {

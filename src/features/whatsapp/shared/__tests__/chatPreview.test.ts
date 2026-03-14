@@ -63,6 +63,38 @@ test('message backed updates also fix stale directions when the preview text is 
   assert.equal(merged.last_message_direction, 'inbound');
 });
 
+test('message history keeps the newest preview when older items are merged later', () => {
+  const stickerPreview = mergeChatPreview(
+    {
+      last_message: 'Contato respondeu antes',
+      last_message_at: '2026-03-13T21:12:05.000Z',
+      last_message_direction: 'inbound',
+    },
+    {
+      preview: '[Sticker]',
+      timestamp: '2026-03-13T22:05:02.000Z',
+      direction: 'inbound',
+    },
+    'message-history',
+  );
+
+  const merged = mergeChatPreview(
+    stickerPreview,
+    {
+      preview: 'Contato respondeu antes',
+      timestamp: '2026-03-13T21:12:05.000Z',
+      direction: 'inbound',
+    },
+    'message-history',
+  );
+
+  assert.deepEqual(merged, {
+    last_message: '[Sticker]',
+    last_message_at: '2026-03-13T22:05:02.000Z',
+    last_message_direction: 'inbound',
+  });
+});
+
 test('chat row does not replace a resolved direction on equal timestamps', () => {
   const merged = mergeChatPreview(
     {

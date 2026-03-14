@@ -3083,10 +3083,26 @@ export default function WhatsAppInboxScreen() {
     return preview;
   }, []);
 
-  const normalizePersistedChatPreview = (preview: ChatPreviewCandidate) => ({
-    last_message: sanitizeTechnicalCiphertextPreview(preview.preview) || null,
-    last_message_direction: preview.direction === 'inbound' || preview.direction === 'outbound' ? preview.direction : null,
-    last_message_at: preview.timestamp ?? null,
+  const normalizePersistedChatPreview = (
+    preview:
+      | ChatPreviewCandidate
+      | Pick<WhatsAppChat, 'last_message' | 'last_message_direction' | 'last_message_at'>,
+  ) => {
+    const previewText = 'preview' in preview ? preview.preview : preview.last_message;
+    const previewDirection = 'direction' in preview ? preview.direction : preview.last_message_direction;
+    const previewTimestamp = 'timestamp' in preview ? preview.timestamp : preview.last_message_at;
+
+    return {
+      last_message: sanitizeTechnicalCiphertextPreview(previewText) || null,
+      last_message_direction: previewDirection === 'inbound' || previewDirection === 'outbound' ? previewDirection : null,
+      last_message_at: previewTimestamp ?? null,
+    };
+  };
+
+  const toChatPreviewState = (preview: ChatPreviewCandidate | null | undefined) => ({
+    last_message: sanitizeTechnicalCiphertextPreview(preview?.preview) || null,
+    last_message_direction: preview?.direction === 'inbound' || preview?.direction === 'outbound' ? preview.direction : null,
+    last_message_at: preview?.timestamp ?? null,
   });
 
   const hasChatPreviewChanged = (
@@ -3221,10 +3237,7 @@ export default function WhatsAppInboxScreen() {
 
       if (currentLoadId && activeChatsLoadIdRef.current !== currentLoadId) return;
 
-      const previewByChatId = new Map<
-        string,
-        { preview: string; direction: 'inbound' | 'outbound' | null; timestamp: string | null }
-      >();
+      const previewByChatId = new Map<string, ChatPreviewCandidate>();
 
       dedupeMessagesForDisplay(allRows).forEach((message) => {
         const preview = getMessagePreview(message);
@@ -3232,13 +3245,21 @@ export default function WhatsAppInboxScreen() {
 
         const matchingChatIds = variantToBaseChatIds.get(message.chat_id) || [];
         matchingChatIds.forEach((chatId) => {
-          if (!previewByChatId.has(chatId)) {
-            previewByChatId.set(chatId, {
+          const mergedPreview = mergeChatPreview(
+            toChatPreviewState(previewByChatId.get(chatId)),
+            {
               preview,
               direction: message.direction ?? null,
               timestamp: getMessageDisplayTimestamp(message),
-            });
-          }
+            },
+            'message-history',
+          );
+
+          previewByChatId.set(chatId, {
+            preview: mergedPreview.last_message,
+            direction: mergedPreview.last_message_direction,
+            timestamp: mergedPreview.last_message_at,
+          });
         });
       });
 
@@ -3274,7 +3295,9 @@ export default function WhatsAppInboxScreen() {
 
           const normalizedPreview = {
             id: chat.id,
-            ...normalizePersistedChatPreview(nextPreview),
+            ...normalizePersistedChatPreview(
+              mergeChatPreview(chat, nextPreview, 'message-history'),
+            ),
           };
           if (hasChatPreviewChanged(chat, normalizedPreview)) {
             correctedChats.push({ id: chat.id, preview: normalizedPreview });

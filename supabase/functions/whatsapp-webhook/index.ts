@@ -2322,35 +2322,52 @@ async function refreshChatLastMessageTimestamp(chatId: string) {
   const refreshVariants = await getChatRefreshVariants(normalizedChatId);
   if (refreshVariants.length === 0) return;
 
-  const { data: recentMessages, error: latestMessageError } = await supabase
-    .from('whatsapp_messages')
-    .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
-    .in('chat_id', refreshVariants)
-    .order('timestamp', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .limit(200);
+  const refreshPageSize = 200;
+  let latestDisplayableActivity: ResolvedChatActivity | null = null;
+  let offset = 0;
 
-  if (latestMessageError) {
-    console.warn('whatsapp-webhook: erro ao recalcular último horário do chat', {
-      chatId: normalizedChatId,
-      error: latestMessageError.message,
-    });
-    return;
+  while (true) {
+    const { data: recentMessages, error: latestMessageError } = await supabase
+      .from('whatsapp_messages')
+      .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
+      .in('chat_id', refreshVariants)
+      .order('timestamp', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + refreshPageSize - 1);
+
+    if (latestMessageError) {
+      console.warn('whatsapp-webhook: erro ao recalcular último horário do chat', {
+        chatId: normalizedChatId,
+        error: latestMessageError.message,
+      });
+      return;
+    }
+
+    if (!recentMessages || recentMessages.length === 0) {
+      break;
+    }
+
+    latestDisplayableActivity =
+      recentMessages
+        .map((message) => resolveStoredChatActivity(message as {
+          body?: string | null;
+          type?: string | null;
+          payload?: unknown;
+          has_media?: boolean | null;
+          is_deleted?: boolean | null;
+          direction?: string | null;
+          timestamp?: string | null;
+          created_at?: string | null;
+        }))
+        .find((activity) => Boolean(activity.preview)) ?? null;
+
+    if (latestDisplayableActivity || recentMessages.length < refreshPageSize) {
+      break;
+    }
+
+    offset += recentMessages.length;
   }
 
-  const latestDisplayableActivity =
-    (recentMessages || [])
-      .map((message) => resolveStoredChatActivity(message as {
-        body?: string | null;
-        type?: string | null;
-        payload?: unknown;
-        has_media?: boolean | null;
-        is_deleted?: boolean | null;
-        direction?: string | null;
-        timestamp?: string | null;
-        created_at?: string | null;
-      }))
-      .find((activity) => Boolean(activity.preview)) ?? null;
   const nextLastMessageAt = latestDisplayableActivity?.timestamp ?? null;
   const nextLastMessage = latestDisplayableActivity?.preview ?? null;
   const nextLastMessageDirection = latestDisplayableActivity?.direction ?? null;
@@ -3204,6 +3221,7 @@ async function upsertMessage(message: NormalizedMessage) {
       throw new Error(`Erro ao atualizar mensagem existente: ${updateError.message}`);
     }
 
+    await refreshChatLastMessageTimestamp(message.chatId);
     return;
   }
 
@@ -3232,6 +3250,8 @@ async function upsertMessage(message: NormalizedMessage) {
   if (insertError) {
     throw new Error(`Erro ao salvar mensagem: ${insertError.message}`);
   }
+
+  await refreshChatLastMessageTimestamp(message.chatId);
 }
 
 async function updateMessageAck(messageId: string, ackStatus: number) {
@@ -3340,6 +3360,8 @@ async function processMessageEdit(message: WhapiMessage, normalized: NormalizedM
     return;
   }
 
+  await refreshChatLastMessageTimestamp(normalized.chatId);
+
   console.log('whatsapp-webhook: mensagem editada com sucesso', {
     messageId: message.id,
     editCount,
@@ -3359,7 +3381,7 @@ async function processMessageDeleteById(
 
   const { data: existingMessage, error: fetchError } = await supabase
     .from('whatsapp_messages')
-    .select('payload')
+    .select('chat_id, payload')
     .eq('id', normalizedTargetMessageId)
     .maybeSingle();
 
@@ -3402,6 +3424,11 @@ async function processMessageDeleteById(
     eventId: options?.eventId || null,
     deletedBy,
   });
+
+  const chatId = toCleanText((existingMessage as { chat_id?: string | null } | null)?.chat_id);
+  if (chatId) {
+    await refreshChatLastMessageTimestamp(chatId);
+  }
 }
 
 async function processMessageDelete(message: WhapiMessage) {

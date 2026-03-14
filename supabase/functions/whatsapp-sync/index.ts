@@ -757,29 +757,8 @@ const refreshChatLastMessageState = async (chatId: string) => {
     return;
   }
 
-  const { data: recentMessages, error: recentMessagesError } = await supabase
-    .from('whatsapp_messages')
-    .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
-    .in('chat_id', refreshVariants)
-    .order('timestamp', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .limit(200);
-
-  if (recentMessagesError) {
-    throw new Error(recentMessagesError.message);
-  }
-
-  const latestMeaningfulMessage = (recentMessages || []).find((message) =>
-    Boolean(
-      resolveStoredChatPreview(message as {
-        body?: string | null;
-        type?: string | null;
-        payload?: unknown;
-        has_media?: boolean | null;
-        is_deleted?: boolean | null;
-      }),
-    ),
-  ) as
+  const refreshPageSize = 200;
+  let latestMeaningfulMessage:
     | {
         body?: string | null;
         type?: string | null;
@@ -791,6 +770,55 @@ const refreshChatLastMessageState = async (chatId: string) => {
         created_at?: string | null;
       }
     | undefined;
+  let offset = 0;
+
+  while (true) {
+    const { data: recentMessages, error: recentMessagesError } = await supabase
+      .from('whatsapp_messages')
+      .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
+      .in('chat_id', refreshVariants)
+      .order('timestamp', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + refreshPageSize - 1);
+
+    if (recentMessagesError) {
+      throw new Error(recentMessagesError.message);
+    }
+
+    if (!recentMessages || recentMessages.length === 0) {
+      break;
+    }
+
+    latestMeaningfulMessage = (recentMessages || []).find((message) =>
+      Boolean(
+        resolveStoredChatPreview(message as {
+          body?: string | null;
+          type?: string | null;
+          payload?: unknown;
+          has_media?: boolean | null;
+          is_deleted?: boolean | null;
+        }),
+      ),
+    ) as
+      | {
+          body?: string | null;
+          type?: string | null;
+          payload?: unknown;
+          has_media?: boolean | null;
+          is_deleted?: boolean | null;
+          direction?: string | null;
+          timestamp?: string | null;
+          created_at?: string | null;
+        }
+      | undefined;
+
+    if (latestMeaningfulMessage || recentMessages.length < refreshPageSize) {
+      break;
+    }
+
+    offset += recentMessages.length;
+  }
+
   const nextLastMessage = latestMeaningfulMessage ? resolveStoredChatPreview(latestMeaningfulMessage) : null;
   const nextLastMessageAt = latestMeaningfulMessage?.timestamp || latestMeaningfulMessage?.created_at || null;
   const nextLastMessageDirection = normalizeChatPreviewDirection(latestMeaningfulMessage?.direction ?? null);

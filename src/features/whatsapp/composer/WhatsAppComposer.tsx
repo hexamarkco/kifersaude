@@ -767,6 +767,7 @@ function WhatsAppComposerComponent({
         phone_number: chatKind === 'direct' ? extractDirectPhoneNumber(normalizedChatId) : null,
         lid: chatKind === 'direct' ? extractChatLid(normalizedChatId) : null,
         last_message: normalizedPreview,
+        last_message_direction: normalizedPreview ? 'outbound' : null,
         last_message_at: sentAt,
         updated_at: new Date().toISOString(),
       },

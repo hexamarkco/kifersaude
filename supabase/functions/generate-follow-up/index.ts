@@ -14,6 +14,7 @@ type FollowUpRequest = {
   leadName?: string;
   conversationHistory?: string;
   leadContext?: Record<string, unknown> | string;
+  extraInstructions?: string;
 };
 
 const BASE_SYSTEM_PROMPT = `Voce e um assistente de follow-up comercial em portugues do Brasil.
@@ -138,14 +139,15 @@ const buildUserPrompt = (
   payload: Required<Pick<FollowUpRequest, 'leadName' | 'conversationHistory'>> & FollowUpRequest,
 ) => {
   const leadContext = normalizeValue(payload.leadContext);
+  const extraInstructions = normalizeValue(payload.extraInstructions);
   const conversationHistory = payload.conversationHistory || '(sem historico relevante carregado)';
 
   return `Nome do cliente: ${payload.leadName}
 
-${leadContext ? `Contexto do lead:\n${leadContext}\n\n` : ''}Historico completo da conversa:
+${leadContext ? `Contexto do lead:\n${leadContext}\n\n` : ''}${extraInstructions ? `Orientacoes extras desta geracao:\n${extraInstructions}\n\n` : ''}Historico completo da conversa:
 ${conversationHistory}
 
-Gere apenas o follow-up final pronto para envio.
+${extraInstructions ? 'Leve em conta as orientacoes extras sem contradizer o historico e sem inventar informacoes nao fornecidas.\n' : ''}Gere apenas o follow-up final pronto para envio.
 Se usar mais de uma mensagem, separe cada mensagem com uma quebra de linha.
 Nao inclua numeracao, titulos ou comentarios extras.`;
 };
@@ -191,6 +193,7 @@ Deno.serve(async (req) => {
         leadName,
         conversationHistory,
         leadContext: payload.leadContext,
+        extraInstructions: payload.extraInstructions,
       }),
       temperature: 0.7,
       maxTokens: 900,
@@ -214,6 +217,7 @@ Deno.serve(async (req) => {
       model: generationResult.model,
       fallbackUsed: generationResult.fallbackUsed,
       hasCustomInstructions: Boolean(customInstructions),
+      hasExtraInstructions: Boolean(normalizeValue(payload.extraInstructions)),
     });
 
     return new Response(

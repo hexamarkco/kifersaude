@@ -218,6 +218,7 @@ function WhatsAppComposerComponent({
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
+  const [followUpSuggestions, setFollowUpSuggestions] = useState('');
   const [followUpLoading, setFollowUpLoading] = useState(false);
   const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [followUpProvider, setFollowUpProvider] = useState('');
@@ -964,6 +965,7 @@ function WhatsAppComposerComponent({
     shouldRestoreComposerFocusRef.current = false;
     setShowFollowUpModal(false);
     setFollowUpDraft('');
+    setFollowUpSuggestions('');
     setFollowUpLoading(false);
     setFollowUpError(null);
     setFollowUpProvider('');
@@ -1815,7 +1817,7 @@ function WhatsAppComposerComponent({
     handleRewrite(draft, rewriteTone);
   };
 
-  const generateFollowUp = async () => {
+  const generateFollowUp = async (extraInstructionsOverride?: string | null) => {
     const requestId = followUpRequestIdRef.current + 1;
     followUpRequestIdRef.current = requestId;
     setFollowUpLoading(true);
@@ -1831,6 +1833,10 @@ function WhatsAppComposerComponent({
           leadName: preparedFollowUpContext?.leadName || followUpContext?.leadName || templateVariables.nome || '',
           conversationHistory: preparedFollowUpContext?.conversationHistory || followUpContext?.conversationHistory || '',
           leadContext: preparedFollowUpContext?.leadContext ?? followUpContext?.leadContext ?? null,
+          extraInstructions:
+            typeof extraInstructionsOverride === 'string'
+              ? extraInstructionsOverride.trim() || null
+              : followUpSuggestions.trim() || null,
         },
       });
 
@@ -1879,10 +1885,11 @@ function WhatsAppComposerComponent({
 
     setShowFollowUpModal(true);
     setFollowUpDraft('');
+    setFollowUpSuggestions('');
     setFollowUpError(null);
     setFollowUpProvider('');
     setFollowUpModel('');
-    void generateFollowUp();
+    void generateFollowUp('');
   };
 
   const handleUseFollowUpInField = () => {
@@ -2348,6 +2355,19 @@ function WhatsAppComposerComponent({
           size="md"
           bodyClassName="space-y-3"
         >
+          <div>
+            <label className="comm-muted text-xs">Sugestoes extras para esta geracao</label>
+            <textarea
+              value={followUpSuggestions}
+              onChange={(event) => setFollowUpSuggestions(event.target.value)}
+              placeholder="Opcional. Ex.: estamos com promocao esta semana, destacar condicao especial, reforcar urgencia leve ou focar em um beneficio especifico."
+              className="comm-textarea mt-1 min-h-[6rem] px-3 py-2 text-sm"
+            />
+            <div className="comm-muted mt-2 text-xs">
+              Use este campo para passar contexto pontual, como promocao ativa, campanha, condicao comercial ou abordagem que queira priorizar. Depois clique em gerar novamente.
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="comm-muted text-xs">
               {followUpProvider || followUpModel

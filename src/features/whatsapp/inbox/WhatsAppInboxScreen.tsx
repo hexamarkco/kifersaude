@@ -250,6 +250,7 @@ export default function WhatsAppInboxScreen() {
   const [chats, setChats] = useState<WhatsAppChat[]>([]);
   const [selectedChat, setSelectedChat] = useState<WhatsAppChat | null>(null);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+  const [messagesChatId, setMessagesChatId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [loading, setLoading] = useState(true);
@@ -1980,6 +1981,7 @@ export default function WhatsAppInboxScreen() {
       lastRenderedMessageIdRef.current = null;
 
       const cachedState = messagesCacheRef.current.get(selectedChat.id);
+      setMessagesChatId(selectedChat.id);
       if (cachedState) {
         setMessages(cachedState.messages);
         setLoadedMessagesCount(cachedState.loadedCount);
@@ -1995,6 +1997,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     setIsLoadingMessages(false);
+    setMessagesChatId(null);
     setMessages([]);
     setHasOlderMessages(false);
     setLoadedMessagesCount(0);
@@ -2070,6 +2073,10 @@ export default function WhatsAppInboxScreen() {
     const lastRenderedMessageId = visibleMessages[visibleMessages.length - 1]?.id ?? null;
 
     if (shouldScrollOnChatChangeRef.current) {
+      if (selectedChat && messagesChatId !== selectedChat.id) {
+        return;
+      }
+
       if (selectedChat && visibleMessages.length === 0 && isLoadingMessages) {
         return;
       }
@@ -2132,7 +2139,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     lastRenderedMessageIdRef.current = lastRenderedMessageId;
-  }, [messages, selectedChat, isLoadingMessages]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [messages, messagesChatId, selectedChat, isLoadingMessages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const indexedMessages = new Map<string, WhatsAppMessage>();

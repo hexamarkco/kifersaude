@@ -5,12 +5,17 @@ import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from '../../shared/components/WhatsAppFormattedText';
 import ModalShell from '../../../../components/ui/ModalShell';
 import Button from '../../../../components/ui/Button';
+import Input from '../../../../components/ui/Input';
 import { getWhatsAppMedia } from '../../../../lib/whatsappApiService';
 import { formatPhoneDisplay } from '../../../../lib/phoneFormatting';
 import { resolveWhatsAppMessageBody } from '../../../../lib/whatsappMessageBody';
 import { getWhatsAppAudioTranscription } from '../../../../lib/whatsappAudioTranscription';
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../../../lib/dateUtils';
 import { supabase } from '../../../../lib/supabase';
+
+type SaveSharedContactResult = {
+  alreadySaved?: boolean;
+};
 
 export interface MessageBubbleProps {
   id: string;
@@ -37,7 +42,7 @@ export interface MessageBubbleProps {
   onRetryFailed?: () => void;
   onDismissFailed?: () => void;
   onTranscriptionSaved?: (messageId: string, payload: MessagePayload) => void;
-  onSaveSharedContact?: (contact: { name: string; phone: string }) => Promise<void> | void;
+  onSaveSharedContact?: (contact: { name: string; phone: string }) => Promise<SaveSharedContactResult | void> | SaveSharedContactResult | void;
   onOpenSharedContactChat?: (contact: { name: string; phone: string }) => void;
 }
 
@@ -238,6 +243,8 @@ function MessageBubbleComponent({
   const [localPayload, setLocalPayload] = useState<MessagePayload | null>(null);
   const [isNearViewport, setIsNearViewport] = useState(false);
   const [sharedContactLoading, setSharedContactLoading] = useState(false);
+  const [sharedContactSaved, setSharedContactSaved] = useState(false);
+  const [saveContactModalState, setSaveContactModalState] = useState<{ name: string; phone: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -369,6 +376,36 @@ function MessageBubbleComponent({
 
   const formatPhone = (phone: string) => {
     return formatPhoneDisplay(phone);
+  };
+
+  const handleOpenSaveContactModal = (contact: { name: string; phone: string }) => {
+    const suggestedName = contact.name.trim();
+    setSaveContactModalState({
+      name: suggestedName && suggestedName !== 'Contato' ? suggestedName : '',
+      phone: contact.phone,
+    });
+  };
+
+  const handleConfirmSaveContact = async () => {
+    if (!saveContactModalState || !onSaveSharedContact || sharedContactLoading) return;
+
+    const resolvedName = saveContactModalState.name.trim();
+    if (!resolvedName) return;
+
+    setSharedContactLoading(true);
+
+    try {
+      await onSaveSharedContact({
+        name: resolvedName,
+        phone: saveContactModalState.phone,
+      });
+      setSharedContactSaved(true);
+      setSaveContactModalState(null);
+    } catch {
+      // Feedback is handled by the caller.
+    } finally {
+      setSharedContactLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -700,7 +737,7 @@ function MessageBubbleComponent({
       const parsed = parseVcard(contactPayload?.vcard);
       const contactName = parsed.name || contactPayload?.name || body || 'Contato';
       const contactPhone = (parsed.phone || contactPayload?.phone || '').replace(/\D/g, '');
-      const canSaveSharedContact = Boolean(onSaveSharedContact && contactPhone);
+      const canSaveSharedContact = Boolean(onSaveSharedContact && contactPhone && !sharedContactSaved);
       const canOpenSharedContactChat = Boolean(onOpenSharedContactChat && contactPhone);
       return (
         <div className="space-y-2">
@@ -722,16 +759,10 @@ function MessageBubbleComponent({
                     size="sm"
                     className="h-8 rounded-full px-3 text-xs"
                     disabled={sharedContactLoading}
-                    onClick={() => {
-                      if (!onSaveSharedContact || !contactPhone || sharedContactLoading) return;
-                      setSharedContactLoading(true);
-                      void Promise.resolve(onSaveSharedContact({ name: contactName, phone: contactPhone })).finally(() => {
-                        setSharedContactLoading(false);
-                      });
-                    }}
+                    onClick={() => handleOpenSaveContactModal({ name: contactName, phone: contactPhone })}
                   >
-                    {sharedContactLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
-                    <span>{sharedContactLoading ? 'Salvando...' : 'Salvar contato'}</span>
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span>Salvar contato</span>
                   </Button>
                 )}
                 {canOpenSharedContactChat && (
@@ -746,6 +777,11 @@ function MessageBubbleComponent({
                     <MessageCircle className="h-3.5 w-3.5" />
                     <span>Abrir chat</span>
                   </Button>
+                )}
+                {sharedContactSaved && (
+                  <span className="inline-flex h-8 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-medium text-emerald-700">
+                    Contato salvo
+                  </span>
                 )}
               </div>
             )}
@@ -1515,6 +1551,66 @@ function MessageBubbleComponent({
             src={documentUrl || documentLink || ''}
             className="h-[84vh] w-full"
           />
+        </ModalShell>
+      )}
+
+      {saveContactModalState && (
+        <ModalShell
+          isOpen
+          onClose={() => {
+            if (!sharedContactLoading) {
+              setSaveContactModalState(null);
+            }
+          }}
+          title="Salvar contato"
+          description="Defina o nome que sera salvo e sincronizado no WhatsApp do celular conectado."
+          size="sm"
+          footer={(
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setSaveContactModalState(null)}
+                disabled={sharedContactLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleConfirmSaveContact()}
+                disabled={sharedContactLoading || !saveContactModalState.name.trim()}
+              >
+                {sharedContactLoading ? 'Salvando...' : 'Salvar contato'}
+              </Button>
+            </div>
+          )}
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Nome do contato
+              </label>
+              <Input
+                type="text"
+                value={saveContactModalState.name}
+                onChange={(event) => {
+                  const nextName = event.target.value;
+                  setSaveContactModalState((current) => (current ? { ...current, name: nextName } : current));
+                }}
+                placeholder="Ex.: Fernando - Gestor Qualicorp"
+                autoFocus
+              />
+            </div>
+
+            <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-sm text-[var(--panel-text-soft,#5b4635)]">
+              <div className="text-xs font-medium uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
+                Telefone
+              </div>
+              <div className="mt-1 font-medium text-[var(--panel-text,#1a120d)]">
+                {formatPhone(saveContactModalState.phone)}
+              </div>
+            </div>
+          </div>
         </ModalShell>
       )}
     </div>

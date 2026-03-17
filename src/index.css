@@ -1619,40 +1619,8 @@
 }
 
 .panel-dropdown-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(161, 98, 7, 0.56) transparent;
-}
-
-.panel-dropdown-scrollbar::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
-}
-
-.panel-dropdown-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.panel-dropdown-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(161, 98, 7, 0.56);
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-.panel-dropdown-scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(146, 64, 14, 0.74);
-}
-
-.painel-theme.theme-dark .panel-dropdown-scrollbar {
-  scrollbar-color: rgba(217, 119, 6, 0.72) transparent;
-}
-
-.painel-theme.theme-dark .panel-dropdown-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(217, 119, 6, 0.72);
-}
-
-.painel-theme.theme-dark .panel-dropdown-scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(245, 158, 11, 0.86);
+  scrollbar-width: auto;
+  scrollbar-color: auto;
 }
 
 .panel-dropdown-dark {
@@ -1660,15 +1628,6 @@
   background-color: #1b1611;
   border-color: rgba(161, 98, 7, 0.36);
   color: #f5f1e8;
-  scrollbar-color: rgba(217, 119, 6, 0.72) transparent;
-}
-
-.panel-dropdown-dark::-webkit-scrollbar-thumb {
-  background-color: rgba(217, 119, 6, 0.72);
-}
-
-.panel-dropdown-dark:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(245, 158, 11, 0.86);
 }
 
 .comm-popover {
@@ -1777,7 +1736,7 @@
 }
 
 .comm-emoji-picker-scroll {
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: auto;
 }
 
 .comm-emoji-picker-item {

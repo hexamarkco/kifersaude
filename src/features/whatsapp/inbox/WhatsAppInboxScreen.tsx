@@ -1964,7 +1964,7 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     if (!user) return;
     void loadUnreadCounts();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     if (!selectedChat) return;
@@ -4706,14 +4706,14 @@ export default function WhatsAppInboxScreen() {
   const handleSaveSharedContact = async (contact: { name: string; phone: string }) => {
     const digits = getPhoneDigits(contact.phone);
     if (!digits) {
-      toast.warning('Esse contato nao possui um telefone valido para salvar.');
-      return;
+      const message = 'Esse contato nao possui um telefone valido para salvar.';
+      toast.warning(message);
+      throw new Error(message);
     }
 
     const existingContact = findSavedContactByPhone(digits);
     if (existingContact?.saved) {
-      toast.info('Esse contato ja esta salvo e sincronizado com o celular.');
-      return;
+      return { alreadySaved: true };
     }
 
     const resolvedName = (contact.name || existingContact?.name || formatWhatsAppPhoneDisplay(digits) || 'Contato WhatsApp').trim();
@@ -4721,11 +4721,12 @@ export default function WhatsAppInboxScreen() {
     try {
       await addWhatsAppContact(digits, resolvedName);
       await loadSavedContacts();
-      toast.success('Contato salvo e sincronizado com o celular.');
+      return { alreadySaved: false };
     } catch (error) {
       console.error('Error saving WhatsApp contact:', error);
       const message = error instanceof Error ? error.message : 'Erro ao salvar contato.';
       toast.error(message);
+      throw error instanceof Error ? error : new Error(message);
     }
   };
 

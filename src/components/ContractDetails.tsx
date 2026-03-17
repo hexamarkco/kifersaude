@@ -1073,7 +1073,7 @@ export default function ContractDetails({
                   )}
                 </div>
               ) : contract.comissao_recebimento_adiantado ? (
-                <div className="comm-card comm-card-success mt-2 flex items-center gap-2 px-3 py-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
+                <div className="comm-card comm-card-brand mt-2 flex items-center gap-2 px-3 py-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
                   <TrendingUp className="h-4 w-4 text-[var(--panel-accent-ink,#6f3f16)]" />
                   <span>Recebimento adiantado previsto (pagamento unico).</span>
                 </div>
@@ -1104,7 +1104,7 @@ export default function ContractDetails({
 
           {contract.bonus_por_vida_aplicado && bonusTotal && (
             <div className={detailDividerClass}>
-              <div className="comm-card comm-card-success p-4">
+              <div className="comm-card comm-card-brand p-4">
                 {bonusSummary.hasConfigurations ? (
                   <div className="mb-3 space-y-2">
                     {bonusSummary.configurations.map((item, index) => (

@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cx } from '../../lib/cx';
 
+let bodyScrollLockCount = 0;
+let originalBodyOverflow = '';
+
 export type ModalShellSize = 'sm' | 'md' | 'lg' | 'xl';
 
 type ModalShellProps = {
@@ -66,11 +69,19 @@ export default function ModalShell({
   useEffect(() => {
     if (!isOpen) return;
 
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (bodyScrollLockCount === 0) {
+      originalBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+    }
+
+    bodyScrollLockCount += 1;
 
     return () => {
-      document.body.style.overflow = originalOverflow;
+      bodyScrollLockCount = Math.max(0, bodyScrollLockCount - 1);
+
+      if (bodyScrollLockCount === 0) {
+        document.body.style.overflow = originalBodyOverflow;
+      }
     };
   }, [isOpen]);
 

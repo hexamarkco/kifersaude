@@ -1974,6 +1974,7 @@ export default function WhatsAppInboxScreen() {
       setEditMessage(null);
       setPendingMessagesBelow(0);
       pendingMessageIdsBelowRef.current.clear();
+      pendingInitialScrollMessageIdRef.current = null;
       messagesViewportNearBottomRef.current = true;
       shouldScrollOnChatChangeRef.current = true;
       lastRenderedMessageIdRef.current = null;
@@ -2065,22 +2066,21 @@ export default function WhatsAppInboxScreen() {
   }, [selectedChat?.id, syncingChatId, isSyncingAllChats]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const visibleMessages = messages.filter(
-      (message) =>
-        !isReactionOnlyMessage(message) &&
-        !isEditActionMessage(message) &&
-        !isHiddenTechnicalAction(message) &&
-        !isTechnicalCiphertextMessage(message),
-    );
+    const visibleMessages = messages.filter((message) => isDisplayableInboxMessage(message));
     const lastRenderedMessageId = visibleMessages[visibleMessages.length - 1]?.id ?? null;
 
     if (shouldScrollOnChatChangeRef.current) {
+      if (selectedChat && visibleMessages.length === 0 && isLoadingMessages) {
+        return;
+      }
+
       shouldScrollOnChatChangeRef.current = false;
       pendingMessageIdsBelowRef.current.clear();
       setPendingMessagesBelow(0);
       lastRenderedMessageIdRef.current = lastRenderedMessageId;
       requestAnimationFrame(() => {
-        const targetMessageId = pendingInitialScrollMessageIdRef.current;
+        const targetMessageId =
+          pendingInitialScrollMessageIdRef.current ?? getInitialScrollTargetMessageId(selectedChat, messages);
         pendingInitialScrollMessageIdRef.current = null;
         if (targetMessageId && scrollMessageIntoView(targetMessageId, 'auto')) {
           requestAnimationFrame(() => {
@@ -2132,7 +2132,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     lastRenderedMessageIdRef.current = lastRenderedMessageId;
-  }, [messages, selectedChat]);
+  }, [messages, selectedChat, isLoadingMessages]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const indexedMessages = new Map<string, WhatsAppMessage>();
@@ -3004,6 +3004,53 @@ export default function WhatsAppInboxScreen() {
   const isHiddenTechnicalAction = (message: Pick<WhatsAppMessage, 'payload' | 'type'>) =>
     isHiddenTechnicalActionMessage(message);
 
+  const isDisplayableInboxMessage = (message: Pick<WhatsAppMessage, 'payload' | 'type' | 'body'>) => {
+    if (isReactionOnlyMessage(message)) return false;
+    if (isEditActionMessage(message)) return false;
+    if (isHiddenTechnicalAction(message)) return false;
+    if (isTechnicalCiphertextMessage(message)) return false;
+    return true;
+  };
+
+  const getInitialScrollTargetMessageId = (
+    chat: Pick<WhatsAppChat, 'unread_count'> | null,
+    items: WhatsAppMessage[],
+  ) => {
+    const unreadCount = Math.max(0, chat?.unread_count ?? 0);
+    if (unreadCount <= 0 || items.length === 0) return null;
+
+    let remainingUnread = unreadCount;
+    let firstUnreadIndex = -1;
+
+    for (let index = items.length - 1; index >= 0; index -= 1) {
+      if (items[index].direction !== 'inbound') continue;
+
+      remainingUnread -= 1;
+      if (remainingUnread <= 0) {
+        firstUnreadIndex = index;
+        break;
+      }
+    }
+
+    if (firstUnreadIndex < 0) {
+      return items.find((message) => isDisplayableInboxMessage(message))?.id ?? null;
+    }
+
+    for (let index = firstUnreadIndex - 1; index >= 0; index -= 1) {
+      if (isDisplayableInboxMessage(items[index])) {
+        return items[index].id;
+      }
+    }
+
+    for (let index = firstUnreadIndex; index < items.length; index += 1) {
+      if (isDisplayableInboxMessage(items[index])) {
+        return items[index].id;
+      }
+    }
+
+    return null;
+  };
+
   const getMessagePreview = (
     message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
   ) => {
@@ -3873,14 +3920,7 @@ export default function WhatsAppInboxScreen() {
   }, [messages]);
 
   const renderedMessages = useMemo(
-    () =>
-      messages.filter(
-        (message) =>
-          !isReactionOnlyMessage(message) &&
-          !isEditActionMessage(message) &&
-          !isHiddenTechnicalAction(message) &&
-          !isTechnicalCiphertextMessage(message),
-      ),
+    () => messages.filter((message) => isDisplayableInboxMessage(message)),
     [messages], // eslint-disable-line react-hooks/exhaustive-deps
   );
 

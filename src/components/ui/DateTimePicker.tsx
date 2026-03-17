@@ -240,7 +240,7 @@ export default function DateTimePicker({
     setPosition(
       calculateFloatingPanelPosition({
         triggerRect: triggerRef.current.getBoundingClientRect(),
-        panelWidth: type === 'month' ? 288 : 384,
+        panelWidth: type === 'month' ? 336 : 384,
         panelHeight: type === 'datetime-local' ? 440 : 400,
       }),
     );
@@ -693,7 +693,7 @@ export default function DateTimePicker({
                       ))}
                     </select>
                   ) : (
-                    <div className="rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
+                    <div className="whitespace-nowrap rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">
                       Escolha o mês
                     </div>
                   )}

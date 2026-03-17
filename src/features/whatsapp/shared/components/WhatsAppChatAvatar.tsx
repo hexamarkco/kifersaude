@@ -27,11 +27,12 @@ export function WhatsAppChatAvatar({
     () => photoSources.map((source) => source?.trim()).filter((source): source is string => Boolean(source)),
     [photoSources],
   );
+  const photoSourcesKey = sanitizedPhotoSources.join('|');
   const [sourceIndex, setSourceIndex] = useState(0);
 
   useEffect(() => {
     setSourceIndex(0);
-  }, [sanitizedPhotoSources.join('|')]);
+  }, [photoSourcesKey]);
 
   const activeSource = sanitizedPhotoSources[sourceIndex] ?? null;
   const containerClassName = `comm-avatar-shell ${shellClassName}`.trim();

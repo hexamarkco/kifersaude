@@ -3439,19 +3439,17 @@ export default function WhatsAppInboxScreen() {
       return preferredName || getChatDisplayNameFromId(message.chat_id);
     })();
 
+    const notificationChat = resolvedChat ?? {
+      id: message.chat_id,
+      is_group: getWhatsAppChatKind(message.chat_id) === 'group',
+      phone_number: message.from_number || null,
+    };
     const icon =
-      resolveChatAvatarSources(
-        resolvedChat ?? {
-          id: message.chat_id,
-          is_group: getWhatsAppChatKind(message.chat_id) === 'group',
-          phone_number: resolvedChat?.phone_number || message.from_number || null,
-        },
-        {
-          directPrimary: liveContactPhotosById,
-          directFallback: legacyContactPhotosById,
-          group: groupPhotosById,
-        },
-      )[0] ?? PERSON_FALLBACK_NOTIFICATION_ICON;
+      resolveChatAvatarSources(notificationChat, {
+        directPrimary: liveContactPhotosById,
+        directFallback: legacyContactPhotosById,
+        group: groupPhotosById,
+      })[0] ?? PERSON_FALLBACK_NOTIFICATION_ICON;
 
     activeDesktopNotificationRef.current?.close();
     const desktopNotification = new Notification(title, {
@@ -6433,7 +6431,7 @@ export default function WhatsAppInboxScreen() {
                   </Button>
                 )}
                 <WhatsAppChatAvatar
-                  kind={selectedChatKind}
+                  kind={selectedChatKind ?? 'unknown'}
                   alt={selectedChatDisplayName || selectedChat.id}
                   photoSources={selectedChatPhotoSources}
                   shellClassName="h-10 w-10 flex-shrink-0"

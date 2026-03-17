@@ -185,7 +185,7 @@ function WhatsAppComposerComponent({
   onPrepareFollowUpContext,
 }: MessageInputProps) {
   const createClientMessageId = () => `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  const [messageDraft, setMessageDraft] = useState('');
+  const [messageDraftSnapshot, setMessageDraftSnapshot] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
   const [audioPreviewBlob, setAudioPreviewBlob] = useState<Blob | null>(null);
@@ -242,7 +242,7 @@ function WhatsAppComposerComponent({
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  const messageDraftFrameRef = useRef<number | null>(null);
+  const messageDraftSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingMessageDraftStateRef = useRef<string | null>(null);
   const textareaResizeFrameRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -463,12 +463,17 @@ function WhatsAppComposerComponent({
     }
   };
 
-  const deferredMessage = useDeferredValue(messageDraft);
+  const deferredMessage = useDeferredValue(messageDraftSnapshot);
   const deferredQuickReplySearch = useDeferredValue(quickReplySearch);
   const deferredRewriteResult = useDeferredValue(rewriteResult);
   const deferredFollowUpDraft = useDeferredValue(followUpDraft);
 
-  const syncComposerTextareaValue = (nextValue: string) => {
+  const flushMessageDraftSnapshot = (nextValue: string) => {
+    pendingMessageDraftStateRef.current = null;
+    setMessageDraftSnapshot((currentValue) => (currentValue === nextValue ? currentValue : nextValue));
+  };
+
+  const syncComposerTextareaValue = (nextValue: string, options?: { deferSnapshot?: boolean }) => {
     messageDraftRef.current = nextValue;
 
     const textarea = textareaRef.current;
@@ -476,29 +481,33 @@ function WhatsAppComposerComponent({
       textarea.value = nextValue;
     }
 
-    pendingMessageDraftStateRef.current = nextValue;
+    if (messageDraftSyncTimeoutRef.current) {
+      clearTimeout(messageDraftSyncTimeoutRef.current);
+      messageDraftSyncTimeoutRef.current = null;
+    }
 
-    if (messageDraftFrameRef.current !== null) {
+    if (options?.deferSnapshot) {
+      pendingMessageDraftStateRef.current = nextValue;
+      messageDraftSyncTimeoutRef.current = setTimeout(() => {
+        messageDraftSyncTimeoutRef.current = null;
+        const queuedValue = pendingMessageDraftStateRef.current;
+        if (queuedValue === null) {
+          return;
+        }
+        startTransition(() => {
+          flushMessageDraftSnapshot(queuedValue);
+        });
+      }, 80);
       return;
     }
 
-    messageDraftFrameRef.current = requestAnimationFrame(() => {
-      messageDraftFrameRef.current = null;
-
-      const queuedValue = pendingMessageDraftStateRef.current;
-      pendingMessageDraftStateRef.current = null;
-      if (queuedValue === null) {
-        return;
-      }
-
-      startTransition(() => {
-        setMessageDraft((currentValue) => (currentValue === queuedValue ? currentValue : queuedValue));
-      });
+    startTransition(() => {
+      flushMessageDraftSnapshot(nextValue);
     });
   };
 
-  const updateComposerDraft = (nextValue: string) => {
-    syncComposerTextareaValue(nextValue);
+  const updateComposerDraft = (nextValue: string, options?: { deferSnapshot?: boolean }) => {
+    syncComposerTextareaValue(nextValue, options);
     scheduleTextareaResize();
   };
 
@@ -978,8 +987,8 @@ function WhatsAppComposerComponent({
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      if (messageDraftFrameRef.current) {
-        cancelAnimationFrame(messageDraftFrameRef.current);
+      if (messageDraftSyncTimeoutRef.current) {
+        clearTimeout(messageDraftSyncTimeoutRef.current);
       }
       if (textareaResizeFrameRef.current) {
         cancelAnimationFrame(textareaResizeFrameRef.current);
@@ -1011,7 +1020,7 @@ function WhatsAppComposerComponent({
 
   useEffect(() => {
     scheduleTextareaResize();
-  }, [messageDraft]);
+  }, [messageDraftSnapshot]);
 
   const queueComposerFocusRestore = () => {
     shouldRestoreComposerFocusRef.current = true;
@@ -1040,7 +1049,7 @@ function WhatsAppComposerComponent({
 
     shouldRestoreComposerFocusRef.current = false;
     focusComposerTextarea();
-  }, [audioPreviewUrl, isRecording, isSending, messageDraft, showFollowUpModal, showRewriteModal]);
+  }, [audioPreviewUrl, isRecording, isSending, messageDraftSnapshot, showFollowUpModal, showRewriteModal]);
 
   useEffect(() => {
     if (!showComposerActionsMenu) {
@@ -2781,10 +2790,10 @@ function WhatsAppComposerComponent({
           ) : (
             <textarea
               ref={textareaRef}
-              defaultValue={messageDraft}
+              defaultValue={messageDraftSnapshot}
               onChange={(e) => {
                 const nextValue = e.target.value;
-                updateComposerDraft(nextValue);
+                updateComposerDraft(nextValue, { deferSnapshot: true });
                 if (nextValue.trim()) {
                   handleTyping();
                 }

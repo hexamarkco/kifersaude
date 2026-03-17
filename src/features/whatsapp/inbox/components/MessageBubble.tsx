@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2 } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2, UserPlus, MessageCircle } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from '../../shared/components/WhatsAppFormattedText';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -37,6 +37,8 @@ export interface MessageBubbleProps {
   onRetryFailed?: () => void;
   onDismissFailed?: () => void;
   onTranscriptionSaved?: (messageId: string, payload: MessagePayload) => void;
+  onSaveSharedContact?: (contact: { name: string; phone: string }) => Promise<void> | void;
+  onOpenSharedContactChat?: (contact: { name: string; phone: string }) => void;
 }
 
 type MediaPayload = {
@@ -141,7 +143,9 @@ function areMessageBubblePropsEqual(
     Boolean(prev.onReact) === Boolean(next.onReact) &&
     Boolean(prev.onRetryFailed) === Boolean(next.onRetryFailed) &&
     Boolean(prev.onDismissFailed) === Boolean(next.onDismissFailed) &&
-    Boolean(prev.onTranscriptionSaved) === Boolean(next.onTranscriptionSaved)
+    Boolean(prev.onTranscriptionSaved) === Boolean(next.onTranscriptionSaved) &&
+    Boolean(prev.onSaveSharedContact) === Boolean(next.onSaveSharedContact) &&
+    Boolean(prev.onOpenSharedContactChat) === Boolean(next.onOpenSharedContactChat)
   );
 }
 
@@ -208,6 +212,8 @@ function MessageBubbleComponent({
   onRetryFailed,
   onDismissFailed,
   onTranscriptionSaved,
+  onSaveSharedContact,
+  onOpenSharedContactChat,
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
@@ -231,6 +237,7 @@ function MessageBubbleComponent({
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [localPayload, setLocalPayload] = useState<MessagePayload | null>(null);
   const [isNearViewport, setIsNearViewport] = useState(false);
+  const [sharedContactLoading, setSharedContactLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -692,7 +699,9 @@ function MessageBubbleComponent({
       const contactPayload = payloadData?.contact;
       const parsed = parseVcard(contactPayload?.vcard);
       const contactName = parsed.name || contactPayload?.name || body || 'Contato';
-      const contactPhone = parsed.phone || contactPayload?.phone || '';
+      const contactPhone = (parsed.phone || contactPayload?.phone || '').replace(/\D/g, '');
+      const canSaveSharedContact = Boolean(onSaveSharedContact && contactPhone);
+      const canOpenSharedContactChat = Boolean(onOpenSharedContactChat && contactPhone);
       return (
         <div className="space-y-2">
           <div className="bg-gray-100 rounded p-2 text-sm text-gray-600">
@@ -705,6 +714,41 @@ function MessageBubbleComponent({
                 {contactPhone && <div className="text-xs">{formatPhone(contactPhone)}</div>}
               </div>
             </div>
+            {(canSaveSharedContact || canOpenSharedContactChat) && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {canSaveSharedContact && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 rounded-full px-3 text-xs"
+                    disabled={sharedContactLoading}
+                    onClick={() => {
+                      if (!onSaveSharedContact || !contactPhone || sharedContactLoading) return;
+                      setSharedContactLoading(true);
+                      void Promise.resolve(onSaveSharedContact({ name: contactName, phone: contactPhone })).finally(() => {
+                        setSharedContactLoading(false);
+                      });
+                    }}
+                  >
+                    {sharedContactLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UserPlus className="h-3.5 w-3.5" />}
+                    <span>{sharedContactLoading ? 'Salvando...' : 'Salvar contato'}</span>
+                  </Button>
+                )}
+                {canOpenSharedContactChat && (
+                  <Button
+                    variant="warning"
+                    size="sm"
+                    className="h-8 rounded-full px-3 text-xs"
+                    onClick={() => {
+                      onOpenSharedContactChat?.({ name: contactName, phone: contactPhone });
+                    }}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    <span>Abrir chat</span>
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       );

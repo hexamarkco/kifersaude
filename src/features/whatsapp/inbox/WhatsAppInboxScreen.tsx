@@ -8,8 +8,6 @@ import {
   Phone,
   MoreVertical,
   ArrowLeft,
-  Users,
-  UserCircle,
   Info,
   History,
   Plus,
@@ -60,7 +58,6 @@ import {
   CHAT_PREVIEW_VARIANTS_BATCH_SIZE,
   DAY_SEPARATOR_LABEL_FORMATTER,
   EMPTY_FILTER_VALUE,
-  getChatAvatarClass,
   getChatTypeBadgeClass,
   MESSAGES_PAGE_SIZE,
   PERSON_FALLBACK_NOTIFICATION_ICON,
@@ -70,6 +67,17 @@ import {
   TEMPLATE_VARIABLE_SHORTCUTS,
 } from '../shared/inboxConstants';
 import { getPinnedSortValue, sortChatsByLatest } from '../shared/chatSort';
+import {
+  buildContactPhotoMap,
+  buildGroupPhotoMap,
+  buildLegacyContactPhotoMap,
+  extractPhoneFromChatId,
+  getChatIdVariants,
+  getDirectIdVariantsFromDigits,
+  getPhoneDigits,
+  resolveChatAvatarSources,
+} from '../shared/avatarResolution';
+import { WhatsAppChatAvatar } from '../shared/components/WhatsAppChatAvatar';
 import {
   compareReminderQuickOpenItems,
   formatReminderDueAt,
@@ -96,6 +104,7 @@ import type {
   WhatsAppMessageReaction,
 } from '../shared/inboxTypes';
 import {
+  addWhatsAppContact,
   buildChatIdFromPhone,
   getWhatsAppChat,
   getWhatsAppChatKind,
@@ -108,6 +117,7 @@ import {
   removeReactionFromMessage,
   sendWhatsAppMessage,
   type WhapiChat,
+  type WhapiContact,
   type WhapiGroup,
 } from '../../../lib/whatsappApiService';
 
@@ -131,7 +141,7 @@ type VisibleChatRowItem = {
   typeBadgeClass: string;
   leadStatus: string | null;
   leadStatusStyles: ReturnType<typeof getBadgeStyle> | null;
-  photo: string | null;
+  photoSources: string[];
   muted: boolean;
   unreadWaitingLabel: string | null;
   formattedTime: string;
@@ -185,27 +195,14 @@ const InboxChatRow = memo(function InboxChatRow({
         }`}
       >
         <div className="relative flex-shrink-0">
-          {item.photo && item.kind === 'direct' ? (
-            <div className="comm-avatar-shell h-12 w-12">
-              <img
-                src={item.photo}
-                alt={item.displayName}
-                className="comm-avatar-image"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-          ) : (
-            <div className={`comm-avatar-shell comm-icon-chip flex h-12 w-12 items-center justify-center font-semibold ${getChatAvatarClass(item.kind)}`}>
-              {item.kind === 'group' ? (
-                <Users className="w-5 h-5" />
-              ) : item.kind === 'direct' ? (
-                <UserCircle className="w-5 h-5" />
-              ) : (
-                <MessageCircle className="w-5 h-5" />
-              )}
-            </div>
-          )}
+          <WhatsAppChatAvatar
+            kind={item.kind}
+            alt={item.displayName}
+            photoSources={item.photoSources}
+            shellClassName="h-12 w-12"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
         <div className="min-w-0 flex-1 text-left">
           <div className="mb-1 flex items-center justify-between">
@@ -269,7 +266,9 @@ export default function WhatsAppInboxScreen() {
   const [contactsList, setContactsList] = useState<Array<{ id: string; name: string; saved: boolean; pushname?: string }>>(
     [],
   );
-  const [contactPhotosById, setContactPhotosById] = useState<Map<string, string>>(new Map());
+  const [liveContactPhotosById, setLiveContactPhotosById] = useState<Map<string, string>>(new Map());
+  const [legacyContactPhotosById, setLegacyContactPhotosById] = useState<Map<string, string>>(new Map());
+  const [groupPhotosById, setGroupPhotosById] = useState<Map<string, string>>(new Map());
   const [leadsList, setLeadsList] = useState<Array<{ id: string; name: string; phone: string; status?: string | null; responsavel?: string | null }>>(
     [],
   );
@@ -923,92 +922,6 @@ export default function WhatsAppInboxScreen() {
     return digits.length >= 10;
   };
 
-  const extractPhoneFromChatId = (chatId: string) => {
-    const trimmed = chatId.trim();
-    if (!trimmed) return '';
-    if (getWhatsAppChatKind(trimmed) !== 'direct') return '';
-    if (/@lid$/i.test(trimmed)) return '';
-    if (!/@(?:s\.whatsapp\.net|c\.us)$/i.test(trimmed)) return '';
-    return normalizePhoneNumber(trimmed);
-  };
-
-  const getChatIdVariants = (chat: Pick<WhatsAppChat, 'id' | 'is_group' | 'phone_number' | 'lid'>) => {
-    const variants = new Set<string>();
-    if (chat.id) variants.add(chat.id);
-    if (isDirectChat(chat)) {
-      const normalized = normalizeChatId(chat.id);
-      if (normalized) variants.add(normalized);
-      if (normalized?.endsWith('@s.whatsapp.net')) {
-        variants.add(normalized.replace(/@s\.whatsapp\.net$/i, '@c.us'));
-      }
-      if (chat.id.endsWith('@c.us')) {
-        variants.add(chat.id.replace(/@c\.us$/i, '@s.whatsapp.net'));
-      }
-      if (chat.phone_number) {
-        variants.add(buildChatIdFromPhone(chat.phone_number));
-      }
-      if (chat.lid) variants.add(chat.lid);
-    }
-    return Array.from(variants);
-  };
-
-  const getPhoneDigits = (value: string | null | undefined) => {
-    if (!value) return '';
-    return value.replace(/\D/g, '');
-  };
-
-  const getDirectIdVariantsFromDigits = (digits: string) => {
-    if (!digits) return [];
-    const phoneDigitsVariants = new Set<string>([digits]);
-
-    const toggleBrazilNinthDigit = (value: string, withCountryCode: boolean) => {
-      const base = withCountryCode ? value.slice(2) : value;
-      if (base.length === 10) {
-        const withNine = `${base.slice(0, 2)}9${base.slice(2)}`;
-        phoneDigitsVariants.add(withCountryCode ? `55${withNine}` : withNine);
-      }
-      if (base.length === 11 && base[2] === '9') {
-        const withoutNine = `${base.slice(0, 2)}${base.slice(3)}`;
-        phoneDigitsVariants.add(withCountryCode ? `55${withoutNine}` : withoutNine);
-      }
-    };
-
-    if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
-      const local = digits.slice(2);
-      if (local) {
-        phoneDigitsVariants.add(local);
-      }
-      toggleBrazilNinthDigit(digits, true);
-      if (local) {
-        toggleBrazilNinthDigit(local, false);
-      }
-    }
-
-    if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
-      phoneDigitsVariants.add(`55${digits}`);
-      toggleBrazilNinthDigit(digits, false);
-      toggleBrazilNinthDigit(`55${digits}`, true);
-    }
-
-    const snapshot = Array.from(phoneDigitsVariants);
-    snapshot.forEach((value) => {
-      if (value.startsWith('55') && (value.length === 12 || value.length === 13)) {
-        phoneDigitsVariants.add(value.slice(2));
-      }
-      if (!value.startsWith('55') && (value.length === 10 || value.length === 11)) {
-        phoneDigitsVariants.add(`55${value}`);
-      }
-    });
-
-    const variants = new Set<string>();
-    phoneDigitsVariants.forEach((value) => {
-      variants.add(`${value}@s.whatsapp.net`);
-      variants.add(`${value}@c.us`);
-    });
-
-    return Array.from(variants);
-  };
-
   const getDirectChatMergePriority = (chatId: string, phoneNumber: string | null) => {
     const normalized = normalizeChatId(chatId).trim().toLowerCase();
     if (!normalized) return -1;
@@ -1124,6 +1037,7 @@ export default function WhatsAppInboxScreen() {
     const now = Date.now();
     const syncIntervalMs = 10 * 60 * 1000;
     const shouldRunFullSync = now - lastGroupNamesSyncAtRef.current > syncIntervalMs;
+    const currentGroupIds = new Set(currentChats.filter((chat) => getChatKind(chat) === 'group').map((chat) => chat.id));
 
     const groupIds = new Set(
       currentChats
@@ -1137,7 +1051,33 @@ export default function WhatsAppInboxScreen() {
         .map((chat) => chat.id),
     );
 
-    if (groupIds.size === 0) return;
+    if (currentGroupIds.size === 0) return;
+
+    try {
+      const { data: storedGroups, error: storedGroupsError } = await supabase
+        .from('whatsapp_groups')
+        .select('id, chat_pic, chat_pic_full')
+        .in('id', Array.from(currentGroupIds));
+
+      if (storedGroupsError) {
+        console.warn('Error loading stored group photos:', storedGroupsError);
+      } else if (storedGroups?.length) {
+        const storedGroupPhotos = buildGroupPhotoMap(storedGroups);
+        if (storedGroupPhotos.size > 0) {
+          setGroupPhotosById((prev) => {
+            const next = new Map(prev);
+            storedGroupPhotos.forEach((url, chatId) => next.set(chatId, url));
+            return next;
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('Error loading stored group photos:', error);
+    }
+
+    if (groupIds.size === 0 && !shouldRunFullSync) {
+      return;
+    }
 
     if (shouldRunFullSync) {
       lastGroupNamesSyncAtRef.current = now;
@@ -1145,6 +1085,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       const namesById = new Map<string, string>();
+      const photoUpdates = new Map<string, string>();
       try {
         const pageSize = 100;
         let offset = 0;
@@ -1154,6 +1095,13 @@ export default function WhatsAppInboxScreen() {
           const groups = response.groups || [];
 
           groups.forEach((group: WhapiGroup) => {
+            if (!currentGroupIds.has(group.id)) return;
+
+            const photo = (group.chat_pic_full || group.chat_pic || '').trim();
+            if (photo) {
+              photoUpdates.set(group.id, photo);
+            }
+
             if (!groupIds.has(group.id)) return;
             const name = group.name?.trim();
             if (!name || name === group.id) return;
@@ -1172,6 +1120,14 @@ export default function WhatsAppInboxScreen() {
         }
       } catch (error) {
         console.warn('Error loading group names from /groups:', error);
+      }
+
+      if (photoUpdates.size > 0) {
+        setGroupPhotosById((prev) => {
+          const next = new Map(prev);
+          photoUpdates.forEach((url, chatId) => next.set(chatId, url));
+          return next;
+        });
       }
 
       const unresolvedGroupIds = Array.from(groupIds).filter((chatId) => !namesById.has(chatId));
@@ -1436,6 +1392,71 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
+  const loadSavedContacts = useCallback(async () => {
+    try {
+      const pageSize = 500;
+      let offset = 0;
+      const loadedContacts: Array<
+        Pick<WhapiContact, 'id' | 'name' | 'pushname' | 'saved' | 'profile_pic' | 'profile_pic_full'>
+      > = [];
+
+      while (true) {
+        const response = await getWhatsAppContacts(pageSize, offset);
+        const batch = Array.isArray(response.contacts) ? response.contacts : [];
+        if (batch.length === 0) break;
+
+        loadedContacts.push(...batch);
+        offset += batch.length;
+
+        if (batch.length < pageSize) break;
+        if (typeof response.total === 'number' && loadedContacts.length >= response.total) break;
+      }
+
+      const contactMap = new Map<string, { name: string; saved: boolean }>();
+
+      setContactsList(
+        loadedContacts.map((contact) => ({
+          id: contact.id,
+          name: contact.name || contact.pushname || contact.id,
+          saved: contact.saved,
+          pushname: contact.pushname,
+        })),
+      );
+
+      loadedContacts.forEach((contact) => {
+        const displayName = (contact.name || contact.pushname || '').trim();
+        if (!displayName) return;
+
+        const isSavedContact = contact.saved || Boolean(contact.name?.trim());
+        const variants = new Set<string>();
+        variants.add(contact.id);
+
+        const normalized = normalizeChatId(contact.id);
+        if (normalized) {
+          variants.add(normalized);
+          if (normalized.endsWith('@s.whatsapp.net')) {
+            variants.add(normalized.replace(/@s\.whatsapp\.net$/i, '@c.us'));
+          }
+          if (normalized.endsWith('@c.us')) {
+            variants.add(normalized.replace(/@c\.us$/i, '@s.whatsapp.net'));
+          }
+        }
+
+        const digits = getPhoneDigits(contact.id);
+        getDirectIdVariantsFromDigits(digits).forEach((variant) => variants.add(variant));
+
+        variants.forEach((variant) => {
+          contactMap.set(variant, { name: displayName, saved: isSavedContact });
+        });
+      });
+
+      setContactsById(contactMap);
+      setLiveContactPhotosById(buildContactPhotoMap(loadedContacts));
+    } catch (err) {
+      console.error('Error loading WhatsApp contacts:', err);
+    }
+  }, []);
+
   useEffect(() => {
     const onGlobalKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
@@ -1536,69 +1557,7 @@ export default function WhatsAppInboxScreen() {
   }, [chatMenu]);
 
   useEffect(() => {
-    const loadSavedContacts = async () => {
-      try {
-        const pageSize = 500;
-        let offset = 0;
-        const loadedContacts: Array<{ id: string; name: string; pushname: string; saved: boolean }> = [];
-
-        while (true) {
-          const response = await getWhatsAppContacts(pageSize, offset);
-          const batch = Array.isArray(response.contacts) ? response.contacts : [];
-          if (batch.length === 0) break;
-
-          loadedContacts.push(...batch);
-          offset += batch.length;
-
-          if (batch.length < pageSize) break;
-          if (typeof response.total === 'number' && loadedContacts.length >= response.total) break;
-        }
-
-        const contactMap = new Map<string, { name: string; saved: boolean }>();
-
-        setContactsList(
-          loadedContacts.map((contact) => ({
-            id: contact.id,
-            name: contact.name || contact.pushname || contact.id,
-            saved: contact.saved,
-            pushname: contact.pushname,
-          })),
-        );
-
-        loadedContacts.forEach((contact) => {
-          const displayName = (contact.name || contact.pushname || '').trim();
-          if (!displayName) return;
-
-          const isSavedContact = contact.saved || Boolean(contact.name?.trim());
-          const variants = new Set<string>();
-          variants.add(contact.id);
-
-          const normalized = normalizeChatId(contact.id);
-          if (normalized) {
-            variants.add(normalized);
-            if (normalized.endsWith('@s.whatsapp.net')) {
-              variants.add(normalized.replace(/@s\.whatsapp\.net$/i, '@c.us'));
-            }
-            if (normalized.endsWith('@c.us')) {
-              variants.add(normalized.replace(/@c\.us$/i, '@s.whatsapp.net'));
-            }
-          }
-
-          const digits = getPhoneDigits(contact.id);
-          getDirectIdVariantsFromDigits(digits).forEach((variant) => variants.add(variant));
-
-          variants.forEach((variant) => {
-            contactMap.set(variant, { name: displayName, saved: isSavedContact });
-          });
-        });
-
-        setContactsById(contactMap);
-      } catch (err) {
-        console.error('Error loading WhatsApp contacts:', err);
-      }
-    };
-
-    const loadContactPhotos = async () => {
+    const loadContactPhotoFallbacks = async () => {
       const { data, error } = await supabase
         .from('whatsapp_contact_photos')
         .select('contact_id, public_url');
@@ -1608,20 +1567,13 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const map = new Map<string, string>();
-      (data || []).forEach((row) => {
-        if (row.public_url) {
-          map.set(row.contact_id, row.public_url);
-        }
-      });
-
-      setContactPhotosById(map);
+      setLegacyContactPhotosById(buildLegacyContactPhotoMap(data || []));
     };
 
     void loadLeadNames();
     void loadSavedContacts();
-    void loadContactPhotos();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    void loadContactPhotoFallbacks();
+  }, [loadSavedContacts]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -3487,38 +3439,19 @@ export default function WhatsAppInboxScreen() {
       return preferredName || getChatDisplayNameFromId(message.chat_id);
     })();
 
-    const icon = (() => {
-      const variants = new Set<string>();
-
-      if (resolvedChat) {
-        getChatIdVariants(resolvedChat).forEach((variant) => variants.add(variant));
-      }
-
-      [message.chat_id, message.from_number, resolvedChat?.phone_number].forEach((value) => {
-        if (!value) return;
-
-        if (value.includes('@')) {
-          const normalized = normalizeChatId(value);
-          if (normalized) {
-            variants.add(normalized);
-          }
-        }
-
-        const digits = getPhoneDigits(value);
-        if (digits) {
-          getDirectIdVariantsFromDigits(digits).forEach((variant) => variants.add(variant));
-        }
-      });
-
-      for (const variant of variants) {
-        const photo = contactPhotosById.get(variant);
-        if (photo) {
-          return photo;
-        }
-      }
-
-      return PERSON_FALLBACK_NOTIFICATION_ICON;
-    })();
+    const icon =
+      resolveChatAvatarSources(
+        resolvedChat ?? {
+          id: message.chat_id,
+          is_group: getWhatsAppChatKind(message.chat_id) === 'group',
+          phone_number: resolvedChat?.phone_number || message.from_number || null,
+        },
+        {
+          directPrimary: liveContactPhotosById,
+          directFallback: legacyContactPhotosById,
+          group: groupPhotosById,
+        },
+      )[0] ?? PERSON_FALLBACK_NOTIFICATION_ICON;
 
     activeDesktopNotificationRef.current?.close();
     const desktopNotification = new Notification(title, {
@@ -3630,7 +3563,7 @@ export default function WhatsAppInboxScreen() {
         leadStatus: string | null;
         leadResponsible: string | null;
         hasLeadMatch: boolean;
-        photo: string | null;
+        photoSources: string[];
       }
     >();
 
@@ -3646,14 +3579,11 @@ export default function WhatsAppInboxScreen() {
 
       const chatTypeBadgeClass = getChatTypeBadgeClass(chatKind);
 
-      const chatPhoto = (() => {
-        const variants = getChatIdVariants(chat);
-        for (const variant of variants) {
-          const photo = contactPhotosById.get(variant);
-          if (photo) return photo;
-        }
-        return null;
-      })();
+      const chatPhotoSources = resolveChatAvatarSources(chat, {
+        directPrimary: liveContactPhotosById,
+        directFallback: legacyContactPhotosById,
+        group: groupPhotosById,
+      });
 
       map.set(chat.id, {
         displayName: chatDisplayName,
@@ -3663,12 +3593,12 @@ export default function WhatsAppInboxScreen() {
         leadStatus,
         leadResponsible,
         hasLeadMatch: Boolean(matchedLead),
-        photo: chatPhoto,
+        photoSources: chatPhotoSources,
       });
     });
 
     return map;
-  }, [chats, contactPhotosById, contactsById, groupNamesById, leadByPhoneMatchKey, leadNamesByPhone, newsletterNamesById]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chats, contactsById, groupNamesById, groupPhotosById, leadByPhoneMatchKey, legacyContactPhotosById, leadNamesByPhone, liveContactPhotosById, newsletterNamesById]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const chatLeadStatusOptions = useMemo(() => {
     const options = new Set<string>();
@@ -4174,7 +4104,7 @@ export default function WhatsAppInboxScreen() {
           typeBadgeClass: chatPresentation?.typeBadgeClass ?? getChatTypeBadgeClass(resolvedKind),
           leadStatus,
           leadStatusStyles: statusConfig ? getLeadStatusBadgeStyle(statusConfig.cor || '#94a3b8') : null,
-          photo: chatPresentation?.photo ?? null,
+          photoSources: chatPresentation?.photoSources ?? [],
           muted: isChatMuted(chat),
           unreadWaitingLabel: getUnreadWaitingLabel(chat),
           formattedTime: formatTime(chat.last_message_at),
@@ -4391,15 +4321,15 @@ export default function WhatsAppInboxScreen() {
     selectedChatPhoneFormatted,
     selectedLead,
   ]);
-  const selectedChatPhoto = (() => {
-    if (!selectedChat || !selectedChatIsDirect) return null;
-    const variants = getChatIdVariants(selectedChat);
-    for (const variant of variants) {
-      const photo = contactPhotosById.get(variant);
-      if (photo) return photo;
-    }
-      return null;
-  })();
+  const selectedChatPhotoSources = useMemo(
+    () =>
+      resolveChatAvatarSources(selectedChat, {
+        directPrimary: liveContactPhotosById,
+        directFallback: legacyContactPhotosById,
+        group: groupPhotosById,
+      }),
+    [groupPhotosById, legacyContactPhotosById, liveContactPhotosById, selectedChat],
+  );
   function getResolvedDirectChatPhone(chat: WhatsAppChat | null) {
     if (!chat || !isDirectChat(chat)) return '';
 
@@ -4749,6 +4679,56 @@ export default function WhatsAppInboxScreen() {
       setNewChatSearch('');
       setNewChatPhone('');
     });
+  };
+
+  const findSavedContactByPhone = (phone: string) => {
+    const digits = getPhoneDigits(phone);
+    if (!digits) return null;
+
+    for (const variant of getDirectIdVariantsFromDigits(digits)) {
+      const contact = contactsById.get(variant);
+      if (contact) {
+        return contact;
+      }
+    }
+
+    return null;
+  };
+
+  const handleOpenSharedContactChat = (contact: { name: string; phone: string }) => {
+    const digits = getPhoneDigits(contact.phone);
+    if (!digits) {
+      toast.warning('Esse contato nao possui um telefone valido para abrir conversa.');
+      return;
+    }
+
+    openChatFromPhone(digits, contact.name);
+  };
+
+  const handleSaveSharedContact = async (contact: { name: string; phone: string }) => {
+    const digits = getPhoneDigits(contact.phone);
+    if (!digits) {
+      toast.warning('Esse contato nao possui um telefone valido para salvar.');
+      return;
+    }
+
+    const existingContact = findSavedContactByPhone(digits);
+    if (existingContact?.saved) {
+      toast.info('Esse contato ja esta salvo e sincronizado com o celular.');
+      return;
+    }
+
+    const resolvedName = (contact.name || existingContact?.name || formatWhatsAppPhoneDisplay(digits) || 'Contato WhatsApp').trim();
+
+    try {
+      await addWhatsAppContact(digits, resolvedName);
+      await loadSavedContacts();
+      toast.success('Contato salvo e sincronizado com o celular.');
+    } catch (error) {
+      console.error('Error saving WhatsApp contact:', error);
+      const message = error instanceof Error ? error.message : 'Erro ao salvar contato.';
+      toast.error(message);
+    }
   };
 
   const loadReminderQuickOpen = async (options?: { preserveExistingItems?: boolean }) => {
@@ -6452,27 +6432,14 @@ export default function WhatsAppInboxScreen() {
                     <ArrowLeft className="w-5 h-5 text-slate-600" />
                   </Button>
                 )}
-                {selectedChatPhoto ? (
-                  <div className="comm-avatar-shell h-10 w-10 flex-shrink-0">
-                    <img
-                      src={selectedChatPhoto}
-                      alt={selectedChatDisplayName || selectedChat.id}
-                      className="comm-avatar-image"
-                    />
-                  </div>
-                ) : (
-                  <div className={`comm-avatar-shell comm-icon-chip flex h-10 w-10 flex-shrink-0 items-center justify-center font-semibold ${
-                    getChatAvatarClass(selectedChatKind)
-                  }`}>
-                    {selectedChatKind === 'group' ? (
-                      <Users className="w-5 h-5" />
-                    ) : selectedChatIsDirect ? (
-                      <UserCircle className="w-5 h-5" />
-                    ) : (
-                      <MessageCircle className="w-5 h-5" />
-                    )}
-                  </div>
-                )}
+                <WhatsAppChatAvatar
+                  kind={selectedChatKind}
+                  alt={selectedChatDisplayName || selectedChat.id}
+                  photoSources={selectedChatPhotoSources}
+                  shellClassName="h-10 w-10 flex-shrink-0"
+                  loading="eager"
+                  decoding="async"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="font-semibold text-slate-900 truncate">
@@ -6634,6 +6601,8 @@ export default function WhatsAppInboxScreen() {
                           onRetryFailed={message.send_state === 'failed' ? () => void retryFailedMessage(message) : undefined}
                           onDismissFailed={message.send_state === 'failed' ? () => removeFailedMessage(message.chat_id, message.id) : undefined}
                           onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
+                          onSaveSharedContact={isSelectedStatusChat ? undefined : handleSaveSharedContact}
+                          onOpenSharedContactChat={isSelectedStatusChat ? undefined : handleOpenSharedContactChat}
                         />
                       </div>
                     );

@@ -27,6 +27,8 @@ type WhapiContactListResponse = {
   offset: number;
 };
 
+const sanitizeWhapiToken = (rawToken: string) => rawToken.replace(/^Bearer\s+/i, '').trim();
+
 const sanitizeFileName = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, '_');
 
 const getExtensionFromContentType = (contentType: string | null) => {
@@ -116,8 +118,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const token = (integration?.settings as { apiKey?: string; token?: string })?.apiKey
+    const tokenValue = (integration?.settings as { apiKey?: string; token?: string })?.apiKey
       ?? (integration?.settings as { token?: string })?.token;
+    const token = tokenValue ? sanitizeWhapiToken(tokenValue) : '';
 
     if (!token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {

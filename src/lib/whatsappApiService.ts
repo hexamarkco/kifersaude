@@ -821,6 +821,40 @@ export interface WhapiContactListResponse {
   offset: number;
 }
 
+export async function addWhatsAppContact(phoneNumber: string, name: string) {
+  const settings = await getWhatsAppSettings();
+  const phone = phoneNumber.replace(/\D/g, '');
+  const resolvedName = name.trim();
+
+  if (!phone) {
+    throw new Error('Telefone invalido para salvar contato.');
+  }
+
+  if (!resolvedName) {
+    throw new Error('Nome obrigatorio para salvar contato.');
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${settings.token}`,
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      phone,
+      name: resolvedName,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro ao salvar contato' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json().catch(() => ({}));
+}
+
 export interface WhapiMessageListParams {
   chatId: string;
   count?: number;

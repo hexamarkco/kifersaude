@@ -53,7 +53,7 @@ import { useConfirmationModal } from '../../../hooks/useConfirmationModal';
 import { useWhatsAppInboxPreferences } from '../../../hooks/useWhatsAppInboxPreferences';
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../../lib/leadReminderUtils';
 import { addBusinessDaysSkippingWeekends } from '../../../lib/reminderUtils';
-import { resolveWhatsAppMessageBody } from '../../../lib/whatsappMessageBody';
+import { isHiddenTechnicalActionMessage, resolveWhatsAppMessageBody } from '../../../lib/whatsappMessageBody';
 import { formatWhatsAppAudioTranscriptionLabel, getWhatsAppAudioTranscription } from '../../../lib/whatsappAudioTranscription';
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../../lib/dateUtils';
 import {
@@ -361,6 +361,7 @@ export default function WhatsAppInboxScreen() {
   const activeChatsLoadIdRef = useRef(0);
   const pendingChatPreviewPersistRef = useRef<Map<string, PersistedChatPreview>>(new Map());
   const pendingChatPreviewPersistTimeoutRef = useRef<number | null>(null);
+  const chatSelectionFrameRef = useRef<number | null>(null);
   const lastGroupNamesSyncAtRef = useRef(0);
   const handledReminderQueryRef = useRef<string | null>(null);
   const reminderQuickOpenLoadingRef = useRef(false);
@@ -373,10 +374,25 @@ export default function WhatsAppInboxScreen() {
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const selectChat = (chat: WhatsAppChat | null) => {
-    startTransition(() => {
-      setSelectedChat(chat && getWhatsAppChatKind(chat.id) === 'status' ? null : chat);
+    if (chatSelectionFrameRef.current !== null) {
+      cancelAnimationFrame(chatSelectionFrameRef.current);
+    }
+
+    chatSelectionFrameRef.current = requestAnimationFrame(() => {
+      chatSelectionFrameRef.current = null;
+      startTransition(() => {
+        setSelectedChat(chat && getWhatsAppChatKind(chat.id) === 'status' ? null : chat);
+      });
     });
   };
+
+  useEffect(() => {
+    return () => {
+      if (chatSelectionFrameRef.current !== null) {
+        cancelAnimationFrame(chatSelectionFrameRef.current);
+      }
+    };
+  }, []);
 
   const normalizeSearchText = (value: string | null | undefined) =>
     (value || '')
@@ -2053,6 +2069,7 @@ export default function WhatsAppInboxScreen() {
       (message) =>
         !isReactionOnlyMessage(message) &&
         !isEditActionMessage(message) &&
+        !isHiddenTechnicalAction(message) &&
         !isTechnicalCiphertextMessage(message),
     );
     const lastRenderedMessageId = visibleMessages[visibleMessages.length - 1]?.id ?? null;
@@ -2984,12 +3001,16 @@ export default function WhatsAppInboxScreen() {
     return (actionType === 'edit' || actionType === 'edited') && Boolean(payloadData?.action?.target);
   };
 
+  const isHiddenTechnicalAction = (message: Pick<WhatsAppMessage, 'payload' | 'type'>) =>
+    isHiddenTechnicalActionMessage(message);
+
   const getMessagePreview = (
     message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
   ) => {
     if (message.is_deleted) return 'Mensagem apagada';
     if (isEditActionMessage(message)) return null;
     if (isReactionOnlyMessage(message)) return null;
+    if (isHiddenTechnicalAction(message)) return null;
     if (isTechnicalCiphertextMessage(message)) return null;
 
     const resolvedBody = resolveWhatsAppMessageBody({
@@ -3089,9 +3110,11 @@ export default function WhatsAppInboxScreen() {
       | ChatPreviewCandidate
       | Pick<WhatsAppChat, 'last_message' | 'last_message_direction' | 'last_message_at'>,
   ) => {
-    const previewText = 'preview' in preview ? preview.preview : preview.last_message;
-    const previewDirection = 'direction' in preview ? preview.direction : preview.last_message_direction;
-    const previewTimestamp = 'timestamp' in preview ? preview.timestamp : preview.last_message_at;
+    const persistedPreview = preview as Pick<WhatsAppChat, 'last_message' | 'last_message_direction' | 'last_message_at'>;
+    const candidatePreview = preview as ChatPreviewCandidate;
+    const previewText = persistedPreview.last_message ?? candidatePreview.preview;
+    const previewDirection = persistedPreview.last_message_direction ?? candidatePreview.direction;
+    const previewTimestamp = persistedPreview.last_message_at ?? candidatePreview.timestamp;
 
     return {
       last_message: sanitizeTechnicalCiphertextPreview(previewText) || null,
@@ -3855,6 +3878,7 @@ export default function WhatsAppInboxScreen() {
         (message) =>
           !isReactionOnlyMessage(message) &&
           !isEditActionMessage(message) &&
+          !isHiddenTechnicalAction(message) &&
           !isTechnicalCiphertextMessage(message),
       ),
     [messages], // eslint-disable-line react-hooks/exhaustive-deps
@@ -3920,6 +3944,7 @@ export default function WhatsAppInboxScreen() {
         const actionType = String(payloadData?.action?.type || '').toLowerCase();
         if (actionType === 'reaction' && payloadData?.action?.target) return false;
         if ((actionType === 'edit' || actionType === 'edited') && payloadData?.action?.target) return false;
+        if (isHiddenTechnicalAction(message)) return false;
         if (isTechnicalCiphertextMessage(message)) return false;
         return true;
       })

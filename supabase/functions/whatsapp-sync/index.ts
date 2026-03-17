@@ -394,6 +394,26 @@ const extractContentBody = (content: unknown): string | null => {
 
 const normalizeActionType = (actionType: unknown): string => toCleanText(actionType).toLowerCase();
 
+const isHiddenTechnicalActionMessage = (message: {
+  type?: string | null;
+  action?: { type?: string | null } | null;
+  payload?: unknown;
+}): boolean => {
+  const messageType = toCleanText(message.type).toLowerCase();
+  if (messageType !== 'action') {
+    return false;
+  }
+
+  const directActionType = normalizeActionType(message.action?.type);
+  if (directActionType === 'label_change') {
+    return true;
+  }
+
+  const payload = toPayloadObject(message.payload);
+  const payloadAction = payload ? toPayloadObject(payload.action) : null;
+  return normalizeActionType(payloadAction?.type) === 'label_change';
+};
+
 const extractLinkPreviewBody = (message: WhapiMessage): string | null => {
   const linkPreview = toPayloadObject(message.link_preview);
   if (!linkPreview) return null;
@@ -658,7 +678,7 @@ const resolveStoredChatPreview = (message: {
   const payload = toPayloadObject(message.payload);
   const payloadAction = payload ? toPayloadObject(payload.action) : null;
   const actionType = normalizeActionType(payloadAction?.type);
-  if (actionType === 'reaction' || actionType === 'edit' || actionType === 'edited') {
+  if (actionType === 'reaction' || actionType === 'edit' || actionType === 'edited' || isHiddenTechnicalActionMessage(message)) {
     return null;
   }
 

@@ -778,6 +778,26 @@ function normalizeActionType(actionType: unknown): string {
   return toCleanText(actionType).toLowerCase();
 }
 
+function isHiddenTechnicalActionMessage(message: {
+  type?: string | null;
+  action?: { type?: string | null } | null;
+  payload?: unknown;
+}): boolean {
+  const messageType = toCleanText(message.type).toLowerCase();
+  if (messageType !== 'action') {
+    return false;
+  }
+
+  const directActionType = normalizeActionType(message.action?.type);
+  if (directActionType === 'label_change') {
+    return true;
+  }
+
+  const payload = toPayloadObject(message.payload);
+  const payloadAction = payload ? toPayloadObject(payload.action) : null;
+  return normalizeActionType(payloadAction?.type) === 'label_change';
+}
+
 function extractLinkPreviewBody(message: WhapiMessage): string | null {
   if (!message.link_preview) return null;
 
@@ -1193,7 +1213,7 @@ function resolveStoredChatPreview(message: {
   const payload = toPayloadObject(message.payload);
   const payloadAction = payload ? toPayloadObject(payload.action) : null;
   const actionType = normalizeActionType(payloadAction?.type);
-  if (actionType === 'reaction' || actionType === 'edit' || actionType === 'edited') {
+  if (actionType === 'reaction' || actionType === 'edit' || actionType === 'edited' || isHiddenTechnicalActionMessage(message)) {
     return null;
   }
 

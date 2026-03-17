@@ -25,6 +25,7 @@ export const sanitizeTechnicalCiphertextPreview = (value: string | null | undefi
   if (!normalized) return '';
 
   if (normalized === '[mensagem criptografada]') return '';
+  if (normalized === '[ação: label_change]' || normalized === '[acao: label_change]') return '';
   if (normalized.includes('aguardando esta mensagem')) return '';
   if (normalized.includes('waiting for this message')) return '';
 

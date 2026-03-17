@@ -1734,6 +1734,7 @@ export default function WhatsAppInboxScreen() {
           last_message_direction: row.last_message_direction ?? null,
           unread_count: typeof row.unread_count === 'number' ? row.unread_count : undefined,
           archived: row.archived ?? false,
+          pinned: typeof row.pinned === 'number' ? row.pinned : 0,
           mute_until: row.mute_until ?? null,
         };
         if (isStatusChat(incomingChat)) {

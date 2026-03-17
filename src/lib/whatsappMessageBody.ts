@@ -214,6 +214,25 @@ const extractEditedActionBody = (payload: MessagePayload): string | null => {
   return '[Mensagem editada]';
 };
 
+export const isHiddenTechnicalActionMessage = (message: {
+  type?: string | null;
+  payload?: unknown;
+}): boolean => {
+  const type = cleanText(message.type).toLowerCase();
+  if (type !== 'action') {
+    return false;
+  }
+
+  const payload = message.payload && typeof message.payload === 'object' ? (message.payload as MessagePayload) : {};
+  const actionType = cleanText(payload?.action?.type).toLowerCase();
+
+  if (actionType === 'label_change') {
+    return true;
+  }
+
+  return false;
+};
+
 const extractSystemBody = (payload: MessagePayload): string | null => {
   const directBody = cleanText(payload?.system?.body);
   if (directBody) {
@@ -281,6 +300,10 @@ export const resolveWhatsAppMessageBody = (message: {
 
   const editedActionBody = extractEditedActionBody(payload);
   if (editedActionBody) return editedActionBody;
+
+  if (isHiddenTechnicalActionMessage({ type: message.type, payload })) {
+    return null;
+  }
 
   const linkPreviewBody = extractLinkPreviewBody(payload);
   if (linkPreviewBody) return linkPreviewBody;

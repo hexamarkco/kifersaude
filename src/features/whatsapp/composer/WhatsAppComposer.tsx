@@ -242,6 +242,8 @@ function WhatsAppComposerComponent({
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const messageDraftFrameRef = useRef<number | null>(null);
+  const pendingMessageDraftStateRef = useRef<string | null>(null);
   const textareaResizeFrameRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -474,8 +476,24 @@ function WhatsAppComposerComponent({
       textarea.value = nextValue;
     }
 
-    startTransition(() => {
-      setMessageDraft(nextValue);
+    pendingMessageDraftStateRef.current = nextValue;
+
+    if (messageDraftFrameRef.current !== null) {
+      return;
+    }
+
+    messageDraftFrameRef.current = requestAnimationFrame(() => {
+      messageDraftFrameRef.current = null;
+
+      const queuedValue = pendingMessageDraftStateRef.current;
+      pendingMessageDraftStateRef.current = null;
+      if (queuedValue === null) {
+        return;
+      }
+
+      startTransition(() => {
+        setMessageDraft((currentValue) => (currentValue === queuedValue ? currentValue : queuedValue));
+      });
     });
   };
 
@@ -959,6 +977,9 @@ function WhatsAppComposerComponent({
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (messageDraftFrameRef.current) {
+        cancelAnimationFrame(messageDraftFrameRef.current);
       }
       if (textareaResizeFrameRef.current) {
         cancelAnimationFrame(textareaResizeFrameRef.current);

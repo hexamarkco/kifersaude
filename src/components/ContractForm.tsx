@@ -56,6 +56,9 @@ import {
 } from "../lib/inputFormatters";
 import { consultarEmpresaPorCNPJ } from "../lib/receitaService";
 
+const normalizeOperadoraName = (value?: string | null) =>
+  normalizeTitleCase(value) ?? value?.trim() ?? "";
+
 type CommissionInstallment = {
   valor: string;
   data_pagamento: string;
@@ -139,7 +142,9 @@ export default function ContractForm({
     lead_id: contract?.lead_id || leadToConvert?.id || "",
     status: contract?.status || "",
     modalidade: contract?.modalidade || leadToConvert?.tipo_contratacao || "",
-    operadora: contract?.operadora || leadToConvert?.operadora_atual || "",
+    operadora: normalizeOperadoraName(
+      contract?.operadora || leadToConvert?.operadora_atual || "",
+    ),
     produto_plano: contract?.produto_plano || "",
     abrangencia: contract?.abrangencia || "",
     acomodacao: contract?.acomodacao || "",
@@ -232,6 +237,20 @@ export default function ContractForm({
     () => (options.lead_responsavel || []).filter((option) => option.ativo),
     [options.lead_responsavel],
   );
+  const normalizedOperadoras = useMemo(() => {
+    const operadoraMap = new Map<string, Operadora>();
+
+    operadoras.forEach((operadora) => {
+      const normalizedName = normalizeOperadoraName(operadora.nome);
+      if (normalizedName && !operadoraMap.has(normalizedName)) {
+        operadoraMap.set(normalizedName, { ...operadora, nome: normalizedName });
+      }
+    });
+
+    return Array.from(operadoraMap.values()).sort((left, right) =>
+      left.nome.localeCompare(right.nome, "pt-BR"),
+    );
+  }, [operadoras]);
   const modalidadeRequerCNPJ = useMemo(() => {
     const normalized = (formData.modalidade || "").toLowerCase();
     return ["pme", "empresarial", "cnpj"].some((keyword) =>
@@ -467,11 +486,15 @@ export default function ContractForm({
   };
 
   const handleOperadoraChange = (operadoraNome: string) => {
-    const operadora = operadoras.find((op) => op.nome === operadoraNome);
+    const normalizedOperadora = normalizeOperadoraName(operadoraNome);
+    const operadora = operadoras.find(
+      (op) => normalizeOperadoraName(op.nome) === normalizedOperadora,
+    );
+
     if (operadora) {
       setFormData((prev) => ({
         ...prev,
-        operadora: operadoraNome,
+        operadora: normalizedOperadora,
         bonus_por_vida_aplicado: operadora.bonus_por_vida,
         bonus_por_vida_valor:
           operadora.bonus_padrao > 0
@@ -490,7 +513,7 @@ export default function ContractForm({
         });
       }
     } else {
-      setFormData((prev) => ({ ...prev, operadora: operadoraNome }));
+      setFormData((prev) => ({ ...prev, operadora: normalizedOperadora }));
     }
   };
 
@@ -834,8 +857,7 @@ export default function ContractForm({
         status: normalizeSentenceCase(dataToSave.status) ?? dataToSave.status,
         modalidade:
           normalizeSentenceCase(dataToSave.modalidade) ?? dataToSave.modalidade,
-        operadora:
-          normalizeSentenceCase(dataToSave.operadora) ?? dataToSave.operadora,
+        operadora: normalizeOperadoraName(dataToSave.operadora) || dataToSave.operadora,
         produto_plano:
           normalizeSentenceCase(dataToSave.produto_plano) ??
           dataToSave.produto_plano,
@@ -1202,7 +1224,7 @@ export default function ContractForm({
                   includePlaceholderOption={false}
                   options={[
                     { value: "", label: "Selecione uma operadora" },
-                    ...operadoras.map((op) => ({
+                    ...normalizedOperadoras.map((op) => ({
                       value: op.nome,
                       label: op.nome,
                     })),

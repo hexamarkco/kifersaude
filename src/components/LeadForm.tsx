@@ -379,7 +379,7 @@ export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
         cidade: normalizeTitleCase(dataToSave.cidade),
         estado: normalizeSentenceCase(dataToSave.estado),
         regiao: normalizeTitleCase(dataToSave.regiao),
-        operadora_atual: normalizeSentenceCase(dataToSave.operadora_atual),
+        operadora_atual: normalizeTitleCase(dataToSave.operadora_atual),
         endereco: normalizeTitleCase(dataToSave.endereco),
       };
 

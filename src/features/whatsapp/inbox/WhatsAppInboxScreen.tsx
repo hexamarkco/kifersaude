@@ -146,7 +146,6 @@ type VisibleChatRowItem = {
   unreadWaitingLabel: string | null;
   formattedTime: string;
   previewText: string;
-  isSelected: boolean;
 };
 
 const OFFSCREEN_CHAT_ROW_STYLE = {
@@ -161,12 +160,14 @@ const OFFSCREEN_MESSAGE_STYLE = {
 
 type InboxChatRowProps = {
   item: VisibleChatRowItem;
+  isSelected: boolean;
   onSelectChat: (chat: WhatsAppChat | null) => void;
   onOpenChatContextMenu: (chatId: string, anchorRect: DOMRect, source: ChatMenuSource) => void;
 };
 
 const InboxChatRow = memo(function InboxChatRow({
   item,
+  isSelected,
   onSelectChat,
   onOpenChatContextMenu,
 }: InboxChatRowProps) {
@@ -191,7 +192,7 @@ const InboxChatRow = memo(function InboxChatRow({
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         className={`h-auto justify-start rounded-none border-b border-[var(--panel-border-subtle,#e7dac8)] p-4 text-left font-normal shadow-none transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)] ${
-          item.isSelected ? 'bg-[var(--panel-surface-muted,#f7f0e7)]' : ''
+          isSelected ? 'bg-[var(--panel-surface-muted,#f7f0e7)]' : ''
         }`}
       >
         <div className="relative flex-shrink-0">
@@ -240,7 +241,7 @@ const InboxChatRow = memo(function InboxChatRow({
       </Button>
     </div>
   );
-}, (prev, next) => prev.item === next.item);
+}, (prev, next) => prev.item === next.item && prev.isSelected === next.isSelected);
 
 export default function WhatsAppInboxScreen() {
   const { handleTabChange } = useOutletContext<{ handleTabChange: (tab: string, options?: { leadIdFilter?: string }) => void }>();
@@ -373,7 +374,7 @@ export default function WhatsAppInboxScreen() {
   const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
-  const selectChat = (chat: WhatsAppChat | null) => {
+  const selectChat = useCallback((chat: WhatsAppChat | null) => {
     if (chatSelectionFrameRef.current !== null) {
       cancelAnimationFrame(chatSelectionFrameRef.current);
     }
@@ -384,7 +385,7 @@ export default function WhatsAppInboxScreen() {
         setSelectedChat(chat && getWhatsAppChatKind(chat.id) === 'status' ? null : chat);
       });
     });
-  };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -3912,23 +3913,16 @@ export default function WhatsAppInboxScreen() {
     return null;
   }
   const firstResponseSla = useMemo<FirstResponseSLA>(() => {
-    const timeline = [...messages]
-      .filter((message) => {
-        if (!message.direction) return false;
-        const payloadData = asMessagePayload(message.payload);
-        const actionType = String(payloadData?.action?.type || '').toLowerCase();
-        if (actionType === 'reaction' && payloadData?.action?.target) return false;
-        if ((actionType === 'edit' || actionType === 'edited') && payloadData?.action?.target) return false;
-        if (isHiddenTechnicalAction(message)) return false;
-        if (isTechnicalCiphertextMessage(message)) return false;
-        return true;
-      })
-      .sort(sortMessagesChronologically);
-
     let lastInboundAt: number | null = null;
     let firstOutboundAfterInboundAt: number | null = null;
 
-    timeline.forEach((message) => {
+    messages.forEach((message) => {
+      if (!message.direction) return;
+      if (isReactionOnlyMessage(message)) return;
+      if (isEditActionMessage(message)) return;
+      if (isHiddenTechnicalAction(message)) return;
+      if (isTechnicalCiphertextMessage(message)) return;
+
       const timeValue = getMessageTimeValue(message);
       if (!timeValue) return;
 
@@ -4107,7 +4101,6 @@ export default function WhatsAppInboxScreen() {
           unreadWaitingLabel: getUnreadWaitingLabel(chat),
           formattedTime: formatTime(chat.last_message_at),
           previewText: formatChatListPreview(chat),
-          isSelected: selectedChat?.id === chat.id,
         } satisfies VisibleChatRowItem;
       }),
     [
@@ -4117,7 +4110,6 @@ export default function WhatsAppInboxScreen() {
       getLeadStatusBadgeStyle,
       getUnreadWaitingLabel,
       isChatMuted,
-      selectedChat?.id,
       statusByName,
       visibleChats,
     ],
@@ -4289,9 +4281,6 @@ export default function WhatsAppInboxScreen() {
 
     return exportedLines.join('\n');
   };
-  const selectedChatConversationHistory = useMemo(() => {
-    return buildConversationHistoryForCopy(messages);
-  }, [messages, selectedChat, selectedChatDisplayName, selectedChatKind]); // eslint-disable-line react-hooks/exhaustive-deps
   const followUpContextForInput = useMemo(() => {
     if (!selectedChat || !selectedChatIsDirect) return null;
 
@@ -4300,7 +4289,6 @@ export default function WhatsAppInboxScreen() {
 
     return {
       leadName,
-      conversationHistory: selectedChatConversationHistory,
       leadContext: {
         leadId: selectedLead?.id ?? null,
         leadStatus: selectedLead?.status ?? null,
@@ -4312,7 +4300,6 @@ export default function WhatsAppInboxScreen() {
     };
   }, [
     selectedChat,
-    selectedChatConversationHistory,
     selectedChatDisplayName,
     selectedChatIsDirect,
     selectedChatPhone,
@@ -4448,7 +4435,7 @@ export default function WhatsAppInboxScreen() {
     });
   };
 
-  const ensureAudioMessagesHaveTranscription = async (items: WhatsAppMessage[]) => {
+  const ensureAudioMessagesHaveTranscription = useCallback(async (items: WhatsAppMessage[]) => {
     const audioMessagesWithoutTranscription = items.filter((message) => {
       const normalizedType = (message.type || '').toLowerCase();
       if (!['audio', 'voice', 'ptt'].includes(normalizedType)) return false;
@@ -4514,9 +4501,9 @@ export default function WhatsAppInboxScreen() {
     });
 
     return nextItems;
-  };
+  }, [selectedChat]);
 
-  const prepareFollowUpContext = async () => {
+  const prepareFollowUpContext = useCallback(async () => {
     if (!selectedChat || !selectedChatIsDirect) {
       return null;
     }
@@ -4537,7 +4524,16 @@ export default function WhatsAppInboxScreen() {
         chatName: selectedChatDisplayName || null,
       },
     };
-  };
+  }, [
+    ensureAudioMessagesHaveTranscription,
+    messages,
+    selectedChat,
+    selectedChatDisplayName,
+    selectedChatIsDirect,
+    selectedChatPhone,
+    selectedChatPhoneFormatted,
+    selectedLead,
+  ]);
 
   const handleCopyFullChat = async () => {
     if (!selectedChat || messages.length === 0 || isCopyingChat) return;
@@ -6205,6 +6201,7 @@ export default function WhatsAppInboxScreen() {
                 <InboxChatRow
                   key={item.chat.id}
                   item={item}
+                  isSelected={selectedChat?.id === item.chat.id}
                   onSelectChat={selectChat}
                   onOpenChatContextMenu={openChatContextMenu}
                 />

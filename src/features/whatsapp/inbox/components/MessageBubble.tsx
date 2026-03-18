@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2, UserPlus, MessageCircle } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2, UserPlus, MessageCircle, Download } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from '../../shared/components/WhatsAppFormattedText';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -15,6 +15,16 @@ import { supabase } from '../../../../lib/supabase';
 
 type SaveSharedContactResult = {
   alreadySaved?: boolean;
+};
+
+type MediaPreviewState = {
+  kind: 'image' | 'video' | 'sticker';
+  src: string | null;
+  caption: string;
+  title: string;
+  fileName: string;
+  poster?: string;
+  isLoading: boolean;
 };
 
 export interface MessageBubbleProps {
@@ -222,7 +232,7 @@ function MessageBubbleComponent({
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
-  const [mediaPreview, setMediaPreview] = useState<{ type: 'image' | 'video'; src: string } | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<MediaPreviewState | null>(null);
   const [audioMediaUrl, setAudioMediaUrl] = useState<string | null>(null);
   const [audioMediaLoading, setAudioMediaLoading] = useState(false);
   const [audioIsPlaying, setAudioIsPlaying] = useState(false);
@@ -249,6 +259,7 @@ function MessageBubbleComponent({
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const bubbleRef = useRef<HTMLDivElement | null>(null);
+  const saveContactNameInputRef = useRef<HTMLInputElement | null>(null);
   const audioAutoplayRequestedRef = useRef(false);
   const hasHistory = editCount > 0 || isDeleted;
   const canReact = Boolean(onReact && !isDeleted);
@@ -408,6 +419,29 @@ function MessageBubbleComponent({
     }
   };
 
+  const handleSaveContactNameKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+    if (sharedContactLoading || !saveContactModalState?.name.trim()) return;
+    void handleConfirmSaveContact();
+  };
+
+  useEffect(() => {
+    if (!saveContactModalState || sharedContactLoading) return;
+
+    const frameId = requestAnimationFrame(() => {
+      const input = saveContactNameInputRef.current;
+      if (!input) return;
+
+      input.focus();
+      const caretPosition = input.value.length;
+      input.setSelectionRange(caretPosition, caretPosition);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [saveContactModalState, sharedContactLoading]);
+
   useEffect(() => {
     setLocalPayload(payload && typeof payload === 'object' ? (payload as MessagePayload) : null);
   }, [payload]);
@@ -490,6 +524,17 @@ function MessageBubbleComponent({
   const documentName = documentPayload?.filename || documentPayload?.name || 'Documento';
   const documentMime = documentPayload?.mime_type || documentPayload?.mimetype || '';
   const isPdf = (documentMime || '').toLowerCase().includes('pdf') || documentName.toLowerCase().endsWith('.pdf');
+  const imageCaption = resolvedBody && resolvedBody !== '[Imagem]' && resolvedBody !== '[Imagem de status]' ? resolvedBody : '';
+  const videoCaption =
+    resolvedBody &&
+    resolvedBody !== '[Vídeo]' &&
+    resolvedBody !== '[Video]' &&
+    resolvedBody !== '[Vídeo de status]'
+      ? resolvedBody
+      : '';
+  const stickerCaption =
+    resolvedBody && resolvedBody !== '[Sticker]' && resolvedBody !== '[Figurinha]' ? resolvedBody : '';
+  const videoPoster = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || undefined;
 
   useEffect(() => {
     const element = bubbleRef.current;
@@ -842,7 +887,7 @@ function MessageBubbleComponent({
             <button
               type="button"
               onClick={() => {
-                void openMediaPreview('image', displayUrl);
+                void openMediaPreview('sticker', displayUrl);
               }}
               className="mx-auto block overflow-hidden bg-transparent"
               style={{ aspectRatio: `${visualAspectRatio}` }}
@@ -861,7 +906,7 @@ function MessageBubbleComponent({
               className="h-auto w-full max-w-full rounded p-2 text-sm text-gray-600"
               style={{ aspectRatio: `${visualAspectRatio}` }}
               onClick={() => {
-                void openMediaPreview('image');
+                void openMediaPreview('sticker');
               }}
               disabled={visualMediaLoading}
             >
@@ -880,7 +925,7 @@ function MessageBubbleComponent({
 
     if (isImageMessage) {
       const displayUrl = visualDisplayUrl;
-      const shouldShowCaption = Boolean(resolvedBody && resolvedBody !== '[Imagem]' && resolvedBody !== '[Imagem de status]');
+      const shouldShowCaption = Boolean(imageCaption);
       return (
         <div className="flex w-[min(420px,85vw)] max-w-full flex-col gap-2">
           {displayUrl ? (
@@ -919,8 +964,8 @@ function MessageBubbleComponent({
               </div>
             </Button>
           )}
-          {shouldShowCaption && resolvedBody && (
-            <WhatsAppFormattedText text={resolvedBody} className="block w-full px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
+          {shouldShowCaption && imageCaption && (
+            <WhatsAppFormattedText text={imageCaption} className="block w-full px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -928,13 +973,8 @@ function MessageBubbleComponent({
 
     if (isVideoMessage) {
       const videoUrl = visualDisplayUrl;
-      const shouldShowCaption = Boolean(
-        resolvedBody &&
-        resolvedBody !== '[Vídeo]' &&
-        resolvedBody !== '[Video]' &&
-        resolvedBody !== '[Vídeo de status]',
-      );
-      const poster = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || undefined;
+      const shouldShowCaption = Boolean(videoCaption);
+      const poster = videoPoster;
 
       return (
         <div className="w-[min(420px,85vw)] max-w-full space-y-2">
@@ -981,8 +1021,8 @@ function MessageBubbleComponent({
               </div>
             </Button>
           )}
-          {shouldShowCaption && resolvedBody && (
-            <WhatsAppFormattedText text={resolvedBody} className="block px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
+          {shouldShowCaption && videoCaption && (
+            <WhatsAppFormattedText text={videoCaption} className="block px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -1238,13 +1278,63 @@ function MessageBubbleComponent({
     void loadVisualMedia();
   }, [isNearViewport, isVisualMediaMessage, loadVisualMedia, visualMediaLoading, visualNeedsUpgrade]);
 
-  async function openMediaPreview(previewType: 'image' | 'video', fallbackSrc?: string | null) {
-    const initialSrc = fallbackSrc || visualDisplayUrl || null;
-    const shouldOpenAfterLoad = !initialSrc;
+  useEffect(() => {
+    if (!mediaPreview) return;
 
-    if (initialSrc) {
-      setMediaPreview({ type: previewType, src: initialSrc });
-    }
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMediaPreview(null);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [mediaPreview]);
+
+  const buildMediaPreviewState = useCallback(
+    (previewKind: 'image' | 'video' | 'sticker', src: string | null, isLoading: boolean): MediaPreviewState => ({
+      kind: previewKind,
+      src,
+      caption: previewKind === 'video' ? videoCaption : previewKind === 'sticker' ? stickerCaption : imageCaption,
+      title: previewKind === 'video' ? 'Vídeo' : previewKind === 'sticker' ? 'Sticker' : 'Foto',
+      fileName:
+        previewKind === 'video'
+          ? payloadData?.video?.filename || payloadData?.video?.name || 'video'
+          : previewKind === 'sticker'
+            ? payloadData?.sticker?.filename || payloadData?.sticker?.name || 'sticker'
+            : payloadData?.image?.filename || payloadData?.image?.name || 'imagem',
+      poster: previewKind === 'video' ? videoPoster : undefined,
+      isLoading,
+    }),
+    [imageCaption, payloadData?.image?.filename, payloadData?.image?.name, payloadData?.sticker?.filename, payloadData?.sticker?.name, payloadData?.video?.filename, payloadData?.video?.name, stickerCaption, videoCaption, videoPoster],
+  );
+
+  const handleDownloadMediaPreview = useCallback(() => {
+    if (!mediaPreview?.src) return;
+    const link = document.createElement('a');
+    link.href = mediaPreview.src;
+    link.download = mediaPreview.fileName;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, [mediaPreview]);
+
+  const handleOpenMediaPreviewExternally = useCallback(() => {
+    if (!mediaPreview?.src) return;
+    window.open(mediaPreview.src, '_blank', 'noopener,noreferrer');
+  }, [mediaPreview]);
+
+  async function openMediaPreview(previewType: 'image' | 'video' | 'sticker', fallbackSrc?: string | null) {
+    const initialSrc = fallbackSrc || visualDisplayUrl || null;
+    setMediaPreview(buildMediaPreviewState(previewType, initialSrc, visualNeedsUpgrade));
 
     if (!visualNeedsUpgrade) {
       return;
@@ -1252,19 +1342,20 @@ function MessageBubbleComponent({
 
     const loadedUrl = await loadVisualMedia();
     if (!loadedUrl) {
+      setMediaPreview((current) => (current && current.kind === previewType ? { ...current, isLoading: false } : current));
       return;
     }
 
     setMediaPreview((current) => {
       if (!current) {
-        return shouldOpenAfterLoad ? { type: previewType, src: loadedUrl } : current;
+        return buildMediaPreviewState(previewType, loadedUrl, false);
       }
 
-      if (current.type !== previewType || current.src === loadedUrl) {
+      if (current.kind !== previewType || current.src === loadedUrl) {
         return current;
       }
 
-      return { ...current, src: loadedUrl };
+      return { ...current, src: loadedUrl, isLoading: false };
     });
   }
 
@@ -1511,31 +1602,111 @@ function MessageBubbleComponent({
         onClose={() => setShowHistory(false)}
       />
 
-      {mediaPreview && (
-        <div className="fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4">
-          <Button
-            variant="icon"
-            size="icon"
-            className="absolute right-4 top-4 h-10 w-10 rounded-full border-0 bg-white/10 text-white shadow-none hover:bg-white/20 hover:text-white"
-            onClick={() => setMediaPreview(null)}
-          >
-            <X className="w-5 h-5" />
-          </Button>
-          <div className="w-full h-full flex items-center justify-center">
-            {mediaPreview.type === 'image' ? (
-              <img src={mediaPreview.src} alt="Imagem" className="h-full w-full max-h-[92vh] max-w-[92vw] object-contain rounded-lg" />
-            ) : (
-              <video
-                src={mediaPreview.src}
-                controls
-                autoPlay
-                playsInline
-                className="h-full w-full max-h-[92vh] max-w-[92vw] object-contain rounded-lg bg-black"
-              />
-            )}
-          </div>
-        </div>
-      )}
+      {mediaPreview && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[95] bg-[#120c08] text-white"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Visualizar ${mediaPreview.title.toLowerCase()}`}
+              onClick={() => setMediaPreview(null)}
+            >
+              <div className="absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/80 via-black/45 to-transparent px-3 pb-8 pt-3 sm:px-5 sm:pt-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 pt-1">
+                    <div className="truncate text-sm font-semibold sm:text-base">{mediaPreview.title}</div>
+                    <div className="truncate text-xs text-white/65">{formatTimestamp(timestamp) || mediaPreview.fileName}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleOpenMediaPreviewExternally();
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Abrir em nova aba"
+                      disabled={!mediaPreview.src}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDownloadMediaPreview();
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Baixar mídia"
+                      disabled={!mediaPreview.src}
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setMediaPreview(null);
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+                      aria-label="Fechar visualização"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="flex h-full w-full items-center justify-center px-3 pb-24 pt-20 sm:px-6 sm:pb-28 sm:pt-24"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {mediaPreview.src ? (
+                  mediaPreview.kind === 'video' ? (
+                    <video
+                      src={mediaPreview.src}
+                      poster={mediaPreview.poster}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="h-full w-full max-h-full max-w-full rounded-2xl bg-black object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
+                    />
+                  ) : (
+                    <img
+                      src={mediaPreview.src}
+                      alt={mediaPreview.title}
+                      className="h-full w-full max-h-full max-w-full rounded-2xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
+                    />
+                  )
+                ) : (
+                  <div className="flex flex-col items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-8 py-7 text-center text-white/80 backdrop-blur-md">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <div className="text-sm font-medium">Carregando mídia</div>
+                    <div className="max-w-xs text-xs text-white/60">A visualização abre na hora e troca sozinha para a versão completa assim que o download terminar.</div>
+                  </div>
+                )}
+
+                {mediaPreview.isLoading && mediaPreview.src ? (
+                  <div className="pointer-events-none absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-xs text-white/85 backdrop-blur-md sm:bottom-28">
+                    Atualizando para a versão completa...
+                  </div>
+                ) : null}
+              </div>
+
+              {mediaPreview.caption ? (
+                <div
+                  className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-4 pb-4 pt-10 sm:px-6 sm:pb-5"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md">
+                    <WhatsAppFormattedText text={mediaPreview.caption} className="text-sm whitespace-pre-wrap break-words text-white" />
+                  </div>
+                </div>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
 
       {showPdfPreview && (
         <ModalShell
@@ -1591,12 +1762,14 @@ function MessageBubbleComponent({
                 Nome do contato
               </label>
               <Input
+                ref={saveContactNameInputRef}
                 type="text"
                 value={saveContactModalState.name}
                 onChange={(event) => {
                   const nextName = event.target.value;
                   setSaveContactModalState((current) => (current ? { ...current, name: nextName } : current));
                 }}
+                onKeyDown={handleSaveContactNameKeyDown}
                 placeholder="Ex.: Fernando - Gestor Qualicorp"
                 autoFocus
               />

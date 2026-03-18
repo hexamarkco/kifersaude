@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { supabase, Contract, fetchAllPages } from "../../lib/supabase";
 import {
@@ -37,19 +37,21 @@ import {
 } from "../../components/ui/panelStyles";
 import { toast } from "../../lib/toast";
 import { getContractBonusSummary } from "../../lib/contractBonus";
+import { normalizeTitleCase } from "../../lib/textNormalization";
 import {
   formatContractManagerDate as formatDate,
   getContractDisplayName as resolveContractDisplayName,
-  getContractFidelityEndDate as getFidelityEndDate,
-  getContractNextAdjustmentDate as getNextAdjustmentDate,
-  getDaysUntilContractDate as daysUntil,
+  getContractManagerHighlightBadges,
   hasUpcomingImportantContractDate as hasUpcomingImportantDate,
-  parseContractManagerDate as parseDate,
 } from "./shared/contractsManagerUtils";
 import type {
+  ContractDependentSearch,
   ContractHolder,
   ContractsManagerProps,
 } from "./shared/contractsManagerTypes";
+
+const normalizeOperadoraLabel = (value?: string | null) =>
+  normalizeTitleCase(value) ?? value?.trim() ?? "";
 
 export default function ContractsManager({
   leadToConvert,
@@ -62,6 +64,9 @@ export default function ContractsManager({
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
   const [holders, setHolders] = useState<Record<string, ContractHolder[]>>({});
+  const [dependentsByContract, setDependentsByContract] = useState<
+    Record<string, ContractDependentSearch[]>
+  >({});
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -90,12 +95,20 @@ export default function ContractsManager({
   const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const operadoraOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          contracts.map((contract) => contract.operadora).filter(Boolean),
-        ),
-      ).sort(),
+    () => {
+      const optionMap = new Map<string, string>();
+
+      contracts.forEach((contract) => {
+        const normalizedOperadora = normalizeOperadoraLabel(contract.operadora);
+        if (normalizedOperadora) {
+          optionMap.set(normalizedOperadora, normalizedOperadora);
+        }
+      });
+
+      return Array.from(optionMap.values()).sort((left, right) =>
+        left.localeCompare(right, "pt-BR"),
+      );
+    },
     [contracts],
   );
 
@@ -163,18 +176,6 @@ export default function ContractsManager({
   }, []);
 
   useEffect(() => {
-    filterContracts();
-    setCurrentPage(1);
-  }, [
-    contracts,
-    searchTerm,
-    filterStatus,
-    filterResponsavel,
-    filterOperadora,
-    dateProximityFilter,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
     if (leadToConvert) {
       setShowForm(true);
     }
@@ -182,7 +183,7 @@ export default function ContractsManager({
 
   useEffect(() => {
     if (initialOperadoraFilter) {
-      setFilterOperadora(initialOperadoraFilter);
+      setFilterOperadora(normalizeOperadoraLabel(initialOperadoraFilter));
     } else if (initialOperadoraFilter === undefined) {
       setFilterOperadora("todas");
     }
@@ -191,7 +192,7 @@ export default function ContractsManager({
   const loadContracts = async () => {
     setLoading(true);
     try {
-      const [contractsData, holdersData] = await Promise.all([
+      const [contractsData, holdersData, dependentsData] = await Promise.all([
         fetchAllPages<Contract>(
           (from, to) =>
             supabase
@@ -208,12 +209,22 @@ export default function ContractsManager({
             supabase
               .from("contract_holders")
               .select(
-                "id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj",
+                "id, contract_id, nome_completo, razao_social, nome_fantasia, cnpj, data_nascimento",
               )
               .range(from, to) as unknown as Promise<{
-              data: ContractHolder[] | null;
-              error: unknown;
-            }>,
+               data: ContractHolder[] | null;
+                 error: unknown;
+              }>,
+        ),
+        fetchAllPages<ContractDependentSearch>(
+          (from, to) =>
+            supabase
+              .from("dependents")
+              .select("id, contract_id, nome_completo, data_nascimento")
+              .range(from, to) as unknown as Promise<{
+              data: ContractDependentSearch[] | null;
+               error: unknown;
+             }>,
         ),
       ]);
 
@@ -225,8 +236,17 @@ export default function ContractsManager({
         holdersMap[holder.contract_id].push(holder);
       });
 
+      const dependentsMap: Record<string, ContractDependentSearch[]> = {};
+      dependentsData?.forEach((dependent) => {
+        if (!dependentsMap[dependent.contract_id]) {
+          dependentsMap[dependent.contract_id] = [];
+        }
+        dependentsMap[dependent.contract_id].push(dependent);
+      });
+
       setContracts(contractsData || []);
       setHolders(holdersMap);
+      setDependentsByContract(dependentsMap);
       setLastUpdated(new Date());
       return contractsData || [];
     } catch (error) {
@@ -247,19 +267,36 @@ export default function ContractsManager({
     setSelectedContract(refreshed);
   };
 
-  const filterContracts = () => {
+  const filterContracts = useCallback(() => {
     let filtered = [...contracts];
 
     if (searchTerm) {
+      const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+
       filtered = filtered.filter(
-        (contract) =>
-          contract.codigo_contrato
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          contract.operadora.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          contract.produto_plano
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()),
+        (contract) => {
+          const contractHolders = holders[contract.id] || [];
+          const contractDependents = dependentsByContract[contract.id] || [];
+          const searchableFields = [
+            contract.codigo_contrato,
+            contract.operadora,
+            contract.produto_plano,
+            contract.cnpj,
+            contract.razao_social,
+            contract.nome_fantasia,
+            ...contractHolders.flatMap((holder) => [
+              holder.nome_completo,
+              holder.razao_social,
+              holder.nome_fantasia,
+              holder.cnpj,
+            ]),
+            ...contractDependents.map((dependent) => dependent.nome_completo),
+          ];
+
+          return searchableFields.some((field) =>
+            field?.toLowerCase().includes(normalizedSearchTerm),
+          );
+        },
       );
     }
 
@@ -277,7 +314,8 @@ export default function ContractsManager({
 
     if (filterOperadora !== "todas") {
       filtered = filtered.filter(
-        (contract) => contract.operadora === filterOperadora,
+        (contract) =>
+          normalizeOperadoraLabel(contract.operadora) === filterOperadora,
       );
     }
 
@@ -288,7 +326,21 @@ export default function ContractsManager({
     }
 
     setFilteredContracts(filtered);
-  };
+  }, [
+    contracts,
+    dateProximityFilter,
+    dependentsByContract,
+    filterOperadora,
+    filterResponsavel,
+    filterStatus,
+    holders,
+    searchTerm,
+  ]);
+
+  useEffect(() => {
+    filterContracts();
+    setCurrentPage(1);
+  }, [filterContracts]);
 
   const resetFilters = () => {
     setSearchTerm("");
@@ -319,22 +371,6 @@ export default function ContractsManager({
   const upcomingImportantCount = filteredContracts.filter((contract) =>
     hasUpcomingImportantDate(contract),
   ).length;
-
-  const getDateBadgeStyle = (remaining: number) => {
-    if (remaining < 0) {
-      return getPanelToneStyle("neutral");
-    }
-
-    if (remaining <= 7) {
-      return getPanelToneStyle("danger");
-    }
-
-    if (remaining <= 15) {
-      return getPanelToneStyle("warning");
-    }
-
-    return getPanelToneStyle("success");
-  };
 
   const handleDeleteContract = async (contract: Contract) => {
     const confirmed = await requestConfirmation({
@@ -368,42 +404,22 @@ export default function ContractsManager({
     }
   };
 
-  const buildDateBadge = (label: string, date?: string | null) => {
-    const normalizedDate =
-      label === "Renova"
-        ? getFidelityEndDate(date)
-        : label === "Reajusta"
-          ? getNextAdjustmentDate(Number(date))
-          : parseDate(date);
-
-    const remaining = daysUntil(normalizedDate);
-    if (remaining === null || !normalizedDate) return null;
-
-    const formattedDate = normalizedDate.toLocaleDateString("pt-BR");
-    const labelText =
-      remaining === 0
-        ? `${label} hoje (${formattedDate})`
-        : remaining > 0
-          ? `${label} em ${remaining} dia${remaining === 1 ? "" : "s"} (${formattedDate})`
-          : `${label} há ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? "" : "s"} (${formattedDate})`;
-
-    return (
-      <span
-        key={`${label}-${date}`}
-        className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold"
-        style={getDateBadgeStyle(remaining)}
-      >
-        {labelText}
-      </span>
-    );
-  };
-
   const renderDateBadges = (contract: Contract) => {
-    const badges = [
-      buildDateBadge("Renova", contract.data_renovacao),
-      buildDateBadge("Reajusta", contract.mes_reajuste?.toString() || null),
-      buildDateBadge("Paga bônus", contract.previsao_pagamento_bonificacao),
-    ].filter(Boolean);
+    const participants = [
+      ...(holders[contract.id] || []),
+      ...(dependentsByContract[contract.id] || []),
+    ];
+    const badges = getContractManagerHighlightBadges(contract, participants).map(
+      (badge) => (
+        <span
+          key={`${contract.id}-${badge.key}`}
+          className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold"
+          style={getPanelToneStyle(badge.tone)}
+        >
+          {badge.label}
+        </span>
+      ),
+    );
 
     if (badges.length === 0) return null;
 
@@ -659,7 +675,7 @@ export default function ContractsManager({
               <Input
                 type="text"
                 leftIcon={Search}
-                placeholder="Buscar por código, operadora ou plano..."
+                placeholder="Buscar por codigo, empresa, CNPJ, beneficiario, operadora ou plano..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -919,7 +935,7 @@ export default function ContractsManager({
                       >
                         <div>
                           <span className="font-medium">Operadora:</span>{" "}
-                          {contract.operadora}
+                          {normalizeOperadoraLabel(contract.operadora)}
                         </div>
                         <div>
                           <span className="font-medium">Plano:</span>{" "}

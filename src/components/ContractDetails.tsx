@@ -655,6 +655,51 @@ export default function ContractDetails({
     }
   };
 
+  const handleDeleteHolder = async (holder: ContractHolder) => {
+    const confirmed = await requestConfirmation({
+      title: "Remover titular",
+      description:
+        "Deseja remover este titular? Dependentes e documentos vinculados tambem serao removidos. Esta acao nao pode ser desfeita.",
+      confirmLabel: "Remover",
+      cancelLabel: "Cancelar",
+      tone: "danger",
+    });
+    if (!confirmed) return;
+
+    const holderDependentIds = dependents
+      .filter((dependent) => dependent.holder_id === holder.id)
+      .map((dependent) => dependent.id);
+    const relatedEntityIds = [holder.id, ...holderDependentIds];
+
+    try {
+      if (relatedEntityIds.length > 0) {
+        const { error: documentsError } = await supabase
+          .from("documents")
+          .delete()
+          .in("entity_id", relatedEntityIds);
+
+        if (documentsError) throw documentsError;
+      }
+
+      const { error } = await supabase
+        .from("contract_holders")
+        .delete()
+        .eq("id", holder.id);
+
+      if (error) throw error;
+
+      setSelectedHolderId((current) =>
+        current === holder.id
+          ? holders.find((item) => item.id !== holder.id)?.id || null
+          : current,
+      );
+      loadData();
+    } catch (error) {
+      console.error("Erro ao remover titular:", error);
+      toast.error("Erro ao remover titular.");
+    }
+  };
+
   const handleAddInteraction = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -1254,17 +1299,27 @@ export default function ContractDetails({
                       </div>
                     </div>
                     {canEditContracts && (
-                      <Button
-                        onClick={() => {
-                          setEditingHolder(holderItem);
-                          setShowHolderForm(true);
-                        }}
-                        variant="info"
-                        size="icon"
-                        aria-label={`Editar titular ${holderItem.nome_completo}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => {
+                            setEditingHolder(holderItem);
+                            setShowHolderForm(true);
+                          }}
+                          variant="info"
+                          size="icon"
+                          aria-label={`Editar titular ${holderItem.nome_completo}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteHolder(holderItem)}
+                          variant="danger"
+                          size="icon"
+                          aria-label={`Remover titular ${holderItem.nome_completo}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

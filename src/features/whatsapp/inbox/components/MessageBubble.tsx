@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2, UserPlus, MessageCircle, Download } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2, UserPlus, MessageCircle, Download, ZoomIn, ZoomOut, RotateCcw, FileText } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from '../../shared/components/WhatsAppFormattedText';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -248,6 +248,8 @@ function MessageBubbleComponent({
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [visualMediaUrl, setVisualMediaUrl] = useState<string | null>(null);
   const [visualMediaLoading, setVisualMediaLoading] = useState(false);
+  const [mediaZoom, setMediaZoom] = useState(1);
+  const [mediaOffset, setMediaOffset] = useState({ x: 0, y: 0 });
   const [transcriptionLoading, setTranscriptionLoading] = useState(false);
   const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const [localPayload, setLocalPayload] = useState<MessagePayload | null>(null);
@@ -259,7 +261,15 @@ function MessageBubbleComponent({
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
   const actionMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const bubbleRef = useRef<HTMLDivElement | null>(null);
+  const mediaViewportRef = useRef<HTMLDivElement | null>(null);
   const saveContactNameInputRef = useRef<HTMLInputElement | null>(null);
+  const mediaDragStateRef = useRef<{ pointerId: number | null; startX: number; startY: number; originX: number; originY: number }>({
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  });
   const audioAutoplayRequestedRef = useRef(false);
   const hasHistory = editCount > 0 || isDeleted;
   const canReact = Boolean(onReact && !isDeleted);
@@ -274,6 +284,43 @@ function MessageBubbleComponent({
     setShowReactionPicker(false);
     setActionMenuPosition(null);
   }, []);
+
+  const clampMediaOffset = useCallback((offset: { x: number; y: number }, zoom: number) => {
+    if (zoom <= 1) {
+      return { x: 0, y: 0 };
+    }
+
+    const viewport = mediaViewportRef.current?.getBoundingClientRect();
+    if (!viewport) {
+      return offset;
+    }
+
+    const maxX = Math.max(0, ((viewport.width * zoom) - viewport.width) / 2);
+    const maxY = Math.max(0, ((viewport.height * zoom) - viewport.height) / 2);
+
+    return {
+      x: Math.min(maxX, Math.max(-maxX, offset.x)),
+      y: Math.min(maxY, Math.max(-maxY, offset.y)),
+    };
+  }, []);
+
+  const resetMediaTransform = useCallback(() => {
+    setMediaZoom(1);
+    setMediaOffset({ x: 0, y: 0 });
+    mediaDragStateRef.current.pointerId = null;
+  }, []);
+
+  const updateMediaZoom = useCallback(
+    (nextZoom: number) => {
+      const clampedZoom = Math.min(4, Math.max(1, Number(nextZoom.toFixed(2))));
+      setMediaZoom(clampedZoom);
+      setMediaOffset((current) => clampMediaOffset(current, clampedZoom));
+      if (clampedZoom <= 1) {
+        mediaDragStateRef.current.pointerId = null;
+      }
+    },
+    [clampMediaOffset],
+  );
 
   const showFailedActions = isOutbound && sendState === 'failed' && (onRetryFailed || onDismissFailed);
 
@@ -1189,37 +1236,21 @@ function MessageBubbleComponent({
               </div>
             </div>
             <div className="mt-2 flex items-center gap-2">
-              {isPdf && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="h-auto px-2 py-1 text-xs"
-                  onClick={() => {
-                    if (!resolvedDocumentUrl) {
-                      loadDocumentMedia();
-                      setShowPdfPreview(true);
-                      return;
-                    }
-                    setShowPdfPreview(true);
-                  }}
-                  disabled={documentLoading}
-                >
-                  {documentLoading ? 'Carregando...' : 'Abrir'}
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-auto px-2 py-1 text-xs"
+                onClick={handleOpenDocumentPreview}
+                disabled={documentLoading && !resolvedDocumentUrl}
+              >
+                {documentLoading && !resolvedDocumentUrl ? 'Carregando...' : isPdf ? 'Abrir' : 'Visualizar'}
+              </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 className="h-auto px-2 py-1 text-xs"
                 onClick={() => {
-                  if (!resolvedDocumentUrl) {
-                    loadDocumentMedia();
-                    return;
-                  }
-                  const link = document.createElement('a');
-                  link.href = resolvedDocumentUrl;
-                  link.download = documentName;
-                  link.click();
+                  void handleDownloadDocument();
                 }}
                 disabled={documentLoading}
               >
@@ -1279,11 +1310,15 @@ function MessageBubbleComponent({
   }, [isNearViewport, isVisualMediaMessage, loadVisualMedia, visualMediaLoading, visualNeedsUpgrade]);
 
   useEffect(() => {
-    if (!mediaPreview) return;
+    if (!mediaPreview && !showPdfPreview) return;
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setMediaPreview(null);
+        if (mediaPreview) {
+          setMediaPreview(null);
+          return;
+        }
+        setShowPdfPreview(false);
       }
     };
 
@@ -1295,7 +1330,11 @@ function MessageBubbleComponent({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [mediaPreview]);
+  }, [mediaPreview, showPdfPreview]);
+
+  useEffect(() => {
+    resetMediaTransform();
+  }, [mediaPreview?.src, mediaPreview?.kind, resetMediaTransform]);
 
   const buildMediaPreviewState = useCallback(
     (previewKind: 'image' | 'video' | 'sticker', src: string | null, isLoading: boolean): MediaPreviewState => ({
@@ -1332,6 +1371,32 @@ function MessageBubbleComponent({
     window.open(mediaPreview.src, '_blank', 'noopener,noreferrer');
   }, [mediaPreview]);
 
+  const handleOpenDocumentPreview = useCallback(() => {
+    setShowPdfPreview(true);
+    if (!documentUrl && !documentLink) {
+      void loadDocumentMedia();
+    }
+  }, [documentLink, documentUrl, loadDocumentMedia]);
+
+  const handleDownloadDocument = useCallback(async () => {
+    const resolvedDocumentUrl = documentUrl || documentLink || (await loadDocumentMedia());
+    if (!resolvedDocumentUrl) return;
+    const link = document.createElement('a');
+    link.href = resolvedDocumentUrl;
+    link.download = documentName;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }, [documentLink, documentName, documentUrl, loadDocumentMedia]);
+
+  const handleOpenDocumentExternally = useCallback(async () => {
+    const resolvedDocumentUrl = documentUrl || documentLink || (await loadDocumentMedia());
+    if (!resolvedDocumentUrl) return;
+    window.open(resolvedDocumentUrl, '_blank', 'noopener,noreferrer');
+  }, [documentLink, documentUrl, loadDocumentMedia]);
+
   async function openMediaPreview(previewType: 'image' | 'video' | 'sticker', fallbackSrc?: string | null) {
     const initialSrc = fallbackSrc || visualDisplayUrl || null;
     setMediaPreview(buildMediaPreviewState(previewType, initialSrc, visualNeedsUpgrade));
@@ -1358,6 +1423,66 @@ function MessageBubbleComponent({
       return { ...current, src: loadedUrl, isLoading: false };
     });
   }
+
+  const handleMediaWheel = useCallback(
+    (event: ReactWheelEvent<HTMLDivElement>) => {
+      if (!mediaPreview || mediaPreview.kind === 'video') return;
+      event.preventDefault();
+      const nextZoom = mediaZoom + (event.deltaY < 0 ? 0.18 : -0.18);
+      updateMediaZoom(nextZoom);
+    },
+    [mediaPreview, mediaZoom, updateMediaZoom],
+  );
+
+  const handleMediaPointerDown = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!mediaPreview || mediaPreview.kind === 'video' || mediaZoom <= 1) return;
+      mediaDragStateRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        originX: mediaOffset.x,
+        originY: mediaOffset.y,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [mediaOffset.x, mediaOffset.y, mediaPreview, mediaZoom],
+  );
+
+  const handleMediaPointerMove = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (mediaDragStateRef.current.pointerId !== event.pointerId || mediaZoom <= 1) return;
+      const deltaX = event.clientX - mediaDragStateRef.current.startX;
+      const deltaY = event.clientY - mediaDragStateRef.current.startY;
+      setMediaOffset(
+        clampMediaOffset(
+          {
+            x: mediaDragStateRef.current.originX + deltaX,
+            y: mediaDragStateRef.current.originY + deltaY,
+          },
+          mediaZoom,
+        ),
+      );
+    },
+    [clampMediaOffset, mediaZoom],
+  );
+
+  const handleMediaPointerUp = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (mediaDragStateRef.current.pointerId !== event.pointerId) return;
+    mediaDragStateRef.current.pointerId = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, []);
+
+  const handleMediaDoubleClick = useCallback(() => {
+    if (!mediaPreview || mediaPreview.kind === 'video') return;
+    if (mediaZoom > 1) {
+      resetMediaTransform();
+      return;
+    }
+    updateMediaZoom(2.2);
+  }, [mediaPreview, mediaZoom, resetMediaTransform, updateMediaZoom]);
 
   return (
     <div
@@ -1658,8 +1783,10 @@ function MessageBubbleComponent({
               </div>
 
               <div
-                className="flex h-full w-full items-center justify-center px-3 pb-24 pt-20 sm:px-6 sm:pb-28 sm:pt-24"
+                ref={mediaViewportRef}
+                className="relative flex h-full w-full items-center justify-center overflow-hidden px-3 pb-24 pt-20 sm:px-6 sm:pb-28 sm:pt-24"
                 onClick={(event) => event.stopPropagation()}
+                onWheel={handleMediaWheel}
               >
                 {mediaPreview.src ? (
                   mediaPreview.kind === 'video' ? (
@@ -1672,11 +1799,55 @@ function MessageBubbleComponent({
                       className="h-full w-full max-h-full max-w-full rounded-2xl bg-black object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
                     />
                   ) : (
-                    <img
-                      src={mediaPreview.src}
-                      alt={mediaPreview.title}
-                      className="h-full w-full max-h-full max-w-full rounded-2xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
-                    />
+                    <div className="relative flex h-full w-full items-center justify-center">
+                      <div className="absolute right-0 top-0 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-black/40 p-1.5 backdrop-blur-md sm:right-3 sm:top-3">
+                        <button
+                          type="button"
+                          onClick={() => updateMediaZoom(mediaZoom - 0.4)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label="Diminuir zoom"
+                          disabled={mediaZoom <= 1}
+                        >
+                          <ZoomOut className="h-4 w-4" />
+                        </button>
+                        <div className="min-w-[3.5rem] text-center text-xs font-medium text-white/80">{Math.round(mediaZoom * 100)}%</div>
+                        <button
+                          type="button"
+                          onClick={() => updateMediaZoom(mediaZoom + 0.4)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label="Aumentar zoom"
+                          disabled={mediaZoom >= 4}
+                        >
+                          <ZoomIn className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={resetMediaTransform}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label="Resetar zoom"
+                          disabled={mediaZoom <= 1 && mediaOffset.x === 0 && mediaOffset.y === 0}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div
+                        className={`flex h-full w-full items-center justify-center ${mediaZoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+                        onPointerDown={handleMediaPointerDown}
+                        onPointerMove={handleMediaPointerMove}
+                        onPointerUp={handleMediaPointerUp}
+                        onPointerCancel={handleMediaPointerUp}
+                        onDoubleClick={handleMediaDoubleClick}
+                        style={{ touchAction: mediaZoom > 1 ? 'none' : 'manipulation' }}
+                      >
+                        <img
+                          src={mediaPreview.src}
+                          alt={mediaPreview.title}
+                          className="h-full w-full max-h-full max-w-full rounded-2xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)] transition-transform duration-150 ease-out"
+                          style={{ transform: `translate3d(${mediaOffset.x}px, ${mediaOffset.y}px, 0) scale(${mediaZoom})` }}
+                        />
+                      </div>
+                    </div>
                   )
                 ) : (
                   <div className="flex flex-col items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-8 py-7 text-center text-white/80 backdrop-blur-md">
@@ -1689,6 +1860,12 @@ function MessageBubbleComponent({
                 {mediaPreview.isLoading && mediaPreview.src ? (
                   <div className="pointer-events-none absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-xs text-white/85 backdrop-blur-md sm:bottom-28">
                     Atualizando para a versão completa...
+                  </div>
+                ) : null}
+
+                {mediaPreview.src && mediaPreview.kind !== 'video' ? (
+                  <div className="pointer-events-none absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[11px] text-white/75 backdrop-blur-md sm:bottom-28">
+                    Use roda do mouse, duplo clique ou arraste com zoom.
                   </div>
                 ) : null}
               </div>
@@ -1708,22 +1885,80 @@ function MessageBubbleComponent({
           )
         : null}
 
-      {showPdfPreview && (
-        <ModalShell
-          isOpen
-          onClose={() => setShowPdfPreview(false)}
-            title={documentName || 'Pré-visualização de PDF'}
-          size="xl"
-          panelClassName="max-w-6xl"
-          bodyClassName="p-0"
-        >
-          <iframe
-            title="PDF Preview"
-            src={documentUrl || documentLink || ''}
-            className="h-[84vh] w-full"
-          />
-        </ModalShell>
-      )}
+      {showPdfPreview && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="fixed inset-0 z-[94] bg-[#17110c] text-white" role="dialog" aria-modal="true" aria-label={`Visualizar documento ${documentName}`}>
+              <div className="absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-black/80 via-black/45 to-transparent px-3 pb-8 pt-3 sm:px-5 sm:pt-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 pt-1">
+                    <div className="truncate text-sm font-semibold sm:text-base">{documentName}</div>
+                    <div className="truncate text-xs text-white/65">{isPdf ? 'PDF' : 'Documento'}{formatTimestamp(timestamp) ? ` · ${formatTimestamp(timestamp)}` : ''}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleOpenDocumentExternally();
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Abrir documento em nova aba"
+                      disabled={documentLoading && !documentUrl && !documentLink}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleDownloadDocument();
+                      }}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label="Baixar documento"
+                      disabled={documentLoading && !documentUrl && !documentLink}
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPdfPreview(false)}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+                      aria-label="Fechar visualização do documento"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex h-full w-full flex-col px-3 pb-4 pt-20 sm:px-6 sm:pb-6 sm:pt-24">
+                {documentUrl || documentLink ? (
+                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[28px] border border-white/10 bg-white/5 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+                    <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3 text-white/75">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-medium text-white">{documentName}</div>
+                        <div className="truncate text-xs text-white/60">Viewer interno com fallback para nova aba</div>
+                      </div>
+                    </div>
+                    <iframe
+                      title={`Preview de ${documentName}`}
+                      src={documentUrl || documentLink || ''}
+                      className="min-h-0 flex-1 bg-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 rounded-[28px] border border-white/10 bg-white/5 px-6 text-center text-white/80 backdrop-blur-sm">
+                    <Loader2 className="h-7 w-7 animate-spin" />
+                    <div className="text-sm font-medium">Preparando documento</div>
+                    <div className="max-w-sm text-xs text-white/60">Assim que o arquivo terminar de carregar, a visualização interna abre aqui. Se o navegador não suportar o formato, use abrir em nova aba.</div>
+                  </div>
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
 
       {saveContactModalState && (
         <ModalShell

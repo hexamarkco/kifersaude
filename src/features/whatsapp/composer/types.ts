@@ -72,4 +72,19 @@ export type IndexedQuickReplyItem = QuickReplyItem & {
   normalizedMessage: string;
 };
 
-export type EmojiCategoryId = 'recent' | 'faces' | 'gestures' | 'objects' | 'symbols';
+export type EmojiEntry = {
+  value: string;
+  keywords: string[];
+};
+
+export type EmojiCategoryId =
+  | 'recent'
+  | 'smileys'
+  | 'people'
+  | 'animals'
+  | 'food'
+  | 'activities'
+  | 'travel'
+  | 'objects'
+  | 'symbols'
+  | 'flags';

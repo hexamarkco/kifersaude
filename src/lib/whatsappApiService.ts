@@ -860,6 +860,65 @@ export async function addWhatsAppContact(phoneNumber: string, name: string) {
   return response.json().catch(() => ({}));
 }
 
+export async function updateWhatsAppContact(contactId: string, name: string) {
+  const settings = await getWhatsAppSettings();
+  const resolvedName = name.trim();
+  const normalizedId = normalizeChatId(contactId);
+  const resolvedContactId = normalizedId.replace(/@(s\.whatsapp\.net|c\.us|lid)$/i, '').trim();
+
+  if (!resolvedContactId) {
+    throw new Error('Contato invalido para editar.');
+  }
+
+  if (!resolvedName) {
+    throw new Error('Nome obrigatorio para editar contato.');
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(resolvedContactId)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${settings.token}`,
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      name: resolvedName,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro ao editar contato' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json().catch(() => ({}));
+}
+
+export async function deleteWhatsAppContact(contactId: string) {
+  const settings = await getWhatsAppSettings();
+  const normalizedId = normalizeChatId(contactId);
+  const resolvedContactId = normalizedId.replace(/@(s\.whatsapp\.net|c\.us|lid)$/i, '').trim();
+
+  if (!resolvedContactId) {
+    throw new Error('Contato invalido para excluir.');
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(resolvedContactId)}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${settings.token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Erro ao excluir contato' }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json().catch(() => ({}));
+}
+
 export async function getWhatsAppContactProfile(contactId: string): Promise<WhapiContactProfile> {
   const settings = await getWhatsAppSettings();
   const normalizedId = contactId.replace(/\D/g, '');

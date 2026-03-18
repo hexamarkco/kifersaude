@@ -16,8 +16,13 @@ import {
   MessageSquare,
   Clock3,
   Hand,
-  Gift,
+  Leaf,
+  UtensilsCrossed,
+  PartyPopper,
+  Plane,
+  Lightbulb,
   Heart,
+  Flag,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -38,11 +43,13 @@ import { ComposerContextBanner } from './components/ComposerContextBanner';
 import { InlineLinkPreviewCard } from './components/InlineLinkPreviewCard';
 import type {
   EmojiCategoryId,
+  EmojiEntry,
   IndexedQuickReplyItem,
   MessageInputProps,
   QuickReplyItem,
   SentMessagePayload,
 } from './types';
+import { EMOJI_CATEGORIES_DATA } from './emojiData';
 import {
   buildIndexedQuickReplies,
   buildLinkPreviewRetryPayload,
@@ -56,7 +63,6 @@ import {
 
 const EMOJI_RECENTS_STORAGE_KEY = 'whatsapp.composer.recent-emojis';
 const MAX_RECENT_EMOJIS = 24;
-type EmojiEntry = { value: string; keywords: string[] };
 type EmojiCategoryConfig = {
   id: Exclude<EmojiCategoryId, 'recent'>;
   label: string;
@@ -72,104 +78,22 @@ const normalizeEmojiSearch = (value: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .trim();
 
-const EMOJI_CATEGORIES: EmojiCategoryConfig[] = [
-  {
-    id: 'faces',
-    label: 'Rostos',
-    nativeLabel: 'Smileys e pessoas',
-    icon: Smile,
-    emojis: [
-      { value: '😀', keywords: ['feliz', 'sorriso', 'alegre', 'grinning'] },
-      { value: '😁', keywords: ['sorrindo', 'animado', 'feliz'] },
-      { value: '😂', keywords: ['rindo', 'lagrimas', 'engracado'] },
-      { value: '🤣', keywords: ['rolando', 'rir', 'muito'] },
-      { value: '😊', keywords: ['fofo', 'sorriso', 'timido'] },
-      { value: '🙂', keywords: ['leve', 'gentil', 'ok'] },
-      { value: '😉', keywords: ['piscando', 'cantada', 'brincadeira'] },
-      { value: '😍', keywords: ['apaixonado', 'amor', 'olhos'] },
-      { value: '😘', keywords: ['beijo', 'carinho', 'amor'] },
-      { value: '😎', keywords: ['estiloso', 'legal', 'oculos'] },
-      { value: '🤩', keywords: ['encantado', 'surpreso', 'estrela'] },
-      { value: '🤔', keywords: ['pensando', 'duvida', 'hmm'] },
-      { value: '😴', keywords: ['sono', 'cansado', 'dormindo'] },
-      { value: '😅', keywords: ['alivio', 'ufa', 'nervoso'] },
-      { value: '😭', keywords: ['chorando', 'triste', 'lagrimas'] },
-      { value: '😡', keywords: ['raiva', 'bravo', 'irritado'] },
-    ],
-  },
-  {
-    id: 'gestures',
-    label: 'Gestos',
-    nativeLabel: 'Gestos e pessoas',
-    icon: Hand,
-    emojis: [
-      { value: '👍', keywords: ['joinha', 'ok', 'aprovado'] },
-      { value: '👎', keywords: ['nao', 'ruim', 'reprovado'] },
-      { value: '👏', keywords: ['aplauso', 'parabens', 'palmas'] },
-      { value: '🙌', keywords: ['celebrar', 'vitoria', 'maos'] },
-      { value: '🙏', keywords: ['obrigado', 'por favor', 'oracao'] },
-      { value: '💪', keywords: ['forca', 'treino', 'forte'] },
-      { value: '👀', keywords: ['olhando', 'vendo', 'atento'] },
-      { value: '🤝', keywords: ['acordo', 'parceria', 'cumprimento'] },
-      { value: '✍️', keywords: ['escrevendo', 'anotar', 'texto'] },
-      { value: '👆', keywords: ['apontando', 'cima', 'indicar'] },
-      { value: '👇', keywords: ['baixo', 'apontando', 'indicar'] },
-      { value: '🤞', keywords: ['torcendo', 'sorte', 'dedos'] },
-      { value: '👌', keywords: ['perfeito', 'ok', 'bom'] },
-      { value: '🫶', keywords: ['carinho', 'coracao', 'amor'] },
-      { value: '💥', keywords: ['impacto', 'boom', 'explosao'] },
-      { value: '🔥', keywords: ['quente', 'top', 'bombando'] },
-    ],
-  },
-  {
-    id: 'objects',
-    label: 'Objetos',
-    nativeLabel: 'Objetos',
-    icon: Gift,
-    emojis: [
-      { value: '🎉', keywords: ['festa', 'celebracao', 'confete'] },
-      { value: '🎯', keywords: ['meta', 'alvo', 'objetivo'] },
-      { value: '🎁', keywords: ['presente', 'gift', 'surpresa'] },
-      { value: '📌', keywords: ['fixar', 'pin', 'lembrete'] },
-      { value: '📅', keywords: ['agenda', 'calendario', 'data'] },
-      { value: '📞', keywords: ['telefone', 'ligacao', 'call'] },
-      { value: '💬', keywords: ['mensagem', 'chat', 'fala'] },
-      { value: '📣', keywords: ['anuncio', 'aviso', 'megafone'] },
-      { value: '💡', keywords: ['ideia', 'insight', 'lampada'] },
-      { value: '💰', keywords: ['dinheiro', 'venda', 'grana'] },
-      { value: '📎', keywords: ['anexo', 'clip', 'arquivo'] },
-      { value: '✅', keywords: ['confirmado', 'feito', 'certo'] },
-      { value: '❌', keywords: ['erro', 'cancelar', 'nao'] },
-      { value: '⚠️', keywords: ['alerta', 'atencao', 'risco'] },
-      { value: '📍', keywords: ['localizacao', 'mapa', 'pin'] },
-      { value: '📝', keywords: ['nota', 'escrever', 'rascunho'] },
-    ],
-  },
-  {
-    id: 'symbols',
-    label: 'Simbolos',
-    nativeLabel: 'Simbolos',
-    icon: Heart,
-    emojis: [
-      { value: '❤️', keywords: ['amor', 'coracao', 'love'] },
-      { value: '🧡', keywords: ['carinho', 'laranja', 'coracao'] },
-      { value: '💛', keywords: ['amizade', 'amarelo', 'coracao'] },
-      { value: '💚', keywords: ['esperanca', 'verde', 'coracao'] },
-      { value: '💙', keywords: ['azul', 'confianca', 'coracao'] },
-      { value: '💜', keywords: ['roxo', 'afeto', 'coracao'] },
-      { value: '🤍', keywords: ['branco', 'paz', 'coracao'] },
-      { value: '🖤', keywords: ['preto', 'luto', 'coracao'] },
-      { value: '⭐', keywords: ['estrela', 'destaque', 'favorito'] },
-      { value: '✨', keywords: ['brilho', 'sparkle', 'especial'] },
-      { value: '✔️', keywords: ['check', 'confirmar', 'certo'] },
-      { value: '☑️', keywords: ['marcado', 'selecionado', 'checkbox'] },
-      { value: '❗', keywords: ['urgente', 'importante', 'atencao'] },
-      { value: '❓', keywords: ['duvida', 'pergunta', 'questao'] },
-      { value: '➕', keywords: ['somar', 'mais', 'adicionar'] },
-      { value: '➖', keywords: ['menos', 'subtrair', 'remover'] },
-    ],
-  },
-];
+const EMOJI_CATEGORY_ICONS: Record<Exclude<EmojiCategoryId, 'recent'>, LucideIcon> = {
+  smileys: Smile,
+  people: Hand,
+  animals: Leaf,
+  food: UtensilsCrossed,
+  activities: PartyPopper,
+  travel: Plane,
+  objects: Lightbulb,
+  symbols: Heart,
+  flags: Flag,
+};
+
+const EMOJI_CATEGORIES: EmojiCategoryConfig[] = EMOJI_CATEGORIES_DATA.map((category) => ({
+  ...category,
+  icon: EMOJI_CATEGORY_ICONS[category.id],
+}));
 
 function WhatsAppComposerComponent({
   chatId,
@@ -1112,7 +1036,7 @@ function WhatsAppComposerComponent({
     setShowEmojiPicker((prev) => {
       const next = !prev;
       if (next) {
-        setActiveEmojiCategory(recentEmojis.length > 0 ? 'recent' : 'faces');
+        setActiveEmojiCategory(recentEmojis.length > 0 ? 'recent' : 'smileys');
         setEmojiSearch('');
       }
       return next;
@@ -2679,7 +2603,7 @@ function WhatsAppComposerComponent({
             </button>
 
             {showEmojiPicker && (
-              <div className="comm-popover comm-emoji-picker absolute bottom-full left-0 z-[120] mb-2 w-[25rem] max-w-[calc(100vw-1.5rem)] overflow-hidden p-0">
+              <div className="comm-popover comm-emoji-picker absolute bottom-full left-0 z-[120] mb-2 w-[28rem] max-w-[calc(100vw-1.5rem)] overflow-hidden p-0">
                 <div className="comm-emoji-picker-tabs">
                   {emojiTabs.map((tab) => {
                     const Icon = tab.icon;
@@ -2698,9 +2622,9 @@ function WhatsAppComposerComponent({
                     );
                   })}
                 </div>
-                <div className="px-3 pb-3 pt-2">
+                <div className="px-3 pb-2 pt-2">
                   <label className="comm-emoji-search">
-                    <Search className="h-4 w-4" />
+                    <Search className="comm-emoji-search-icon h-4 w-4" />
                     <input
                       type="text"
                       value={emojiSearch}
@@ -2708,19 +2632,33 @@ function WhatsAppComposerComponent({
                       placeholder="Pesquisar emoji"
                       aria-label="Pesquisar emoji"
                     />
+                    {emojiSearch ? (
+                      <button
+                        type="button"
+                        className="comm-emoji-search-clear"
+                        aria-label="Limpar busca"
+                        onClick={() => setEmojiSearch('')}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
                   </label>
                 </div>
                 <div className="flex items-center justify-between px-4 pb-2">
                   <div className="comm-emoji-picker-section-title">
                     {normalizedEmojiSearch ? 'Resultados' : activeEmojiTab.nativeLabel}
                   </div>
-                  {!normalizedEmojiSearch && activeEmojiCategory === 'recent' && recentEmojis.length > 0 ? (
-                    <div className="comm-emoji-picker-section-meta">{recentEmojis.length} usados</div>
-                  ) : null}
+                  <div className="comm-emoji-picker-section-meta">
+                    {normalizedEmojiSearch
+                      ? `${emojiSearchResults.length} encontrados`
+                      : activeEmojiCategory === 'recent'
+                        ? `${recentEmojis.length} usados`
+                        : `${activeEmojiTab.emojis.length} emojis`}
+                  </div>
                 </div>
-                <div className="comm-emoji-picker-scroll panel-dropdown-scrollbar max-h-80 overflow-y-auto px-3 pb-4">
+                <div className="comm-emoji-picker-scroll panel-dropdown-scrollbar overflow-y-auto px-3 pb-4">
                   {emojiSearchResults.length === 0 ? (
-                    <div className="comm-muted px-2 py-8 text-center text-xs">
+                    <div className="comm-emoji-picker-empty comm-muted px-2 text-center text-xs">
                       {normalizedEmojiSearch
                         ? 'Nenhum emoji encontrado para essa busca.'
                         : 'Seus emojis mais usados vao aparecer aqui conforme voce enviar.'}

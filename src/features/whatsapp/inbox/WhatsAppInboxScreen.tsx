@@ -44,6 +44,7 @@ import { PanelAdaptiveLoadingFrame } from '../../../components/ui/panelLoading';
 import { toast } from '../../../lib/toast';
 import { getBadgeStyle, getContrastTextColor, hexToRgba } from '../../../lib/colorUtils';
 import { MessageBubble } from './components/MessageBubble';
+import { DirectChatInfoPanel } from './components/DirectChatInfoPanel';
 import { GroupInfoPanel } from './components/GroupInfoPanel';
 import ReminderSchedulerModal from '../../../components/ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../../hooks/useAdaptiveLoading';
@@ -91,6 +92,7 @@ import {
 } from '../shared/reminderQuickOpen';
 import { mergeChatPreview, sanitizeTechnicalCiphertextPreview, type ChatPreviewCandidate } from '../shared/chatPreview';
 import { formatWhatsAppPhoneDisplay, isLikelyBrazilLocalNumber, normalizePhoneNumber } from '../shared/phoneUtils';
+import { normalizeTitleCase } from '../../../lib/textNormalization';
 import type {
   ChatKindFilter,
   ChatLeadPresenceFilter,
@@ -107,6 +109,7 @@ import type {
 import {
   addWhatsAppContact,
   buildChatIdFromPhone,
+  deleteWhatsAppContact,
   getWhatsAppChat,
   getWhatsAppChatKind,
   getWhatsAppChats,
@@ -118,6 +121,7 @@ import {
   reactToMessage,
   removeReactionFromMessage,
   sendWhatsAppMessage,
+  updateWhatsAppContact,
   type WhapiChat,
   type WhapiContact,
   type WhapiGroup,
@@ -148,6 +152,27 @@ type VisibleChatRowItem = {
   unreadWaitingLabel: string | null;
   formattedTime: string;
   previewText: string;
+};
+
+type InboxLeadSummary = {
+  id: string;
+  name: string;
+  phone: string;
+  status?: string | null;
+  responsavel?: string | null;
+};
+
+type InboxLeadInfo = InboxLeadSummary & {
+  email?: string | null;
+  cidade?: string | null;
+  observacoes?: string | null;
+};
+
+type InboxContactInfo = {
+  id: string;
+  name: string;
+  saved: boolean;
+  pushname?: string;
 };
 
 const OFFSCREEN_CHAT_ROW_STYLE = {
@@ -255,7 +280,7 @@ export default function WhatsAppInboxScreen() {
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [loading, setLoading] = useState(true);
   const [isMobileView, setIsMobileView] = useState(false);
-  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showConversationInfo, setShowConversationInfo] = useState(false);
   const [replyToMessage, setReplyToMessage] = useState<{
     id: string;
     body: string;
@@ -272,9 +297,7 @@ export default function WhatsAppInboxScreen() {
   const [liveContactPhotosById, setLiveContactPhotosById] = useState<Map<string, string>>(new Map());
   const [legacyContactPhotosById, setLegacyContactPhotosById] = useState<Map<string, string>>(new Map());
   const [groupPhotosById, setGroupPhotosById] = useState<Map<string, string>>(new Map());
-  const [leadsList, setLeadsList] = useState<Array<{ id: string; name: string; phone: string; status?: string | null; responsavel?: string | null }>>(
-    [],
-  );
+  const [leadsList, setLeadsList] = useState<InboxLeadSummary[]>([]);
   const [leadStatuses, setLeadStatuses] = useState<LeadStatusConfig[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [showChatSegmentsMenu, setShowChatSegmentsMenu] = useState(false);
@@ -306,6 +329,12 @@ export default function WhatsAppInboxScreen() {
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [chatCopiedAt, setChatCopiedAt] = useState<number | null>(null);
   const [isCopyingChat, setIsCopyingChat] = useState(false);
+  const [selectedLeadInfo, setSelectedLeadInfo] = useState<InboxLeadInfo | null>(null);
+  const [isLoadingSelectedLeadInfo, setIsLoadingSelectedLeadInfo] = useState(false);
+  const [isSavingSelectedContact, setIsSavingSelectedContact] = useState(false);
+  const [isDeletingSelectedContact, setIsDeletingSelectedContact] = useState(false);
+  const [isSavingSelectedLeadInfo, setIsSavingSelectedLeadInfo] = useState(false);
+  const [isDeletingSelectedLeadInfo, setIsDeletingSelectedLeadInfo] = useState(false);
   const [pendingMessagesBelow, setPendingMessagesBelow] = useState(0);
   const [composerHeight, setComposerHeight] = useState(96);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
@@ -1499,8 +1528,8 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      if (showGroupInfo) {
-        setShowGroupInfo(false);
+      if (showConversationInfo) {
+        setShowConversationInfo(false);
         return;
       }
 
@@ -1511,7 +1540,7 @@ export default function WhatsAppInboxScreen() {
 
     window.addEventListener('keydown', onGlobalKeyDown);
     return () => window.removeEventListener('keydown', onGlobalKeyDown);
-  }, [chatMenu, isMobileView, selectedChat, showGroupInfo, showNewChatModal, leadsList.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [chatMenu, isMobileView, selectedChat, showConversationInfo, showNewChatModal, leadsList.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!showAdvancedChatFilters) {
@@ -1926,7 +1955,8 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     if (selectedChat) {
       setCopiedPhone(null);
-      setShowGroupInfo(false);
+      setShowConversationInfo(false);
+      setSelectedLeadInfo(null);
       setReplyToMessage(null);
       setEditMessage(null);
       setPendingMessagesBelow(0);
@@ -4313,6 +4343,305 @@ export default function WhatsAppInboxScreen() {
     return '';
   })();
   const selectedChatPhoneFormatted = selectedChatPhone ? formatPhone(selectedChatPhone) : '';
+  const selectedContact = useMemo<InboxContactInfo | null>(() => {
+    if (!selectedChat || !selectedChatIsDirect) return null;
+
+    const candidateKeys = new Set<string>();
+
+    [selectedChat.id, normalizeChatId(selectedChat.id), selectedChat.phone_number || '', selectedChatPhone].forEach((value) => {
+      if (!value) return;
+
+      candidateKeys.add(value);
+
+      const normalizedValue = normalizeChatId(value);
+      if (normalizedValue) {
+        candidateKeys.add(normalizedValue);
+      }
+
+      const digits = getPhoneDigits(value);
+      if (!digits) return;
+
+      candidateKeys.add(digits);
+      getDirectIdVariantsFromDigits(digits).forEach((variant) => candidateKeys.add(variant));
+    });
+
+    const matchedContact = contactsList.find((contact) => {
+      const normalizedContactId = normalizeChatId(contact.id);
+      const contactDigits = getPhoneDigits(contact.id);
+
+      return candidateKeys.has(contact.id) || candidateKeys.has(normalizedContactId) || candidateKeys.has(contactDigits);
+    });
+
+    return matchedContact
+      ? {
+          id: matchedContact.id,
+          name: matchedContact.name,
+          saved: matchedContact.saved,
+          pushname: matchedContact.pushname,
+        }
+      : null;
+  }, [contactsList, selectedChat, selectedChatIsDirect, selectedChatPhone]);
+  const effectiveSelectedLeadInfo = useMemo<InboxLeadInfo | null>(() => {
+    if (!selectedLead && !selectedLeadInfo) return null;
+
+    const fallbackLead = selectedLead
+      ? {
+          ...selectedLead,
+          email: null,
+          cidade: null,
+          observacoes: null,
+        }
+      : null;
+
+    if (!selectedLeadInfo) return fallbackLead;
+
+    return {
+      id: selectedLeadInfo.id,
+      name: selectedLeadInfo.name || fallbackLead?.name || '',
+      phone: selectedLeadInfo.phone || fallbackLead?.phone || '',
+      status: selectedLead?.status ?? selectedLeadInfo.status ?? null,
+      responsavel: selectedLead?.responsavel ?? selectedLeadInfo.responsavel ?? null,
+      email: selectedLeadInfo.email ?? null,
+      cidade: selectedLeadInfo.cidade ?? null,
+      observacoes: selectedLeadInfo.observacoes ?? null,
+    };
+  }, [selectedLead, selectedLeadInfo]);
+
+  useEffect(() => {
+    if (!showConversationInfo) {
+      setIsLoadingSelectedLeadInfo(false);
+      return;
+    }
+
+    if (!selectedLead?.id) {
+      setSelectedLeadInfo(null);
+      setIsLoadingSelectedLeadInfo(false);
+      return;
+    }
+
+    let cancelled = false;
+    const fallbackLeadInfo: InboxLeadInfo = {
+      ...selectedLead,
+      email: null,
+      cidade: null,
+      observacoes: null,
+    };
+
+    const loadSelectedLeadInfo = async () => {
+      setIsLoadingSelectedLeadInfo(true);
+
+      try {
+        const { data, error } = await supabase
+          .from('leads')
+          .select('id, nome_completo, telefone, status, responsavel_id, email, cidade, observacoes')
+          .eq('id', selectedLead.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (cancelled) return;
+
+        if (!data?.id) {
+          setSelectedLeadInfo(fallbackLeadInfo);
+          return;
+        }
+
+        setSelectedLeadInfo({
+          id: data.id,
+          name: data.nome_completo?.trim() || fallbackLeadInfo.name,
+          phone: normalizePhoneNumber(data.telefone ?? '') || fallbackLeadInfo.phone,
+          status: data.status ?? fallbackLeadInfo.status ?? null,
+          responsavel: data.responsavel_id ?? fallbackLeadInfo.responsavel ?? null,
+          email: data.email ?? null,
+          cidade: data.cidade ?? null,
+          observacoes: data.observacoes ?? null,
+        });
+      } catch (error) {
+        console.error('Erro ao carregar dados completos do lead no WhatsApp:', error);
+        if (!cancelled) {
+          setSelectedLeadInfo(fallbackLeadInfo);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingSelectedLeadInfo(false);
+        }
+      }
+    };
+
+    void loadSelectedLeadInfo();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [showConversationInfo, selectedLead]);
+
+  const handleSaveSelectedContactInfo = async ({ name }: { name: string }) => {
+    if (!selectedChatIsDirect || !selectedChatPhone) {
+      toast.warning('Nao foi possivel identificar o telefone deste chat.');
+      return;
+    }
+
+    const resolvedName = name.trim();
+    if (!resolvedName) {
+      toast.warning('Informe um nome para salvar o contato.');
+      return;
+    }
+
+    setIsSavingSelectedContact(true);
+
+    try {
+      if (selectedContact?.saved) {
+        await updateWhatsAppContact(selectedContact.id, resolvedName);
+      } else {
+        await addWhatsAppContact(selectedChatPhone, resolvedName);
+      }
+
+      await loadSavedContacts();
+      toast.success(selectedContact?.saved ? 'Contato atualizado com sucesso.' : 'Contato adicionado com sucesso.');
+    } catch (error) {
+      console.error('Erro ao salvar contato do WhatsApp:', error);
+      const message = error instanceof Error ? error.message : 'Nao foi possivel salvar o contato.';
+      toast.error(message);
+    } finally {
+      setIsSavingSelectedContact(false);
+    }
+  };
+
+  const handleDeleteSelectedContactInfo = async () => {
+    if (!selectedContact?.saved) return;
+
+    const confirmed = await requestConfirmation({
+      title: 'Excluir contato',
+      description: `Deseja excluir o contato ${selectedContact.name || selectedChatDisplayName || selectedChatPhoneFormatted}? Esta ação também remove o contato do WhatsApp conectado.`,
+      confirmLabel: 'Excluir contato',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    setIsDeletingSelectedContact(true);
+
+    try {
+      await deleteWhatsAppContact(selectedContact.id);
+      await loadSavedContacts();
+      toast.success('Contato excluido com sucesso.');
+    } catch (error) {
+      console.error('Erro ao excluir contato do WhatsApp:', error);
+      const message = error instanceof Error ? error.message : 'Nao foi possivel excluir o contato.';
+      toast.error(message);
+    } finally {
+      setIsDeletingSelectedContact(false);
+    }
+  };
+
+  const handleSaveSelectedLeadInfo = async (payload: {
+    name: string;
+    email: string;
+    cidade: string;
+    observacoes: string;
+  }) => {
+    const currentLead = effectiveSelectedLeadInfo;
+    if (!currentLead?.id) return;
+
+    const normalizedName = normalizeTitleCase(payload.name)?.trim() || '';
+    if (!normalizedName) {
+      toast.warning('Informe o nome do lead.');
+      return;
+    }
+
+    const normalizedEmail = payload.email.trim().toLowerCase();
+    if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      toast.warning('Informe um e-mail valido.');
+      return;
+    }
+
+    const normalizedCity = normalizeTitleCase(payload.cidade)?.trim() || null;
+    const normalizedObservacoes = payload.observacoes.trim() || null;
+
+    setIsSavingSelectedLeadInfo(true);
+
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .update({
+          nome_completo: normalizedName,
+          email: normalizedEmail || null,
+          cidade: normalizedCity,
+          observacoes: normalizedObservacoes,
+        })
+        .eq('id', currentLead.id)
+        .select('id, nome_completo, telefone, status, responsavel_id, email, cidade, observacoes')
+        .maybeSingle();
+
+      if (error) throw error;
+
+      const nextLeadInfo: InboxLeadInfo = {
+        id: currentLead.id,
+        name: data?.nome_completo?.trim() || normalizedName,
+        phone: normalizePhoneNumber(data?.telefone ?? '') || currentLead.phone,
+        status: data?.status ?? currentLead.status ?? null,
+        responsavel: data?.responsavel_id ?? currentLead.responsavel ?? null,
+        email: data?.email ?? (normalizedEmail || null),
+        cidade: data?.cidade ?? normalizedCity,
+        observacoes: data?.observacoes ?? normalizedObservacoes,
+      };
+
+      setSelectedLeadInfo(nextLeadInfo);
+      setLeadsList((prev) =>
+        prev.map((lead) =>
+          lead.id === currentLead.id
+            ? {
+                ...lead,
+                name: nextLeadInfo.name,
+                phone: nextLeadInfo.phone,
+                status: nextLeadInfo.status ?? null,
+                responsavel: nextLeadInfo.responsavel ?? null,
+              }
+            : lead,
+        ),
+      );
+      toast.success('Lead atualizado com sucesso.');
+    } catch (error) {
+      console.error('Erro ao atualizar lead pelo WhatsApp:', error);
+      const message = error instanceof Error ? error.message : 'Nao foi possivel salvar os dados do lead.';
+      toast.error(message);
+    } finally {
+      setIsSavingSelectedLeadInfo(false);
+    }
+  };
+
+  const handleDeleteSelectedLeadInfo = async () => {
+    const currentLead = effectiveSelectedLeadInfo;
+    if (!currentLead) return;
+
+    const confirmed = await requestConfirmation({
+      title: 'Excluir lead',
+      description: `Deseja excluir o lead ${currentLead.name}? Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir lead',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    setIsDeletingSelectedLeadInfo(true);
+
+    try {
+      const { error } = await supabase.from('leads').delete().eq('id', currentLead.id);
+      if (error) throw error;
+
+      setLeadsList((prev) => prev.filter((lead) => lead.id !== currentLead.id));
+      setSelectedLeadInfo(null);
+      toast.success('Lead excluido com sucesso.');
+    } catch (error) {
+      console.error('Erro ao excluir lead pelo WhatsApp:', error);
+      const message = error instanceof Error ? error.message : 'Nao foi possivel excluir o lead.';
+      toast.error(message);
+    } finally {
+      setIsDeletingSelectedLeadInfo(false);
+    }
+  };
+
   const buildConversationHistoryForCopy = (items: WhatsAppMessage[]) => {
     if (!selectedChat || items.length === 0) return '';
 
@@ -6541,17 +6870,18 @@ export default function WhatsAppInboxScreen() {
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {selectedChatKind === 'group' ? (
+                  {selectedChatKind === 'group' || selectedChatIsDirect ? (
                     <Button
                       variant="icon"
                       size="icon"
                       className="h-9 w-9 rounded-full"
-                      onClick={() => setShowGroupInfo(!showGroupInfo)}
-                      title="Informações do grupo"
+                      onClick={() => setShowConversationInfo(!showConversationInfo)}
+                      title={selectedChatKind === 'group' ? 'Informacoes do grupo' : 'Informacoes do contato'}
                     >
                       <Info className="w-5 h-5 text-slate-600" />
                     </Button>
-                  ) : selectedChatIsDirect ? (
+                  ) : null}
+                  {selectedChatIsDirect ? (
                     <Button
                       variant="icon"
                       size="icon"
@@ -6716,10 +7046,30 @@ export default function WhatsAppInboxScreen() {
                 </div>
               )}
 
-              {showGroupInfo && selectedChatKind === 'group' && (
+              {showConversationInfo && selectedChatKind === 'group' && (
                 <GroupInfoPanel
                   groupId={selectedChat.id}
-                  onClose={() => setShowGroupInfo(false)}
+                  onClose={() => setShowConversationInfo(false)}
+                />
+              )}
+              {showConversationInfo && selectedChatIsDirect && (
+                <DirectChatInfoPanel
+                  displayName={selectedChatDisplayName || selectedChat.id}
+                  phoneFormatted={selectedChatPhoneFormatted}
+                  photoSources={selectedChatPhotoSources}
+                  contact={selectedContact}
+                  lead={effectiveSelectedLeadInfo}
+                  isLoadingLead={isLoadingSelectedLeadInfo}
+                  isSavingContact={isSavingSelectedContact}
+                  isDeletingContact={isDeletingSelectedContact}
+                  isSavingLead={isSavingSelectedLeadInfo}
+                  isDeletingLead={isDeletingSelectedLeadInfo}
+                  onClose={() => setShowConversationInfo(false)}
+                  onOpenLead={selectedLead?.id ? () => handleOpenLeadFromChat(selectedLead.id) : undefined}
+                  onSaveContact={handleSaveSelectedContactInfo}
+                  onDeleteContact={handleDeleteSelectedContactInfo}
+                  onSaveLead={handleSaveSelectedLeadInfo}
+                  onDeleteLead={handleDeleteSelectedLeadInfo}
                 />
               )}
             </>

@@ -69,6 +69,7 @@ import {
 import { getPinnedSortValue, sortChatsByLatest } from '../shared/chatSort';
 import {
   buildContactPhotoMap,
+  buildContactProfilePhotoMap,
   buildGroupPhotoMap,
   buildLegacyContactPhotoMap,
   extractPhoneFromChatId,
@@ -109,6 +110,7 @@ import {
   getWhatsAppChat,
   getWhatsAppChatKind,
   getWhatsAppChats,
+  getWhatsAppContactProfile,
   getWhatsAppContacts,
   getWhatsAppGroups,
   getWhatsAppNewsletters,
@@ -364,6 +366,7 @@ export default function WhatsAppInboxScreen() {
   const pendingChatPreviewPersistTimeoutRef = useRef<number | null>(null);
   const chatSelectionFrameRef = useRef<number | null>(null);
   const lastGroupNamesSyncAtRef = useRef(0);
+  const avatarProfileHydrationAttemptsRef = useRef<Set<string>>(new Set());
   const handledReminderQueryRef = useRef<string | null>(null);
   const reminderQuickOpenLoadingRef = useRef(false);
   const reminderQuickOpenLastLoadedAtRef = useRef(0);
@@ -3817,6 +3820,67 @@ export default function WhatsAppInboxScreen() {
     () => unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null,
     [unreadQueue, selectedChat?.id],
   );
+  const directChatsMissingAvatar = useMemo(() => {
+    const candidateChats = new Map<string, WhatsAppChat>();
+
+    if (selectedChat && !selectedChat.is_group && getWhatsAppChatKind(selectedChat.id) === 'direct') {
+      candidateChats.set(selectedChat.id, selectedChat);
+    }
+
+    visibleChats.slice(0, 40).forEach((chat) => {
+      if (!chat.is_group && getWhatsAppChatKind(chat.id) === 'direct') {
+        candidateChats.set(chat.id, chat);
+      }
+    });
+
+    return Array.from(candidateChats.values()).filter(
+      (chat) =>
+        resolveChatAvatarSources(chat, {
+          directPrimary: liveContactPhotosById,
+          directFallback: legacyContactPhotosById,
+          group: groupPhotosById,
+        }).length === 0,
+    );
+  }, [groupPhotosById, legacyContactPhotosById, liveContactPhotosById, selectedChat, visibleChats]);
+
+  useEffect(() => {
+    const chatsToHydrate = directChatsMissingAvatar
+      .filter((chat) => !avatarProfileHydrationAttemptsRef.current.has(chat.id))
+      .slice(0, 8);
+
+    if (chatsToHydrate.length === 0) {
+      return;
+    }
+
+    chatsToHydrate.forEach((chat) => avatarProfileHydrationAttemptsRef.current.add(chat.id));
+
+    void Promise.allSettled(
+      chatsToHydrate.map(async (chat) => {
+        try {
+          const profile = await getWhatsAppContactProfile(chat.phone_number || chat.id);
+          const hydratedPhotoMap = buildContactProfilePhotoMap(
+            [chat.id, chat.phone_number ? buildChatIdFromPhone(chat.phone_number) : '', chat.lid ?? ''],
+            {
+              profile_pic: profile.icon,
+              profile_pic_full: profile.icon_full,
+            },
+          );
+
+          if (hydratedPhotoMap.size === 0) {
+            return;
+          }
+
+          setLiveContactPhotosById((prev) => {
+            const next = new Map(prev);
+            hydratedPhotoMap.forEach((url, key) => next.set(key, url));
+            return next;
+          });
+        } catch (error) {
+          console.warn('Error hydrating contact photo from profile endpoint:', { chatId: chat.id, error });
+        }
+      }),
+    );
+  }, [directChatsMissingAvatar]);
   const reactionsByTargetId = useMemo(() => {
     const map = new Map<string, Map<string, number>>();
 

@@ -176,10 +176,27 @@ export function buildContactPhotoMap(contacts: Array<Pick<WhapiContact, 'id' | '
   const map = new Map<string, string>();
 
   contacts.forEach((contact) => {
-    const url = getPreferredPhotoUrl(contact.profile_pic_full, contact.profile_pic);
-    if (!url) return;
-    setPhotoVariants(map, getDirectChatVariants(contact.id), url, true);
+    const contactPhotoMap = buildContactProfilePhotoMap([contact.id], contact);
+    contactPhotoMap.forEach((url, key) => map.set(key, url));
   });
+
+  return map;
+}
+
+export function buildContactProfilePhotoMap(
+  contactIds: string[],
+  photo: Pick<WhapiContact, 'profile_pic' | 'profile_pic_full'>,
+) {
+  const map = new Map<string, string>();
+  const url = getPreferredPhotoUrl(photo.profile_pic_full, photo.profile_pic);
+  if (!url) return map;
+
+  contactIds
+    .map((contactId) => contactId?.trim())
+    .filter((contactId): contactId is string => Boolean(contactId))
+    .forEach((contactId) => {
+      setPhotoVariants(map, getDirectChatVariants(contactId), url, true);
+    });
 
   return map;
 }

@@ -163,6 +163,32 @@ test("contractsManagerUtils builds smarter highlight badges for contract cards",
       "2 reajustes por idade",
     ],
   );
+
+  const overdueFinancialBadges = getContractManagerHighlightBadges(
+    {
+      status: "Ativo",
+      data_inicio: "2025-01-10",
+      created_at: "2025-01-01T12:00:00.000Z",
+      data_renovacao: "2027-01",
+      mes_reajuste: 2,
+      previsao_recebimento_comissao: "2026-03-12",
+      previsao_pagamento_bonificacao: "2026-03-10",
+      comissao_prevista: 900,
+      bonus_por_vida_configuracoes: [{ id: "bonus-1", quantidade: 1, valor: 300 }],
+      bonus_por_vida_valor: undefined,
+    },
+    [],
+    new Date("2026-03-17T10:00:00"),
+  );
+
+  assert.equal(
+    overdueFinancialBadges.some(
+      (badge) =>
+        badge.label.includes("Recebe comissão") ||
+        badge.label.includes("Paga bônus"),
+    ),
+    false,
+  );
 });
 
 test("contractsManagerUtils builds holder display names based on contract modality", () => {

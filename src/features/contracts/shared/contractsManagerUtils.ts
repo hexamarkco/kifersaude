@@ -21,12 +21,6 @@ const normalizeContractReferenceDate = (referenceDate: Date = new Date()) => {
 const getContractMonthKey = (date: Date) =>
   date.getFullYear() * 12 + date.getMonth();
 
-const isWithinContractBadgeWindow = (
-  value: number,
-  pastLimit: number,
-  futureLimit: number,
-) => value >= -pastLimit && value <= futureLimit;
-
 const formatRelativeContractBadgeLabel = (
   label: string,
   days: number,
@@ -520,7 +514,8 @@ export const getContractManagerHighlightBadges = (
     commissionDate &&
     commissionDays !== null &&
     (contract.comissao_prevista ?? 0) > 0 &&
-    isWithinContractBadgeWindow(commissionDays, 30, 60)
+    commissionDays >= 0 &&
+    commissionDays <= 60
   ) {
     badges.push({
       key: "commission",
@@ -546,7 +541,8 @@ export const getContractManagerHighlightBadges = (
     bonusDate &&
     bonusDays !== null &&
     hasBonusValue &&
-    isWithinContractBadgeWindow(bonusDays, 30, 60)
+    bonusDays >= 0 &&
+    bonusDays <= 60
   ) {
     badges.push({
       key: "bonus",

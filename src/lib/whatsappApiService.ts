@@ -821,6 +821,11 @@ export interface WhapiContactListResponse {
   offset: number;
 }
 
+export interface WhapiContactProfile {
+  icon?: string | null;
+  icon_full?: string | null;
+}
+
 export async function addWhatsAppContact(phoneNumber: string, name: string) {
   const settings = await getWhatsAppSettings();
   const phone = phoneNumber.replace(/\D/g, '');
@@ -853,6 +858,30 @@ export async function addWhatsAppContact(phoneNumber: string, name: string) {
   }
 
   return response.json().catch(() => ({}));
+}
+
+export async function getWhatsAppContactProfile(contactId: string): Promise<WhapiContactProfile> {
+  const settings = await getWhatsAppSettings();
+  const normalizedId = contactId.replace(/\D/g, '');
+
+  if (!normalizedId) {
+    throw new Error('Contato invalido para buscar foto de perfil.');
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(normalizedId)}/profile`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${settings.token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(async () => ({ error: await response.text().catch(() => 'Erro desconhecido') }));
+    throw new Error(formatApiError(error));
+  }
+
+  return response.json();
 }
 
 export interface WhapiMessageListParams {

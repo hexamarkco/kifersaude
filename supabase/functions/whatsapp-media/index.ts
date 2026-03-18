@@ -15,7 +15,8 @@ type MediaRequest = {
 type CachedMediaPayload = {
   mimeType: string;
   fileName: string | null;
-  data: string;
+  data?: string;
+  url?: string;
 };
 
 const MEDIA_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -25,6 +26,21 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 
 const readTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+const extractFileNameFromDisposition = (contentDisposition: string) => {
+  const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+  return fileNameMatch ? decodeURIComponent(fileNameMatch[1].replace(/"/g, '')) : null;
+};
+
+const extractFileNameFromUrl = (resourceUrl: string) => {
+  try {
+    const url = new URL(resourceUrl);
+    const candidate = url.pathname.split('/').pop() || '';
+    return candidate ? decodeURIComponent(candidate) : null;
+  } catch {
+    return null;
+  }
+};
 
 const encodeBase64 = (buffer: ArrayBuffer) => {
   let binary = '';
@@ -112,6 +128,34 @@ const fetchBinaryMedia = async (resourceUrl: string, token: string): Promise<Res
   throw new Error('Falha ao baixar midia.');
 };
 
+const probePublicMediaUrl = async (resourceUrl: string): Promise<CachedMediaPayload | null> => {
+  try {
+    const response = await fetch(resourceUrl, {
+      method: 'HEAD',
+      headers: {
+        Accept: '*/*',
+      },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    if (contentType.includes('application/json')) {
+      return null;
+    }
+
+    return {
+      url: resourceUrl,
+      mimeType: contentType,
+      fileName: extractFileNameFromDisposition(response.headers.get('content-disposition') || '') || extractFileNameFromUrl(resourceUrl),
+    };
+  } catch {
+    return null;
+  }
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -189,6 +233,15 @@ Deno.serve(async (req) => {
         });
       }
 
+      const publicPayload = await probePublicMediaUrl(resourceUrl);
+      if (publicPayload?.url) {
+        setCachedMediaPayload(mediaId, publicPayload);
+        return new Response(JSON.stringify(publicPayload), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       binaryResponse = await fetchBinaryMedia(resourceUrl, whapiToken);
 
       if (!binaryResponse.ok) {
@@ -203,8 +256,7 @@ Deno.serve(async (req) => {
     const mediaBuffer = await binaryResponse.arrayBuffer();
     const binaryContentType = binaryResponse.headers.get('content-type') || 'application/octet-stream';
     const contentDisposition = binaryResponse.headers.get('content-disposition') || '';
-    const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8''|")?([^\";]+)/i);
-    const fileName = fileNameMatch ? decodeURIComponent(fileNameMatch[1].replace(/"/g, '')) : null;
+    const fileName = extractFileNameFromDisposition(contentDisposition);
 
     const responsePayload = {
       mimeType: binaryContentType,

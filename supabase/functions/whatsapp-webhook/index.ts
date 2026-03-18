@@ -2779,6 +2779,37 @@ function getValidChatName(value: string | null | undefined, chatId: string): str
   return trimmed;
 }
 
+function isPhoneLikeDirectChatName(value: string | null | undefined, chatId: string, phoneNumber?: string | null): boolean {
+  const trimmed = toCleanText(value);
+  if (!trimmed) return false;
+  if (!/^[+\d\s().-]+$/.test(trimmed)) return false;
+
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length < 10) return false;
+
+  const variants = new Set<string>();
+  const directPhone = toCleanText(phoneNumber) || extractPhoneNumber(chatId) || null;
+  if (directPhone) {
+    buildPhoneLookupVariants(directPhone).forEach((variant) => variants.add(variant));
+  }
+
+  return variants.size > 0 ? variants.has(digits) : true;
+}
+
+function getMeaningfulDirectChatName(value: string | null | undefined, chatId: string, phoneNumber?: string | null): string | null {
+  const trimmed = getValidChatName(value, chatId);
+  if (!trimmed) return null;
+  if (isPhoneLikeDirectChatName(trimmed, chatId, phoneNumber)) {
+    return null;
+  }
+  return trimmed;
+}
+
+async function fetchMeaningfulWhapiDirectChatName(chatId: string, phoneNumber?: string | null): Promise<string | null> {
+  const whapiChatName = await fetchWhapiChatName(chatId);
+  return getMeaningfulDirectChatName(whapiChatName, chatId, phoneNumber);
+}
+
 function resolveChatUpdateName(update: WhapiChatUpdate): string | null {
   const chatId = resolveChatUpdateChatId(update) || '';
   const candidates = [
@@ -2930,23 +2961,35 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
 
   const { data: existingChat } = await supabase
     .from('whatsapp_chats')
-    .select('name')
+    .select('name, phone_number')
     .eq('id', message.chatId)
     .maybeSingle();
 
-  if (existingChat?.name) {
-    return existingChat.name;
+  const resolvedPhoneNumber = phoneNumber || toCleanText(existingChat?.phone_number) || null;
+  const existingChatName = getMeaningfulDirectChatName(existingChat?.name, message.chatId, resolvedPhoneNumber);
+  if (existingChatName) {
+    return existingChatName;
   }
 
-  if (message.direction === 'inbound' && message.contactName) {
-    return message.contactName;
+  const inboundContactName =
+    message.direction === 'inbound'
+      ? getMeaningfulDirectChatName(message.contactName, message.chatId, resolvedPhoneNumber)
+      : null;
+  if (inboundContactName) {
+    return inboundContactName;
   }
 
-  if (message.chatName?.trim() && message.chatName !== message.chatId) {
-    return message.chatName;
+  const chatName = getMeaningfulDirectChatName(message.chatName, message.chatId, resolvedPhoneNumber);
+  if (chatName) {
+    return chatName;
   }
 
-  return phoneNumber || message.chatId;
+  const whapiDirectName = await fetchMeaningfulWhapiDirectChatName(message.chatId, resolvedPhoneNumber);
+  if (whapiDirectName) {
+    return whapiDirectName;
+  }
+
+  return resolvedPhoneNumber || message.chatId;
 }
 
 type UpsertChatOptions = {
@@ -3814,10 +3857,24 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
           ? 'Transmissao sem nome'
           : phoneNumber || chatId;
 
+  const resolvedPhoneNumber = phoneNumber || toCleanText(existingChat?.phone_number) || null;
+  const nextDirectChatName = isDirectChat
+    ? getMeaningfulDirectChatName(updateName ?? existingChat?.name ?? null, chatId, resolvedPhoneNumber)
+    : null;
+  const preservedDirectChatName = isDirectChat
+    ? getMeaningfulDirectChatName(existingChat?.name, chatId, resolvedPhoneNumber)
+    : null;
+  const whapiDirectName =
+    isDirectChat && !preservedDirectChatName && !nextDirectChatName
+      ? await fetchMeaningfulWhapiDirectChatName(chatId, resolvedPhoneNumber)
+      : null;
+
   const { error: upsertError } = await supabase.from('whatsapp_chats').upsert(
     {
       id: chatId,
-      name: updateName ?? existingChat?.name ?? fallbackName,
+      name: isDirectChat
+        ? preservedDirectChatName ?? nextDirectChatName ?? whapiDirectName ?? getValidChatName(existingChat?.name, chatId) ?? fallbackName
+        : updateName ?? existingChat?.name ?? fallbackName,
       is_group: existingChat?.is_group ?? chatType === 'group',
       phone_number: isDirectChat ? phoneNumber ?? existingChat?.phone_number ?? null : null,
       lid: chatType === 'lid' ? lid : existingChat?.lid ?? null,

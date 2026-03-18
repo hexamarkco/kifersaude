@@ -175,6 +175,23 @@ type InboxContactInfo = {
   pushname?: string;
 };
 
+type ContactPhotoSyncTarget = {
+  lookupId: string;
+  aliases?: string[];
+};
+
+type ContactPhotoSyncResponse = {
+  success: boolean;
+  processed: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+  photos?: Array<{
+    contact_id: string;
+    public_url: string | null;
+  }>;
+};
+
 const OFFSCREEN_CHAT_ROW_STYLE = {
   contentVisibility: 'auto' as const,
   containIntrinsicSize: '96px',
@@ -395,6 +412,7 @@ export default function WhatsAppInboxScreen() {
   const pendingChatPreviewPersistTimeoutRef = useRef<number | null>(null);
   const chatSelectionFrameRef = useRef<number | null>(null);
   const lastGroupNamesSyncAtRef = useRef(0);
+  const directNameHydrationAttemptsRef = useRef<Set<string>>(new Set());
   const avatarProfileHydrationAttemptsRef = useRef<Set<string>>(new Set());
   const handledReminderQueryRef = useRef<string | null>(null);
   const reminderQuickOpenLoadingRef = useRef(false);
@@ -953,6 +971,42 @@ export default function WhatsAppInboxScreen() {
     if (!/^[+\d\s().-]+$/.test(trimmed)) return false;
     const digits = trimmed.replace(/\D/g, '');
     return digits.length >= 10;
+  };
+
+  const getMeaningfulDirectChatNameCandidate = (
+    chat: Pick<WhatsAppChat, 'id' | 'phone_number'>,
+    value: string | null | undefined,
+  ) => {
+    const trimmed = value?.trim();
+    if (!trimmed || trimmed === chat.id) return null;
+    if (isPhoneLikeLabel(trimmed)) return null;
+    return trimmed;
+  };
+
+  const getDirectChatAvatarLookupTarget = (chat: Pick<WhatsAppChat, 'id' | 'is_group' | 'phone_number' | 'lid'>) => {
+    const aliases = new Set<string>(getChatIdVariants(chat));
+    const lookupIds = new Set<string>();
+
+    const addPhone = (value: string | null | undefined) => {
+      const normalized = normalizePhoneNumber(value);
+      if (!normalized) return;
+      aliases.add(normalized);
+      getDirectIdVariantsFromDigits(normalized).forEach((variant) => aliases.add(variant));
+      lookupIds.add(normalized);
+    };
+
+    addPhone(chat.phone_number);
+    addPhone(extractPhoneFromChatId(chat.id));
+
+    const normalizedChatId = normalizeChatId(chat.id);
+    if (lookupIds.size === 0 && normalizedChatId && !normalizedChatId.endsWith('@lid')) {
+      lookupIds.add(normalizedChatId);
+    }
+
+    return {
+      lookupIds: Array.from(lookupIds),
+      aliases: Array.from(aliases).filter(Boolean),
+    };
   };
 
   const getDirectChatMergePriority = (chatId: string, phoneNumber: string | null) => {
@@ -3850,6 +3904,92 @@ export default function WhatsAppInboxScreen() {
     () => unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null,
     [unreadQueue, selectedChat?.id],
   );
+  const directChatsMissingName = useMemo(() => {
+    const candidateChats = new Map<string, WhatsAppChat>();
+
+    if (selectedChat && !selectedChat.is_group && getWhatsAppChatKind(selectedChat.id) === 'direct') {
+      candidateChats.set(selectedChat.id, selectedChat);
+    }
+
+    visibleChats.slice(0, 40).forEach((chat) => {
+      if (!chat.is_group && getWhatsAppChatKind(chat.id) === 'direct') {
+        candidateChats.set(chat.id, chat);
+      }
+    });
+
+    return Array.from(candidateChats.values()).filter((chat) => {
+      if (getMeaningfulDirectChatNameCandidate(chat, chat.name)) {
+        return false;
+      }
+
+      const displayName = chatListPresentationById.get(chat.id)?.displayName || chat.name || chat.id;
+      return displayName === chat.id || isPhoneLikeLabel(displayName);
+    });
+  }, [chatListPresentationById, selectedChat, visibleChats]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const chatsToHydrate = directChatsMissingName
+      .filter((chat) => !directNameHydrationAttemptsRef.current.has(chat.id))
+      .slice(0, 8);
+
+    if (chatsToHydrate.length === 0) {
+      return;
+    }
+
+    chatsToHydrate.forEach((chat) => directNameHydrationAttemptsRef.current.add(chat.id));
+
+    void Promise.allSettled(
+      chatsToHydrate.map(async (chat) => {
+        try {
+          const metadata = await getWhatsAppChat(chat.id);
+          const resolvedName = getMeaningfulDirectChatNameCandidate(chat, metadata.name);
+          if (!resolvedName) {
+            return;
+          }
+
+          setChats((prev) =>
+            prev.map((item) => {
+              if (item.id !== chat.id && !areEquivalentDirectChats(item, chat)) {
+                return item;
+              }
+
+              if (getMeaningfulDirectChatNameCandidate(item, item.name)) {
+                return item;
+              }
+
+              return {
+                ...item,
+                name: resolvedName,
+              };
+            }),
+          );
+
+          const equivalentChatIds = Array.from(
+            new Set(
+              chatsRef.current
+                .filter((item) => item.id === chat.id || areEquivalentDirectChats(item, chat))
+                .map((item) => item.id),
+            ),
+          );
+
+          const { error } = await supabase
+            .from('whatsapp_chats')
+            .update({
+              name: resolvedName,
+              updated_at: new Date().toISOString(),
+            })
+            .in('id', equivalentChatIds.length > 0 ? equivalentChatIds : [chat.id]);
+
+          if (error) {
+            console.warn('Error persisting hydrated direct chat name:', { chatId: chat.id, error });
+          }
+        } catch (error) {
+          console.warn('Error hydrating direct chat name from chat metadata:', { chatId: chat.id, error });
+        }
+      }),
+    );
+  }, [directChatsMissingName]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const directChatsMissingAvatar = useMemo(() => {
     const candidateChats = new Map<string, WhatsAppChat>();
 
@@ -3884,17 +4024,46 @@ export default function WhatsAppInboxScreen() {
 
     chatsToHydrate.forEach((chat) => avatarProfileHydrationAttemptsRef.current.add(chat.id));
 
-    void Promise.allSettled(
-      chatsToHydrate.map(async (chat) => {
-        try {
-          const profile = await getWhatsAppContactProfile(chat.phone_number || chat.id);
-          const hydratedPhotoMap = buildContactProfilePhotoMap(
-            [chat.id, chat.phone_number ? buildChatIdFromPhone(chat.phone_number) : '', chat.lid ?? ''],
-            {
-              profile_pic: profile.icon,
-              profile_pic_full: profile.icon_full,
-            },
-          );
+    void (async () => {
+      const persistedTargets: ContactPhotoSyncTarget[] = [];
+
+      await Promise.allSettled(
+        chatsToHydrate.map(async (chat) => {
+          const { lookupIds, aliases } = getDirectChatAvatarLookupTarget(chat);
+          if (lookupIds.length === 0 || aliases.length === 0) {
+            return;
+          }
+
+          let resolvedLookupId = '';
+          let resolvedProfile: Awaited<ReturnType<typeof getWhatsAppContactProfile>> | null = null;
+          let lastError: unknown = null;
+
+          for (const lookupId of lookupIds) {
+            try {
+              const candidateProfile = await getWhatsAppContactProfile(lookupId);
+              if (!candidateProfile.icon && !candidateProfile.icon_full) {
+                continue;
+              }
+
+              resolvedLookupId = lookupId;
+              resolvedProfile = candidateProfile;
+              break;
+            } catch (error) {
+              lastError = error;
+            }
+          }
+
+          if (!resolvedProfile) {
+            if (lastError) {
+              console.warn('Error hydrating contact photo from profile endpoint:', { chatId: chat.id, error: lastError });
+            }
+            return;
+          }
+
+          const hydratedPhotoMap = buildContactProfilePhotoMap(aliases, {
+            profile_pic: resolvedProfile.icon,
+            profile_pic_full: resolvedProfile.icon_full,
+          });
 
           if (hydratedPhotoMap.size === 0) {
             return;
@@ -3905,11 +4074,43 @@ export default function WhatsAppInboxScreen() {
             hydratedPhotoMap.forEach((url, key) => next.set(key, url));
             return next;
           });
-        } catch (error) {
-          console.warn('Error hydrating contact photo from profile endpoint:', { chatId: chat.id, error });
-        }
-      }),
-    );
+
+          persistedTargets.push({
+            lookupId: resolvedLookupId,
+            aliases,
+          });
+        }),
+      );
+
+      if (persistedTargets.length === 0) {
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('whatsapp-sync-contact-photos', {
+        body: {
+          targets: persistedTargets,
+        },
+      });
+
+      if (error) {
+        console.warn('Error persisting hydrated contact photos:', error);
+        return;
+      }
+
+      const syncedPhotos = Array.isArray((data as ContactPhotoSyncResponse | null)?.photos)
+        ? ((data as ContactPhotoSyncResponse).photos ?? [])
+        : [];
+
+      if (syncedPhotos.length === 0) {
+        return;
+      }
+
+      setLegacyContactPhotosById((prev) => {
+        const next = new Map(prev);
+        buildLegacyContactPhotoMap(syncedPhotos).forEach((url, key) => next.set(key, url));
+        return next;
+      });
+    })();
   }, [directChatsMissingAvatar]);
   const reactionsByTargetId = useMemo(() => {
     const map = new Map<string, Map<string, number>>();

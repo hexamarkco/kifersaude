@@ -12,6 +12,28 @@ const BUCKET_NAME = 'whatsapp-contact-photos';
 type SyncRequest = {
   force?: boolean;
   limit?: number;
+  contactIds?: string[];
+  targets?: Array<{
+    lookupId?: string;
+    aliases?: string[];
+  }>;
+};
+
+type NormalizedSyncTarget = {
+  lookupId: string;
+  aliases: string[];
+};
+
+type StoredPhotoRow = {
+  contact_id: string;
+  source_url?: string | null;
+  storage_path?: string | null;
+  public_url?: string | null;
+};
+
+type SyncedPhotoRow = {
+  contact_id: string;
+  public_url: string | null;
 };
 
 type WhapiContact = {
@@ -30,6 +52,8 @@ type WhapiContactListResponse = {
 const sanitizeWhapiToken = (rawToken: string) => rawToken.replace(/^Bearer\s+/i, '').trim();
 
 const sanitizeFileName = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+const toTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
 const getExtensionFromContentType = (contentType: string | null) => {
   if (!contentType) return 'jpg';
@@ -77,6 +101,190 @@ const fetchContactProfile = async (token: string, contactId: string) => {
   return (await response.json()) as { icon?: string | null; icon_full?: string | null };
 };
 
+const normalizeSyncTargets = (payload: SyncRequest): NormalizedSyncTarget[] => {
+  const targetsByLookupId = new Map<string, Set<string>>();
+
+  const addTarget = (lookupId: unknown, aliases: unknown) => {
+    const resolvedLookupId = toTrimmedString(lookupId);
+    if (!resolvedLookupId) return;
+
+    const nextAliases = targetsByLookupId.get(resolvedLookupId) ?? new Set<string>();
+    nextAliases.add(resolvedLookupId);
+
+    if (Array.isArray(aliases)) {
+      aliases.forEach((alias) => {
+        const resolvedAlias = toTrimmedString(alias);
+        if (resolvedAlias) {
+          nextAliases.add(resolvedAlias);
+        }
+      });
+    }
+
+    targetsByLookupId.set(resolvedLookupId, nextAliases);
+  };
+
+  if (Array.isArray(payload.targets)) {
+    payload.targets.forEach((target) => addTarget(target.lookupId, target.aliases));
+  }
+
+  if (Array.isArray(payload.contactIds)) {
+    payload.contactIds.forEach((contactId) => addTarget(contactId, [contactId]));
+  }
+
+  return Array.from(targetsByLookupId.entries()).map(([lookupId, aliases]) => ({
+    lookupId,
+    aliases: Array.from(aliases),
+  }));
+};
+
+const collectPhotoRows = (rows: StoredPhotoRow[]): SyncedPhotoRow[] =>
+  rows
+    .filter((row) => toTrimmedString(row.contact_id) && toTrimmedString(row.public_url))
+    .map((row) => ({
+      contact_id: row.contact_id,
+      public_url: row.public_url ?? null,
+    }));
+
+const upsertPhotoRows = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  rows: Array<{ contact_id: string; source_url: string; storage_path: string; public_url: string }>,
+) => {
+  if (rows.length === 0) return;
+
+  const { error } = await supabaseAdmin
+    .from('whatsapp_contact_photos')
+    .upsert(rows, { onConflict: 'contact_id' });
+
+  if (error) {
+    throw new Error(`Erro ao salvar fotos sincronizadas: ${error.message}`);
+  }
+};
+
+const syncSpecificContactPhoto = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  token: string,
+  target: NormalizedSyncTarget,
+  force: boolean,
+): Promise<{ status: 'updated' | 'skipped' | 'error'; photos: SyncedPhotoRow[] }> => {
+  try {
+    const { data: existingRows, error: existingRowsError } = await supabaseAdmin
+      .from('whatsapp_contact_photos')
+      .select('contact_id, source_url, storage_path, public_url')
+      .in('contact_id', target.aliases);
+
+    if (existingRowsError) {
+      throw new Error(`Erro ao buscar fotos existentes: ${existingRowsError.message}`);
+    }
+
+    const resolvedExistingRows = (existingRows as StoredPhotoRow[] | null) || [];
+    const existingById = new Map(resolvedExistingRows.map((row) => [row.contact_id, row]));
+
+    const profile = await fetchContactProfile(token, target.lookupId);
+    const sourceUrl = profile.icon_full || profile.icon || null;
+    if (!sourceUrl) {
+      return {
+        status: 'skipped',
+        photos: collectPhotoRows(resolvedExistingRows),
+      };
+    }
+
+    const reusableRow = resolvedExistingRows.find(
+      (row) => row.source_url === sourceUrl && toTrimmedString(row.storage_path) && toTrimmedString(row.public_url),
+    );
+
+    if (!force && reusableRow?.storage_path && reusableRow.public_url) {
+      const rowsToUpsert = target.aliases
+        .filter((alias) => {
+          const existing = existingById.get(alias);
+          return !existing || existing.source_url !== sourceUrl || existing.public_url !== reusableRow.public_url;
+        })
+        .map((alias) => ({
+          contact_id: alias,
+          source_url: sourceUrl,
+          storage_path: reusableRow.storage_path as string,
+          public_url: reusableRow.public_url as string,
+        }));
+
+      if (rowsToUpsert.length > 0) {
+        await upsertPhotoRows(supabaseAdmin, rowsToUpsert);
+      }
+
+      return {
+        status: rowsToUpsert.length > 0 ? 'updated' : 'skipped',
+        photos: target.aliases.map((alias) => ({
+          contact_id: alias,
+          public_url: existingById.get(alias)?.public_url ?? reusableRow.public_url ?? null,
+        })),
+      };
+    }
+
+    const aliasesAlreadySynced = target.aliases.every((alias) => {
+      const existing = existingById.get(alias);
+      return existing?.source_url === sourceUrl && Boolean(toTrimmedString(existing.public_url));
+    });
+
+    if (!force && aliasesAlreadySynced) {
+      return {
+        status: 'skipped',
+        photos: target.aliases.map((alias) => ({
+          contact_id: alias,
+          public_url: existingById.get(alias)?.public_url ?? null,
+        })),
+      };
+    }
+
+    const photoResponse = await fetch(sourceUrl);
+    if (!photoResponse.ok) {
+      throw new Error(`Falha ao baixar foto: ${photoResponse.status}`);
+    }
+
+    const contentType = photoResponse.headers.get('content-type');
+    const extension = getExtensionFromContentType(contentType);
+    const fileName = sanitizeFileName(target.lookupId.replace(/\D/g, '') || target.lookupId);
+    const filePath = `contacts/${fileName}.${extension}`;
+    const fileData = new Uint8Array(await photoResponse.arrayBuffer());
+
+    const storageBucket = supabaseAdmin.storage?.from(BUCKET_NAME);
+    if (!storageBucket) {
+      throw new Error('Storage bucket unavailable');
+    }
+
+    const uploadResult = await storageBucket.upload(filePath, fileData, {
+      contentType: contentType ?? 'image/jpeg',
+      upsert: true,
+    });
+
+    if (!uploadResult || uploadResult.error) {
+      throw new Error(uploadResult?.error?.message || 'Falha ao enviar foto para o bucket');
+    }
+
+    const publicUrl = supabaseAdmin.storage.from(BUCKET_NAME).getPublicUrl(filePath).data.publicUrl;
+    const rowsToUpsert = target.aliases.map((alias) => ({
+      contact_id: alias,
+      source_url: sourceUrl,
+      storage_path: filePath,
+      public_url: publicUrl,
+    }));
+
+    await upsertPhotoRows(supabaseAdmin, rowsToUpsert);
+
+    return {
+      status: 'updated',
+      photos: rowsToUpsert.map((row) => ({
+        contact_id: row.contact_id,
+        public_url: row.public_url,
+      })),
+    };
+  } catch (error) {
+    console.error('[whatsapp-sync-contact-photos] Failed to sync targeted photo', {
+      lookupId: target.lookupId,
+      aliases: target.aliases,
+      error,
+    });
+    return { status: 'error', photos: [] };
+  }
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -93,6 +301,7 @@ Deno.serve(async (req) => {
     const payload = (await req.json().catch(() => ({}))) as SyncRequest;
     const force = payload.force === true;
     const limit = typeof payload.limit === 'number' && payload.limit > 0 ? payload.limit : null;
+    const requestedTargets = normalizeSyncTargets(payload);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -138,6 +347,41 @@ Deno.serve(async (req) => {
     let errors = 0;
 
     const fetchLimit = limit ?? Number.POSITIVE_INFINITY;
+
+    if (requestedTargets.length > 0) {
+      const photos: SyncedPhotoRow[] = [];
+
+      for (const target of requestedTargets) {
+        if (processed >= fetchLimit) break;
+        processed += 1;
+
+        const result = await syncSpecificContactPhoto(supabaseAdmin, token, target, force);
+        photos.push(...result.photos);
+
+        if (result.status === 'updated') {
+          updated += 1;
+        } else if (result.status === 'skipped') {
+          skipped += 1;
+        } else {
+          errors += 1;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          processed,
+          updated,
+          skipped,
+          errors,
+          photos,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
+    }
 
     do {
       const response = await fetchContactsPage(token, offset, pageSize);

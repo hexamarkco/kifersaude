@@ -1783,103 +1783,116 @@ function MessageBubbleComponent({
               </div>
 
               <div
-                ref={mediaViewportRef}
-                className="relative flex h-full w-full items-center justify-center overflow-hidden px-3 pb-24 pt-20 sm:px-6 sm:pb-28 sm:pt-24"
+                className={`flex h-full w-full flex-col gap-4 px-3 pb-4 pt-20 sm:px-6 sm:pb-6 sm:pt-24 ${mediaPreview.caption ? 'lg:flex-row lg:items-stretch' : ''}`}
                 onClick={(event) => event.stopPropagation()}
-                onWheel={handleMediaWheel}
               >
-                {mediaPreview.src ? (
-                  mediaPreview.kind === 'video' ? (
-                    <video
-                      src={mediaPreview.src}
-                      poster={mediaPreview.poster}
-                      controls
-                      autoPlay
-                      playsInline
-                      className="h-full w-full max-h-full max-w-full rounded-2xl bg-black object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
-                    />
-                  ) : (
-                    <div className="relative flex h-full w-full items-center justify-center">
-                      <div className="absolute right-0 top-0 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-black/40 p-1.5 backdrop-blur-md sm:right-3 sm:top-3">
-                        <button
-                          type="button"
-                          onClick={() => updateMediaZoom(mediaZoom - 0.4)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Diminuir zoom"
-                          disabled={mediaZoom <= 1}
-                        >
-                          <ZoomOut className="h-4 w-4" />
-                        </button>
-                        <div className="min-w-[3.5rem] text-center text-xs font-medium text-white/80">{Math.round(mediaZoom * 100)}%</div>
-                        <button
-                          type="button"
-                          onClick={() => updateMediaZoom(mediaZoom + 0.4)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Aumentar zoom"
-                          disabled={mediaZoom >= 4}
-                        >
-                          <ZoomIn className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={resetMediaTransform}
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label="Resetar zoom"
-                          disabled={mediaZoom <= 1 && mediaOffset.x === 0 && mediaOffset.y === 0}
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      <div
-                        className={`flex h-full w-full items-center justify-center ${mediaZoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
-                        onPointerDown={handleMediaPointerDown}
-                        onPointerMove={handleMediaPointerMove}
-                        onPointerUp={handleMediaPointerUp}
-                        onPointerCancel={handleMediaPointerUp}
-                        onDoubleClick={handleMediaDoubleClick}
-                        style={{ touchAction: mediaZoom > 1 ? 'none' : 'manipulation' }}
-                      >
-                        <img
-                          src={mediaPreview.src}
-                          alt={mediaPreview.title}
-                          className="h-full w-full max-h-full max-w-full rounded-2xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)] transition-transform duration-150 ease-out"
-                          style={{ transform: `translate3d(${mediaOffset.x}px, ${mediaOffset.y}px, 0) scale(${mediaZoom})` }}
-                        />
-                      </div>
-                    </div>
-                  )
-                ) : (
-                  <div className="flex flex-col items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-8 py-7 text-center text-white/80 backdrop-blur-md">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <div className="text-sm font-medium">Carregando mídia</div>
-                    <div className="max-w-xs text-xs text-white/60">A visualização abre na hora e troca sozinha para a versão completa assim que o download terminar.</div>
-                  </div>
-                )}
-
-                {mediaPreview.isLoading && mediaPreview.src ? (
-                  <div className="pointer-events-none absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-xs text-white/85 backdrop-blur-md sm:bottom-28">
-                    Atualizando para a versão completa...
-                  </div>
-                ) : null}
-
-                {mediaPreview.src && mediaPreview.kind !== 'video' ? (
-                  <div className="pointer-events-none absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[11px] text-white/75 backdrop-blur-md sm:bottom-28">
-                    Use roda do mouse, duplo clique ou arraste com zoom.
-                  </div>
-                ) : null}
-              </div>
-
-              {mediaPreview.caption ? (
                 <div
-                  className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent px-4 pb-4 pt-10 sm:px-6 sm:pb-5"
-                  onClick={(event) => event.stopPropagation()}
+                  ref={mediaViewportRef}
+                  className="relative min-h-0 flex-1 overflow-hidden rounded-[28px] border border-white/10 bg-black/20 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+                  onWheel={handleMediaWheel}
                 >
-                  <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur-md">
-                    <WhatsAppFormattedText text={mediaPreview.caption} className="text-sm whitespace-pre-wrap break-words text-white" />
+                  <div className="relative flex h-full min-h-[320px] w-full items-center justify-center overflow-hidden px-3 py-3 sm:min-h-[420px] sm:px-4 sm:py-4">
+                    {mediaPreview.src ? (
+                      mediaPreview.kind === 'video' ? (
+                        <video
+                          src={mediaPreview.src}
+                          poster={mediaPreview.poster}
+                          controls
+                          autoPlay
+                          playsInline
+                          className="h-full w-full max-h-full max-w-full rounded-2xl bg-black object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)]"
+                        />
+                      ) : (
+                        <div className="relative flex h-full w-full items-center justify-center">
+                          <div className="absolute right-0 top-0 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-black/40 p-1.5 backdrop-blur-md sm:right-3 sm:top-3">
+                            <button
+                              type="button"
+                              onClick={() => updateMediaZoom(mediaZoom - 0.4)}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label="Diminuir zoom"
+                              disabled={mediaZoom <= 1}
+                            >
+                              <ZoomOut className="h-4 w-4" />
+                            </button>
+                            <div className="min-w-[3.5rem] text-center text-xs font-medium text-white/80">{Math.round(mediaZoom * 100)}%</div>
+                            <button
+                              type="button"
+                              onClick={() => updateMediaZoom(mediaZoom + 0.4)}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label="Aumentar zoom"
+                              disabled={mediaZoom >= 4}
+                            >
+                              <ZoomIn className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={resetMediaTransform}
+                              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label="Resetar zoom"
+                              disabled={mediaZoom <= 1 && mediaOffset.x === 0 && mediaOffset.y === 0}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <div
+                            className={`flex h-full w-full items-center justify-center ${mediaZoom > 1 ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+                            onPointerDown={handleMediaPointerDown}
+                            onPointerMove={handleMediaPointerMove}
+                            onPointerUp={handleMediaPointerUp}
+                            onPointerCancel={handleMediaPointerUp}
+                            onDoubleClick={handleMediaDoubleClick}
+                            style={{ touchAction: mediaZoom > 1 ? 'none' : 'manipulation' }}
+                          >
+                            <img
+                              src={mediaPreview.src}
+                              alt={mediaPreview.title}
+                              className="h-full w-full max-h-full max-w-full rounded-2xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.45)] transition-transform duration-150 ease-out"
+                              style={{ transform: `translate3d(${mediaOffset.x}px, ${mediaOffset.y}px, 0) scale(${mediaZoom})` }}
+                            />
+                          </div>
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex flex-col items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-8 py-7 text-center text-white/80 backdrop-blur-md">
+                        <Loader2 className="h-6 w-6 animate-spin" />
+                        <div className="text-sm font-medium">Carregando mídia</div>
+                        <div className="max-w-xs text-xs text-white/60">A visualização abre na hora e troca sozinha para a versão completa assim que o download terminar.</div>
+                      </div>
+                    )}
+
+                    {(mediaPreview.isLoading && mediaPreview.src) || (mediaPreview.src && mediaPreview.kind !== 'video') ? (
+                      <div className="pointer-events-none absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2">
+                        {mediaPreview.isLoading && mediaPreview.src ? (
+                          <div className="rounded-full border border-white/10 bg-black/55 px-3 py-1.5 text-xs text-white/85 backdrop-blur-md">
+                            Atualizando para a versão completa...
+                          </div>
+                        ) : null}
+                        {mediaPreview.src && mediaPreview.kind !== 'video' ? (
+                          <div className="rounded-full border border-white/10 bg-black/45 px-3 py-1.5 text-[11px] text-white/75 backdrop-blur-md">
+                            Use roda do mouse, duplo clique ou arraste com zoom.
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
-              ) : null}
+
+                {mediaPreview.caption ? (
+                  <aside
+                    className="min-h-0 max-h-[34vh] overflow-hidden rounded-[28px] border border-white/10 bg-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.28)] backdrop-blur-md lg:max-h-none lg:w-[min(30rem,32vw)] lg:flex-shrink-0"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="border-b border-white/10 px-4 py-3">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">Legenda</div>
+                      <div className="mt-1 text-xs text-white/65">Texto da mídia separado para não cobrir a visualização.</div>
+                    </div>
+                    <div className="panel-dropdown-scrollbar max-h-[calc(34vh-4.5rem)] overflow-y-auto px-4 py-4 lg:max-h-[calc(100dvh-9rem)]">
+                      <WhatsAppFormattedText text={mediaPreview.caption} className="text-sm leading-6 whitespace-pre-wrap break-words text-white" />
+                    </div>
+                  </aside>
+                ) : null}
+              </div>
             </div>,
             document.body,
           )

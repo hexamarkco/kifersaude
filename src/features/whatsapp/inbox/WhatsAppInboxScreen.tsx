@@ -861,6 +861,64 @@ export default function WhatsAppInboxScreen() {
     };
   };
 
+  const appendMessageToSortedList = (currentMessages: WhatsAppMessage[], nextMessage: WhatsAppMessage) => {
+    if (currentMessages.length === 0) {
+      return [nextMessage];
+    }
+
+    const lastMessage = currentMessages[currentMessages.length - 1];
+    if (sortMessagesChronologically(lastMessage, nextMessage) <= 0) {
+      return [...currentMessages, nextMessage];
+    }
+
+    const next = [...currentMessages];
+    let insertAt = next.length;
+    while (insertAt > 0 && sortMessagesChronologically(next[insertAt - 1], nextMessage) > 0) {
+      insertAt -= 1;
+    }
+    next.splice(insertAt, 0, nextMessage);
+    return next;
+  };
+
+  const mergeSentMessageIntoList = (currentMessages: WhatsAppMessage[], nextMessage: WhatsAppMessage) => {
+    const sameIdIndex = currentMessages.findIndex((item) => item.id === nextMessage.id);
+    if (sameIdIndex >= 0) {
+      const mergedMessage = mergeMessageForDisplay(currentMessages[sameIdIndex], nextMessage);
+      if (mergedMessage === currentMessages[sameIdIndex]) {
+        return currentMessages;
+      }
+
+      const next = [...currentMessages];
+      next[sameIdIndex] = mergedMessage;
+      return next;
+    }
+
+    const lastMessageIndex = currentMessages.length - 1;
+    const lastMessage = lastMessageIndex >= 0 ? currentMessages[lastMessageIndex] : null;
+    if (lastMessage && isLikelyOutboundDuplicateMessage(lastMessage, nextMessage)) {
+      const mergedMessage = mergeMessageForDisplay(lastMessage, nextMessage);
+      const next = [...currentMessages];
+      next[lastMessageIndex] = mergedMessage;
+      return next;
+    }
+
+    const likelyDuplicateIndex = currentMessages.findIndex((item) => isLikelyOutboundDuplicateMessage(item, nextMessage));
+    if (likelyDuplicateIndex >= 0) {
+      const mergedMessage = mergeMessageForDisplay(currentMessages[likelyDuplicateIndex], nextMessage);
+      const previousMessage = currentMessages[likelyDuplicateIndex - 1];
+      const followingMessage = currentMessages[likelyDuplicateIndex + 1];
+      const orderChanged =
+        (previousMessage && sortMessagesChronologically(previousMessage, mergedMessage) > 0) ||
+        (followingMessage && sortMessagesChronologically(mergedMessage, followingMessage) > 0);
+
+      const next = [...currentMessages];
+      next[likelyDuplicateIndex] = mergedMessage;
+      return orderChanged ? next.sort(sortMessagesChronologically) : next;
+    }
+
+    return appendMessageToSortedList(currentMessages, nextMessage);
+  };
+
   const dedupeMessagesForDisplay = (items: WhatsAppMessage[]) => {
     const sorted = [...items].sort(sortMessagesChronologically);
     const deduped: WhatsAppMessage[] = [];
@@ -3030,22 +3088,7 @@ export default function WhatsAppInboxScreen() {
         selectedChatRef.current && getChatIdVariants(selectedChatRef.current).includes(message.chat_id),
       );
 
-      const mergeIntoMessageList = (currentMessages: WhatsAppMessage[]) => {
-        if (currentMessages.some((item) => item.id === nextMessage.id)) {
-          return currentMessages;
-        }
-
-        const likelyDuplicateIndex = currentMessages.findIndex((item) =>
-          isLikelyOutboundDuplicateMessage(item, nextMessage),
-        );
-        if (likelyDuplicateIndex >= 0) {
-          const next = [...currentMessages];
-          next[likelyDuplicateIndex] = mergeMessageForDisplay(next[likelyDuplicateIndex], nextMessage);
-          return next.sort(sortMessagesChronologically);
-        }
-
-        return [...currentMessages, nextMessage].sort(sortMessagesChronologically);
-      };
+      const mergeIntoMessageList = (currentMessages: WhatsAppMessage[]) => mergeSentMessageIntoList(currentMessages, nextMessage);
 
       if (selectedChatMatchesMessage) {
         setMessages((prev) => mergeIntoMessageList(prev));
@@ -4713,29 +4756,34 @@ export default function WhatsAppInboxScreen() {
     [reactionsByTargetId, renderedMessages, selectedChatKind], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  const isVisualMediaMessage = useCallback((message: Pick<WhatsAppMessage, 'type' | 'has_media' | 'is_deleted' | 'payload'>) => {
+    const payload = message.payload && typeof message.payload === 'object' ? (message.payload as MessageBubblePayload) : null;
+    const normalizedType = (message.type || '').toLowerCase();
+
+    return Boolean(
+      !message.is_deleted &&
+      message.has_media &&
+      (
+        normalizedType === 'sticker' ||
+        normalizedType === 'gif' ||
+        normalizedType.startsWith('image') ||
+        normalizedType.startsWith('video') ||
+        payload?.sticker ||
+        payload?.gif ||
+        payload?.image ||
+        payload?.video
+      ),
+    );
+  }, []);
+
   const mediaGalleryItems = useMemo<MessageBubbleMediaGalleryItem[]>(
     () =>
       renderedMessageItems.flatMap(({ message, timestamp, authorName }) => {
-        const payload = message.payload && typeof message.payload === 'object' ? (message.payload as MessageBubblePayload) : null;
-        const normalizedType = (message.type || '').toLowerCase();
-        const isVisualMedia = Boolean(
-          !message.is_deleted &&
-          message.has_media &&
-          (
-            normalizedType === 'sticker' ||
-            normalizedType === 'gif' ||
-            normalizedType.startsWith('image') ||
-            normalizedType.startsWith('video') ||
-            payload?.sticker ||
-            payload?.gif ||
-            payload?.image ||
-            payload?.video
-          ),
-        );
-
-        if (!isVisualMedia) {
+        if (!isVisualMediaMessage(message)) {
           return [];
         }
+
+        const payload = message.payload && typeof message.payload === 'object' ? (message.payload as MessageBubblePayload) : null;
 
         return [{
           messageId: message.id,
@@ -4748,7 +4796,7 @@ export default function WhatsAppInboxScreen() {
           isDeleted: message.is_deleted,
         }];
       }),
-    [renderedMessageItems],
+    [isVisualMediaMessage, renderedMessageItems],
   );
 
   const selectedChatDisplayName = selectedChat
@@ -7868,6 +7916,7 @@ export default function WhatsAppInboxScreen() {
                 ) : (
                   renderedMessageItems.map(({ message, timestamp, shouldShowDaySeparator, daySeparatorLabel, authorName, reactions }) => {
                     const forwardPlan = isSelectedStatusChat ? null : buildForwardMessagePlan(message);
+                    const messageMediaGalleryItems = isVisualMediaMessage(message) ? mediaGalleryItems : undefined;
 
                     return (
                       <div key={message.id} data-message-id={message.id} style={OFFSCREEN_MESSAGE_STYLE}>
@@ -7907,7 +7956,7 @@ export default function WhatsAppInboxScreen() {
                           onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
                           onSaveSharedContact={isSelectedStatusChat ? undefined : handleSaveSharedContact}
                           onOpenSharedContactChat={isSelectedStatusChat ? undefined : handleOpenSharedContactChat}
-                          mediaGalleryItems={mediaGalleryItems}
+                          mediaGalleryItems={messageMediaGalleryItems}
                         />
                       </div>
                     );

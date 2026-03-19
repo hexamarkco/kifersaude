@@ -177,6 +177,7 @@ function WhatsAppComposerComponent({
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const sendMessageFrameRef = useRef<number | null>(null);
   const messageDraftSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingMessageDraftStateRef = useRef<string | null>(null);
   const textareaResizeFrameRef = useRef<number | null>(null);
@@ -445,6 +446,14 @@ function WhatsAppComposerComponent({
   const updateComposerDraft = (nextValue: string, options?: { deferSnapshot?: boolean }) => {
     syncComposerTextareaValue(nextValue, options);
     scheduleTextareaResize();
+  };
+
+  const emitMessageSent = (message?: SentMessagePayload) => {
+    if (!onMessageSent) return;
+
+    startTransition(() => {
+      onMessageSent(message);
+    });
   };
 
   const detectedPreviewUrl = useMemo(() => {
@@ -893,23 +902,21 @@ function WhatsAppComposerComponent({
     const normalizedChatId = normalizeChatId(targetChatId);
     const retryPayload = buildTextRetryPayload(resolvedText, replyToMessage?.id ?? null);
 
-    if (onMessageSent) {
-      onMessageSent({
-        id: localRef,
-        local_ref: localRef,
-        chat_id: normalizedChatId,
-        body: resolvedText,
-        type: 'text',
-        has_media: false,
-        timestamp: sentAt,
-        direction: 'outbound',
-        created_at: sentAt,
-        ack_status: 1,
-        send_state: 'pending',
-        error_message: null,
-        retry_payload: retryPayload,
-      });
-    }
+    emitMessageSent({
+      id: localRef,
+      local_ref: localRef,
+      chat_id: normalizedChatId,
+      body: resolvedText,
+      type: 'text',
+      has_media: false,
+      timestamp: sentAt,
+      direction: 'outbound',
+      created_at: sentAt,
+      ack_status: 1,
+      send_state: 'pending',
+      error_message: null,
+      retry_payload: retryPayload,
+    });
 
     try {
       const response = await sendWhatsAppMessage({
@@ -945,27 +952,25 @@ function WhatsAppComposerComponent({
         payload: response,
       };
 
-      if (onMessageSent) onMessageSent(textPayload);
+      emitMessageSent(textPayload);
       return textPayload;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
-      if (onMessageSent) {
-        onMessageSent({
-          id: localRef,
-          local_ref: localRef,
-          chat_id: normalizedChatId,
-          body: resolvedText,
-          type: 'text',
-          has_media: false,
-          timestamp: sentAt,
-          direction: 'outbound',
-          created_at: sentAt,
-          ack_status: 0,
-          send_state: 'failed',
-          error_message: errorMessage,
-          retry_payload: retryPayload,
-        });
-      }
+      emitMessageSent({
+        id: localRef,
+        local_ref: localRef,
+        chat_id: normalizedChatId,
+        body: resolvedText,
+        type: 'text',
+        has_media: false,
+        timestamp: sentAt,
+        direction: 'outbound',
+        created_at: sentAt,
+        ack_status: 0,
+        send_state: 'failed',
+        error_message: errorMessage,
+        retry_payload: retryPayload,
+      });
       throw error;
     }
   };
@@ -1005,6 +1010,9 @@ function WhatsAppComposerComponent({
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      if (sendMessageFrameRef.current) {
+        cancelAnimationFrame(sendMessageFrameRef.current);
+      }
       if (messageDraftSyncTimeoutRef.current) {
         clearTimeout(messageDraftSyncTimeoutRef.current);
       }
@@ -1042,6 +1050,20 @@ function WhatsAppComposerComponent({
 
   const queueComposerFocusRestore = () => {
     shouldRestoreComposerFocusRef.current = true;
+  };
+
+  const scheduleSendMessage = () => {
+    if (typeof window === 'undefined') {
+      void handleSendMessage();
+      return;
+    }
+
+    if (sendMessageFrameRef.current !== null) return;
+
+    sendMessageFrameRef.current = requestAnimationFrame(() => {
+      sendMessageFrameRef.current = null;
+      void handleSendMessage();
+    });
   };
 
   const focusComposerTextarea = () => {
@@ -1176,8 +1198,7 @@ function WhatsAppComposerComponent({
     const normalizedChatId = normalizeChatId(submitChatId);
     const retryPayload = buildLinkPreviewRetryPayload(bodyText, draftLinkPreview, draftReplyToMessage?.id ?? null);
 
-    if (onMessageSent) {
-      onMessageSent({
+    emitMessageSent({
         id: localRef,
         local_ref: localRef,
         chat_id: normalizedChatId,
@@ -1200,7 +1221,6 @@ function WhatsAppComposerComponent({
           },
         },
       });
-    }
 
     try {
       const response = await sendWhatsAppMessage({
@@ -1225,8 +1245,7 @@ function WhatsAppComposerComponent({
         sentAt,
       });
 
-      if (onMessageSent) {
-        onMessageSent({
+      emitMessageSent({
           id: messageId,
           local_ref: localRef,
           chat_id: persistedChatId,
@@ -1242,11 +1261,9 @@ function WhatsAppComposerComponent({
           retry_payload: null,
           payload: response,
         });
-      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem';
-      if (onMessageSent) {
-        onMessageSent({
+      emitMessageSent({
           id: localRef,
           local_ref: localRef,
           chat_id: normalizedChatId,
@@ -1269,7 +1286,6 @@ function WhatsAppComposerComponent({
             },
           },
         });
-      }
       throw error;
     }
   };
@@ -1299,7 +1315,7 @@ function WhatsAppComposerComponent({
 
         updateComposerDraft('');
         if (onCancelEdit) onCancelEdit();
-        if (onMessageSent) onMessageSent();
+        emitMessageSent();
         queueComposerFocusRestore();
       } else if (selectedGif) {
         const gifUrl = resolveSelectedGifSendUrl(selectedGif);
@@ -1351,7 +1367,7 @@ function WhatsAppComposerComponent({
         clearSelectedGif();
         updateComposerDraft('');
         if (onCancelReply) onCancelReply();
-        if (onMessageSent) onMessageSent(gifPayload);
+        emitMessageSent(gifPayload);
         queueComposerFocusRestore();
       } else if (selectedFile) {
         const mediaMessageType = resolveOutgoingFileMessageType(selectedFile);
@@ -1396,7 +1412,7 @@ function WhatsAppComposerComponent({
         clearFile();
         updateComposerDraft('');
         if (onCancelReply) onCancelReply();
-        if (onMessageSent) onMessageSent(mediaPayload);
+        emitMessageSent(mediaPayload);
         queueComposerFocusRestore();
       } else if (rawMessage) {
         const currentDetectedUrl = detectedPreviewUrl;
@@ -1492,7 +1508,7 @@ function WhatsAppComposerComponent({
 
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      handleSendMessage();
+      scheduleSendMessage();
     }
   };
 
@@ -1799,7 +1815,7 @@ function WhatsAppComposerComponent({
 
       clearAudioPreview();
       if (onCancelReply) onCancelReply();
-      if (onMessageSent) onMessageSent(audioPayload);
+      emitMessageSent(audioPayload);
       queueComposerFocusRestore();
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
@@ -2133,8 +2149,7 @@ function WhatsAppComposerComponent({
             sentAt,
           });
 
-          if (onMessageSent) {
-            onMessageSent({
+          emitMessageSent({
               id: messageId,
               chat_id: normalizedChatId,
               body: '[Localização]',
@@ -2145,7 +2160,6 @@ function WhatsAppComposerComponent({
               created_at: sentAt,
               payload: response,
             });
-          }
           queueComposerFocusRestore();
         } catch (error) {
           console.error('Erro ao enviar localização:', error);
@@ -2212,7 +2226,7 @@ function WhatsAppComposerComponent({
       setShowContactPicker(false);
       setContactSearch('');
       if (onCancelReply) onCancelReply();
-      if (onMessageSent) onMessageSent(contactPayload);
+      emitMessageSent(contactPayload);
       queueComposerFocusRestore();
     } catch (error) {
       console.error('Erro ao enviar contato:', error);
@@ -3108,7 +3122,7 @@ function WhatsAppComposerComponent({
           </div>
         ) : messageDraftRef.current.trim() || selectedFile || selectedGif ? (
           <button
-            onClick={handleSendMessage}
+            onClick={scheduleSendMessage}
             disabled={isSending}
             className="comm-fab-primary h-10 w-10 disabled:cursor-not-allowed disabled:opacity-50"
           >

@@ -43,7 +43,7 @@ import { WhatsAppPageSkeleton } from '../../../components/ui/panelSkeletons';
 import { PanelAdaptiveLoadingFrame } from '../../../components/ui/panelLoading';
 import { toast } from '../../../lib/toast';
 import { getBadgeStyle, getContrastTextColor, hexToRgba } from '../../../lib/colorUtils';
-import { MessageBubble } from './components/MessageBubble';
+import { MessageBubble, type MediaGalleryItem as MessageBubbleMediaGalleryItem, type MessagePayload as MessageBubblePayload } from './components/MessageBubble';
 import { DirectChatInfoPanel } from './components/DirectChatInfoPanel';
 import { GroupInfoPanel } from './components/GroupInfoPanel';
 import ReminderSchedulerModal from '../../../components/ReminderSchedulerModal';
@@ -4713,6 +4713,44 @@ export default function WhatsAppInboxScreen() {
     [reactionsByTargetId, renderedMessages, selectedChatKind], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  const mediaGalleryItems = useMemo<MessageBubbleMediaGalleryItem[]>(
+    () =>
+      renderedMessageItems.flatMap(({ message, timestamp, authorName }) => {
+        const payload = message.payload && typeof message.payload === 'object' ? (message.payload as MessageBubblePayload) : null;
+        const normalizedType = (message.type || '').toLowerCase();
+        const isVisualMedia = Boolean(
+          !message.is_deleted &&
+          message.has_media &&
+          (
+            normalizedType === 'sticker' ||
+            normalizedType === 'gif' ||
+            normalizedType.startsWith('image') ||
+            normalizedType.startsWith('video') ||
+            payload?.sticker ||
+            payload?.gif ||
+            payload?.image ||
+            payload?.video
+          ),
+        );
+
+        if (!isVisualMedia) {
+          return [];
+        }
+
+        return [{
+          messageId: message.id,
+          body: message.body,
+          type: message.type,
+          hasMedia: message.has_media,
+          payload,
+          timestamp,
+          fromName: authorName,
+          isDeleted: message.is_deleted,
+        }];
+      }),
+    [renderedMessageItems],
+  );
+
   const selectedChatDisplayName = selectedChat
     ? chatListPresentationById.get(selectedChat.id)?.displayName || getChatDisplayName(selectedChat)
     : '';
@@ -7869,6 +7907,7 @@ export default function WhatsAppInboxScreen() {
                           onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
                           onSaveSharedContact={isSelectedStatusChat ? undefined : handleSaveSharedContact}
                           onOpenSharedContactChat={isSelectedStatusChat ? undefined : handleOpenSharedContactChat}
+                          mediaGalleryItems={mediaGalleryItems}
                         />
                       </div>
                     );

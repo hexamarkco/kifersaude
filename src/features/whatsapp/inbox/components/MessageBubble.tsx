@@ -1,6 +1,6 @@
-import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, CornerUpRight, Loader2, UserPlus, MessageCircle, Download, ZoomIn, ZoomOut, RotateCcw, FileText } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, ChevronLeft, ChevronRight, CornerUpLeft, CornerUpRight, Loader2, UserPlus, MessageCircle, Download, ZoomIn, ZoomOut, RotateCcw, FileText } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from '../../shared/components/WhatsAppFormattedText';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -18,6 +18,7 @@ type SaveSharedContactResult = {
 };
 
 type MediaPreviewState = {
+  messageId: string;
   kind: 'image' | 'video' | 'sticker';
   src: string | null;
   caption: string;
@@ -25,6 +26,34 @@ type MediaPreviewState = {
   fileName: string;
   poster?: string;
   isLoading: boolean;
+  timestamp: string | null;
+  fromName?: string;
+  galleryItems: MediaGalleryItem[];
+  galleryIndex: number;
+};
+
+export type MediaGalleryItem = {
+  messageId: string;
+  body: string | null;
+  type: string | null;
+  hasMedia: boolean;
+  payload?: MessagePayload | null;
+  timestamp: string | null;
+  fromName?: string;
+  isDeleted?: boolean;
+};
+
+type VisualMediaDescriptor = {
+  kind: 'image' | 'video' | 'sticker';
+  mediaId: string | null;
+  directSrc: string;
+  previewSrc: string;
+  displayUrl: string | null;
+  needsUpgrade: boolean;
+  caption: string;
+  title: string;
+  fileName: string;
+  poster?: string;
 };
 
 export interface MessageBubbleProps {
@@ -56,6 +85,7 @@ export interface MessageBubbleProps {
   onSaveSharedContact?: (contact: { name: string; phone: string }) => Promise<SaveSharedContactResult | void> | SaveSharedContactResult | void;
   onOpenSharedContactChat?: (contact: { name: string; phone: string }) => void;
   isForwarded?: boolean;
+  mediaGalleryItems?: MediaGalleryItem[];
 }
 
 type MediaPayload = {
@@ -171,7 +201,8 @@ function areMessageBubblePropsEqual(
     Boolean(prev.onTranscriptionSaved) === Boolean(next.onTranscriptionSaved) &&
     Boolean(prev.onSaveSharedContact) === Boolean(next.onSaveSharedContact) &&
     Boolean(prev.onOpenSharedContactChat) === Boolean(next.onOpenSharedContactChat) &&
-    prev.isForwarded === next.isForwarded
+    prev.isForwarded === next.isForwarded &&
+    prev.mediaGalleryItems === next.mediaGalleryItems
   );
 }
 
@@ -217,6 +248,138 @@ function resolveAspectRatio(primary?: MediaPayload | null, fallback?: MediaPaylo
   return width / height;
 }
 
+function resolveVisualMediaDescriptor(params: {
+  body: string | null;
+  type: string | null;
+  hasMedia: boolean;
+  payload?: MessagePayload | null;
+  isDeleted?: boolean;
+}): VisualMediaDescriptor | null {
+  const { body, type, hasMedia, payload, isDeleted = false } = params;
+  if (isDeleted || !hasMedia) {
+    return null;
+  }
+
+  const payloadData: MessagePayload = payload && typeof payload === 'object' ? payload : {};
+  const resolvedBody = resolveWhatsAppMessageBody({ body, type, payload });
+  const normalizedType = (type || '').toLowerCase();
+
+  const imageDirectSrc =
+    payloadData?.image?.url ||
+    payloadData?.image?.file ||
+    payloadData?.image?.path ||
+    payloadData?.media?.link ||
+    payloadData?.media?.url ||
+    payloadData?.media?.file ||
+    payloadData?.media?.path ||
+    payloadData?.image?.link ||
+    '';
+  const imagePreviewSrc = payloadData?.image?.preview || payloadData?.media?.preview || '';
+  const stickerDirectSrc =
+    payloadData?.sticker?.url ||
+    payloadData?.sticker?.file ||
+    payloadData?.sticker?.path ||
+    payloadData?.sticker?.link ||
+    payloadData?.media?.link ||
+    payloadData?.media?.url ||
+    payloadData?.media?.file ||
+    payloadData?.media?.path ||
+    '';
+  const stickerPreviewSrc =
+    payloadData?.sticker?.preview ||
+    payloadData?.image?.preview ||
+    payloadData?.media?.preview ||
+    '';
+  const gifDirectSrc =
+    payloadData?.gif?.url ||
+    payloadData?.image?.url ||
+    payloadData?.gif?.file ||
+    payloadData?.gif?.path ||
+    payloadData?.image?.file ||
+    payloadData?.image?.path ||
+    payloadData?.media?.url ||
+    payloadData?.media?.file ||
+    payloadData?.media?.path ||
+    payloadData?.gif?.link ||
+    payloadData?.video?.link ||
+    payloadData?.media?.link ||
+    payloadData?.image?.link ||
+    '';
+  const gifPreviewSrc =
+    payloadData?.gif?.preview ||
+    payloadData?.image?.preview ||
+    payloadData?.video?.preview ||
+    payloadData?.media?.preview ||
+    '';
+  const videoDirectSrc =
+    payloadData?.video?.url ||
+    payloadData?.video?.file ||
+    payloadData?.video?.path ||
+    payloadData?.media?.link ||
+    payloadData?.media?.url ||
+    payloadData?.media?.file ||
+    payloadData?.media?.path ||
+    payloadData?.video?.link ||
+    '';
+  const videoPreviewSrc = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || '';
+  const visualMediaId =
+    payloadData?.sticker?.id ||
+    payloadData?.sticker?.media_id ||
+    payloadData?.sticker?.mediaId ||
+    payloadData?.gif?.id ||
+    payloadData?.gif?.media_id ||
+    payloadData?.gif?.mediaId ||
+    payloadData?.image?.id ||
+    payloadData?.image?.media_id ||
+    payloadData?.image?.mediaId ||
+    payloadData?.video?.id ||
+    payloadData?.video?.media_id ||
+    payloadData?.video?.mediaId ||
+    payloadData?.media?.id ||
+    payloadData?.media_id ||
+    payloadData?.mediaId ||
+    null;
+  const isStickerMessage = normalizedType === 'sticker' || Boolean(payloadData?.sticker);
+  const isGifMessage = !isStickerMessage && (normalizedType === 'gif' || Boolean(payloadData?.gif));
+  const isImageMessage = !isStickerMessage && !isGifMessage && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
+  const isVideoMessage = !isGifMessage && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
+
+  if (!isStickerMessage && !isGifMessage && !isImageMessage && !isVideoMessage) {
+    return null;
+  }
+
+  const visualDirectSrc = isVideoMessage ? videoDirectSrc : isGifMessage ? gifDirectSrc : isStickerMessage ? stickerDirectSrc : imageDirectSrc;
+  const visualPreviewSrc = isVideoMessage ? videoPreviewSrc : isGifMessage ? gifPreviewSrc : isStickerMessage ? stickerPreviewSrc : imagePreviewSrc;
+  const displayUrl = visualDirectSrc || visualPreviewSrc || null;
+  const resolvedKind = isVideoMessage
+    ? 'video'
+    : isStickerMessage
+      ? 'sticker'
+      : isGifMessage && isMp4Asset(displayUrl)
+        ? 'video'
+        : 'image';
+  const videoPoster = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || undefined;
+
+  return {
+    kind: resolvedKind,
+    mediaId: visualMediaId,
+    directSrc: visualDirectSrc,
+    previewSrc: visualPreviewSrc,
+    displayUrl,
+    needsUpgrade: Boolean(visualMediaId && !visualDirectSrc),
+    caption: isVideoMessage ? resolvedBody && resolvedBody !== '[Vídeo]' && resolvedBody !== '[Video]' && resolvedBody !== '[Vídeo de status]' ? resolvedBody : '' : isGifMessage ? resolvedBody && resolvedBody !== '[GIF]' ? resolvedBody : '' : isStickerMessage ? resolvedBody && resolvedBody !== '[Sticker]' && resolvedBody !== '[Figurinha]' ? resolvedBody : '' : resolvedBody && resolvedBody !== '[Imagem]' && resolvedBody !== '[Imagem de status]' ? resolvedBody : '',
+    title: isGifMessage ? 'GIF' : resolvedKind === 'video' ? 'Vídeo' : resolvedKind === 'sticker' ? 'Sticker' : 'Foto',
+    fileName: isVideoMessage
+      ? payloadData?.video?.filename || payloadData?.video?.name || 'video'
+      : isGifMessage
+        ? payloadData?.gif?.filename || payloadData?.gif?.name || 'gif'
+        : isStickerMessage
+          ? payloadData?.sticker?.filename || payloadData?.sticker?.name || 'sticker'
+          : payloadData?.image?.filename || payloadData?.image?.name || 'imagem',
+    poster: resolvedKind === 'video' ? (isGifMessage ? gifPreviewSrc || videoPoster : videoPoster) : undefined,
+  };
+}
+
 function MessageBubbleComponent({
   id,
   chatId,
@@ -244,6 +407,7 @@ function MessageBubbleComponent({
   onSaveSharedContact,
   onOpenSharedContactChat,
   isForwarded = false,
+  mediaGalleryItems,
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
@@ -623,9 +787,24 @@ function MessageBubbleComponent({
       ? resolvedBody
       : '';
   const gifCaption = resolvedBody && resolvedBody !== '[GIF]' ? resolvedBody : '';
-  const stickerCaption =
-    resolvedBody && resolvedBody !== '[Sticker]' && resolvedBody !== '[Figurinha]' ? resolvedBody : '';
   const videoPoster = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || undefined;
+  const currentMediaGalleryItem = useMemo<MediaGalleryItem>(
+    () => ({
+      messageId: id,
+      body,
+      type,
+      hasMedia,
+      payload: payloadData,
+      timestamp,
+      fromName,
+      isDeleted,
+    }),
+    [body, fromName, hasMedia, id, isDeleted, payloadData, timestamp, type],
+  );
+  const availableMediaGalleryItems = useMemo(
+    () => (mediaGalleryItems && mediaGalleryItems.length > 0 ? mediaGalleryItems : isVisualMediaMessage ? [currentMediaGalleryItem] : []),
+    [currentMediaGalleryItem, isVisualMediaMessage, mediaGalleryItems],
+  );
 
   useEffect(() => {
     const element = bubbleRef.current;
@@ -1466,60 +1645,49 @@ function MessageBubbleComponent({
     resetMediaTransform();
   }, [mediaPreview?.src, mediaPreview?.kind, resetMediaTransform]);
 
+  const loadMediaUrlById = useCallback(async (mediaId: string | null) => {
+    if (!mediaId) return null;
+    try {
+      const response = await getWhatsAppMedia(mediaId, { preferObjectUrl: true });
+      return response.url || response.objectUrl || null;
+    } catch (error) {
+      console.error('Erro ao carregar midia da galeria:', error);
+      return null;
+    }
+  }, []);
+
   const buildMediaPreviewState = useCallback(
-    (previewKind: 'image' | 'video' | 'sticker', src: string | null, isLoading: boolean): MediaPreviewState => ({
-      kind: previewKind,
-      src,
-      caption:
-        previewKind === 'video'
-          ? isGifMessage
-            ? gifCaption
-            : videoCaption
-          : previewKind === 'sticker'
-            ? stickerCaption
-            : isGifMessage
-              ? gifCaption
-              : imageCaption,
-      title:
-        previewKind === 'video'
-          ? isGifMessage
-            ? 'GIF'
-            : 'Vídeo'
-          : previewKind === 'sticker'
-            ? 'Sticker'
-            : isGifMessage
-              ? 'GIF'
-              : 'Foto',
-      fileName:
-        previewKind === 'video'
-          ? isGifMessage
-            ? payloadData?.gif?.filename || payloadData?.gif?.name || payloadData?.video?.filename || payloadData?.video?.name || 'gif'
-            : payloadData?.video?.filename || payloadData?.video?.name || 'video'
-          : previewKind === 'sticker'
-            ? payloadData?.sticker?.filename || payloadData?.sticker?.name || 'sticker'
-            : isGifMessage
-              ? payloadData?.gif?.filename || payloadData?.gif?.name || 'gif'
-              : payloadData?.image?.filename || payloadData?.image?.name || 'imagem',
-      poster: previewKind === 'video' ? videoPoster || gifPreviewSrc : undefined,
-      isLoading,
-    }),
-    [
-      gifCaption,
-      imageCaption,
-      isGifMessage,
-      payloadData?.gif?.filename,
-      payloadData?.gif?.name,
-      payloadData?.image?.filename,
-      payloadData?.image?.name,
-      payloadData?.sticker?.filename,
-      payloadData?.sticker?.name,
-      gifPreviewSrc,
-      payloadData?.video?.filename,
-      payloadData?.video?.name,
-      stickerCaption,
-      videoCaption,
-      videoPoster,
-    ],
+    (
+      item: MediaGalleryItem,
+      descriptor: VisualMediaDescriptor,
+      src: string | null,
+      isLoading: boolean,
+      galleryItemsOverride?: MediaGalleryItem[],
+      galleryIndexOverride?: number,
+    ): MediaPreviewState => {
+      const fallbackItems = galleryItemsOverride && galleryItemsOverride.length > 0 ? galleryItemsOverride : availableMediaGalleryItems;
+      const galleryItems = fallbackItems.length > 0 ? fallbackItems : [item];
+      const galleryIndex =
+        typeof galleryIndexOverride === 'number'
+          ? galleryIndexOverride
+          : Math.max(0, galleryItems.findIndex((entry) => entry.messageId === item.messageId));
+
+      return {
+        messageId: item.messageId,
+        kind: descriptor.kind,
+        src,
+        caption: descriptor.caption,
+        title: descriptor.title,
+        fileName: descriptor.fileName,
+        poster: descriptor.poster,
+        isLoading,
+        timestamp: item.timestamp,
+        fromName: item.fromName,
+        galleryItems,
+        galleryIndex,
+      };
+    },
+    [availableMediaGalleryItems],
   );
 
   const handleDownloadMediaPreview = useCallback(() => {
@@ -1565,32 +1733,126 @@ function MessageBubbleComponent({
     window.open(resolvedDocumentUrl, '_blank', 'noopener,noreferrer');
   }, [documentLink, documentUrl, loadDocumentMedia]);
 
-  async function openMediaPreview(previewType: 'image' | 'video' | 'sticker', fallbackSrc?: string | null) {
-    const initialSrc = fallbackSrc || visualDisplayUrl || null;
-    setMediaPreview(buildMediaPreviewState(previewType, initialSrc, visualNeedsUpgrade));
+  const openMediaPreviewForItem = useCallback(
+    async (
+      item: MediaGalleryItem,
+      fallbackSrc?: string | null,
+      galleryItemsOverride?: MediaGalleryItem[],
+      galleryIndexOverride?: number,
+    ) => {
+      const descriptor = resolveVisualMediaDescriptor({
+        body: item.body,
+        type: item.type,
+        hasMedia: item.hasMedia,
+        payload: item.payload,
+        isDeleted: item.isDeleted,
+      });
 
-    if (!visualNeedsUpgrade) {
-      return;
-    }
-
-    const loadedUrl = await loadVisualMedia();
-    if (!loadedUrl) {
-      setMediaPreview((current) => (current && current.kind === previewType ? { ...current, isLoading: false } : current));
-      return;
-    }
-
-    setMediaPreview((current) => {
-      if (!current) {
-        return buildMediaPreviewState(previewType, loadedUrl, false);
+      if (!descriptor) {
+        return;
       }
 
-      if (current.kind !== previewType || current.src === loadedUrl) {
-        return current;
+      const galleryItems = galleryItemsOverride && galleryItemsOverride.length > 0 ? galleryItemsOverride : availableMediaGalleryItems;
+      const galleryIndex =
+        typeof galleryIndexOverride === 'number'
+          ? galleryIndexOverride
+          : Math.max(0, galleryItems.findIndex((entry) => entry.messageId === item.messageId));
+      const initialSrc = fallbackSrc || descriptor.displayUrl || null;
+
+      setMediaPreview(buildMediaPreviewState(item, descriptor, initialSrc, descriptor.needsUpgrade, galleryItems, galleryIndex));
+
+      if (!descriptor.needsUpgrade || !descriptor.mediaId) {
+        return;
       }
 
-      return { ...current, src: loadedUrl, isLoading: false };
-    });
+      const loadedUrl = item.messageId === id ? await loadVisualMedia() : await loadMediaUrlById(descriptor.mediaId);
+      if (!loadedUrl) {
+        setMediaPreview((current) => (current && current.messageId === item.messageId ? { ...current, isLoading: false } : current));
+        return;
+      }
+
+      setMediaPreview((current) => {
+        if (!current || current.messageId !== item.messageId) {
+          return current;
+        }
+
+        if (current.src === loadedUrl && !current.isLoading) {
+          return current;
+        }
+
+        return { ...current, src: loadedUrl, isLoading: false };
+      });
+    },
+    [availableMediaGalleryItems, buildMediaPreviewState, id, loadMediaUrlById, loadVisualMedia],
+  );
+
+  async function openMediaPreview(_previewType: 'image' | 'video' | 'sticker', fallbackSrc?: string | null) {
+    const baseGalleryItems = availableMediaGalleryItems.length > 0 ? availableMediaGalleryItems : [currentMediaGalleryItem];
+    const currentIndex = baseGalleryItems.findIndex((entry) => entry.messageId === currentMediaGalleryItem.messageId);
+    const galleryItems = currentIndex >= 0 ? baseGalleryItems : [currentMediaGalleryItem];
+    const galleryIndex = currentIndex >= 0 ? currentIndex : 0;
+    const currentItem = galleryItems[galleryIndex] || currentMediaGalleryItem;
+    await openMediaPreviewForItem(currentItem, fallbackSrc, galleryItems, galleryIndex);
   }
+
+  const hasPreviousMediaPreview = Boolean(mediaPreview && mediaPreview.galleryIndex > 0);
+  const hasNextMediaPreview = Boolean(mediaPreview && mediaPreview.galleryIndex < mediaPreview.galleryItems.length - 1);
+
+  const navigateMediaPreview = useCallback(
+    (direction: -1 | 1) => {
+      if (!mediaPreview) return;
+      const nextIndex = mediaPreview.galleryIndex + direction;
+      const nextItem = mediaPreview.galleryItems[nextIndex];
+      if (!nextItem) return;
+      void openMediaPreviewForItem(nextItem, undefined, mediaPreview.galleryItems, nextIndex);
+    },
+    [mediaPreview, openMediaPreviewForItem],
+  );
+
+  useEffect(() => {
+    if (!mediaPreview) return;
+
+    const adjacentItems = [mediaPreview.galleryItems[mediaPreview.galleryIndex - 1], mediaPreview.galleryItems[mediaPreview.galleryIndex + 1]].filter(
+      (item): item is MediaGalleryItem => Boolean(item),
+    );
+
+    adjacentItems.forEach((item) => {
+      const descriptor = resolveVisualMediaDescriptor({
+        body: item.body,
+        type: item.type,
+        hasMedia: item.hasMedia,
+        payload: item.payload,
+        isDeleted: item.isDeleted,
+      });
+
+      if (!descriptor?.needsUpgrade || !descriptor.mediaId) {
+        return;
+      }
+
+      void loadMediaUrlById(descriptor.mediaId);
+    });
+  }, [loadMediaUrlById, mediaPreview]);
+
+  useEffect(() => {
+    if (!mediaPreview || mediaPreview.galleryItems.length <= 1) return;
+
+    const handleArrowNavigation = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        navigateMediaPreview(-1);
+      }
+
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        navigateMediaPreview(1);
+      }
+    };
+
+    document.addEventListener('keydown', handleArrowNavigation);
+    return () => {
+      document.removeEventListener('keydown', handleArrowNavigation);
+    };
+  }, [mediaPreview, navigateMediaPreview]);
 
   const handleMediaWheel = useCallback(
     (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -1933,7 +2195,11 @@ function MessageBubbleComponent({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 pt-1">
                     <div className="truncate text-sm font-semibold sm:text-base">{mediaPreview.title}</div>
-                    <div className="truncate text-xs text-white/65">{formatTimestamp(timestamp) || mediaPreview.fileName}</div>
+                    <div className="truncate text-xs text-white/65">
+                      {mediaPreview.galleryItems.length > 1 ? `${mediaPreview.galleryIndex + 1} de ${mediaPreview.galleryItems.length} · ` : ''}
+                      {formatTimestamp(mediaPreview.timestamp) || mediaPreview.fileName}
+                    </div>
+                    {mediaPreview.fromName ? <div className="truncate text-[11px] text-white/45">{mediaPreview.fromName}</div> : null}
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -1985,6 +2251,29 @@ function MessageBubbleComponent({
                   onWheel={handleMediaWheel}
                 >
                   <div className="relative flex h-full min-h-[320px] w-full items-center justify-center overflow-hidden px-3 py-3 sm:min-h-[420px] sm:px-4 sm:py-4">
+                    {mediaPreview.galleryItems.length > 1 ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => navigateMediaPreview(-1)}
+                          className="absolute left-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Ver mídia anterior"
+                          disabled={!hasPreviousMediaPreview}
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigateMediaPreview(1)}
+                          className="absolute right-3 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/45 text-white transition hover:bg-black/60 disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Ver próxima mídia"
+                          disabled={!hasNextMediaPreview}
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </button>
+                      </>
+                    ) : null}
+
                     {mediaPreview.src ? (
                       mediaPreview.kind === 'video' ? (
                         <video

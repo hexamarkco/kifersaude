@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, Loader2, UserPlus, MessageCircle, Download, ZoomIn, ZoomOut, RotateCcw, FileText } from 'lucide-react';
+import { Check, CheckCheck, Clock, AlertCircle, Edit3, Trash2, History, Smile, ExternalLink, X, ChevronDown, CornerUpLeft, CornerUpRight, Loader2, UserPlus, MessageCircle, Download, ZoomIn, ZoomOut, RotateCcw, FileText } from 'lucide-react';
 import { MessageHistoryModal } from './MessageHistoryModal';
 import { WhatsAppFormattedText } from '../../shared/components/WhatsAppFormattedText';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -47,6 +47,7 @@ export interface MessageBubbleProps {
   editedAt?: string | null;
   originalBody?: string | null;
   onReply?: (messageId: string, body: string, from: string) => void;
+  onForward?: () => void;
   onEdit?: (messageId: string, body: string) => void;
   onReact?: (messageId: string, emoji: string) => void;
   onRetryFailed?: () => void;
@@ -54,6 +55,7 @@ export interface MessageBubbleProps {
   onTranscriptionSaved?: (messageId: string, payload: MessagePayload) => void;
   onSaveSharedContact?: (contact: { name: string; phone: string }) => Promise<SaveSharedContactResult | void> | SaveSharedContactResult | void;
   onOpenSharedContactChat?: (contact: { name: string; phone: string }) => void;
+  isForwarded?: boolean;
 }
 
 type MediaPayload = {
@@ -80,6 +82,7 @@ export type MessagePayload = MediaPayload & {
   voice?: MediaPayload;
   media?: MediaPayload;
   image?: MediaPayload;
+  gif?: MediaPayload;
   sticker?: MediaPayload;
   video?: MediaPayload;
   document?: MediaPayload;
@@ -106,6 +109,12 @@ export type MessagePayload = MediaPayload & {
     preview?: string;
     image?: string;
     thumbnail?: string;
+    [key: string]: unknown;
+  };
+  location?: {
+    latitude?: number;
+    longitude?: number;
+    address?: string;
     [key: string]: unknown;
   };
   [key: string]: unknown;
@@ -154,13 +163,15 @@ function areMessageBubblePropsEqual(
     prev.editedAt === next.editedAt &&
     prev.originalBody === next.originalBody &&
     Boolean(prev.onReply) === Boolean(next.onReply) &&
+    Boolean(prev.onForward) === Boolean(next.onForward) &&
     Boolean(prev.onEdit) === Boolean(next.onEdit) &&
     Boolean(prev.onReact) === Boolean(next.onReact) &&
     Boolean(prev.onRetryFailed) === Boolean(next.onRetryFailed) &&
     Boolean(prev.onDismissFailed) === Boolean(next.onDismissFailed) &&
     Boolean(prev.onTranscriptionSaved) === Boolean(next.onTranscriptionSaved) &&
     Boolean(prev.onSaveSharedContact) === Boolean(next.onSaveSharedContact) &&
-    Boolean(prev.onOpenSharedContactChat) === Boolean(next.onOpenSharedContactChat)
+    Boolean(prev.onOpenSharedContactChat) === Boolean(next.onOpenSharedContactChat) &&
+    prev.isForwarded === next.isForwarded
   );
 }
 
@@ -184,6 +195,8 @@ const MESSAGE_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
 const DEFAULT_IMAGE_ASPECT_RATIO = 4 / 5;
 const DEFAULT_VIDEO_ASPECT_RATIO = 9 / 16;
 const VIEWPORT_PRELOAD_ROOT_MARGIN = '240px';
+
+const isMp4Asset = (value: string | null | undefined) => Boolean(value && /\.mp4(?:[?#].*)?$/i.test(value));
 
 function readPositiveNumber(value: unknown): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
@@ -222,6 +235,7 @@ function MessageBubbleComponent({
   deletedAt,
   editCount = 0,
   onReply,
+  onForward,
   onEdit,
   onReact,
   onRetryFailed,
@@ -229,6 +243,7 @@ function MessageBubbleComponent({
   onTranscriptionSaved,
   onSaveSharedContact,
   onOpenSharedContactChat,
+  isForwarded = false,
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
@@ -274,9 +289,10 @@ function MessageBubbleComponent({
   const hasHistory = editCount > 0 || isDeleted;
   const canReact = Boolean(onReact && !isDeleted);
   const canReply = Boolean(onReply && !isDeleted);
+  const canForward = Boolean(onForward && !isDeleted);
   const canEditMessage = Boolean(onEdit && isOutbound && !isDeleted && !hasMedia);
   const canViewHistory = hasHistory;
-  const hasActionMenu = canReact || canReply || canEditMessage || canViewHistory;
+  const hasActionMenu = canReact || canReply || canForward || canEditMessage || canViewHistory;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   const closeActionMenu = useCallback(() => {
@@ -527,6 +543,27 @@ function MessageBubbleComponent({
     payloadData?.image?.preview ||
     payloadData?.media?.preview ||
     '';
+  const gifDirectSrc =
+    payloadData?.gif?.url ||
+    payloadData?.image?.url ||
+    payloadData?.gif?.file ||
+    payloadData?.gif?.path ||
+    payloadData?.image?.file ||
+    payloadData?.image?.path ||
+    payloadData?.media?.url ||
+    payloadData?.media?.file ||
+    payloadData?.media?.path ||
+    payloadData?.gif?.link ||
+    payloadData?.video?.link ||
+    payloadData?.media?.link ||
+    payloadData?.image?.link ||
+    '';
+  const gifPreviewSrc =
+    payloadData?.gif?.preview ||
+    payloadData?.image?.preview ||
+    payloadData?.video?.preview ||
+    payloadData?.media?.preview ||
+    '';
   const videoDirectSrc =
     payloadData?.video?.url ||
     payloadData?.video?.file ||
@@ -542,6 +579,9 @@ function MessageBubbleComponent({
     payloadData?.sticker?.id ||
     payloadData?.sticker?.media_id ||
     payloadData?.sticker?.mediaId ||
+    payloadData?.gif?.id ||
+    payloadData?.gif?.media_id ||
+    payloadData?.gif?.mediaId ||
     payloadData?.image?.id ||
     payloadData?.image?.media_id ||
     payloadData?.image?.mediaId ||
@@ -553,16 +593,19 @@ function MessageBubbleComponent({
     payloadData?.mediaId ||
     null;
   const isStickerMessage = hasMedia && (normalizedType === 'sticker' || Boolean(payloadData?.sticker));
-  const isImageMessage = hasMedia && !isStickerMessage && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
-  const isVideoMessage = hasMedia && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
-  const isVisualMediaMessage = !isDeleted && (isStickerMessage || isImageMessage || isVideoMessage);
+  const isGifMessage = hasMedia && !isStickerMessage && (normalizedType === 'gif' || Boolean(payloadData?.gif));
+  const isImageMessage = hasMedia && !isStickerMessage && !isGifMessage && (normalizedType.startsWith('image') || Boolean(payloadData?.image));
+  const isVideoMessage = hasMedia && !isGifMessage && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
+  const isVisualMediaMessage = !isDeleted && (isStickerMessage || isGifMessage || isImageMessage || isVideoMessage);
   const isAudioMessage = hasMedia && (normalizedType.startsWith('audio') || normalizedType === 'ptt' || normalizedType === 'voice');
-  const visualDirectSrc = isVideoMessage ? videoDirectSrc : isStickerMessage ? stickerDirectSrc : imageDirectSrc;
-  const visualPreviewSrc = isVideoMessage ? videoPreviewSrc : isStickerMessage ? stickerPreviewSrc : imagePreviewSrc;
+  const visualDirectSrc = isVideoMessage ? videoDirectSrc : isGifMessage ? gifDirectSrc : isStickerMessage ? stickerDirectSrc : imageDirectSrc;
+  const visualPreviewSrc = isVideoMessage ? videoPreviewSrc : isGifMessage ? gifPreviewSrc : isStickerMessage ? stickerPreviewSrc : imagePreviewSrc;
   const visualDisplayUrl = visualMediaUrl || visualDirectSrc || visualPreviewSrc || null;
   const visualNeedsUpgrade = Boolean(visualMediaId && !visualMediaUrl && !visualDirectSrc);
   const visualAspectRatio = isStickerMessage
     ? resolveAspectRatio(payloadData.sticker, payloadData.media, 1)
+    : isGifMessage
+    ? resolveAspectRatio(payloadData.gif, payloadData.video || payloadData.image || payloadData.media, 1)
     : isVideoMessage
     ? resolveAspectRatio(payloadData.video, payloadData.media, DEFAULT_VIDEO_ASPECT_RATIO)
     : resolveAspectRatio(payloadData.image, payloadData.media, DEFAULT_IMAGE_ASPECT_RATIO);
@@ -579,6 +622,7 @@ function MessageBubbleComponent({
     resolvedBody !== '[Vídeo de status]'
       ? resolvedBody
       : '';
+  const gifCaption = resolvedBody && resolvedBody !== '[GIF]' ? resolvedBody : '';
   const stickerCaption =
     resolvedBody && resolvedBody !== '[Sticker]' && resolvedBody !== '[Figurinha]' ? resolvedBody : '';
   const videoPoster = payloadData?.video?.preview || payloadData?.image?.preview || payloadData?.media?.preview || undefined;
@@ -909,12 +953,23 @@ function MessageBubbleComponent({
     }
 
     if (type === 'location') {
+      const locationPayload = payloadData?.location && typeof payloadData.location === 'object'
+        ? (payloadData.location as { latitude?: unknown; longitude?: unknown; address?: unknown })
+        : null;
+      const latitude = typeof locationPayload?.latitude === 'number' ? locationPayload.latitude : null;
+      const longitude = typeof locationPayload?.longitude === 'number' ? locationPayload.longitude : null;
+      const locationQuery = latitude !== null && longitude !== null ? `${latitude},${longitude}` : body || '';
+      const locationLabel =
+        typeof locationPayload?.address === 'string' && locationPayload.address.trim()
+          ? locationPayload.address.trim()
+          : 'Localização compartilhada';
+
       return (
         <div className="flex items-center gap-2">
           <div className="text-sm">
-            <div className="font-medium">Localização compartilhada</div>
+            <div className="font-medium">{locationLabel}</div>
             <a
-              href={`https://maps.google.com/?q=${body}`}
+              href={`https://maps.google.com/?q=${locationQuery}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-amber-700 hover:text-amber-800 hover:underline"
@@ -1013,6 +1068,81 @@ function MessageBubbleComponent({
           )}
           {shouldShowCaption && imageCaption && (
             <WhatsAppFormattedText text={imageCaption} className="block w-full px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
+          )}
+        </div>
+      );
+    }
+
+    if (isGifMessage) {
+      const displayUrl = visualDisplayUrl;
+      const shouldShowCaption = Boolean(gifCaption);
+      const previewKind = isMp4Asset(displayUrl) ? 'video' : 'image';
+
+      return (
+        <div className="w-[min(380px,80vw)] max-w-full space-y-2">
+          {displayUrl ? (
+            <div className="w-full overflow-hidden rounded-xl bg-black">
+              <button
+                type="button"
+                onClick={() => {
+                  void openMediaPreview(previewKind, displayUrl);
+                }}
+                className="block w-full bg-black"
+                style={{ aspectRatio: `${visualAspectRatio}` }}
+              >
+                {previewKind === 'video' ? (
+                  <video
+                    src={displayUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="metadata"
+                    poster={gifPreviewSrc || videoPoster}
+                    className="block h-full w-full bg-black object-contain"
+                  />
+                ) : (
+                  <img
+                    src={displayUrl}
+                    alt="GIF"
+                    className="block h-full w-full object-contain"
+                    loading={isNearViewport ? 'eager' : 'lazy'}
+                  />
+                )}
+              </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto w-full rounded-none border-0 bg-black/75 py-1.5 text-xs text-white/90 shadow-none hover:bg-black/85 hover:text-white"
+                onClick={() => {
+                  void openMediaPreview(previewKind, displayUrl);
+                }}
+              >
+                Abrir GIF
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-auto w-full rounded p-2 text-sm text-gray-600"
+              style={{ aspectRatio: `${visualAspectRatio}` }}
+              onClick={() => {
+                void openMediaPreview('image');
+              }}
+              disabled={visualMediaLoading}
+            >
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-200 text-xs font-semibold text-gray-600">GIF</div>
+                <div>
+                  <div className="font-medium">GIF</div>
+                  <div className="text-xs">{visualMediaLoading ? 'Carregando...' : 'Clique para visualizar'}</div>
+                </div>
+              </div>
+            </Button>
+          )}
+          {shouldShowCaption && gifCaption && (
+            <WhatsAppFormattedText text={gifCaption} className="block px-1 pb-1 text-sm whitespace-pre-wrap break-words" />
           )}
         </div>
       );
@@ -1340,18 +1470,56 @@ function MessageBubbleComponent({
     (previewKind: 'image' | 'video' | 'sticker', src: string | null, isLoading: boolean): MediaPreviewState => ({
       kind: previewKind,
       src,
-      caption: previewKind === 'video' ? videoCaption : previewKind === 'sticker' ? stickerCaption : imageCaption,
-      title: previewKind === 'video' ? 'Vídeo' : previewKind === 'sticker' ? 'Sticker' : 'Foto',
+      caption:
+        previewKind === 'video'
+          ? isGifMessage
+            ? gifCaption
+            : videoCaption
+          : previewKind === 'sticker'
+            ? stickerCaption
+            : isGifMessage
+              ? gifCaption
+              : imageCaption,
+      title:
+        previewKind === 'video'
+          ? isGifMessage
+            ? 'GIF'
+            : 'Vídeo'
+          : previewKind === 'sticker'
+            ? 'Sticker'
+            : isGifMessage
+              ? 'GIF'
+              : 'Foto',
       fileName:
         previewKind === 'video'
-          ? payloadData?.video?.filename || payloadData?.video?.name || 'video'
+          ? isGifMessage
+            ? payloadData?.gif?.filename || payloadData?.gif?.name || payloadData?.video?.filename || payloadData?.video?.name || 'gif'
+            : payloadData?.video?.filename || payloadData?.video?.name || 'video'
           : previewKind === 'sticker'
             ? payloadData?.sticker?.filename || payloadData?.sticker?.name || 'sticker'
-            : payloadData?.image?.filename || payloadData?.image?.name || 'imagem',
-      poster: previewKind === 'video' ? videoPoster : undefined,
+            : isGifMessage
+              ? payloadData?.gif?.filename || payloadData?.gif?.name || 'gif'
+              : payloadData?.image?.filename || payloadData?.image?.name || 'imagem',
+      poster: previewKind === 'video' ? videoPoster || gifPreviewSrc : undefined,
       isLoading,
     }),
-    [imageCaption, payloadData?.image?.filename, payloadData?.image?.name, payloadData?.sticker?.filename, payloadData?.sticker?.name, payloadData?.video?.filename, payloadData?.video?.name, stickerCaption, videoCaption, videoPoster],
+    [
+      gifCaption,
+      imageCaption,
+      isGifMessage,
+      payloadData?.gif?.filename,
+      payloadData?.gif?.name,
+      payloadData?.image?.filename,
+      payloadData?.image?.name,
+      payloadData?.sticker?.filename,
+      payloadData?.sticker?.name,
+      gifPreviewSrc,
+      payloadData?.video?.filename,
+      payloadData?.video?.name,
+      stickerCaption,
+      videoCaption,
+      videoPoster,
+    ],
   );
 
   const handleDownloadMediaPreview = useCallback(() => {
@@ -1501,6 +1669,13 @@ function MessageBubbleComponent({
               : 'message-bubble-inbound border border-slate-200 bg-white text-slate-900'
           }`}
         >
+          {isForwarded && (
+            <div className="mb-1 flex items-center gap-1 text-[11px] font-medium text-slate-500">
+              <CornerUpRight className="h-3 w-3" />
+              <span>Encaminhada</span>
+            </div>
+          )}
+
           {!isOutbound && fromName && (
             <div className="mb-1 text-xs font-semibold text-amber-700">
               {fromName}
@@ -1676,6 +1851,24 @@ function MessageBubbleComponent({
                 <span className="flex w-full items-center gap-2 text-left">
                   <CornerUpLeft className="comm-muted h-4 w-4 flex-shrink-0" />
                   <span className="flex-1 text-left">Responder</span>
+                </span>
+              </Button>
+            )}
+
+            {canForward && (
+              <Button
+                variant="ghost"
+                size="sm"
+                fullWidth
+                onClick={() => {
+                  onForward?.();
+                  closeActionMenu();
+                }}
+                className="comm-menu-item comm-text h-auto rounded-md border-0 px-2.5 py-2 text-sm font-medium shadow-none"
+              >
+                <span className="flex w-full items-center gap-2 text-left">
+                  <CornerUpRight className="comm-muted h-4 w-4 flex-shrink-0" />
+                  <span className="flex-1 text-left">Encaminhar</span>
                 </span>
               </Button>
             )}

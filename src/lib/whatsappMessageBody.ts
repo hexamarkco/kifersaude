@@ -326,6 +326,7 @@ export const resolveWhatsAppMessageBody = (message: {
   if (type === 'unknown') return '[Mensagem não suportada]';
   if (type === 'story') return '[Status]';
   if (type === 'link_preview') return '[Link]';
+  if (type === 'gif') return '[GIF]';
 
   return body || null;
 };

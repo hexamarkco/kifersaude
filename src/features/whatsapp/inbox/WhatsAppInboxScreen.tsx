@@ -115,17 +115,20 @@ import {
   getWhatsAppChats,
   getWhatsAppContactProfile,
   getWhatsAppContacts,
+  getWhatsAppMedia,
   getWhatsAppGroups,
   getWhatsAppNewsletters,
   normalizeChatId,
   reactToMessage,
   removeReactionFromMessage,
+  sendMediaMessage,
   sendWhatsAppMessage,
   updateWhatsAppContact,
   type WhapiChat,
   type WhapiContact,
   type WhapiGroup,
 } from '../../../lib/whatsappApiService';
+import { isWhatsAppPayloadForwarded, markWhatsAppPayloadAsForwarded } from '../shared/messageForwarding';
 
 type FirstResponseSLA =
   | { kind: 'no-inbound' }
@@ -161,6 +164,55 @@ type InboxLeadSummary = {
   status?: string | null;
   responsavel?: string | null;
 };
+
+type ForwardMessagePlan =
+  | {
+      kind: 'text';
+      type: 'text';
+      body: string;
+      hasMedia: false;
+    }
+  | {
+      kind: 'link_preview';
+      type: 'link_preview';
+      body: string;
+      hasMedia: true;
+      title: string;
+      description?: string;
+      canonical?: string;
+      preview?: string;
+    }
+  | {
+      kind: 'contact';
+      type: 'contact';
+      body: string;
+      hasMedia: false;
+      name: string;
+      vcard: string;
+    }
+  | {
+      kind: 'location';
+      type: 'location';
+      body: string;
+      hasMedia: true;
+      latitude: number;
+      longitude: number;
+      description?: string;
+    }
+  | {
+      kind: 'media';
+      type: 'image' | 'video' | 'sticker' | 'document' | 'audio' | 'voice';
+      body: string;
+      hasMedia: true;
+      caption?: string;
+      mediaId?: string;
+      url?: string;
+      fileName: string;
+      mimeType?: string;
+      seconds?: number;
+      recordingTime?: number;
+      asVoice?: boolean;
+    };
 
 type InboxLeadInfo = InboxLeadSummary & {
   email?: string | null;
@@ -307,6 +359,10 @@ export default function WhatsAppInboxScreen() {
     id: string;
     body: string;
   } | null>(null);
+  const [forwardMessage, setForwardMessage] = useState<WhatsAppMessage | null>(null);
+  const [forwardSearch, setForwardSearch] = useState('');
+  const [forwardTargetChatIds, setForwardTargetChatIds] = useState<string[]>([]);
+  const [isForwardingMessage, setIsForwardingMessage] = useState(false);
   const [contactsById, setContactsById] = useState<Map<string, { name: string; saved: boolean }>>(new Map());
   const [contactsList, setContactsList] = useState<Array<{ id: string; name: string; saved: boolean; pushname?: string }>>(
     [],
@@ -830,6 +886,35 @@ export default function WhatsAppInboxScreen() {
 
   const asMessagePayload = (payload: unknown): WhatsAppMessagePayload =>
     payload && typeof payload === 'object' ? (payload as WhatsAppMessagePayload) : {};
+
+  const asPayloadRecord = (value: unknown): Record<string, unknown> | null =>
+    value && typeof value === 'object' ? (value as Record<string, unknown>) : null;
+
+  const getFirstTrimmedString = (...values: unknown[]): string | null => {
+    for (const value of values) {
+      if (typeof value !== 'string') continue;
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+    }
+
+    return null;
+  };
+
+  const getFiniteNumber = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number(value.trim());
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+  };
+
+  const buildContactVcard = (name: string, phone: string) =>
+    `BEGIN:VCARD\nVERSION:3.0\nFN:${name}\nTEL;type=CELL;type=VOICE;waid=${phone}:${phone}\nEND:VCARD`;
 
   const isTechnicalCiphertextMessage = (
     message: Pick<WhatsAppMessage, 'type' | 'body' | 'payload'>,
@@ -2672,17 +2757,95 @@ export default function WhatsAppInboxScreen() {
     setEditMessage(null);
   };
 
-  const persistRetriedOutboundMessage = async (params: {
+  const resetForwardModalState = () => {
+    setForwardMessage(null);
+    setForwardSearch('');
+    setForwardTargetChatIds([]);
+  };
+
+  const closeForwardModal = useCallback(() => {
+    if (isForwardingMessage) return;
+    resetForwardModalState();
+  }, [isForwardingMessage]);
+
+  const handleOpenForwardModal = (message: WhatsAppMessage) => {
+    if (!buildForwardMessagePlan(message)) {
+      toast.warning('Esse tipo de mensagem ainda nao pode ser encaminhado.');
+      return;
+    }
+
+    setForwardMessage(message);
+    setForwardSearch('');
+    setForwardTargetChatIds([]);
+  };
+
+  const toggleForwardTargetChat = (chatId: string) => {
+    setForwardTargetChatIds((current) =>
+      current.includes(chatId) ? current.filter((item) => item !== chatId) : [...current, chatId],
+    );
+  };
+
+  const handleConfirmForwardMessage = async () => {
+    if (!forwardMessage || forwardTargetChatIds.length === 0 || isForwardingMessage) return;
+
+    setIsForwardingMessage(true);
+
+    let successCount = 0;
+    let failureCount = 0;
+    let lastSuccessfulChatId: string | null = null;
+    let lastErrorMessage = 'Nao foi possivel encaminhar a mensagem.';
+
+    try {
+      for (const targetChatId of Array.from(new Set(forwardTargetChatIds))) {
+        try {
+          lastSuccessfulChatId = await forwardMessageToChat(forwardMessage, targetChatId);
+          successCount += 1;
+        } catch (error) {
+          failureCount += 1;
+          lastErrorMessage = error instanceof Error ? error.message : lastErrorMessage;
+          console.error('Erro ao encaminhar mensagem:', error);
+        }
+      }
+    } finally {
+      setIsForwardingMessage(false);
+    }
+
+    if (successCount === 0) {
+      toast.error(lastErrorMessage);
+      return;
+    }
+
+    resetForwardModalState();
+
+    if (successCount === 1 && failureCount === 0) {
+      toast.success('Mensagem encaminhada.');
+    } else if (failureCount === 0) {
+      toast.success(`Mensagem encaminhada para ${successCount} conversa(s).`);
+    } else {
+      toast.warning(`Encaminhada para ${successCount} conversa(s) e ${failureCount} falha(s).`);
+    }
+
+    if (successCount === 1 && failureCount === 0 && lastSuccessfulChatId) {
+      const targetChat = chatsRef.current.find((chat) => getChatIdVariants(chat).includes(lastSuccessfulChatId));
+      if (targetChat) {
+        selectChat(targetChat);
+      }
+    }
+  };
+
+  const persistOutboundMessageResult = async (params: {
     response: unknown;
     chatId: string;
     type: string;
     body: string;
     hasMedia: boolean;
     sentAt: string;
+    payloadOverride?: Record<string, unknown> | null;
   }) => {
-    const { response, chatId: rawChatId, type, body, hasMedia, sentAt } = params;
+    const { response, chatId: rawChatId, type, body, hasMedia, sentAt, payloadOverride } = params;
     const normalizedChatId = normalizeChatId(rawChatId);
     const responsePayload = response && typeof response === 'object' ? (response as Record<string, unknown>) : null;
+    const storedPayload = payloadOverride ?? responsePayload;
 
     const nestedMessageId =
       responsePayload?.message && typeof responsePayload.message === 'object'
@@ -2710,7 +2873,7 @@ export default function WhatsAppInboxScreen() {
         has_media: hasMedia,
         timestamp: sentAt,
         direction: 'outbound',
-        payload: responsePayload,
+        payload: storedPayload,
       });
 
       if (insertError) {
@@ -2718,7 +2881,7 @@ export default function WhatsAppInboxScreen() {
       }
     }
 
-    return { normalizedChatId, messageId, payload: responsePayload };
+    return { normalizedChatId, messageId, payload: storedPayload };
   };
 
   const patchMessageById = (
@@ -2804,7 +2967,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       const sentAt = new Date().toISOString();
-      const persisted = await persistRetriedOutboundMessage({
+      const persisted = await persistOutboundMessageResult({
         response,
         chatId: message.chat_id,
         type,
@@ -3126,6 +3289,7 @@ export default function WhatsAppInboxScreen() {
 
     const type = (message.type || '').toLowerCase();
     if (type === 'sticker') return '[Sticker]';
+    if (type === 'gif') return '[GIF]';
     if (type === 'image') return '[Imagem]';
     if (type === 'video') return '[Vídeo]';
     if (['audio', 'voice', 'ptt'].includes(type)) return '[Áudio]';
@@ -3134,6 +3298,373 @@ export default function WhatsAppInboxScreen() {
     if (type === 'location') return '[Localização]';
     if (message.has_media) return '[Anexo]';
     return 'Mensagem';
+  };
+
+  const forwardCaptionPlaceholders = new Set([
+    '[sticker]',
+    '[imagem]',
+    '[imagem de status]',
+    '[video]',
+    '[vídeo]',
+    '[vídeo de status]',
+    '[áudio]',
+    '[audio]',
+    '[mensagem de voz]',
+    '[documento]',
+    '[arquivo]',
+    '[anexo]',
+    '[contato]',
+    '[localização]',
+    '[localizacao]',
+    '[link]',
+  ]);
+
+  const resolveForwardCaption = (
+    message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
+  ) => {
+    const preview = getMessagePreview(message);
+    if (!preview) return null;
+
+    return forwardCaptionPlaceholders.has(normalizeSearchText(preview)) ? null : preview;
+  };
+
+  const buildForwardMediaPlan = (
+    message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
+    type: Extract<ForwardMessagePlan, { kind: 'media' }>['type'],
+    primary: Record<string, unknown> | null,
+    fallback: Record<string, unknown> | null,
+    options?: {
+      body?: string;
+      caption?: string | null;
+      asVoice?: boolean;
+    },
+  ): Extract<ForwardMessagePlan, { kind: 'media' }> | null => {
+    const mediaId = getFirstTrimmedString(
+      primary?.id,
+      primary?.media_id,
+      primary?.mediaId,
+      fallback?.id,
+      fallback?.media_id,
+      fallback?.mediaId,
+    );
+    const url = getFirstTrimmedString(
+      primary?.link,
+      primary?.url,
+      primary?.file,
+      primary?.path,
+      fallback?.link,
+      fallback?.url,
+      fallback?.file,
+      fallback?.path,
+    );
+
+    if (!mediaId && !url) {
+      return null;
+    }
+
+    const defaultFileNameByType: Record<Extract<ForwardMessagePlan, { kind: 'media' }>['type'], string> = {
+      image: 'imagem.jpg',
+      video: 'video.mp4',
+      sticker: 'sticker.webp',
+      document: 'documento',
+      audio: 'audio.ogg',
+      voice: 'voice.ogg',
+    };
+
+    const defaultMimeTypeByType: Record<Extract<ForwardMessagePlan, { kind: 'media' }>['type'], string> = {
+      image: 'image/jpeg',
+      video: 'video/mp4',
+      sticker: 'image/webp',
+      document: 'application/octet-stream',
+      audio: 'audio/ogg',
+      voice: 'audio/ogg',
+    };
+
+    return {
+      kind: 'media',
+      type,
+      body: options?.body || getMessagePreview(message) || 'Mensagem',
+      hasMedia: true,
+      caption: options?.caption || undefined,
+      mediaId: mediaId || undefined,
+      url: url || undefined,
+      fileName:
+        getFirstTrimmedString(primary?.filename, primary?.name, fallback?.filename, fallback?.name) ||
+        defaultFileNameByType[type],
+      mimeType:
+        getFirstTrimmedString(primary?.mime_type, primary?.mimetype, fallback?.mime_type, fallback?.mimetype) ||
+        defaultMimeTypeByType[type],
+      seconds: getFiniteNumber(primary?.seconds) ?? getFiniteNumber(fallback?.seconds) ?? undefined,
+      recordingTime:
+        getFiniteNumber(primary?.recording_time) ??
+        getFiniteNumber(primary?.recordingTime) ??
+        getFiniteNumber(fallback?.recording_time) ??
+        getFiniteNumber(fallback?.recordingTime) ??
+        undefined,
+      asVoice: options?.asVoice,
+    };
+  };
+
+  const buildForwardMessagePlan = (
+    message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
+  ): ForwardMessagePlan | null => {
+    if (message.is_deleted) return null;
+    if (isEditActionMessage(message)) return null;
+    if (isReactionOnlyMessage(message)) return null;
+    if (isHiddenTechnicalAction(message)) return null;
+    if (isTechnicalCiphertextMessage(message)) return null;
+
+    const payloadData = asMessagePayload(message.payload);
+    const normalizedType = String(message.type || '').trim().toLowerCase();
+    const resolvedBody =
+      resolveWhatsAppMessageBody({
+        body: message.body,
+        type: message.type,
+        payload: message.payload,
+      })?.trim() || '';
+    const mediaPayload = asPayloadRecord(payloadData.media);
+
+    const linkPreviewPayload = asPayloadRecord(payloadData.link_preview);
+    if (normalizedType === 'link_preview' || linkPreviewPayload) {
+      const canonical = getFirstTrimmedString(
+        linkPreviewPayload?.url,
+        linkPreviewPayload?.canonical,
+        linkPreviewPayload?.link,
+      );
+      const title = getFirstTrimmedString(linkPreviewPayload?.title) || canonical;
+      if (!canonical || !title) return null;
+
+      return {
+        kind: 'link_preview',
+        type: 'link_preview',
+        body: resolvedBody || canonical,
+        hasMedia: true,
+        title,
+        description: getFirstTrimmedString(linkPreviewPayload?.description) || undefined,
+        canonical,
+        preview: getFirstTrimmedString(
+          linkPreviewPayload?.preview,
+          linkPreviewPayload?.image,
+          linkPreviewPayload?.thumbnail,
+        ) || undefined,
+      };
+    }
+
+    const contactPayload = asPayloadRecord(payloadData.contact);
+    if (normalizedType === 'contact' || contactPayload) {
+      const contactName = getFirstTrimmedString(contactPayload?.name, message.body) || 'Contato';
+      const phone = (getFirstTrimmedString(contactPayload?.phone) || '').replace(/\D/g, '');
+      const vcard = getFirstTrimmedString(contactPayload?.vcard) || (phone ? buildContactVcard(contactName, phone) : null);
+      if (!vcard) return null;
+
+      return {
+        kind: 'contact',
+        type: 'contact',
+        body: `[Contato: ${contactName}]`,
+        hasMedia: false,
+        name: contactName,
+        vcard,
+      };
+    }
+
+    const locationPayload = asPayloadRecord(payloadData.location);
+    if (normalizedType === 'location' || locationPayload) {
+      const latitude = getFiniteNumber(locationPayload?.latitude);
+      const longitude = getFiniteNumber(locationPayload?.longitude);
+      if (latitude === null || longitude === null) return null;
+
+      return {
+        kind: 'location',
+        type: 'location',
+        body: getMessagePreview(message) || '[Localização]',
+        hasMedia: true,
+        latitude,
+        longitude,
+        description: getFirstTrimmedString(locationPayload?.address, message.body) || undefined,
+      };
+    }
+
+    const stickerPayload = asPayloadRecord(payloadData.sticker);
+    if (normalizedType === 'sticker' || stickerPayload) {
+      return buildForwardMediaPlan(message, 'sticker', stickerPayload, mediaPayload, {
+        body: '[Sticker]',
+      });
+    }
+
+    const imagePayload = asPayloadRecord(payloadData.image);
+    if (normalizedType === 'image' || imagePayload) {
+      return buildForwardMediaPlan(message, 'image', imagePayload, mediaPayload, {
+        caption: resolveForwardCaption(message),
+      });
+    }
+
+    const videoPayload = asPayloadRecord(payloadData.video);
+    if (['video', 'short', 'gif'].includes(normalizedType) || videoPayload) {
+      return buildForwardMediaPlan(message, 'video', videoPayload, mediaPayload, {
+        caption: resolveForwardCaption(message),
+      });
+    }
+
+    const voicePayload = asPayloadRecord(payloadData.voice);
+    if (normalizedType === 'voice' || voicePayload) {
+      return buildForwardMediaPlan(message, 'voice', voicePayload, mediaPayload, {
+        body: '[Mensagem de voz]',
+        asVoice: true,
+      });
+    }
+
+    const audioPayload = asPayloadRecord(payloadData.audio);
+    if (['audio', 'ptt'].includes(normalizedType) || audioPayload) {
+      return buildForwardMediaPlan(message, 'audio', audioPayload, mediaPayload, {
+        body: '[Áudio]',
+      });
+    }
+
+    const documentPayload = asPayloadRecord(payloadData.document);
+    if (normalizedType === 'document' || documentPayload || (message.has_media && mediaPayload)) {
+      return buildForwardMediaPlan(message, 'document', documentPayload || mediaPayload, mediaPayload, {
+        caption: resolveForwardCaption(message),
+      });
+    }
+
+    const textBody = resolvedBody || getFirstTrimmedString(message.body);
+    if (!textBody) return null;
+
+    return {
+      kind: 'text',
+      type: 'text',
+      body: textBody,
+      hasMedia: false,
+    };
+  };
+
+  const createForwardMediaFile = async (plan: Extract<ForwardMessagePlan, { kind: 'media' }>) => {
+    let blob: Blob | null = null;
+    let mimeType = plan.mimeType || 'application/octet-stream';
+    let fileName = plan.fileName;
+
+    if (plan.mediaId) {
+      const mediaResponse = await getWhatsAppMedia(plan.mediaId);
+      blob = mediaResponse.data || null;
+      fileName = mediaResponse.fileName || fileName;
+      mimeType = mediaResponse.mimeType || blob?.type || mimeType;
+
+      const mediaUrl = mediaResponse.url || mediaResponse.objectUrl || plan.url || null;
+      if (!blob && mediaUrl) {
+        const response = await fetch(mediaUrl);
+        if (!response.ok) {
+          throw new Error('Nao foi possivel baixar a midia para encaminhar.');
+        }
+        blob = await response.blob();
+      }
+    } else if (plan.url) {
+      const response = await fetch(plan.url);
+      if (!response.ok) {
+        throw new Error('Nao foi possivel baixar a midia para encaminhar.');
+      }
+      blob = await response.blob();
+      mimeType = blob.type || mimeType;
+    }
+
+    if (!blob) {
+      throw new Error('Nao foi possivel carregar a midia para encaminhar.');
+    }
+
+    return new File([blob], fileName, {
+      type: blob.type || mimeType,
+      lastModified: Date.now(),
+    });
+  };
+
+  const forwardMessageToChat = async (
+    message: Pick<WhatsAppMessage, 'body' | 'type' | 'has_media' | 'payload' | 'is_deleted'>,
+    targetChatId: string,
+  ) => {
+    const plan = buildForwardMessagePlan(message);
+    if (!plan) {
+      throw new Error('Este tipo de mensagem ainda nao pode ser encaminhado.');
+    }
+
+    let response: unknown;
+    switch (plan.kind) {
+      case 'text':
+        response = await sendWhatsAppMessage({
+          chatId: targetChatId,
+          contentType: 'string',
+          content: plan.body,
+        });
+        break;
+      case 'link_preview':
+        response = await sendWhatsAppMessage({
+          chatId: targetChatId,
+          contentType: 'LinkPreview',
+          content: {
+            body: plan.body,
+            title: plan.title,
+            description: plan.description,
+            canonical: plan.canonical,
+            preview: plan.preview,
+          },
+        });
+        break;
+      case 'contact':
+        response = await sendWhatsAppMessage({
+          chatId: targetChatId,
+          contentType: 'Contact',
+          content: {
+            name: plan.name,
+            vcard: plan.vcard,
+          },
+        });
+        break;
+      case 'location':
+        response = await sendWhatsAppMessage({
+          chatId: targetChatId,
+          contentType: 'Location',
+          content: {
+            latitude: plan.latitude,
+            longitude: plan.longitude,
+            description: plan.description,
+          },
+        });
+        break;
+      case 'media': {
+        const file = await createForwardMediaFile(plan);
+        response = await sendMediaMessage(targetChatId, file, {
+          caption: plan.caption,
+          asVoice: plan.asVoice,
+          seconds: plan.seconds,
+          recordingTime: plan.recordingTime,
+        });
+        break;
+      }
+    }
+
+    const sentAt = new Date().toISOString();
+    const responsePayload = response && typeof response === 'object' ? (response as Record<string, unknown>) : null;
+    const persisted = await persistOutboundMessageResult({
+      response,
+      chatId: targetChatId,
+      type: plan.type,
+      body: plan.body,
+      hasMedia: plan.hasMedia,
+      sentAt,
+      payloadOverride: markWhatsAppPayloadAsForwarded(responsePayload),
+    });
+
+    handleMessageSent({
+      id: persisted.messageId,
+      chat_id: persisted.normalizedChatId,
+      body: plan.body,
+      type: plan.type,
+      has_media: plan.hasMedia,
+      timestamp: sentAt,
+      direction: 'outbound',
+      created_at: sentAt,
+      payload: persisted.payload,
+    });
+
+    return persisted.normalizedChatId;
   };
 
   const getLatestMeaningfulPreview = (items: WhatsAppMessage[]) => {
@@ -4344,6 +4875,55 @@ export default function WhatsAppInboxScreen() {
       return false;
     });
   }, [contactsList, newChatSearch]);
+
+  const selectedForwardChatIds = useMemo(() => new Set(forwardTargetChatIds), [forwardTargetChatIds]);
+
+  const filteredForwardChats = useMemo(() => {
+    const normalizedQuery = normalizeSearchText(forwardSearch);
+    const queryDigits = forwardSearch.replace(/\D/g, '');
+
+    return chats
+      .filter((chat) => {
+        const chatKind = getWhatsAppChatKind(chat.id);
+        if (chatKind === 'status' || chatKind === 'newsletter') {
+          return false;
+        }
+
+        if (!normalizedQuery) {
+          return true;
+        }
+
+        const displayName = getChatDisplayName(chat);
+        const previewText = formatChatListPreview(chat);
+        const searchable = normalizeSearchText(`${displayName} ${chat.name || ''} ${chat.id} ${previewText}`);
+        if (searchable.includes(normalizedQuery)) {
+          return true;
+        }
+
+        if (queryDigits.length >= 3) {
+          const phoneMatch = getPhoneDigits(chat.phone_number || '').includes(queryDigits);
+          const chatIdMatch = getPhoneDigits(chat.id).includes(queryDigits);
+          return phoneMatch || chatIdMatch;
+        }
+
+        return false;
+      })
+      .map((chat) => ({
+        chat,
+        displayName: getChatDisplayName(chat),
+        previewText: formatChatListPreview(chat),
+        formattedTime: formatTime(chat.last_message_at),
+      }))
+      .sort((left, right) => {
+        const leftSelected = selectedForwardChatIds.has(left.chat.id);
+        const rightSelected = selectedForwardChatIds.has(right.chat.id);
+        if (leftSelected !== rightSelected) {
+          return leftSelected ? -1 : 1;
+        }
+
+        return 0;
+      });
+  }, [chats, forwardSearch, formatTime, selectedForwardChatIds]);
 
   const templateVariablesForInput = useMemo(() => {
     const fullName = (selectedLead?.name || selectedChatDisplayName || '').trim();
@@ -6108,6 +6688,97 @@ export default function WhatsAppInboxScreen() {
           setChatMenu(null);
         }}
       >
+      {forwardMessage && (
+        <ModalShell
+          isOpen
+          onClose={closeForwardModal}
+          title="Encaminhar mensagem"
+          size="md"
+          panelClassName="max-w-lg"
+        >
+          <div className="space-y-4">
+            <div className="comm-banner px-4 py-3">
+              <div className="comm-accent-text text-xs font-medium">Mensagem selecionada</div>
+              <div className="comm-text mt-1 text-sm">{getMessagePreview(forwardMessage) || 'Mensagem'}</div>
+            </div>
+
+            <Input
+              type="text"
+              leftIcon={Search}
+              placeholder="Buscar conversa..."
+              value={forwardSearch}
+              onChange={(event) => setForwardSearch(event.target.value)}
+            />
+
+            <div className="max-h-[52vh] overflow-y-auto rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]">
+              {filteredForwardChats.length === 0 ? (
+                <div className="px-4 py-6 text-sm text-slate-500">Nenhuma conversa encontrada.</div>
+              ) : (
+                filteredForwardChats.map((item) => {
+                  const isSelected = selectedForwardChatIds.has(item.chat.id);
+
+                  return (
+                    <button
+                      key={item.chat.id}
+                      type="button"
+                      className={`flex w-full items-start gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] px-4 py-3 text-left transition-colors last:border-b-0 ${
+                        isSelected
+                          ? 'bg-[var(--panel-surface-muted,#f7f0e7)]'
+                          : 'hover:bg-[var(--panel-surface-soft,#f4ede3)]'
+                      }`}
+                      onClick={() => toggleForwardTargetChat(item.chat.id)}
+                      disabled={isForwardingMessage}
+                    >
+                      <div
+                        className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border text-[11px] ${
+                          isSelected
+                            ? 'border-[var(--panel-accent-border,#a96428)] bg-[var(--panel-accent-strong,#8a4b16)] text-white'
+                            : 'border-[var(--panel-border,#d4c0a7)] bg-white text-transparent'
+                        }`}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="comm-title truncate text-sm font-medium">{item.displayName}</span>
+                          <span className="comm-muted shrink-0 text-[11px]">{item.formattedTime || '-'}</span>
+                        </div>
+                        <div className="comm-muted mt-1 truncate text-xs">{item.previewText}</div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="comm-muted text-xs">
+                {forwardTargetChatIds.length === 0
+                  ? 'Selecione pelo menos uma conversa.'
+                  : `${forwardTargetChatIds.length} conversa(s) selecionada(s)`}
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={closeForwardModal}
+                  disabled={isForwardingMessage}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void handleConfirmForwardMessage()}
+                  loading={isForwardingMessage}
+                  disabled={forwardTargetChatIds.length === 0}
+                >
+                  Encaminhar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </ModalShell>
+      )}
       {showNewChatModal && (
         <ModalShell
           isOpen
@@ -7158,6 +7829,8 @@ export default function WhatsAppInboxScreen() {
                   </div>
                 ) : (
                   renderedMessageItems.map(({ message, timestamp, shouldShowDaySeparator, daySeparatorLabel, authorName, reactions }) => {
+                    const forwardPlan = isSelectedStatusChat ? null : buildForwardMessagePlan(message);
+
                     return (
                       <div key={message.id} data-message-id={message.id} style={OFFSCREEN_MESSAGE_STYLE}>
                         {shouldShowDaySeparator && daySeparatorLabel && (
@@ -7186,8 +7859,10 @@ export default function WhatsAppInboxScreen() {
                           editCount={message.edit_count}
                           editedAt={message.edited_at}
                           originalBody={message.original_body}
+                          isForwarded={isWhatsAppPayloadForwarded(message.payload)}
                           onReact={isSelectedStatusChat ? undefined : handleReact}
                           onReply={isSelectedStatusChat ? undefined : handleReply}
+                          onForward={forwardPlan ? () => handleOpenForwardModal(message) : undefined}
                           onEdit={isSelectedStatusChat ? undefined : handleEdit}
                           onRetryFailed={message.send_state === 'failed' ? () => void retryFailedMessage(message) : undefined}
                           onDismissFailed={message.send_state === 'failed' ? () => removeFailedMessage(message.chat_id, message.id) : undefined}

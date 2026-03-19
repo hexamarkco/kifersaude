@@ -40,10 +40,13 @@ import ModalShell from '../../../components/ui/ModalShell';
 import VariableAutocompleteTextarea from '../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS, type TemplateVariableSuggestion } from '../../../lib/templateVariableSuggestions';
 import { ComposerContextBanner } from './components/ComposerContextBanner';
+import { GiphyPickerModal } from './components/GiphyPickerModal';
 import { InlineLinkPreviewCard } from './components/InlineLinkPreviewCard';
+import { searchGiphyLibrary } from './giphy';
 import type {
   EmojiCategoryId,
   EmojiEntry,
+  GiphyGifItem,
   IndexedQuickReplyItem,
   MessageInputProps,
   QuickReplyItem,
@@ -116,6 +119,7 @@ function WhatsAppComposerComponent({
   const [audioPreviewDuration, setAudioPreviewDuration] = useState(0);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedGif, setSelectedGif] = useState<GiphyGifItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -156,9 +160,15 @@ function WhatsAppComposerComponent({
   const [linkPreviewSiteName, setLinkPreviewSiteName] = useState('');
   const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
   const [linkPreviewError, setLinkPreviewError] = useState<string | null>(null);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [gifSearch, setGifSearch] = useState('');
+  const [gifResults, setGifResults] = useState<GiphyGifItem[]>([]);
+  const [gifLoading, setGifLoading] = useState(false);
+  const [gifError, setGifError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const stickerInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingCancelledRef = useRef(false);
@@ -176,6 +186,7 @@ function WhatsAppComposerComponent({
   const mediaSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const followUpRequestIdRef = useRef(0);
   const linkPreviewRequestIdRef = useRef(0);
+  const gifSearchRequestIdRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageDraftRef = useRef('');
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -437,11 +448,11 @@ function WhatsAppComposerComponent({
   };
 
   const detectedPreviewUrl = useMemo(() => {
-    if (selectedFile) return null;
+    if (selectedFile || selectedGif) return null;
     const resolvedMessage = applyTemplateVariables(deferredMessage.trim());
     const firstUrl = extractFirstUrl(resolvedMessage);
     return firstUrl ? normalizePreviewUrl(firstUrl) : null;
-  }, [deferredMessage, selectedFile, templateVariables]);
+  }, [deferredMessage, selectedFile, selectedGif, templateVariables]);
 
   const shouldShowInlineLinkPreview = Boolean(
     detectedPreviewUrl && linkPreviewDismissedUrl !== detectedPreviewUrl && (linkPreviewCanonical || linkPreviewLoading || linkPreviewError),
@@ -537,6 +548,36 @@ function WhatsAppComposerComponent({
     clearLinkPreviewDraft();
     setLinkPreviewDismissedUrl(null);
   }, [chatId]);
+
+  useEffect(() => {
+    if (!showGifPicker) return;
+
+    const requestId = gifSearchRequestIdRef.current + 1;
+    gifSearchRequestIdRef.current = requestId;
+    const timeoutId = window.setTimeout(async () => {
+      setGifLoading(true);
+      setGifError(null);
+
+      try {
+        const nextResults = await searchGiphyLibrary(gifSearch, 24);
+        if (gifSearchRequestIdRef.current !== requestId) return;
+        setGifResults(nextResults);
+      } catch (error) {
+        if (gifSearchRequestIdRef.current !== requestId) return;
+        console.error('Erro ao carregar GIFs do Giphy:', error);
+        setGifResults([]);
+        setGifError(error instanceof Error ? error.message : 'Nao foi possivel carregar GIFs do Giphy.');
+      } finally {
+        if (gifSearchRequestIdRef.current === requestId) {
+          setGifLoading(false);
+        }
+      }
+    }, gifSearch.trim() ? 260 : 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [gifSearch, showGifPicker]);
 
   const selectedSlashQuickReply = slashCommandState.results[slashQuickReplyIndex] ?? null;
   const isDirectChat = getWhatsAppChatKind(chatId) === 'direct';
@@ -682,14 +723,63 @@ function WhatsAppComposerComponent({
     [deferredFollowUpDraft],
   );
 
-  const resolveOutgoingFileMessageType = (file: File): 'image' | 'sticker' | 'video' | 'audio' | 'document' => {
+  const resolveOutgoingFileMessageType = (file: File): 'image' | 'sticker' | 'video' | 'gif' | 'audio' | 'document' => {
     const mimeType = file.type.toLowerCase();
     const fileName = file.name.toLowerCase();
     if (mimeType === 'image/webp' || mimeType === 'application/webp' || fileName.endsWith('.webp')) return 'sticker';
+    if (mimeType === 'image/gif' || fileName.endsWith('.gif')) return 'gif';
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('audio/')) return 'audio';
     return 'document';
+  };
+
+  const resolveSelectedGifPreviewUrl = (gif: GiphyGifItem | null) => {
+    if (!gif) return '';
+    return gif.previewUrl || gif.stillUrl || gif.gifUrl || gif.mp4Url || '';
+  };
+
+  const resolveSelectedGifSendUrl = (gif: GiphyGifItem | null) => {
+    if (!gif) return '';
+    return gif.gifUrl || gif.mp4Url || gif.previewUrl || gif.stillUrl || '';
+  };
+
+  const buildGifPayloadOverride = (gif: GiphyGifItem, response: unknown) => {
+    const preview = resolveSelectedGifPreviewUrl(gif);
+    const gifUrl = resolveSelectedGifSendUrl(gif);
+    const fileNameBase = `giphy-${gif.id}`;
+    const responsePayload = response && typeof response === 'object' ? (response as Record<string, unknown>) : {};
+
+    return {
+      ...responsePayload,
+      gif: {
+        url: gifUrl,
+        link: gif.mp4Url || gifUrl,
+        preview,
+        filename: `${fileNameBase}.gif`,
+        name: gif.title || 'GIF',
+        mime_type: 'image/gif',
+      },
+      media: {
+        url: gifUrl,
+        link: gif.mp4Url || gifUrl,
+        preview,
+        filename: `${fileNameBase}.gif`,
+        name: gif.title || 'GIF',
+        mime_type: 'image/gif',
+      },
+      video: gif.mp4Url
+        ? {
+            link: gif.mp4Url,
+            preview,
+            filename: `${fileNameBase}.mp4`,
+            name: gif.title || 'GIF',
+            mime_type: 'video/mp4',
+          }
+        : undefined,
+      source: 'giphy',
+      source_url: gif.pageUrl,
+    } as Record<string, unknown>;
   };
 
   const extractDirectPhoneNumber = (normalizedChatId: string): string | null => {
@@ -738,8 +828,9 @@ function WhatsAppComposerComponent({
     body: string;
     hasMedia: boolean;
     sentAt: string;
+    payloadOverride?: Record<string, unknown> | null;
   }): Promise<{ normalizedChatId: string; messageId: string; persistedMessageId: string | null }> => {
-    const { response, chatId: rawChatId, type, body, hasMedia, sentAt } = params;
+    const { response, chatId: rawChatId, type, body, hasMedia, sentAt, payloadOverride } = params;
     const normalizedChatId = normalizeChatId(rawChatId);
     await ensureOutboundChatExists(normalizedChatId, sentAt, body);
 
@@ -769,6 +860,7 @@ function WhatsAppComposerComponent({
     const persistedMessageId =
       extractResponseMessageId(responsePayload?.id) || nestedMessageId || firstArrayMessageId;
     const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const payloadToPersist = payloadOverride ?? responsePayload;
 
     if (persistedMessageId) {
       const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
@@ -781,7 +873,7 @@ function WhatsAppComposerComponent({
         has_media: hasMedia,
         timestamp: sentAt,
         direction: 'outbound',
-        payload: responsePayload,
+        payload: payloadToPersist,
       });
 
       if (insertError) {
@@ -1187,9 +1279,9 @@ function WhatsAppComposerComponent({
     const resolvedMessage = applyTemplateVariables(rawMessage);
     const submitChatId = chatId;
 
-    if ((!rawMessage && !selectedFile) || isSending) return;
+    if ((!rawMessage && !selectedFile && !selectedGif) || isSending) return;
 
-    if (!editMessage && !selectedFile && slashCommandState.active && slashCommandState.results.length > 0) {
+    if (!editMessage && !selectedFile && !selectedGif && slashCommandState.active && slashCommandState.results.length > 0) {
       handleUseSlashQuickReply(selectedSlashQuickReply || slashCommandState.results[0]);
       return;
     }
@@ -1209,6 +1301,57 @@ function WhatsAppComposerComponent({
         if (onCancelEdit) onCancelEdit();
         if (onMessageSent) onMessageSent();
         queueComposerFocusRestore();
+      } else if (selectedGif) {
+        const gifUrl = resolveSelectedGifSendUrl(selectedGif);
+        const preview = resolveSelectedGifPreviewUrl(selectedGif);
+
+        if (!gifUrl) {
+          toast.error('Nao foi possivel preparar o GIF selecionado.');
+          return;
+        }
+
+        const response = await sendWhatsAppMessage({
+          chatId,
+          contentType: 'gif',
+          content: {
+            url: gifUrl,
+            preview: preview || undefined,
+            caption: resolvedMessage || undefined,
+            autoplay: true,
+          },
+          quotedMessageId: replyToMessage?.id,
+        });
+
+        const sentAt = new Date().toISOString();
+        const resolvedBody = resolvedMessage || '[GIF]';
+        const payloadOverride = buildGifPayloadOverride(selectedGif, response);
+        const { normalizedChatId, messageId } = await persistOutboundMessage({
+          response,
+          chatId,
+          type: 'gif',
+          body: resolvedBody,
+          hasMedia: true,
+          sentAt,
+          payloadOverride,
+        });
+
+        const gifPayload: SentMessagePayload = {
+          id: messageId,
+          chat_id: normalizedChatId,
+          body: resolvedBody,
+          type: 'gif',
+          has_media: true,
+          timestamp: sentAt,
+          direction: 'outbound',
+          created_at: sentAt,
+          payload: payloadOverride,
+        };
+
+        clearSelectedGif();
+        updateComposerDraft('');
+        if (onCancelReply) onCancelReply();
+        if (onMessageSent) onMessageSent(gifPayload);
+        queueComposerFocusRestore();
       } else if (selectedFile) {
         const mediaMessageType = resolveOutgoingFileMessageType(selectedFile);
         const caption = mediaMessageType === 'sticker' ? '' : resolvedMessage;
@@ -1218,13 +1361,17 @@ function WhatsAppComposerComponent({
         });
 
         const sentAt = new Date().toISOString();
-        const fallbackBody = mediaMessageType === 'sticker' ? '[Sticker]' : selectedFile.type.startsWith('audio/')
-          ? '[Áudio]'
-          : selectedFile.type.startsWith('image/')
-            ? '[Imagem]'
-            : selectedFile.type.startsWith('video/')
-              ? '[Vídeo]'
-              : '[Arquivo]';
+        const fallbackBody = mediaMessageType === 'sticker'
+          ? '[Sticker]'
+          : mediaMessageType === 'gif'
+            ? '[GIF]'
+            : selectedFile.type.startsWith('audio/')
+              ? '[Áudio]'
+              : selectedFile.type.startsWith('image/')
+                ? '[Imagem]'
+                : selectedFile.type.startsWith('video/')
+                  ? '[Vídeo]'
+                  : '[Arquivo]';
         const resolvedBody = mediaMessageType === 'sticker' ? '[Sticker]' : caption || fallbackBody;
         const { normalizedChatId, messageId } = await persistOutboundMessage({
           response,
@@ -1377,6 +1524,8 @@ function WhatsAppComposerComponent({
     const extensionFromType = file.type.split('/')[1]?.split(';')[0]?.trim() || 'bin';
     const prefix = file.type === 'image/webp' || file.type === 'application/webp'
       ? 'sticker'
+      : file.type === 'image/gif'
+      ? 'gif'
       : file.type.startsWith('image/')
       ? 'imagem'
       : file.type.startsWith('video/')
@@ -1403,10 +1552,11 @@ function WhatsAppComposerComponent({
     }
 
     setSelectedFile(normalizedFile);
+    setSelectedGif(null);
 
     const outgoingType = resolveOutgoingFileMessageType(normalizedFile);
 
-    if (outgoingType === 'image' || outgoingType === 'sticker' || outgoingType === 'video') {
+    if (outgoingType === 'image' || outgoingType === 'sticker' || outgoingType === 'video' || outgoingType === 'gif') {
       const url = URL.createObjectURL(normalizedFile);
       setPreviewUrl(url);
     }
@@ -1452,6 +1602,29 @@ function WhatsAppComposerComponent({
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (imageInputRef.current) imageInputRef.current.value = '';
+    if (stickerInputRef.current) stickerInputRef.current.value = '';
+  };
+
+  const clearSelectedGif = () => {
+    setSelectedGif(null);
+  };
+
+  const handleOpenGifPicker = () => {
+    setGifSearch('');
+    setGifError(null);
+    setShowGifPicker(true);
+    setShowAttachMenu(false);
+    setShowEmojiPicker(false);
+    setShowComposerActionsMenu(false);
+  };
+
+  const handleSelectGif = (gif: GiphyGifItem) => {
+    clearFile();
+    setSelectedGif(gif);
+    setShowGifPicker(false);
+    setShowAttachMenu(false);
+    setShowEmojiPicker(false);
+    setShowComposerActionsMenu(false);
   };
 
   const startRecording = async () => {
@@ -2170,6 +2343,16 @@ function WhatsAppComposerComponent({
           </div>
         </div>
       )}
+      <GiphyPickerModal
+        isOpen={showGifPicker}
+        search={gifSearch}
+        onSearchChange={setGifSearch}
+        results={gifResults}
+        loading={gifLoading}
+        error={gifError}
+        onClose={() => setShowGifPicker(false)}
+        onSelect={handleSelectGif}
+      />
       {showRewriteModal && (
         <ModalShell
           isOpen
@@ -2428,6 +2611,47 @@ function WhatsAppComposerComponent({
         />
       )}
 
+      {selectedGif && !selectedFile && (
+        <div className="comm-banner px-4 py-3">
+          <div className="flex items-start gap-3">
+            <div className="h-20 w-20 overflow-hidden rounded bg-[var(--panel-surface-soft,#f4ede3)]">
+              {selectedGif.mp4Url ? (
+                <video
+                  src={selectedGif.mp4Url}
+                  className="h-full w-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                />
+              ) : resolveSelectedGifPreviewUrl(selectedGif) ? (
+                <img
+                  src={resolveSelectedGifPreviewUrl(selectedGif)}
+                  alt={selectedGif.title}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-[var(--panel-accent-ink,#6f3f16)]">
+                  GIF
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="comm-title truncate text-sm font-medium">{selectedGif.title || 'GIF do Giphy'}</div>
+              <div className="comm-muted text-xs">Selecionado do Giphy e pronto para envio.</div>
+              <div className="comm-badge comm-badge-brand mt-1">Digite uma legenda abaixo (opcional)</div>
+            </div>
+            <button
+              onClick={clearSelectedGif}
+              className="comm-icon-button rounded p-1"
+              disabled={isSending}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {selectedFile && (
         <div className="comm-banner px-4 py-3">
           <div className="flex items-start gap-3">
@@ -2455,9 +2679,14 @@ function WhatsAppComposerComponent({
               <div className="comm-muted text-xs">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </div>
-              {(['image', 'video'] as const).includes(resolveOutgoingFileMessageType(selectedFile) as 'image' | 'video') && (
+              {(['image', 'video', 'gif'] as const).includes(resolveOutgoingFileMessageType(selectedFile) as 'image' | 'video' | 'gif') && (
                 <div className="comm-badge comm-badge-info mt-1">
                   Digite uma legenda abaixo (opcional)
+                </div>
+              )}
+              {resolveOutgoingFileMessageType(selectedFile) === 'gif' && (
+                <div className="comm-badge comm-badge-brand mt-1">
+                  GIF sera enviado animado no WhatsApp
                 </div>
               )}
               {resolveOutgoingFileMessageType(selectedFile) === 'sticker' && (
@@ -2465,7 +2694,7 @@ function WhatsAppComposerComponent({
                   Sticker sera enviado no formato nativo do WhatsApp
                 </div>
               )}
-              {!['image', 'video', 'sticker'].includes(resolveOutgoingFileMessageType(selectedFile)) && (
+              {!['image', 'video', 'gif', 'sticker'].includes(resolveOutgoingFileMessageType(selectedFile)) && (
                 <div className="comm-badge comm-badge-neutral mt-1">
                   Você também pode colar arquivos direto no composer
                 </div>
@@ -2520,7 +2749,30 @@ function WhatsAppComposerComponent({
                 <div className="comm-icon-chip comm-icon-chip-brand flex h-8 w-8 items-center justify-center">
                   <ImageIcon className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-medium">Imagem ou vídeo</span>
+                <span className="text-sm font-medium">Imagem, GIF ou vídeo</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  stickerInputRef.current?.click();
+                  setShowAttachMenu(false);
+                }}
+                className="comm-attach-item"
+              >
+                <div className="comm-icon-chip comm-icon-chip-brand flex h-8 w-8 items-center justify-center">
+                  <Smile className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium">Figurinha (.webp)</span>
+              </button>
+
+              <button
+                onClick={handleOpenGifPicker}
+                className="comm-attach-item"
+              >
+                <div className="comm-icon-chip comm-icon-chip-warning flex h-8 w-8 items-center justify-center">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-medium">GIF do Giphy</span>
               </button>
 
               <button
@@ -2554,7 +2806,7 @@ function WhatsAppComposerComponent({
                 className="comm-attach-item"
               >
                 <div className="comm-icon-chip comm-icon-chip-warning flex h-8 w-8 items-center justify-center">
-                  <Smile className="w-4 h-4" />
+                  <MessageSquare className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium">Contato</span>
               </button>
@@ -2565,6 +2817,14 @@ function WhatsAppComposerComponent({
             ref={imageInputRef}
             type="file"
             accept="image/*,image/webp,.webp,video/*"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+
+          <input
+            ref={stickerInputRef}
+            type="file"
+            accept="image/webp,.webp"
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -2764,7 +3024,7 @@ function WhatsAppComposerComponent({
                   event.preventDefault();
                 }
               }}
-              placeholder={selectedFile ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
+              placeholder={selectedFile || selectedGif ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
               className="comm-composer-textarea flex-1 max-h-32 min-h-[40px] resize-none bg-transparent px-2 py-2 focus:outline-none"
               rows={1}
               disabled={isSending || isRecording}
@@ -2852,7 +3112,7 @@ function WhatsAppComposerComponent({
               <Send className="w-5 h-5" />
             </button>
           </div>
-        ) : messageDraftRef.current.trim() || selectedFile ? (
+        ) : messageDraftRef.current.trim() || selectedFile || selectedGif ? (
           <button
             onClick={handleSendMessage}
             disabled={isSending}

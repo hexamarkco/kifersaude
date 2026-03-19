@@ -12,6 +12,7 @@
     "audit:visual": "node scripts/audit-visual-hardcodes.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "backfill:whatsapp:global": "node scripts/backfill-whatsapp-global.mjs",
+    "backfill:whatsapp:direct-metadata": "node scripts/backfill-whatsapp-direct-metadata.mjs",
     "reconcile:whatsapp:chat-previews": "node scripts/reconcile-whatsapp-chat-previews.mjs",
     "reconcile:whatsapp:direct": "node scripts/reconcile-whatsapp-direct-chats.mjs",
     "reconcile:whatsapp:group-names": "node scripts/reconcile-whatsapp-group-names.mjs",

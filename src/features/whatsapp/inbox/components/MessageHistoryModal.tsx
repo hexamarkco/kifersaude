@@ -99,6 +99,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
     if (transcription) return transcription;
     if (message.text?.body) return message.text.body;
     if (message.image) return message.image.caption || '[Imagem]';
+    if (message.gif) return '[GIF]';
     if (message.video) return message.video.caption || '[Vídeo]';
     if (message.audio) return '[Áudio]';
     if (message.voice) return '[Mensagem de voz]';

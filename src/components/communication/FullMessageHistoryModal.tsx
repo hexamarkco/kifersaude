@@ -148,6 +148,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
     if (transcription) return transcription;
     if (message.text?.body) return message.text.body;
     if (message.image) return message.image.caption || '[Imagem]';
+    if (message.gif) return '[GIF]';
     if (message.video) return message.video.caption || '[Vídeo]';
     if (message.audio) return '[Áudio]';
     if (message.voice) return '[Mensagem de voz]';
@@ -163,6 +164,7 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
     const typeLabels: Record<string, string> = {
       text: 'Texto',
       image: 'Imagem',
+      gif: 'GIF',
       video: 'Vídeo',
       audio: 'Áudio',
       voice: 'Voz',

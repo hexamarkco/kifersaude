@@ -88,3 +88,13 @@ export type EmojiCategoryId =
   | 'objects'
   | 'symbols'
   | 'flags';
+
+export type GiphyGifItem = {
+  id: string;
+  title: string;
+  pageUrl: string;
+  gifUrl: string;
+  previewUrl: string;
+  stillUrl: string;
+  mp4Url: string;
+};

@@ -609,9 +609,11 @@ function isStickerMimeType(mimetype: string): boolean {
   return normalized === 'image/webp' || normalized === 'application/webp';
 }
 
-export function detectMediaType(mimetype: string): 'image' | 'sticker' | 'video' | 'audio' | 'voice' | 'document' {
+export function detectMediaType(mimetype: string): 'image' | 'sticker' | 'video' | 'gif' | 'audio' | 'voice' | 'document' {
   if (isStickerMimeType(mimetype)) {
     return 'sticker';
+  } else if (mimetype === 'image/gif') {
+    return 'gif';
   } else if (mimetype.startsWith('image/')) {
     return 'image';
   } else if (mimetype.startsWith('video/')) {
@@ -1015,6 +1017,12 @@ export interface WhapiMessage {
     mime_type: string;
     link?: string;
     animated?: boolean;
+  };
+  gif?: {
+    mime_type?: string;
+    link?: string;
+    url?: string;
+    preview?: string;
   };
   contact?: {
     name: string;

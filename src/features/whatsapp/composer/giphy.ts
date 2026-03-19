@@ -51,5 +51,5 @@ export async function searchGiphyLibrary(query: string, limit: number = 24): Pro
 
   return payload.items
     .map(normalizeGifItem)
-    .filter((item): item is GiphyGifItem => Boolean(item));
+    .filter((item): item is GiphyGifItem => Boolean(item && item.mp4Url));
 }

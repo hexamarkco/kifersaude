@@ -723,11 +723,10 @@ function WhatsAppComposerComponent({
     [deferredFollowUpDraft],
   );
 
-  const resolveOutgoingFileMessageType = (file: File): 'image' | 'sticker' | 'video' | 'gif' | 'audio' | 'document' => {
+  const resolveOutgoingFileMessageType = (file: File): 'image' | 'sticker' | 'video' | 'audio' | 'document' => {
     const mimeType = file.type.toLowerCase();
     const fileName = file.name.toLowerCase();
     if (mimeType === 'image/webp' || mimeType === 'application/webp' || fileName.endsWith('.webp')) return 'sticker';
-    if (mimeType === 'image/gif' || fileName.endsWith('.gif')) return 'gif';
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('audio/')) return 'audio';
@@ -741,28 +740,29 @@ function WhatsAppComposerComponent({
 
   const resolveSelectedGifSendUrl = (gif: GiphyGifItem | null) => {
     if (!gif) return '';
-    return gif.gifUrl || gif.mp4Url || gif.previewUrl || gif.stillUrl || '';
+    return gif.mp4Url || '';
   };
 
   const buildGifPayloadOverride = (gif: GiphyGifItem, response: unknown) => {
     const preview = resolveSelectedGifPreviewUrl(gif);
-    const gifUrl = resolveSelectedGifSendUrl(gif);
+    const sendUrl = resolveSelectedGifSendUrl(gif);
+    const animationUrl = gif.gifUrl || preview || sendUrl;
     const fileNameBase = `giphy-${gif.id}`;
     const responsePayload = response && typeof response === 'object' ? (response as Record<string, unknown>) : {};
 
     return {
       ...responsePayload,
       gif: {
-        url: gifUrl,
-        link: gif.mp4Url || gifUrl,
+        url: animationUrl,
+        link: sendUrl,
         preview,
         filename: `${fileNameBase}.gif`,
         name: gif.title || 'GIF',
         mime_type: 'image/gif',
       },
       media: {
-        url: gifUrl,
-        link: gif.mp4Url || gifUrl,
+        url: animationUrl,
+        link: sendUrl,
         preview,
         filename: `${fileNameBase}.gif`,
         name: gif.title || 'GIF',
@@ -1315,6 +1315,7 @@ function WhatsAppComposerComponent({
           contentType: 'gif',
           content: {
             url: gifUrl,
+            mimetype: 'video/mp4',
             preview: preview || undefined,
             caption: resolvedMessage || undefined,
             autoplay: true,
@@ -1363,15 +1364,13 @@ function WhatsAppComposerComponent({
         const sentAt = new Date().toISOString();
         const fallbackBody = mediaMessageType === 'sticker'
           ? '[Sticker]'
-          : mediaMessageType === 'gif'
-            ? '[GIF]'
-            : selectedFile.type.startsWith('audio/')
-              ? '[Áudio]'
-              : selectedFile.type.startsWith('image/')
-                ? '[Imagem]'
-                : selectedFile.type.startsWith('video/')
-                  ? '[Vídeo]'
-                  : '[Arquivo]';
+          : selectedFile.type.startsWith('audio/')
+            ? '[Áudio]'
+            : selectedFile.type.startsWith('image/')
+              ? '[Imagem]'
+              : selectedFile.type.startsWith('video/')
+                ? '[Vídeo]'
+                : '[Arquivo]';
         const resolvedBody = mediaMessageType === 'sticker' ? '[Sticker]' : caption || fallbackBody;
         const { normalizedChatId, messageId } = await persistOutboundMessage({
           response,
@@ -1556,7 +1555,7 @@ function WhatsAppComposerComponent({
 
     const outgoingType = resolveOutgoingFileMessageType(normalizedFile);
 
-    if (outgoingType === 'image' || outgoingType === 'sticker' || outgoingType === 'video' || outgoingType === 'gif') {
+    if (outgoingType === 'image' || outgoingType === 'sticker' || outgoingType === 'video') {
       const url = URL.createObjectURL(normalizedFile);
       setPreviewUrl(url);
     }
@@ -2679,14 +2678,9 @@ function WhatsAppComposerComponent({
               <div className="comm-muted text-xs">
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </div>
-              {(['image', 'video', 'gif'] as const).includes(resolveOutgoingFileMessageType(selectedFile) as 'image' | 'video' | 'gif') && (
+              {(['image', 'video'] as const).includes(resolveOutgoingFileMessageType(selectedFile) as 'image' | 'video') && (
                 <div className="comm-badge comm-badge-info mt-1">
                   Digite uma legenda abaixo (opcional)
-                </div>
-              )}
-              {resolveOutgoingFileMessageType(selectedFile) === 'gif' && (
-                <div className="comm-badge comm-badge-brand mt-1">
-                  GIF sera enviado animado no WhatsApp
                 </div>
               )}
               {resolveOutgoingFileMessageType(selectedFile) === 'sticker' && (
@@ -2694,7 +2688,7 @@ function WhatsAppComposerComponent({
                   Sticker sera enviado no formato nativo do WhatsApp
                 </div>
               )}
-              {!['image', 'video', 'gif', 'sticker'].includes(resolveOutgoingFileMessageType(selectedFile)) && (
+              {!['image', 'video', 'sticker'].includes(resolveOutgoingFileMessageType(selectedFile)) && (
                 <div className="comm-badge comm-badge-neutral mt-1">
                   Você também pode colar arquivos direto no composer
                 </div>
@@ -2749,7 +2743,7 @@ function WhatsAppComposerComponent({
                 <div className="comm-icon-chip comm-icon-chip-brand flex h-8 w-8 items-center justify-center">
                   <ImageIcon className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-medium">Imagem, GIF ou vídeo</span>
+                <span className="text-sm font-medium">Imagem ou vídeo</span>
               </button>
 
               <button
@@ -2813,13 +2807,13 @@ function WhatsAppComposerComponent({
             </div>
           )}
 
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*,image/webp,.webp,video/*"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp,.webp,video/*"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
 
           <input
             ref={stickerInputRef}

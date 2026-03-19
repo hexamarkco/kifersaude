@@ -136,7 +136,7 @@ function parseGiphyHtml(html: string, limit: number, searchUrl: string): ParsedG
       previewUrl: item.previewUrl || item.stillUrl || item.gifUrl || item.mp4Url,
       stillUrl: item.stillUrl || item.previewUrl || item.gifUrl || item.mp4Url,
     }))
-    .filter((item) => Boolean(item.gifUrl || item.mp4Url || item.previewUrl))
+    .filter((item) => Boolean(item.mp4Url && (item.gifUrl || item.previewUrl || item.stillUrl)))
     .slice(0, limit);
 }
 

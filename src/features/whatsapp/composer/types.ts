@@ -98,3 +98,14 @@ export type GiphyGifItem = {
   stillUrl: string;
   mp4Url: string;
 };
+
+export type MediaPickerTabId = 'emoji' | 'gif' | 'sticker';
+
+export type RecentStickerItem = {
+  id: string;
+  name: string;
+  mimeType: string;
+  previewUrl: string;
+  dataUrl: string;
+  lastUsedAt: number;
+};

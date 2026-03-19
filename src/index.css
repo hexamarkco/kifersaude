@@ -1814,6 +1814,178 @@
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.34);
 }
 
+.comm-media-picker {
+  border-radius: 1.6rem;
+}
+
+.comm-media-picker-shortcuts {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem 0.625rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.comm-media-picker-shortcuts::-webkit-scrollbar {
+  display: none;
+}
+
+.comm-media-picker-shortcut {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 248, 240, 0.72);
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.comm-media-picker-shortcut:hover,
+.comm-media-picker-shortcut.is-active {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.comm-media-picker-empty-state {
+  display: flex;
+  min-height: 12rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.comm-media-picker-empty-title {
+  color: rgba(255, 248, 240, 0.86);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.comm-media-picker-empty-copy {
+  max-width: 19rem;
+  color: rgba(255, 248, 240, 0.58);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.comm-media-picker-gif-card,
+.comm-media-picker-sticker-card,
+.comm-media-picker-sticker-add {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.comm-media-picker-gif-card {
+  aspect-ratio: 4 / 5;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.comm-media-picker-gif-card:hover,
+.comm-media-picker-sticker-card:hover,
+.comm-media-picker-sticker-add:hover {
+  transform: translateY(-1px);
+}
+
+.comm-media-picker-gif-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  align-items: flex-end;
+  min-height: 3.75rem;
+  padding: 0.85rem 0.7rem 0.55rem;
+  background: linear-gradient(180deg, rgba(10, 6, 4, 0) 0%, rgba(10, 6, 4, 0.86) 100%);
+}
+
+.comm-media-picker-gif-overlay span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.comm-media-picker-sticker-card,
+.comm-media-picker-sticker-add {
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.comm-media-picker-sticker-card:hover,
+.comm-media-picker-sticker-add:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.comm-media-picker-sticker-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-style: dashed;
+  color: rgba(255, 248, 240, 0.72);
+}
+
+.comm-media-picker-sticker-add span {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.comm-media-picker-sticker-add small {
+  color: rgba(255, 248, 240, 0.46);
+  font-size: 0.68rem;
+}
+
+.comm-media-picker-modebar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(18rem, calc(100% - 1.5rem));
+  margin: 0.25rem auto 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.comm-media-picker-modebutton {
+  min-height: 2.35rem;
+  color: rgba(255, 248, 240, 0.64);
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.comm-media-picker-modebutton + .comm-media-picker-modebutton {
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.comm-media-picker-modebutton.is-active {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 .comm-title {
   color: var(--panel-text, #1a120d);
 }

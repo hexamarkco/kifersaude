@@ -23,6 +23,7 @@ import {
   Lightbulb,
   Heart,
   Flag,
+  Plus,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -40,7 +41,6 @@ import ModalShell from '../../../components/ui/ModalShell';
 import VariableAutocompleteTextarea from '../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS, type TemplateVariableSuggestion } from '../../../lib/templateVariableSuggestions';
 import { ComposerContextBanner } from './components/ComposerContextBanner';
-import { GiphyPickerModal } from './components/GiphyPickerModal';
 import { InlineLinkPreviewCard } from './components/InlineLinkPreviewCard';
 import { searchGiphyLibrary } from './giphy';
 import type {
@@ -48,8 +48,10 @@ import type {
   EmojiEntry,
   GiphyGifItem,
   IndexedQuickReplyItem,
+  MediaPickerTabId,
   MessageInputProps,
   QuickReplyItem,
+  RecentStickerItem,
   SentMessagePayload,
 } from './types';
 import { EMOJI_CATEGORIES_DATA } from './emojiData';
@@ -66,6 +68,9 @@ import {
 
 const EMOJI_RECENTS_STORAGE_KEY = 'whatsapp.composer.recent-emojis';
 const MAX_RECENT_EMOJIS = 24;
+const STICKER_RECENTS_STORAGE_KEY = 'whatsapp.composer.recent-stickers';
+const MAX_RECENT_STICKERS = 24;
+const GIF_QUICK_SEARCHES = ['bom dia', 'parabens', 'amor', 'engraçado', 'obrigado'];
 type EmojiCategoryConfig = {
   id: Exclude<EmojiCategoryId, 'recent'>;
   label: string;
@@ -80,6 +85,29 @@ const normalizeEmojiSearch = (value: string) =>
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .trim();
+
+const dataUrlToFile = async (dataUrl: string, fileName: string, mimeType: string) => {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  return new File([blob], fileName, {
+    type: mimeType || blob.type || 'image/webp',
+    lastModified: Date.now(),
+  });
+};
+
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error('Nao foi possivel ler a figurinha selecionada.'));
+    };
+    reader.onerror = () => reject(reader.error || new Error('Falha ao carregar figurinha.'));
+    reader.readAsDataURL(file);
+  });
 
 const EMOJI_CATEGORY_ICONS: Record<Exclude<EmojiCategoryId, 'recent'>, LucideIcon> = {
   smileys: Smile,
@@ -124,9 +152,12 @@ function WhatsAppComposerComponent({
   const [isSending, setIsSending] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeMediaPickerTab, setActiveMediaPickerTab] = useState<MediaPickerTabId>('emoji');
   const [activeEmojiCategory, setActiveEmojiCategory] = useState<EmojiCategoryId>('recent');
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
+  const [recentStickers, setRecentStickers] = useState<RecentStickerItem[]>([]);
   const [emojiSearch, setEmojiSearch] = useState('');
+  const [stickerSearch, setStickerSearch] = useState('');
   const [showComposerActionsMenu, setShowComposerActionsMenu] = useState(false);
   const [renderComposerActionsMenu, setRenderComposerActionsMenu] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -160,7 +191,6 @@ function WhatsAppComposerComponent({
   const [linkPreviewSiteName, setLinkPreviewSiteName] = useState('');
   const [linkPreviewLoading, setLinkPreviewLoading] = useState(false);
   const [linkPreviewError, setLinkPreviewError] = useState<string | null>(null);
-  const [showGifPicker, setShowGifPicker] = useState(false);
   const [gifSearch, setGifSearch] = useState('');
   const [gifResults, setGifResults] = useState<GiphyGifItem[]>([]);
   const [gifLoading, setGifLoading] = useState(false);
@@ -201,6 +231,7 @@ function WhatsAppComposerComponent({
     { value: 'persuasivo', label: 'Persuasivo' },
   ];
   const normalizedEmojiSearch = useMemo(() => normalizeEmojiSearch(emojiSearch), [emojiSearch]);
+  const normalizedStickerSearch = useMemo(() => normalizeEmojiSearch(stickerSearch), [stickerSearch]);
   const emojiTabs = useMemo(
     () => [
       {
@@ -231,6 +262,10 @@ function WhatsAppComposerComponent({
       }),
     );
   }, [activeEmojiTab.emojis, emojiTabs, normalizedEmojiSearch]);
+  const filteredRecentStickers = useMemo(() => {
+    if (!normalizedStickerSearch) return recentStickers;
+    return recentStickers.filter((item) => normalizeEmojiSearch(item.name).includes(normalizedStickerSearch));
+  }, [normalizedStickerSearch, recentStickers]);
 
   const normalizedTemplateVariables = useMemo(() => {
     const normalized = new Map<string, string>();
@@ -285,6 +320,36 @@ function WhatsAppComposerComponent({
       }
     } catch (error) {
       console.warn('Erro ao carregar emojis recentes:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const stored = window.localStorage.getItem(STICKER_RECENTS_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) return;
+
+      setRecentStickers(
+        parsed
+          .filter((item): item is RecentStickerItem => {
+            if (!item || typeof item !== 'object') return false;
+            const candidate = item as Record<string, unknown>;
+            return (
+              typeof candidate.id === 'string' &&
+              typeof candidate.name === 'string' &&
+              typeof candidate.previewUrl === 'string' &&
+              typeof candidate.dataUrl === 'string' &&
+              typeof candidate.mimeType === 'string' &&
+              typeof candidate.lastUsedAt === 'number'
+            );
+          })
+          .slice(0, MAX_RECENT_STICKERS),
+      );
+    } catch (error) {
+      console.warn('Erro ao carregar figurinhas recentes:', error);
     }
   }, []);
 
@@ -559,7 +624,7 @@ function WhatsAppComposerComponent({
   }, [chatId]);
 
   useEffect(() => {
-    if (!showGifPicker) return;
+    if (!showEmojiPicker || activeMediaPickerTab !== 'gif') return;
 
     const requestId = gifSearchRequestIdRef.current + 1;
     gifSearchRequestIdRef.current = requestId;
@@ -586,7 +651,7 @@ function WhatsAppComposerComponent({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [gifSearch, showGifPicker]);
+  }, [activeMediaPickerTab, gifSearch, showEmojiPicker]);
 
   const selectedSlashQuickReply = slashCommandState.results[slashQuickReplyIndex] ?? null;
   const isDirectChat = getWhatsAppChatKind(chatId) === 'direct';
@@ -1105,20 +1170,27 @@ function WhatsAppComposerComponent({
         });
       }
     });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameId);
+    };
+  }, [showComposerActionsMenu]);
+
+  useEffect(() => {
+    if (!showEmojiPicker && !showComposerActionsMenu) return;
 
     const handlePointerDown = (event: MouseEvent) => {
       if (!composerActionsMenuRef.current?.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
         setShowComposerActionsMenu(false);
       }
     };
 
     document.addEventListener('mousedown', handlePointerDown);
     return () => {
-      cancelled = true;
-      cancelAnimationFrame(frameId);
       document.removeEventListener('mousedown', handlePointerDown);
     };
-  }, [showComposerActionsMenu]);
+  }, [showComposerActionsMenu, showEmojiPicker]);
 
   const handleTyping = () => {
     if (typingTimeoutRef.current) {
@@ -1146,12 +1218,59 @@ function WhatsAppComposerComponent({
     });
   };
 
+  const rememberRecentSticker = async (file: File) => {
+    const dataUrl = await fileToDataUrl(file);
+    const previewUrl = dataUrl;
+    const stickerId = `${file.name || 'sticker'}-${file.size}-${file.lastModified}`;
+
+    setRecentStickers((current) => {
+      const next: RecentStickerItem[] = [
+        {
+          id: stickerId,
+          name: file.name || 'Figurinha',
+          mimeType: file.type || 'image/webp',
+          previewUrl,
+          dataUrl,
+          lastUsedAt: Date.now(),
+        },
+        ...current.filter((item) => item.id !== stickerId),
+      ].slice(0, MAX_RECENT_STICKERS);
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(STICKER_RECENTS_STORAGE_KEY, JSON.stringify(next));
+      }
+
+      return next;
+    });
+  };
+
+  const openMediaPickerTab = (tab: MediaPickerTabId) => {
+    setActiveMediaPickerTab(tab);
+    setShowEmojiPicker(true);
+    setShowAttachMenu(false);
+    setShowComposerActionsMenu(false);
+    setShowQuickReplies(false);
+
+    if (tab === 'emoji') {
+      setActiveEmojiCategory(recentEmojis.length > 0 ? 'recent' : 'smileys');
+      setEmojiSearch('');
+      return;
+    }
+
+    if (tab === 'gif') {
+      setGifError(null);
+      return;
+    }
+
+    setStickerSearch('');
+  };
+
   const toggleEmojiPicker = () => {
     setShowEmojiPicker((prev) => {
       const next = !prev;
       if (next) {
+        setActiveMediaPickerTab('emoji');
         setActiveEmojiCategory(recentEmojis.length > 0 ? 'recent' : 'smileys');
-        setEmojiSearch('');
       }
       return next;
     });
@@ -1576,6 +1695,12 @@ function WhatsAppComposerComponent({
       setPreviewUrl(url);
     }
 
+    if (outgoingType === 'sticker') {
+      void rememberRecentSticker(normalizedFile).catch((error) => {
+        console.warn('Erro ao salvar figurinha recente:', error);
+      });
+    }
+
     setShowAttachMenu(false);
     setShowEmojiPicker(false);
     setShowComposerActionsMenu(false);
@@ -1624,22 +1749,22 @@ function WhatsAppComposerComponent({
     setSelectedGif(null);
   };
 
-  const handleOpenGifPicker = () => {
-    setGifSearch('');
-    setGifError(null);
-    setShowGifPicker(true);
+  const handleSelectGif = (gif: GiphyGifItem) => {
+    clearFile();
+    setSelectedGif(gif);
     setShowAttachMenu(false);
     setShowEmojiPicker(false);
     setShowComposerActionsMenu(false);
   };
 
-  const handleSelectGif = (gif: GiphyGifItem) => {
-    clearFile();
-    setSelectedGif(gif);
-    setShowGifPicker(false);
-    setShowAttachMenu(false);
-    setShowEmojiPicker(false);
-    setShowComposerActionsMenu(false);
+  const handleSelectRecentSticker = async (sticker: RecentStickerItem) => {
+    try {
+      const file = await dataUrlToFile(sticker.dataUrl, sticker.name || `sticker-${sticker.id}.webp`, sticker.mimeType || 'image/webp');
+      attachFileToComposer(file);
+    } catch (error) {
+      console.error('Erro ao recuperar figurinha recente:', error);
+      toast.error('Nao foi possivel carregar esta figurinha.');
+    }
   };
 
   const startRecording = async () => {
@@ -2356,16 +2481,6 @@ function WhatsAppComposerComponent({
           </div>
         </div>
       )}
-      <GiphyPickerModal
-        isOpen={showGifPicker}
-        search={gifSearch}
-        onSearchChange={setGifSearch}
-        results={gifResults}
-        loading={gifLoading}
-        error={gifError}
-        onClose={() => setShowGifPicker(false)}
-        onSelect={handleSelectGif}
-      />
       {showRewriteModal && (
         <ModalShell
           isOpen
@@ -2738,7 +2853,11 @@ function WhatsAppComposerComponent({
       <div className="relative flex items-center gap-2 p-3">
         <div className="relative self-center">
           <button
-            onClick={() => setShowAttachMenu(!showAttachMenu)}
+            onClick={() => {
+              setShowAttachMenu((prev) => !prev);
+              setShowEmojiPicker(false);
+              setShowComposerActionsMenu(false);
+            }}
             className="comm-action-button p-2 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isSending}
           >
@@ -2758,29 +2877,6 @@ function WhatsAppComposerComponent({
                   <ImageIcon className="w-4 h-4" />
                 </div>
                 <span className="text-sm font-medium">Imagem ou vídeo</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  stickerInputRef.current?.click();
-                  setShowAttachMenu(false);
-                }}
-                className="comm-attach-item"
-              >
-                <div className="comm-icon-chip comm-icon-chip-brand flex h-8 w-8 items-center justify-center">
-                  <Smile className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-medium">Figurinha (.webp)</span>
-              </button>
-
-              <button
-                onClick={handleOpenGifPicker}
-                className="comm-attach-item"
-              >
-                <div className="comm-icon-chip comm-icon-chip-warning flex h-8 w-8 items-center justify-center">
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-medium">GIF do Giphy</span>
               </button>
 
               <button
@@ -2824,7 +2920,7 @@ function WhatsAppComposerComponent({
             <input
               ref={imageInputRef}
               type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp,.webp,video/*"
+              accept="image/jpeg,image/jpg,image/png,video/*"
               className="hidden"
               onChange={handleFileSelect}
             />
@@ -2852,7 +2948,7 @@ function WhatsAppComposerComponent({
               disabled={isSending}
               onClick={toggleEmojiPicker}
               type="button"
-              aria-label="Abrir emojis"
+              aria-label="Abrir emojis, GIFs e figurinhas"
               aria-expanded={showEmojiPicker}
             >
               <Smile className="w-5 h-5" />
@@ -2871,84 +2967,269 @@ function WhatsAppComposerComponent({
             </button>
 
             {showEmojiPicker && (
-              <div className="comm-popover comm-emoji-picker absolute bottom-full left-0 z-[120] mb-2 w-[28rem] max-w-[calc(100vw-1.5rem)] overflow-hidden p-0">
-                <div className="comm-emoji-picker-tabs">
-                  {emojiTabs.map((tab) => {
-                    const Icon = tab.icon;
+              <div className="comm-popover comm-emoji-picker comm-media-picker absolute bottom-full left-0 z-[120] mb-2 w-[30rem] max-w-[calc(100vw-1.5rem)] overflow-hidden p-0">
+                {activeMediaPickerTab === 'emoji' ? (
+                  <div className="comm-emoji-picker-tabs">
+                    {emojiTabs.map((tab) => {
+                      const Icon = tab.icon;
 
-                    return (
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          className={`comm-emoji-picker-tab ${activeEmojiCategory === tab.id ? 'is-active' : ''}`}
+                          onClick={() => setActiveEmojiCategory(tab.id)}
+                          aria-label={tab.label}
+                          title={tab.label}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : activeMediaPickerTab === 'gif' ? (
+                  <div className="comm-media-picker-shortcuts panel-dropdown-scrollbar">
+                    {GIF_QUICK_SEARCHES.map((term) => (
                       <button
-                        key={tab.id}
+                        key={`gif-shortcut-${term}`}
                         type="button"
-                        className={`comm-emoji-picker-tab ${activeEmojiCategory === tab.id ? 'is-active' : ''}`}
-                        onClick={() => setActiveEmojiCategory(tab.id)}
-                        aria-label={tab.label}
-                        title={tab.label}
+                        className={`comm-media-picker-shortcut ${normalizeEmojiSearch(gifSearch) === normalizeEmojiSearch(term) ? 'is-active' : ''}`}
+                        onClick={() => setGifSearch(term)}
                       >
-                        <Icon className="h-4 w-4" />
+                        {term}
                       </button>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="comm-media-picker-shortcuts panel-dropdown-scrollbar">
+                    <button type="button" className="comm-media-picker-shortcut is-active">
+                      Recentes
+                    </button>
+                    <button
+                      type="button"
+                      className="comm-media-picker-shortcut"
+                      onClick={() => stickerInputRef.current?.click()}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Adicionar
+                    </button>
+                  </div>
+                )}
+
                 <div className="px-3 pb-2 pt-2">
                   <label className="comm-emoji-search">
                     <Search className="comm-emoji-search-icon h-4 w-4" />
                     <input
                       type="text"
-                      value={emojiSearch}
-                      onChange={(event) => setEmojiSearch(event.target.value)}
-                      placeholder="Pesquisar emoji"
-                      aria-label="Pesquisar emoji"
+                      value={activeMediaPickerTab === 'emoji' ? emojiSearch : activeMediaPickerTab === 'gif' ? gifSearch : stickerSearch}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        if (activeMediaPickerTab === 'emoji') {
+                          setEmojiSearch(nextValue);
+                          return;
+                        }
+                        if (activeMediaPickerTab === 'gif') {
+                          setGifSearch(nextValue);
+                          return;
+                        }
+                        setStickerSearch(nextValue);
+                      }}
+                      placeholder={
+                        activeMediaPickerTab === 'emoji'
+                          ? 'Pesquisar emoji'
+                          : activeMediaPickerTab === 'gif'
+                            ? 'Pesquisar GIFs em Giphy'
+                            : 'Pesquisar figurinhas recentes'
+                      }
+                      aria-label={
+                        activeMediaPickerTab === 'emoji'
+                          ? 'Pesquisar emoji'
+                          : activeMediaPickerTab === 'gif'
+                            ? 'Pesquisar GIFs'
+                            : 'Pesquisar figurinhas'
+                      }
+                      autoFocus
                     />
-                    {emojiSearch ? (
+                    {(activeMediaPickerTab === 'emoji' ? emojiSearch : activeMediaPickerTab === 'gif' ? gifSearch : stickerSearch) ? (
                       <button
                         type="button"
                         className="comm-emoji-search-clear"
                         aria-label="Limpar busca"
-                        onClick={() => setEmojiSearch('')}
+                        onClick={() => {
+                          if (activeMediaPickerTab === 'emoji') {
+                            setEmojiSearch('');
+                            return;
+                          }
+                          if (activeMediaPickerTab === 'gif') {
+                            setGifSearch('');
+                            return;
+                          }
+                          setStickerSearch('');
+                        }}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
                     ) : null}
                   </label>
                 </div>
+
                 <div className="flex items-center justify-between px-4 pb-2">
                   <div className="comm-emoji-picker-section-title">
-                    {normalizedEmojiSearch ? 'Resultados' : activeEmojiTab.nativeLabel}
+                    {activeMediaPickerTab === 'emoji'
+                      ? normalizedEmojiSearch
+                        ? 'Resultados'
+                        : activeEmojiTab.nativeLabel
+                      : activeMediaPickerTab === 'gif'
+                        ? gifSearch.trim()
+                          ? `GIFs para "${gifSearch.trim()}"`
+                          : 'GIFs em alta'
+                        : normalizedStickerSearch
+                          ? 'Resultados'
+                          : 'Figurinhas recentes'}
                   </div>
                   <div className="comm-emoji-picker-section-meta">
-                    {normalizedEmojiSearch
-                      ? `${emojiSearchResults.length} encontrados`
-                      : activeEmojiCategory === 'recent'
-                        ? `${recentEmojis.length} usados`
-                        : `${activeEmojiTab.emojis.length} emojis`}
+                    {activeMediaPickerTab === 'emoji'
+                      ? normalizedEmojiSearch
+                        ? `${emojiSearchResults.length} encontrados`
+                        : activeEmojiCategory === 'recent'
+                          ? `${recentEmojis.length} usados`
+                          : `${activeEmojiTab.emojis.length} emojis`
+                      : activeMediaPickerTab === 'gif'
+                        ? gifLoading
+                          ? 'Buscando...'
+                          : `${gifResults.length} GIFs`
+                        : `${filteredRecentStickers.length} itens`}
                   </div>
                 </div>
-                <div className="comm-emoji-picker-scroll panel-dropdown-scrollbar overflow-y-auto px-3 pb-4">
-                  {emojiSearchResults.length === 0 ? (
-                    <div className="comm-emoji-picker-empty comm-muted px-2 text-center text-xs">
-                      {normalizedEmojiSearch
-                        ? 'Nenhum emoji encontrado para essa busca.'
-                        : 'Seus emojis mais usados vao aparecer aqui conforme voce enviar.'}
+
+                <div className="panel-dropdown-scrollbar overflow-y-auto px-3 pb-3">
+                  {activeMediaPickerTab === 'emoji' ? (
+                    <div className="comm-emoji-picker-scroll overflow-y-auto pb-1">
+                      {emojiSearchResults.length === 0 ? (
+                        <div className="comm-emoji-picker-empty comm-muted px-2 text-center text-xs">
+                          {normalizedEmojiSearch
+                            ? 'Nenhum emoji encontrado para essa busca.'
+                            : 'Seus emojis mais usados vao aparecer aqui conforme voce enviar.'}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-8 gap-1.5">
+                          {emojiSearchResults.map((entry) => (
+                            <button
+                              key={`${activeEmojiCategory}-${entry.value}`}
+                              type="button"
+                              className="comm-emoji-picker-item"
+                              onClick={() => insertEmoji(entry.value)}
+                              aria-label={`Inserir ${entry.value}`}
+                            >
+                              <span className="text-[1.65rem] leading-none">{entry.value}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : activeMediaPickerTab === 'gif' ? (
+                    gifError ? (
+                      <div className="comm-media-picker-empty-state">
+                        <div className="comm-media-picker-empty-title">Erro ao carregar GIFs</div>
+                        <div className="comm-media-picker-empty-copy">{gifError}</div>
+                      </div>
+                    ) : gifLoading && gifResults.length === 0 ? (
+                      <div className="grid grid-cols-3 gap-2.5 pb-2">
+                        {Array.from({ length: 9 }).map((_, index) => (
+                          <div key={`gif-skeleton-${index}`} className="panel-skeleton aspect-[4/5] rounded-2xl border border-white/10" />
+                        ))}
+                      </div>
+                    ) : gifResults.length === 0 ? (
+                      <div className="comm-media-picker-empty-state">
+                        <div className="comm-media-picker-empty-title">Nada encontrado</div>
+                        <div className="comm-media-picker-empty-copy">Tente outro termo ou use um dos atalhos acima para buscar no Giphy.</div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2.5 pb-2">
+                        {gifResults.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            className="comm-media-picker-gif-card"
+                            onClick={() => handleSelectGif(item)}
+                          >
+                            <video
+                              src={item.mp4Url}
+                              className="h-full w-full object-cover"
+                              autoPlay
+                              muted
+                              loop
+                              playsInline
+                              preload="metadata"
+                            />
+                            <div className="comm-media-picker-gif-overlay">
+                              <span>{item.title || 'GIF do Giphy'}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )
+                  ) : filteredRecentStickers.length === 0 ? (
+                    <div className="pb-2">
+                      <div className="grid grid-cols-3 gap-2.5">
+                        <button
+                          type="button"
+                          className="comm-media-picker-sticker-add"
+                          onClick={() => stickerInputRef.current?.click()}
+                        >
+                          <Plus className="h-5 w-5" />
+                          <span>Adicionar</span>
+                          <small>.webp</small>
+                        </button>
+                      </div>
+                      <div className="comm-media-picker-empty-state mt-3">
+                        <div className="comm-media-picker-empty-title">Nenhuma figurinha recente</div>
+                        <div className="comm-media-picker-empty-copy">Importe uma `.webp` para começar sua biblioteca rápida de figurinhas.</div>
+                      </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-8 gap-1.5">
-                      {emojiSearchResults.map((entry) => (
+                    <div className="grid grid-cols-3 gap-2.5 pb-2">
+                      <button
+                        type="button"
+                        className="comm-media-picker-sticker-add"
+                        onClick={() => stickerInputRef.current?.click()}
+                      >
+                        <Plus className="h-5 w-5" />
+                        <span>Adicionar</span>
+                        <small>.webp</small>
+                      </button>
+                      {filteredRecentStickers.map((item) => (
                         <button
-                          key={`${activeEmojiCategory}-${entry.value}`}
+                          key={item.id}
                           type="button"
-                          className="comm-emoji-picker-item"
+                          className="comm-media-picker-sticker-card"
                           onClick={() => {
-                            insertEmoji(entry.value);
-                            setShowEmojiPicker(false);
+                            void handleSelectRecentSticker(item);
                           }}
-                          aria-label={`Inserir ${entry.value}`}
+                          title={item.name}
                         >
-                          <span className="text-[1.65rem] leading-none">{entry.value}</span>
+                          <img src={item.previewUrl} alt={item.name} className="h-full w-full object-contain p-3" />
                         </button>
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className="comm-media-picker-modebar">
+                  {([
+                    { id: 'emoji', label: 'Emoji' },
+                    { id: 'gif', label: 'GIF' },
+                    { id: 'sticker', label: 'Sticker' },
+                  ] as Array<{ id: MediaPickerTabId; label: string }>).map((tab) => (
+                    <button
+                      key={`media-picker-tab-${tab.id}`}
+                      type="button"
+                      className={`comm-media-picker-modebutton ${activeMediaPickerTab === tab.id ? 'is-active' : ''}`}
+                      onClick={() => openMediaPickerTab(tab.id)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}

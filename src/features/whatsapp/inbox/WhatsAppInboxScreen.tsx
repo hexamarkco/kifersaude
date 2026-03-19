@@ -224,8 +224,12 @@ type InboxContactInfo = {
   id: string;
   name: string;
   saved: boolean;
+  savedName?: string;
   pushname?: string;
+  isBusiness?: boolean;
 };
+
+type InboxContactDirectoryEntry = Omit<InboxContactInfo, 'id'>;
 
 type ContactPhotoSyncTarget = {
   lookupId: string;
@@ -363,10 +367,8 @@ export default function WhatsAppInboxScreen() {
   const [forwardSearch, setForwardSearch] = useState('');
   const [forwardTargetChatIds, setForwardTargetChatIds] = useState<string[]>([]);
   const [isForwardingMessage, setIsForwardingMessage] = useState(false);
-  const [contactsById, setContactsById] = useState<Map<string, { name: string; saved: boolean }>>(new Map());
-  const [contactsList, setContactsList] = useState<Array<{ id: string; name: string; saved: boolean; pushname?: string }>>(
-    [],
-  );
+  const [contactsById, setContactsById] = useState<Map<string, InboxContactDirectoryEntry>>(new Map());
+  const [contactsList, setContactsList] = useState<InboxContactInfo[]>([]);
   const [liveContactPhotosById, setLiveContactPhotosById] = useState<Map<string, string>>(new Map());
   const [legacyContactPhotosById, setLegacyContactPhotosById] = useState<Map<string, string>>(new Map());
   const [groupPhotosById, setGroupPhotosById] = useState<Map<string, string>>(new Map());
@@ -491,7 +493,7 @@ export default function WhatsAppInboxScreen() {
         setSelectedChat(chat && getWhatsAppChatKind(chat.id) === 'status' ? null : chat);
       });
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => {
@@ -499,7 +501,7 @@ export default function WhatsAppInboxScreen() {
         cancelAnimationFrame(chatSelectionFrameRef.current);
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const normalizeSearchText = (value: string | null | undefined) =>
     (value || '')
@@ -1116,6 +1118,75 @@ export default function WhatsAppInboxScreen() {
     return digits.length >= 10;
   };
 
+  const getMeaningfulContactLabel = (value: string | null | undefined) => {
+    const trimmed = value?.trim();
+    if (!trimmed || isPhoneLikeLabel(trimmed)) {
+      return null;
+    }
+
+    return trimmed;
+  };
+
+  const buildContactDirectoryEntry = (
+    contact: Pick<WhapiContact, 'name' | 'pushname' | 'saved' | 'is_business'>,
+  ): InboxContactDirectoryEntry => {
+    const savedName = getMeaningfulContactLabel(contact.name);
+    const pushname = getMeaningfulContactLabel(contact.pushname);
+    const saved = Boolean(contact.saved || savedName);
+
+    return {
+      name: savedName || pushname || contact.name || contact.pushname || '',
+      saved,
+      savedName: savedName || undefined,
+      pushname: pushname || undefined,
+      isBusiness: contact.is_business === true,
+    };
+  };
+
+  const mergeContactDirectoryEntry = (
+    current: InboxContactDirectoryEntry | undefined,
+    next: InboxContactDirectoryEntry,
+  ): InboxContactDirectoryEntry => {
+    const savedName = getMeaningfulContactLabel(current?.savedName) || getMeaningfulContactLabel(next.savedName);
+    const pushname = getMeaningfulContactLabel(current?.pushname) || getMeaningfulContactLabel(next.pushname);
+
+    return {
+      name: savedName || pushname || current?.name || next.name,
+      saved: Boolean(current?.saved || next.saved || savedName),
+      savedName: savedName || undefined,
+      pushname: pushname || undefined,
+      isBusiness: current?.isBusiness === true || next.isBusiness === true,
+    };
+  };
+
+  const getPreferredContactName = (contact: Partial<InboxContactDirectoryEntry> | null | undefined) => {
+    return (
+      getMeaningfulContactLabel(contact?.savedName) ||
+      getMeaningfulContactLabel(contact?.pushname) ||
+      getMeaningfulContactLabel(contact?.name) ||
+      null
+    );
+  };
+
+  const getPreferredContactNameFromCandidates = (candidates: Iterable<string>) => {
+    let pushnameFallback: string | null = null;
+
+    for (const candidate of candidates) {
+      const contact = contactsById.get(candidate);
+      const savedName = getMeaningfulContactLabel(contact?.savedName);
+      if (savedName) {
+        return savedName;
+      }
+
+      const pushname = getMeaningfulContactLabel(contact?.pushname);
+      if (!pushnameFallback && pushname) {
+        pushnameFallback = pushname;
+      }
+    }
+
+    return pushnameFallback;
+  };
+
   const getMeaningfulDirectChatNameCandidate = (
     chat: Pick<WhatsAppChat, 'id' | 'phone_number'>,
     value: string | null | undefined,
@@ -1627,7 +1698,7 @@ export default function WhatsAppInboxScreen() {
       const pageSize = 500;
       let offset = 0;
       const loadedContacts: Array<
-        Pick<WhapiContact, 'id' | 'name' | 'pushname' | 'saved' | 'profile_pic' | 'profile_pic_full'>
+        Pick<WhapiContact, 'id' | 'name' | 'pushname' | 'saved' | 'is_business' | 'profile_pic' | 'profile_pic_full'>
       > = [];
 
       while (true) {
@@ -1642,22 +1713,22 @@ export default function WhatsAppInboxScreen() {
         if (typeof response.total === 'number' && loadedContacts.length >= response.total) break;
       }
 
-      const contactMap = new Map<string, { name: string; saved: boolean }>();
-
-      setContactsList(
-        loadedContacts.map((contact) => ({
+      const contactMap = new Map<string, InboxContactDirectoryEntry>();
+      const normalizedContacts = loadedContacts.map((contact) => {
+        const entry = buildContactDirectoryEntry(contact);
+        return {
           id: contact.id,
-          name: contact.name || contact.pushname || contact.id,
-          saved: contact.saved,
-          pushname: contact.pushname,
-        })),
-      );
+          ...entry,
+          name: entry.name || contact.id,
+        };
+      });
 
-      loadedContacts.forEach((contact) => {
-        const displayName = (contact.name || contact.pushname || '').trim();
+      setContactsList(normalizedContacts);
+
+      normalizedContacts.forEach((contact) => {
+        const displayName = getPreferredContactName(contact) || contact.name || contact.id;
         if (!displayName) return;
 
-        const isSavedContact = contact.saved || Boolean(contact.name?.trim());
         const variants = new Set<string>();
         variants.add(contact.id);
 
@@ -1676,7 +1747,16 @@ export default function WhatsAppInboxScreen() {
         getDirectIdVariantsFromDigits(digits).forEach((variant) => variants.add(variant));
 
         variants.forEach((variant) => {
-          contactMap.set(variant, { name: displayName, saved: isSavedContact });
+          contactMap.set(
+            variant,
+            mergeContactDirectoryEntry(contactMap.get(variant), {
+              name: displayName,
+              saved: contact.saved,
+              savedName: contact.savedName,
+              pushname: contact.pushname,
+              isBusiness: contact.isBusiness,
+            }),
+          );
         });
       });
 
@@ -1685,7 +1765,7 @@ export default function WhatsAppInboxScreen() {
     } catch (err) {
       console.error('Error loading WhatsApp contacts:', err);
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const onGlobalKeyDown = (event: KeyboardEvent) => {
@@ -4091,11 +4171,9 @@ export default function WhatsAppInboxScreen() {
         }
       });
 
-      for (const candidate of contactCandidates) {
-        const contact = contactsById.get(candidate);
-        if (contact?.name?.trim() && !isPhoneLikeLabel(contact.name)) {
-          return contact.name.trim();
-        }
+      const contactName = getPreferredContactNameFromCandidates(contactCandidates);
+      if (contactName) {
+        return contactName;
       }
 
       return preferredName || getChatDisplayNameFromId(message.chat_id);
@@ -4194,11 +4272,9 @@ export default function WhatsAppInboxScreen() {
       getDirectIdVariantsFromDigits(digits).forEach((variant) => contactCandidates.add(variant));
     });
 
-    for (const candidate of contactCandidates) {
-      const contact = contactsById.get(candidate);
-      if (contact?.name && (contact.saved || !isPhoneLikeLabel(contact.name))) {
-        return contact.name;
-      }
+    const preferredContactName = getPreferredContactNameFromCandidates(contactCandidates);
+    if (preferredContactName) {
+      return preferredContactName;
     }
 
     if (chat.name?.trim() && chat.name !== chat.id) {

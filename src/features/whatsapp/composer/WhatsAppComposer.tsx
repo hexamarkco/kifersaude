@@ -43,6 +43,14 @@ import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS, type TemplateVariableSuggestio
 import { ComposerContextBanner } from './components/ComposerContextBanner';
 import { InlineLinkPreviewCard } from './components/InlineLinkPreviewCard';
 import { searchGiphyLibrary } from './giphy';
+import {
+  dataUrlToFile,
+  loadRecentStickerItems,
+  loadSavedStickerItems,
+  rememberRecentSticker,
+  saveStickerToLibrary,
+  STICKER_LIBRARY_SYNC_EVENT,
+} from '../shared/stickerLibrary';
 import type {
   EmojiCategoryId,
   EmojiEntry,
@@ -52,6 +60,7 @@ import type {
   MessageInputProps,
   QuickReplyItem,
   RecentStickerItem,
+  SavedStickerItem,
   SentMessagePayload,
 } from './types';
 import { EMOJI_CATEGORIES_DATA } from './emojiData';
@@ -68,8 +77,6 @@ import {
 
 const EMOJI_RECENTS_STORAGE_KEY = 'whatsapp.composer.recent-emojis';
 const MAX_RECENT_EMOJIS = 24;
-const STICKER_RECENTS_STORAGE_KEY = 'whatsapp.composer.recent-stickers';
-const MAX_RECENT_STICKERS = 24;
 const GIF_QUICK_SEARCHES = ['bom dia', 'parabens', 'amor', 'engraçado', 'obrigado'];
 type EmojiCategoryConfig = {
   id: Exclude<EmojiCategoryId, 'recent'>;
@@ -86,28 +93,6 @@ const normalizeEmojiSearch = (value: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .trim();
 
-const dataUrlToFile = async (dataUrl: string, fileName: string, mimeType: string) => {
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
-  return new File([blob], fileName, {
-    type: mimeType || blob.type || 'image/webp',
-    lastModified: Date.now(),
-  });
-};
-
-const fileToDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error('Nao foi possivel ler a figurinha selecionada.'));
-    };
-    reader.onerror = () => reject(reader.error || new Error('Falha ao carregar figurinha.'));
-    reader.readAsDataURL(file);
-  });
 
 const EMOJI_CATEGORY_ICONS: Record<Exclude<EmojiCategoryId, 'recent'>, LucideIcon> = {
   smileys: Smile,
@@ -156,6 +141,7 @@ function WhatsAppComposerComponent({
   const [activeEmojiCategory, setActiveEmojiCategory] = useState<EmojiCategoryId>('recent');
   const [recentEmojis, setRecentEmojis] = useState<string[]>([]);
   const [recentStickers, setRecentStickers] = useState<RecentStickerItem[]>([]);
+  const [savedStickers, setSavedStickers] = useState<SavedStickerItem[]>([]);
   const [emojiSearch, setEmojiSearch] = useState('');
   const [stickerSearch, setStickerSearch] = useState('');
   const [showComposerActionsMenu, setShowComposerActionsMenu] = useState(false);
@@ -266,6 +252,10 @@ function WhatsAppComposerComponent({
     if (!normalizedStickerSearch) return recentStickers;
     return recentStickers.filter((item) => normalizeEmojiSearch(item.name).includes(normalizedStickerSearch));
   }, [normalizedStickerSearch, recentStickers]);
+  const filteredSavedStickers = useMemo(() => {
+    if (!normalizedStickerSearch) return savedStickers;
+    return savedStickers.filter((item) => normalizeEmojiSearch(item.name).includes(normalizedStickerSearch));
+  }, [normalizedStickerSearch, savedStickers]);
 
   const normalizedTemplateVariables = useMemo(() => {
     const normalized = new Map<string, string>();
@@ -326,31 +316,21 @@ function WhatsAppComposerComponent({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    try {
-      const stored = window.localStorage.getItem(STICKER_RECENTS_STORAGE_KEY);
-      if (!stored) return;
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) return;
+    const syncStickerCollections = () => {
+      setRecentStickers(loadRecentStickerItems());
+      setSavedStickers(loadSavedStickerItems());
+    };
 
-      setRecentStickers(
-        parsed
-          .filter((item): item is RecentStickerItem => {
-            if (!item || typeof item !== 'object') return false;
-            const candidate = item as Record<string, unknown>;
-            return (
-              typeof candidate.id === 'string' &&
-              typeof candidate.name === 'string' &&
-              typeof candidate.previewUrl === 'string' &&
-              typeof candidate.dataUrl === 'string' &&
-              typeof candidate.mimeType === 'string' &&
-              typeof candidate.lastUsedAt === 'number'
-            );
-          })
-          .slice(0, MAX_RECENT_STICKERS),
-      );
-    } catch (error) {
-      console.warn('Erro ao carregar figurinhas recentes:', error);
-    }
+    syncStickerCollections();
+
+    const handleStickerLibraryUpdate = () => {
+      syncStickerCollections();
+    };
+
+    window.addEventListener(STICKER_LIBRARY_SYNC_EVENT, handleStickerLibraryUpdate as EventListener);
+    return () => {
+      window.removeEventListener(STICKER_LIBRARY_SYNC_EVENT, handleStickerLibraryUpdate as EventListener);
+    };
   }, []);
 
   const getRuntimeTemplateVariable = (key: string) => {
@@ -1218,32 +1198,6 @@ function WhatsAppComposerComponent({
     });
   };
 
-  const rememberRecentSticker = async (file: File) => {
-    const dataUrl = await fileToDataUrl(file);
-    const previewUrl = dataUrl;
-    const stickerId = `${file.name || 'sticker'}-${file.size}-${file.lastModified}`;
-
-    setRecentStickers((current) => {
-      const next: RecentStickerItem[] = [
-        {
-          id: stickerId,
-          name: file.name || 'Figurinha',
-          mimeType: file.type || 'image/webp',
-          previewUrl,
-          dataUrl,
-          lastUsedAt: Date.now(),
-        },
-        ...current.filter((item) => item.id !== stickerId),
-      ].slice(0, MAX_RECENT_STICKERS);
-
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STICKER_RECENTS_STORAGE_KEY, JSON.stringify(next));
-      }
-
-      return next;
-    });
-  };
-
   const openMediaPickerTab = (tab: MediaPickerTabId) => {
     setActiveMediaPickerTab(tab);
     setShowEmojiPicker(true);
@@ -1710,6 +1664,24 @@ function WhatsAppComposerComponent({
     const file = e.target.files?.[0];
     if (file) {
       attachFileToComposer(file);
+    }
+  };
+
+  const handleStickerFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    attachFileToComposer(file);
+
+    try {
+      const result = await saveStickerToLibrary(file);
+      if (activeMediaPickerTab === 'sticker') {
+        setStickerSearch('');
+      }
+      toast.success(result.alreadySaved ? 'Figurinha atualizada na loja.' : 'Figurinha salva na loja.');
+    } catch (error) {
+      console.error('Erro ao salvar figurinha importada na loja:', error);
+      toast.error('Nao foi possivel salvar a figurinha na loja.');
     }
   };
 
@@ -2930,7 +2902,9 @@ function WhatsAppComposerComponent({
             type="file"
             accept="image/webp,.webp"
             className="hidden"
-            onChange={handleFileSelect}
+            onChange={(event) => {
+              void handleStickerFileSelect(event);
+            }}
           />
 
           <input
@@ -3098,7 +3072,7 @@ function WhatsAppComposerComponent({
                         ? gifLoading
                           ? 'Buscando...'
                           : `${gifResults.length} GIFs`
-                        : `${filteredRecentStickers.length} itens`}
+                        : `${filteredSavedStickers.length + filteredRecentStickers.length} itens`}
                   </div>
                 </div>
 
@@ -3169,7 +3143,7 @@ function WhatsAppComposerComponent({
                         ))}
                       </div>
                     )
-                  ) : filteredRecentStickers.length === 0 ? (
+                  ) : filteredSavedStickers.length === 0 && filteredRecentStickers.length === 0 ? (
                     <div className="pb-2">
                       <div className="grid grid-cols-3 gap-2.5">
                         <button
@@ -3183,34 +3157,84 @@ function WhatsAppComposerComponent({
                         </button>
                       </div>
                       <div className="comm-media-picker-empty-state mt-3">
-                        <div className="comm-media-picker-empty-title">Nenhuma figurinha recente</div>
-                        <div className="comm-media-picker-empty-copy">Importe uma `.webp` para começar sua biblioteca rápida de figurinhas.</div>
+                        <div className="comm-media-picker-empty-title">Sua loja de figurinhas esta vazia</div>
+                        <div className="comm-media-picker-empty-copy">Importe uma `.webp` ou salve uma figurinha do chat para montar sua biblioteca.</div>
                       </div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-3 gap-2.5 pb-2">
-                      <button
-                        type="button"
-                        className="comm-media-picker-sticker-add"
-                        onClick={() => stickerInputRef.current?.click()}
-                      >
-                        <Plus className="h-5 w-5" />
-                        <span>Adicionar</span>
-                        <small>.webp</small>
-                      </button>
-                      {filteredRecentStickers.map((item) => (
+                    <div className="space-y-3 pb-2">
+                      <div className="grid grid-cols-3 gap-2.5">
                         <button
-                          key={item.id}
                           type="button"
-                          className="comm-media-picker-sticker-card"
-                          onClick={() => {
-                            void handleSelectRecentSticker(item);
-                          }}
-                          title={item.name}
+                          className="comm-media-picker-sticker-add"
+                          onClick={() => stickerInputRef.current?.click()}
                         >
-                          <img src={item.previewUrl} alt={item.name} className="h-full w-full object-contain p-3" />
+                          <Plus className="h-5 w-5" />
+                          <span>Adicionar</span>
+                          <small>.webp</small>
                         </button>
-                      ))}
+                        {filteredSavedStickers.slice(0, 5).map((item) => (
+                          <button
+                            key={`saved-highlight-${item.id}`}
+                            type="button"
+                            className="comm-media-picker-sticker-card"
+                            onClick={() => {
+                              void handleSelectRecentSticker(item);
+                            }}
+                            title={item.name}
+                          >
+                            <img src={item.previewUrl} alt={item.name} className="h-full w-full object-contain p-3" />
+                          </button>
+                        ))}
+                      </div>
+
+                      {filteredSavedStickers.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="comm-emoji-picker-section-title text-sm">Loja</span>
+                            <span className="comm-emoji-picker-section-meta">{filteredSavedStickers.length} salvas</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2.5">
+                            {filteredSavedStickers.map((item) => (
+                              <button
+                                key={`library-${item.id}`}
+                                type="button"
+                                className="comm-media-picker-sticker-card"
+                                onClick={() => {
+                                  void handleSelectRecentSticker(item);
+                                }}
+                                title={item.name}
+                              >
+                                <img src={item.previewUrl} alt={item.name} className="h-full w-full object-contain p-3" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {filteredRecentStickers.length > 0 ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="comm-emoji-picker-section-title text-sm">Recentes</span>
+                            <span className="comm-emoji-picker-section-meta">{filteredRecentStickers.length} usadas</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2.5">
+                            {filteredRecentStickers.map((item) => (
+                              <button
+                                key={`recent-${item.id}`}
+                                type="button"
+                                className="comm-media-picker-sticker-card"
+                                onClick={() => {
+                                  void handleSelectRecentSticker(item);
+                                }}
+                                title={item.name}
+                              >
+                                <img src={item.previewUrl} alt={item.name} className="h-full w-full object-contain p-3" />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   )}
                 </div>

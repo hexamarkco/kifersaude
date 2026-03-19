@@ -12,6 +12,8 @@ import { resolveWhatsAppMessageBody } from '../../../../lib/whatsappMessageBody'
 import { getWhatsAppAudioTranscription } from '../../../../lib/whatsappAudioTranscription';
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../../../lib/dateUtils';
 import { supabase } from '../../../../lib/supabase';
+import { toast } from '../../../../lib/toast';
+import { saveStickerToLibrary } from '../../shared/stickerLibrary';
 
 type SaveSharedContactResult = {
   alreadySaved?: boolean;
@@ -435,6 +437,7 @@ function MessageBubbleComponent({
   const [isNearViewport, setIsNearViewport] = useState(false);
   const [sharedContactLoading, setSharedContactLoading] = useState(false);
   const [sharedContactSaved, setSharedContactSaved] = useState(false);
+  const [savingStickerToLibrary, setSavingStickerToLibrary] = useState(false);
   const [saveContactModalState, setSaveContactModalState] = useState<{ name: string; phone: string } | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const actionMenuRef = useRef<HTMLDivElement | null>(null);
@@ -451,12 +454,6 @@ function MessageBubbleComponent({
   });
   const audioAutoplayRequestedRef = useRef(false);
   const hasHistory = editCount > 0 || isDeleted;
-  const canReact = Boolean(onReact && !isDeleted);
-  const canReply = Boolean(onReply && !isDeleted);
-  const canForward = Boolean(onForward && !isDeleted);
-  const canEditMessage = Boolean(onEdit && isOutbound && !isDeleted && !hasMedia);
-  const canViewHistory = hasHistory;
-  const hasActionMenu = canReact || canReply || canForward || canEditMessage || canViewHistory;
   const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
   const closeActionMenu = useCallback(() => {
@@ -762,6 +759,13 @@ function MessageBubbleComponent({
   const isVideoMessage = hasMedia && !isGifMessage && (normalizedType.startsWith('video') || Boolean(payloadData?.video));
   const isVisualMediaMessage = !isDeleted && (isStickerMessage || isGifMessage || isImageMessage || isVideoMessage);
   const isAudioMessage = hasMedia && (normalizedType.startsWith('audio') || normalizedType === 'ptt' || normalizedType === 'voice');
+  const canReact = Boolean(onReact && !isDeleted);
+  const canReply = Boolean(onReply && !isDeleted);
+  const canForward = Boolean(onForward && !isDeleted);
+  const canEditMessage = Boolean(onEdit && isOutbound && !isDeleted && !hasMedia);
+  const canViewHistory = hasHistory;
+  const canSaveSticker = Boolean(isStickerMessage && !isDeleted);
+  const hasActionMenu = canReact || canReply || canForward || canEditMessage || canViewHistory || canSaveSticker;
   const visualDirectSrc = isVideoMessage ? videoDirectSrc : isGifMessage ? gifDirectSrc : isStickerMessage ? stickerDirectSrc : imageDirectSrc;
   const visualPreviewSrc = isVideoMessage ? videoPreviewSrc : isGifMessage ? gifPreviewSrc : isStickerMessage ? stickerPreviewSrc : imagePreviewSrc;
   const visualDisplayUrl = visualMediaUrl || visualDirectSrc || visualPreviewSrc || null;
@@ -910,6 +914,57 @@ function MessageBubbleComponent({
     }
     return null;
   }, [documentLoading, documentPayload?.id, documentUrl, payloadData?.document?.id, payloadData?.media?.id]);
+
+  const handleSaveStickerToLibrary = useCallback(async () => {
+    if (!canSaveSticker || savingStickerToLibrary) return;
+
+    setSavingStickerToLibrary(true);
+    try {
+      const stickerName = payloadData?.sticker?.filename || payloadData?.sticker?.name || `sticker-${id}.webp`;
+      const stickerMime = payloadData?.sticker?.mime_type || payloadData?.sticker?.mimetype || 'image/webp';
+
+      let stickerBlob: Blob | null = null;
+
+      if (visualMediaId) {
+        const mediaResponse = await getWhatsAppMedia(visualMediaId, { forceRefresh: true });
+        if (mediaResponse.data instanceof Blob) {
+          stickerBlob = mediaResponse.data;
+        } else if (mediaResponse.url) {
+          const fetched = await fetch(mediaResponse.url);
+          if (!fetched.ok) {
+            throw new Error('Nao foi possivel baixar a figurinha.');
+          }
+          stickerBlob = await fetched.blob();
+        }
+      }
+
+      if (!stickerBlob && visualDisplayUrl) {
+        const fetched = await fetch(visualDisplayUrl);
+        if (!fetched.ok) {
+          throw new Error('Nao foi possivel baixar a figurinha.');
+        }
+        stickerBlob = await fetched.blob();
+      }
+
+      if (!stickerBlob) {
+        throw new Error('Figurinha indisponivel para salvar.');
+      }
+
+      const stickerFile = new File([stickerBlob], stickerName, {
+        type: stickerBlob.type || stickerMime,
+        lastModified: Date.now(),
+      });
+
+      const result = await saveStickerToLibrary(stickerFile, stickerName);
+      toast.success(result.alreadySaved ? 'Figurinha atualizada na loja.' : 'Figurinha salva na loja.');
+      closeActionMenu();
+    } catch (error) {
+      console.error('Erro ao salvar figurinha na loja:', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar a figurinha.');
+    } finally {
+      setSavingStickerToLibrary(false);
+    }
+  }, [canSaveSticker, closeActionMenu, id, payloadData?.sticker?.filename, payloadData?.sticker?.mime_type, payloadData?.sticker?.mimetype, payloadData?.sticker?.name, savingStickerToLibrary, visualDisplayUrl, visualMediaId]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -2149,6 +2204,24 @@ function MessageBubbleComponent({
                 <span className="flex w-full items-center gap-2 text-left">
                   <Edit3 className="comm-muted h-4 w-4 flex-shrink-0" />
                   <span className="flex-1 text-left">Editar</span>
+                </span>
+              </Button>
+            )}
+
+            {canSaveSticker && (
+              <Button
+                variant="ghost"
+                size="sm"
+                fullWidth
+                onClick={() => {
+                  void handleSaveStickerToLibrary();
+                }}
+                disabled={savingStickerToLibrary}
+                className="comm-menu-item comm-text h-auto rounded-md border-0 px-2.5 py-2 text-sm font-medium shadow-none disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="flex w-full items-center gap-2 text-left">
+                  {savingStickerToLibrary ? <Loader2 className="comm-muted h-4 w-4 animate-spin flex-shrink-0" /> : <Download className="comm-muted h-4 w-4 flex-shrink-0" />}
+                  <span className="flex-1 text-left">{savingStickerToLibrary ? 'Salvando figurinha...' : 'Salvar na loja'}</span>
                 </span>
               </Button>
             )}

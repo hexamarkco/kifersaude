@@ -101,7 +101,7 @@ export type GiphyGifItem = {
 
 export type MediaPickerTabId = 'emoji' | 'gif' | 'sticker';
 
-export type RecentStickerItem = {
+export type StickerLibraryItem = {
   id: string;
   name: string;
   mimeType: string;
@@ -109,3 +109,6 @@ export type RecentStickerItem = {
   dataUrl: string;
   lastUsedAt: number;
 };
+
+export type RecentStickerItem = StickerLibraryItem;
+export type SavedStickerItem = StickerLibraryItem;

@@ -1308,17 +1308,9 @@ function WhatsAppComposerComponent({
 
     try {
       if (editMessage) {
-        await sendWhatsAppMessage({
-          chatId,
-          contentType: 'string',
-          content: resolvedMessage,
-          editMessageId: editMessage.id,
-        });
-
-        updateComposerDraft('');
-        if (onCancelEdit) onCancelEdit();
-        emitMessageSent();
+        toast.warning('Edicao de mensagem foi desativada temporariamente para evitar envio duplicado.');
         queueComposerFocusRestore();
+        return;
       } else if (selectedGif) {
         const gifUrl = resolveSelectedGifSendUrl(selectedGif);
         const preview = resolveSelectedGifPreviewUrl(selectedGif);

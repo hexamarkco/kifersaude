@@ -532,53 +532,12 @@ const updateTargetResult = async (
 };
 
 const recomputeCampaignCounters = async (supabaseAdmin: ReturnType<typeof createClient>, campaignId: string): Promise<void> => {
-  const { data: targetRows, error: targetError } = await supabaseAdmin
-    .from('whatsapp_campaign_targets')
-    .select('status')
-    .eq('campaign_id', campaignId);
+  const { error } = await supabaseAdmin.rpc('recompute_whatsapp_campaign_counters', {
+    p_campaign_id: campaignId,
+  });
 
-  if (targetError) {
-    throw new Error(`Erro ao recalcular contadores da campanha: ${targetError.message}`);
-  }
-
-  const rows = (targetRows ?? []) as Array<{ status: TargetStatus }>;
-  const totalTargets = rows.length;
-  const pendingTargets = rows.filter((row) => row.status === 'pending' || row.status === 'processing').length;
-  const sentTargets = rows.filter((row) => row.status === 'sent').length;
-  const failedTargets = rows.filter((row) => row.status === 'failed').length;
-  const invalidTargets = rows.filter((row) => row.status === 'invalid').length;
-
-  const { data: campaignData, error: campaignError } = await supabaseAdmin
-    .from('whatsapp_campaigns')
-    .select('status')
-    .eq('id', campaignId)
-    .maybeSingle();
-
-  if (campaignError) {
-    throw new Error(`Erro ao consultar campanha para atualizar contadores: ${campaignError.message}`);
-  }
-
-  const updates: Record<string, unknown> = {
-    total_targets: totalTargets,
-    pending_targets: pendingTargets,
-    sent_targets: sentTargets,
-    failed_targets: failedTargets,
-    invalid_targets: invalidTargets,
-  };
-
-  const campaignStatus = campaignData?.status as CampaignStatus | undefined;
-  if (pendingTargets === 0 && campaignStatus === 'running') {
-    updates.status = 'completed';
-    updates.completed_at = new Date().toISOString();
-  }
-
-  const { error: updateError } = await supabaseAdmin
-    .from('whatsapp_campaigns')
-    .update(updates)
-    .eq('id', campaignId);
-
-  if (updateError) {
-    throw new Error(`Erro ao atualizar campanha com novos contadores: ${updateError.message}`);
+  if (error) {
+    throw new Error(`Erro ao recalcular contadores da campanha: ${error.message}`);
   }
 };
 
@@ -633,29 +592,51 @@ const loadProcessableTargets = async (
   campaignId: string | null,
   limit: number,
 ): Promise<TargetRecord[]> => {
-  const scanLimit = Math.min(Math.max(limit * 5, limit), 200);
-  let query = supabaseAdmin
-    .from('whatsapp_campaign_targets')
-    .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, lead:leads(nome_completo, telefone, email, status, origem, cidade, responsavel), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at)')
-    .in('status', ['pending', 'processing'])
-    .order('created_at', { ascending: true })
-    .limit(scanLimit);
+  const pageSize = Math.min(Math.max(limit * 5, limit), 200);
+  const maxPages = 20;
+  const collected: TargetRecord[] = [];
+  let offset = 0;
 
-  if (campaignId) {
-    query = query.eq('campaign_id', campaignId);
+  for (let page = 0; page < maxPages && collected.length < limit; page += 1) {
+    let query = supabaseAdmin
+      .from('whatsapp_campaign_targets')
+      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, lead:leads(nome_completo, telefone, email, status, origem, cidade, responsavel), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at)')
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+
+    if (campaignId) {
+      query = query.eq('campaign_id', campaignId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Erro ao carregar alvos pendentes da campanha: ${error.message}`);
+    }
+
+    const rows = (data ?? []) as TargetRecord[];
+    if (rows.length === 0) {
+      break;
+    }
+
+    rows
+      .filter((row) => row.campaign?.status === 'running')
+      .filter((row) => isCampaignTargetReadyForProcessing(row))
+      .forEach((row) => {
+        if (collected.length < limit) {
+          collected.push(row);
+        }
+      });
+
+    if (rows.length < pageSize) {
+      break;
+    }
+
+    offset += pageSize;
   }
 
-  const { data, error } = await query;
-
-  if (error) {
-    throw new Error(`Erro ao carregar alvos pendentes da campanha: ${error.message}`);
-  }
-
-  const rows = (data ?? []) as TargetRecord[];
-  return rows
-    .filter((row) => row.campaign?.status === 'running')
-    .filter((row) => isCampaignTargetReadyForProcessing(row))
-    .slice(0, limit);
+  return collected;
 };
 
 const processCampaignTargets = async ({

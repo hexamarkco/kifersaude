@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Crown, ChevronDown, ChevronUp, Shield, User as UserIcon, Users, X } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { formatPhoneDisplay } from '../../../../lib/phoneFormatting';
+import { getWhatsAppGroups, type WhapiGroup } from '../../../../lib/whatsappApiService';
 
 type GroupParticipant = {
   phone: string;
@@ -25,9 +26,9 @@ type GroupInfo = {
   name: string;
   chat_pic: string | null;
   chat_pic_full: string | null;
-  created_at: string;
-  created_by: string;
-  admin_add_member_mode: boolean;
+  created_at: string | null;
+  created_by: string | null;
+  admin_add_member_mode: boolean | null;
 };
 
 type GroupInfoPanelProps = {
@@ -47,6 +48,92 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
   const [showEvents, setShowEvents] = useState(false);
   const requestIdRef = useRef(0);
 
+  const loadLocalGroupSnapshot = useCallback(async () => {
+    const [groupResult, participantsResult, eventsResult] = await Promise.all([
+      supabase.from('whatsapp_groups').select('*').eq('id', groupId).maybeSingle(),
+      supabase
+        .from('whatsapp_group_participants')
+        .select('*')
+        .eq('group_id', groupId)
+        .order('rank', { ascending: true })
+        .order('joined_at', { ascending: true }),
+      supabase
+        .from('whatsapp_group_events')
+        .select('*')
+        .eq('group_id', groupId)
+        .order('occurred_at', { ascending: false })
+        .limit(20),
+    ]);
+
+    return { groupResult, participantsResult, eventsResult };
+  }, [groupId]);
+
+  const buildFallbackGroupInfo = useCallback(async (): Promise<GroupInfo | null> => {
+    try {
+      await supabase.functions.invoke('whatsapp-sync', {
+        body: { chatId: groupId, count: 50 },
+      });
+    } catch (syncError) {
+      console.warn('Nao foi possivel sincronizar o grupo sob demanda:', syncError);
+    }
+
+    const refreshedSnapshot = await loadLocalGroupSnapshot();
+    if (refreshedSnapshot.groupResult.data) {
+      return refreshedSnapshot.groupResult.data as GroupInfo;
+    }
+
+    const { data: chatSnapshot } = await supabase
+      .from('whatsapp_chats')
+      .select('id, name')
+      .eq('id', groupId)
+      .maybeSingle();
+
+    const fallbackChatName = typeof chatSnapshot?.name === 'string' && chatSnapshot.name.trim()
+      ? chatSnapshot.name.trim()
+      : null;
+
+    let offset = 0;
+    const pageSize = 100;
+    for (let page = 0; page < 20; page += 1) {
+      const response = await getWhatsAppGroups(pageSize, offset, true);
+      const matchedGroup = response.groups.find((group: WhapiGroup) => group.id === groupId);
+      if (matchedGroup) {
+        return {
+          id: matchedGroup.id,
+          name: matchedGroup.name?.trim() || fallbackChatName || groupId,
+          chat_pic: typeof matchedGroup.chat_pic === 'string' && matchedGroup.chat_pic.trim() ? matchedGroup.chat_pic.trim() : null,
+          chat_pic_full:
+            typeof matchedGroup.chat_pic_full === 'string' && matchedGroup.chat_pic_full.trim()
+              ? matchedGroup.chat_pic_full.trim()
+              : null,
+          created_at: null,
+          created_by: null,
+          admin_add_member_mode: null,
+        };
+      }
+
+      if ((response.groups || []).length < pageSize) {
+        break;
+      }
+
+      offset += pageSize;
+    }
+
+    if (fallbackChatName) {
+      return {
+        id: groupId,
+        name: fallbackChatName,
+        chat_pic: null,
+        chat_pic_full: null,
+        created_at: null,
+        created_by: null,
+        admin_add_member_mode: null,
+      };
+    }
+
+    return null;
+  }, [groupId, loadLocalGroupSnapshot]);
+
   useEffect(() => {
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
@@ -60,21 +147,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
         setParticipants([]);
         setEvents([]);
 
-        const [groupResult, participantsResult, eventsResult] = await Promise.all([
-          supabase.from('whatsapp_groups').select('*').eq('id', groupId).maybeSingle(),
-          supabase
-            .from('whatsapp_group_participants')
-            .select('*')
-            .eq('group_id', groupId)
-            .order('rank', { ascending: true })
-            .order('joined_at', { ascending: true }),
-          supabase
-            .from('whatsapp_group_events')
-            .select('*')
-            .eq('group_id', groupId)
-            .order('occurred_at', { ascending: false })
-            .limit(20),
-        ]);
+        const { groupResult, participantsResult, eventsResult } = await loadLocalGroupSnapshot();
 
         if (cancelled || requestIdRef.current !== requestId) {
           return;
@@ -85,7 +158,15 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
         }
 
         if (!groupResult.data) {
-          setError('Grupo nao encontrado.');
+          const fallbackGroupInfo = await buildFallbackGroupInfo();
+
+          if (!fallbackGroupInfo) {
+            setError('Grupo nao encontrado.');
+            return;
+          }
+
+          setGroupInfo(fallbackGroupInfo);
+          setError('Dados completos do grupo ainda nao foram sincronizados.');
           return;
         }
 
@@ -127,7 +208,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
     return () => {
       cancelled = true;
     };
-  }, [groupId]);
+  }, [buildFallbackGroupInfo, groupId, loadLocalGroupSnapshot]);
 
   const getRankIcon = (rank: string) => {
     switch (rank) {
@@ -163,7 +244,11 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
     return labels[eventType] || eventType;
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) {
+      return 'data indisponivel';
+    }
+
     const date = new Date(dateString);
     return date.toLocaleString('pt-BR', {
       day: '2-digit',

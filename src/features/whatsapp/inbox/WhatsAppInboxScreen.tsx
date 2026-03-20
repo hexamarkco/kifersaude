@@ -410,6 +410,7 @@ export default function WhatsAppInboxScreen() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [loadedMessagesCount, setLoadedMessagesCount] = useState(0);
   const [loadedMessagesQueryOffset, setLoadedMessagesQueryOffset] = useState(0);
+  const [windowFocusVersion, setWindowFocusVersion] = useState(0);
   const [slaTick, setSlaTick] = useState(0);
   const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
   const [chatCopiedAt, setChatCopiedAt] = useState<number | null>(null);
@@ -1613,12 +1614,21 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     const syncFocusState = () => {
+      const previousFocused = isWindowFocusedRef.current;
       if (typeof document === 'undefined') {
         isWindowFocusedRef.current = true;
+        if (!previousFocused) {
+          setWindowFocusVersion((current) => current + 1);
+        }
         return;
       }
 
-      isWindowFocusedRef.current = document.visibilityState === 'visible' && document.hasFocus();
+      const nextFocused = document.visibilityState === 'visible' && document.hasFocus();
+      isWindowFocusedRef.current = nextFocused;
+
+      if (nextFocused && !previousFocused) {
+        setWindowFocusVersion((current) => current + 1);
+      }
     };
 
     syncFocusState();
@@ -1631,6 +1641,18 @@ export default function WhatsAppInboxScreen() {
       window.removeEventListener('blur', syncFocusState);
       document.removeEventListener('visibilitychange', syncFocusState);
     };
+  }, []);
+
+  const canAutoMarkSelectedChatRead = useCallback((chat?: WhatsAppChat | null) => {
+    if (!userRef.current) return false;
+    const activeChat = chat ?? selectedChatRef.current;
+    if (!activeChat) return false;
+
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      return false;
+    }
+
+    return isWindowFocusedRef.current;
   }, []);
 
   useEffect(() => {
@@ -2180,7 +2202,7 @@ export default function WhatsAppInboxScreen() {
               if (chatToUpdate?.archived && !isChatMuted(chatToUpdate)) {
                 updateChatArchive(chatToUpdate.id, false);
               }
-              if (message.direction === 'inbound' && userRef.current) {
+              if (message.direction === 'inbound' && canAutoMarkSelectedChatRead(currentChat)) {
                 void markMessagesRead([message]);
               }
             }
@@ -2282,6 +2304,20 @@ export default function WhatsAppInboxScreen() {
     setReplyToMessage(null);
     setEditMessage(null);
   }, [selectedChat]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (windowFocusVersion === 0 || !selectedChat || messagesChatId !== selectedChat.id || messages.length === 0) {
+      return;
+    }
+
+    if (!canAutoMarkSelectedChatRead(selectedChat)) {
+      return;
+    }
+
+    void markChatAsRead(selectedChat, messages).then(() => {
+      scheduleUnreadCountsRefresh(50);
+    });
+  }, [canAutoMarkSelectedChatRead, messages, messagesChatId, selectedChat, windowFocusVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user) return;
@@ -2741,7 +2777,7 @@ export default function WhatsAppInboxScreen() {
         });
       }
 
-      if (userRef.current) {
+      if (canAutoMarkSelectedChatRead(chat)) {
         void markChatAsRead(chat, baseMessages).then(() => {
           scheduleUnreadCountsRefresh(50);
         });
@@ -6745,65 +6781,126 @@ export default function WhatsAppInboxScreen() {
   }, [location.pathname, location.search, navigate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const patchSelectedChat = (chatId: string, patch: Partial<WhatsAppChat>) => {
-    setSelectedChat((current) => (current && current.id === chatId ? { ...current, ...patch } : current));
+    const targetChatIds = resolveEquivalentChatIds(chatId);
+    setSelectedChat((current) => {
+      if (!current || !targetChatIds.some((candidateId) => getChatIdVariants(current).includes(candidateId))) {
+        return current;
+      }
+
+      return { ...current, ...patch };
+    });
+  };
+
+  const resolveEquivalentChatIds = (chatId: string) => {
+    const normalizedTargetId = normalizeChatId(chatId);
+    const fallbackChat: WhatsAppChat = {
+      id: normalizedTargetId,
+      is_group: getWhatsAppChatKind(normalizedTargetId) === 'group',
+      phone_number: extractPhoneFromChatId(normalizedTargetId),
+      lid: normalizedTargetId.toLowerCase().endsWith('@lid') ? normalizedTargetId : null,
+      name: null,
+      last_message: null,
+      last_message_direction: null,
+      last_message_at: null,
+      unread_count: 0,
+      archived: false,
+      pinned: 0,
+      mute_until: null,
+      created_at: '',
+      updated_at: '',
+    };
+    const referenceChat = chatsRef.current.find(
+      (chat) => chat.id === normalizedTargetId || areEquivalentDirectChats(chat, fallbackChat),
+    ) ?? fallbackChat;
+
+    return Array.from(new Set(getChatIdVariants(referenceChat)));
+  };
+
+  const patchChatsByIdentity = (
+    chatId: string,
+    apply: (chat: WhatsAppChat) => WhatsAppChat,
+  ) => {
+    const targetChatIds = resolveEquivalentChatIds(chatId);
+
+    setChats((prev) => prev.map((chat) => (targetChatIds.some((candidateId) => getChatIdVariants(chat).includes(candidateId)) ? apply(chat) : chat)));
+    return targetChatIds;
   };
 
   const updateChatArchive = async (chatId: string, archived: boolean) => {
-    const previousArchived = chatsRef.current.find((chat) => chat.id === chatId)?.archived ?? false;
+    const targetChatIds = resolveEquivalentChatIds(chatId);
+    const previousArchivedById = new Map(
+      chatsRef.current
+        .filter((chat) => targetChatIds.some((candidateId) => getChatIdVariants(chat).includes(candidateId)))
+        .map((chat) => [chat.id, chat.archived ?? false]),
+    );
 
-    setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, archived } : chat)));
+    patchChatsByIdentity(chatId, (chat) => ({ ...chat, archived }));
     patchSelectedChat(chatId, { archived });
 
     const { data, error } = await supabase
       .from('whatsapp_chats')
       .update({ archived, updated_at: new Date().toISOString() })
-      .eq('id', chatId)
+      .in('id', targetChatIds)
       .select('id')
-      .maybeSingle();
+      ;
 
-    if (error || !data) {
-      setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, archived: previousArchived } : chat)));
-      patchSelectedChat(chatId, { archived: previousArchived });
+    if (error || !data?.length) {
+      setChats((prev) => prev.map((chat) => (previousArchivedById.has(chat.id) ? { ...chat, archived: previousArchivedById.get(chat.id) ?? false } : chat)));
+      patchSelectedChat(chatId, { archived: previousArchivedById.get(selectedChatRef.current?.id || '') ?? false });
       console.error('Erro ao atualizar arquivamento do chat:', error ?? 'Nenhuma linha atualizada (RLS/permissao).');
     }
   };
 
   const updateChatMute = async (chatId: string, muteUntil: string | null) => {
-    const previousMuteUntil = chatsRef.current.find((chat) => chat.id === chatId)?.mute_until ?? null;
+    const targetChatIds = resolveEquivalentChatIds(chatId);
+    const previousMuteById = new Map(
+      chatsRef.current
+        .filter((chat) => targetChatIds.some((candidateId) => getChatIdVariants(chat).includes(candidateId)))
+        .map((chat) => [chat.id, chat.mute_until ?? null]),
+    );
 
-    setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, mute_until: muteUntil } : chat)));
+    patchChatsByIdentity(chatId, (chat) => ({ ...chat, mute_until: muteUntil }));
     patchSelectedChat(chatId, { mute_until: muteUntil });
 
     const { data, error } = await supabase
       .from('whatsapp_chats')
       .update({ mute_until: muteUntil, updated_at: new Date().toISOString() })
-      .eq('id', chatId)
+      .in('id', targetChatIds)
       .select('id')
-      .maybeSingle();
+      ;
 
-    if (error || !data) {
-      setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, mute_until: previousMuteUntil } : chat)));
-      patchSelectedChat(chatId, { mute_until: previousMuteUntil });
+    if (error || !data?.length) {
+      setChats((prev) => prev.map((chat) => (previousMuteById.has(chat.id) ? { ...chat, mute_until: previousMuteById.get(chat.id) ?? null } : chat)));
+      patchSelectedChat(chatId, { mute_until: previousMuteById.get(selectedChatRef.current?.id || '') ?? null });
       console.error('Erro ao atualizar mute do chat:', error ?? 'Nenhuma linha atualizada (RLS/permissao).');
     }
   };
 
   const updateChatPinned = async (chatId: string, pinned: number) => {
-    const previousPinned = chatsRef.current.find((chat) => chat.id === chatId)?.pinned ?? 0;
+    const targetChatIds = resolveEquivalentChatIds(chatId);
+    const previousPinnedById = new Map(
+      chatsRef.current
+        .filter((chat) => targetChatIds.some((candidateId) => getChatIdVariants(chat).includes(candidateId)))
+        .map((chat) => [chat.id, chat.pinned ?? 0]),
+    );
 
-    setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, pinned } : chat)).sort(sortChatsByLatest));
+    setChats((prev) =>
+      prev
+        .map((chat) => (targetChatIds.some((candidateId) => getChatIdVariants(chat).includes(candidateId)) ? { ...chat, pinned } : chat))
+        .sort(sortChatsByLatest),
+    );
     patchSelectedChat(chatId, { pinned });
 
     const { data, error } = await supabase
       .from('whatsapp_chats')
       .update({ pinned, updated_at: new Date().toISOString() })
-      .eq('id', chatId)
+      .in('id', targetChatIds)
       .select('id')
-      .maybeSingle();
+      ;
 
-    if (error || !data) {
-      setChats((prev) => prev.map((chat) => (chat.id === chatId ? { ...chat, pinned: previousPinned } : chat)).sort(sortChatsByLatest));
-      patchSelectedChat(chatId, { pinned: previousPinned });
+    if (error || !data?.length) {
+      setChats((prev) => prev.map((chat) => (previousPinnedById.has(chat.id) ? { ...chat, pinned: previousPinnedById.get(chat.id) ?? 0 } : chat)).sort(sortChatsByLatest));
+      patchSelectedChat(chatId, { pinned: previousPinnedById.get(selectedChatRef.current?.id || '') ?? 0 });
       console.error('Erro ao atualizar fixação do chat:', error ?? 'Nenhuma linha atualizada (RLS/permissão).');
     }
   };
@@ -6849,7 +6946,7 @@ export default function WhatsAppInboxScreen() {
 
       setChats((prev) =>
         prev.map((item) =>
-          item.id === chat.id
+          chatIds.some((candidateId) => getChatIdVariants(item).includes(candidateId))
             ? {
                 ...item,
                 unread_count: Math.max(1, item.unread_count ?? 0),

@@ -1050,6 +1050,48 @@ export interface WhapiMessageListResponse {
   last: number;
 }
 
+export function mergeWhapiMessageHistoryResponses(
+  params: Pick<WhapiMessageListParams, 'count' | 'offset' | 'sort'>,
+  receivedResponse: WhapiMessageListResponse,
+  sentResponse: WhapiMessageListResponse,
+): WhapiMessageListResponse {
+  const requestedOffset = Math.max(0, params.offset ?? 0);
+  const requestedCount = Math.max(0, params.count ?? (receivedResponse.count + sentResponse.count));
+  const uniqueMessages = new Map<string, WhapiMessage>();
+
+  [...(receivedResponse.messages || []), ...(sentResponse.messages || [])].forEach((message, index) => {
+    const key = typeof message.id === 'string' && message.id.trim()
+      ? message.id.trim()
+      : `${message.chat_id}:${message.timestamp}:${message.from_me}:${index}`;
+    const existing = uniqueMessages.get(key);
+    uniqueMessages.set(key, existing ? { ...existing, ...message } : message);
+  });
+
+  const mergedMessages = Array.from(uniqueMessages.values()).sort((left, right) => {
+    if (params.sort === 'asc') {
+      return left.timestamp - right.timestamp;
+    }
+    return right.timestamp - left.timestamp;
+  });
+
+  const paginatedMessages = requestedCount > 0
+    ? mergedMessages.slice(requestedOffset, requestedOffset + requestedCount)
+    : mergedMessages.slice(requestedOffset);
+  const totalMessages = Math.max(
+    mergedMessages.length,
+    (receivedResponse.total || 0) + (sentResponse.total || 0),
+  );
+
+  return {
+    messages: paginatedMessages,
+    count: paginatedMessages.length,
+    total: totalMessages,
+    offset: requestedOffset,
+    first: paginatedMessages.length > 0 ? paginatedMessages[0].timestamp : 0,
+    last: paginatedMessages.length > 0 ? paginatedMessages[paginatedMessages.length - 1].timestamp : 0,
+  };
+}
+
 export async function getWhatsAppChats(count: number = 100, offset: number = 0): Promise<WhapiChatListResponse> {
   const settings = await getWhatsAppSettings();
 
@@ -1530,33 +1572,17 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
     return response.json();
   }
 
-  const [receivedResponse, sentResponse] = await Promise.all([
-    fetchMessagesBatch(settings, params.chatId, params, false),
-    fetchMessagesBatch(settings, params.chatId, params, true),
-  ]);
-
-  const allMessages = [
-    ...(receivedResponse.messages || []),
-    ...(sentResponse.messages || [])
-  ];
-
-  allMessages.sort((a, b) => {
-    if (params.sort === 'asc') {
-      return a.timestamp - b.timestamp;
-    }
-    return b.timestamp - a.timestamp;
-  });
-
-  const totalMessages = receivedResponse.total + sentResponse.total;
-
-  const result = {
-    messages: allMessages,
-    count: allMessages.length,
-    total: totalMessages,
-    offset: params.offset || 0,
-    first: allMessages.length > 0 ? allMessages[0].timestamp : 0,
-    last: allMessages.length > 0 ? allMessages[allMessages.length - 1].timestamp : 0,
+  const effectiveCount = Math.max(1, (params.count ?? 50) + (params.offset ?? 0));
+  const batchParams: Omit<WhapiMessageListParams, 'chatId'> = {
+    ...params,
+    count: effectiveCount,
+    offset: 0,
   };
 
-  return result;
+  const [receivedResponse, sentResponse] = await Promise.all([
+    fetchMessagesBatch(settings, params.chatId, batchParams, false),
+    fetchMessagesBatch(settings, params.chatId, batchParams, true),
+  ]);
+
+  return mergeWhapiMessageHistoryResponses(params, receivedResponse, sentResponse);
 }

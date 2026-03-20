@@ -784,6 +784,14 @@ export default function WhatsAppCampaignSettings() {
       });
 
       setMessageState({ type: 'success', text: 'Arquivo enviado com sucesso para a etapa.' });
+    } catch (error) {
+      console.error('Erro ao enviar arquivo da etapa da campanha:', error);
+      setMessageState({
+        type: 'error',
+        text: error instanceof Error && error.message.trim()
+          ? error.message
+          : 'Não foi possível enviar o arquivo da etapa.',
+      });
     } finally {
       setUploadingStepId(null);
     }

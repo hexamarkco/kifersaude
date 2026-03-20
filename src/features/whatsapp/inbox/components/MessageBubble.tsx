@@ -1186,10 +1186,11 @@ function MessageBubbleComponent({
       );
     }
 
-    if (type === 'location') {
-      const locationPayload = payloadData?.location && typeof payloadData.location === 'object'
-        ? (payloadData.location as { latitude?: unknown; longitude?: unknown; address?: unknown })
-        : null;
+    const locationPayload = payloadData?.location && typeof payloadData.location === 'object'
+      ? (payloadData.location as { latitude?: unknown; longitude?: unknown; address?: unknown })
+      : null;
+
+    if (type === 'location' || locationPayload) {
       const latitude = typeof locationPayload?.latitude === 'number' ? locationPayload.latitude : null;
       const longitude = typeof locationPayload?.longitude === 'number' ? locationPayload.longitude : null;
       const locationQuery = latitude !== null && longitude !== null ? `${latitude},${longitude}` : body || '';
@@ -1203,7 +1204,7 @@ function MessageBubbleComponent({
           <div className="text-sm">
             <div className="font-medium">{locationLabel}</div>
             <a
-              href={`https://maps.google.com/?q=${locationQuery}`}
+              href={`https://maps.google.com/?q=${encodeURIComponent(locationQuery)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-amber-700 hover:text-amber-800 hover:underline"

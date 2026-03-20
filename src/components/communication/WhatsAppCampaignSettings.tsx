@@ -28,6 +28,7 @@ import { fetchAllPages, supabase } from '../../lib/supabase';
 import {
   cancelWhatsAppCampaignAtomic,
   createWhatsAppCampaignAtomic,
+  previewWhatsAppCampaignAudience,
   recomputeWhatsAppCampaignCounters,
 } from '../../lib/whatsappCampaignAdminService';
 import { getAcceptedFileTypesByStepType, uploadWhatsAppCampaignMedia } from '../../lib/whatsappCampaignMediaService';
@@ -434,6 +435,7 @@ export default function WhatsAppCampaignSettings() {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
 
   const [previewLeads, setPreviewLeads] = useState<LeadPreviewRow[]>([]);
+  const [previewLeadsTotal, setPreviewLeadsTotal] = useState(0);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [loadingFilters, setLoadingFilters] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -675,6 +677,7 @@ export default function WhatsAppCampaignSettings() {
 
   useEffect(() => {
     setPreviewLeads([]);
+    setPreviewLeadsTotal(0);
     setCsvAnalysis(null);
   }, [
     audienceSource,
@@ -868,6 +871,7 @@ export default function WhatsAppCampaignSettings() {
       statusId: current.statusId,
     }));
     setPreviewLeads([]);
+    setPreviewLeadsTotal(0);
     setFlowSteps([firstStep]);
     setSelectedStepId(firstStep.id);
   }, []);
@@ -935,85 +939,20 @@ export default function WhatsAppCampaignSettings() {
 
         setCsvAnalysis(analysis);
         setPreviewLeads([]);
+        setPreviewLeadsTotal(0);
         return;
       }
 
-      const queryWithoutCanal = async (): Promise<LeadPreviewRow[]> => {
-        let fallbackQuery = supabase
-          .from('leads')
-          .select('id, nome_completo, telefone, status_id, responsavel_id, origem_id')
-          .eq('arquivado', false)
-          .not('telefone', 'is', null)
-          .neq('telefone', '')
-          .limit(400);
-
-        if (filters.statusId) {
-          fallbackQuery = fallbackQuery.eq('status_id', filters.statusId);
-        }
-        if (filters.responsavelId) {
-          fallbackQuery = fallbackQuery.eq('responsavel_id', filters.responsavelId);
-        }
-        if (filters.origemId) {
-          fallbackQuery = fallbackQuery.eq('origem_id', filters.origemId);
-        }
-
-        const { data, error } = await fallbackQuery;
-        if (error) {
-          throw error;
-        }
-
-        return ((data ?? []) as LeadPreviewRow[]).map((lead) => ({
-          ...lead,
-          canal: null,
-        }));
-      };
-
-      if (!hasCanalColumn) {
-        setPreviewLeads(await queryWithoutCanal());
-        setCsvAnalysis(null);
-        return;
-      }
-
-      let query = supabase
-        .from('leads')
-        .select('id, nome_completo, telefone, status_id, responsavel_id, origem_id, canal')
-        .eq('arquivado', false)
-        .not('telefone', 'is', null)
-        .neq('telefone', '')
-        .limit(400);
-
-      if (filters.statusId) {
-        query = query.eq('status_id', filters.statusId);
-      }
-      if (filters.responsavelId) {
-        query = query.eq('responsavel_id', filters.responsavelId);
-      }
-      if (filters.origemId) {
-        query = query.eq('origem_id', filters.origemId);
-      }
-      if (filters.canal) {
-        query = query.eq('canal', filters.canal);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        if (isMissingLeadsCanalColumnError(error)) {
-          setHasCanalColumn(false);
-          setCanalOptions([]);
-          setFilters((current) => ({ ...current, canal: '' }));
-          setPreviewLeads(await queryWithoutCanal());
-          setCsvAnalysis(null);
-          return;
-        }
-
-        throw error;
-      }
-
-      setPreviewLeads((data ?? []) as LeadPreviewRow[]);
+      const preview = await previewWhatsAppCampaignAudience(buildAudienceFilterSnapshot(), 80);
+      setPreviewLeads(preview.sampleTargets as LeadPreviewRow[]);
+      setPreviewLeadsTotal(preview.totalTargets);
       setCsvAnalysis(null);
     } catch (error) {
       console.error('Erro ao gerar preview de publico da campanha:', error);
+      if (audienceSource === 'filters') {
+        setPreviewLeads([]);
+        setPreviewLeadsTotal(0);
+      }
       setMessageState({ type: 'error', text: 'Não foi possível gerar o preview do público.' });
     } finally {
       setLoadingPreview(false);
@@ -1072,7 +1011,7 @@ export default function WhatsAppCampaignSettings() {
       }
     }
 
-    if (audienceSource === 'filters' && previewLeads.length === 0) {
+    if (audienceSource === 'filters' && previewLeadsTotal === 0) {
       setMessageState({ type: 'error', text: 'Gere o preview de publico antes de criar a campanha.' });
       return;
     }
@@ -1149,7 +1088,7 @@ export default function WhatsAppCampaignSettings() {
         audienceFilter: audienceFilterSnapshot,
         audienceConfig: {
           source: 'filters',
-          preview_count: previewLeads.length,
+          preview_count: previewLeadsTotal,
           filters: audienceFilterSnapshot,
         },
         scheduledAt: scheduledAtIso,
@@ -2091,7 +2030,7 @@ export default function WhatsAppCampaignSettings() {
                 ? csvAnalysis
                   ? formatCsvSummaryLabel(csvAnalysis.summary)
                   : 'CSV ainda nao validado'
-                : `${previewLeads.length} lead(s)`}
+                : `${previewLeadsTotal} lead(s)`}
             </strong>
           </span>
         </div>
@@ -2141,7 +2080,9 @@ export default function WhatsAppCampaignSettings() {
 
         {audienceSource === 'filters' && previewLeads.length > 0 && (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Leads no preview (max. 400)</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Amostra do preview ({previewLeads.length} de {previewLeadsTotal} lead(s) deduplicado(s))
+            </p>
             <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto text-xs text-slate-700">
               {previewLeads.slice(0, 80).map((lead) => (
                 <li key={lead.id} className="rounded-md border border-slate-200 bg-white px-2 py-1">

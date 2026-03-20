@@ -26,6 +26,21 @@ export type CreateWhatsAppCampaignInput = {
   csvTargets?: CreateWhatsAppCampaignCsvTargetInput[];
 };
 
+export type WhatsAppCampaignAudiencePreviewLead = {
+  id: string;
+  nome_completo: string;
+  telefone: string;
+  status_id: string | null;
+  responsavel_id: string | null;
+  origem_id: string | null;
+  canal?: string | null;
+};
+
+export type WhatsAppCampaignAudiencePreview = {
+  totalTargets: number;
+  sampleTargets: WhatsAppCampaignAudiencePreviewLead[];
+};
+
 const ensureCampaignResult = (data: unknown, fallbackMessage: string): WhatsAppCampaign => {
   if (Array.isArray(data)) {
     if (data[0] && typeof data[0] === 'object') {
@@ -84,4 +99,30 @@ export async function recomputeWhatsAppCampaignCounters(campaignId: string): Pro
   }
 
   return ensureCampaignResult(data, 'Nao foi possivel recalcular os contadores da campanha do WhatsApp.');
+}
+
+export async function previewWhatsAppCampaignAudience(
+  audienceFilter: Record<string, unknown>,
+  limit = 80,
+): Promise<WhatsAppCampaignAudiencePreview> {
+  const { data, error } = await supabase.rpc('preview_whatsapp_campaign_audience', {
+    p_audience_filter: audienceFilter,
+    p_limit: limit,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const payload = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
+  if (!payload) {
+    throw new Error('Nao foi possivel gerar o preview do publico da campanha.');
+  }
+
+  return {
+    totalTargets: typeof payload.total_targets === 'number' ? payload.total_targets : 0,
+    sampleTargets: Array.isArray(payload.sample_targets)
+      ? (payload.sample_targets as WhatsAppCampaignAudiencePreviewLead[])
+      : [],
+  };
 }

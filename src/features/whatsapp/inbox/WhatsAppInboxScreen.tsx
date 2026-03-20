@@ -1705,25 +1705,29 @@ export default function WhatsAppInboxScreen() {
     const batchSize = 100;
     const mergedResults: InboxLeadSummary[] = [];
 
-    for (let index = 0; index < missingKeys.length; index += batchSize) {
-      const batch = missingKeys.slice(index, index + batchSize);
-      const rows = await searchWhatsAppInboxLeads({ phoneNumbers: batch, limit: 250 });
-      mergedResults.push(
-        ...rows
-          .map((lead) => ({
-            id: lead.id,
-            name: lead.nome_completo?.trim() || normalizePhoneNumber(lead.telefone) || '',
-            phone: normalizePhoneNumber(lead.telefone),
-            status: lead.status ?? null,
-            responsavel: lead.responsavel_id ?? null,
-          }))
-          .filter((lead) => Boolean(lead.phone)),
-      );
-      batch.forEach((key) => loadedLeadMatchKeysRef.current.add(key));
-    }
+    try {
+      for (let index = 0; index < missingKeys.length; index += batchSize) {
+        const batch = missingKeys.slice(index, index + batchSize);
+        const rows = await searchWhatsAppInboxLeads({ phoneNumbers: batch, limit: 250 });
+        mergedResults.push(
+          ...rows
+            .map((lead) => ({
+              id: lead.id,
+              name: lead.nome_completo?.trim() || normalizePhoneNumber(lead.telefone) || '',
+              phone: normalizePhoneNumber(lead.telefone),
+              status: lead.status ?? null,
+              responsavel: lead.responsavel_id ?? null,
+            }))
+            .filter((lead) => Boolean(lead.phone)),
+        );
+        batch.forEach((key) => loadedLeadMatchKeysRef.current.add(key));
+      }
 
-    if (mergedResults.length > 0) {
-      mergeLeadSummaries(mergedResults);
+      if (mergedResults.length > 0) {
+        mergeLeadSummaries(mergedResults);
+      }
+    } catch (err) {
+      console.error('Error loading lead matches for chats:', err);
     }
   }, [getLeadMatchKeysForChat, mergeLeadSummaries]);
 

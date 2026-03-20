@@ -473,6 +473,7 @@ export default function WhatsAppInboxScreen() {
   const muteMenuCloseTimeoutRef = useRef<number | null>(null);
   const statusMenuCloseTimeoutRef = useRef<number | null>(null);
   const shouldScrollOnChatChangeRef = useRef(false);
+  const previousSelectedChatRef = useRef<WhatsAppChat | null>(null);
   const pendingInitialScrollMessageIdRef = useRef<string | null>(null);
   const lastRenderedMessageIdRef = useRef<string | null>(null);
   const pendingMessageIdsBelowRef = useRef<Set<string>>(new Set());
@@ -1120,6 +1121,24 @@ export default function WhatsAppInboxScreen() {
   };
 
   const isDirectChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => isDirectChatIdentityTarget(chat);
+
+  const isSameConversation = (
+    left: Pick<WhatsAppChat, 'id' | 'is_group'> | null | undefined,
+    right: Pick<WhatsAppChat, 'id' | 'is_group'> | null | undefined,
+  ) => {
+    if (!left || !right) return left === right;
+    if (left.id === right.id) return true;
+    return areEquivalentDirectChats(left, right);
+  };
+
+  const doesMessagesStateMatchChat = (
+    chatId: string | null,
+    chat: Pick<WhatsAppChat, 'id' | 'is_group'> | null | undefined,
+  ) => {
+    if (!chatId || !chat) return false;
+    if (chatId === chat.id) return true;
+    return areEquivalentDirectChats({ id: chatId, is_group: chat.is_group }, chat);
+  };
 
   const getChatTypeLabel = useCallback((chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
     const kind = getChatKind(chat);
@@ -2320,7 +2339,21 @@ export default function WhatsAppInboxScreen() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    const previousSelectedChat = previousSelectedChatRef.current;
+    previousSelectedChatRef.current = selectedChat;
+
     if (selectedChat) {
+      if (previousSelectedChat && isSameConversation(previousSelectedChat, selectedChat)) {
+        setMessagesChatId((currentChatId) => {
+          if (!doesMessagesStateMatchChat(currentChatId, selectedChat)) {
+            return currentChatId;
+          }
+
+          return currentChatId === selectedChat.id ? currentChatId : selectedChat.id;
+        });
+        return;
+      }
+
       setCopiedPhone(null);
       setShowConversationInfo(false);
       setSelectedLeadInfo(null);
@@ -2368,7 +2401,7 @@ export default function WhatsAppInboxScreen() {
   }, [selectedChat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (windowFocusVersion === 0 || !selectedChat || messagesChatId !== selectedChat.id || messages.length === 0) {
+    if (windowFocusVersion === 0 || !selectedChat || !doesMessagesStateMatchChat(messagesChatId, selectedChat) || messages.length === 0) {
       return;
     }
 
@@ -2445,7 +2478,7 @@ export default function WhatsAppInboxScreen() {
     const lastRenderedMessageId = visibleMessages[visibleMessages.length - 1]?.id ?? null;
 
     if (shouldScrollOnChatChangeRef.current) {
-      if (selectedChat && messagesChatId !== selectedChat.id) {
+      if (selectedChat && !doesMessagesStateMatchChat(messagesChatId, selectedChat)) {
         return;
       }
 
@@ -2939,6 +2972,17 @@ export default function WhatsAppInboxScreen() {
         };
       }),
     );
+
+    setSelectedChat((current) => {
+      if (!current) return current;
+      const unreadCount = getChatIdVariants(current).reduce((total, variant) => total + (countsMap.get(variant) ?? 0), 0);
+      return (current.unread_count ?? 0) === unreadCount
+        ? current
+        : {
+            ...current,
+            unread_count: unreadCount,
+          };
+    });
   };
 
   const markChatAsRead = async (chat: WhatsAppChat, fallbackMessages: WhatsAppMessage[] = []) => {
@@ -2978,6 +3022,17 @@ export default function WhatsAppInboxScreen() {
           : existing,
       ),
     );
+
+    setSelectedChat((current) => {
+      if (!current) return current;
+      const currentVariants = getChatIdVariants(current);
+      return currentVariants.some((variant) => chatIds.includes(variant))
+        ? {
+            ...current,
+            unread_count: 0,
+          }
+        : current;
+    });
   };
 
   const markMessagesRead = async (messagesToMark: WhatsAppMessage[]) => {
@@ -3008,6 +3063,17 @@ export default function WhatsAppInboxScreen() {
         return { ...chat, unread_count: Math.max(0, current - matches) };
       }),
     );
+
+    setSelectedChat((current) => {
+      if (!current) return current;
+      const variants = getChatIdVariants(current);
+      const matches = unreadInbound.filter((message) => variants.includes(message.chat_id)).length;
+      if (!matches) return current;
+      return {
+        ...current,
+        unread_count: Math.max(0, (current.unread_count ?? 0) - matches),
+      };
+    });
   };
 
   const handleReply = (messageId: string, body: string, from: string) => {

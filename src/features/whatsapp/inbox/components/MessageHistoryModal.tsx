@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
 import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../../../lib/whatsappApiService';
 import { formatWhatsAppAudioTranscriptionLabel } from '../../../../lib/whatsappAudioTranscription';
@@ -17,48 +17,27 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
   const [messages, setMessages] = useState<WhapiMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [resolvedChatId, setResolvedChatId] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+  const resolvedChatId = chatId ? (chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId)) : null;
 
   useEffect(() => {
-    if (isOpen && chatId) {
-      resolveChatId();
+    if (!isOpen) {
+      requestIdRef.current += 1;
+      setMessages([]);
+      setError(null);
+      setLoading(false);
     }
-  }, [isOpen, chatId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && resolvedChatId) {
-      loadHistory();
+      void loadHistory(resolvedChatId);
     }
-  }, [isOpen, resolvedChatId, messageTimestamp]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, resolvedChatId, messageTimestamp]);
 
-  const resolveChatId = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const finalChatId = chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId);
-
-      const contextWindow = 10 * 60;
-      const timeFrom = Math.floor(messageTimestamp / 1000) - contextWindow;
-      const timeTo = Math.floor(messageTimestamp / 1000) + contextWindow;
-
-      await getWhatsAppMessageHistory({
-        chatId: finalChatId,
-        count: 1,
-        timeFrom,
-        timeTo,
-      });
-
-      setResolvedChatId(finalChatId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao buscar chat');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadHistory = async () => {
-    if (!resolvedChatId) return;
+  const loadHistory = async (activeChatId: string) => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
 
     setLoading(true);
     setError(null);
@@ -68,18 +47,28 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
       const timeTo = Math.floor(messageTimestamp / 1000) + contextWindow;
 
       const response = await getWhatsAppMessageHistory({
-        chatId: resolvedChatId,
+        chatId: activeChatId,
         count: 50,
         timeFrom,
         timeTo,
         sort: 'asc',
       });
 
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
+
       setMessages(response.messages);
     } catch (err) {
+      if (requestIdRef.current !== requestId) {
+        return;
+      }
+
       setError(err instanceof Error ? err.message : 'Erro ao carregar contexto');
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   };
 

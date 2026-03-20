@@ -23,7 +23,6 @@ type ChatSummaryRow = {
   id: string;
   name: string | null;
   phone_number: string | null;
-  archived: boolean | null;
 };
 
 const SETTINGS_TABS: TabItem<SettingsTab>[] = [
@@ -61,13 +60,29 @@ export default function WhatsAppSettingsPage() {
     setSummaryError(null);
 
     try {
-      const rows = await fetchAllPages<ChatSummaryRow>(async (from, to) =>
-        supabase.from('whatsapp_chats').select('id, name, phone_number, archived').range(from, to),
-      );
+      const [chatCountResponse, archivedCountResponse, rows] = await Promise.all([
+        supabase.from('whatsapp_chats').select('id', { count: 'exact', head: true }),
+        supabase.from('whatsapp_chats').select('id', { count: 'exact', head: true }).eq('archived', true),
+        fetchAllPages<ChatSummaryRow>(async (from, to) => {
+          const response = await supabase
+            .from('whatsapp_chats')
+            .select('id, name, phone_number')
+            .range(from, to);
+          return { data: response.data, error: response.error };
+        }, 500),
+      ]);
+
+      if (chatCountResponse.error) {
+        throw chatCountResponse.error;
+      }
+
+      if (archivedCountResponse.error) {
+        throw archivedCountResponse.error;
+      }
 
       setChatRows(rows);
-      setChatsCount(rows.length);
-      setArchivedCount(rows.filter((chat) => Boolean(chat.archived)).length);
+      setChatsCount(chatCountResponse.count ?? rows.length);
+      setArchivedCount(archivedCountResponse.count ?? 0);
     } catch (error) {
       console.error('Erro ao carregar resumo do WhatsApp:', error);
       setSummaryError('Não foi possível carregar os indicadores do WhatsApp agora.');
@@ -102,6 +117,7 @@ export default function WhatsAppSettingsPage() {
     if (isSyncingAllChats || chatRows.length === 0) return;
 
     const chatIds = Array.from(new Set(chatRows.map((chat) => chat.id).filter(Boolean)));
+    const chatRowsById = new Map(chatRows.map((chat) => [chat.id, chat]));
     if (chatIds.length === 0) return;
 
     setIsSyncingAllChats(true);
@@ -116,11 +132,11 @@ export default function WhatsAppSettingsPage() {
     let failed = 0;
     const yieldProgressFrame = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
-    try {
-      for (let index = 0; index < chatIds.length; index += 1) {
-        const chatId = chatIds[index];
-        const currentChat = chatRows.find((chat) => chat.id === chatId);
-        const currentChatName = currentChat?.name?.trim() || currentChat?.phone_number?.trim() || chatId;
+      try {
+        for (let index = 0; index < chatIds.length; index += 1) {
+          const chatId = chatIds[index];
+          const currentChat = chatRowsById.get(chatId);
+          const currentChatName = currentChat?.name?.trim() || currentChat?.phone_number?.trim() || chatId;
 
         setSyncAllChatsProgress((previousValue) => ({
           ...previousValue,

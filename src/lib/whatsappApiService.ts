@@ -1159,8 +1159,62 @@ export interface WhatsAppMediaResponse {
   objectUrl?: string;
 }
 
-const whatsappMediaCache = new Map<string, WhatsAppMediaResponse>();
+const WHATSAPP_MEDIA_CACHE_MAX_ENTRIES = 120;
+const WHATSAPP_MEDIA_CACHE_TTL_MS = 10 * 60 * 1000;
+
+type CachedWhatsAppMediaEntry = {
+  response: WhatsAppMediaResponse;
+  cachedAt: number;
+  lastAccessedAt: number;
+};
+
+const whatsappMediaCache = new Map<string, CachedWhatsAppMediaEntry>();
 const whatsappMediaRequestCache = new Map<string, Promise<WhatsAppMediaResponse>>();
+
+function revokeMediaObjectUrl(response: WhatsAppMediaResponse) {
+  if (response.objectUrl) {
+    URL.revokeObjectURL(response.objectUrl);
+  }
+}
+
+function removeCachedMediaEntry(cacheKey: string) {
+  const cached = whatsappMediaCache.get(cacheKey);
+  if (!cached) return;
+  revokeMediaObjectUrl(cached.response);
+  whatsappMediaCache.delete(cacheKey);
+}
+
+function touchCachedMediaEntry(cacheKey: string, cached: CachedWhatsAppMediaEntry) {
+  cached.lastAccessedAt = Date.now();
+  whatsappMediaCache.delete(cacheKey);
+  whatsappMediaCache.set(cacheKey, cached);
+}
+
+function cleanupWhatsAppMediaCache(now = Date.now()) {
+  for (const [cacheKey, cached] of whatsappMediaCache.entries()) {
+    if (cached.cachedAt + WHATSAPP_MEDIA_CACHE_TTL_MS <= now) {
+      removeCachedMediaEntry(cacheKey);
+    }
+  }
+
+  while (whatsappMediaCache.size > WHATSAPP_MEDIA_CACHE_MAX_ENTRIES) {
+    const oldestCacheKey = whatsappMediaCache.keys().next().value;
+    if (!oldestCacheKey) {
+      break;
+    }
+    removeCachedMediaEntry(oldestCacheKey);
+  }
+}
+
+function setCachedWhatsAppMedia(cacheKey: string, response: WhatsAppMediaResponse) {
+  removeCachedMediaEntry(cacheKey);
+  whatsappMediaCache.set(cacheKey, {
+    response,
+    cachedAt: Date.now(),
+    lastAccessedAt: Date.now(),
+  });
+  cleanupWhatsAppMediaCache();
+}
 
 function materializeCachedObjectUrl(cached: WhatsAppMediaResponse): WhatsAppMediaResponse {
   if (cached.objectUrl || !cached.data) {
@@ -1184,17 +1238,25 @@ export async function getWhatsAppMedia(
     throw new Error('mediaId obrigatorio.');
   }
 
+  cleanupWhatsAppMediaCache();
+
+  if (options?.forceRefresh) {
+    removeCachedMediaEntry(cacheKey);
+  }
+
   const cached = !options?.forceRefresh ? whatsappMediaCache.get(cacheKey) : undefined;
   if (cached) {
     if (options?.preferObjectUrl) {
-      const nextCached = materializeCachedObjectUrl(cached);
-      if (nextCached !== cached) {
-        whatsappMediaCache.set(cacheKey, nextCached);
+      const nextCachedResponse = materializeCachedObjectUrl(cached.response);
+      if (nextCachedResponse !== cached.response) {
+        cached.response = nextCachedResponse;
       }
-      return nextCached;
+      touchCachedMediaEntry(cacheKey, cached);
+      return cached.response;
     }
 
-    return cached;
+    touchCachedMediaEntry(cacheKey, cached);
+    return cached.response;
   }
 
   const pending = !options?.forceRefresh ? whatsappMediaRequestCache.get(cacheKey) : undefined;
@@ -1203,7 +1265,7 @@ export async function getWhatsAppMedia(
     if (options?.preferObjectUrl) {
       const nextCached = materializeCachedObjectUrl(response);
       if (nextCached !== response) {
-        whatsappMediaCache.set(cacheKey, nextCached);
+        setCachedWhatsAppMedia(cacheKey, nextCached);
       }
       return nextCached;
     }
@@ -1261,7 +1323,7 @@ export async function getWhatsAppMedia(
   try {
     const response = await request;
     const nextCached = options?.preferObjectUrl ? materializeCachedObjectUrl(response) : response;
-    whatsappMediaCache.set(cacheKey, nextCached);
+    setCachedWhatsAppMedia(cacheKey, nextCached);
     return nextCached;
   } finally {
     whatsappMediaRequestCache.delete(cacheKey);

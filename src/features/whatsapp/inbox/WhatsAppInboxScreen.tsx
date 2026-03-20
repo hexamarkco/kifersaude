@@ -446,6 +446,8 @@ export default function WhatsAppInboxScreen() {
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
   const newsletterNamesByIdRef = useRef<Map<string, string>>(new Map());
   const newsletterNameLookupAttemptsRef = useRef<Set<string>>(new Set());
+  const leadNamesLoadedRef = useRef(false);
+  const leadNamesRequestRef = useRef<Promise<void> | null>(null);
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1660,38 +1662,61 @@ export default function WhatsAppInboxScreen() {
     };
   }, []);
 
-  const loadLeadNames = async () => {
-    try {
-      const data = await fetchAllPages<{
-        id: string;
-        telefone: string;
-        nome_completo: string;
-        status?: string | null;
-        responsavel_id?: string | null;
-      }>(async (from, to) => {
-        const response = await supabase
-          .from('leads')
-          .select('id, telefone, nome_completo, status, responsavel_id')
-          .order('created_at', { ascending: false })
-          .range(from, to);
-        return { data: response.data, error: response.error };
-      });
+  const loadLeadNames = useCallback(async (options?: { force?: boolean }) => {
+    const force = options?.force ?? false;
+    if (!force) {
+      if (leadNamesLoadedRef.current) {
+        return;
+      }
 
-      setLeadsList(
-        (data || [])
-          .map((lead) => ({
-            id: lead.id,
-            name: lead.nome_completo,
-            phone: normalizePhoneNumber(lead.telefone),
-            status: lead.status ?? null,
-            responsavel: lead.responsavel_id ?? null,
-          }))
-          .filter((lead) => Boolean(lead.phone)),
-      );
-    } catch (err) {
-      console.error('Error loading lead names:', err);
+      if (leadNamesRequestRef.current) {
+        await leadNamesRequestRef.current;
+        return;
+      }
     }
-  };
+
+    let request: Promise<void> | null = null;
+    request = (async () => {
+      try {
+        const data = await fetchAllPages<{
+          id: string;
+          telefone: string;
+          nome_completo: string;
+          status?: string | null;
+          responsavel_id?: string | null;
+        }>(async (from, to) => {
+          const response = await supabase
+            .from('leads')
+            .select('id, telefone, nome_completo, status, responsavel_id')
+            .order('created_at', { ascending: false })
+            .range(from, to);
+          return { data: response.data, error: response.error };
+        });
+
+        setLeadsList(
+          (data || [])
+            .map((lead) => ({
+              id: lead.id,
+              name: lead.nome_completo,
+              phone: normalizePhoneNumber(lead.telefone),
+              status: lead.status ?? null,
+              responsavel: lead.responsavel_id ?? null,
+            }))
+            .filter((lead) => Boolean(lead.phone)),
+        );
+        leadNamesLoadedRef.current = true;
+      } catch (err) {
+        console.error('Error loading lead names:', err);
+      } finally {
+        if (leadNamesRequestRef.current === request) {
+          leadNamesRequestRef.current = null;
+        }
+      }
+    })();
+
+    leadNamesRequestRef.current = request;
+    await request;
+  }, []);
 
   const loadSavedContacts = useCallback(async () => {
     try {
@@ -1883,13 +1908,13 @@ export default function WhatsAppInboxScreen() {
     void loadLeadNames();
     void loadSavedContacts();
     void loadContactPhotoFallbacks();
-  }, [loadSavedContacts]);
+  }, [loadLeadNames, loadSavedContacts]);
 
   useEffect(() => {
     if (!user?.id) return;
     if (leadsList.length > 0) return;
     void loadLeadNames();
-  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadLeadNames, leadsList.length, user?.id]);
 
   useEffect(() => {
     const loadLeadStatuses = async () => {
@@ -1917,6 +1942,7 @@ export default function WhatsAppInboxScreen() {
         if (payload.eventType === 'DELETE') {
           const deletedLeadId = (payload.old as { id?: string } | null)?.id;
           if (!deletedLeadId) return;
+          leadNamesLoadedRef.current = true;
           setLeadsList((prev) => prev.filter((lead) => lead.id !== deletedLeadId));
           return;
         }
@@ -1961,6 +1987,7 @@ export default function WhatsAppInboxScreen() {
           next[existingIndex] = nextLead;
           return next;
         });
+        leadNamesLoadedRef.current = true;
       })
       .subscribe();
 
@@ -2606,6 +2633,9 @@ export default function WhatsAppInboxScreen() {
     activeMessagesLoadIdRef.current += 1;
     const currentLoadId = activeMessagesLoadIdRef.current;
     const silent = options?.silent ?? false;
+    const cachedState = messagesCacheRef.current.get(chat.id);
+    const previousLoadedCount = cachedState?.loadedCount ?? 0;
+    const previousHasOlder = cachedState?.hasOlder ?? false;
 
     if (!silent) {
       setIsLoadingMessages(true);
@@ -2633,19 +2663,21 @@ export default function WhatsAppInboxScreen() {
         .map(hydrateMessageAudioTranscription)
         .filter((item) => !isTechnicalCiphertextMessage(item));
       const fetchedCount = fetchedMessages.length;
+      const nextLoadedCount = silent ? Math.max(previousLoadedCount, fetchedCount) : fetchedCount;
+      const nextHasOlder = silent ? previousHasOlder || fetchedCount === MESSAGES_PAGE_SIZE : fetchedCount === MESSAGES_PAGE_SIZE;
       const baseMessages = dedupeMessagesForDisplay(fetchedMessages as WhatsAppMessage[]);
       const latestPreview = getLatestMeaningfulPreview(baseMessages);
       setMessages((prev) => {
         const mergedMessages = dedupeMessagesForDisplay([...prev, ...baseMessages]);
         messagesCacheRef.current.set(chat.id, {
           messages: mergedMessages,
-          loadedCount: fetchedCount,
-          hasOlder: fetchedCount === MESSAGES_PAGE_SIZE,
+          loadedCount: nextLoadedCount,
+          hasOlder: nextHasOlder,
         });
         return mergedMessages;
       });
-      setLoadedMessagesCount(fetchedCount);
-      setHasOlderMessages(fetchedCount === MESSAGES_PAGE_SIZE);
+      setLoadedMessagesCount(nextLoadedCount);
+      setHasOlderMessages(nextHasOlder);
       pendingInitialScrollMessageIdRef.current = null;
 
       if (latestPreview) {
@@ -3226,6 +3258,8 @@ export default function WhatsAppInboxScreen() {
 
   const handleReact = async (messageId: string, emoji: string) => {
     try {
+      const targetMessage = messageByIdRef.current.get(messageId);
+      const targetChatId = targetMessage?.chat_id ?? selectedChatRef.current?.id ?? '';
       const existingEmoji = myReactionsByMessage.get(messageId);
       if (existingEmoji === emoji) {
         await removeReactionFromMessage(messageId);
@@ -3234,9 +3268,8 @@ export default function WhatsAppInboxScreen() {
           next.delete(messageId);
           return next;
         });
-        setMessages((prev) =>
-          prev.map((message) => {
-            if (message.id !== messageId) return message;
+        if (targetChatId) {
+          patchMessageById(targetChatId, messageId, (message) => {
             const payloadData = asMessagePayload(message.payload);
             const reactions = Array.isArray(payloadData.reactions) ? payloadData.reactions : [];
             const nextReactions = reactions
@@ -3248,31 +3281,49 @@ export default function WhatsAppInboxScreen() {
               ...message,
               payload: { ...payloadData, reactions: nextReactions },
             };
-          }),
-        );
+          });
+        }
         return;
       }
 
       await reactToMessage(messageId, emoji);
       setMyReactionsByMessage((prev) => new Map(prev).set(messageId, emoji));
-      setMessages((prev) =>
-        prev.map((message) => {
-          if (message.id !== messageId) return message;
+      if (targetChatId) {
+        patchMessageById(targetChatId, messageId, (message) => {
           const payloadData = asMessagePayload(message.payload);
           const reactions = Array.isArray(payloadData.reactions) ? payloadData.reactions : [];
-          const existing = reactions.find((item: WhatsAppMessageReaction) => item.emoji === emoji);
-          const nextReactions = existing
-            ? reactions.map((item: WhatsAppMessageReaction) =>
-                item.emoji === emoji ? { ...item, count: (item.count ?? 1) + 1 } : item,
-              )
-            : [...reactions, { emoji, count: 1 }];
+          const reactionMap = new Map<string, number>();
+
+          reactions.forEach((item: WhatsAppMessageReaction) => {
+            const normalizedCount = Math.max(0, item.count ?? 0);
+            const reactionEmoji = typeof item.emoji === 'string' ? item.emoji : '';
+            if (normalizedCount > 0 && reactionEmoji) {
+              reactionMap.set(reactionEmoji, normalizedCount);
+            }
+          });
+
+          if (existingEmoji) {
+            const previousCount = Math.max(0, reactionMap.get(existingEmoji) ?? 0);
+            if (previousCount <= 1) {
+              reactionMap.delete(existingEmoji);
+            } else {
+              reactionMap.set(existingEmoji, previousCount - 1);
+            }
+          }
+
+          reactionMap.set(emoji, Math.max(0, reactionMap.get(emoji) ?? 0) + 1);
+
+          const nextReactions = Array.from(reactionMap.entries()).map(([reactionEmoji, count]) => ({
+            emoji: reactionEmoji,
+            count,
+          }));
 
           return {
             ...message,
             payload: { ...payloadData, reactions: nextReactions },
           };
-        }),
-      );
+        });
+      }
     } catch (error) {
       console.error('Erro ao reagir mensagem:', error);
     }
@@ -3807,7 +3858,11 @@ export default function WhatsAppInboxScreen() {
   };
 
   const playNotificationTone = () => {
-    if (!desktopNotificationsEnabledRef.current || typeof window === 'undefined') return;
+    if (
+      !desktopNotificationsEnabledRef.current ||
+      notificationPermissionRef.current !== 'granted' ||
+      typeof window === 'undefined'
+    ) return;
 
     const audioWindow = window as Window & { webkitAudioContext?: typeof AudioContext };
     const AudioContextCtor = window.AudioContext || audioWindow.webkitAudioContext;
@@ -4128,14 +4183,14 @@ export default function WhatsAppInboxScreen() {
       : false;
     const shouldAlert = !messageBelongsToActiveChat || !isWindowFocusedRef.current;
 
-    if (!shouldAlert || !desktopNotificationsEnabledRef.current) return;
+    if (!shouldAlert || !desktopNotificationsEnabledRef.current || notificationPermissionRef.current !== 'granted') return;
 
     const preview = getMessagePreview(message);
     if (!preview) return;
 
     playNotificationTone();
 
-    if (notificationPermissionRef.current !== 'granted' || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
 
     const title = (() => {
       const preferredName = resolvedChat ? getChatDisplayName(resolvedChat) : '';
@@ -5996,13 +6051,25 @@ export default function WhatsAppInboxScreen() {
       last_message: null,
       unread_count: 0,
     };
+    const existingEquivalentChat = chatsRef.current.find((chat) => areEquivalentDirectChats(chat, nextChat));
 
     startTransition(() => {
       setChats((prev) => {
+        if (existingEquivalentChat) {
+          return prev.map((chat) => {
+            if (chat.id !== existingEquivalentChat.id) return chat;
+            return {
+              ...chat,
+              name: chat.name ?? nextChat.name,
+              phone_number: chat.phone_number ?? nextChat.phone_number,
+            };
+          });
+        }
+
         if (prev.some((chat) => chat.id === chatId)) return prev;
         return [nextChat, ...prev];
       });
-      setSelectedChat(nextChat);
+      setSelectedChat(existingEquivalentChat ?? nextChat);
       setChatOnlyUnread(false);
       setChatKindFilters([]);
       setShowNewChatModal(false);

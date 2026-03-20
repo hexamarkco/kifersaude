@@ -1,4 +1,4 @@
-import { memo, startTransition, useCallback, useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
+import { memo, startTransition, useCallback, useState, useEffect, useLayoutEffect, useRef, useMemo, useDeferredValue } from 'react';
 import { supabase, type Lead } from '../../../lib/supabase';
 import {
   Search,
@@ -477,9 +477,15 @@ export default function WhatsAppInboxScreen() {
   const lastRenderedMessageIdRef = useRef<string | null>(null);
   const pendingMessageIdsBelowRef = useRef<Set<string>>(new Set());
   const messagesViewportNearBottomRef = useRef(true);
+  const pendingPrependScrollRestoreRef = useRef<{
+    chatId: string;
+    previousScrollHeight: number;
+    previousScrollTop: number;
+  } | null>(null);
   const activeMessagesLoadIdRef = useRef(0);
   const activeChatsLoadIdRef = useRef(0);
   const chatSelectionFrameRef = useRef<number | null>(null);
+  const composerResizeFrameRef = useRef<number | null>(null);
   const lastGroupNamesSyncAtRef = useRef(0);
   const directNameHydrationAttemptsRef = useRef<Set<string>>(new Set());
   const avatarProfileHydrationAttemptsRef = useRef<Set<string>>(new Set());
@@ -508,6 +514,9 @@ export default function WhatsAppInboxScreen() {
     return () => {
       if (chatSelectionFrameRef.current !== null) {
         cancelAnimationFrame(chatSelectionFrameRef.current);
+      }
+      if (composerResizeFrameRef.current !== null) {
+        cancelAnimationFrame(composerResizeFrameRef.current);
       }
     };
   }, []);
@@ -1547,14 +1556,40 @@ export default function WhatsAppInboxScreen() {
     if (!composerElement) return;
 
     const syncComposerHeight = () => {
+      const wasNearBottom = getMessagesViewportDistanceFromBottom() <= 40;
       setComposerHeight(composerElement.getBoundingClientRect().height || 96);
+
+      if (composerResizeFrameRef.current !== null) {
+        cancelAnimationFrame(composerResizeFrameRef.current);
+      }
+
+      composerResizeFrameRef.current = requestAnimationFrame(() => {
+        composerResizeFrameRef.current = null;
+        if (!wasNearBottom) {
+          syncMessagesViewportBottomState();
+          syncPendingMessagesBelow();
+          return;
+        }
+
+        scrollToBottom('auto');
+        requestAnimationFrame(() => {
+          syncMessagesViewportBottomState();
+          syncPendingMessagesBelow();
+        });
+      });
     };
 
     syncComposerHeight();
 
     if (typeof ResizeObserver === 'undefined') {
       window.addEventListener('resize', syncComposerHeight);
-      return () => window.removeEventListener('resize', syncComposerHeight);
+      return () => {
+        window.removeEventListener('resize', syncComposerHeight);
+        if (composerResizeFrameRef.current !== null) {
+          cancelAnimationFrame(composerResizeFrameRef.current);
+          composerResizeFrameRef.current = null;
+        }
+      };
     }
 
     const observer = new ResizeObserver(() => {
@@ -1562,7 +1597,13 @@ export default function WhatsAppInboxScreen() {
     });
 
     observer.observe(composerElement);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (composerResizeFrameRef.current !== null) {
+        cancelAnimationFrame(composerResizeFrameRef.current);
+        composerResizeFrameRef.current = null;
+      }
+    };
   }, [selectedChat?.id, replyToMessage, editMessage]);
 
   useEffect(() => {
@@ -2284,6 +2325,7 @@ export default function WhatsAppInboxScreen() {
       setPendingMessagesBelow(0);
       pendingMessageIdsBelowRef.current.clear();
       pendingInitialScrollMessageIdRef.current = null;
+      pendingPrependScrollRestoreRef.current = null;
       messagesViewportNearBottomRef.current = true;
       shouldScrollOnChatChangeRef.current = true;
       lastRenderedMessageIdRef.current = null;
@@ -2314,6 +2356,7 @@ export default function WhatsAppInboxScreen() {
     setLoadedMessagesQueryOffset(0);
     setPendingMessagesBelow(0);
     pendingMessageIdsBelowRef.current.clear();
+    pendingPrependScrollRestoreRef.current = null;
     messagesViewportNearBottomRef.current = true;
     lastRenderedMessageIdRef.current = null;
     setReplyToMessage(null);
@@ -2441,8 +2484,9 @@ export default function WhatsAppInboxScreen() {
     const appendedMessages =
       previousLastRenderedMessageIndex >= 0 ? visibleMessages.slice(previousLastRenderedMessageIndex + 1) : [];
     const appendedInboundMessages = appendedMessages.filter((message) => message.direction === 'inbound');
+    const isNearBottom = syncMessagesViewportBottomState();
 
-    if (appendedMessages.length > 0 && messagesViewportNearBottomRef.current) {
+    if (appendedMessages.length > 0 && isNearBottom) {
       pendingMessageIdsBelowRef.current.clear();
       setPendingMessagesBelow(0);
       requestAnimationFrame(() => {
@@ -2485,8 +2529,11 @@ export default function WhatsAppInboxScreen() {
   }, [createMessagesCacheState, hasOlderMessages, loadedMessagesCount, loadedMessagesQueryOffset, messages]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+
     messagesViewportNearBottomRef.current = true;
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior });
   };
 
   const getMessagesViewportDistanceFromBottom = () => {
@@ -2526,6 +2573,21 @@ export default function WhatsAppInboxScreen() {
     pendingMessageIdsBelowRef.current = nextPending;
     setPendingMessagesBelow(nextPending.size);
   };
+
+  useLayoutEffect(() => {
+    const pendingRestore = pendingPrependScrollRestoreRef.current;
+    const viewport = messagesViewportRef.current;
+
+    if (!pendingRestore || !viewport || messagesChatId !== pendingRestore.chatId) {
+      return;
+    }
+
+    const nextScrollTop = pendingRestore.previousScrollTop + (viewport.scrollHeight - pendingRestore.previousScrollHeight);
+    viewport.scrollTop = Math.max(0, nextScrollTop);
+    pendingPrependScrollRestoreRef.current = null;
+    syncMessagesViewportBottomState();
+    syncPendingMessagesBelow();
+  }, [messages, messagesChatId]);
 
   const handleMessagesViewportScroll = () => {
     const nearBottom = syncMessagesViewportBottomState();
@@ -2794,6 +2856,14 @@ export default function WhatsAppInboxScreen() {
       const existingIds = new Set(messages.map((item) => item.id));
       const dedupedOlderMessages = olderMessages.filter((item) => !existingIds.has(item.id));
       const nextLoadedCount = loadedMessagesCount + dedupedOlderMessages.length;
+      const viewport = messagesViewportRef.current;
+      const previousScrollMetrics = viewport
+        ? {
+            chatId: currentChatId,
+            previousScrollHeight: viewport.scrollHeight,
+            previousScrollTop: viewport.scrollTop,
+          }
+        : null;
 
       setMessages((prev) => {
         const existingIds = new Set(prev.map((item) => item.id));
@@ -2807,6 +2877,8 @@ export default function WhatsAppInboxScreen() {
           }));
           return prev;
         }
+
+        pendingPrependScrollRestoreRef.current = previousScrollMetrics;
 
         const nextMessages = dedupeMessagesForDisplay([...deduped, ...prev]);
         messagesCacheRef.current.set(currentChatId, createMessagesCacheState({

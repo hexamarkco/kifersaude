@@ -138,6 +138,7 @@ function WhatsAppComposerComponent({
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
   const [audioPreviewBlob, setAudioPreviewBlob] = useState<Blob | null>(null);
   const [audioPreviewDuration, setAudioPreviewDuration] = useState(0);
+  const [audioPreviewMimeType, setAudioPreviewMimeType] = useState('');
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedGif, setSelectedGif] = useState<GiphyGifItem | null>(null);
@@ -163,7 +164,9 @@ function WhatsAppComposerComponent({
   const [quickReplies, setQuickReplies] = useState<QuickReplyItem[]>([]);
   const [quickRepliesLoading, setQuickRepliesLoading] = useState(false);
   const [slashQuickReplyIndex, setSlashQuickReplyIndex] = useState(0);
+  const [audioToTextLoading, setAudioToTextLoading] = useState(false);
   const [showRewriteModal, setShowRewriteModal] = useState(false);
+  const [rewriteSource, setRewriteSource] = useState<'text' | 'audio'>('text');
   const [rewriteTone, setRewriteTone] = useState('claro');
   const [rewriteOriginal, setRewriteOriginal] = useState('');
   const [rewriteResult, setRewriteResult] = useState('');
@@ -196,6 +199,7 @@ function WhatsAppComposerComponent({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingCancelledRef = useRef(false);
+  const recordingTimeRef = useRef(0);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingSignalAtRef = useRef(0);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -788,6 +792,7 @@ function WhatsAppComposerComponent({
     () => splitRewriteChunks(deferredRewriteResult || rewriteOriginal),
     [deferredRewriteResult, rewriteOriginal],
   );
+  const isAudioRewriteFlow = rewriteSource === 'audio';
   const followUpMessages = useMemo(
     () => splitFollowUpLines(deferredFollowUpDraft),
     [deferredFollowUpDraft],
@@ -878,12 +883,16 @@ function WhatsAppComposerComponent({
     payload: params.payload ?? null,
   });
 
-  const sendPlainTextMessage = async (text: string, targetChatId: string = chatId) => {
+  const sendPlainTextMessage = async (
+    text: string,
+    targetChatId: string = chatId,
+    quotedMessageId: string | null = replyToMessage?.id ?? null,
+  ) => {
     const resolvedText = applyTemplateVariables(text).trim() || text.trim();
     const localRef = createClientMessageId();
     const sentAt = new Date().toISOString();
     const normalizedChatId = normalizeChatId(targetChatId);
-    const retryPayload = buildTextRetryPayload(resolvedText, replyToMessage?.id ?? null);
+    const retryPayload = buildTextRetryPayload(resolvedText, quotedMessageId);
 
     emitMessageSent({
       id: localRef,
@@ -906,7 +915,7 @@ function WhatsAppComposerComponent({
         chatId: targetChatId,
         contentType: 'string',
         content: resolvedText,
-        quotedMessageId: replyToMessage?.id,
+        quotedMessageId: quotedMessageId || undefined,
       });
 
       const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
@@ -1187,17 +1196,6 @@ function WhatsAppComposerComponent({
     setShowEmojiPicker(false);
   };
 
-  const waitForLinkPreviewResolution = async (targetUrl: string, timeoutMs: number = 1200) => {
-    const startedAt = Date.now();
-
-    while (Date.now() - startedAt < timeoutMs) {
-      if (!linkPreviewLoading || linkPreviewUrl !== targetUrl) {
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 80));
-    }
-  };
-
   const sendLinkPreviewMessage = async (
     bodyText: string,
     submitChatId: string,
@@ -1310,6 +1308,48 @@ function WhatsAppComposerComponent({
 
     if (!editMessage && !selectedFile && !selectedGif && slashCommandState.active && slashCommandState.results.length > 0) {
       handleUseSlashQuickReply(selectedSlashQuickReply || slashCommandState.results[0]);
+      return;
+    }
+
+    if (!editMessage && !selectedFile && !selectedGif && rawMessage) {
+      const currentDetectedUrl = detectedPreviewUrl;
+      const draftReplyToMessage = replyToMessage ? { ...replyToMessage } : null;
+      const previewTitle = linkPreviewTitle.trim();
+      const previewCanonical = (linkPreviewCanonical || currentDetectedUrl || '').trim();
+      const canSendPreview = Boolean(
+        currentDetectedUrl &&
+          linkPreviewDismissedUrl !== currentDetectedUrl &&
+          linkPreviewUrl === currentDetectedUrl &&
+          !linkPreviewLoading &&
+          !linkPreviewError &&
+          previewTitle,
+      );
+
+      updateComposerDraft('');
+      clearLinkPreviewDraft();
+      setLinkPreviewDismissedUrl(null);
+      if (onCancelReply) onCancelReply();
+      queueComposerFocusRestore();
+
+      if (canSendPreview && currentDetectedUrl) {
+        void sendLinkPreviewMessage(resolvedMessage || rawMessage, submitChatId, draftReplyToMessage, {
+          title: previewTitle,
+          description: linkPreviewDescription,
+          canonical: previewCanonical,
+          image: linkPreviewImage,
+        }).catch((error) => {
+          console.error('Erro ao enviar mensagem:', error);
+        });
+        return;
+      }
+
+      void sendPlainTextMessage(
+        resolvedMessage || rawMessage,
+        submitChatId,
+        draftReplyToMessage?.id ?? null,
+      ).catch((error) => {
+        console.error('Erro ao enviar mensagem:', error);
+      });
       return;
     }
 
@@ -1521,40 +1561,6 @@ function WhatsAppComposerComponent({
           }));
           throw error;
         }
-      } else if (rawMessage) {
-        const currentDetectedUrl = detectedPreviewUrl;
-
-        if (currentDetectedUrl && linkPreviewDismissedUrl !== currentDetectedUrl) {
-          if (linkPreviewLoading && linkPreviewUrl === currentDetectedUrl) {
-            await waitForLinkPreviewResolution(currentDetectedUrl);
-          }
-
-          const previewTitle = linkPreviewTitle.trim();
-          const previewCanonical = (linkPreviewCanonical || currentDetectedUrl).trim();
-          const canSendPreview = linkPreviewUrl === currentDetectedUrl && !linkPreviewError && Boolean(previewTitle);
-
-          if (canSendPreview) {
-            updateComposerDraft('');
-            clearLinkPreviewDraft();
-            setLinkPreviewDismissedUrl(null);
-            if (onCancelReply) onCancelReply();
-            await sendLinkPreviewMessage(resolvedMessage || rawMessage, submitChatId, replyToMessage ?? null, {
-              title: previewTitle,
-              description: linkPreviewDescription,
-              canonical: previewCanonical,
-              image: linkPreviewImage,
-            });
-            queueComposerFocusRestore();
-            return;
-          }
-        }
-
-        updateComposerDraft('');
-        clearLinkPreviewDraft();
-        setLinkPreviewDismissedUrl(null);
-        if (onCancelReply) onCancelReply();
-        await sendPlainTextMessage(resolvedMessage || rawMessage, submitChatId);
-        queueComposerFocusRestore();
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -1776,21 +1782,26 @@ function WhatsAppComposerComponent({
   const startRecording = async () => {
     try {
       recordingCancelledRef.current = false;
+      recordingTimeRef.current = 0;
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
       };
 
       mediaRecorder.onstop = async () => {
-        const durationSeconds = recordingTime;
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
+        const durationSeconds = recordingTimeRef.current;
+        const recordedMimeType = mediaRecorder.mimeType || audioChunksRef.current[0]?.type || 'audio/ogg';
+        const audioBlob = new Blob(audioChunksRef.current, { type: recordedMimeType });
 
         setIsRecording(false);
         setRecordingTime(0);
+        recordingTimeRef.current = 0;
 
         stream.getTracks().forEach(track => track.stop());
 
@@ -1813,6 +1824,7 @@ function WhatsAppComposerComponent({
         setAudioPreviewBlob(audioBlob);
         setAudioPreviewUrl(objectUrl);
         setAudioPreviewDuration(durationSeconds);
+        setAudioPreviewMimeType(audioBlob.type || recordedMimeType);
       };
 
       mediaRecorder.start();
@@ -1822,7 +1834,8 @@ function WhatsAppComposerComponent({
       sendRecordingState(chatId).catch(console.error);
 
       recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        recordingTimeRef.current += 1;
+        setRecordingTime(recordingTimeRef.current);
       }, 1000);
 
       const audioContext = new AudioContext();
@@ -1888,6 +1901,7 @@ function WhatsAppComposerComponent({
     }
     setIsRecording(false);
     setRecordingTime(0);
+    recordingTimeRef.current = 0;
     audioChunksRef.current = [];
     if (recordingIntervalRef.current) {
       clearInterval(recordingIntervalRef.current);
@@ -1907,14 +1921,18 @@ function WhatsAppComposerComponent({
     setAudioPreviewUrl(null);
     setAudioPreviewBlob(null);
     setAudioPreviewDuration(0);
+    setAudioPreviewMimeType('');
   };
 
   const handleSendAudioPreview = async () => {
-    if (!audioPreviewBlob || isSending) return;
+    if (!audioPreviewBlob || isSending || audioToTextLoading) return;
     try {
       setIsSending(true);
-      const audioFile = new File([audioPreviewBlob], 'voice.ogg', { type: 'audio/ogg' });
-      const durationSeconds = audioPreviewDuration || recordingTime;
+      const resolvedAudioMimeType = audioPreviewMimeType || audioPreviewBlob.type || 'audio/ogg';
+      const audioFile = new File([audioPreviewBlob], `voice.${getAudioFileExtension(resolvedAudioMimeType)}`, {
+        type: resolvedAudioMimeType,
+      });
+      const durationSeconds = audioPreviewDuration || recordingTimeRef.current;
       const sentAt = new Date().toISOString();
       const localRef = createClientMessageId();
       const normalizedChatId = normalizeChatId(chatId);
@@ -2092,11 +2110,71 @@ function WhatsAppComposerComponent({
       toast.warning('Digite uma mensagem para reescrever.');
       return;
     }
+    setRewriteSource('text');
     setRewriteOriginal(draft);
     setRewriteResult('');
     setRewriteError(null);
     setShowRewriteModal(true);
     handleRewrite(draft, rewriteTone);
+  };
+
+  const handleConvertAudioPreviewToText = async () => {
+    if (!audioPreviewBlob || isSending || audioToTextLoading) return;
+
+    setAudioToTextLoading(true);
+
+    try {
+      const resolvedAudioMimeType = audioPreviewMimeType || audioPreviewBlob.type || 'audio/ogg';
+      const audioFile = new File([audioPreviewBlob], `voice.${getAudioFileExtension(resolvedAudioMimeType)}`, {
+        type: resolvedAudioMimeType,
+      });
+      const audioDataUrl = await fileToDataUrl(audioFile);
+      const { data, error } = await supabase.functions.invoke('transcribe-whatsapp-audio', {
+        body: {
+          audioDataUrl,
+          mimeType: audioFile.type || resolvedAudioMimeType,
+          fileName: audioFile.name,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const transcript = typeof data?.transcript === 'string' ? data.transcript.trim() : '';
+      if (!transcript) {
+        throw new Error('A IA nao retornou uma transcricao utilizavel.');
+      }
+
+      setRewriteSource('audio');
+      setRewriteOriginal(transcript);
+      setRewriteResult('');
+      setRewriteError(null);
+      setShowRewriteModal(true);
+      await handleRewrite(transcript, rewriteTone);
+    } catch (error) {
+      console.error('Erro ao transformar audio em texto:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao transformar audio em texto.');
+    } finally {
+      setAudioToTextLoading(false);
+    }
+  };
+
+  const handleUseRewriteInField = () => {
+    const nextText = (rewriteResult || rewriteOriginal).trim();
+    if (!nextText) {
+      setRewriteError('Nada para usar no campo.');
+      return;
+    }
+
+    if (isAudioRewriteFlow) {
+      clearAudioPreview();
+    }
+
+    updateComposerDraft(nextText);
+    setRewriteSource('text');
+    setShowRewriteModal(false);
+    queueComposerFocusRestore();
   };
 
   const generateFollowUp = async (extraInstructionsOverride?: string | null) => {
@@ -2272,6 +2350,10 @@ function WhatsAppComposerComponent({
         await new Promise((resolve) => setTimeout(resolve, 350));
       }
       updateComposerDraft('');
+      if (isAudioRewriteFlow) {
+        clearAudioPreview();
+      }
+      setRewriteSource('text');
       setRewriteResult('');
       setRewriteOriginal('');
       setShowRewriteModal(false);
@@ -2285,6 +2367,16 @@ function WhatsAppComposerComponent({
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getAudioFileExtension = (mimeType: string) => {
+    const normalized = mimeType.trim().toLowerCase();
+    if (normalized.includes('webm')) return 'webm';
+    if (normalized.includes('ogg')) return 'ogg';
+    if (normalized.includes('mpeg')) return 'mp3';
+    if (normalized.includes('mp4')) return 'm4a';
+    if (normalized.includes('wav')) return 'wav';
+    return 'bin';
   };
 
   const handleSendLocation = async () => {
@@ -2594,12 +2686,12 @@ function WhatsAppComposerComponent({
         <ModalShell
           isOpen
           onClose={() => setShowRewriteModal(false)}
-          title="Reescrever com GPT"
+          title={isAudioRewriteFlow ? 'Transformar audio em texto' : 'Reescrever com GPT'}
           size="md"
           bodyClassName="space-y-3"
         >
           <div>
-            <label className="comm-muted text-xs">Texto original</label>
+            <label className="comm-muted text-xs">{isAudioRewriteFlow ? 'Transcricao do audio' : 'Texto original'}</label>
             <div className="comm-card comm-text mt-1 whitespace-pre-wrap break-words px-3 py-2 text-sm">
               {rewriteOriginal}
             </div>
@@ -2625,20 +2717,20 @@ function WhatsAppComposerComponent({
               onClick={() => handleRewrite(rewriteOriginal, rewriteTone)}
               disabled={rewriteLoading}
             >
-              {rewriteLoading ? 'Gerando...' : 'Gerar'}
+              {rewriteLoading ? 'Gerando...' : isAudioRewriteFlow ? 'Gerar texto' : 'Gerar'}
             </button>
           </div>
           <div>
-            <label className="comm-muted text-xs">Preview</label>
+            <label className="comm-muted text-xs">{isAudioRewriteFlow ? 'Texto para enviar' : 'Preview'}</label>
             <textarea
               ref={rewriteTextareaRef}
               value={rewriteResult}
               onChange={(event) => setRewriteResult(event.target.value)}
-              placeholder="Resultado da reescrita"
+              placeholder={isAudioRewriteFlow ? 'Texto final para enviar ao cliente' : 'Resultado da reescrita'}
               className="comm-textarea mt-1 min-h-[10rem] px-3 py-2 text-sm"
             />
             <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="comm-muted text-xs">Use --- para dividir</span>
+              <span className="comm-muted text-xs">Use --- para dividir em mais de uma mensagem</span>
               <button
                 type="button"
                 className="comm-button-link flex items-center gap-1 text-xs"
@@ -2672,10 +2764,7 @@ function WhatsAppComposerComponent({
             <button
               type="button"
               className="comm-button-secondary rounded-md px-3 py-2 text-sm"
-              onClick={() => {
-                updateComposerDraft(rewriteResult || rewriteOriginal);
-                setShowRewriteModal(false);
-              }}
+              onClick={handleUseRewriteInField}
             >
               Usar no campo
             </button>
@@ -2685,7 +2774,7 @@ function WhatsAppComposerComponent({
               onClick={handleSendRewriteChunks}
               disabled={rewriteLoading || isSending}
             >
-              Enviar em partes
+              {isAudioRewriteFlow ? (isSending ? 'Enviando...' : `Aprovar e enviar (${rewriteChunks.length})`) : 'Enviar em partes'}
             </button>
           </div>
         </ModalShell>
@@ -3544,20 +3633,30 @@ function WhatsAppComposerComponent({
             </button>
           </div>
         ) : audioPreviewUrl ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               onClick={clearAudioPreview}
               className="comm-fab-neutral h-10 w-10 disabled:cursor-not-allowed disabled:opacity-60"
               title="Cancelar"
-              disabled={isSending}
+              disabled={isSending || audioToTextLoading}
             >
               <X className="w-5 h-5" />
             </button>
             <button
+              type="button"
+              onClick={handleConvertAudioPreviewToText}
+              disabled={isSending || audioToTextLoading}
+              className="comm-button-secondary inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
+              title="Transcrever e reescrever"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span>{audioToTextLoading ? 'Gerando texto...' : 'Gerar texto com IA'}</span>
+            </button>
+            <button
               onClick={handleSendAudioPreview}
-              disabled={isSending}
+              disabled={isSending || audioToTextLoading}
               className="comm-fab-primary h-10 w-10 disabled:cursor-not-allowed disabled:opacity-50"
-                title="Enviar áudio"
+              title="Enviar audio"
             >
               <Send className="w-5 h-5" />
             </button>

@@ -24,14 +24,62 @@ const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
 type TranscribeRequest = {
   messageId?: string;
   mediaId?: string;
+  audioDataUrl?: string;
+  mimeType?: string;
+  fileName?: string;
+  prompt?: string;
 };
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
+const DEFAULT_TRANSCRIPTION_PROMPT = 'Transcreva em PT-BR e preserve nomes, numeros, datas e valores.';
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 
 const readTrimmedString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+const decodeBase64ToBytes = (value: string) => {
+  const normalized = value.replace(/\s+/g, '');
+  if (!normalized) {
+    throw new Error('Audio do composer invalido.');
+  }
+
+  try {
+    const binary = atob(normalized);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  } catch {
+    throw new Error('Audio do composer em base64 invalido.');
+  }
+};
+
+type DirectAudioSource = {
+  audioBlob: Blob;
+  mimeType: string;
+  fileName: string;
+};
+
+const extractDirectAudioSource = (payload: TranscribeRequest | null): DirectAudioSource | null => {
+  const rawAudioDataUrl = readTrimmedString(payload?.audioDataUrl);
+  if (!rawAudioDataUrl) return null;
+
+  const dataUrlMatch = rawAudioDataUrl.match(/^data:([^;,]+)?(?:;[^,]*)?;base64,(.+)$/i);
+  const mimeTypeFromDataUrl = readTrimmedString(dataUrlMatch?.[1]);
+  const base64Payload = dataUrlMatch?.[2] || rawAudioDataUrl;
+  const mimeType = readTrimmedString(payload?.mimeType) || mimeTypeFromDataUrl || 'audio/ogg';
+  const fileName =
+    readTrimmedString(payload?.fileName) ||
+    `whatsapp-composer-audio.${getExtensionFromMimeType(mimeType)}`;
+
+  return {
+    audioBlob: new Blob([decodeBase64ToBytes(base64Payload)], { type: mimeType }),
+    mimeType,
+    fileName,
+  };
+};
 
 const extractPersistedTranscription = (payload: unknown, fallbackText?: string) => {
   const payloadRecord = asRecord(payload);
@@ -111,6 +159,60 @@ const loadWhapiToken = async (supabaseAdmin: ReturnType<typeof createClient>) =>
   return token;
 };
 
+const fetchWhapiAudioBlob = async (mediaId: string, whapiToken: string) => {
+  const mediaResponse = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${whapiToken}`,
+      Accept: 'application/json, */*',
+    },
+  });
+
+  if (!mediaResponse.ok) {
+    const errorText = await mediaResponse.text();
+    throw new Error(`Falha ao buscar audio na Whapi: ${mediaResponse.status} ${errorText}`);
+  }
+
+  const contentType = mediaResponse.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    return mediaResponse.blob();
+  }
+
+  const descriptor = asRecord(await mediaResponse.json()) ?? {};
+  const resourceUrl =
+    readTrimmedString(descriptor.url) ||
+    readTrimmedString(descriptor.link) ||
+    readTrimmedString(descriptor.media);
+
+  if (!resourceUrl) {
+    throw new Error('Whapi nao retornou uma URL de audio valida.');
+  }
+
+  let binaryResponse = await fetch(resourceUrl, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${whapiToken}`,
+      Accept: 'application/octet-stream, */*',
+    },
+  });
+
+  if (!binaryResponse.ok) {
+    binaryResponse = await fetch(resourceUrl, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/octet-stream, */*',
+      },
+    });
+  }
+
+  if (!binaryResponse.ok) {
+    const errorText = await binaryResponse.text();
+    throw new Error(`Falha ao baixar audio binario da Whapi: ${binaryResponse.status} ${errorText}`);
+  }
+
+  return binaryResponse.blob();
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -150,9 +252,33 @@ Deno.serve(async (req) => {
 
     const payload = (await req.json().catch(() => null)) as TranscribeRequest | null;
     const messageId = readTrimmedString(payload?.messageId);
+    const transcriptionPrompt = readTrimmedString(payload?.prompt) || DEFAULT_TRANSCRIPTION_PROMPT;
 
-    if (!messageId) {
-      return jsonResponse({ error: 'messageId obrigatorio.' }, 400);
+    let directAudioSource: DirectAudioSource | null = null;
+    try {
+      directAudioSource = extractDirectAudioSource(payload);
+    } catch (error) {
+      return jsonResponse({ error: error instanceof Error ? error.message : 'Audio do composer invalido.' }, 400);
+    }
+
+    if (!messageId && !directAudioSource) {
+      return jsonResponse({ error: 'messageId ou audioDataUrl obrigatorio.' }, 400);
+    }
+
+    if (!messageId && directAudioSource) {
+      const transcriptionResult = await transcribeAudioWithRouting({
+        supabaseAdmin,
+        audioBlob: directAudioSource.audioBlob,
+        fileName: directAudioSource.fileName,
+        mimeType: directAudioSource.mimeType,
+        prompt: transcriptionPrompt,
+      });
+
+      return jsonResponse({
+        transcript: transcriptionResult.text,
+        provider: transcriptionResult.provider,
+        model: transcriptionResult.model,
+      }, 200);
     }
 
     const { data: message, error: messageError } = await supabaseAdmin
@@ -204,20 +330,7 @@ Deno.serve(async (req) => {
     }
 
     const whapiToken = await loadWhapiToken(supabaseAdmin);
-    const mediaResponse = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${whapiToken}`,
-        Accept: 'application/json, */*',
-      },
-    });
-
-    if (!mediaResponse.ok) {
-      const errorText = await mediaResponse.text();
-      throw new Error(`Falha ao buscar audio na Whapi: ${mediaResponse.status} ${errorText}`);
-    }
-
-    const mediaBlob = await mediaResponse.blob();
+    const mediaBlob = await fetchWhapiAudioBlob(mediaId, whapiToken);
     const mimeType =
       mediaBlob.type ||
       readTrimmedString(mediaPayload?.mime_type) ||
@@ -230,7 +343,7 @@ Deno.serve(async (req) => {
       audioBlob: mediaBlob,
       fileName,
       mimeType,
-      prompt: 'Transcreva em PT-BR e preserve nomes, numeros, datas e valores.',
+      prompt: transcriptionPrompt,
     });
 
     const now = new Date().toISOString();

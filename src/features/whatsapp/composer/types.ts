@@ -90,8 +90,15 @@ export interface MessageInputProps {
   editMessage?: {
     id: string;
     body: string;
+    chatId?: string;
   } | null;
   onCancelEdit?: () => void;
+  onMessageEdited?: (payload: {
+    messageId: string;
+    chatId: string;
+    body: string;
+    editedAt: string;
+  }) => void;
   followUpContext?: FollowUpGenerationContext | null;
   onPrepareFollowUpContext?: () => Promise<FollowUpGenerationContext | null>;
 }

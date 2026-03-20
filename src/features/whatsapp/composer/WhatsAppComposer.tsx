@@ -128,6 +128,7 @@ function WhatsAppComposerComponent({
   onCancelReply,
   editMessage,
   onCancelEdit,
+  onMessageEdited,
   followUpContext,
   onPrepareFollowUpContext,
 }: MessageInputProps) {
@@ -505,6 +506,14 @@ function WhatsAppComposerComponent({
 
     startTransition(() => {
       onMessageSent(message);
+    });
+  };
+
+  const emitMessageEdited = (payload: { messageId: string; chatId: string; body: string; editedAt: string }) => {
+    if (!onMessageEdited) return;
+
+    startTransition(() => {
+      onMessageEdited(payload);
     });
   };
 
@@ -1308,8 +1317,32 @@ function WhatsAppComposerComponent({
 
     try {
       if (editMessage) {
-        toast.warning('Edicao de mensagem foi desativada temporariamente para evitar envio duplicado.');
+        if (editMessage.id.startsWith('local-')) {
+          toast.warning('Aguarde a mensagem ser confirmada antes de editar.');
+          queueComposerFocusRestore();
+          return;
+        }
+
+        const submitEditChatId = editMessage.chatId || chatId;
+        const editedAt = new Date().toISOString();
+
+        await sendWhatsAppMessage({
+          chatId: submitEditChatId,
+          contentType: 'string',
+          content: resolvedMessage,
+          editMessageId: editMessage.id,
+        });
+
+        emitMessageEdited({
+          messageId: editMessage.id,
+          chatId: submitEditChatId,
+          body: resolvedMessage,
+          editedAt,
+        });
+
         queueComposerFocusRestore();
+        updateComposerDraft('');
+        if (onCancelEdit) onCancelEdit();
         return;
       } else if (selectedGif) {
         const gifUrl = resolveSelectedGifSendUrl(selectedGif);
@@ -3559,6 +3592,7 @@ const areMessageInputPropsEqual = (prev: MessageInputProps, next: MessageInputPr
   prev.templateVariableShortcuts === next.templateVariableShortcuts &&
   prev.replyToMessage === next.replyToMessage &&
   prev.editMessage === next.editMessage &&
+  prev.onMessageEdited === next.onMessageEdited &&
   prev.followUpContext === next.followUpContext &&
   prev.onPrepareFollowUpContext === next.onPrepareFollowUpContext
 );

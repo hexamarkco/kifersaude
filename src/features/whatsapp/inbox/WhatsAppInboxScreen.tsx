@@ -368,6 +368,7 @@ export default function WhatsAppInboxScreen() {
   const [editMessage, setEditMessage] = useState<{
     id: string;
     body: string;
+    chatId?: string;
   } | null>(null);
   const [forwardMessage, setForwardMessage] = useState<WhatsAppMessage | null>(null);
   const [forwardSearch, setForwardSearch] = useState('');
@@ -2942,8 +2943,105 @@ export default function WhatsAppInboxScreen() {
     setReplyToMessage(null);
   };
 
+  const handleEdit = (messageId: string, body: string) => {
+    const targetMessage = messageByIdRef.current.get(messageId);
+    if (!targetMessage) {
+      toast.error('Nao foi possivel localizar a mensagem para editar.');
+      return;
+    }
+
+    if (targetMessage.send_state === 'pending' || targetMessage.send_state === 'failed' || targetMessage.id.startsWith('local-')) {
+      toast.warning('Aguarde a mensagem ser confirmada antes de editar.');
+      return;
+    }
+
+    setReplyToMessage(null);
+    setEditMessage({ id: messageId, body, chatId: targetMessage.chat_id });
+  };
+
   const handleCancelEdit = () => {
     setEditMessage(null);
+  };
+
+  const handleMessageEdited = ({
+    messageId,
+    chatId,
+    body,
+    editedAt,
+  }: {
+    messageId: string;
+    chatId: string;
+    body: string;
+    editedAt: string;
+  }) => {
+    patchMessageById(chatId, messageId, (current) => {
+      const payloadData = asMessagePayload(current.payload);
+      const nextText = payloadData?.text && typeof payloadData.text === 'object'
+        ? { ...(payloadData.text as Record<string, unknown>), body }
+        : { body };
+
+      return {
+        ...current,
+        body,
+        edit_count: Math.max((current.edit_count ?? 0) + 1, 1),
+        edited_at: editedAt,
+        original_body: current.original_body ?? current.body ?? null,
+        payload: {
+          ...payloadData,
+          text: nextText,
+          edited_at: editedAt,
+        },
+      };
+    });
+
+    const activeChat = selectedChatRef.current;
+    if (activeChat && getChatIdVariants(activeChat).includes(chatId)) {
+      const currentMessages = messages;
+      const nextMessages = currentMessages.map((message) => {
+        if (message.id !== messageId) return message;
+
+        const payloadData = asMessagePayload(message.payload);
+        const nextText = payloadData?.text && typeof payloadData.text === 'object'
+          ? { ...(payloadData.text as Record<string, unknown>), body }
+          : { body };
+
+        return {
+          ...message,
+          body,
+          edit_count: Math.max((message.edit_count ?? 0) + 1, 1),
+          edited_at: editedAt,
+          original_body: message.original_body ?? message.body ?? null,
+          payload: {
+            ...payloadData,
+            text: nextText,
+            edited_at: editedAt,
+          },
+        };
+      });
+
+      const latestDisplayable = [...nextMessages]
+        .filter((message) => isDisplayableInboxMessage(message))
+        .sort(sortMessagesChronologically)
+        .slice(-1)[0];
+
+      if (latestDisplayable?.id === messageId) {
+        const preview = getMessagePreview(latestDisplayable);
+        if (preview) {
+          setChats((prev) =>
+            prev.map((chat) =>
+              getChatIdVariants(chat).includes(chatId)
+                ? {
+                    ...chat,
+                    last_message: preview,
+                    last_message_direction: latestDisplayable.direction ?? chat.last_message_direction ?? null,
+                    last_message_at: latestDisplayable.timestamp ?? chat.last_message_at,
+                  }
+                : chat,
+            ),
+          );
+        }
+      }
+    }
   };
 
   const resetForwardModalState = () => {
@@ -7937,7 +8035,7 @@ export default function WhatsAppInboxScreen() {
                           onReact={isSelectedStatusChat ? undefined : handleReact}
                           onReply={isSelectedStatusChat ? undefined : handleReply}
                           onForward={forwardPlan ? () => handleOpenForwardModal(message) : undefined}
-                          onEdit={undefined}
+                          onEdit={isSelectedStatusChat ? undefined : handleEdit}
                           onRetryFailed={message.send_state === 'failed' ? () => void retryFailedMessage(message) : undefined}
                           onDismissFailed={message.send_state === 'failed' ? () => removeFailedMessage(message.chat_id, message.id) : undefined}
                           onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
@@ -7984,6 +8082,7 @@ export default function WhatsAppInboxScreen() {
                       followUpContext={followUpContextForInput}
                       onPrepareFollowUpContext={prepareFollowUpContext}
                       onMessageSent={handleMessageSent}
+                      onMessageEdited={handleMessageEdited}
                       replyToMessage={replyToMessage}
                       onCancelReply={handleCancelReply}
                       editMessage={editMessage}

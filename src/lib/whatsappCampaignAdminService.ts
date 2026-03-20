@@ -73,3 +73,15 @@ export async function cancelWhatsAppCampaignAtomic(campaignId: string, reason: s
 
   return ensureCampaignResult(data, 'Nao foi possivel cancelar a campanha do WhatsApp.');
 }
+
+export async function recomputeWhatsAppCampaignCounters(campaignId: string): Promise<WhatsAppCampaign> {
+  const { data, error } = await supabase.rpc('recompute_whatsapp_campaign_counters', {
+    p_campaign_id: campaignId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return ensureCampaignResult(data, 'Nao foi possivel recalcular os contadores da campanha do WhatsApp.');
+}

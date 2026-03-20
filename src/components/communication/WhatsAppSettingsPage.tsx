@@ -42,7 +42,6 @@ export default function WhatsAppSettingsPage() {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [chatsCount, setChatsCount] = useState(0);
   const [archivedCount, setArchivedCount] = useState(0);
-  const [chatRows, setChatRows] = useState<ChatSummaryRow[]>([]);
   const [isSyncingAllChats, setIsSyncingAllChats] = useState(false);
   const [syncAllChatsMessage, setSyncAllChatsMessage] = useState<SyncAllChatsMessage | null>(null);
   const [syncAllChatsProgress, setSyncAllChatsProgress] = useState<SyncAllChatsProgress>({
@@ -66,16 +65,9 @@ export default function WhatsAppSettingsPage() {
     setSummaryError(null);
 
     try {
-      const [chatCountResponse, archivedCountResponse, rows] = await Promise.all([
+      const [chatCountResponse, archivedCountResponse] = await Promise.all([
         supabase.from('whatsapp_chats').select('id', { count: 'exact', head: true }),
         supabase.from('whatsapp_chats').select('id', { count: 'exact', head: true }).eq('archived', true),
-        fetchAllPages<ChatSummaryRow>(async (from, to) => {
-          const response = await supabase
-            .from('whatsapp_chats')
-            .select('id, name, phone_number')
-            .range(from, to);
-          return { data: response.data, error: response.error };
-        }, 500),
       ]);
 
       if (chatCountResponse.error) {
@@ -86,8 +78,7 @@ export default function WhatsAppSettingsPage() {
         throw archivedCountResponse.error;
       }
 
-      setChatRows(rows);
-      setChatsCount(chatCountResponse.count ?? rows.length);
+      setChatsCount(chatCountResponse.count ?? 0);
       setArchivedCount(archivedCountResponse.count ?? 0);
     } catch (error) {
       console.error('Erro ao carregar resumo do WhatsApp:', error);
@@ -120,26 +111,34 @@ export default function WhatsAppSettingsPage() {
   }, [syncAllChatsProgress.currentChatId, syncAllChatsProgress.currentChatName]);
 
   const handleSyncAllChats = async () => {
-    if (isSyncingAllChats || chatRows.length === 0) return;
-
-    const chatIds = Array.from(new Set(chatRows.map((chat) => chat.id).filter(Boolean)));
-    const chatRowsById = new Map(chatRows.map((chat) => [chat.id, chat]));
-    if (chatIds.length === 0) return;
-
-    setIsSyncingAllChats(true);
-    setSyncAllChatsMessage(null);
-    setSyncAllChatsProgress({
-      total: chatIds.length,
-      completed: 0,
-      failed: 0,
-      currentChatId: null,
-      currentChatName: null,
-    });
-
-    let failed = 0;
-    const yieldProgressFrame = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-
     try {
+      if (isSyncingAllChats || chatsCount === 0) return;
+
+      const chatRows = await fetchAllPages<ChatSummaryRow>(async (from, to) => {
+        const response = await supabase
+          .from('whatsapp_chats')
+          .select('id, name, phone_number')
+          .range(from, to);
+        return { data: response.data, error: response.error };
+      }, 500);
+
+      const chatIds = Array.from(new Set(chatRows.map((chat) => chat.id).filter(Boolean)));
+      const chatRowsById = new Map(chatRows.map((chat) => [chat.id, chat]));
+      if (chatIds.length === 0) return;
+
+      setIsSyncingAllChats(true);
+      setSyncAllChatsMessage(null);
+      setSyncAllChatsProgress({
+        total: chatIds.length,
+        completed: 0,
+        failed: 0,
+        currentChatId: null,
+        currentChatName: null,
+      });
+
+      let failed = 0;
+      const yieldProgressFrame = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
       for (let index = 0; index < chatIds.length; index += 1) {
         const chatId = chatIds[index];
         const currentChat = chatRowsById.get(chatId);
@@ -224,7 +223,7 @@ export default function WhatsAppSettingsPage() {
                       void handleSyncAllChats();
                     }}
                     loading={isSyncingAllChats}
-                    disabled={isLoadingSummary || chatRows.length === 0}
+                    disabled={isLoadingSummary || chatsCount === 0}
                   >
                     <RefreshCw className="h-4 w-4" />
                     Sincronizar todos os chats

@@ -149,6 +149,7 @@ type MessagesCacheState = {
   loadedCount: number;
   queryOffset: number;
   hasOlder: boolean;
+  searchIndex: string;
 };
 
 type VisibleChatRowItem = {
@@ -566,6 +567,23 @@ export default function WhatsAppInboxScreen() {
         .filter(Boolean)
         .join(' '),
     );
+
+  const buildMessagesSearchIndex = (messages: WhatsAppMessage[]) =>
+    messages
+      .slice(-80)
+      .map((message) => getMessageSearchHaystack(message))
+      .filter(Boolean)
+      .join(' ');
+
+  const createMessagesCacheState = (params: {
+    messages: WhatsAppMessage[];
+    loadedCount: number;
+    queryOffset: number;
+    hasOlder: boolean;
+  }): MessagesCacheState => ({
+    ...params,
+    searchIndex: buildMessagesSearchIndex(params.messages),
+  });
 
   const collectPhoneMatchKeys = (value: string | null | undefined): string[] => {
     const digitsOnly = (value || '').replace(/\D/g, '');
@@ -2407,12 +2425,12 @@ export default function WhatsAppInboxScreen() {
     const currentChat = selectedChatRef.current;
     if (!currentChat) return;
 
-    messagesCacheRef.current.set(currentChat.id, {
+    messagesCacheRef.current.set(currentChat.id, createMessagesCacheState({
       messages,
       loadedCount: loadedMessagesCount,
       queryOffset: loadedMessagesQueryOffset,
       hasOlder: hasOlderMessages,
-    });
+    }));
   }, [hasOlderMessages, loadedMessagesCount, loadedMessagesQueryOffset, messages]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
@@ -2663,12 +2681,12 @@ export default function WhatsAppInboxScreen() {
       const latestPreview = getLatestMeaningfulPreview(baseMessages);
       setMessages((prev) => {
         const mergedMessages = dedupeMessagesForDisplay([...prev, ...baseMessages]);
-        messagesCacheRef.current.set(chat.id, {
+        messagesCacheRef.current.set(chat.id, createMessagesCacheState({
           messages: mergedMessages,
           loadedCount: nextLoadedCount,
           queryOffset: nextQueryOffset,
           hasOlder: nextHasOlder,
-        });
+        }));
         return mergedMessages;
       });
       setLoadedMessagesCount(nextLoadedCount);
@@ -2779,22 +2797,22 @@ export default function WhatsAppInboxScreen() {
         const existingIds = new Set(prev.map((item) => item.id));
         const deduped = olderMessages.filter((item) => !existingIds.has(item.id));
         if (deduped.length === 0) {
-          messagesCacheRef.current.set(currentChatId, {
+          messagesCacheRef.current.set(currentChatId, createMessagesCacheState({
             messages: prev,
             loadedCount: loadedMessagesCount,
             queryOffset: nextQueryOffset,
             hasOlder: nextHasOlder,
-          });
+          }));
           return prev;
         }
 
         const nextMessages = dedupeMessagesForDisplay([...deduped, ...prev]);
-        messagesCacheRef.current.set(currentChatId, {
+        messagesCacheRef.current.set(currentChatId, createMessagesCacheState({
           messages: nextMessages,
           loadedCount: nextMessages.length,
           queryOffset: nextQueryOffset,
           hasOlder: nextHasOlder,
-        });
+        }));
         return nextMessages;
       });
 
@@ -3081,10 +3099,10 @@ export default function WhatsAppInboxScreen() {
     const cacheKey = targetChat?.id || chatId;
     const cachedState = messagesCacheRef.current.get(cacheKey);
     if (cachedState) {
-      messagesCacheRef.current.set(cacheKey, {
+      messagesCacheRef.current.set(cacheKey, createMessagesCacheState({
         ...cachedState,
         messages: apply(cachedState.messages),
-      });
+      }));
     }
   };
 
@@ -3276,13 +3294,13 @@ export default function WhatsAppInboxScreen() {
 
       const cachedState = messagesCacheRef.current.get(targetChatId);
       const nextCachedMessages = mergeIntoMessageList(cachedState?.messages || []);
-      messagesCacheRef.current.set(targetChatId, {
+      messagesCacheRef.current.set(targetChatId, createMessagesCacheState({
         messages: nextCachedMessages,
         loadedCount:
           cachedState?.loadedCount ?? (selectedChatMatchesMessage ? loadedMessagesCount : nextCachedMessages.length),
         queryOffset: cachedState?.queryOffset ?? (selectedChatMatchesMessage ? loadedMessagesQueryOffset : 0),
         hasOlder: cachedState?.hasOlder ?? (selectedChatMatchesMessage ? hasOlderMessages : false),
-      });
+      }));
 
       setChats((prev) => {
         const preview = getMessagePreview(nextMessage);
@@ -4568,11 +4586,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       const cachedState = messagesCacheRef.current.get(chat.id);
-      return Boolean(
-        cachedState?.messages.some((message) =>
-          getMessageSearchHaystack(message).includes(normalizedSearchQuery),
-        ),
-      );
+      return Boolean(cachedState?.searchIndex?.includes(normalizedSearchQuery));
     });
 
     const activeChats = chatsMatchingSearch.filter((chat) => !chat.archived);
@@ -5886,10 +5900,10 @@ export default function WhatsAppInboxScreen() {
       if (selectedChat) {
         const cachedState = messagesCacheRef.current.get(selectedChat.id);
         if (cachedState) {
-          messagesCacheRef.current.set(selectedChat.id, {
+          messagesCacheRef.current.set(selectedChat.id, createMessagesCacheState({
             ...cachedState,
             messages: nextMessages,
-          });
+          }));
         }
       }
 
@@ -5909,23 +5923,38 @@ export default function WhatsAppInboxScreen() {
     }
 
     const payloadsByMessageId = new Map<string, WhatsAppMessagePayload>();
+    const concurrency = 4;
 
-    for (const message of audioMessagesWithoutTranscription) {
-      try {
-        const { data, error } = await supabase.functions.invoke('transcribe-whatsapp-audio', {
-          body: { messageId: message.id },
-        });
+    for (let index = 0; index < audioMessagesWithoutTranscription.length; index += concurrency) {
+      const chunk = audioMessagesWithoutTranscription.slice(index, index + concurrency);
+      const settledResults = await Promise.allSettled(
+        chunk.map(async (message) => {
+          const { data, error } = await supabase.functions.invoke('transcribe-whatsapp-audio', {
+            body: { messageId: message.id },
+          });
 
-        if (error) {
-          throw error;
+          if (error) {
+            throw error;
+          }
+
+          if (data?.payload && typeof data.payload === 'object') {
+            return { messageId: message.id, payload: data.payload as WhatsAppMessagePayload };
+          }
+
+          return null;
+        }),
+      );
+
+      settledResults.forEach((result, chunkIndex) => {
+        if (result.status === 'fulfilled') {
+          if (result.value?.payload) {
+            payloadsByMessageId.set(result.value.messageId, result.value.payload);
+          }
+          return;
         }
 
-        if (data?.payload && typeof data.payload === 'object') {
-          payloadsByMessageId.set(message.id, data.payload as WhatsAppMessagePayload);
-        }
-      } catch (error) {
-        console.error(`Erro ao transcrever audio ${message.id}:`, error);
-      }
+        console.error(`Erro ao transcrever audio ${chunk[chunkIndex]?.id}:`, result.reason);
+      });
     }
 
     if (payloadsByMessageId.size === 0) {
@@ -5952,10 +5981,10 @@ export default function WhatsAppInboxScreen() {
       if (selectedChat) {
         const cachedState = messagesCacheRef.current.get(selectedChat.id);
         if (cachedState) {
-          messagesCacheRef.current.set(selectedChat.id, {
+          messagesCacheRef.current.set(selectedChat.id, createMessagesCacheState({
             ...cachedState,
             messages: nextMessages,
-          });
+          }));
         }
       }
 

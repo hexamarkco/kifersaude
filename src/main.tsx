@@ -20,7 +20,7 @@ import {
   ProtectedRoute,
   RemindersManagerEnhanced,
   RouteLoading,
-  WhatsAppTab,
+  WhatsAppInboxPage,
   WhatsAppSettingsPage,
 } from './routes/lazyRouteComponents';
 import './index.css';
@@ -66,7 +66,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="comissoes" element={<FinanceiroComissoesTab />} />
               <Route path="tarefas" element={<FinanceiroAgendaTab />} />
               <Route path="lembretes" element={<RemindersManagerEnhanced />} />
-              <Route path="whatsapp" element={<WhatsAppTab />} />
+              <Route path="whatsapp" element={<WhatsAppInboxPage />} />
               <Route path="whatsapp/config" element={<WhatsAppSettingsPage />} />
               <Route path="blog" element={<BlogTab />} />
               <Route path="config" element={<ConfigPage />} />

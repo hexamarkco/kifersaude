@@ -25,7 +25,11 @@ import Button from '../ui/Button';
 import Checkbox from '../ui/Checkbox';
 import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
 import { fetchAllPages, supabase } from '../../lib/supabase';
-import { cancelWhatsAppCampaignAtomic, createWhatsAppCampaignAtomic } from '../../lib/whatsappCampaignAdminService';
+import {
+  cancelWhatsAppCampaignAtomic,
+  createWhatsAppCampaignAtomic,
+  recomputeWhatsAppCampaignCounters,
+} from '../../lib/whatsappCampaignAdminService';
 import { getAcceptedFileTypesByStepType, uploadWhatsAppCampaignMedia } from '../../lib/whatsappCampaignMediaService';
 import {
   analyzeCsvAudience,
@@ -629,36 +633,7 @@ export default function WhatsAppCampaignSettings() {
   }, []);
 
   const recomputeCampaignCounters = useCallback(async (campaignId: string) => {
-    const { data, error } = await supabase
-      .from('whatsapp_campaign_targets')
-      .select('status')
-      .eq('campaign_id', campaignId);
-
-    if (error) {
-      throw error;
-    }
-
-    const rows = (data ?? []) as Array<{ status: string | null }>;
-    const totalTargets = rows.length;
-    const pendingTargets = rows.filter((row) => row.status === 'pending' || row.status === 'processing').length;
-    const sentTargets = rows.filter((row) => row.status === 'sent').length;
-    const failedTargets = rows.filter((row) => row.status === 'failed').length;
-    const invalidTargets = rows.filter((row) => row.status === 'invalid').length;
-
-    const { error: updateError } = await supabase
-      .from('whatsapp_campaigns')
-      .update({
-        total_targets: totalTargets,
-        pending_targets: pendingTargets,
-        sent_targets: sentTargets,
-        failed_targets: failedTargets,
-        invalid_targets: invalidTargets,
-      })
-      .eq('id', campaignId);
-
-    if (updateError) {
-      throw updateError;
-    }
+    await recomputeWhatsAppCampaignCounters(campaignId);
   }, []);
 
   useEffect(() => {
@@ -857,27 +832,26 @@ export default function WhatsAppCampaignSettings() {
       }
     });
 
-    const results: ExistingCampaignLeadMatch[] = [];
     const batches = splitIntoBatches(Array.from(candidatePhones), 200);
 
-    for (const batch of batches) {
-      if (batch.length === 0) {
-        continue;
-      }
+    const responses = await Promise.all(
+      batches
+        .filter((batch) => batch.length > 0)
+        .map(async (batch) => {
+          const { data, error } = await supabase
+            .from('leads')
+            .select('id, nome_completo, telefone, email, status, status_id, origem, origem_id, cidade, responsavel, responsavel_id, canal')
+            .in('telefone', batch);
 
-      const { data, error } = await supabase
-        .from('leads')
-        .select('id, nome_completo, telefone, email, status, status_id, origem, origem_id, cidade, responsavel, responsavel_id, canal')
-        .in('telefone', batch);
+          if (error) {
+            throw error;
+          }
 
-      if (error) {
-        throw error;
-      }
+          return (data ?? []) as ExistingCampaignLeadMatch[];
+        }),
+    );
 
-      results.push(...((data ?? []) as ExistingCampaignLeadMatch[]));
-    }
-
-    return results;
+    return responses.flat();
   }, []);
 
   const resetBuilderState = useCallback(() => {

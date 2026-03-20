@@ -11,7 +11,7 @@ export const LeadsManagerWrapper = lazy(() => import('../pages/routes/LeadsManag
 export const ContractsManagerWrapper = lazy(() => import('../pages/routes/ContractsManagerWrapper'));
 export const RemindersManagerEnhanced = lazy(() => import('../components/RemindersManagerEnhanced'));
 export const BlogTab = lazy(() => import('../components/config/BlogTab'));
-export const WhatsAppTab = lazy(() => import('../features/whatsapp/inbox/WhatsAppInboxScreen'));
+export const WhatsAppInboxPage = lazy(() => import('../features/whatsapp/inbox/WhatsAppInboxScreen'));
 export const WhatsAppSettingsPage = lazy(() => import('../components/communication/WhatsAppSettingsPage'));
 export const ConfigPage = lazy(() => import('../pages/ConfigPage'));
 export const FinanceiroComissoesTab = lazy(() => import('../components/finance/FinanceiroComissoesTab'));

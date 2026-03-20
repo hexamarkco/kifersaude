@@ -42,6 +42,7 @@ import Textarea from './ui/Textarea';
 
 type LeadFormProps = {
   lead: Lead | null;
+  initialValues?: Partial<Lead>;
   onClose: () => void;
   onSave: (lead: Lead, context?: { created: boolean }) => void;
 };
@@ -115,31 +116,42 @@ const parseBlackoutDates = (value: string): string[] => {
   return Array.from(uniqueDates);
 };
 
-export default function LeadForm({ lead, onClose, onSave }: LeadFormProps) {
+const buildInitialFormData = (
+  lead: Lead | null,
+  initialValues?: Partial<Lead>,
+): LeadFormState => {
+  const source = lead ?? initialValues ?? {};
+
+  return {
+    nome_completo: source.nome_completo || '',
+    telefone: source.telefone || '',
+    email: source.email || '',
+    data_criacao: formatDateForInput(source.data_criacao || new Date().toISOString()),
+    cep: source.cep || '',
+    endereco: source.endereco || '',
+    cidade: source.cidade || '',
+    estado: source.estado || '',
+    regiao: source.regiao || '',
+    origem: source.origem || '',
+    tipo_contratacao: source.tipo_contratacao || '',
+    operadora_atual: source.operadora_atual || '',
+    status: source.status || '',
+    responsavel: source.responsavel || '',
+    proximo_retorno: formatDateTimeForInput(source.proximo_retorno),
+    observacoes: source.observacoes || '',
+    blackout_dates: (source.blackout_dates || []).join(', '),
+    daily_send_limit:
+      typeof source.daily_send_limit === 'number' ? String(source.daily_send_limit) : '',
+  };
+};
+
+export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadFormProps) {
   const { loading: configLoading, leadStatuses, leadOrigins, options } = useConfig();
   const { isObserver } = useAuth();
 
-  const [formData, setFormData] = useState<LeadFormState>({
-    nome_completo: lead?.nome_completo || '',
-    telefone: lead?.telefone || '',
-    email: lead?.email || '',
-    data_criacao: formatDateForInput(lead?.data_criacao || new Date().toISOString()),
-    cep: lead?.cep || '',
-    endereco: lead?.endereco || '',
-    cidade: lead?.cidade || '',
-    estado: lead?.estado || '',
-    regiao: lead?.regiao || '',
-    origem: lead?.origem || '',
-    tipo_contratacao: lead?.tipo_contratacao || '',
-    operadora_atual: lead?.operadora_atual || '',
-    status: lead?.status || '',
-    responsavel: lead?.responsavel || '',
-    proximo_retorno: formatDateTimeForInput(lead?.proximo_retorno),
-    observacoes: lead?.observacoes || '',
-    blackout_dates: (lead?.blackout_dates || []).join(', '),
-    daily_send_limit:
-      typeof lead?.daily_send_limit === 'number' ? String(lead.daily_send_limit) : '',
-  });
+  const [formData, setFormData] = useState<LeadFormState>(() =>
+    buildInitialFormData(lead, initialValues),
+  );
 
   const [saving, setSaving] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);

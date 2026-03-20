@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, User, AlertCircle, MessageSquare } from 'lucide-react';
 import { getWhatsAppMessageHistory, buildChatIdFromPhone, normalizeChatId, type WhapiMessage } from '../../../../lib/whatsappApiService';
 import { formatWhatsAppAudioTranscriptionLabel } from '../../../../lib/whatsappAudioTranscription';
@@ -33,9 +33,9 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
     if (isOpen && resolvedChatId) {
       void loadHistory(resolvedChatId);
     }
-  }, [isOpen, resolvedChatId, messageTimestamp]);
+  }, [isOpen, resolvedChatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadHistory = async (activeChatId: string) => {
+  const loadHistory = useCallback(async (activeChatId: string) => {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
 
@@ -70,7 +70,7 @@ export function MessageHistoryModal({ messageId, chatId, messageTimestamp, isOpe
         setLoading(false);
       }
     }
-  };
+  }, [messageTimestamp]);
 
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp * 1000);

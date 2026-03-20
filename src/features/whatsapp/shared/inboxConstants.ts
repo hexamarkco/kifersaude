@@ -60,8 +60,8 @@ export const REMINDER_QUICK_OPEN_PERIODS: Array<{
   },
   {
     id: 'thisMonth',
-    label: 'Este mÃªs',
-    emptyLabel: 'Sem lembretes para este mÃªs.',
+    label: 'Este mes',
+    emptyLabel: 'Sem lembretes para este mes.',
     accentClassName: 'comm-badge comm-badge-warning',
   },
   {

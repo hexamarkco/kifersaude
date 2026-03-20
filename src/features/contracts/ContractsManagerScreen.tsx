@@ -1103,6 +1103,7 @@ export default function ContractsManager({
 
         {showForm && (
           <ContractForm
+            key={editingContract?.id ?? leadToConvert?.id ?? "new-contract"}
             contract={editingContract}
             leadToConvert={leadToConvert}
             onClose={() => {
@@ -1121,6 +1122,7 @@ export default function ContractsManager({
 
         {selectedContract && (
           <ContractDetails
+            key={selectedContract.id}
             contract={selectedContract}
             onClose={() => setSelectedContract(null)}
             onUpdate={handleContractsUpdated}

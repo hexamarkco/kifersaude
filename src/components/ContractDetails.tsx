@@ -1747,6 +1747,7 @@ export default function ContractDetails({
 
       {showHolderForm && (
         <HolderForm
+          key={editingHolder?.id ?? `holder-${contract.id}`}
           contractId={contract.id}
           modalidade={contract.modalidade}
           holder={editingHolder || undefined}
@@ -1766,6 +1767,7 @@ export default function ContractDetails({
 
       {showDependentForm && (
         <DependentForm
+          key={editingDependent?.id ?? `dependent-${selectedHolderId ?? contract.id}`}
           contractId={contract.id}
           holders={holders}
           dependent={editingDependent}
@@ -1786,6 +1788,7 @@ export default function ContractDetails({
       )}
       {showEditForm && (
         <ContractForm
+          key={`contract-${contract.id}-${contract.updated_at}`}
           contract={contract}
           onClose={() => setShowEditForm(false)}
           onSave={() => {

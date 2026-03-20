@@ -36,6 +36,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import type { LeadStatusConfig } from '../../../lib/supabase';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import StatusDropdown from '../../../components/StatusDropdown';
+import LeadForm from '../../../components/LeadForm';
 import ModalShell from '../../../components/ui/ModalShell';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -95,6 +96,7 @@ import {
 } from '../shared/reminderQuickOpen';
 import { mergeChatPreview, sanitizeTechnicalCiphertextPreview, type ChatPreviewCandidate } from '../shared/chatPreview';
 import { dataUrlToFile } from '../shared/stickerLibrary';
+import { buildOutboundSentMessagePayload, persistOutboundMessage } from '../shared/outboundMessagePersistence';
 import { formatWhatsAppPhoneDisplay, isLikelyBrazilLocalNumber, normalizePhoneNumber } from '../shared/phoneUtils';
 import { normalizeTitleCase } from '../../../lib/textNormalization';
 import type {
@@ -425,6 +427,7 @@ export default function WhatsAppInboxScreen() {
   const [isDeletingSelectedContact, setIsDeletingSelectedContact] = useState(false);
   const [isSavingSelectedLeadInfo, setIsSavingSelectedLeadInfo] = useState(false);
   const [isDeletingSelectedLeadInfo, setIsDeletingSelectedLeadInfo] = useState(false);
+  const [leadCreationInitialValues, setLeadCreationInitialValues] = useState<Partial<Lead> | null>(null);
   const [pendingMessagesBelow, setPendingMessagesBelow] = useState(0);
   const [composerHeight, setComposerHeight] = useState(96);
   const [myReactionsByMessage, setMyReactionsByMessage] = useState<Map<string, string>>(new Map());
@@ -557,7 +560,7 @@ export default function WhatsAppInboxScreen() {
     });
   };
 
-  const getMessageSearchHaystack = (message: WhatsAppMessage) =>
+  const getMessageSearchHaystack = useCallback((message: WhatsAppMessage) =>
     normalizeSearchText(
       [
         resolveWhatsAppMessageBody({
@@ -571,16 +574,16 @@ export default function WhatsAppInboxScreen() {
       ]
         .filter(Boolean)
         .join(' '),
-    );
+    ), []);
 
-  const buildMessagesSearchIndex = (messages: WhatsAppMessage[]) =>
+  const buildMessagesSearchIndex = useCallback((messages: WhatsAppMessage[]) =>
     messages
       .slice(-CHAT_SEARCH_MESSAGE_INDEX_LIMIT)
       .map((message) => getMessageSearchHaystack(message))
       .filter(Boolean)
-      .join(' ');
+      .join(' '), [getMessageSearchHaystack]);
 
-  const createMessagesCacheState = (params: {
+  const createMessagesCacheState = useCallback((params: {
     messages: WhatsAppMessage[];
     loadedCount: number;
     queryOffset: number;
@@ -588,7 +591,7 @@ export default function WhatsAppInboxScreen() {
   }): MessagesCacheState => ({
     ...params,
     searchIndex: buildMessagesSearchIndex(params.messages),
-  });
+  }), [buildMessagesSearchIndex]);
 
   const collectPhoneMatchKeys = (value: string | null | undefined): string[] => {
     const digitsOnly = (value || '').replace(/\D/g, '');
@@ -636,7 +639,7 @@ export default function WhatsAppInboxScreen() {
       .filter(Boolean);
   };
 
-  const getLeadMatchKeysForChat = (chat: Pick<WhatsAppChat, 'id' | 'name' | 'phone_number' | 'lid' | 'is_group'> | null): string[] => {
+  const getLeadMatchKeysForChat = useCallback((chat: Pick<WhatsAppChat, 'id' | 'name' | 'phone_number' | 'lid' | 'is_group'> | null): string[] => {
     if (!chat || !isDirectChat(chat)) {
       return [];
     }
@@ -655,7 +658,7 @@ export default function WhatsAppInboxScreen() {
     });
 
     return Array.from(keys);
-  };
+  }, []);
 
   const parseIsoTimestampMillis = (value: string | null | undefined) => {
     if (!value) return Number.NaN;
@@ -713,12 +716,6 @@ export default function WhatsAppInboxScreen() {
   };
 
   const isClientGeneratedMessageId = (id: string) => id.startsWith('local-') || id.startsWith('msg-');
-
-  const extractResponseMessageId = (value: unknown): string | null => {
-    if (typeof value !== 'string') return null;
-    const trimmed = value.trim();
-    return trimmed || null;
-  };
 
   const normalizeMessageBodyForMatch = (value: string | null | undefined) =>
     (value || '')
@@ -1111,10 +1108,10 @@ export default function WhatsAppInboxScreen() {
     return kind;
   };
 
-  const isStatusChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'> | null | undefined) => {
+  const isStatusChat = useCallback((chat: Pick<WhatsAppChat, 'id' | 'is_group'> | null | undefined) => {
     if (!chat) return false;
     return getChatKind(chat) === 'status';
-  };
+  }, []);
 
   const isStatusMessage = (message: Pick<WhatsAppMessage, 'chat_id' | 'type'> | null | undefined) => {
     if (!message) return false;
@@ -1124,14 +1121,14 @@ export default function WhatsAppInboxScreen() {
 
   const isDirectChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => isDirectChatIdentityTarget(chat);
 
-  const getChatTypeLabel = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
+  const getChatTypeLabel = useCallback((chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
     const kind = getChatKind(chat);
     if (kind === 'group') return 'Grupo';
     if (kind === 'newsletter') return 'Canal';
     if (kind === 'status') return 'Status';
     if (kind === 'broadcast') return 'Transmissao';
     return null;
-  };
+  }, []);
 
   const getNonDirectFallbackName = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
     const kind = getChatKind(chat);
@@ -1705,7 +1702,7 @@ export default function WhatsAppInboxScreen() {
     if (mergedResults.length > 0) {
       mergeLeadSummaries(mergedResults);
     }
-  }, [mergeLeadSummaries]);
+  }, [getLeadMatchKeysForChat, mergeLeadSummaries]);
 
   const loadLeadDirectorySearch = useCallback(async (query: string) => {
     leadDirectoryRequestIdRef.current += 1;
@@ -1919,7 +1916,7 @@ export default function WhatsAppInboxScreen() {
 
     document.addEventListener('mousedown', handlePointerDown);
     return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [chatMenu]);
+  }, [chatMenu]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const loadContactPhotoFallbacks = async () => {
@@ -2503,7 +2500,7 @@ export default function WhatsAppInboxScreen() {
       queryOffset: loadedMessagesQueryOffset,
       hasOlder: hasOlderMessages,
     }));
-  }, [hasOlderMessages, loadedMessagesCount, loadedMessagesQueryOffset, messages]);
+  }, [createMessagesCacheState, hasOlderMessages, loadedMessagesCount, loadedMessagesQueryOffset, messages]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesViewportNearBottomRef.current = true;
@@ -3101,57 +3098,6 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const persistOutboundMessageResult = async (params: {
-    response: unknown;
-    chatId: string;
-    type: string;
-    body: string;
-    hasMedia: boolean;
-    sentAt: string;
-    payloadOverride?: Record<string, unknown> | null;
-  }) => {
-    const { response, chatId: rawChatId, type, body, hasMedia, sentAt, payloadOverride } = params;
-    const normalizedChatId = normalizeChatId(rawChatId);
-    const responsePayload = response && typeof response === 'object' ? (response as Record<string, unknown>) : null;
-    const storedPayload = payloadOverride ?? responsePayload;
-
-    const nestedMessageId =
-      responsePayload?.message && typeof responsePayload.message === 'object'
-        ? extractResponseMessageId((responsePayload.message as Record<string, unknown>).id)
-        : null;
-    const firstArrayMessageId =
-      Array.isArray(responsePayload?.messages) &&
-      responsePayload.messages.length > 0 &&
-      responsePayload.messages[0] &&
-      typeof responsePayload.messages[0] === 'object'
-        ? extractResponseMessageId((responsePayload.messages[0] as Record<string, unknown>).id)
-        : null;
-    const persistedMessageId =
-      extractResponseMessageId(responsePayload?.id) || nestedMessageId || firstArrayMessageId;
-    const messageId = persistedMessageId || `local-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-    if (persistedMessageId) {
-      const { error: insertError } = await supabase.from('whatsapp_messages').upsert({
-        id: persistedMessageId,
-        chat_id: normalizedChatId,
-        from_number: null,
-        to_number: normalizedChatId,
-        type,
-        body,
-        has_media: hasMedia,
-        timestamp: sentAt,
-        direction: 'outbound',
-        payload: storedPayload,
-      });
-
-      if (insertError) {
-        console.warn('Erro ao salvar mensagem reenviada no banco:', insertError);
-      }
-    }
-
-    return { normalizedChatId, messageId, payload: storedPayload };
-  };
-
   const patchMessageById = (
     chatId: string,
     messageId: string,
@@ -3298,7 +3244,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       const sentAt = new Date().toISOString();
-      const persisted = await persistOutboundMessageResult({
+      const persisted = await persistOutboundMessage({
         response,
         chatId: message.chat_id,
         type,
@@ -3307,22 +3253,20 @@ export default function WhatsAppInboxScreen() {
         sentAt,
       });
 
-      handleMessageSent({
+      handleMessageSent(buildOutboundSentMessagePayload({
         id: persisted.messageId,
-        local_ref: message.local_ref || message.id,
-        chat_id: persisted.normalizedChatId,
+        localRef: message.local_ref || message.id,
+        chatId: persisted.normalizedChatId,
         body,
         type,
-        has_media: hasMedia,
-        timestamp: sentAt,
-        direction: 'outbound',
-        created_at: sentAt,
-        ack_status: 2,
-        send_state: null,
-        error_message: null,
-        retry_payload: null,
-        payload: persisted.payload,
-      });
+        hasMedia,
+        sentAt,
+        payload: persisted.storedPayload,
+        ackStatus: 2,
+        sendState: null,
+        errorMessage: null,
+        retryPayload: null,
+      }));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao reenviar mensagem';
       patchMessageById(message.chat_id, message.id, (current) => ({
@@ -3980,7 +3924,7 @@ export default function WhatsAppInboxScreen() {
 
     const sentAt = new Date().toISOString();
     const responsePayload = response && typeof response === 'object' ? (response as Record<string, unknown>) : null;
-    const persisted = await persistOutboundMessageResult({
+    const persisted = await persistOutboundMessage({
       response,
       chatId: targetChatId,
       type: plan.type,
@@ -3990,17 +3934,15 @@ export default function WhatsAppInboxScreen() {
       payloadOverride: markWhatsAppPayloadAsForwarded(responsePayload),
     });
 
-    handleMessageSent({
+    handleMessageSent(buildOutboundSentMessagePayload({
       id: persisted.messageId,
-      chat_id: persisted.normalizedChatId,
+      chatId: persisted.normalizedChatId,
       body: plan.body,
       type: plan.type,
-      has_media: plan.hasMedia,
-      timestamp: sentAt,
-      direction: 'outbound',
-      created_at: sentAt,
-      payload: persisted.payload,
-    });
+      hasMedia: plan.hasMedia,
+      sentAt,
+      payload: persisted.storedPayload,
+    }));
 
     return persisted.normalizedChatId;
   };
@@ -4458,7 +4400,7 @@ export default function WhatsAppInboxScreen() {
     return map;
   }, [leadByPhoneMatchKey]);
 
-  function getChatDisplayName(chat: WhatsAppChat) {
+  const getChatDisplayName = useCallback((chat: WhatsAppChat) => {
     const chatKind = getChatKind(chat);
     if (chatKind === 'group') {
       return groupNamesById.get(chat.id) || chat.name || chat.id;
@@ -4510,7 +4452,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     return chat.id;
-  }
+  }, [formatPhone, getLeadMatchKeysForChat, getNonDirectFallbackName, getPreferredContactNameFromCandidates, groupNamesById, leadNamesByPhone, newsletterNamesById]);
 
   const chatListPresentationById = useMemo(() => {
     const map = new Map<
@@ -4766,6 +4708,7 @@ export default function WhatsAppInboxScreen() {
     chatSearchMetadataById,
     chats,
     deferredSearchQuery,
+    isStatusChat,
     prioritizeUnread,
     showArchived,
   ]);
@@ -5200,7 +5143,7 @@ export default function WhatsAppInboxScreen() {
       label: `Aguardando resposta: ${formatMinutesDuration(firstResponseSla.minutes)}`,
       className: 'comm-badge-danger',
     };
-  }, [firstResponseSla]);
+  }, [firstResponseSla, formatMinutesDuration]);
   const isDarkThemeActive =
     typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
   const getLeadStatusBadgeStyle = useCallback((hexColor: string) => {
@@ -5301,7 +5244,7 @@ export default function WhatsAppInboxScreen() {
 
         return 0;
       });
-  }, [chats, forwardSearch, formatTime, selectedForwardChatIds]);
+  }, [chats, formatChatListPreview, formatTime, forwardSearch, getChatDisplayName, selectedForwardChatIds]);
 
   const templateVariablesForInput = useMemo(() => {
     const fullName = (selectedLead?.name || selectedChatDisplayName || '').trim();
@@ -5358,6 +5301,8 @@ export default function WhatsAppInboxScreen() {
       }),
     [
       chatListPresentationById,
+      getChatDisplayName,
+      getChatTypeLabel,
       formatChatListPreview,
       formatTime,
       getLeadStatusBadgeStyle,
@@ -5368,12 +5313,12 @@ export default function WhatsAppInboxScreen() {
     ],
   );
 
-  const clearMuteMenuCloseTimeout = () => {
+  const clearMuteMenuCloseTimeout = useCallback(() => {
     if (muteMenuCloseTimeoutRef.current !== null) {
       window.clearTimeout(muteMenuCloseTimeoutRef.current);
       muteMenuCloseTimeoutRef.current = null;
     }
-  };
+  }, []);
 
   const openMuteSubmenu = () => {
     clearMuteMenuCloseTimeout();
@@ -5388,17 +5333,17 @@ export default function WhatsAppInboxScreen() {
     }, 140);
   };
 
-  const closeMuteSubmenuNow = () => {
+  const closeMuteSubmenuNow = useCallback(() => {
     clearMuteMenuCloseTimeout();
     setChatMenuMuteOpen(false);
-  };
+  }, [clearMuteMenuCloseTimeout]);
 
-  const clearStatusMenuCloseTimeout = () => {
+  const clearStatusMenuCloseTimeout = useCallback(() => {
     if (statusMenuCloseTimeoutRef.current !== null) {
       window.clearTimeout(statusMenuCloseTimeoutRef.current);
       statusMenuCloseTimeoutRef.current = null;
     }
-  };
+  }, []);
 
   const openStatusSubmenu = () => {
     clearStatusMenuCloseTimeout();
@@ -5413,10 +5358,10 @@ export default function WhatsAppInboxScreen() {
     }, 140);
   };
 
-  const closeStatusSubmenuNow = () => {
+  const closeStatusSubmenuNow = useCallback(() => {
     clearStatusMenuCloseTimeout();
     setChatMenuStatusOpen(false);
-  };
+  }, [clearStatusMenuCloseTimeout]);
 
   const runDeferredChatMenuAction = useCallback((action: () => void | Promise<void>) => {
     closeMuteSubmenuNow();
@@ -5435,7 +5380,7 @@ export default function WhatsAppInboxScreen() {
         void action();
       }, 0);
     });
-  }, []);
+  }, [closeMuteSubmenuNow, closeStatusSubmenuNow]);
 
   useEffect(() => {
     return () => {
@@ -5801,7 +5746,63 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const buildConversationHistoryForCopy = (items: WhatsAppMessage[]) => {
+  const handleCreateLeadFromSelectedChat = (payload: {
+    name: string;
+    phone: string;
+  }) => {
+    if (!selectedChatIsDirect) {
+      toast.warning('Abra uma conversa individual para criar um lead por aqui.');
+      return;
+    }
+
+    const initialPhone = payload.phone.trim() || selectedChatPhoneFormatted || selectedChatPhone || '';
+    if (!initialPhone) {
+      toast.warning('Nao foi possivel identificar o telefone deste chat.');
+      return;
+    }
+
+    const initialName =
+      normalizeTitleCase(payload.name)?.trim() ||
+      normalizeTitleCase(selectedChatDisplayName)?.trim() ||
+      selectedChatDisplayName ||
+      initialPhone;
+
+    setLeadCreationInitialValues({
+      nome_completo: initialName,
+      telefone: initialPhone,
+    });
+  };
+
+  const handleLeadCreatedFromSelectedChat = (
+    savedLead: Lead,
+    _context?: { created: boolean },
+  ) => {
+    const normalizedPhone =
+      normalizePhoneNumber(savedLead.telefone || '') || selectedChatPhone || '';
+    const nextLeadSummary: InboxLeadSummary = {
+      id: savedLead.id,
+      name: savedLead.nome_completo?.trim() || normalizedPhone || selectedChatDisplayName || 'Lead',
+      phone: normalizedPhone,
+      status: savedLead.status ?? null,
+      responsavel: savedLead.responsavel_id ?? savedLead.responsavel ?? null,
+    };
+
+    mergeLeadSummaries([nextLeadSummary]);
+    setSelectedLeadInfo({
+      id: savedLead.id,
+      name: nextLeadSummary.name,
+      phone: nextLeadSummary.phone,
+      status: nextLeadSummary.status ?? null,
+      responsavel: nextLeadSummary.responsavel ?? null,
+      email: savedLead.email ?? null,
+      cidade: savedLead.cidade ?? null,
+      observacoes: savedLead.observacoes ?? null,
+    });
+    setLeadCreationInitialValues(null);
+    toast.success('Lead criado e vinculado a esta conversa.');
+  };
+
+  const buildConversationHistoryForCopy = useCallback((items: WhatsAppMessage[]) => {
     if (!selectedChat || items.length === 0) return '';
 
     const exportedLines = [...items]
@@ -5832,7 +5833,7 @@ export default function WhatsAppInboxScreen() {
       .filter((line): line is string => Boolean(line));
 
     return exportedLines.join('\n');
-  };
+  }, [formatPhone, getMessageDisplayTimestamp, getMessagePreview, selectedChat, selectedChatDisplayName, selectedChatKind, sortMessagesChronologically]);
   const followUpContextForInput = useMemo(() => {
     if (!selectedChat || !selectedChatIsDirect) return null;
 
@@ -6068,7 +6069,7 @@ export default function WhatsAppInboxScreen() {
     });
 
     return nextItems;
-  }, [selectedChat]);
+  }, [createMessagesCacheState, selectedChat]);
 
   const prepareFollowUpContext = useCallback(async () => {
     if (!selectedChat || !selectedChatIsDirect) {
@@ -6092,6 +6093,7 @@ export default function WhatsAppInboxScreen() {
       },
     };
   }, [
+    buildConversationHistoryForCopy,
     ensureAudioMessagesHaveTranscription,
     messages,
     selectedChat,
@@ -8357,10 +8359,20 @@ export default function WhatsAppInboxScreen() {
                   isDeletingLead={isDeletingSelectedLeadInfo}
                   onClose={() => setShowConversationInfo(false)}
                   onOpenLead={selectedLead?.id ? () => handleOpenLeadFromChat(selectedLead.id) : undefined}
+                  onCreateLead={handleCreateLeadFromSelectedChat}
                   onSaveContact={handleSaveSelectedContactInfo}
                   onDeleteContact={handleDeleteSelectedContactInfo}
                   onSaveLead={handleSaveSelectedLeadInfo}
                   onDeleteLead={handleDeleteSelectedLeadInfo}
+                />
+              )}
+
+              {leadCreationInitialValues && (
+                <LeadForm
+                  lead={null}
+                  initialValues={leadCreationInitialValues}
+                  onClose={() => setLeadCreationInitialValues(null)}
+                  onSave={handleLeadCreatedFromSelectedChat}
                 />
               )}
             </>

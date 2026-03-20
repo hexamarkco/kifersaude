@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HeartPulse, Search, UserCircle, Users, WalletCards } from 'lucide-react';
 import { supabase, type ContractHolder, type Dependent } from '../lib/supabase';
 import { formatDateForInput } from '../lib/dateUtils';
-import { formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
+import { formatCpf, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import FilterSingleSelect from './FilterSingleSelect';
 import Button from './ui/Button';
@@ -23,6 +23,52 @@ type DependentFormProps = {
   onSave: () => void;
 };
 
+type DependentFormState = {
+  holder_id: string;
+  nome_completo: string;
+  cpf: string;
+  data_nascimento: string;
+  relacao: string;
+  elegibilidade: string;
+  valor_individual: string;
+  carencia_individual: string;
+  bonus_por_vida_aplicado: boolean;
+};
+
+const buildDependentFormState = (
+  dependent: Dependent | null,
+  defaultHolderId: string,
+  bonusPorVidaDefault?: boolean,
+): DependentFormState => ({
+  holder_id: defaultHolderId,
+  nome_completo: dependent?.nome_completo || '',
+  cpf: formatCpf(dependent?.cpf || ''),
+  data_nascimento: formatDateForInput(dependent?.data_nascimento) || '',
+  relacao: dependent?.relacao || 'Filho(a)',
+  elegibilidade: dependent?.elegibilidade || '',
+  valor_individual:
+    typeof dependent?.valor_individual === 'number'
+      ? formatCurrencyInput(String(Math.round(dependent.valor_individual * 100)))
+      : '',
+  carencia_individual: dependent?.carencia_individual || '',
+  bonus_por_vida_aplicado:
+    dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
+});
+
+const withCurrentOption = (
+  options: Array<{ value: string; label: string }>,
+  value?: string | null,
+  label?: string | null,
+) => {
+  const normalizedValue = value?.trim();
+
+  if (!normalizedValue || options.some((option) => option.value === normalizedValue)) {
+    return options;
+  }
+
+  return [{ value: normalizedValue, label: label?.trim() || normalizedValue }, ...options];
+};
+
 export default function DependentForm({
   contractId,
   holders,
@@ -40,82 +86,98 @@ export default function DependentForm({
   const defaultHolderId =
     dependent?.holder_id || selectedHolderId || holderOptions[0]?.value || '';
 
-  const [formData, setFormData] = useState({
-    holder_id: defaultHolderId,
-    nome_completo: dependent?.nome_completo || '',
-    cpf: dependent?.cpf || '',
-    data_nascimento: formatDateForInput(dependent?.data_nascimento) || '',
-    relacao: dependent?.relacao || 'Filho(a)',
-    elegibilidade: dependent?.elegibilidade || '',
-    valor_individual:
-      typeof dependent?.valor_individual === 'number'
-        ? formatCurrencyInput(String(Math.round(dependent.valor_individual * 100)))
-        : '',
-    carencia_individual: dependent?.carencia_individual || '',
-    bonus_por_vida_aplicado:
-      dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
-  });
+  const initialFormData = useMemo(
+    () => buildDependentFormState(dependent, defaultHolderId, bonusPorVidaDefault),
+    [bonusPorVidaDefault, defaultHolderId, dependent],
+  );
+  const [formData, setFormData] = useState<DependentFormState>(initialFormData);
   const [saving, setSaving] = useState(false);
   const [cpfLoading, setCpfLoading] = useState(false);
   const [cpfLookupError, setCpfLookupError] = useState<string | null>(null);
   const lastFetchedCpfKeyRef = useRef('');
+  const holderSelectOptions = useMemo(() => {
+    const currentHolderLabel =
+      holders.find((holder) => holder.id === formData.holder_id)?.nome_completo ||
+      'Titular atual';
+
+    return withCurrentOption(holderOptions, formData.holder_id, currentHolderLabel);
+  }, [formData.holder_id, holderOptions, holders]);
+  const relacaoOptions = useMemo(
+    () =>
+      withCurrentOption(
+        [
+          { value: 'Conjuge', label: 'Conjuge' },
+          { value: 'Filho(a)', label: 'Filho(a)' },
+          { value: 'Enteado(a)', label: 'Enteado(a)' },
+          { value: 'Pai/Mae', label: 'Pai/Mae' },
+          { value: 'Outro', label: 'Outro' },
+        ],
+        formData.relacao,
+      ),
+    [formData.relacao],
+  );
+  const carenciaOptions = useMemo(
+    () =>
+      withCurrentOption(
+        [
+          { value: '', label: 'Mesma do titular' },
+          { value: 'padrao', label: 'Padrao' },
+          { value: 'reduzida', label: 'Reduzida' },
+          { value: 'portabilidade', label: 'Portabilidade' },
+          { value: 'zero', label: 'Zero' },
+        ],
+        formData.carencia_individual,
+      ),
+    [formData.carencia_individual],
+  );
 
   useEffect(() => {
-    setFormData((current) => ({
-      ...current,
-      holder_id: dependent?.holder_id || selectedHolderId || holderOptions[0]?.value || '',
-      nome_completo: dependent?.nome_completo || '',
-      cpf: dependent?.cpf || '',
-      data_nascimento: formatDateForInput(dependent?.data_nascimento) || '',
-      relacao: dependent?.relacao || 'Filho(a)',
-      elegibilidade: dependent?.elegibilidade || '',
-      valor_individual:
-        typeof dependent?.valor_individual === 'number'
-          ? formatCurrencyInput(String(Math.round(dependent.valor_individual * 100)))
-          : '',
-      carencia_individual: dependent?.carencia_individual || '',
-      bonus_por_vida_aplicado:
-        dependent?.bonus_por_vida_aplicado ?? bonusPorVidaDefault ?? true,
-    }));
-  }, [bonusPorVidaDefault, dependent, holderOptions, selectedHolderId]);
-
-  const handleConsultarCPF = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
-    const cleanCpf = formData.cpf.replace(/\D/g, '');
-    if (cleanCpf.length !== 11) {
-      if (!silent) {
-        setCpfLookupError('Informe um CPF válido para buscar.');
-      }
-      return;
-    }
-
-    const fetchKey = `${cleanCpf}:${formData.data_nascimento || 'sem-data'}`;
-    if (!force && lastFetchedCpfKeyRef.current === fetchKey) {
-      return;
-    }
-
+    setFormData(initialFormData);
     setCpfLookupError(null);
-    setCpfLoading(true);
+    setCpfLoading(false);
+    lastFetchedCpfKeyRef.current = '';
+  }, [initialFormData]);
 
-    try {
-      const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento || undefined);
-
-      setFormData((prev) => ({
-        ...prev,
-        nome_completo: pessoa.nome || prev.nome_completo,
-        data_nascimento: formatDateForInput(pessoa.data_nascimento) || prev.data_nascimento,
-      }));
-      lastFetchedCpfKeyRef.current = fetchKey;
-    } catch (error) {
-      console.error('Erro ao consultar CPF do dependente:', error);
-      if (!silent) {
-        setCpfLookupError(
-          error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
-        );
+  const handleConsultarCPF = useCallback(
+    async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+      const cleanCpf = formData.cpf.replace(/\D/g, '');
+      if (cleanCpf.length !== 11) {
+        if (!silent) {
+          setCpfLookupError('Informe um CPF válido para buscar.');
+        }
+        return;
       }
-    } finally {
-      setCpfLoading(false);
-    }
-  };
+
+      const fetchKey = `${cleanCpf}:${formData.data_nascimento || 'sem-data'}`;
+      if (!force && lastFetchedCpfKeyRef.current === fetchKey) {
+        return;
+      }
+
+      setCpfLookupError(null);
+      setCpfLoading(true);
+
+      try {
+        const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento || undefined);
+
+        setFormData((prev) => ({
+          ...prev,
+          nome_completo: pessoa.nome || prev.nome_completo,
+          data_nascimento: formatDateForInput(pessoa.data_nascimento) || prev.data_nascimento,
+        }));
+        lastFetchedCpfKeyRef.current = fetchKey;
+      } catch (error) {
+        console.error('Erro ao consultar CPF do dependente:', error);
+        if (!silent) {
+          setCpfLookupError(
+            error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
+          );
+        }
+      } finally {
+        setCpfLoading(false);
+      }
+    },
+    [formData.cpf, formData.data_nascimento],
+  );
 
   useEffect(() => {
     const cleanCpf = formData.cpf.replace(/\D/g, '');
@@ -126,7 +188,7 @@ export default function DependentForm({
     }
 
     void handleConsultarCPF({ silent: true });
-  }, [formData.cpf, formData.data_nascimento]);
+  }, [formData.cpf, formData.data_nascimento, handleConsultarCPF]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,7 +260,7 @@ export default function DependentForm({
               includePlaceholderOption={false}
               options={[
                 { value: '', label: 'Selecione um titular' },
-                ...holderOptions,
+                ...holderSelectOptions,
               ]}
             />
           </Field>
@@ -271,13 +333,7 @@ export default function DependentForm({
               onChange={(value) => setFormData({ ...formData, relacao: value })}
               placeholder="Relacao com titular"
               includePlaceholderOption={false}
-              options={[
-                { value: 'Conjuge', label: 'Conjuge' },
-                { value: 'Filho(a)', label: 'Filho(a)' },
-                { value: 'Enteado(a)', label: 'Enteado(a)' },
-                { value: 'Pai/Mae', label: 'Pai/Mae' },
-                { value: 'Outro', label: 'Outro' },
-              ]}
+              options={relacaoOptions}
             />
           </Field>
 
@@ -299,13 +355,7 @@ export default function DependentForm({
               onChange={(value) => setFormData({ ...formData, carencia_individual: value })}
               placeholder="Carencia individual"
               includePlaceholderOption={false}
-              options={[
-                { value: '', label: 'Mesma do titular' },
-                { value: 'padrao', label: 'Padrao' },
-                { value: 'reduzida', label: 'Reduzida' },
-                { value: 'portabilidade', label: 'Portabilidade' },
-                { value: 'zero', label: 'Zero' },
-              ]}
+              options={carenciaOptions}
             />
           </Field>
 

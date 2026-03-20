@@ -37,6 +37,7 @@ type DirectChatInfoPanelProps = {
   isDeletingLead: boolean;
   onClose: () => void;
   onOpenLead?: () => void;
+  onCreateLead?: (payload: { name: string; phone: string }) => void;
   onSaveContact: (payload: { name: string }) => Promise<void>;
   onDeleteContact: () => Promise<void>;
   onSaveLead: (payload: { name: string; email: string; cidade: string; observacoes: string }) => Promise<void>;
@@ -59,6 +60,7 @@ export function DirectChatInfoPanel({
   isDeletingLead,
   onClose,
   onOpenLead,
+  onCreateLead,
   onSaveContact,
   onDeleteContact,
   onSaveLead,
@@ -93,7 +95,7 @@ export function DirectChatInfoPanel({
       cidade: lead.cidade || '',
       observacoes: lead.observacoes || '',
     });
-  }, [lead?.id, lead?.name, lead?.email, lead?.cidade, lead?.observacoes]);
+  }, [lead]);
 
   const contactStatusLabel = contact?.saved ? 'Contato salvo' : 'Numero avulso';
   const hasLead = Boolean(lead);
@@ -314,8 +316,26 @@ export function DirectChatInfoPanel({
               </div>
             </>
           ) : (
-            <div className="rounded-xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-4 text-sm text-[var(--panel-text-soft,#6f5b4b)]">
-              Assim que esse numero estiver vinculado a um lead, os dados aparecem aqui para edicao rapida.
+            <div className="space-y-3">
+              <div className="rounded-xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-4 text-sm text-[var(--panel-text-soft,#6f5b4b)]">
+                Assim que esse numero estiver vinculado a um lead, os dados aparecem aqui para edicao rapida.
+              </div>
+              {onCreateLead && (
+                <Button
+                  variant="warning"
+                  fullWidth
+                  disabled={!phoneFormatted.trim()}
+                  onClick={() =>
+                    onCreateLead({
+                      name: (contactName || displayName || phoneFormatted || '').trim(),
+                      phone: phoneFormatted.trim(),
+                    })
+                  }
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Criar lead
+                </Button>
+              )}
             </div>
           )}
         </section>

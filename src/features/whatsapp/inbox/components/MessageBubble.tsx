@@ -670,7 +670,10 @@ function MessageBubbleComponent({
     setLocalPayload(payload && typeof payload === 'object' ? (payload as MessagePayload) : null);
   }, [payload]);
 
-  const payloadData: MessagePayload = localPayload || (payload && typeof payload === 'object' ? payload : {});
+  const payloadData: MessagePayload = useMemo(
+    () => localPayload || (payload && typeof payload === 'object' ? payload : {}),
+    [localPayload, payload],
+  );
   const resolvedBody = resolveWhatsAppMessageBody({ body, type, payload });
   const transcription = getWhatsAppAudioTranscription(payloadData);
   const normalizedType = (type || '').toLowerCase();

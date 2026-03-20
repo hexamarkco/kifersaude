@@ -70,6 +70,40 @@ type BonusDistributionRow = {
   valor: string;
 };
 
+type ContractFormState = {
+  codigo_contrato: string;
+  lead_id: string;
+  status: string;
+  modalidade: string;
+  operadora: string;
+  produto_plano: string;
+  abrangencia: string;
+  acomodacao: string;
+  data_inicio: string;
+  data_renovacao: string;
+  mes_reajuste: string;
+  carencia: string;
+  mensalidade_total: string;
+  comissao_prevista: string;
+  comissao_multiplicador: string;
+  taxa_adesao_tipo: SignupFeeType;
+  taxa_adesao_percentual: string;
+  taxa_adesao_valor: string;
+  comissao_recebimento_adiantado: boolean;
+  previsao_recebimento_comissao: string;
+  previsao_pagamento_bonificacao: string;
+  vidas: string;
+  vidas_elegiveis_bonus: string;
+  bonus_por_vida_valor: string;
+  bonus_por_vida_aplicado: boolean;
+  responsavel: string;
+  observacoes_internas: string;
+  cnpj: string;
+  razao_social: string;
+  nome_fantasia: string;
+  endereco_empresa: string;
+};
+
 type SignupFeeType = NonNullable<Contract["taxa_adesao_tipo"]>;
 
 const DEFAULT_SIGNUP_FEE_TYPE: SignupFeeType = "nao_cobrar";
@@ -84,60 +118,65 @@ const SIGNUP_FEE_TYPE_OPTIONS: Array<{ value: SignupFeeType; label: string }> =
 const isSignupFeeType = (value: string): value is SignupFeeType =>
   SIGNUP_FEE_TYPE_OPTIONS.some((option) => option.value === value);
 
-type ContractFormProps = {
-  contract: Contract | null;
-  leadToConvert?: Lead | null;
-  onClose: () => void;
-  onSave: () => void;
+const createBonusRow = (
+  quantidade = "",
+  valor = "",
+): BonusDistributionRow => ({
+  id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  quantidade,
+  valor,
+});
+
+const buildBonusDistribution = (
+  contract: Contract | null,
+): BonusDistributionRow[] => {
+  const configured = normalizeBonusConfigurations(
+    contract?.bonus_por_vida_configuracoes,
+  );
+  if (configured.length > 0) {
+    return configured.map((item) => ({
+      id: item.id,
+      quantidade: item.quantidade.toString(),
+      valor: formatCurrencyFromNumber(item.valor),
+    }));
+  }
+
+  if (contract?.bonus_por_vida_aplicado && contract?.bonus_por_vida_valor) {
+    const summary = getContractBonusSummary(contract);
+    return [
+      createBonusRow(
+        summary.eligibleLives.toString(),
+        formatCurrencyFromNumber(contract.bonus_por_vida_valor),
+      ),
+    ];
+  }
+
+  return [];
 };
 
-export default function ContractForm({
-  contract,
-  leadToConvert,
-  onClose,
-  onSave,
-}: ContractFormProps) {
-  const createBonusRow = (
-    quantidade = "",
-    valor = "",
-  ): BonusDistributionRow => ({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    quantidade,
-    valor,
+const buildCommissionInstallments = (
+  contract: Contract | null,
+): CommissionInstallment[] => {
+  const summary = getCommissionInstallmentSummary({
+    comissao_prevista: contract?.comissao_prevista,
+    comissao_parcelas: contract?.comissao_parcelas,
+    mensalidade_total: contract?.mensalidade_total,
   });
 
-  const getInitialBonusRows = (): BonusDistributionRow[] => {
-    const configured = normalizeBonusConfigurations(
-      contract?.bonus_por_vida_configuracoes,
-    );
-    if (configured.length > 0) {
-      return configured.map((item) => ({
-        id: item.id,
-        quantidade: item.quantidade.toString(),
-        valor: formatCurrencyFromNumber(item.valor),
-      }));
-    }
+  return summary.installments.map((parcel) => ({
+    valor: formatCurrencyFromNumber(parcel.resolvedValue),
+    data_pagamento: parcel.data_pagamento ?? "",
+  }));
+};
 
-    if (contract?.bonus_por_vida_aplicado && contract?.bonus_por_vida_valor) {
-      const summary = getContractBonusSummary(contract);
-      return [
-        createBonusRow(
-          summary.eligibleLives.toString(),
-          formatCurrencyFromNumber(contract.bonus_por_vida_valor),
-        ),
-      ];
-    }
-
-    return [];
-  };
-
+const buildContractFormState = (
+  contract: Contract | null,
+  leadToConvert?: Lead | null,
+): ContractFormState => {
   const initialSignupFeeType: SignupFeeType =
     contract?.taxa_adesao_tipo ?? DEFAULT_SIGNUP_FEE_TYPE;
 
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [operadoras, setOperadoras] = useState<Operadora[]>([]);
-  const { options, leadStatuses } = useConfig();
-  const [formData, setFormData] = useState({
+  return {
     codigo_contrato: contract?.codigo_contrato || "",
     lead_id: contract?.lead_id || leadToConvert?.id || "",
     status: contract?.status || "",
@@ -182,24 +221,60 @@ export default function ContractForm({
     razao_social: contract?.razao_social || "",
     nome_fantasia: contract?.nome_fantasia || "",
     endereco_empresa: contract?.endereco_empresa || "",
-  });
+  };
+};
+
+const withCurrentOption = (
+  options: Array<{ value: string; label: string }>,
+  value?: string | null,
+  label?: string | null,
+) => {
+  const normalizedValue = value?.trim();
+
+  if (!normalizedValue) {
+    return options;
+  }
+
+  if (options.some((option) => option.value === normalizedValue)) {
+    return options;
+  }
+
+  return [
+    {
+      value: normalizedValue,
+      label: label?.trim() || normalizedValue,
+    },
+    ...options,
+  ];
+};
+
+type ContractFormProps = {
+  contract: Contract | null;
+  leadToConvert?: Lead | null;
+  onClose: () => void;
+  onSave: () => void;
+};
+
+export default function ContractForm({
+  contract,
+  leadToConvert,
+  onClose,
+  onSave,
+}: ContractFormProps) {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [operadoras, setOperadoras] = useState<Operadora[]>([]);
+  const { options, leadStatuses } = useConfig();
+  const initialFormData = useMemo(
+    () => buildContractFormState(contract, leadToConvert),
+    [contract, leadToConvert],
+  );
+  const [formData, setFormData] = useState<ContractFormState>(initialFormData);
   const [commissionInstallments, setCommissionInstallments] = useState<
     CommissionInstallment[]
-  >(() => {
-    const summary = getCommissionInstallmentSummary({
-      comissao_prevista: contract?.comissao_prevista,
-      comissao_parcelas: contract?.comissao_parcelas,
-      mensalidade_total: contract?.mensalidade_total,
-    });
-
-    return summary.installments.map((parcel) => ({
-      valor: formatCurrencyFromNumber(parcel.resolvedValue),
-      data_pagamento: parcel.data_pagamento ?? "",
-    }));
-  });
+  >(() => buildCommissionInstallments(contract));
   const [bonusDistribution, setBonusDistribution] = useState<
     BonusDistributionRow[]
-  >(() => getInitialBonusRows());
+  >(() => buildBonusDistribution(contract));
   const [saving, setSaving] = useState(false);
   const [showHolderForm, setShowHolderForm] = useState(false);
   const [contractId, setContractId] = useState<string | null>(
@@ -278,6 +353,104 @@ export default function ContractForm({
       }) ?? null,
     [leadStatuses],
   );
+  const contractStatusSelectOptions = useMemo(
+    () =>
+      withCurrentOption(
+        contractStatusOptions.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        formData.status,
+      ),
+    [contractStatusOptions, formData.status],
+  );
+  const modalidadeSelectOptions = useMemo(
+    () =>
+      withCurrentOption(
+        modalidadeOptions.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        formData.modalidade,
+      ),
+    [formData.modalidade, modalidadeOptions],
+  );
+  const operadoraSelectOptions = useMemo(
+    () =>
+      withCurrentOption(
+        [
+          { value: "", label: "Selecione uma operadora" },
+          ...normalizedOperadoras.map((op) => ({
+            value: op.nome,
+            label: op.nome,
+          })),
+        ],
+        formData.operadora,
+      ),
+    [formData.operadora, normalizedOperadoras],
+  );
+  const abrangenciaSelectOptions = useMemo(
+    () =>
+      withCurrentOption(
+        abrangenciaOptions.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        formData.abrangencia,
+      ),
+    [abrangenciaOptions, formData.abrangencia],
+  );
+  const acomodacaoSelectOptions = useMemo(
+    () =>
+      withCurrentOption(
+        acomodacaoOptions.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        formData.acomodacao,
+      ),
+    [acomodacaoOptions, formData.acomodacao],
+  );
+  const carenciaSelectOptions = useMemo(
+    () =>
+      withCurrentOption(
+        carenciaOptions.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        formData.carencia,
+      ),
+    [carenciaOptions, formData.carencia],
+  );
+  const responsavelSelectOptions = useMemo(
+    () =>
+      withCurrentOption(
+        responsavelOptions.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        formData.responsavel,
+      ),
+    [formData.responsavel, responsavelOptions],
+  );
+  const leadSelectOptions = useMemo(() => {
+    const currentLeadLabel =
+      leads.find((lead) => lead.id === formData.lead_id)?.nome_completo ||
+      leadToConvert?.nome_completo ||
+      'Lead vinculado';
+
+    return withCurrentOption(
+      [
+        { value: '', label: 'Nenhum' },
+        ...leads.map((lead) => ({
+          value: lead.id,
+          label: lead.nome_completo,
+        })),
+      ],
+      formData.lead_id,
+      currentLeadLabel,
+    );
+  }, [formData.lead_id, leadToConvert?.nome_completo, leads]);
 
   const totalInstallmentValue = useMemo(
     () =>
@@ -287,6 +460,19 @@ export default function ContractForm({
       }, 0),
     [commissionInstallments],
   );
+
+  useEffect(() => {
+    setFormData(initialFormData);
+    setCommissionInstallments(buildCommissionInstallments(contract));
+    setBonusDistribution(buildBonusDistribution(contract));
+    setContractId(contract?.id || null);
+    setAdjustments([]);
+    setShowAdjustmentForm(false);
+    setEditingAdjustment(null);
+    setCnpjLookupError(null);
+    setCnpjLoading(false);
+    lastFetchedCnpjRef.current = "";
+  }, [contract, initialFormData]);
 
   useEffect(() => {
     if (!contract && !formData.status && contractStatusOptions.length > 0) {
@@ -971,6 +1157,7 @@ export default function ContractForm({
 
     return (
       <HolderForm
+        key={`holder-${contractId}`}
         contractId={contractId}
         modalidade={formData.modalidade}
         initialData={initialHolderData}
@@ -1042,13 +1229,7 @@ export default function ContractForm({
                   }
                   placeholder="Lead vinculado"
                   includePlaceholderOption={false}
-                  options={[
-                    { value: "", label: "Nenhum" },
-                    ...leads.map((lead) => ({
-                      value: lead.id,
-                      label: lead.nome_completo,
-                    })),
-                  ]}
+                  options={leadSelectOptions}
                 />
               </div>
 
@@ -1065,10 +1246,7 @@ export default function ContractForm({
                     }
                     placeholder="Status"
                     includePlaceholderOption={false}
-                    options={contractStatusOptions.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
+                    options={contractStatusSelectOptions}
                   />
                 ) : (
                   <input
@@ -1097,10 +1275,7 @@ export default function ContractForm({
                     }
                     placeholder="Modalidade"
                     includePlaceholderOption={false}
-                    options={modalidadeOptions.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
+                    options={modalidadeSelectOptions}
                   />
                 ) : (
                   <input
@@ -1221,13 +1396,7 @@ export default function ContractForm({
                   onChange={(value) => handleOperadoraChange(value)}
                   placeholder="Selecione uma operadora"
                   includePlaceholderOption={false}
-                  options={[
-                    { value: "", label: "Selecione uma operadora" },
-                    ...normalizedOperadoras.map((op) => ({
-                      value: op.nome,
-                      label: op.nome,
-                    })),
-                  ]}
+                  options={operadoraSelectOptions}
                 />
                 <p className="comm-muted mt-1 text-xs">
                   Comissão e bônus serão preenchidos automaticamente
@@ -1262,10 +1431,7 @@ export default function ContractForm({
                     }
                     placeholder="Abrangência"
                     includePlaceholderOption={false}
-                    options={abrangenciaOptions.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
+                    options={abrangenciaSelectOptions}
                   />
                 ) : (
                   <input
@@ -1293,10 +1459,7 @@ export default function ContractForm({
                     }
                     placeholder="Acomodação"
                     includePlaceholderOption={false}
-                    options={acomodacaoOptions.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
+                    options={acomodacaoSelectOptions}
                   />
                 ) : (
                   <input
@@ -1382,10 +1545,7 @@ export default function ContractForm({
                     }
                     placeholder="Carência"
                     includePlaceholderOption={false}
-                    options={carenciaOptions.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
+                    options={carenciaSelectOptions}
                   />
                 ) : (
                   <input
@@ -2184,10 +2344,7 @@ export default function ContractForm({
                     }
                     placeholder="Responsável"
                     includePlaceholderOption={false}
-                    options={responsavelOptions.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
+                    options={responsavelSelectOptions}
                   />
                 ) : (
                   <input

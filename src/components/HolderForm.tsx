@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   HeartPulse,
@@ -14,7 +14,7 @@ import { supabase, type ContractHolder } from '../lib/supabase';
 import { formatDateForInput } from '../lib/dateUtils';
 import { BRAZIL_STATE_OPTIONS, fetchCitiesByState } from '../lib/brasilLocations';
 import { consultarCep } from '../lib/cepService';
-import { formatCep } from '../lib/inputFormatters';
+import { formatCep, formatCnpj, formatCpf } from '../lib/inputFormatters';
 import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaService';
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
@@ -37,6 +37,82 @@ type HolderFormProps = {
   onSave: () => void;
 };
 
+type HolderFormState = {
+  nome_completo: string;
+  cpf: string;
+  rg: string;
+  data_nascimento: string;
+  sexo: string;
+  estado_civil: string;
+  telefone: string;
+  email: string;
+  cep: string;
+  endereco: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  cns: string;
+  cnpj: string;
+  razao_social: string;
+  nome_fantasia: string;
+  percentual_societario: string;
+  data_abertura_cnpj: string;
+  bonus_por_vida_aplicado: boolean;
+};
+
+const buildHolderFormState = (
+  holder?: ContractHolder,
+  initialData?: Partial<ContractHolder>,
+  bonusPorVidaDefault?: boolean,
+): HolderFormState => ({
+  nome_completo: holder?.nome_completo || initialData?.nome_completo || '',
+  cpf: formatCpf(holder?.cpf || initialData?.cpf || ''),
+  rg: holder?.rg || initialData?.rg || '',
+  data_nascimento:
+    formatDateForInput(holder?.data_nascimento || initialData?.data_nascimento) || '',
+  sexo: holder?.sexo || initialData?.sexo || '',
+  estado_civil: holder?.estado_civil || initialData?.estado_civil || '',
+  telefone: holder?.telefone || initialData?.telefone || '',
+  email: holder?.email || initialData?.email || '',
+  cep: formatCep(holder?.cep || initialData?.cep || ''),
+  endereco: holder?.endereco || initialData?.endereco || '',
+  numero: holder?.numero || initialData?.numero || '',
+  complemento: holder?.complemento || initialData?.complemento || '',
+  bairro: holder?.bairro || initialData?.bairro || '',
+  cidade: holder?.cidade || initialData?.cidade || '',
+  estado: holder?.estado || initialData?.estado || '',
+  cns: holder?.cns || initialData?.cns || '',
+  cnpj: formatCnpj(holder?.cnpj || initialData?.cnpj || ''),
+  razao_social: holder?.razao_social || initialData?.razao_social || '',
+  nome_fantasia: holder?.nome_fantasia || initialData?.nome_fantasia || '',
+  percentual_societario:
+    holder?.percentual_societario?.toString() ||
+    initialData?.percentual_societario?.toString() ||
+    '',
+  data_abertura_cnpj:
+    formatDateForInput(holder?.data_abertura_cnpj || initialData?.data_abertura_cnpj) || '',
+  bonus_por_vida_aplicado:
+    holder?.bonus_por_vida_aplicado ??
+    initialData?.bonus_por_vida_aplicado ??
+    bonusPorVidaDefault ??
+    true,
+});
+
+const withCurrentOption = (
+  options: Array<{ value: string; label: string }>,
+  value?: string | null,
+) => {
+  const normalizedValue = value?.trim();
+
+  if (!normalizedValue || options.some((option) => option.value === normalizedValue)) {
+    return options;
+  }
+
+  return [{ value: normalizedValue, label: normalizedValue }, ...options];
+};
+
 export default function HolderForm({
   contractId,
   modalidade,
@@ -46,39 +122,11 @@ export default function HolderForm({
   onClose,
   onSave,
 }: HolderFormProps) {
-  const [formData, setFormData] = useState({
-    nome_completo: holder?.nome_completo || initialData?.nome_completo || '',
-    cpf: holder?.cpf || initialData?.cpf || '',
-    rg: holder?.rg || initialData?.rg || '',
-    data_nascimento:
-      formatDateForInput(holder?.data_nascimento || initialData?.data_nascimento) || '',
-    sexo: holder?.sexo || initialData?.sexo || '',
-    estado_civil: holder?.estado_civil || initialData?.estado_civil || '',
-    telefone: holder?.telefone || initialData?.telefone || '',
-    email: holder?.email || initialData?.email || '',
-    cep: holder?.cep || initialData?.cep || '',
-    endereco: holder?.endereco || initialData?.endereco || '',
-    numero: holder?.numero || initialData?.numero || '',
-    complemento: holder?.complemento || initialData?.complemento || '',
-    bairro: holder?.bairro || initialData?.bairro || '',
-    cidade: holder?.cidade || initialData?.cidade || '',
-    estado: holder?.estado || initialData?.estado || '',
-    cns: holder?.cns || initialData?.cns || '',
-    cnpj: holder?.cnpj || initialData?.cnpj || '',
-    razao_social: holder?.razao_social || initialData?.razao_social || '',
-    nome_fantasia: holder?.nome_fantasia || initialData?.nome_fantasia || '',
-    percentual_societario:
-      holder?.percentual_societario?.toString() ||
-      initialData?.percentual_societario?.toString() ||
-      '',
-    data_abertura_cnpj:
-      formatDateForInput(holder?.data_abertura_cnpj || initialData?.data_abertura_cnpj) || '',
-    bonus_por_vida_aplicado:
-      holder?.bonus_por_vida_aplicado ??
-      initialData?.bonus_por_vida_aplicado ??
-      bonusPorVidaDefault ??
-      true,
-  });
+  const initialFormData = useMemo(
+    () => buildHolderFormState(holder, initialData, bonusPorVidaDefault),
+    [bonusPorVidaDefault, holder, initialData],
+  );
+  const [formData, setFormData] = useState<HolderFormState>(initialFormData);
   const [saving, setSaving] = useState(false);
   const [holders, setHolders] = useState<ContractHolder[]>([]);
   const [selectedHolderId, setSelectedHolderId] = useState<string | null>(holder?.id || null);
@@ -95,8 +143,46 @@ export default function HolderForm({
     () => ['mei', 'cnpj', 'pme', 'empresarial'].some((item) => modalidade.toLowerCase().includes(item)),
     [modalidade],
   );
+  const sexoOptions = useMemo(
+    () =>
+      withCurrentOption(
+        [
+          { value: '', label: 'Selecione' },
+          { value: 'Masculino', label: 'Masculino' },
+          { value: 'Feminino', label: 'Feminino' },
+        ],
+        formData.sexo,
+      ),
+    [formData.sexo],
+  );
+  const estadoCivilOptions = useMemo(
+    () =>
+      withCurrentOption(
+        [
+          { value: '', label: 'Selecione' },
+          { value: 'Solteiro(a)', label: 'Solteiro(a)' },
+          { value: 'Casado(a)', label: 'Casado(a)' },
+          { value: 'Divorciado(a)', label: 'Divorciado(a)' },
+          { value: 'Viuvo(a)', label: 'Viuvo(a)' },
+        ],
+        formData.estado_civil,
+      ),
+    [formData.estado_civil],
+  );
   const lastFetchedCepRef = useRef('');
   const lastFetchedCpfKeyRef = useRef('');
+
+  useEffect(() => {
+    setFormData(initialFormData);
+    setSelectedHolderId(holder?.id || null);
+    setCpfLookupError(null);
+    setCpfLoading(false);
+    setCnpjLookupError(null);
+    setCnpjLoading(false);
+    setLoadingCep(false);
+    lastFetchedCepRef.current = '';
+    lastFetchedCpfKeyRef.current = '';
+  }, [initialFormData, holder?.id]);
 
   useEffect(() => {
     const stateUf = formData.estado.trim().toUpperCase();
@@ -199,55 +285,58 @@ export default function HolderForm({
     }));
   };
 
-  const handleConsultarCPF = async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
-    const cleanCpf = formData.cpf.replace(/\D/g, '');
-    if (cleanCpf.length !== 11) {
-      if (!silent) {
-        setCpfLookupError('Informe um CPF válido para buscar.');
+  const handleConsultarCPF = useCallback(
+    async ({ force = false, silent = false }: { force?: boolean; silent?: boolean } = {}) => {
+      const cleanCpf = formData.cpf.replace(/\D/g, '');
+      if (cleanCpf.length !== 11) {
+        if (!silent) {
+          setCpfLookupError('Informe um CPF válido para buscar.');
+        }
+        return;
       }
-      return;
-    }
 
-    const fetchKey = `${cleanCpf}:${formData.data_nascimento || 'sem-data'}`;
-    if (!force && lastFetchedCpfKeyRef.current === fetchKey) {
-      return;
-    }
-
-    setCpfLookupError(null);
-    setCpfLoading(true);
-
-    try {
-      const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento || undefined);
-
-      setFormData((prev) => ({
-        ...prev,
-        nome_completo: pessoa.nome || prev.nome_completo,
-        data_nascimento: formatDateForInput(pessoa.data_nascimento) || prev.data_nascimento,
-        sexo: pessoa.sexo || prev.sexo,
-        cep: pessoa.cep ? formatCep(pessoa.cep) : prev.cep,
-        endereco: pessoa.endereco || prev.endereco,
-        numero: pessoa.numero || prev.numero,
-        complemento: pessoa.complemento ?? prev.complemento,
-        bairro: pessoa.bairro || prev.bairro,
-        cidade: pessoa.cidade || prev.cidade,
-        estado: pessoa.estado || prev.estado,
-      }));
-      lastFetchedCpfKeyRef.current = fetchKey;
-
-      if (pessoa.cep) {
-        lastFetchedCepRef.current = pessoa.cep.replace(/\D/g, '');
+      const fetchKey = `${cleanCpf}:${formData.data_nascimento || 'sem-data'}`;
+      if (!force && lastFetchedCpfKeyRef.current === fetchKey) {
+        return;
       }
-    } catch (error) {
-      console.error('Erro ao consultar CPF:', error);
-      if (!silent) {
-        setCpfLookupError(
-          error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
-        );
+
+      setCpfLookupError(null);
+      setCpfLoading(true);
+
+      try {
+        const pessoa = await consultarPessoaPorCPF(formData.cpf, formData.data_nascimento || undefined);
+
+        setFormData((prev) => ({
+          ...prev,
+          nome_completo: pessoa.nome || prev.nome_completo,
+          data_nascimento: formatDateForInput(pessoa.data_nascimento) || prev.data_nascimento,
+          sexo: pessoa.sexo || prev.sexo,
+          cep: pessoa.cep ? formatCep(pessoa.cep) : prev.cep,
+          endereco: pessoa.endereco || prev.endereco,
+          numero: pessoa.numero || prev.numero,
+          complemento: pessoa.complemento ?? prev.complemento,
+          bairro: pessoa.bairro || prev.bairro,
+          cidade: pessoa.cidade || prev.cidade,
+          estado: pessoa.estado || prev.estado,
+        }));
+        lastFetchedCpfKeyRef.current = fetchKey;
+
+        if (pessoa.cep) {
+          lastFetchedCepRef.current = pessoa.cep.replace(/\D/g, '');
+        }
+      } catch (error) {
+        console.error('Erro ao consultar CPF:', error);
+        if (!silent) {
+          setCpfLookupError(
+            error instanceof Error ? error.message : 'Nao foi possivel consultar CPF',
+          );
+        }
+      } finally {
+        setCpfLoading(false);
       }
-    } finally {
-      setCpfLoading(false);
-    }
-  };
+    },
+    [formData.cpf, formData.data_nascimento],
+  );
 
   useEffect(() => {
     const cleanCpf = formData.cpf.replace(/\D/g, '');
@@ -258,7 +347,7 @@ export default function HolderForm({
     }
 
     void handleConsultarCPF({ silent: true });
-  }, [formData.cpf, formData.data_nascimento]);
+  }, [formData.cpf, formData.data_nascimento, handleConsultarCPF]);
 
   const handleConsultarCNPJ = async () => {
     if (!formData.cnpj) {
@@ -483,11 +572,7 @@ export default function HolderForm({
                     onChange={(value) => setFormData({ ...formData, sexo: value })}
                     placeholder="Selecione"
                     includePlaceholderOption={false}
-                    options={[
-                      { value: '', label: 'Selecione' },
-                      { value: 'Masculino', label: 'Masculino' },
-                      { value: 'Feminino', label: 'Feminino' },
-                    ]}
+                    options={sexoOptions}
                   />
                 </Field>
 
@@ -498,13 +583,7 @@ export default function HolderForm({
                     onChange={(value) => setFormData({ ...formData, estado_civil: value })}
                     placeholder="Selecione"
                     includePlaceholderOption={false}
-                    options={[
-                      { value: '', label: 'Selecione' },
-                      { value: 'Solteiro(a)', label: 'Solteiro(a)' },
-                      { value: 'Casado(a)', label: 'Casado(a)' },
-                      { value: 'Divorciado(a)', label: 'Divorciado(a)' },
-                      { value: 'Viuvo(a)', label: 'Viuvo(a)' },
-                    ]}
+                    options={estadoCivilOptions}
                   />
                 </Field>
 
@@ -727,6 +806,7 @@ export default function HolderForm({
 
       {showDependentForm && (
         <DependentForm
+          key={`dependent-${selectedHolderId ?? contractId}`}
           contractId={contractId}
           holders={holders}
           dependent={null}

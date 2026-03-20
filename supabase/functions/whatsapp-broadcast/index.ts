@@ -1,9 +1,19 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
+  clampCompletedCampaignStepIndex,
   getCampaignIdsReadyToAutoStart,
+  isCampaignTargetReadyForProcessing,
   normalizePhoneForCampaign,
   resolveCampaignTemplateText,
+  WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS,
 } from '../../../src/lib/whatsappCampaignUtils.ts';
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: {
+    get: (name: string) => string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,7 +56,15 @@ type TargetRecord = {
   display_name: string | null;
   chat_id: string | null;
   source_payload: Record<string, unknown> | null;
+  status: TargetStatus;
   attempts: number | null;
+  error_message?: string | null;
+  last_attempt_at?: string | null;
+  processing_started_at?: string | null;
+  processing_expires_at?: string | null;
+  last_completed_step_index?: number | null;
+  last_completed_step_id?: string | null;
+  last_sent_step_at?: string | null;
   lead?: {
     nome_completo?: string | null;
     telefone?: string | null;
@@ -73,6 +91,9 @@ const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+
+const getProcessingLeaseExpiryIso = (baseDate: Date = new Date()): string =>
+  new Date(baseDate.getTime() + WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS).toISOString();
 
 const toErrorMessage = (error: unknown): string => {
   if (error instanceof Error) {
@@ -505,26 +526,104 @@ const claimTarget = async (
   supabaseAdmin: ReturnType<typeof createClient>,
   target: TargetRecord,
 ): Promise<boolean> => {
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const processingExpiresAt = getProcessingLeaseExpiryIso(now);
   const currentAttempts = Number.isFinite(target.attempts) ? Number(target.attempts) : 0;
+
+  const baseClaimPayload = {
+    status: 'processing',
+    attempts: currentAttempts + 1,
+    last_attempt_at: nowIso,
+    processing_started_at: nowIso,
+    processing_expires_at: processingExpiresAt,
+  };
+
+  const claimPending = async () => {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_campaign_targets')
+      .update(baseClaimPayload)
+      .eq('id', target.id)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Erro ao bloquear alvo para processamento: ${error.message}`);
+    }
+
+    return Boolean(data?.id);
+  };
+
+  if (target.status === 'pending') {
+    return claimPending();
+  }
+
+  if (target.status !== 'processing' || !isCampaignTargetReadyForProcessing(target, now)) {
+    return false;
+  }
 
   const { data, error } = await supabaseAdmin
     .from('whatsapp_campaign_targets')
-    .update({
-      status: 'processing',
-      attempts: currentAttempts + 1,
-      last_attempt_at: nowIso,
-    })
+    .update(baseClaimPayload)
     .eq('id', target.id)
-    .eq('status', 'pending')
+    .eq('status', 'processing')
+    .lt('processing_expires_at', nowIso)
     .select('id')
     .maybeSingle();
 
   if (error) {
-    throw new Error(`Erro ao bloquear alvo para processamento: ${error.message}`);
+    throw new Error(`Erro ao recuperar alvo travado para processamento: ${error.message}`);
   }
 
-  return Boolean(data?.id);
+  if (data?.id) {
+    return true;
+  }
+
+  const staleProcessingFallbackIso = new Date(now.getTime() - WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS).toISOString();
+  const { data: fallbackData, error: fallbackError } = await supabaseAdmin
+    .from('whatsapp_campaign_targets')
+    .update(baseClaimPayload)
+    .eq('id', target.id)
+    .eq('status', 'processing')
+    .is('processing_expires_at', null)
+    .or(`last_attempt_at.is.null,last_attempt_at.lt.${staleProcessingFallbackIso}`)
+    .select('id')
+    .maybeSingle();
+
+  if (fallbackError) {
+    throw new Error(`Erro ao recuperar alvo travado sem lease: ${fallbackError.message}`);
+  }
+
+  return Boolean(fallbackData?.id);
+};
+
+const persistTargetStepProgress = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  targetId: string,
+  stepIndex: number,
+  stepId: string,
+) => {
+  const now = new Date();
+  const nowIso = now.toISOString();
+
+  const { error } = await supabaseAdmin
+    .from('whatsapp_campaign_targets')
+    .update({
+      last_completed_step_index: stepIndex,
+      last_completed_step_id: stepId,
+      last_sent_step_at: nowIso,
+      last_attempt_at: nowIso,
+      processing_started_at: nowIso,
+      processing_expires_at: getProcessingLeaseExpiryIso(now),
+      error_message: null,
+    })
+    .eq('id', targetId)
+    .eq('status', 'processing');
+
+  if (error) {
+    throw new Error(`Erro ao salvar progresso do alvo: ${error.message}`);
+  }
 };
 
 const updateTargetResult = async (
@@ -543,6 +642,8 @@ const updateTargetResult = async (
       error_message: errorMessage,
       last_attempt_at: nowIso,
       sent_at: markAsSent ? nowIso : null,
+      processing_started_at: null,
+      processing_expires_at: null,
     })
     .eq('id', targetId);
 
@@ -648,17 +749,18 @@ const startScheduledCampaigns = async (
   return readyIds;
 };
 
-const loadPendingTargets = async (
+const loadProcessableTargets = async (
   supabaseAdmin: ReturnType<typeof createClient>,
   campaignId: string | null,
   limit: number,
 ): Promise<TargetRecord[]> => {
+  const scanLimit = Math.min(Math.max(limit * 5, limit), 200);
   let query = supabaseAdmin
     .from('whatsapp_campaign_targets')
-    .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, attempts, lead:leads(nome_completo, telefone, email, status, origem, cidade, responsavel), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at)')
-    .eq('status', 'pending')
+    .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, lead:leads(nome_completo, telefone, email, status, origem, cidade, responsavel), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at)')
+    .in('status', ['pending', 'processing'])
     .order('created_at', { ascending: true })
-    .limit(limit);
+    .limit(scanLimit);
 
   if (campaignId) {
     query = query.eq('campaign_id', campaignId);
@@ -671,7 +773,10 @@ const loadPendingTargets = async (
   }
 
   const rows = (data ?? []) as TargetRecord[];
-  return rows.filter((row) => row.campaign?.status === 'running');
+  return rows
+    .filter((row) => row.campaign?.status === 'running')
+    .filter((row) => isCampaignTargetReadyForProcessing(row))
+    .slice(0, limit);
 };
 
 const processCampaignTargets = async ({
@@ -696,7 +801,7 @@ const processCampaignTargets = async ({
 
   const startedCampaignIds = await startScheduledCampaigns(supabaseAdmin, campaignId);
 
-  const targets = await loadPendingTargets(supabaseAdmin, campaignId, limit);
+  const targets = await loadProcessableTargets(supabaseAdmin, campaignId, limit);
   if (targets.length === 0) {
     for (const startedCampaignId of startedCampaignIds) {
       await recomputeCampaignCounters(supabaseAdmin, startedCampaignId);
@@ -705,6 +810,7 @@ const processCampaignTargets = async ({
   }
 
   const touchedCampaignIds = new Set<string>();
+  startedCampaignIds.forEach((startedCampaignId) => touchedCampaignIds.add(startedCampaignId));
 
   for (const target of targets) {
     touchedCampaignIds.add(target.campaign_id);
@@ -723,6 +829,8 @@ const processCampaignTargets = async ({
       continue;
     }
 
+    const lastCompletedStepIndex = clampCompletedCampaignStepIndex(target.last_completed_step_index, campaignSteps.length);
+
     try {
       const recipient = await resolveWhapiRecipient({
         token,
@@ -730,7 +838,8 @@ const processCampaignTargets = async ({
         phone: target.phone,
       });
 
-      for (const step of campaignSteps) {
+      for (let stepIndex = lastCompletedStepIndex + 1; stepIndex < campaignSteps.length; stepIndex += 1) {
+        const step = campaignSteps[stepIndex];
         await sendCampaignStep({
           token,
           to: recipient,
@@ -738,6 +847,8 @@ const processCampaignTargets = async ({
           lead: target.lead ?? null,
           sourcePayload: target.source_payload ?? null,
         });
+
+        await persistTargetStepProgress(supabaseAdmin, target.id, stepIndex, step.id);
       }
 
       await updateTargetResult(supabaseAdmin, target.id, 'sent', null, true);

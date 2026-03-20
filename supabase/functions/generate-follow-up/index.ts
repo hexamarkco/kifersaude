@@ -1,14 +1,32 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: {
+    get: (name: string) => string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
 
 const AI_FOLLOW_UP_PROMPT_SLUG = 'ai_follow_up_prompt';
 const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
+const MAX_LEAD_NAME_LENGTH = 120;
+const MAX_CONVERSATION_HISTORY_LENGTH = 40000;
+const MAX_EXTRA_INSTRUCTIONS_LENGTH = 4000;
+const MAX_LEAD_CONTEXT_LENGTH = 12000;
+
+const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
 type FollowUpRequest = {
   leadName?: string;
@@ -158,32 +176,55 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Metodo nao permitido' }, 405);
   }
 
   try {
-    const payload = (await req.json()) as FollowUpRequest;
-    const leadName = normalizeValue(payload.leadName) || 'Cliente';
-    const conversationHistory = normalizeValue(payload.conversationHistory);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       console.error('[generate-follow-up] Missing Supabase environment variables');
-      return new Response(
-        JSON.stringify({ error: 'Configuracao do servidor incompleta.' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
+      return jsonResponse({ error: 'Configuracao do servidor incompleta.' }, 500);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    const serviceRoleCall = isServiceRoleRequest(req, supabaseServiceRoleKey);
+    if (!serviceRoleCall) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: 'whatsapp',
+        requiredPermission: 'view',
+      });
+
+      if (!authResult.authorized) {
+        return jsonResponse(authResult.body, authResult.status);
+      }
+    }
+
+    const payload = (await req.json().catch(() => null)) as FollowUpRequest | null;
+    const leadName = (normalizeValue(payload?.leadName) || 'Cliente').slice(0, MAX_LEAD_NAME_LENGTH);
+    const conversationHistory = normalizeValue(payload?.conversationHistory);
+    const normalizedExtraInstructions = normalizeValue(payload?.extraInstructions);
+    const normalizedLeadContext = normalizeValue(payload?.leadContext);
+
+    if (conversationHistory.length > MAX_CONVERSATION_HISTORY_LENGTH) {
+      return jsonResponse({ error: 'Historico da conversa excede o limite permitido.' }, 400);
+    }
+
+    if (normalizedExtraInstructions.length > MAX_EXTRA_INSTRUCTIONS_LENGTH) {
+      return jsonResponse({ error: 'As instrucoes extras excedem o limite permitido.' }, 400);
+    }
+
+    if (normalizedLeadContext.length > MAX_LEAD_CONTEXT_LENGTH) {
+      return jsonResponse({ error: 'O contexto do lead excede o limite permitido.' }, 400);
+    }
+
     const customInstructions = await loadCustomInstructions(supabaseAdmin);
     const generationResult = await generateTextWithRouting({
       supabaseAdmin,
@@ -192,8 +233,8 @@ Deno.serve(async (req) => {
       userPrompt: buildUserPrompt({
         leadName,
         conversationHistory,
-        leadContext: payload.leadContext,
-        extraInstructions: payload.extraInstructions,
+        leadContext: normalizedLeadContext,
+        extraInstructions: normalizedExtraInstructions,
       }),
       temperature: 0.7,
       maxTokens: 900,
@@ -203,13 +244,7 @@ Deno.serve(async (req) => {
 
     if (!followUpText) {
       console.error('[generate-follow-up] Resposta inesperada do provedor de IA', generationResult);
-      return new Response(
-        JSON.stringify({ error: 'Resposta da IA vazia.' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
+      return jsonResponse({ error: 'Resposta da IA vazia.' }, 500);
     }
 
     console.log('[generate-follow-up] Follow-up gerado', {
@@ -217,29 +252,17 @@ Deno.serve(async (req) => {
       model: generationResult.model,
       fallbackUsed: generationResult.fallbackUsed,
       hasCustomInstructions: Boolean(customInstructions),
-      hasExtraInstructions: Boolean(normalizeValue(payload.extraInstructions)),
+      hasExtraInstructions: Boolean(normalizedExtraInstructions),
     });
 
-    return new Response(
-      JSON.stringify({
+    return jsonResponse({
         followUp: followUpText,
         messages: splitFollowUpMessages(followUpText),
         provider: generationResult.provider,
         model: generationResult.model,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+      }, 200);
   } catch (error) {
     console.error('[generate-follow-up] Erro inesperado:', error);
-    return new Response(
-      JSON.stringify({ error: 'Erro interno ao gerar follow-up.' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+    return jsonResponse({ error: 'Erro interno ao gerar follow-up.' }, 500);
   }
 });

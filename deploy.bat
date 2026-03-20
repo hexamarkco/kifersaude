@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal ENABLEDELAYEDEXPANSION
 
 cd /d "%~dp0"
 
@@ -25,13 +25,29 @@ if "%DB_PASSWORD%"=="" (
 )
 
 echo === Deploy Edge Functions ===
-supabase functions deploy whatsapp-webhook --no-verify-jwt
-supabase functions deploy create-initial-admin --no-verify-jwt
-supabase functions deploy leads-api
-supabase functions deploy whatsapp-sync
-supabase functions deploy whatsapp-sync-contact-photos
-supabase functions deploy whatsapp-sync-group-names
-supabase functions deploy rewrite-message
+set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook create-initial-admin whatsapp-broadcast"
+
+for /d %%D in ("supabase\functions\*") do (
+  if exist "%%~fD\index.ts" (
+    set "FUNCTION_NAME=%%~nxD"
+    set "DEPLOY_ARGS="
+
+    for %%F in (!NO_VERIFY_JWT_FUNCTIONS!) do (
+      if /I "%%~F"=="!FUNCTION_NAME!" set "DEPLOY_ARGS=--no-verify-jwt"
+    )
+
+    if defined DEPLOY_ARGS (
+      echo === Deploy function: !FUNCTION_NAME! ^(!DEPLOY_ARGS!^) ===
+      supabase functions deploy "!FUNCTION_NAME!" !DEPLOY_ARGS!
+    ) else (
+      echo === Deploy function: !FUNCTION_NAME! ===
+      supabase functions deploy "!FUNCTION_NAME!"
+    )
+
+    if errorlevel 1 goto :end
+  )
+)
 
 echo === Done ===
+:end
 endlocal

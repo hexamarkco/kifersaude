@@ -1331,7 +1331,7 @@ export async function getChatIdByPhone(phoneNumber: string): Promise<string | nu
       return directChatId;
     }
   } catch {
-    console.log('Chat ID direto não funcionou, buscando em todos os chats...');
+    // Fall back to scanning known chats when direct lookup fails.
   }
 
   let offset = 0;
@@ -1398,11 +1398,6 @@ async function fetchMessagesBatch(
 
   const url = `${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(chatId)}?${queryParams.toString()}`;
 
-  console.log(`[WhatsApp API] Buscando mensagens (from_me: ${fromMe})`);
-  console.log(`[WhatsApp API] URL: ${url}`);
-  console.log(`[WhatsApp API] Chat ID: ${chatId}`);
-  console.log(`[WhatsApp API] Parâmetros:`, Object.fromEntries(queryParams));
-
   const response = await fetch(url, {
     method: 'GET',
     headers: {
@@ -1411,33 +1406,18 @@ async function fetchMessagesBatch(
     },
   });
 
-  console.log(`[WhatsApp API] Status da resposta: ${response.status}`);
-
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-    console.error(`[WhatsApp API] Erro na requisição:`, error);
     throw new Error(formatApiError(error));
   }
 
-  const data = await response.json();
-  console.log(`[WhatsApp API] RESPOSTA COMPLETA DA API (from_me: ${fromMe}):`, data);
-  console.log(`[WhatsApp API] Mensagens recebidas (from_me: ${fromMe}):`, data.count, 'mensagens');
-  console.log(`[WhatsApp API] Total disponível: ${data.total}`);
-  console.log(`[WhatsApp API] Array de mensagens:`, data.messages);
-  console.log(`[WhatsApp API] Tipo do array:`, typeof data.messages, Array.isArray(data.messages));
-  console.log(`[WhatsApp API] Tamanho do array:`, data.messages?.length);
-
-  return data;
+  return response.json();
 }
 
 export async function getWhatsAppMessageHistory(params: WhapiMessageListParams): Promise<WhapiMessageListResponse> {
-  console.log('[WhatsApp API] getWhatsAppMessageHistory chamado com params:', params);
-
   const settings = await getWhatsAppSettings();
-  console.log('[WhatsApp API] Settings carregadas');
 
   if (params.fromMe !== undefined) {
-    console.log('[WhatsApp API] Modo single request (fromMe definido)');
     const queryParams = new URLSearchParams();
 
     if (params.count !== undefined) {
@@ -1471,7 +1451,6 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
     }
 
     const url = `${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(params.chatId)}?${queryParams.toString()}`;
-    console.log('[WhatsApp API] URL single request:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -1481,39 +1460,23 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
       },
     });
 
-    console.log('[WhatsApp API] Response status:', response.status);
-
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-      console.error('[WhatsApp API] Erro na single request:', error);
       throw new Error(formatApiError(error));
     }
 
-    const result = await response.json();
-    console.log('[WhatsApp API] Single request result:', result);
-    return result;
+    return response.json();
   }
-
-  console.log('[WhatsApp API] Modo dual request (from_me não definido)');
-  console.log('[WhatsApp API] Fazendo requisições paralelas...');
 
   const [receivedResponse, sentResponse] = await Promise.all([
     fetchMessagesBatch(settings, params.chatId, params, false),
     fetchMessagesBatch(settings, params.chatId, params, true),
   ]);
 
-  console.log('[WhatsApp API] Recebidas mensagens recebidas:', receivedResponse.count);
-  console.log('[WhatsApp API] Recebidas mensagens enviadas:', sentResponse.count);
-  console.log('[WhatsApp API] Array receivedResponse.messages:', receivedResponse.messages);
-  console.log('[WhatsApp API] Array sentResponse.messages:', sentResponse.messages);
-  console.log('[WhatsApp API] Tamanho arrays:', receivedResponse.messages?.length, sentResponse.messages?.length);
-
   const allMessages = [
     ...(receivedResponse.messages || []),
     ...(sentResponse.messages || [])
   ];
-
-  console.log('[WhatsApp API] Total de mensagens combinadas:', allMessages.length);
 
   allMessages.sort((a, b) => {
     if (params.sort === 'asc') {
@@ -1532,12 +1495,6 @@ export async function getWhatsAppMessageHistory(params: WhapiMessageListParams):
     first: allMessages.length > 0 ? allMessages[0].timestamp : 0,
     last: allMessages.length > 0 ? allMessages[allMessages.length - 1].timestamp : 0,
   };
-
-  console.log('[WhatsApp API] Resultado final:', {
-    count: result.count,
-    total: result.total,
-    offset: result.offset,
-  });
 
   return result;
 }

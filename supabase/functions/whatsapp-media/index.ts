@@ -1,12 +1,25 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: {
+    get: (name: string) => string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
+const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
 type MediaRequest = {
   mediaId?: string;
@@ -162,42 +175,48 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Metodo nao permitido' }, 405);
   }
 
   try {
-    const payload = (await req.json()) as MediaRequest;
-    const mediaId = readTrimmedString(payload.mediaId);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+      return jsonResponse({ error: 'Configuracao do servidor incompleta.' }, 500);
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    const serviceRoleCall = isServiceRoleRequest(req, supabaseServiceRoleKey);
+    if (!serviceRoleCall) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: 'whatsapp',
+        requiredPermission: 'view',
+      });
+
+      if (!authResult.authorized) {
+        return jsonResponse(authResult.body, authResult.status);
+      }
+    }
+
+    const payload = (await req.json().catch(() => null)) as MediaRequest | null;
+    const mediaId = readTrimmedString(payload?.mediaId);
 
     if (!mediaId) {
-      return new Response(JSON.stringify({ error: 'mediaId obrigatorio.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'mediaId obrigatorio.' }, 400);
     }
 
     const cachedPayload = getCachedMediaPayload(mediaId);
     if (cachedPayload) {
-      return new Response(JSON.stringify(cachedPayload), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse(cachedPayload, 200);
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      return new Response(JSON.stringify({ error: 'Configuracao do servidor incompleta.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
     const whapiToken = await loadWhapiToken(supabaseAdmin);
 
     const mediaResponse = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
@@ -209,11 +228,7 @@ Deno.serve(async (req) => {
     });
 
     if (!mediaResponse.ok) {
-      const errorText = await mediaResponse.text();
-      return new Response(JSON.stringify({ error: `Falha ao buscar midia na Whapi: ${mediaResponse.status} ${errorText}` }), {
-        status: mediaResponse.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Falha ao buscar midia na Whapi.', provider_status: mediaResponse.status }, mediaResponse.status);
     }
 
     const contentType = mediaResponse.headers.get('content-type') || '';
@@ -227,29 +242,19 @@ Deno.serve(async (req) => {
         readTrimmedString(descriptor.media);
 
       if (!resourceUrl) {
-        return new Response(JSON.stringify({ error: 'Whapi nao retornou uma URL de midia valida.' }), {
-          status: 502,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return jsonResponse({ error: 'Whapi nao retornou uma URL de midia valida.' }, 502);
       }
 
       const publicPayload = await probePublicMediaUrl(resourceUrl);
       if (publicPayload?.url) {
         setCachedMediaPayload(mediaId, publicPayload);
-        return new Response(JSON.stringify(publicPayload), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return jsonResponse(publicPayload, 200);
       }
 
       binaryResponse = await fetchBinaryMedia(resourceUrl, whapiToken);
 
       if (!binaryResponse.ok) {
-        const errorText = await binaryResponse.text();
-        return new Response(JSON.stringify({ error: `Falha ao baixar binario da midia: ${binaryResponse.status} ${errorText}` }), {
-          status: binaryResponse.status,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return jsonResponse({ error: 'Falha ao baixar binario da midia.', provider_status: binaryResponse.status }, binaryResponse.status);
       }
     }
 
@@ -266,15 +271,9 @@ Deno.serve(async (req) => {
 
     setCachedMediaPayload(mediaId, responsePayload);
 
-    return new Response(JSON.stringify(responsePayload), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse(responsePayload, 200);
   } catch (error) {
     console.error('[whatsapp-media] Erro inesperado:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao carregar midia.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error instanceof Error ? error.message : 'Erro interno ao carregar midia.' }, 500);
   }
 });

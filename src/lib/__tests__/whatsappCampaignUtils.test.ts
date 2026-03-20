@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   analyzeCsvAudience,
   canRequeueCampaignTarget,
+  clampCompletedCampaignStepIndex,
   getCampaignIdsReadyToAutoStart,
+  isCampaignTargetReadyForProcessing,
   parseCampaignCsvText,
   resolveCampaignTemplateText,
 } from '../whatsappCampaignUtils';
@@ -66,4 +68,48 @@ test('collects campaigns ready to auto start and exposes requeue status helper',
   assert.deepEqual(readyIds, ['1']);
   assert.equal(canRequeueCampaignTarget('failed'), true);
   assert.equal(canRequeueCampaignTarget('invalid'), false);
+});
+
+test('detects recoverable processing targets and clamps completed step index', () => {
+  const now = new Date('2026-03-19T20:00:00.000Z');
+
+  assert.equal(
+    isCampaignTargetReadyForProcessing(
+      {
+        status: 'processing',
+        processing_expires_at: '2026-03-19T19:55:00.000Z',
+        last_attempt_at: '2026-03-19T19:54:00.000Z',
+      },
+      now,
+    ),
+    true,
+  );
+
+  assert.equal(
+    isCampaignTargetReadyForProcessing(
+      {
+        status: 'processing',
+        processing_expires_at: '2026-03-19T20:05:00.000Z',
+        last_attempt_at: '2026-03-19T19:59:00.000Z',
+      },
+      now,
+    ),
+    false,
+  );
+
+  assert.equal(
+    isCampaignTargetReadyForProcessing(
+      {
+        status: 'processing',
+        processing_expires_at: null,
+        last_attempt_at: '2026-03-19T19:40:00.000Z',
+      },
+      now,
+    ),
+    true,
+  );
+
+  assert.equal(clampCompletedCampaignStepIndex(undefined, 3), -1);
+  assert.equal(clampCompletedCampaignStepIndex(5, 3), 2);
+  assert.equal(clampCompletedCampaignStepIndex(-4, 3), -1);
 });

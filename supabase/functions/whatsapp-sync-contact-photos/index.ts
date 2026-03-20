@@ -1,13 +1,30 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: {
+    get: (name: string) => string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 const BUCKET_NAME = 'whatsapp-contact-photos';
+const DEFAULT_SYNC_LIMIT = 200;
+const MAX_SYNC_LIMIT = 500;
+const MAX_TARGETED_CONTACTS = 200;
+
+const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
 type SyncRequest = {
   force?: boolean;
@@ -291,29 +308,48 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Metodo nao permitido' }, 405);
   }
 
   try {
-    const payload = (await req.json().catch(() => ({}))) as SyncRequest;
-    const force = payload.force === true;
-    const limit = typeof payload.limit === 'number' && payload.limit > 0 ? payload.limit : null;
-    const requestedTargets = normalizeSyncTargets(payload);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      return new Response(JSON.stringify({ error: 'Configuracao do servidor incompleta.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
+      return jsonResponse({ error: 'Configuracao do servidor incompleta.' }, 500);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    const serviceRoleCall = isServiceRoleRequest(req, supabaseServiceRoleKey);
+    if (!serviceRoleCall) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: 'whatsapp',
+        requiredPermission: 'view',
+      });
+
+      if (!authResult.authorized) {
+        return jsonResponse(authResult.body, authResult.status);
+      }
+    }
+
+    const payload = (await req.json().catch(() => ({}))) as SyncRequest;
+    const force = payload.force === true;
+    const normalizedLimit = typeof payload.limit === 'number' && Number.isFinite(payload.limit)
+      ? Math.trunc(payload.limit)
+      : DEFAULT_SYNC_LIMIT;
+    const limit = Math.min(Math.max(normalizedLimit, 1), MAX_SYNC_LIMIT);
+    const requestedTargets = normalizeSyncTargets(payload);
+
+    if (requestedTargets.length > MAX_TARGETED_CONTACTS) {
+      return jsonResponse({ error: `Envie no maximo ${MAX_TARGETED_CONTACTS} contatos por requisicao.` }, 400);
+    }
+
     const { data: integration, error: integrationError } = await supabaseAdmin
       .from('integration_settings')
       .select('settings')
@@ -321,10 +357,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (integrationError) {
-      return new Response(JSON.stringify({ error: 'Nao foi possivel acessar configuracao do WhatsApp.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Nao foi possivel acessar configuracao do WhatsApp.' }, 500);
     }
 
     const tokenValue = (integration?.settings as { apiKey?: string; token?: string })?.apiKey
@@ -332,10 +365,7 @@ Deno.serve(async (req) => {
     const token = tokenValue ? sanitizeWhapiToken(tokenValue) : '';
 
     if (!token) {
-      return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Token da Whapi nao configurado.' }, 400);
     }
 
     let offset = 0;
@@ -346,7 +376,7 @@ Deno.serve(async (req) => {
     let skipped = 0;
     let errors = 0;
 
-    const fetchLimit = limit ?? Number.POSITIVE_INFINITY;
+    const fetchLimit = limit;
 
     if (requestedTargets.length > 0) {
       const photos: SyncedPhotoRow[] = [];
@@ -367,20 +397,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(
-        JSON.stringify({
+      return jsonResponse({
           success: true,
           processed,
           updated,
           skipped,
           errors,
           photos,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
+        }, 200);
     }
 
     do {
@@ -470,24 +494,15 @@ Deno.serve(async (req) => {
       if (response.count === 0 || processed >= fetchLimit) break;
     } while (offset < total);
 
-    return new Response(
-      JSON.stringify({
+    return jsonResponse({
         success: true,
         processed,
         updated,
         skipped,
         errors,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+      }, 200);
   } catch (error) {
     console.error('[whatsapp-sync-contact-photos] Unexpected error', error);
-    return new Response(JSON.stringify({ error: 'Erro interno ao sincronizar fotos.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Erro interno ao sincronizar fotos.' }, 500);
   }
 });

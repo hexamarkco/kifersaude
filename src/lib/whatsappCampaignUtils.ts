@@ -75,6 +75,7 @@ export type CsvAudienceAnalysis = {
   variableKeys: string[];
 };
 
+export const WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS = 10 * 60 * 1000;
 export const CAMPAIGN_TARGET_REQUEUEABLE_STATUSES: WhatsAppCampaignTargetStatus[] = ['failed'];
 export const CAMPAIGN_DEFAULT_AUDIENCE_SOURCE: WhatsAppCampaignAudienceSource = 'filters';
 export const CAMPAIGN_VARIABLE_TIMEZONE = 'America/Sao_Paulo';
@@ -571,6 +572,50 @@ export const getCampaignIdsReadyToAutoStart = (
       return !Number.isNaN(scheduledDate.getTime()) && scheduledDate.getTime() <= now.getTime();
     })
     .map((campaign) => campaign.id);
+
+export const clampCompletedCampaignStepIndex = (value: unknown, totalSteps: number): number => {
+  if (!Number.isFinite(totalSteps) || totalSteps <= 0) {
+    return -1;
+  }
+
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return -1;
+  }
+
+  const normalized = Math.trunc(value);
+  return Math.min(Math.max(normalized, -1), totalSteps - 1);
+};
+
+export const isCampaignTargetReadyForProcessing = (
+  target: {
+    status: WhatsAppCampaignTargetStatus;
+    processing_expires_at?: string | null;
+    last_attempt_at?: string | null;
+  },
+  now: Date = new Date(),
+  leaseMs: number = WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS,
+): boolean => {
+  if (target.status === 'pending') {
+    return true;
+  }
+
+  if (target.status !== 'processing') {
+    return false;
+  }
+
+  const nowMs = now.getTime();
+  const expiresAtMs = target.processing_expires_at ? new Date(target.processing_expires_at).getTime() : Number.NaN;
+  if (!Number.isNaN(expiresAtMs)) {
+    return expiresAtMs <= nowMs;
+  }
+
+  const lastAttemptMs = target.last_attempt_at ? new Date(target.last_attempt_at).getTime() : Number.NaN;
+  if (Number.isNaN(lastAttemptMs)) {
+    return true;
+  }
+
+  return lastAttemptMs + leaseMs <= nowMs;
+};
 
 export const canRequeueCampaignTarget = (status: WhatsAppCampaignTargetStatus): boolean =>
   CAMPAIGN_TARGET_REQUEUEABLE_STATUSES.includes(status);

@@ -41,35 +41,21 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
   }, [resolvedChatId, currentOffset, pageSize, filterFromMe, filterAuthor, filterDateFrom, filterDateTo, sortOrder]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resolveChatId = async () => {
-    console.log('[FullMessageHistoryModal] resolveChatId iniciado');
-    console.log('[FullMessageHistoryModal] chatId recebido:', chatId);
-
     setResolvingChatId(true);
     setError(null);
 
     try {
       const finalChatId = chatId.includes('@') ? normalizeChatId(chatId) : buildChatIdFromPhone(chatId);
-
-      if (!chatId.includes('@')) {
-        console.log('[FullMessageHistoryModal] chatId não contém @, construindo...');
-        console.log('[FullMessageHistoryModal] Chat ID construído:', finalChatId);
-      } else {
-        console.log('[FullMessageHistoryModal] chatId já está no formato correto');
-      }
-
-      console.log('[FullMessageHistoryModal] Testando chat ID com 1 mensagem...');
       await getWhatsAppMessageHistory({
         chatId: finalChatId,
         count: 1,
         offset: 0,
       });
 
-      console.log('[FullMessageHistoryModal] Teste bem-sucedido, setando resolved chat ID');
       setResolvedChatId(finalChatId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao buscar chat';
       setError(`Erro ao buscar histórico: ${errorMessage}`);
-      console.error('[FullMessageHistoryModal] Erro ao buscar chat ID:', err);
     } finally {
       setResolvingChatId(false);
     }
@@ -77,19 +63,8 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
 
   const loadMessages = async () => {
     if (!resolvedChatId) {
-      console.log('[FullMessageHistoryModal] loadMessages: resolvedChatId não definido');
       return;
     }
-
-    console.log('[FullMessageHistoryModal] loadMessages iniciado');
-    console.log('[FullMessageHistoryModal] resolvedChatId:', resolvedChatId);
-    console.log('[FullMessageHistoryModal] pageSize:', pageSize);
-    console.log('[FullMessageHistoryModal] currentOffset:', currentOffset);
-    console.log('[FullMessageHistoryModal] filterFromMe:', filterFromMe);
-    console.log('[FullMessageHistoryModal] filterAuthor:', filterAuthor);
-    console.log('[FullMessageHistoryModal] filterDateFrom:', filterDateFrom);
-    console.log('[FullMessageHistoryModal] filterDateTo:', filterDateTo);
-    console.log('[FullMessageHistoryModal] sortOrder:', sortOrder);
 
     setLoading(true);
     setError(null);
@@ -97,9 +72,6 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
     try {
       const timeFrom = filterDateFrom ? new Date(filterDateFrom).getTime() / 1000 : undefined;
       const timeTo = filterDateTo ? new Date(filterDateTo).getTime() / 1000 : undefined;
-
-      console.log('[FullMessageHistoryModal] timeFrom:', timeFrom);
-      console.log('[FullMessageHistoryModal] timeTo:', timeTo);
 
       const params = {
         chatId: resolvedChatId,
@@ -112,21 +84,13 @@ export function FullMessageHistoryModal({ chatId, chatName, onClose }: FullMessa
         sort: sortOrder,
       };
 
-      console.log('[FullMessageHistoryModal] Chamando getWhatsAppMessageHistory com params:', params);
-
       const response = await getWhatsAppMessageHistory(params);
-
-      console.log('[FullMessageHistoryModal] Response recebida:', {
-        messageCount: response.messages.length,
-        total: response.total,
-      });
 
       setMessages(response.messages);
       setTotalMessages(response.total);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar histórico';
       setError(errorMessage);
-      console.error('[FullMessageHistoryModal] Erro ao carregar histórico:', err);
     } finally {
       setLoading(false);
     }

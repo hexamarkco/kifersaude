@@ -1,11 +1,25 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { transcribeAudioWithRouting } from '../_shared/ai-router.ts';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: {
+    get: (name: string) => string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
+
+const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
 type TranscribeRequest = {
   messageId?: string;
@@ -103,35 +117,44 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Metodo nao permitido' }, 405);
   }
 
   try {
-    const payload = (await req.json()) as TranscribeRequest;
-    const messageId = readTrimmedString(payload.messageId);
-
-    if (!messageId) {
-      return new Response(JSON.stringify({ error: 'messageId obrigatorio.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       console.error('[transcribe-whatsapp-audio] Missing Supabase environment variables');
-      return new Response(JSON.stringify({ error: 'Configuracao do servidor incompleta.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Configuracao do servidor incompleta.' }, 500);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    const serviceRoleCall = isServiceRoleRequest(req, supabaseServiceRoleKey);
+    if (!serviceRoleCall) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: 'whatsapp',
+        requiredPermission: 'view',
+      });
+
+      if (!authResult.authorized) {
+        return jsonResponse(authResult.body, authResult.status);
+      }
+    }
+
+    const payload = (await req.json().catch(() => null)) as TranscribeRequest | null;
+    const messageId = readTrimmedString(payload?.messageId);
+
+    if (!messageId) {
+      return jsonResponse({ error: 'messageId obrigatorio.' }, 400);
+    }
+
     const { data: message, error: messageError } = await supabaseAdmin
       .from('whatsapp_messages')
       .select('id, type, payload, transcription_text')
@@ -143,18 +166,12 @@ Deno.serve(async (req) => {
     }
 
     if (!message) {
-      return new Response(JSON.stringify({ error: 'Mensagem nao encontrada.' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Mensagem nao encontrada.' }, 404);
     }
 
     const normalizedType = readTrimmedString(message.type).toLowerCase();
     if (!['audio', 'voice', 'ptt'].includes(normalizedType)) {
-      return new Response(JSON.stringify({ error: 'A mensagem informada nao e um audio.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'A mensagem informada nao e um audio.' }, 400);
     }
 
     const currentPayload = asRecord(message.payload) ?? {};
@@ -171,28 +188,19 @@ Deno.serve(async (req) => {
         },
       };
 
-      return new Response(
-        JSON.stringify({
+      return jsonResponse({
           transcript: persistedTranscription.text,
           provider: persistedTranscription.provider || null,
           model: persistedTranscription.model || null,
           payload: existingPayload,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
+        }, 200);
     }
 
     const mediaPayload = extractMediaPayload(currentPayload);
-    const mediaId = readTrimmedString(payload.mediaId) || resolveMediaIdFromPayload(currentPayload);
+    const mediaId = readTrimmedString(payload?.mediaId) || resolveMediaIdFromPayload(currentPayload);
 
     if (!mediaId) {
-      return new Response(JSON.stringify({ error: 'Media ID do audio nao encontrado.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Media ID do audio nao encontrado.' }, 400);
     }
 
     const whapiToken = await loadWhapiToken(supabaseAdmin);
@@ -250,23 +258,14 @@ Deno.serve(async (req) => {
       throw new Error(`Falha ao salvar transcricao: ${updateError.message}`);
     }
 
-    return new Response(
-      JSON.stringify({
+    return jsonResponse({
         transcript: transcriptionResult.text,
         provider: transcriptionResult.provider,
         model: transcriptionResult.model,
         payload: nextPayload,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      },
-    );
+      }, 200);
   } catch (error) {
     console.error('[transcribe-whatsapp-audio] Erro inesperado:', error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao transcrever audio.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error instanceof Error ? error.message : 'Erro interno ao transcrever audio.' }, 500);
   }
 });

@@ -1,10 +1,27 @@
 import { createClient } from 'npm:@supabase/supabase-js@^2.57.4';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: {
+    get: (name: string) => string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
+
+const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
+const DEFAULT_SYNC_COUNT = 200;
+const MAX_SYNC_COUNT = 500;
 
 type WhapiMessage = {
   id: string;
@@ -754,11 +771,11 @@ const buildChatRefreshVariants = (chatId: string, phoneNumber?: string | null, l
   return Array.from(variants);
 };
 
-const refreshChatLastMessageState = async (chatId: string) => {
+const refreshChatLastMessageState = async (supabaseAdmin: ReturnType<typeof createClient>, chatId: string) => {
   const normalizedChatId = toCleanText(chatId);
   if (!normalizedChatId) return;
 
-  const { data: currentChat, error: currentChatError } = await supabase
+  const { data: currentChat, error: currentChatError } = await supabaseAdmin
     .from('whatsapp_chats')
     .select('phone_number, lid')
     .eq('id', normalizedChatId)
@@ -793,7 +810,7 @@ const refreshChatLastMessageState = async (chatId: string) => {
   let offset = 0;
 
   while (true) {
-    const { data: recentMessages, error: recentMessagesError } = await supabase
+    const { data: recentMessages, error: recentMessagesError } = await supabaseAdmin
       .from('whatsapp_messages')
       .select('timestamp, created_at, body, type, payload, has_media, is_deleted, direction')
       .in('chat_id', refreshVariants)
@@ -843,7 +860,7 @@ const refreshChatLastMessageState = async (chatId: string) => {
   const nextLastMessageAt = latestMeaningfulMessage?.timestamp || latestMeaningfulMessage?.created_at || null;
   const nextLastMessageDirection = normalizeChatPreviewDirection(latestMeaningfulMessage?.direction ?? null);
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from('whatsapp_chats')
     .update({
       last_message: nextLastMessage,
@@ -905,24 +922,45 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
   try {
-    const { chatId, count } = await req.json();
-    if (!chatId || typeof chatId !== 'string') {
-      return new Response(JSON.stringify({ error: 'chatId é obrigatório' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      return jsonResponse({ error: 'Configuracao do servidor incompleta.' }, 500);
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const serviceRoleCall = isServiceRoleRequest(req, supabaseServiceKey);
+    if (!serviceRoleCall) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin: supabase,
+        module: 'whatsapp',
+        requiredPermission: 'view',
+      });
+
+      if (!authResult.authorized) {
+        return jsonResponse(authResult.body, authResult.status);
+      }
+    }
+
+    const requestPayload = (await req.json().catch(() => null)) as { chatId?: unknown; count?: unknown } | null;
+    const rawChatId = typeof requestPayload?.chatId === 'string' ? requestPayload.chatId.trim() : '';
+    if (!rawChatId) {
+      return jsonResponse({ error: 'chatId obrigatorio.' }, 400);
+    }
+
+    const rawCount = typeof requestPayload?.count === 'number' ? requestPayload.count : Number(requestPayload?.count);
+    const requestedCount = Number.isFinite(rawCount) ? Math.trunc(rawCount) : DEFAULT_SYNC_COUNT;
+    const count = Math.min(Math.max(requestedCount, 1), MAX_SYNC_COUNT);
 
     const { data: settingsRow, error: settingsError } = await supabase
       .from('integration_settings')
@@ -936,22 +974,16 @@ Deno.serve(async (req) => {
 
     const token = sanitizeWhapiToken(settingsRow?.settings?.apiKey || settingsRow?.settings?.token || '');
     if (!token) {
-      return new Response(JSON.stringify({ error: 'Token Whapi não configurado' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Token Whapi nao configurado' }, 400);
     }
 
-    const requestedChatId = normalizeDirectChatId(chatId);
+    const requestedChatId = normalizeDirectChatId(rawChatId);
     if (isStatusChatId(requestedChatId)) {
-      return new Response(JSON.stringify({ success: true, count: 0, skipped: 'status_chat_ignored' }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ success: true, count: 0, skipped: 'status_chat_ignored' }, 200);
     }
 
     const queryParams = new URLSearchParams();
-    queryParams.append('count', String(typeof count === 'number' ? count : 200));
+    queryParams.append('count', String(count));
     queryParams.append('offset', '0');
     queryParams.append('sort', 'desc');
 
@@ -963,30 +995,26 @@ Deno.serve(async (req) => {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      return new Response(JSON.stringify({ error }), {
-        status: response.status,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse(
+        {
+          error: 'Falha ao sincronizar mensagens na Whapi.',
+          provider_status: response.status,
+        },
+        response.status,
+      );
     }
 
     const payload = (await response.json()) as WhapiMessageListResponse;
     const messages = (payload.messages || []).filter((message) => !isStatusStoryMessage(message));
 
     if (messages.length === 0) {
-      return new Response(JSON.stringify({ success: true, count: 0 }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ success: true, count: 0 }, 200);
     }
 
     const resolvedRequestedChatId = resolveRequestedChatIdFromMessages(requestedChatId, messages);
     const chatKind = getChatIdKind(resolvedRequestedChatId);
     if (chatKind === 'status') {
-      return new Response(JSON.stringify({ success: true, count: 0, skipped: 'status_chat_ignored' }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ success: true, count: 0, skipped: 'status_chat_ignored' }, 200);
     }
     const isGroup = chatKind === 'group';
     const isChannelChat = chatKind === 'newsletter' || chatKind === 'broadcast';
@@ -1011,9 +1039,7 @@ Deno.serve(async (req) => {
       chatName = canonicalGroupName ?? messageChatName ?? existingChatName ?? resolvedRequestedChatId;
     } else if (isChannelChat) {
       const channelName = messageChatName ?? (await fetchNewsletterName(token, resolvedRequestedChatId));
-      if (chatKind === 'status') {
-        chatName = 'Status';
-      } else if (channelName) {
+      if (channelName) {
         chatName = channelName;
       } else if (chatKind === 'newsletter') {
         chatName = existingChatName ?? 'Canal sem nome';
@@ -1203,16 +1229,10 @@ Deno.serve(async (req) => {
       throw new Error(insertError.message);
     }
 
-    await refreshChatLastMessageState(resolvedRequestedChatId);
+    await refreshChatLastMessageState(supabase, resolvedRequestedChatId);
 
-    return new Response(JSON.stringify({ success: true, count: mergedMessages.length }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ success: true, count: mergedMessages.length }, 200);
   } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
   }
 });

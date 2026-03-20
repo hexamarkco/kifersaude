@@ -1,11 +1,27 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: {
+    get: (name: string) => string | undefined;
+  };
+};
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-API-Key',
 };
+
+const MAX_REWRITE_TEXT_LENGTH = 8000;
+
+const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
 
 type RewriteRequest = {
   text?: string;
@@ -42,36 +58,49 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Metodo nao permitido' }, 405);
   }
 
   try {
-    const payload = (await req.json()) as RewriteRequest;
-    const text = normalizeValue(payload.text);
-    const tone = normalizeValue(payload.tone) || 'claro';
-
-    if (!text) {
-      return new Response(JSON.stringify({ error: 'Texto obrigatorio.' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceRoleKey) {
       console.error('[rewrite-message] Missing Supabase environment variables');
-      return new Response(JSON.stringify({ error: 'Configuracao do servidor incompleta.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Configuracao do servidor incompleta.' }, 500);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    const serviceRoleCall = isServiceRoleRequest(req, supabaseServiceRoleKey);
+    if (!serviceRoleCall) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: 'whatsapp',
+        requiredPermission: 'view',
+      });
+
+      if (!authResult.authorized) {
+        return jsonResponse(authResult.body, authResult.status);
+      }
+    }
+
+    const payload = (await req.json().catch(() => null)) as RewriteRequest | null;
+    const text = normalizeValue(payload?.text);
+    const tone = normalizeValue(payload?.tone) || 'claro';
+
+    if (!text) {
+      return jsonResponse({ error: 'Texto obrigatorio.' }, 400);
+    }
+
+    if (text.length > MAX_REWRITE_TEXT_LENGTH) {
+      return jsonResponse({ error: 'Texto excede o limite permitido.' }, 400);
+    }
+
     const tonePrompt = TONE_PROMPTS[tone] || TONE_PROMPTS.claro;
     const rewriteResult = await generateTextWithRouting({
       supabaseAdmin,
@@ -86,10 +115,7 @@ Deno.serve(async (req) => {
 
     if (!rewriteText) {
       console.error('[rewrite-message] Resposta inesperada do provedor de IA', rewriteResult);
-      return new Response(JSON.stringify({ error: 'Resposta da IA vazia.' }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ error: 'Resposta da IA vazia.' }, 500);
     }
 
     console.log('[rewrite-message] Reescrita gerada', {
@@ -98,15 +124,9 @@ Deno.serve(async (req) => {
       fallbackUsed: rewriteResult.fallbackUsed,
     });
 
-    return new Response(JSON.stringify({ rewrite: rewriteText, provider: rewriteResult.provider, model: rewriteResult.model }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ rewrite: rewriteText, provider: rewriteResult.provider, model: rewriteResult.model }, 200);
   } catch (error) {
     console.error('[rewrite-message] Erro inesperado:', error);
-    return new Response(JSON.stringify({ error: 'Erro interno ao reescrever.' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ error: 'Erro interno ao reescrever.' }, 500);
   }
 });

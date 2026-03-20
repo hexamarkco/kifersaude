@@ -60,6 +60,11 @@ export type WhatsAppCampaignTarget = {
   error_message: string | null;
   sent_at: string | null;
   last_attempt_at: string | null;
+  processing_started_at: string | null;
+  processing_expires_at: string | null;
+  last_completed_step_index: number;
+  last_completed_step_id: string | null;
+  last_sent_step_at: string | null;
   created_at: string;
   updated_at: string;
 };

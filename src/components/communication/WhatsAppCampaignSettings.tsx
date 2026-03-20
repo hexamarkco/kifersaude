@@ -24,18 +24,12 @@ import 'reactflow/dist/style.css';
 import Button from '../ui/Button';
 import Checkbox from '../ui/Checkbox';
 import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
-import { fetchAllPages, getUserManagementId, supabase } from '../../lib/supabase';
-import {
-  resolveOrigemIdByName,
-  resolveResponsavelIdByLabel,
-  resolveStatusIdByName,
-  resolveTipoContratacaoIdByLabel,
-} from '../../lib/leadRelations';
+import { fetchAllPages, supabase } from '../../lib/supabase';
+import { cancelWhatsAppCampaignAtomic, createWhatsAppCampaignAtomic } from '../../lib/whatsappCampaignAdminService';
 import { getAcceptedFileTypesByStepType, uploadWhatsAppCampaignMedia } from '../../lib/whatsappCampaignMediaService';
 import {
   analyzeCsvAudience,
   buildCampaignVariableSuggestions,
-  buildChatIdFromPhoneDigits,
   canRequeueCampaignTarget,
   collectUnknownCampaignFlowVariableKeys,
   formatCsvSummaryLabel,
@@ -50,7 +44,6 @@ import {
   type ExistingCampaignLeadMatch,
   type ParsedCampaignCsv,
 } from '../../lib/whatsappCampaignUtils';
-import { useAuth } from '../../contexts/AuthContext';
 import { useConfig } from '../../contexts/ConfigContext';
 import type {
   WhatsAppCampaignAudienceSource,
@@ -367,14 +360,6 @@ const formatAudienceSourceLabel = (value: WhatsAppCampaignAudienceSource): strin
 const formatTargetSourceKindLabel = (value: WhatsAppCampaignTarget['source_kind']): string =>
   value === 'csv_import' ? 'CSV' : 'Lead';
 
-const buildLeadStoragePhone = (value: string): string => {
-  if (value.startsWith('55') && (value.length === 12 || value.length === 13)) {
-    return value.slice(2);
-  }
-
-  return value;
-};
-
 const toIsoFromDateTimeInput = (value: string): string | null => {
   if (!value) {
     return null;
@@ -405,6 +390,14 @@ const escapeCsvCell = (value: unknown): string => {
   return stringValue;
 };
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
 const downloadTextFile = (fileName: string, content: string, contentType: string) => {
   const blob = new Blob([content], { type: contentType });
   const objectUrl = window.URL.createObjectURL(blob);
@@ -418,7 +411,6 @@ const downloadTextFile = (fileName: string, content: string, contentType: string
 };
 
 export default function WhatsAppCampaignSettings() {
-  const { user } = useAuth();
   const { leadStatuses, leadOrigins, options } = useConfig();
 
   const [campaigns, setCampaigns] = useState<WhatsAppCampaign[]>([]);
@@ -565,17 +557,17 @@ export default function WhatsAppCampaignSettings() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('whatsapp_campaigns')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const rows = await fetchAllPages<WhatsAppCampaign>(async (from, to) => {
+        const response = await supabase
+          .from('whatsapp_campaigns')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, to);
 
-      if (error) {
-        throw error;
-      }
+        return { data: response.data as WhatsAppCampaign[] | null, error: response.error };
+      }, 200);
 
-      const nextCampaigns = ((data ?? []) as WhatsAppCampaign[]).map((campaign) => ({
+      const nextCampaigns = rows.map((campaign) => ({
         ...campaign,
         audience_source: normalizeCampaignAudienceSource((campaign as WhatsAppCampaign & { audience_source?: unknown }).audience_source),
         audience_config:
@@ -1116,9 +1108,9 @@ export default function WhatsAppCampaignSettings() {
 
     try {
       const campaignTitle = campaignName.trim() || `Campanha ${new Date().toLocaleDateString('pt-BR')}`;
-      const createdBy = getUserManagementId(user);
       const normalizedSteps = flowSteps.map((step, index) => ({ ...step, order: index }));
       const scheduledAtIso = toIsoFromDateTimeInput(scheduledAtInput);
+      const audienceFilterSnapshot = buildAudienceFilterSnapshot();
 
       if (audienceSource === 'csv' && csvImport.parsed && csvAnalysis) {
         const origemLabel = origemNameById.get(csvCrmDefaults.origemId) ?? '';
@@ -1126,212 +1118,80 @@ export default function WhatsAppCampaignSettings() {
         const tipoContratacaoLabel = tipoContratacaoNameById.get(csvCrmDefaults.tipoContratacaoId) ?? '';
         const responsavelLabel = responsavelNameById.get(csvCrmDefaults.responsavelId) ?? '';
 
-        const { data: createdCampaign, error: campaignError } = await supabase
-          .from('whatsapp_campaigns')
-          .insert({
-            name: campaignTitle,
-            message: composeFallbackMessage(normalizedSteps),
-            flow_steps: normalizedSteps,
-            status: 'draft',
-            audience_source: 'csv',
-            audience_filter: {},
-            audience_config: {
-              csv_file_name: csvImport.fileName,
-              csv_delimiter: csvImport.parsed.delimiter,
-              csv_headers: csvImport.parsed.headers,
-              csv_normalized_headers: csvImport.parsed.normalizedHeaders,
-              mapping: {
-                phone_column_key: csvImport.phoneColumnKey,
-                name_column_key: csvImport.nameColumnKey || null,
-              },
-              crm_defaults: {
-                origem_id: csvCrmDefaults.origemId || null,
-                origem_label: origemLabel || null,
-                status_id: csvCrmDefaults.statusId || null,
-                status_label: statusLabel || null,
-                tipo_contratacao_id: csvCrmDefaults.tipoContratacaoId || null,
-                tipo_contratacao_label: tipoContratacaoLabel || null,
-                responsavel_id: csvCrmDefaults.responsavelId || null,
-                responsavel_label: responsavelLabel || null,
-              },
-              summary: csvAnalysis.summary,
+        const createdCampaign = await createWhatsAppCampaignAtomic({
+          name: campaignTitle,
+          message: composeFallbackMessage(normalizedSteps),
+          flowSteps: normalizedSteps,
+          audienceSource: 'csv',
+          audienceFilter: {},
+          audienceConfig: {
+            csv_file_name: csvImport.fileName,
+            csv_delimiter: csvImport.parsed.delimiter,
+            csv_headers: csvImport.parsed.headers,
+            csv_normalized_headers: csvImport.parsed.normalizedHeaders,
+            mapping: {
+              phone_column_key: csvImport.phoneColumnKey,
+              name_column_key: csvImport.nameColumnKey || null,
             },
-            total_targets: csvAnalysis.validItems.length,
-            pending_targets: csvAnalysis.validItems.length,
-            sent_targets: 0,
-            failed_targets: 0,
-            invalid_targets: 0,
-            scheduled_at: scheduledAtIso,
-            created_by: createdBy,
-          })
-          .select('*')
-          .single();
-
-        if (campaignError || !createdCampaign) {
-          throw campaignError || new Error('Erro ao criar campanha CSV.');
-        }
-
-        const nowIso = new Date().toISOString();
-        const createdLeadsByPhone = new Map<string, ExistingCampaignLeadMatch>();
-        const itemsToCreate = csvAnalysis.validItems.filter((item) => item.needsLeadCreation);
-
-        for (const batch of splitIntoBatches(itemsToCreate, 100)) {
-          if (batch.length === 0) {
-            continue;
-          }
-
-          const rows = batch.map((item) => ({
-            nome_completo: item.displayName,
-            telefone: buildLeadStoragePhone(item.normalizedPhone),
-            origem: origemLabel,
-            origem_id: resolveOrigemIdByName(leadOrigins, origemLabel),
-            tipo_contratacao: tipoContratacaoLabel,
-            tipo_contratacao_id: resolveTipoContratacaoIdByLabel(options.lead_tipo_contratacao, tipoContratacaoLabel),
-            status: statusLabel,
-            status_id: resolveStatusIdByName(leadStatuses, statusLabel),
-            responsavel: responsavelLabel,
-            responsavel_id: resolveResponsavelIdByLabel(options.lead_responsavel, responsavelLabel),
-            data_criacao: nowIso,
-            ultimo_contato: nowIso,
-            canal: 'whatsapp_campaign',
-          }));
-
-          const { data: insertedLeads, error: leadInsertError } = await supabase
-            .from('leads')
-            .insert(rows)
-            .select('id, nome_completo, telefone, email, status, status_id, origem, origem_id, cidade, responsavel, responsavel_id, canal');
-
-          if (leadInsertError) {
-            throw leadInsertError;
-          }
-
-          ((insertedLeads ?? []) as ExistingCampaignLeadMatch[]).forEach((lead) => {
-            const normalizedPhone = normalizePhoneForCampaign(lead.telefone ?? '');
-            if (normalizedPhone) {
-              createdLeadsByPhone.set(normalizedPhone, lead);
-            }
-          });
-        }
-
-        const targetRows = csvAnalysis.validItems.map((item) => {
-          const leadMatch = item.existingLead ?? createdLeadsByPhone.get(item.normalizedPhone) ?? null;
-
-          if (!leadMatch?.id) {
-            throw new Error(`Nao foi possivel vincular o lead do telefone ${item.rawPhone || item.normalizedPhone}.`);
-          }
-
-          return {
-            campaign_id: createdCampaign.id,
-            lead_id: leadMatch.id,
-            phone: item.normalizedPhone,
-            raw_phone: item.rawPhone || null,
-            display_name: item.displayName || null,
-            chat_id: item.chatId,
-            source_kind: 'csv_import',
-            source_payload: normalizeCampaignSourcePayload(item.payload),
-            status: 'pending',
-          };
+            crm_defaults: {
+              origem_id: csvCrmDefaults.origemId || null,
+              origem_label: origemLabel || null,
+              status_id: csvCrmDefaults.statusId || null,
+              status_label: statusLabel || null,
+              tipo_contratacao_id: csvCrmDefaults.tipoContratacaoId || null,
+              tipo_contratacao_label: tipoContratacaoLabel || null,
+              responsavel_id: csvCrmDefaults.responsavelId || null,
+              responsavel_label: responsavelLabel || null,
+            },
+            summary: csvAnalysis.summary,
+          },
+          scheduledAt: scheduledAtIso,
+          csvTargets: csvAnalysis.validItems.map((item) => ({
+            normalizedPhone: item.normalizedPhone,
+            rawPhone: item.rawPhone || null,
+            displayName: item.displayName,
+            chatId: item.chatId,
+            sourcePayload: normalizeCampaignSourcePayload(item.payload),
+            existingLeadId: item.existingLead?.id ?? null,
+            needsLeadCreation: item.needsLeadCreation,
+          })),
         });
 
-        const { error: targetError } = await supabase
-          .from('whatsapp_campaign_targets')
-          .upsert(targetRows, { onConflict: 'campaign_id,phone' });
-
-        if (targetError) {
-          throw targetError;
-        }
-
-        await recomputeCampaignCounters(createdCampaign.id);
         await loadCampaigns();
         setSelectedCampaignId(createdCampaign.id);
         resetBuilderState();
-        setMessageState({ type: 'success', text: 'Campanha CSV criada com sucesso.' });
+        setMessageState({
+          type: 'success',
+          text: `Campanha CSV criada com sucesso com ${createdCampaign.total_targets} alvo(s).`,
+        });
         return;
       }
 
-      const uniqueTargets = new Map<string, LeadPreviewRow>();
-
-      previewLeads.forEach((lead) => {
-        const normalizedPhone = normalizePhoneForCampaign(lead.telefone);
-        if (!normalizedPhone) {
-          return;
-        }
-
-        if (!uniqueTargets.has(normalizedPhone)) {
-          uniqueTargets.set(normalizedPhone, lead);
-        }
+      const createdCampaign = await createWhatsAppCampaignAtomic({
+        name: campaignTitle,
+        message: composeFallbackMessage(normalizedSteps),
+        flowSteps: normalizedSteps,
+        audienceSource: 'filters',
+        audienceFilter: audienceFilterSnapshot,
+        audienceConfig: {
+          source: 'filters',
+          preview_count: previewLeads.length,
+          filters: audienceFilterSnapshot,
+        },
+        scheduledAt: scheduledAtIso,
       });
 
-      if (uniqueTargets.size === 0) {
-        setMessageState({ type: 'error', text: 'Nenhum lead com telefone valido para campanha.' });
-        return;
-      }
-
-      const { data: createdCampaign, error: campaignError } = await supabase
-        .from('whatsapp_campaigns')
-        .insert({
-          name: campaignTitle,
-          message: composeFallbackMessage(normalizedSteps),
-          flow_steps: normalizedSteps,
-          status: 'draft',
-          audience_source: 'filters',
-          audience_filter: buildAudienceFilterSnapshot(),
-          audience_config: {
-            source: 'filters',
-            preview_count: uniqueTargets.size,
-            filters: buildAudienceFilterSnapshot(),
-          },
-          total_targets: uniqueTargets.size,
-          pending_targets: uniqueTargets.size,
-          sent_targets: 0,
-          failed_targets: 0,
-          invalid_targets: 0,
-          scheduled_at: scheduledAtIso,
-          created_by: createdBy,
-        })
-        .select('*')
-        .single();
-
-      if (campaignError || !createdCampaign) {
-        throw campaignError || new Error('Erro ao criar campanha.');
-      }
-
-      const targetRows = Array.from(uniqueTargets.entries()).map(([phone, lead]) => ({
-        campaign_id: createdCampaign.id,
-        lead_id: lead.id,
-        phone,
-        raw_phone: lead.telefone,
-        display_name: lead.nome_completo,
-        chat_id: buildChatIdFromPhoneDigits(phone),
-        source_kind: 'lead_filter',
-        source_payload: normalizeCampaignSourcePayload({
-          nome: lead.nome_completo,
-          telefone: lead.telefone,
-          status: statusNameById.get(lead.status_id || '') ?? '',
-          origem: origemNameById.get(lead.origem_id || '') ?? '',
-          responsavel: responsavelNameById.get(lead.responsavel_id || '') ?? '',
-          canal: lead.canal ?? '',
-        }),
-        status: 'pending',
-      }));
-
-      const { error: targetError } = await supabase
-        .from('whatsapp_campaign_targets')
-        .upsert(targetRows, { onConflict: 'campaign_id,phone' });
-
-      if (targetError) {
-        throw targetError;
-      }
-
-      await recomputeCampaignCounters(createdCampaign.id);
       await loadCampaigns();
 
       setSelectedCampaignId(createdCampaign.id);
       resetBuilderState();
-      setMessageState({ type: 'success', text: 'Campanha criada com sucesso.' });
+      setMessageState({
+        type: 'success',
+        text: `Campanha criada com sucesso com ${createdCampaign.total_targets} alvo(s).`,
+      });
     } catch (error) {
       console.error('Erro ao criar campanha do WhatsApp:', error);
-      setMessageState({ type: 'error', text: 'Não foi possível criar a campanha.' });
+      setMessageState({ type: 'error', text: getErrorMessage(error, 'Nao foi possivel criar a campanha.') });
     } finally {
       setCreatingCampaign(false);
     }
@@ -1389,40 +1249,16 @@ export default function WhatsAppCampaignSettings() {
     setMessageState(null);
 
     try {
-      const nowIso = new Date().toISOString();
-
-      const { error: campaignError } = await supabase
-        .from('whatsapp_campaigns')
-        .update({
-          status: 'cancelled',
-          completed_at: nowIso,
-        })
-        .eq('id', campaign.id);
-
-      if (campaignError) {
-        throw campaignError;
-      }
-
-      const { error: targetsError } = await supabase
-        .from('whatsapp_campaign_targets')
-        .update({
-          status: 'cancelled',
-          error_message: 'Campanha cancelada manualmente.',
-        })
-        .eq('campaign_id', campaign.id)
-        .in('status', ['pending', 'processing']);
-
-      if (targetsError) {
-        throw targetsError;
-      }
-
-      await recomputeCampaignCounters(campaign.id);
+      await cancelWhatsAppCampaignAtomic(campaign.id, 'Campanha cancelada manualmente.');
       await loadCampaigns();
+      if (selectedCampaignId === campaign.id) {
+        await loadCampaignTargets();
+      }
 
       setMessageState({ type: 'success', text: 'Campanha cancelada com sucesso.' });
     } catch (error) {
       console.error('Erro ao cancelar campanha:', error);
-      setMessageState({ type: 'error', text: 'Não foi possível cancelar a campanha.' });
+      setMessageState({ type: 'error', text: getErrorMessage(error, 'Nao foi possivel cancelar a campanha.') });
     } finally {
       setActionCampaignId(null);
     }
@@ -1481,14 +1317,14 @@ export default function WhatsAppCampaignSettings() {
 
     setLoadingTargets(true);
 
-    try {
-      let query = supabase
-        .from('whatsapp_campaign_targets')
-        .select(
-          'id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_kind, source_payload, status, attempts, error_message, sent_at, last_attempt_at, created_at, updated_at, lead:leads(nome_completo, telefone)',
-          { count: 'exact' },
-        )
-        .eq('campaign_id', selectedCampaignId)
+      try {
+        let query = supabase
+          .from('whatsapp_campaign_targets')
+          .select(
+          'id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_kind, source_payload, status, attempts, error_message, sent_at, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, created_at, updated_at, lead:leads(nome_completo, telefone)',
+           { count: 'exact' },
+         )
+          .eq('campaign_id', selectedCampaignId)
         .order('created_at', { ascending: false });
 
       if (campaignTargetsFilters.status) {

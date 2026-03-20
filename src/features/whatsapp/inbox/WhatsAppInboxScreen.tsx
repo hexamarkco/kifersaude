@@ -79,6 +79,7 @@ import {
   getPhoneDigits,
   resolveChatAvatarSources,
 } from '../shared/avatarResolution';
+import { areEquivalentDirectChats, choosePreferredDirectChatId, isDirectChatIdentityTarget } from '../shared/directChatIdentity';
 import { WhatsAppChatAvatar } from '../shared/components/WhatsAppChatAvatar';
 import {
   compareReminderQuickOpenItems,
@@ -395,7 +396,6 @@ export default function WhatsAppInboxScreen() {
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
   const [newChatPhone, setNewChatPhone] = useState('');
   const [syncingChatId, setSyncingChatId] = useState<string | null>(null);
-  const [isSyncingAllChats] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
@@ -495,7 +495,7 @@ export default function WhatsAppInboxScreen() {
         setSelectedChat(chat && getWhatsAppChatKind(chat.id) === 'status' ? null : chat);
       });
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -503,7 +503,7 @@ export default function WhatsAppInboxScreen() {
         cancelAnimationFrame(chatSelectionFrameRef.current);
       }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const normalizeSearchText = (value: string | null | undefined) =>
     (value || '')
@@ -1092,7 +1092,7 @@ export default function WhatsAppInboxScreen() {
     return getWhatsAppChatKind(message.chat_id || '') === 'status';
   };
 
-  const isDirectChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => getChatKind(chat) === 'direct';
+  const isDirectChat = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => isDirectChatIdentityTarget(chat);
 
   const getChatTypeLabel = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
     const kind = getChatKind(chat);
@@ -1223,50 +1223,6 @@ export default function WhatsAppInboxScreen() {
       lookupIds: Array.from(lookupIds),
       aliases: Array.from(aliases).filter(Boolean),
     };
-  };
-
-  const getDirectChatMergePriority = (chatId: string, phoneNumber: string | null) => {
-    const normalized = normalizeChatId(chatId).trim().toLowerCase();
-    if (!normalized) return -1;
-
-    if (phoneNumber) {
-      if (normalized === `${phoneNumber}@s.whatsapp.net`) return 120;
-      if (normalized === `${phoneNumber}@c.us`) return 110;
-    }
-
-    if (normalized.endsWith('@s.whatsapp.net')) return 90;
-    if (normalized.endsWith('@c.us')) return 80;
-    if (normalized.endsWith('@lid')) return 20;
-    if (!normalized.includes('@')) return 10;
-    return 0;
-  };
-
-  const choosePreferredDirectChatId = (
-    primaryChat: Pick<WhatsAppChat, 'id' | 'phone_number'>,
-    secondaryChat: Pick<WhatsAppChat, 'id' | 'phone_number'>,
-  ) => {
-    const preferredPhone =
-      normalizePhoneNumber(primaryChat.phone_number || '') ||
-      normalizePhoneNumber(secondaryChat.phone_number || '') ||
-      extractPhoneFromChatId(primaryChat.id) ||
-      extractPhoneFromChatId(secondaryChat.id) ||
-      null;
-
-    const primaryScore = getDirectChatMergePriority(primaryChat.id, preferredPhone);
-    const secondaryScore = getDirectChatMergePriority(secondaryChat.id, preferredPhone);
-    return secondaryScore > primaryScore ? secondaryChat.id : primaryChat.id;
-  };
-
-  const areEquivalentDirectChats = (
-    primaryChat: Pick<WhatsAppChat, 'id' | 'is_group' | 'phone_number' | 'lid'>,
-    secondaryChat: Pick<WhatsAppChat, 'id' | 'is_group' | 'phone_number' | 'lid'>,
-  ) => {
-    if (!isDirectChat(primaryChat) || !isDirectChat(secondaryChat)) {
-      return false;
-    }
-
-    const secondaryVariants = new Set(getChatIdVariants(secondaryChat));
-    return getChatIdVariants(primaryChat).some((variant) => secondaryVariants.has(variant));
   };
 
   const chooseEarlierIsoTimestamp = (primary: string | null | undefined, secondary: string | null | undefined) => {
@@ -2325,7 +2281,7 @@ export default function WhatsAppInboxScreen() {
       if (!activeChat) return;
       if (getChatKind(activeChat) !== 'direct') return;
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-      if (autoSyncSelectedChatInFlightRef.current || syncingChatId || isSyncingAllChats) return;
+      if (autoSyncSelectedChatInFlightRef.current || syncingChatId) return;
 
       autoSyncSelectedChatInFlightRef.current = true;
       try {
@@ -2356,7 +2312,7 @@ export default function WhatsAppInboxScreen() {
       window.clearInterval(intervalId);
       autoSyncSelectedChatInFlightRef.current = false;
     };
-  }, [selectedChat?.id, syncingChatId, isSyncingAllChats]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedChat?.id, syncingChatId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const visibleMessages = messages.filter((message) => isDisplayableInboxMessage(message));
@@ -3330,7 +3286,7 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleSyncFromWhapi = async () => {
-    if (!selectedChat || syncingChatId === selectedChat.id || isSyncingAllChats) return;
+    if (!selectedChat || syncingChatId === selectedChat.id) return;
 
     setSyncingChatId(selectedChat.id);
     try {
@@ -4275,7 +4231,7 @@ export default function WhatsAppInboxScreen() {
     });
 
     return map;
-  }, [leadsList]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [leadsList]);
 
   const leadNamesByPhone = useMemo(() => {
     const map = new Map<string, string>();
@@ -4603,7 +4559,7 @@ export default function WhatsAppInboxScreen() {
     deferredSearchQuery,
     prioritizeUnread,
     showArchived,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
+  ]);
 
   const nextUnreadChat = useMemo(
     () => unreadQueue.find((chat) => chat.id !== selectedChat?.id) ?? unreadQueue[0] ?? null,
@@ -5932,62 +5888,7 @@ export default function WhatsAppInboxScreen() {
     try {
       setIsCopyingChat(true);
 
-      const audioMessagesWithoutTranscription: WhatsAppMessage[] = [];
-      let messagesForCopy = await ensureAudioMessagesHaveTranscription(messages);
-
-      if (audioMessagesWithoutTranscription.length > 0) {
-        const payloadsByMessageId = new Map<string, WhatsAppMessagePayload>();
-
-        for (const message of audioMessagesWithoutTranscription) {
-          try {
-            const { data, error } = await supabase.functions.invoke('transcribe-whatsapp-audio', {
-              body: { messageId: message.id },
-            });
-
-            if (error) {
-              throw error;
-            }
-
-            if (data?.payload && typeof data.payload === 'object') {
-              payloadsByMessageId.set(message.id, data.payload as WhatsAppMessagePayload);
-            }
-          } catch (error) {
-        console.error(`Erro ao transcrever áudio ${message.id} para cópia do chat:`, error);
-          }
-        }
-
-        if (payloadsByMessageId.size > 0) {
-          messagesForCopy = messages.map((message) =>
-            payloadsByMessageId.has(message.id)
-              ? {
-                  ...message,
-                  payload: payloadsByMessageId.get(message.id) ?? message.payload,
-                }
-              : message,
-          );
-
-          setMessages((prev) => {
-            const nextMessages = prev.map((message) =>
-              payloadsByMessageId.has(message.id)
-                ? {
-                    ...message,
-                    payload: payloadsByMessageId.get(message.id) ?? message.payload,
-                  }
-                : message,
-            );
-
-            const cachedState = messagesCacheRef.current.get(selectedChat.id);
-            if (cachedState) {
-              messagesCacheRef.current.set(selectedChat.id, {
-                ...cachedState,
-                messages: nextMessages,
-              });
-            }
-
-            return nextMessages;
-          });
-        }
-      }
+      const messagesForCopy = await ensureAudioMessagesHaveTranscription(messages);
 
       const conversationHistory = buildConversationHistoryForCopy(messagesForCopy);
       if (!conversationHistory) return;
@@ -7453,7 +7354,7 @@ export default function WhatsAppInboxScreen() {
                     navigate('/painel/whatsapp/config');
                   }}
                 >
-                  <Settings className={`h-4 w-4 ${isSyncingAllChats ? 'animate-spin' : ''}`} />
+                  <Settings className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -7999,10 +7900,10 @@ export default function WhatsAppInboxScreen() {
                     className="h-9 w-9 rounded-full"
                     title="Sincronizar mensagens"
                     onClick={handleSyncFromWhapi}
-                    disabled={isSyncingAllChats || syncingChatId === selectedChat.id}
+                    disabled={syncingChatId === selectedChat.id}
                   >
                     <History
-                      className={`w-5 h-5 text-slate-600 ${isSyncingAllChats || syncingChatId === selectedChat.id ? 'animate-spin' : ''}`}
+                      className={`w-5 h-5 text-slate-600 ${syncingChatId === selectedChat.id ? 'animate-spin' : ''}`}
                     />
                   </Button>
                   <Button

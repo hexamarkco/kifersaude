@@ -29,10 +29,45 @@ export type OutboundRetryPayload =
       canonical?: string;
       preview?: string;
       quotedMessageId?: string | null;
+    }
+  | {
+      kind: 'gif';
+      url: string;
+      preview?: string;
+      caption?: string;
+      quotedMessageId?: string | null;
+    }
+  | {
+      kind: 'media';
+      mediaType: 'image' | 'sticker' | 'video' | 'audio' | 'document' | 'voice';
+      fileName: string;
+      mimeType: string;
+      dataUrl: string;
+      caption?: string;
+      quotedMessageId?: string | null;
+      asVoice?: boolean;
+      seconds?: number | null;
+      recordingTime?: number | null;
+    }
+  | {
+      kind: 'location';
+      latitude: number;
+      longitude: number;
+      description?: string;
+    }
+  | {
+      kind: 'contact';
+      name: string;
+      phone: string;
+      quotedMessageId?: string | null;
     };
 
 export type TextRetryPayload = Extract<OutboundRetryPayload, { kind: 'text' }>;
 export type LinkPreviewRetryPayload = Extract<OutboundRetryPayload, { kind: 'link_preview' }>;
+export type GifRetryPayload = Extract<OutboundRetryPayload, { kind: 'gif' }>;
+export type MediaRetryPayload = Extract<OutboundRetryPayload, { kind: 'media' }>;
+export type LocationRetryPayload = Extract<OutboundRetryPayload, { kind: 'location' }>;
+export type ContactRetryPayload = Extract<OutboundRetryPayload, { kind: 'contact' }>;
 
 export type FollowUpGenerationContext = {
   leadName?: string;

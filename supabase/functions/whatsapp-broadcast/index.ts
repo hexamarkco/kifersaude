@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
   clampCompletedCampaignStepIndex,
   getCampaignIdsReadyToAutoStart,
@@ -100,42 +101,6 @@ const toErrorMessage = (error: unknown): string => {
     return error.message;
   }
   return String(error);
-};
-
-const getBearerToken = (authHeader: string | null): string | null => {
-  if (!authHeader) return null;
-  const match = authHeader.match(/^Bearer\s+(.+)$/i);
-  return match?.[1]?.trim() || null;
-};
-
-const getUserManagementId = (user: Record<string, unknown> | null | undefined): string | null => {
-  if (!user) return null;
-
-  const userMetadata =
-    user.user_metadata && typeof user.user_metadata === 'object'
-      ? (user.user_metadata as Record<string, unknown>)
-      : null;
-  const appMetadata =
-    user.app_metadata && typeof user.app_metadata === 'object'
-      ? (user.app_metadata as Record<string, unknown>)
-      : null;
-
-  const candidates: unknown[] = [
-    userMetadata?.user_management_id,
-    userMetadata?.user_management_user_id,
-    userMetadata?.user_id,
-    appMetadata?.user_management_id,
-    appMetadata?.user_id,
-    user.id,
-  ];
-
-  for (const candidate of candidates) {
-    if (typeof candidate === 'string' && candidate.trim()) {
-      return candidate.trim();
-    }
-  }
-
-  return null;
 };
 
 const sanitizeWhapiToken = (rawToken: string): string => rawToken.replace(/^Bearer\s+/i, '').trim();
@@ -267,92 +232,6 @@ const isInvalidRecipientError = (message: string): boolean => {
     normalized.includes('chat not found') ||
     normalized.includes('invalid chatid')
   );
-};
-
-const isServiceRoleRequest = (req: Request, serviceRoleKey: string): boolean => {
-  const expected = serviceRoleKey.trim();
-  if (!expected) {
-    return false;
-  }
-
-  const bearerToken = getBearerToken(req.headers.get('Authorization'));
-  if (bearerToken && bearerToken.trim() === expected) {
-    return true;
-  }
-
-  const apikey = req.headers.get('apikey')?.trim() || req.headers.get('x-api-key')?.trim() || '';
-  return apikey === expected;
-};
-
-const authorizeAdminUser = async ({
-  req,
-  supabaseUrl,
-  supabaseAnonKey,
-  supabaseAdmin,
-}: {
-  req: Request;
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  supabaseAdmin: ReturnType<typeof createClient>;
-}): Promise<{ authorized: true } | { authorized: false; response: Response }> => {
-  const bearerToken = getBearerToken(req.headers.get('Authorization'));
-
-  if (!bearerToken) {
-    return {
-      authorized: false,
-      response: jsonResponse({ success: false, error: 'Nao autenticado' }, 401),
-    };
-  }
-
-  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${bearerToken}`,
-      },
-    },
-  });
-
-  const {
-    data: { user },
-    error: userError,
-  } = await authClient.auth.getUser();
-
-  if (userError || !user) {
-    return {
-      authorized: false,
-      response: jsonResponse({ success: false, error: 'Token de autenticacao invalido' }, 401),
-    };
-  }
-
-  const profileId = getUserManagementId(user as unknown as Record<string, unknown>);
-  if (!profileId) {
-    return {
-      authorized: false,
-      response: jsonResponse({ success: false, error: 'Perfil do usuario nao encontrado' }, 403),
-    };
-  }
-
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from('user_profiles')
-    .select('role')
-    .eq('id', profileId)
-    .maybeSingle();
-
-  if (profileError) {
-    return {
-      authorized: false,
-      response: jsonResponse({ success: false, error: 'Erro ao validar permissao de usuario' }, 500),
-    };
-  }
-
-  if (!profile || profile.role !== 'admin') {
-    return {
-      authorized: false,
-      response: jsonResponse({ success: false, error: 'Permissao insuficiente' }, 403),
-    };
-  }
-
-  return { authorized: true };
 };
 
 const loadWhapiToken = async (supabaseAdmin: ReturnType<typeof createClient>): Promise<string> => {
@@ -568,7 +447,7 @@ const claimTarget = async (
     .update(baseClaimPayload)
     .eq('id', target.id)
     .eq('status', 'processing')
-    .lt('processing_expires_at', nowIso)
+    .lte('processing_expires_at', nowIso)
     .select('id')
     .maybeSingle();
 
@@ -904,15 +783,17 @@ Deno.serve(async (req) => {
 
   const serviceRoleCall = isServiceRoleRequest(req, supabaseServiceRoleKey);
   if (!serviceRoleCall) {
-    const authResult = await authorizeAdminUser({
+    const authResult = await authorizeDashboardUser({
       req,
       supabaseUrl,
       supabaseAnonKey,
       supabaseAdmin,
+      module: 'whatsapp',
+      requiredPermission: 'edit',
     });
 
     if (!authResult.authorized) {
-      return authResult.response;
+      return jsonResponse({ success: false, error: authResult.body.error }, authResult.status);
     }
   }
 

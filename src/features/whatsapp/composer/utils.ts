@@ -1,6 +1,10 @@
 import type {
+  ContactRetryPayload,
+  GifRetryPayload,
   IndexedQuickReplyItem,
+  LocationRetryPayload,
   LinkPreviewRetryPayload,
+  MediaRetryPayload,
   QuickReplyItem,
   TextRetryPayload,
 } from './types';
@@ -187,5 +191,66 @@ export const buildLinkPreviewRetryPayload = (
   description: preview.description?.trim() || undefined,
   canonical: preview.canonical?.trim() || undefined,
   preview: preview.image?.trim() || undefined,
+  quotedMessageId: quotedMessageId ?? null,
+});
+
+export const buildGifRetryPayload = (
+  url: string,
+  options?: {
+    preview?: string | null;
+    caption?: string | null;
+    quotedMessageId?: string | null;
+  },
+): GifRetryPayload => ({
+  kind: 'gif',
+  url: url.trim(),
+  preview: options?.preview?.trim() || undefined,
+  caption: options?.caption?.trim() || undefined,
+  quotedMessageId: options?.quotedMessageId ?? null,
+});
+
+export const buildMediaRetryPayload = (
+  mediaType: MediaRetryPayload['mediaType'],
+  file: { name: string; type: string },
+  dataUrl: string,
+  options?: {
+    caption?: string | null;
+    quotedMessageId?: string | null;
+    asVoice?: boolean;
+    seconds?: number | null;
+    recordingTime?: number | null;
+  },
+): MediaRetryPayload => ({
+  kind: 'media',
+  mediaType,
+  fileName: file.name,
+  mimeType: file.type,
+  dataUrl,
+  caption: options?.caption?.trim() || undefined,
+  quotedMessageId: options?.quotedMessageId ?? null,
+  asVoice: options?.asVoice === true,
+  seconds: options?.seconds ?? null,
+  recordingTime: options?.recordingTime ?? null,
+});
+
+export const buildLocationRetryPayload = (
+  latitude: number,
+  longitude: number,
+  description?: string | null,
+): LocationRetryPayload => ({
+  kind: 'location',
+  latitude,
+  longitude,
+  description: description?.trim() || undefined,
+});
+
+export const buildContactRetryPayload = (
+  name: string,
+  phone: string,
+  quotedMessageId?: string | null,
+): ContactRetryPayload => ({
+  kind: 'contact',
+  name: name.trim(),
+  phone: phone.trim(),
   quotedMessageId: quotedMessageId ?? null,
 });

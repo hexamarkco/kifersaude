@@ -3,8 +3,12 @@ import assert from 'node:assert/strict';
 
 import {
   applyLinePrefix,
+  buildContactRetryPayload,
+  buildGifRetryPayload,
   buildIndexedQuickReplies,
   buildLinkPreviewRetryPayload,
+  buildLocationRetryPayload,
+  buildMediaRetryPayload,
   buildSlashCommandState,
   buildTextRetryPayload,
   splitFollowUpLines,
@@ -56,6 +60,51 @@ test('builds retry payloads for text and link preview sends', () => {
       quotedMessageId: 'msg-2',
     },
   );
+});
+
+test('builds retry payloads for gif, media, location and contact sends', () => {
+  assert.deepEqual(buildGifRetryPayload('https://media.example/gif.mp4', { preview: 'https://media.example/preview.jpg', caption: 'Oi', quotedMessageId: 'msg-3' }), {
+    kind: 'gif',
+    url: 'https://media.example/gif.mp4',
+    preview: 'https://media.example/preview.jpg',
+    caption: 'Oi',
+    quotedMessageId: 'msg-3',
+  });
+
+  assert.deepEqual(
+    buildMediaRetryPayload(
+      'document',
+      { name: 'arquivo.pdf', type: 'application/pdf' },
+      'data:application/pdf;base64,AAA',
+      { caption: 'Segue anexo', quotedMessageId: 'msg-4' },
+    ),
+    {
+      kind: 'media',
+      mediaType: 'document',
+      fileName: 'arquivo.pdf',
+      mimeType: 'application/pdf',
+      dataUrl: 'data:application/pdf;base64,AAA',
+      caption: 'Segue anexo',
+      quotedMessageId: 'msg-4',
+      asVoice: false,
+      seconds: null,
+      recordingTime: null,
+    },
+  );
+
+  assert.deepEqual(buildLocationRetryPayload(-23.55, -46.63, 'Minha localização'), {
+    kind: 'location',
+    latitude: -23.55,
+    longitude: -46.63,
+    description: 'Minha localização',
+  });
+
+  assert.deepEqual(buildContactRetryPayload('Ana', '5511999999999', 'msg-5'), {
+    kind: 'contact',
+    name: 'Ana',
+    phone: '5511999999999',
+    quotedMessageId: 'msg-5',
+  });
 });
 
 test('applies quote prefix to the current line when there is no selection', () => {

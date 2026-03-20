@@ -25,6 +25,11 @@ type ChatSummaryRow = {
   phone_number: string | null;
 };
 
+type SyncAllChatsMessage = {
+  type: 'success' | 'error';
+  text: string;
+};
+
 const SETTINGS_TABS: TabItem<SettingsTab>[] = [
   { id: 'general', label: 'Geral', icon: Settings },
   { id: 'campaigns', label: 'Campanhas', icon: RefreshCw },
@@ -39,6 +44,7 @@ export default function WhatsAppSettingsPage() {
   const [archivedCount, setArchivedCount] = useState(0);
   const [chatRows, setChatRows] = useState<ChatSummaryRow[]>([]);
   const [isSyncingAllChats, setIsSyncingAllChats] = useState(false);
+  const [syncAllChatsMessage, setSyncAllChatsMessage] = useState<SyncAllChatsMessage | null>(null);
   const [syncAllChatsProgress, setSyncAllChatsProgress] = useState<SyncAllChatsProgress>({
     total: 0,
     completed: 0,
@@ -121,6 +127,7 @@ export default function WhatsAppSettingsPage() {
     if (chatIds.length === 0) return;
 
     setIsSyncingAllChats(true);
+    setSyncAllChatsMessage(null);
     setSyncAllChatsProgress({
       total: chatIds.length,
       completed: 0,
@@ -132,11 +139,11 @@ export default function WhatsAppSettingsPage() {
     let failed = 0;
     const yieldProgressFrame = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
 
-      try {
-        for (let index = 0; index < chatIds.length; index += 1) {
-          const chatId = chatIds[index];
-          const currentChat = chatRowsById.get(chatId);
-          const currentChatName = currentChat?.name?.trim() || currentChat?.phone_number?.trim() || chatId;
+    try {
+      for (let index = 0; index < chatIds.length; index += 1) {
+        const chatId = chatIds[index];
+        const currentChat = chatRowsById.get(chatId);
+        const currentChatName = currentChat?.name?.trim() || currentChat?.phone_number?.trim() || chatId;
 
         setSyncAllChatsProgress((previousValue) => ({
           ...previousValue,
@@ -167,8 +174,14 @@ export default function WhatsAppSettingsPage() {
       }
 
       await loadChatSummary();
+      setSyncAllChatsMessage(
+        failed > 0
+          ? { type: 'error', text: `Sincronização concluída com ${failed} chat(s) com falha.` }
+          : { type: 'success', text: 'Sincronização concluída com sucesso.' },
+      );
     } catch (error) {
       console.error('Erro ao sincronizar todos os chats:', error);
+      setSyncAllChatsMessage({ type: 'error', text: 'Não foi possível concluir a sincronização de todos os chats.' });
     } finally {
       setIsSyncingAllChats(false);
       setSyncAllChatsProgress((previousValue) => ({
@@ -231,6 +244,12 @@ export default function WhatsAppSettingsPage() {
                 </div>
 
                 {summaryError && <p className="mt-3 text-xs text-red-600">{summaryError}</p>}
+
+                {syncAllChatsMessage && (
+                  <p className={`mt-3 text-xs ${syncAllChatsMessage.type === 'success' ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {syncAllChatsMessage.text}
+                  </p>
+                )}
 
                 {isSyncingAllChats && (
                   <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">

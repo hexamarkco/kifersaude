@@ -45,6 +45,7 @@ import { InlineLinkPreviewCard } from './components/InlineLinkPreviewCard';
 import { searchGiphyLibrary } from './giphy';
 import {
   dataUrlToFile,
+  fileToDataUrl,
   loadRecentStickerItems,
   loadSavedStickerItems,
   rememberRecentSticker,
@@ -58,6 +59,7 @@ import type {
   IndexedQuickReplyItem,
   MediaPickerTabId,
   MessageInputProps,
+  OutboundRetryPayload,
   QuickReplyItem,
   RecentStickerItem,
   SavedStickerItem,
@@ -65,8 +67,12 @@ import type {
 } from './types';
 import { EMOJI_CATEGORIES_DATA } from './emojiData';
 import {
+  buildContactRetryPayload,
+  buildGifRetryPayload,
   buildIndexedQuickReplies,
   buildLinkPreviewRetryPayload,
+  buildLocationRetryPayload,
+  buildMediaRetryPayload,
   buildQuickReplyPreviewItems,
   buildSlashCommandState,
   buildTextRetryPayload,
@@ -940,6 +946,34 @@ function WhatsAppComposerComponent({
     return { normalizedChatId, messageId, persistedMessageId };
   };
 
+  const buildRetryableSentMessage = (params: {
+    localRef: string;
+    chatId: string;
+    body: string;
+    type: string;
+    hasMedia: boolean;
+    sentAt: string;
+    retryPayload: OutboundRetryPayload | null;
+    sendState: 'pending' | 'failed';
+    errorMessage: string | null;
+    payload?: Record<string, unknown> | null;
+  }): SentMessagePayload => ({
+    id: params.localRef,
+    local_ref: params.localRef,
+    chat_id: params.chatId,
+    body: params.body,
+    type: params.type,
+    has_media: params.hasMedia,
+    timestamp: params.sentAt,
+    direction: 'outbound',
+    created_at: params.sentAt,
+    ack_status: params.sendState === 'pending' ? 1 : 0,
+    send_state: params.sendState,
+    error_message: params.errorMessage,
+    retry_payload: params.retryPayload,
+    payload: params.payload ?? null,
+  });
+
   const sendPlainTextMessage = async (text: string, targetChatId: string = chatId) => {
     const resolvedText = applyTemplateVariables(text).trim() || text.trim();
     const localRef = createClientMessageId();
@@ -1399,58 +1433,93 @@ function WhatsAppComposerComponent({
           return;
         }
 
-        const response = await sendWhatsAppMessage({
-          chatId,
-          contentType: 'gif',
-          content: {
-            url: gifUrl,
-            mimetype: 'video/mp4',
-            preview: preview || undefined,
-            caption: resolvedMessage || undefined,
-            autoplay: true,
-          },
-          quotedMessageId: replyToMessage?.id,
+        const sentAt = new Date().toISOString();
+        const localRef = createClientMessageId();
+        const normalizedChatId = normalizeChatId(chatId);
+        const resolvedBody = resolvedMessage || '[GIF]';
+        const retryPayload = buildGifRetryPayload(gifUrl, {
+          preview,
+          caption: resolvedMessage || null,
+          quotedMessageId: replyToMessage?.id ?? null,
         });
 
-        const sentAt = new Date().toISOString();
-        const resolvedBody = resolvedMessage || '[GIF]';
-        const payloadOverride = buildGifPayloadOverride(selectedGif, response);
-        const { normalizedChatId, messageId } = await persistOutboundMessage({
-          response,
-          chatId,
-          type: 'gif',
+        emitMessageSent(buildRetryableSentMessage({
+          localRef,
+          chatId: normalizedChatId,
           body: resolvedBody,
+          type: 'gif',
           hasMedia: true,
           sentAt,
-          payloadOverride,
-        });
+          retryPayload,
+          sendState: 'pending',
+          errorMessage: null,
+        }));
 
-        const gifPayload: SentMessagePayload = {
-          id: messageId,
-          chat_id: normalizedChatId,
-          body: resolvedBody,
-          type: 'gif',
-          has_media: true,
-          timestamp: sentAt,
-          direction: 'outbound',
-          created_at: sentAt,
-          payload: payloadOverride,
-        };
+        try {
+          const response = await sendWhatsAppMessage({
+            chatId,
+            contentType: 'gif',
+            content: {
+              url: gifUrl,
+              mimetype: 'video/mp4',
+              preview: preview || undefined,
+              caption: resolvedMessage || undefined,
+              autoplay: true,
+            },
+            quotedMessageId: replyToMessage?.id,
+          });
 
-        clearSelectedGif();
-        updateComposerDraft('');
-        if (onCancelReply) onCancelReply();
-        emitMessageSent(gifPayload);
-        queueComposerFocusRestore();
+          const payloadOverride = buildGifPayloadOverride(selectedGif, response);
+          const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
+            response,
+            chatId,
+            type: 'gif',
+            body: resolvedBody,
+            hasMedia: true,
+            sentAt,
+            payloadOverride,
+          });
+
+          const gifPayload: SentMessagePayload = {
+            id: messageId,
+            local_ref: localRef,
+            chat_id: persistedChatId,
+            body: resolvedBody,
+            type: 'gif',
+            has_media: true,
+            timestamp: sentAt,
+            direction: 'outbound',
+            created_at: sentAt,
+            retry_payload: null,
+            payload: payloadOverride,
+          };
+
+          clearSelectedGif();
+          updateComposerDraft('');
+          if (onCancelReply) onCancelReply();
+          emitMessageSent(gifPayload);
+          queueComposerFocusRestore();
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar GIF';
+          emitMessageSent(buildRetryableSentMessage({
+            localRef,
+            chatId: normalizedChatId,
+            body: resolvedBody,
+            type: 'gif',
+            hasMedia: true,
+            sentAt,
+            retryPayload,
+            sendState: 'failed',
+            errorMessage,
+          }));
+          throw error;
+        }
       } else if (selectedFile) {
         const mediaMessageType = resolveOutgoingFileMessageType(selectedFile);
         const caption = mediaMessageType === 'sticker' ? '' : resolvedMessage;
-        const response = await sendMediaMessage(chatId, selectedFile, {
-          caption: caption || undefined,
-          quotedMessageId: replyToMessage?.id,
-        });
-
         const sentAt = new Date().toISOString();
+        const localRef = createClientMessageId();
+        const normalizedChatId = normalizeChatId(chatId);
         const fallbackBody = mediaMessageType === 'sticker'
           ? '[Sticker]'
           : selectedFile.type.startsWith('audio/')
@@ -1461,32 +1530,77 @@ function WhatsAppComposerComponent({
                 ? '[Vídeo]'
                 : '[Arquivo]';
         const resolvedBody = mediaMessageType === 'sticker' ? '[Sticker]' : caption || fallbackBody;
-        const { normalizedChatId, messageId } = await persistOutboundMessage({
-          response,
-          chatId,
-          type: mediaMessageType,
+        const retryPayload = buildMediaRetryPayload(
+          mediaMessageType,
+          selectedFile,
+          await fileToDataUrl(selectedFile),
+          {
+            caption: caption || null,
+            quotedMessageId: replyToMessage?.id ?? null,
+          },
+        );
+
+        emitMessageSent(buildRetryableSentMessage({
+          localRef,
+          chatId: normalizedChatId,
           body: resolvedBody,
+          type: mediaMessageType,
           hasMedia: true,
           sentAt,
-        });
+          retryPayload,
+          sendState: 'pending',
+          errorMessage: null,
+        }));
 
-        const mediaPayload: SentMessagePayload = {
-          id: messageId,
-          chat_id: normalizedChatId,
-          body: resolvedBody,
-          type: mediaMessageType,
-          has_media: true,
-          timestamp: sentAt,
-          direction: 'outbound',
-          created_at: sentAt,
-          payload: response,
-        };
+        try {
+          const response = await sendMediaMessage(chatId, selectedFile, {
+            caption: caption || undefined,
+            quotedMessageId: replyToMessage?.id,
+          });
 
-        clearFile();
-        updateComposerDraft('');
-        if (onCancelReply) onCancelReply();
-        emitMessageSent(mediaPayload);
-        queueComposerFocusRestore();
+          const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
+            response,
+            chatId,
+            type: mediaMessageType,
+            body: resolvedBody,
+            hasMedia: true,
+            sentAt,
+          });
+
+          const mediaPayload: SentMessagePayload = {
+            id: messageId,
+            local_ref: localRef,
+            chat_id: persistedChatId,
+            body: resolvedBody,
+            type: mediaMessageType,
+            has_media: true,
+            timestamp: sentAt,
+            direction: 'outbound',
+            created_at: sentAt,
+            retry_payload: null,
+            payload: response,
+          };
+
+          clearFile();
+          updateComposerDraft('');
+          if (onCancelReply) onCancelReply();
+          emitMessageSent(mediaPayload);
+          queueComposerFocusRestore();
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar arquivo';
+          emitMessageSent(buildRetryableSentMessage({
+            localRef,
+            chatId: normalizedChatId,
+            body: resolvedBody,
+            type: mediaMessageType,
+            hasMedia: true,
+            sentAt,
+            retryPayload,
+            sendState: 'failed',
+            errorMessage,
+          }));
+          throw error;
+        }
       } else if (rawMessage) {
         const currentDetectedUrl = detectedPreviewUrl;
 
@@ -1881,39 +1995,78 @@ function WhatsAppComposerComponent({
       setIsSending(true);
       const audioFile = new File([audioPreviewBlob], 'voice.ogg', { type: 'audio/ogg' });
       const durationSeconds = audioPreviewDuration || recordingTime;
-      const response = await sendMediaMessage(chatId, audioFile, {
-        quotedMessageId: replyToMessage?.id,
+      const sentAt = new Date().toISOString();
+      const localRef = createClientMessageId();
+      const normalizedChatId = normalizeChatId(chatId);
+      const retryPayload = buildMediaRetryPayload('voice', audioFile, await fileToDataUrl(audioFile), {
+        quotedMessageId: replyToMessage?.id ?? null,
+        asVoice: true,
         seconds: durationSeconds,
         recordingTime: durationSeconds,
-        asVoice: true,
       });
 
-      const sentAt = new Date().toISOString();
-      const { normalizedChatId, messageId } = await persistOutboundMessage({
-        response,
-        chatId,
-        type: 'voice',
+      emitMessageSent(buildRetryableSentMessage({
+        localRef,
+        chatId: normalizedChatId,
         body: '[Mensagem de voz]',
+        type: 'voice',
         hasMedia: true,
         sentAt,
-      });
+        retryPayload,
+        sendState: 'pending',
+        errorMessage: null,
+      }));
 
-      const audioPayload: SentMessagePayload = {
-        id: messageId,
-        chat_id: normalizedChatId,
-        body: '[Mensagem de voz]',
-        type: 'voice',
-        has_media: true,
-        timestamp: sentAt,
-        direction: 'outbound',
-        created_at: sentAt,
-        payload: response,
-      };
+      try {
+        const response = await sendMediaMessage(chatId, audioFile, {
+          quotedMessageId: replyToMessage?.id,
+          seconds: durationSeconds,
+          recordingTime: durationSeconds,
+          asVoice: true,
+        });
 
-      clearAudioPreview();
-      if (onCancelReply) onCancelReply();
-      emitMessageSent(audioPayload);
-      queueComposerFocusRestore();
+        const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
+          response,
+          chatId,
+          type: 'voice',
+          body: '[Mensagem de voz]',
+          hasMedia: true,
+          sentAt,
+        });
+
+        const audioPayload: SentMessagePayload = {
+          id: messageId,
+          local_ref: localRef,
+          chat_id: persistedChatId,
+          body: '[Mensagem de voz]',
+          type: 'voice',
+          has_media: true,
+          timestamp: sentAt,
+          direction: 'outbound',
+          created_at: sentAt,
+          retry_payload: null,
+          payload: response,
+        };
+
+        clearAudioPreview();
+        if (onCancelReply) onCancelReply();
+        emitMessageSent(audioPayload);
+        queueComposerFocusRestore();
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar mensagem de voz';
+        emitMessageSent(buildRetryableSentMessage({
+          localRef,
+          chatId: normalizedChatId,
+          body: '[Mensagem de voz]',
+          type: 'voice',
+          hasMedia: true,
+          sentAt,
+          retryPayload,
+          sendState: 'failed',
+          errorMessage,
+        }));
+        throw error;
+      }
     } catch (error) {
       console.error('Erro ao enviar áudio:', error);
       toast.error('Erro ao enviar mensagem de voz.');
@@ -2225,7 +2378,28 @@ function WhatsAppComposerComponent({
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        const sentAt = new Date().toISOString();
+        const localRef = createClientMessageId();
+        const normalizedChatId = normalizeChatId(chatId);
+        const retryPayload = buildLocationRetryPayload(
+          position.coords.latitude,
+          position.coords.longitude,
+          'Minha localização',
+        );
+
         try {
+          emitMessageSent(buildRetryableSentMessage({
+            localRef,
+            chatId: normalizedChatId,
+            body: '[Localização]',
+            type: 'location',
+            hasMedia: true,
+            sentAt,
+            retryPayload,
+            sendState: 'pending',
+            errorMessage: null,
+          }));
+
           const response = await sendWhatsAppMessage({
             chatId,
             contentType: 'Location',
@@ -2236,8 +2410,7 @@ function WhatsAppComposerComponent({
             },
           });
 
-          const sentAt = new Date().toISOString();
-          const { normalizedChatId, messageId } = await persistOutboundMessage({
+          const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
             response,
             chatId,
             type: 'location',
@@ -2248,18 +2421,32 @@ function WhatsAppComposerComponent({
 
           emitMessageSent({
               id: messageId,
-              chat_id: normalizedChatId,
+              local_ref: localRef,
+              chat_id: persistedChatId,
               body: '[Localização]',
               type: 'location',
               has_media: true,
               timestamp: sentAt,
               direction: 'outbound',
               created_at: sentAt,
+              retry_payload: null,
               payload: response,
             });
           queueComposerFocusRestore();
         } catch (error) {
           console.error('Erro ao enviar localização:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar localização.';
+          emitMessageSent(buildRetryableSentMessage({
+            localRef,
+            chatId: normalizedChatId,
+            body: '[Localização]',
+            type: 'location',
+            hasMedia: true,
+            sentAt,
+            retryPayload,
+            sendState: 'failed',
+            errorMessage,
+          }));
           toast.error('Erro ao enviar localização.');
         } finally {
           setIsSending(false);
@@ -2285,8 +2472,26 @@ function WhatsAppComposerComponent({
       return;
     }
 
+    const sentAt = new Date().toISOString();
+    const localRef = createClientMessageId();
+    const normalizedChatId = normalizeChatId(chatId);
+    const body = `[Contato: ${contact.name}]`;
+    const retryPayload = buildContactRetryPayload(contact.name, phone, replyToMessage?.id ?? null);
+
     setIsSending(true);
     try {
+      emitMessageSent(buildRetryableSentMessage({
+        localRef,
+        chatId: normalizedChatId,
+        body,
+        type: 'contact',
+        hasMedia: false,
+        sentAt,
+        retryPayload,
+        sendState: 'pending',
+        errorMessage: null,
+      }));
+
       const response = await sendWhatsAppMessage({
         chatId,
         contentType: 'Contact',
@@ -2297,9 +2502,7 @@ function WhatsAppComposerComponent({
         quotedMessageId: replyToMessage?.id,
       });
 
-      const sentAt = new Date().toISOString();
-      const body = `[Contato: ${contact.name}]`;
-      const { normalizedChatId, messageId } = await persistOutboundMessage({
+      const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
         response,
         chatId,
         type: 'contact',
@@ -2310,13 +2513,15 @@ function WhatsAppComposerComponent({
 
       const contactPayload: SentMessagePayload = {
         id: messageId,
-        chat_id: normalizedChatId,
+        local_ref: localRef,
+        chat_id: persistedChatId,
         body,
         type: 'contact',
         has_media: false,
         timestamp: sentAt,
         direction: 'outbound',
         created_at: sentAt,
+        retry_payload: null,
         payload: response,
       };
 
@@ -2327,6 +2532,18 @@ function WhatsAppComposerComponent({
       queueComposerFocusRestore();
     } catch (error) {
       console.error('Erro ao enviar contato:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar contato.';
+      emitMessageSent(buildRetryableSentMessage({
+        localRef,
+        chatId: normalizedChatId,
+        body,
+        type: 'contact',
+        hasMedia: false,
+        sentAt,
+        retryPayload,
+        sendState: 'failed',
+        errorMessage,
+      }));
       toast.error('Erro ao enviar contato.');
     } finally {
       setIsSending(false);

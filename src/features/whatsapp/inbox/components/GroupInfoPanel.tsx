@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Crown, ChevronDown, ChevronUp, Shield, User as UserIcon, Users, X } from 'lucide-react';
 import { supabase } from '../../../../lib/supabase';
 import { formatPhoneDisplay } from '../../../../lib/phoneFormatting';
@@ -43,12 +43,22 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
   const [participants, setParticipants] = useState<GroupParticipant[]>([]);
   const [events, setEvents] = useState<GroupEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showEvents, setShowEvents] = useState(false);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    let cancelled = false;
+
     const loadGroupData = async () => {
       try {
         setLoading(true);
+        setError(null);
+        setGroupInfo(null);
+        setParticipants([]);
+        setEvents([]);
 
         const [groupResult, participantsResult, eventsResult] = await Promise.all([
           supabase.from('whatsapp_groups').select('*').eq('id', groupId).maybeSingle(),
@@ -66,17 +76,57 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
             .limit(20),
         ]);
 
-        if (groupResult.data) setGroupInfo(groupResult.data);
-        if (participantsResult.data) setParticipants(participantsResult.data);
-        if (eventsResult.data) setEvents(eventsResult.data);
+        if (cancelled || requestIdRef.current !== requestId) {
+          return;
+        }
+
+        if (groupResult.error) {
+          throw new Error(`Nao foi possivel carregar os dados do grupo: ${groupResult.error.message}`);
+        }
+
+        if (!groupResult.data) {
+          setError('Grupo nao encontrado.');
+          return;
+        }
+
+        setGroupInfo(groupResult.data);
+
+        const partialErrors: string[] = [];
+
+        if (participantsResult.error) {
+          partialErrors.push('participantes');
+        } else {
+          setParticipants(participantsResult.data ?? []);
+        }
+
+        if (eventsResult.error) {
+          partialErrors.push('eventos');
+        } else {
+          setEvents(eventsResult.data ?? []);
+        }
+
+        if (partialErrors.length > 0) {
+          setError(`Nao foi possivel carregar ${partialErrors.join(' e ')} do grupo.`);
+        }
       } catch (error) {
+        if (cancelled || requestIdRef.current !== requestId) {
+          return;
+        }
+
         console.error('Erro ao carregar dados do grupo:', error);
+        setError(error instanceof Error ? error.message : 'Nao foi possivel carregar os dados do grupo.');
       } finally {
-        setLoading(false);
+        if (!cancelled && requestIdRef.current === requestId) {
+          setLoading(false);
+        }
       }
     };
 
     void loadGroupData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [groupId]);
 
   const getRankIcon = (rank: string) => {
@@ -137,7 +187,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
   if (!groupInfo) {
     return (
       <div className={`${panelShellClass} items-center justify-center`}>
-        <p className="comm-muted">Grupo não encontrado</p>
+        <p className="comm-muted text-center">{error || 'Grupo não encontrado'}</p>
       </div>
     );
   }
@@ -164,6 +214,12 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
             <h2 className="comm-title text-center text-lg font-semibold">{groupInfo.name}</h2>
             <p className="comm-muted mt-1 text-sm">Criado em {formatDate(groupInfo.created_at)}</p>
           </div>
+
+          {error && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {error}
+            </div>
+          )}
         </div>
 
         <div className="border-b border-[var(--panel-border-subtle,#e7dac8)] p-4">

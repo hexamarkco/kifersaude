@@ -20,6 +20,12 @@ const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
+const throwIfMutationError = (operation: string, error: { message: string } | null) => {
+  if (error) {
+    throw new Error(`${operation}: ${error.message}`);
+  }
+};
+
 const DEFAULT_SYNC_COUNT = 200;
 const MAX_SYNC_COUNT = 500;
 
@@ -1053,7 +1059,7 @@ Deno.serve(async (req) => {
       existingChat?.last_message_at ??
       lastMessageAt;
 
-    await supabase.from('whatsapp_chats').upsert(
+    const { error: upsertChatError } = await supabase.from('whatsapp_chats').upsert(
       {
         id: resolvedRequestedChatId,
         name: chatName,
@@ -1068,36 +1074,38 @@ Deno.serve(async (req) => {
       },
       { onConflict: 'id' },
     );
+    throwIfMutationError('Erro ao atualizar chat sincronizado', upsertChatError);
 
     if (resolvedRequestedChatId !== requestedChatId) {
-      await supabase
+      const { error: outboundChatRewriteError } = await supabase
         .from('whatsapp_messages')
         .update({ to_number: resolvedRequestedChatId })
         .eq('chat_id', requestedChatId)
         .eq('direction', 'outbound');
+      throwIfMutationError('Erro ao atualizar destino das mensagens de saida do chat canonico', outboundChatRewriteError);
 
-      await supabase
+      const { error: messageChatRewriteError } = await supabase
         .from('whatsapp_messages')
         .update({ chat_id: resolvedRequestedChatId })
         .eq('chat_id', requestedChatId);
+      throwIfMutationError('Erro ao atualizar mensagens para o chat canonico', messageChatRewriteError);
 
       const { error: historyUpdateError } = await supabase
         .from('whatsapp_message_history')
         .update({ chat_id: resolvedRequestedChatId })
         .eq('chat_id', requestedChatId);
 
-      if (historyUpdateError) {
-        console.warn('Erro ao atualizar historico do chat canonico apos sync', historyUpdateError);
-      }
+      throwIfMutationError('Erro ao atualizar historico do chat canonico apos sync', historyUpdateError);
 
-      await supabase
+      const { error: deleteCanonicalSourceChatError } = await supabase
         .from('whatsapp_chats')
         .delete()
         .eq('id', requestedChatId);
+      throwIfMutationError('Erro ao remover chat substituido pela versao canonica', deleteCanonicalSourceChatError);
     }
 
     if (isGroup && chatName) {
-      await supabase
+      const { error: upsertGroupError } = await supabase
         .from('whatsapp_groups')
         .upsert(
           {
@@ -1113,11 +1121,13 @@ Deno.serve(async (req) => {
           },
           { onConflict: 'id', ignoreDuplicates: true },
         );
+      throwIfMutationError('Erro ao registrar grupo sincronizado', upsertGroupError);
 
-      await supabase
+      const { error: updateGroupError } = await supabase
         .from('whatsapp_groups')
         .update({ name: chatName, type: 'group', name_at: nowIso, last_updated_at: nowIso })
         .eq('id', resolvedRequestedChatId);
+      throwIfMutationError('Erro ao atualizar metadados do grupo sincronizado', updateGroupError);
     }
 
     const normalized = messages

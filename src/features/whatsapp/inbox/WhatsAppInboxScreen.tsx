@@ -1,5 +1,5 @@
 import { memo, startTransition, useCallback, useState, useEffect, useRef, useMemo, useDeferredValue } from 'react';
-import { supabase, fetchAllPages, type Lead } from '../../../lib/supabase';
+import { supabase, type Lead } from '../../../lib/supabase';
 import {
   Search,
   MessageCircle,
@@ -50,6 +50,7 @@ import ReminderSchedulerModal from '../../../components/ReminderSchedulerModal';
 import { useAdaptiveLoading } from '../../../hooks/useAdaptiveLoading';
 import { useConfirmationModal } from '../../../hooks/useConfirmationModal';
 import { useWhatsAppInboxPreferences } from '../../../hooks/useWhatsAppInboxPreferences';
+import { searchWhatsAppInboxLeads } from '../../../lib/whatsappInboxLeadService';
 import { shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../../lib/leadReminderUtils';
 import { addBusinessDaysSkippingWeekends } from '../../../lib/reminderUtils';
 import { isHiddenTechnicalActionMessage, resolveWhatsAppMessageBody } from '../../../lib/whatsappMessageBody';
@@ -57,6 +58,7 @@ import { formatWhatsAppAudioTranscriptionLabel, getWhatsAppAudioTranscription } 
 import { SAO_PAULO_TIMEZONE, getDateKey } from '../../../lib/dateUtils';
 import {
   CHAT_PREVIEW_VARIANTS_BATCH_SIZE,
+  CHAT_SEARCH_MESSAGE_INDEX_LIMIT,
   DAY_SEPARATOR_LABEL_FORMATTER,
   EMPTY_FILTER_VALUE,
   getChatTypeBadgeClass,
@@ -404,6 +406,8 @@ export default function WhatsAppInboxScreen() {
   const [newChatSearch, setNewChatSearch] = useState('');
   const [newChatTab, setNewChatTab] = useState<'leads' | 'contacts' | 'manual'>('leads');
   const [newChatPhone, setNewChatPhone] = useState('');
+  const [leadDirectoryResults, setLeadDirectoryResults] = useState<InboxLeadSummary[]>([]);
+  const [isLoadingLeadDirectory, setIsLoadingLeadDirectory] = useState(false);
   const [syncingChatId, setSyncingChatId] = useState<string | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
@@ -457,8 +461,8 @@ export default function WhatsAppInboxScreen() {
   const selectedChatRef = useRef<WhatsAppChat | null>(null);
   const newsletterNamesByIdRef = useRef<Map<string, string>>(new Map());
   const newsletterNameLookupAttemptsRef = useRef<Set<string>>(new Set());
-  const leadNamesLoadedRef = useRef(false);
-  const leadNamesRequestRef = useRef<Promise<void> | null>(null);
+  const loadedLeadMatchKeysRef = useRef<Set<string>>(new Set());
+  const leadDirectoryRequestIdRef = useRef(0);
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -571,7 +575,7 @@ export default function WhatsAppInboxScreen() {
 
   const buildMessagesSearchIndex = (messages: WhatsAppMessage[]) =>
     messages
-      .slice(-80)
+      .slice(-CHAT_SEARCH_MESSAGE_INDEX_LIMIT)
       .map((message) => getMessageSearchHaystack(message))
       .filter(Boolean)
       .join(' ');
@@ -1655,6 +1659,88 @@ export default function WhatsAppInboxScreen() {
     return isWindowFocusedRef.current;
   }, []);
 
+  const mergeLeadSummaries = useCallback((incomingLeads: InboxLeadSummary[]) => {
+    setLeadsList((prev) => {
+      const nextById = new Map(prev.map((lead) => [lead.id, lead]));
+      incomingLeads.forEach((lead) => {
+        if (lead.id) {
+          nextById.set(lead.id, lead);
+        }
+      });
+      return Array.from(nextById.values());
+    });
+  }, []);
+
+  const loadLeadMatchesForChats = useCallback(async (sourceChats: WhatsAppChat[]) => {
+    const directChatKeys = Array.from(
+      new Set(
+        sourceChats.flatMap((chat) => getLeadMatchKeysForChat(chat)).filter(Boolean),
+      ),
+    );
+    const missingKeys = directChatKeys.filter((key) => !loadedLeadMatchKeysRef.current.has(key));
+    if (missingKeys.length === 0) {
+      return;
+    }
+
+    const batchSize = 100;
+    const mergedResults: InboxLeadSummary[] = [];
+
+    for (let index = 0; index < missingKeys.length; index += batchSize) {
+      const batch = missingKeys.slice(index, index + batchSize);
+      const rows = await searchWhatsAppInboxLeads({ phoneNumbers: batch, limit: 250 });
+      mergedResults.push(
+        ...rows
+          .map((lead) => ({
+            id: lead.id,
+            name: lead.nome_completo?.trim() || normalizePhoneNumber(lead.telefone) || '',
+            phone: normalizePhoneNumber(lead.telefone),
+            status: lead.status ?? null,
+            responsavel: lead.responsavel_id ?? null,
+          }))
+          .filter((lead) => Boolean(lead.phone)),
+      );
+      batch.forEach((key) => loadedLeadMatchKeysRef.current.add(key));
+    }
+
+    if (mergedResults.length > 0) {
+      mergeLeadSummaries(mergedResults);
+    }
+  }, [mergeLeadSummaries]);
+
+  const loadLeadDirectorySearch = useCallback(async (query: string) => {
+    leadDirectoryRequestIdRef.current += 1;
+    const requestId = leadDirectoryRequestIdRef.current;
+
+    setIsLoadingLeadDirectory(true);
+    try {
+      const rows = await searchWhatsAppInboxLeads({ query, limit: query ? 120 : 80 });
+      if (leadDirectoryRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      const nextResults = rows
+        .map((lead) => ({
+          id: lead.id,
+          name: lead.nome_completo?.trim() || normalizePhoneNumber(lead.telefone) || '',
+          phone: normalizePhoneNumber(lead.telefone),
+          status: lead.status ?? null,
+          responsavel: lead.responsavel_id ?? null,
+        }))
+        .filter((lead) => Boolean(lead.phone));
+
+      setLeadDirectoryResults(nextResults);
+      mergeLeadSummaries(nextResults);
+    } catch (err) {
+      if (leadDirectoryRequestIdRef.current === requestId) {
+        console.error('Error loading lead directory search:', err);
+      }
+    } finally {
+      if (leadDirectoryRequestIdRef.current === requestId) {
+        setIsLoadingLeadDirectory(false);
+      }
+    }
+  }, [mergeLeadSummaries]);
+
   useEffect(() => {
     return () => {
       activeDesktopNotificationRef.current?.close();
@@ -1663,62 +1749,6 @@ export default function WhatsAppInboxScreen() {
         notificationAudioRef.current = null;
       }
     };
-  }, []);
-
-  const loadLeadNames = useCallback(async (options?: { force?: boolean }) => {
-    const force = options?.force ?? false;
-    if (!force) {
-      if (leadNamesLoadedRef.current) {
-        return;
-      }
-
-      if (leadNamesRequestRef.current) {
-        await leadNamesRequestRef.current;
-        return;
-      }
-    }
-
-    let request: Promise<void> | null = null;
-    request = (async () => {
-      try {
-        const data = await fetchAllPages<{
-          id: string;
-          telefone: string;
-          nome_completo: string;
-          status?: string | null;
-          responsavel_id?: string | null;
-        }>(async (from, to) => {
-          const response = await supabase
-            .from('leads')
-            .select('id, telefone, nome_completo, status, responsavel_id')
-            .order('created_at', { ascending: false })
-            .range(from, to);
-          return { data: response.data, error: response.error };
-        });
-
-        setLeadsList(
-          (data || [])
-            .map((lead) => ({
-              id: lead.id,
-              name: lead.nome_completo,
-              phone: normalizePhoneNumber(lead.telefone),
-              status: lead.status ?? null,
-              responsavel: lead.responsavel_id ?? null,
-            }))
-            .filter((lead) => Boolean(lead.phone)),
-        );
-        leadNamesLoadedRef.current = true;
-      } catch (err) {
-        console.error('Error loading lead names:', err);
-      } finally {
-        if (leadNamesRequestRef.current === request) {
-          leadNamesRequestRef.current = null;
-        }
-      }
-    })();
-
-    leadNamesRequestRef.current = request;
-    await request;
   }, []);
 
   const loadSavedContacts = useCallback(async () => {
@@ -1809,9 +1839,6 @@ export default function WhatsAppInboxScreen() {
         event.preventDefault();
         setShowNewChatModal(true);
         setNewChatTab('leads');
-        if (leadsList.length === 0) {
-          void loadLeadNames();
-        }
         return;
       }
 
@@ -1908,16 +1935,9 @@ export default function WhatsAppInboxScreen() {
       setLegacyContactPhotosById(buildLegacyContactPhotoMap(data || []));
     };
 
-    void loadLeadNames();
     void loadSavedContacts();
     void loadContactPhotoFallbacks();
-  }, [loadLeadNames, loadSavedContacts]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    if (leadsList.length > 0) return;
-    void loadLeadNames();
-  }, [loadLeadNames, leadsList.length, user?.id]);
+  }, [loadSavedContacts]);
 
   useEffect(() => {
     const loadLeadStatuses = async () => {
@@ -1945,7 +1965,6 @@ export default function WhatsAppInboxScreen() {
         if (payload.eventType === 'DELETE') {
           const deletedLeadId = (payload.old as { id?: string } | null)?.id;
           if (!deletedLeadId) return;
-          leadNamesLoadedRef.current = true;
           setLeadsList((prev) => prev.filter((lead) => lead.id !== deletedLeadId));
           return;
         }
@@ -1990,7 +2009,6 @@ export default function WhatsAppInboxScreen() {
           next[existingIndex] = nextLead;
           return next;
         });
-        leadNamesLoadedRef.current = true;
       })
       .subscribe();
 
@@ -1998,6 +2016,24 @@ export default function WhatsAppInboxScreen() {
       void supabase.removeChannel(leadsSubscription);
     };
   }, []);
+
+  useEffect(() => {
+    if (chats.length === 0) {
+      return;
+    }
+
+    void loadLeadMatchesForChats(chats);
+  }, [chats, loadLeadMatchesForChats]);
+
+  const deferredLeadDirectorySearch = useDeferredValue(newChatSearch.trim());
+
+  useEffect(() => {
+    if (!showNewChatModal || newChatTab !== 'leads') {
+      return;
+    }
+
+    void loadLeadDirectorySearch(deferredLeadDirectorySearch);
+  }, [deferredLeadDirectorySearch, loadLeadDirectorySearch, newChatTab, showNewChatModal]);
 
   useEffect(() => {
     void loadChats();
@@ -2662,7 +2698,10 @@ export default function WhatsAppInboxScreen() {
         return mergedChats.find((chat) => chat.id === current.id || areEquivalentDirectChats(chat, current)) ?? current;
       });
 
-      void refreshChatPreviewsFromMessages(mergedChats, currentLoadId);
+      const chatsNeedingPreviewRefresh = mergedChats.filter((chat) => needsChatPreviewRefresh(chat)).slice(0, 120);
+      if (chatsNeedingPreviewRefresh.length > 0) {
+        void refreshChatPreviewsFromMessages(chatsNeedingPreviewRefresh, currentLoadId);
+      }
       void loadUnreadCounts();
       void loadGroupNames(mergedChats);
       void loadNewsletterNames(mergedChats);
@@ -4057,6 +4096,11 @@ export default function WhatsAppInboxScreen() {
     last_message_at: preview?.timestamp ?? null,
   });
 
+  const needsChatPreviewRefresh = (chat: Pick<WhatsAppChat, 'last_message' | 'last_message_at'>) => {
+    const preview = sanitizeTechnicalCiphertextPreview(chat.last_message) || null;
+    return !preview || !chat.last_message_at;
+  };
+
   const hasChatPreviewChanged = (
     currentChat: Pick<WhatsAppChat, 'last_message' | 'last_message_direction' | 'last_message_at'>,
     nextPreview: PersistedChatPreview,
@@ -5177,11 +5221,7 @@ export default function WhatsAppInboxScreen() {
     leadStatuses.forEach((status) => map.set(status.nome, status));
     return map;
   }, [leadStatuses]);
-  const filteredLeads = useMemo(() => {
-    const query = newChatSearch.trim().toLowerCase();
-    if (!query) return leadsList;
-    return leadsList.filter((lead) => lead.name.toLowerCase().includes(query) || lead.phone.includes(query));
-  }, [leadsList, newChatSearch]);
+  const filteredLeads = useMemo(() => leadDirectoryResults, [leadDirectoryResults]);
 
   const filteredContacts = useMemo(() => {
     const query = newChatSearch.trim().toLowerCase();
@@ -7199,7 +7239,12 @@ export default function WhatsAppInboxScreen() {
 
               {newChatTab === 'leads' && (
                 <div className="max-h-72 overflow-y-auto border rounded-lg">
-                  {filteredLeads.length === 0 ? (
+                  {isLoadingLeadDirectory ? (
+                    <div className="flex items-center gap-2 p-3 text-sm text-slate-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Buscando leads...
+                    </div>
+                  ) : filteredLeads.length === 0 ? (
                     <div className="p-3 text-sm text-slate-500">Nenhum lead encontrado.</div>
                   ) : (
                     filteredLeads.map((lead, index) => (
@@ -7545,9 +7590,6 @@ export default function WhatsAppInboxScreen() {
                   onClick={() => {
                     setShowNewChatModal(true);
                     setNewChatTab('leads');
-                    if (leadsList.length === 0) {
-                      void loadLeadNames();
-                    }
                   }}
                   title="Novo chat"
                   aria-label="Novo chat"

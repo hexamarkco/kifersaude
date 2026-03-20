@@ -32,6 +32,7 @@ export const DAY_SEPARATOR_LABEL_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
 
 export const EMPTY_FILTER_VALUE = '__empty__';
 export const CHAT_PREVIEW_VARIANTS_BATCH_SIZE = 40;
+export const CHAT_SEARCH_MESSAGE_INDEX_LIMIT = 80;
 
 export const REMINDER_QUICK_OPEN_PERIODS: Array<{
   id: ReminderQuickOpenPeriod;

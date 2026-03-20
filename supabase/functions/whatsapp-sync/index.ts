@@ -922,6 +922,399 @@ const toIsoString = (timestamp: unknown): string | null => {
   return null;
 };
 
+type SyncRequestPayload = {
+  action?: unknown;
+  chatId?: unknown;
+  count?: unknown;
+};
+
+type SyncSingleChatResult = {
+  chatId: string;
+  count: number;
+  skipped?: string;
+};
+
+const parseSyncCount = (rawCount: unknown): number => {
+  const numericCount = typeof rawCount === 'number' ? rawCount : Number(rawCount);
+  const requestedCount = Number.isFinite(numericCount) ? Math.trunc(numericCount) : DEFAULT_SYNC_COUNT;
+  return Math.min(Math.max(requestedCount, 1), MAX_SYNC_COUNT);
+};
+
+const loadWhapiToken = async (supabaseAdmin: ReturnType<typeof createClient>) => {
+  const { data: settingsRow, error: settingsError } = await supabaseAdmin
+    .from('integration_settings')
+    .select('settings')
+    .eq('slug', 'whatsapp_auto_contact')
+    .maybeSingle();
+
+  if (settingsError) {
+    throw new Error(settingsError.message);
+  }
+
+  const token = sanitizeWhapiToken(settingsRow?.settings?.apiKey || settingsRow?.settings?.token || '');
+  if (!token) {
+    throw new Error('Token Whapi nao configurado');
+  }
+
+  return token;
+};
+
+const syncSingleChat = async ({
+  supabaseAdmin,
+  token,
+  rawChatId,
+  count,
+}: {
+  supabaseAdmin: ReturnType<typeof createClient>;
+  token: string;
+  rawChatId: string;
+  count: number;
+}): Promise<SyncSingleChatResult> => {
+  const requestedChatId = normalizeDirectChatId(rawChatId);
+  if (!requestedChatId) {
+    throw new Error('chatId obrigatorio.');
+  }
+
+  if (isStatusChatId(requestedChatId)) {
+    return { chatId: requestedChatId, count: 0, skipped: 'status_chat_ignored' };
+  }
+
+  const queryParams = new URLSearchParams();
+  queryParams.append('count', String(count));
+  queryParams.append('offset', '0');
+  queryParams.append('sort', 'desc');
+
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(requestedChatId)}?${queryParams}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Falha ao sincronizar mensagens na Whapi. Status ${response.status}`);
+  }
+
+  const payload = (await response.json()) as WhapiMessageListResponse;
+  const messages = (payload.messages || []).filter((message) => !isStatusStoryMessage(message));
+
+  if (messages.length === 0) {
+    return { chatId: requestedChatId, count: 0 };
+  }
+
+  const resolvedRequestedChatId = resolveRequestedChatIdFromMessages(requestedChatId, messages);
+  const chatKind = getChatIdKind(resolvedRequestedChatId);
+  if (chatKind === 'status') {
+    return { chatId: requestedChatId, count: 0, skipped: 'status_chat_ignored' };
+  }
+
+  const isGroup = chatKind === 'group';
+  const isChannelChat = chatKind === 'newsletter' || chatKind === 'broadcast';
+  const nowIso = new Date().toISOString();
+  const latestMessageAt = messages
+    .map((message) => toIsoString(message.timestamp))
+    .reduce<string | null>((latest, current) => getLatestIsoTimestamp(latest, current), null);
+  const lastMessageAt = latestMessageAt ?? nowIso;
+  const messageChatNameRaw = messages.find((message) => message.chat_name?.trim())?.chat_name?.trim() || null;
+  const messageChatName = messageChatNameRaw && messageChatNameRaw !== resolvedRequestedChatId ? messageChatNameRaw : null;
+  const { data: existingChat } = await supabaseAdmin
+    .from('whatsapp_chats')
+    .select('name, last_message_at, last_message, last_message_direction, phone_number, lid')
+    .eq('id', resolvedRequestedChatId)
+    .maybeSingle();
+
+  const existingChatName = existingChat?.name?.trim() || null;
+
+  let chatName = existingChatName;
+  if (isGroup) {
+    const canonicalGroupName = await fetchGroupName(token, resolvedRequestedChatId);
+    chatName = canonicalGroupName ?? messageChatName ?? existingChatName ?? resolvedRequestedChatId;
+  } else if (isChannelChat) {
+    const channelName = messageChatName ?? (await fetchNewsletterName(token, resolvedRequestedChatId));
+    if (channelName) {
+      chatName = channelName;
+    } else if (chatKind === 'newsletter') {
+      chatName = existingChatName ?? 'Canal sem nome';
+    } else {
+      chatName = existingChatName ?? 'Transmissao sem nome';
+    }
+  }
+
+  const nextLastMessageAt =
+    getLatestIsoTimestamp(existingChat?.last_message_at ?? null, lastMessageAt) ??
+    existingChat?.last_message_at ??
+    lastMessageAt;
+
+  const { error: upsertChatError } = await supabaseAdmin.from('whatsapp_chats').upsert(
+    {
+      id: resolvedRequestedChatId,
+      name: chatName,
+      is_group: isGroup,
+      phone_number:
+        chatKind === 'direct' ? extractChatPhoneNumber(resolvedRequestedChatId) ?? existingChat?.phone_number ?? null : null,
+      lid: chatKind === 'direct' ? extractChatLid(resolvedRequestedChatId) ?? existingChat?.lid ?? null : null,
+      last_message: existingChat?.last_message ?? null,
+      last_message_direction: existingChat?.last_message_direction ?? null,
+      last_message_at: nextLastMessageAt,
+      updated_at: nowIso,
+    },
+    { onConflict: 'id' },
+  );
+  throwIfMutationError('Erro ao atualizar chat sincronizado', upsertChatError);
+
+  if (resolvedRequestedChatId !== requestedChatId) {
+    const { error: outboundChatRewriteError } = await supabaseAdmin
+      .from('whatsapp_messages')
+      .update({ to_number: resolvedRequestedChatId })
+      .eq('chat_id', requestedChatId)
+      .eq('direction', 'outbound');
+    throwIfMutationError('Erro ao atualizar destino das mensagens de saida do chat canonico', outboundChatRewriteError);
+
+    const { error: messageChatRewriteError } = await supabaseAdmin
+      .from('whatsapp_messages')
+      .update({ chat_id: resolvedRequestedChatId })
+      .eq('chat_id', requestedChatId);
+    throwIfMutationError('Erro ao atualizar mensagens para o chat canonico', messageChatRewriteError);
+
+    const { error: historyUpdateError } = await supabaseAdmin
+      .from('whatsapp_message_history')
+      .update({ chat_id: resolvedRequestedChatId })
+      .eq('chat_id', requestedChatId);
+    throwIfMutationError('Erro ao atualizar historico do chat canonico apos sync', historyUpdateError);
+
+    const { error: deleteCanonicalSourceChatError } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .delete()
+      .eq('id', requestedChatId);
+    throwIfMutationError('Erro ao remover chat substituido pela versao canonica', deleteCanonicalSourceChatError);
+  }
+
+  if (isGroup && chatName) {
+    const { error: upsertGroupError } = await supabaseAdmin
+      .from('whatsapp_groups')
+      .upsert(
+        {
+          id: resolvedRequestedChatId,
+          name: chatName,
+          type: 'group',
+          created_at: nowIso,
+          created_by: 'system',
+          name_at: nowIso,
+          admin_add_member_mode: true,
+          first_seen_at: nowIso,
+          last_updated_at: nowIso,
+        },
+        { onConflict: 'id', ignoreDuplicates: true },
+      );
+    throwIfMutationError('Erro ao registrar grupo sincronizado', upsertGroupError);
+
+    const { error: updateGroupError } = await supabaseAdmin
+      .from('whatsapp_groups')
+      .update({ name: chatName, type: 'group', name_at: nowIso, last_updated_at: nowIso })
+      .eq('id', resolvedRequestedChatId);
+    throwIfMutationError('Erro ao atualizar metadados do grupo sincronizado', updateGroupError);
+  }
+
+  const normalized = messages
+    .filter((message) => {
+      if (message.type !== 'action') return true;
+      const actionType = normalizeActionType(message.action?.type);
+      return actionType !== 'edit' && actionType !== 'edited';
+    })
+    .map((message) => {
+      const direction = message.from_me ? 'outbound' : 'inbound';
+      const { body, hasMedia } = buildMessageBody(message);
+      const actionType = normalizeActionType(message.action?.type);
+      const messageChatIdRaw = actionType === 'reaction' && message.action?.target ? resolvedRequestedChatId : message.chat_id;
+      let messageChatId = normalizeDirectChatId(messageChatIdRaw || resolvedRequestedChatId);
+      const normalizedFrom = normalizeMaybeDirectId(message.from);
+      if (direction === 'inbound') {
+        messageChatId = resolveInboundCanonicalDirectChatId(messageChatIdRaw || '', messageChatId, normalizedFrom);
+      }
+      const normalizedFromNumber = direction === 'inbound' ? (normalizedFrom || messageChatId) : null;
+      const normalizedToNumber = direction === 'outbound' ? messageChatId : null;
+      const incomingTimestamp = toIsoString(message.timestamp);
+
+      return {
+        id: message.id,
+        chat_id: messageChatId,
+        from_number: normalizedFromNumber,
+        to_number: normalizedToNumber,
+        type: message.type,
+        body,
+        has_media: hasMedia,
+        timestamp: incomingTimestamp,
+        payload: {
+          ...message,
+          ...(isGroup && chatName && !message.chat_name ? { chat_name: chatName } : {}),
+        },
+        direction,
+        ack_status: mapStatusToAck(message.status),
+        author: message.from_name ?? null,
+        is_deleted: actionType === 'delete' || message.type === 'revoked',
+        edit_count: message.edit_history?.length ?? 0,
+        edited_at: toIsoString(message.edited_at),
+        original_body: message.text?.body ?? body,
+      };
+    });
+
+  const messageIds = normalized.map((message) => message.id);
+  type ExistingMessageSnapshot = {
+    id: string;
+    timestamp: string | null;
+    created_at: string | null;
+    is_deleted: boolean | null;
+    deleted_at: string | null;
+    deleted_by: string | null;
+    edit_count: number | null;
+    edited_at: string | null;
+    original_body: string | null;
+    ack_status: number | null;
+    payload: Record<string, unknown> | null;
+    transcription_text: string | null;
+  };
+
+  const { data: existingMessages, error: existingMessagesError } = await supabaseAdmin
+    .from('whatsapp_messages')
+    .select('id, timestamp, created_at, is_deleted, deleted_at, deleted_by, edit_count, edited_at, original_body, ack_status, payload, transcription_text')
+    .in('id', messageIds);
+
+  if (existingMessagesError) {
+    throw new Error(existingMessagesError.message);
+  }
+
+  const existingById = new Map<string, ExistingMessageSnapshot>(
+    ((existingMessages as ExistingMessageSnapshot[] | null) || []).map((row) => [row.id, row]),
+  );
+
+  const mergedMessages = normalized.map((message) => {
+    const existing = existingById.get(message.id);
+    if (!existing) {
+      return message;
+    }
+
+    const mergedIsDeleted = Boolean(existing.is_deleted) || Boolean(message.is_deleted);
+    return {
+      ...message,
+      payload:
+        existing.payload && typeof existing.payload === 'object'
+          ? {
+              ...existing.payload,
+              ...message.payload,
+            }
+          : message.payload,
+      transcription_text: existing.transcription_text ?? null,
+      is_deleted: mergedIsDeleted,
+      deleted_at: mergedIsDeleted ? existing.deleted_at ?? message.timestamp ?? nowIso : null,
+      deleted_by: mergedIsDeleted ? existing.deleted_by ?? 'unknown' : null,
+      edit_count: Math.max(existing.edit_count ?? 0, message.edit_count ?? 0),
+      edited_at: existing.edited_at ?? message.edited_at,
+      original_body: existing.original_body ?? message.original_body ?? message.body,
+      ack_status: mergeAckStatus(existing.ack_status, message.ack_status),
+      timestamp: mergeMessageTimestamp(existing.timestamp, message.timestamp, existing.created_at),
+    };
+  });
+
+  const { error: insertError } = await supabaseAdmin
+    .from('whatsapp_messages')
+    .upsert(mergedMessages, { onConflict: 'id' });
+
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
+
+  await refreshChatLastMessageState(supabaseAdmin, resolvedRequestedChatId);
+
+  return { chatId: resolvedRequestedChatId, count: mergedMessages.length };
+};
+
+const loadChatsForBulkSync = async (supabaseAdmin: ReturnType<typeof createClient>) => {
+  const chats: Array<{ id: string; name: string | null; phone_number: string | null }> = [];
+  const pageSize = 500;
+  let offset = 0;
+
+  while (true) {
+    const { data, error } = await supabaseAdmin
+      .from('whatsapp_chats')
+      .select('id, name, phone_number')
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) {
+      throw new Error(`Erro ao carregar chats para sincronizacao em massa: ${error.message}`);
+    }
+
+    const rows = (data ?? []) as Array<{ id: string; name: string | null; phone_number: string | null }>;
+    if (rows.length === 0) {
+      break;
+    }
+
+    chats.push(...rows);
+
+    if (rows.length < pageSize) {
+      break;
+    }
+
+    offset += pageSize;
+  }
+
+  return chats;
+};
+
+const syncAllChats = async ({
+  supabaseAdmin,
+  token,
+  count,
+}: {
+  supabaseAdmin: ReturnType<typeof createClient>;
+  token: string;
+  count: number;
+}) => {
+  const chatRows = await loadChatsForBulkSync(supabaseAdmin);
+  const uniqueChats = Array.from(new Map(chatRows.map((chat) => [chat.id, chat])).values());
+
+  let syncedChats = 0;
+  let failedChats = 0;
+  let skippedChats = 0;
+  let syncedMessages = 0;
+  const failures: Array<{ chatId: string; chatName: string | null; error: string }> = [];
+
+  for (const chat of uniqueChats) {
+    try {
+      const result = await syncSingleChat({
+        supabaseAdmin,
+        token,
+        rawChatId: chat.id,
+        count,
+      });
+
+      syncedMessages += result.count;
+      if (result.skipped) {
+        skippedChats += 1;
+      } else {
+        syncedChats += 1;
+      }
+    } catch (error) {
+      failedChats += 1;
+      failures.push({
+        chatId: chat.id,
+        chatName: chat.name?.trim() || chat.phone_number?.trim() || chat.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  return {
+    totalChats: uniqueChats.length,
+    syncedChats,
+    failedChats,
+    skippedChats,
+    syncedMessages,
+    failures: failures.slice(0, 20),
+  };
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -958,290 +1351,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    const requestPayload = (await req.json().catch(() => null)) as { chatId?: unknown; count?: unknown } | null;
+    const requestPayload = (await req.json().catch(() => null)) as SyncRequestPayload | null;
+    const action = typeof requestPayload?.action === 'string' ? requestPayload.action.trim().toLowerCase() : 'sync_chat';
+    const count = parseSyncCount(requestPayload?.count);
+    const token = await loadWhapiToken(supabase);
+
+    if (action === 'sync_all_chats') {
+      const summary = await syncAllChats({
+        supabaseAdmin: supabase,
+        token,
+        count,
+      });
+
+      return jsonResponse({ success: true, mode: 'sync_all_chats', ...summary }, 200);
+    }
+
     const rawChatId = typeof requestPayload?.chatId === 'string' ? requestPayload.chatId.trim() : '';
     if (!rawChatId) {
       return jsonResponse({ error: 'chatId obrigatorio.' }, 400);
     }
 
-    const rawCount = typeof requestPayload?.count === 'number' ? requestPayload.count : Number(requestPayload?.count);
-    const requestedCount = Number.isFinite(rawCount) ? Math.trunc(rawCount) : DEFAULT_SYNC_COUNT;
-    const count = Math.min(Math.max(requestedCount, 1), MAX_SYNC_COUNT);
-
-    const { data: settingsRow, error: settingsError } = await supabase
-      .from('integration_settings')
-      .select('settings')
-      .eq('slug', 'whatsapp_auto_contact')
-      .maybeSingle();
-
-    if (settingsError) {
-      throw new Error(settingsError.message);
-    }
-
-    const token = sanitizeWhapiToken(settingsRow?.settings?.apiKey || settingsRow?.settings?.token || '');
-    if (!token) {
-      return jsonResponse({ error: 'Token Whapi nao configurado' }, 400);
-    }
-
-    const requestedChatId = normalizeDirectChatId(rawChatId);
-    if (isStatusChatId(requestedChatId)) {
-      return jsonResponse({ success: true, count: 0, skipped: 'status_chat_ignored' }, 200);
-    }
-
-    const queryParams = new URLSearchParams();
-    queryParams.append('count', String(count));
-    queryParams.append('offset', '0');
-    queryParams.append('sort', 'desc');
-
-    const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(requestedChatId)}?${queryParams}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
+    const result = await syncSingleChat({
+      supabaseAdmin: supabase,
+      token,
+      rawChatId,
+      count,
     });
 
-    if (!response.ok) {
-      return jsonResponse(
-        {
-          error: 'Falha ao sincronizar mensagens na Whapi.',
-          provider_status: response.status,
-        },
-        response.status,
-      );
-    }
-
-    const payload = (await response.json()) as WhapiMessageListResponse;
-    const messages = (payload.messages || []).filter((message) => !isStatusStoryMessage(message));
-
-    if (messages.length === 0) {
-      return jsonResponse({ success: true, count: 0 }, 200);
-    }
-
-    const resolvedRequestedChatId = resolveRequestedChatIdFromMessages(requestedChatId, messages);
-    const chatKind = getChatIdKind(resolvedRequestedChatId);
-    if (chatKind === 'status') {
-      return jsonResponse({ success: true, count: 0, skipped: 'status_chat_ignored' }, 200);
-    }
-    const isGroup = chatKind === 'group';
-    const isChannelChat = chatKind === 'newsletter' || chatKind === 'broadcast';
-    const nowIso = new Date().toISOString();
-    const latestMessageAt = messages
-      .map((message) => toIsoString(message.timestamp))
-      .reduce<string | null>((latest, current) => getLatestIsoTimestamp(latest, current), null);
-    const lastMessageAt = latestMessageAt ?? nowIso;
-    const messageChatNameRaw = messages.find((message) => message.chat_name?.trim())?.chat_name?.trim() || null;
-    const messageChatName = messageChatNameRaw && messageChatNameRaw !== resolvedRequestedChatId ? messageChatNameRaw : null;
-    const { data: existingChat } = await supabase
-      .from('whatsapp_chats')
-      .select('name, last_message_at, last_message, last_message_direction, phone_number, lid')
-      .eq('id', resolvedRequestedChatId)
-      .maybeSingle();
-
-    const existingChatName = existingChat?.name?.trim() || null;
-
-    let chatName = existingChatName;
-    if (isGroup) {
-      const canonicalGroupName = await fetchGroupName(token, resolvedRequestedChatId);
-      chatName = canonicalGroupName ?? messageChatName ?? existingChatName ?? resolvedRequestedChatId;
-    } else if (isChannelChat) {
-      const channelName = messageChatName ?? (await fetchNewsletterName(token, resolvedRequestedChatId));
-      if (channelName) {
-        chatName = channelName;
-      } else if (chatKind === 'newsletter') {
-        chatName = existingChatName ?? 'Canal sem nome';
-      } else {
-        chatName = existingChatName ?? 'Transmissao sem nome';
-      }
-    }
-
-    const nextLastMessageAt =
-      getLatestIsoTimestamp(existingChat?.last_message_at ?? null, lastMessageAt) ??
-      existingChat?.last_message_at ??
-      lastMessageAt;
-
-    const { error: upsertChatError } = await supabase.from('whatsapp_chats').upsert(
-      {
-        id: resolvedRequestedChatId,
-        name: chatName,
-        is_group: isGroup,
-        phone_number:
-          chatKind === 'direct' ? extractChatPhoneNumber(resolvedRequestedChatId) ?? existingChat?.phone_number ?? null : null,
-        lid: chatKind === 'direct' ? extractChatLid(resolvedRequestedChatId) ?? existingChat?.lid ?? null : null,
-        last_message: existingChat?.last_message ?? null,
-        last_message_direction: existingChat?.last_message_direction ?? null,
-        last_message_at: nextLastMessageAt,
-        updated_at: nowIso,
-      },
-      { onConflict: 'id' },
-    );
-    throwIfMutationError('Erro ao atualizar chat sincronizado', upsertChatError);
-
-    if (resolvedRequestedChatId !== requestedChatId) {
-      const { error: outboundChatRewriteError } = await supabase
-        .from('whatsapp_messages')
-        .update({ to_number: resolvedRequestedChatId })
-        .eq('chat_id', requestedChatId)
-        .eq('direction', 'outbound');
-      throwIfMutationError('Erro ao atualizar destino das mensagens de saida do chat canonico', outboundChatRewriteError);
-
-      const { error: messageChatRewriteError } = await supabase
-        .from('whatsapp_messages')
-        .update({ chat_id: resolvedRequestedChatId })
-        .eq('chat_id', requestedChatId);
-      throwIfMutationError('Erro ao atualizar mensagens para o chat canonico', messageChatRewriteError);
-
-      const { error: historyUpdateError } = await supabase
-        .from('whatsapp_message_history')
-        .update({ chat_id: resolvedRequestedChatId })
-        .eq('chat_id', requestedChatId);
-
-      throwIfMutationError('Erro ao atualizar historico do chat canonico apos sync', historyUpdateError);
-
-      const { error: deleteCanonicalSourceChatError } = await supabase
-        .from('whatsapp_chats')
-        .delete()
-        .eq('id', requestedChatId);
-      throwIfMutationError('Erro ao remover chat substituido pela versao canonica', deleteCanonicalSourceChatError);
-    }
-
-    if (isGroup && chatName) {
-      const { error: upsertGroupError } = await supabase
-        .from('whatsapp_groups')
-        .upsert(
-          {
-            id: resolvedRequestedChatId,
-            name: chatName,
-            type: 'group',
-            created_at: nowIso,
-            created_by: 'system',
-            name_at: nowIso,
-            admin_add_member_mode: true,
-            first_seen_at: nowIso,
-            last_updated_at: nowIso,
-          },
-          { onConflict: 'id', ignoreDuplicates: true },
-        );
-      throwIfMutationError('Erro ao registrar grupo sincronizado', upsertGroupError);
-
-      const { error: updateGroupError } = await supabase
-        .from('whatsapp_groups')
-        .update({ name: chatName, type: 'group', name_at: nowIso, last_updated_at: nowIso })
-        .eq('id', resolvedRequestedChatId);
-      throwIfMutationError('Erro ao atualizar metadados do grupo sincronizado', updateGroupError);
-    }
-
-    const normalized = messages
-      .filter((message) => {
-        if (message.type !== 'action') return true;
-        const actionType = normalizeActionType(message.action?.type);
-        return actionType !== 'edit' && actionType !== 'edited';
-      })
-      .map((message) => {
-        const direction = message.from_me ? 'outbound' : 'inbound';
-        const { body, hasMedia } = buildMessageBody(message);
-        const actionType = normalizeActionType(message.action?.type);
-        const messageChatIdRaw = actionType === 'reaction' && message.action?.target ? resolvedRequestedChatId : message.chat_id;
-        let messageChatId = normalizeDirectChatId(messageChatIdRaw || resolvedRequestedChatId);
-        const normalizedFrom = normalizeMaybeDirectId(message.from);
-        if (direction === 'inbound') {
-          messageChatId = resolveInboundCanonicalDirectChatId(messageChatIdRaw || '', messageChatId, normalizedFrom);
-        }
-        const normalizedFromNumber =
-          direction === 'inbound' ? (normalizedFrom || messageChatId) : null;
-        const normalizedToNumber = direction === 'outbound' ? messageChatId : null;
-        const incomingTimestamp = toIsoString(message.timestamp);
-
-        return {
-          id: message.id,
-          chat_id: messageChatId,
-          from_number: normalizedFromNumber,
-          to_number: normalizedToNumber,
-          type: message.type,
-          body,
-          has_media: hasMedia,
-          timestamp: incomingTimestamp,
-          payload: {
-            ...message,
-            ...(isGroup && chatName && !message.chat_name ? { chat_name: chatName } : {}),
-          },
-          direction,
-          ack_status: mapStatusToAck(message.status),
-          author: message.from_name ?? null,
-          is_deleted: actionType === 'delete' || message.type === 'revoked',
-          edit_count: message.edit_history?.length ?? 0,
-          edited_at: toIsoString(message.edited_at),
-          original_body: message.text?.body ?? body,
-        };
-      });
-
-    const messageIds = normalized.map((message) => message.id);
-    type ExistingMessageSnapshot = {
-      id: string;
-      timestamp: string | null;
-      created_at: string | null;
-      is_deleted: boolean | null;
-      deleted_at: string | null;
-      deleted_by: string | null;
-      edit_count: number | null;
-      edited_at: string | null;
-      original_body: string | null;
-      ack_status: number | null;
-      payload: Record<string, unknown> | null;
-      transcription_text: string | null;
-    };
-
-    const { data: existingMessages, error: existingMessagesError } = await supabase
-      .from('whatsapp_messages')
-      .select('id, timestamp, created_at, is_deleted, deleted_at, deleted_by, edit_count, edited_at, original_body, ack_status, payload, transcription_text')
-      .in('id', messageIds);
-
-    if (existingMessagesError) {
-      throw new Error(existingMessagesError.message);
-    }
-
-    const existingById = new Map<string, ExistingMessageSnapshot>(
-      ((existingMessages as ExistingMessageSnapshot[] | null) || []).map((row) => [row.id, row]),
-    );
-
-    const mergedMessages = normalized.map((message) => {
-      const existing = existingById.get(message.id);
-      if (!existing) {
-        return message;
-      }
-
-      const mergedIsDeleted = Boolean(existing.is_deleted) || Boolean(message.is_deleted);
-      return {
-        ...message,
-        payload:
-          existing.payload && typeof existing.payload === 'object'
-            ? {
-                ...existing.payload,
-                ...message.payload,
-              }
-            : message.payload,
-        transcription_text: existing.transcription_text ?? null,
-        is_deleted: mergedIsDeleted,
-        deleted_at: mergedIsDeleted ? existing.deleted_at ?? message.timestamp ?? nowIso : null,
-        deleted_by: mergedIsDeleted ? existing.deleted_by ?? 'unknown' : null,
-        edit_count: Math.max(existing.edit_count ?? 0, message.edit_count ?? 0),
-        edited_at: existing.edited_at ?? message.edited_at,
-        original_body: existing.original_body ?? message.original_body ?? message.body,
-        ack_status: mergeAckStatus(existing.ack_status, message.ack_status),
-        timestamp: mergeMessageTimestamp(existing.timestamp, message.timestamp, existing.created_at),
-      };
-    });
-
-    const { error: insertError } = await supabase
-      .from('whatsapp_messages')
-      .upsert(mergedMessages, { onConflict: 'id' });
-
-    if (insertError) {
-      throw new Error(insertError.message);
-    }
-
-    await refreshChatLastMessageState(supabase, resolvedRequestedChatId);
-
-    return jsonResponse({ success: true, count: mergedMessages.length }, 200);
+    return jsonResponse({ success: true, ...result }, 200);
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 500);
   }

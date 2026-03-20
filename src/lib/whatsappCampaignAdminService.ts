@@ -126,3 +126,17 @@ export async function previewWhatsAppCampaignAudience(
       : [],
   };
 }
+
+export async function listWhatsAppCampaignCanais(): Promise<string[]> {
+  const { data, error } = await supabase.rpc('list_whatsapp_campaign_canais');
+
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data)
+    ? data
+        .map((item) => (item && typeof item === 'object' && typeof (item as { canal?: unknown }).canal === 'string' ? (item as { canal: string }).canal.trim() : ''))
+        .filter(Boolean)
+    : [];
+}

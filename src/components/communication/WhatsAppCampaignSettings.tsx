@@ -28,6 +28,7 @@ import { fetchAllPages, supabase } from '../../lib/supabase';
 import {
   cancelWhatsAppCampaignAtomic,
   createWhatsAppCampaignAtomic,
+  listWhatsAppCampaignCanais,
   previewWhatsAppCampaignAudience,
   recomputeWhatsAppCampaignCounters,
 } from '../../lib/whatsappCampaignAdminService';
@@ -601,24 +602,8 @@ export default function WhatsAppCampaignSettings() {
   const loadCanalOptions = useCallback(async () => {
     setLoadingFilters(true);
     try {
-      const rows = await fetchAllPages<{ canal: string | null }>(async (from, to) => {
-        const response = await supabase
-          .from('leads')
-          .select('canal')
-          .eq('arquivado', false)
-          .range(from, to);
-        return { data: response.data, error: response.error };
-      }, 1000);
-
-      const canais = new Set<string>();
-      rows.forEach((row) => {
-        if (typeof row.canal === 'string' && row.canal.trim()) {
-          canais.add(row.canal);
-        }
-      });
-
       setHasCanalColumn(true);
-      setCanalOptions(toSortedOptions(canais));
+      setCanalOptions(toSortedOptions(new Set(await listWhatsAppCampaignCanais())));
     } catch (error) {
       if (isMissingLeadsCanalColumnError(error)) {
         setHasCanalColumn(false);

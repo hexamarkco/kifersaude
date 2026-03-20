@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Bell, BellOff, RefreshCw, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAllPages, supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { useWhatsAppInboxPreferences } from '../../hooks/useWhatsAppInboxPreferences';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
@@ -17,12 +17,6 @@ type SyncAllChatsProgress = {
   failed: number;
   currentChatId: string | null;
   currentChatName: string | null;
-};
-
-type ChatSummaryRow = {
-  id: string;
-  name: string | null;
-  phone_number: string | null;
 };
 
 type SyncAllChatsMessage = {
@@ -114,69 +108,42 @@ export default function WhatsAppSettingsPage() {
     try {
       if (isSyncingAllChats || chatsCount === 0) return;
 
-      const chatRows = await fetchAllPages<ChatSummaryRow>(async (from, to) => {
-        const response = await supabase
-          .from('whatsapp_chats')
-          .select('id, name, phone_number')
-          .range(from, to);
-        return { data: response.data, error: response.error };
-      }, 500);
-
-      const chatIds = Array.from(new Set(chatRows.map((chat) => chat.id).filter(Boolean)));
-      const chatRowsById = new Map(chatRows.map((chat) => [chat.id, chat]));
-      if (chatIds.length === 0) return;
-
       setIsSyncingAllChats(true);
       setSyncAllChatsMessage(null);
       setSyncAllChatsProgress({
-        total: chatIds.length,
+        total: chatsCount,
         completed: 0,
         failed: 0,
+        currentChatId: 'bulk-sync',
+        currentChatName: 'Processando no servidor',
+      });
+
+      const { data, error } = await supabase.functions.invoke('whatsapp-sync', {
+        body: { action: 'sync_all_chats', count: 200 },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const totalChats = typeof data?.totalChats === 'number' ? data.totalChats : chatsCount;
+      const failedChats = typeof data?.failedChats === 'number' ? data.failedChats : 0;
+      const syncedChats = typeof data?.syncedChats === 'number' ? data.syncedChats : totalChats - failedChats;
+      const skippedChats = typeof data?.skippedChats === 'number' ? data.skippedChats : 0;
+
+      setSyncAllChatsProgress({
+        total: totalChats,
+        completed: totalChats,
+        failed: failedChats,
         currentChatId: null,
         currentChatName: null,
       });
 
-      let failed = 0;
-      const yieldProgressFrame = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
-
-      for (let index = 0; index < chatIds.length; index += 1) {
-        const chatId = chatIds[index];
-        const currentChat = chatRowsById.get(chatId);
-        const currentChatName = currentChat?.name?.trim() || currentChat?.phone_number?.trim() || chatId;
-
-        setSyncAllChatsProgress((previousValue) => ({
-          ...previousValue,
-          total: chatIds.length,
-          currentChatId: chatId,
-          currentChatName,
-        }));
-        await yieldProgressFrame();
-
-        const { error } = await supabase.functions.invoke('whatsapp-sync', {
-          body: { chatId, count: 200 },
-        });
-
-        if (error) {
-          failed += 1;
-          console.error('Erro ao sincronizar chat:', chatId, error);
-        }
-
-        setSyncAllChatsProgress((previousValue) => ({
-          ...previousValue,
-          total: chatIds.length,
-          completed: index + 1,
-          failed,
-          currentChatId: chatId,
-          currentChatName,
-        }));
-        await yieldProgressFrame();
-      }
-
       await loadChatSummary();
       setSyncAllChatsMessage(
-        failed > 0
-          ? { type: 'error', text: `Sincronização concluída com ${failed} chat(s) com falha.` }
-          : { type: 'success', text: 'Sincronização concluída com sucesso.' },
+        failedChats > 0
+          ? { type: 'error', text: `Sincronização concluída com ${syncedChats} chat(s) sincronizado(s), ${skippedChats} ignorado(s) e ${failedChats} com falha.` }
+          : { type: 'success', text: `Sincronização concluída com ${syncedChats} chat(s) sincronizado(s)${skippedChats > 0 ? ` e ${skippedChats} ignorado(s)` : ''}.` },
       );
     } catch (error) {
       console.error('Erro ao sincronizar todos os chats:', error);

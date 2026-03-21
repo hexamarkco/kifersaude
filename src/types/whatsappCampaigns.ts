@@ -12,6 +12,31 @@ export type WhatsAppCampaignTargetStatus =
 
 export type WhatsAppCampaignFlowStepType = 'text' | 'image' | 'video' | 'audio' | 'document';
 
+export type WhatsAppCampaignFlowStepDelayUnit = 'minutes' | 'hours' | 'days';
+
+export type WhatsAppCampaignConditionOperator =
+  | 'equals'
+  | 'contains'
+  | 'not_equals'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'in_list'
+  | 'not_in_list'
+  | 'greater_than'
+  | 'greater_or_equal'
+  | 'less_than'
+  | 'less_or_equal';
+
+export type WhatsAppCampaignConditionLogic = 'all' | 'any';
+
+export type WhatsAppCampaignCondition = {
+  id: string;
+  field: string;
+  operator: WhatsAppCampaignConditionOperator;
+  value: string;
+};
+
 export type WhatsAppCampaignFlowStep = {
   id: string;
   type: WhatsAppCampaignFlowStepType;
@@ -20,6 +45,10 @@ export type WhatsAppCampaignFlowStep = {
   mediaUrl?: string;
   caption?: string;
   filename?: string;
+  delayValue?: number;
+  delayUnit?: WhatsAppCampaignFlowStepDelayUnit;
+  conditions?: WhatsAppCampaignCondition[];
+  conditionLogic?: WhatsAppCampaignConditionLogic;
 };
 
 export type WhatsAppCampaign = {
@@ -65,6 +94,7 @@ export type WhatsAppCampaignTarget = {
   last_completed_step_index: number;
   last_completed_step_id: string | null;
   last_sent_step_at: string | null;
+  next_step_due_at: string | null;
   created_at: string;
   updated_at: string;
 };

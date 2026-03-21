@@ -589,12 +589,19 @@ export const clampCompletedCampaignStepIndex = (value: unknown, totalSteps: numb
 export const isCampaignTargetReadyForProcessing = (
   target: {
     status: WhatsAppCampaignTargetStatus;
+    next_step_due_at?: string | null;
     processing_expires_at?: string | null;
     last_attempt_at?: string | null;
   },
   now: Date = new Date(),
   leaseMs: number = WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS,
 ): boolean => {
+  const nowMs = now.getTime();
+  const nextStepDueAtMs = target.next_step_due_at ? new Date(target.next_step_due_at).getTime() : Number.NaN;
+  if (!Number.isNaN(nextStepDueAtMs) && nextStepDueAtMs > nowMs) {
+    return false;
+  }
+
   if (target.status === 'pending') {
     return true;
   }
@@ -603,7 +610,6 @@ export const isCampaignTargetReadyForProcessing = (
     return false;
   }
 
-  const nowMs = now.getTime();
   const expiresAtMs = target.processing_expires_at ? new Date(target.processing_expires_at).getTime() : Number.NaN;
   if (!Number.isNaN(expiresAtMs)) {
     return expiresAtMs <= nowMs;

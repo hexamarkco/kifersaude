@@ -77,6 +77,17 @@ test('detects recoverable processing targets and clamps completed step index', (
   assert.equal(
     isCampaignTargetReadyForProcessing(
       {
+        next_step_due_at: '2026-03-19T20:05:00.000Z',
+        status: 'pending',
+      },
+      now,
+    ),
+    false,
+  );
+
+  assert.equal(
+    isCampaignTargetReadyForProcessing(
+      {
         status: 'processing',
         processing_expires_at: '2026-03-19T19:55:00.000Z',
         last_attempt_at: '2026-03-19T19:54:00.000Z',

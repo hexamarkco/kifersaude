@@ -26,6 +26,16 @@ import Checkbox from '../ui/Checkbox';
 import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
 import { fetchAllPages, supabase } from '../../lib/supabase';
 import {
+  buildWhatsAppCampaignConditionFieldDefinitions,
+  createWhatsAppCampaignCondition,
+  formatWhatsAppCampaignStepDelay,
+  getWhatsAppCampaignConditionFieldDefinitionMap,
+  normalizeWhatsAppCampaignFlowSteps,
+  type WhatsAppCampaignConditionFieldDefinition,
+  WHATSAPP_CAMPAIGN_CONDITION_OPERATOR_LABELS,
+  WHATSAPP_CAMPAIGN_DELAY_UNIT_LABELS,
+} from '../../lib/whatsappCampaignFlow';
+import {
   cancelWhatsAppCampaignAtomic,
   createWhatsAppCampaignAtomic,
   listWhatsAppCampaignCanais,
@@ -52,9 +62,13 @@ import {
 } from '../../lib/whatsappCampaignUtils';
 import { useConfig } from '../../contexts/ConfigContext';
 import type {
+  WhatsAppCampaignCondition,
+  WhatsAppCampaignConditionLogic,
+  WhatsAppCampaignConditionOperator,
   WhatsAppCampaignAudienceSource,
   WhatsAppCampaign,
   WhatsAppCampaignFlowStep,
+  WhatsAppCampaignFlowStepDelayUnit,
   WhatsAppCampaignFlowStepType,
   WhatsAppCampaignStatus,
   WhatsAppCampaignTarget,
@@ -114,6 +128,11 @@ type CampaignTargetHistoryRow = WhatsAppCampaignTarget & {
 
 type SelectOption = {
   id: string;
+  label: string;
+};
+
+type ConditionGroupOption = {
+  value: string;
   label: string;
 };
 
@@ -200,7 +219,23 @@ const createFlowStep = (type: WhatsAppCampaignFlowStepType = 'text'): WhatsAppCa
   mediaUrl: type === 'text' ? undefined : '',
   caption: type === 'text' ? undefined : '',
   filename: type === 'document' ? '' : undefined,
+  delayValue: 0,
+  delayUnit: 'hours',
+  conditions: [],
+  conditionLogic: 'all',
 });
+
+const CONDITION_GROUP_LABELS: Record<ConditionGroupOption['value'], string> = {
+  lead: 'Lead',
+  conversation: 'Conversa',
+  campaign: 'Campanha',
+  payload: 'CSV',
+};
+
+const CONDITION_LOGIC_OPTIONS: Array<{ value: WhatsAppCampaignConditionLogic; label: string }> = [
+  { value: 'all', label: 'Todas as condicoes' },
+  { value: 'any', label: 'Qualquer condicao' },
+];
 
 const formatDateTime = (value: string | null): string => {
   if (!value) return '-';
@@ -229,56 +264,6 @@ const normalizeFlowStepType = (value: unknown): WhatsAppCampaignFlowStepType => 
   return 'text';
 };
 
-const normalizeFlowSteps = (value: unknown, fallbackMessage: string): WhatsAppCampaignFlowStep[] => {
-  if (!Array.isArray(value)) {
-    return [
-      {
-        id: createUniqueStepId(),
-        type: 'text',
-        text: fallbackMessage || '',
-        order: 0,
-      },
-    ];
-  }
-
-  const parsed: WhatsAppCampaignFlowStep[] = [];
-
-  value.forEach((item, index) => {
-    if (!item || typeof item !== 'object') {
-      return;
-    }
-
-    const row = item as Record<string, unknown>;
-    const type = normalizeFlowStepType(row.type);
-    const id = typeof row.id === 'string' && row.id.trim() ? row.id : createUniqueStepId();
-
-    parsed.push({
-      id,
-      type,
-      order: typeof row.order === 'number' ? row.order : index,
-      text: typeof row.text === 'string' ? row.text : undefined,
-      mediaUrl: typeof row.mediaUrl === 'string' ? row.mediaUrl : undefined,
-      caption: typeof row.caption === 'string' ? row.caption : undefined,
-      filename: typeof row.filename === 'string' ? row.filename : undefined,
-    });
-  });
-
-  parsed.sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
-
-  if (parsed.length === 0) {
-    return [
-      {
-        id: createUniqueStepId(),
-        type: 'text',
-        text: fallbackMessage || '',
-        order: 0,
-      },
-    ];
-  }
-
-  return parsed.map((step, index) => ({ ...step, order: index }));
-};
-
 const composeFallbackMessage = (steps: WhatsAppCampaignFlowStep[]): string => {
   const firstText = steps.find((step) => step.type === 'text' && step.text?.trim());
   if (firstText?.text?.trim()) {
@@ -293,6 +278,15 @@ const buildFlowNodes = (steps: WhatsAppCampaignFlowStep[], selectedStepId: strin
   return steps.map((step, index) => {
     const nodeColor = FLOW_STEP_NODE_COLORS[step.type];
     const selected = selectedStepId === step.id;
+    const badges: string[] = [];
+
+    if ((step.delayValue ?? 0) > 0) {
+      badges.push(`+${formatWhatsAppCampaignStepDelay(step)}`);
+    }
+
+    if ((step.conditions?.length ?? 0) > 0) {
+      badges.push(`${step.conditions?.length ?? 0} regra(s)`);
+    }
 
     return {
       id: step.id,
@@ -301,7 +295,9 @@ const buildFlowNodes = (steps: WhatsAppCampaignFlowStep[], selectedStepId: strin
         y: 90,
       },
       data: {
-        label: `${index + 1}. ${FLOW_STEP_LABELS[step.type]}`,
+        label: badges.length > 0
+          ? `${index + 1}. ${FLOW_STEP_LABELS[step.type]} • ${badges.join(' • ')}`
+          : `${index + 1}. ${FLOW_STEP_LABELS[step.type]}`,
         description: summarizeStep(step),
       },
       draggable: false,
@@ -545,6 +541,23 @@ export default function WhatsAppCampaignSettings() {
     [audienceSource, csvImport.parsed],
   );
 
+  const campaignConditionFieldDefinitions = useMemo<WhatsAppCampaignConditionFieldDefinition[]>(
+    () =>
+      buildWhatsAppCampaignConditionFieldDefinitions({
+        statusOptions: statusOptions.map((option) => ({ value: option.label, label: option.label })),
+        origemOptions: origemOptions.map((option) => ({ value: option.label, label: option.label })),
+        responsavelOptions: responsavelOptions.map((option) => ({ value: option.label, label: option.label })),
+        canalOptions,
+        payloadKeys: audienceSource === 'csv' ? csvImport.parsed?.normalizedHeaders ?? [] : [],
+      }),
+    [audienceSource, canalOptions, csvImport.parsed, origemOptions, responsavelOptions, statusOptions],
+  );
+
+  const campaignConditionFieldDefinitionMap = useMemo(
+    () => getWhatsAppCampaignConditionFieldDefinitionMap(campaignConditionFieldDefinitions),
+    [campaignConditionFieldDefinitions],
+  );
+
   const allowedVariableKeys = useMemo(
     () => campaignVariableSuggestions.map((suggestion) => suggestion.key),
     [campaignVariableSuggestions],
@@ -579,7 +592,10 @@ export default function WhatsAppCampaignSettings() {
         audience_source: normalizeCampaignAudienceSource((campaign as WhatsAppCampaign & { audience_source?: unknown }).audience_source),
         audience_config:
           (campaign as WhatsAppCampaign & { audience_config?: Record<string, unknown> | null }).audience_config ?? {},
-        flow_steps: normalizeFlowSteps((campaign as WhatsAppCampaign & { flow_steps?: unknown }).flow_steps, campaign.message),
+        flow_steps: normalizeWhatsAppCampaignFlowSteps(
+          (campaign as WhatsAppCampaign & { flow_steps?: unknown }).flow_steps,
+          campaign.message,
+        ),
       }));
 
       setCampaigns(nextCampaigns);
@@ -679,6 +695,45 @@ export default function WhatsAppCampaignSettings() {
     const newStep = createFlowStep(type);
     setFlowSteps((current) => [...current, { ...newStep, order: current.length }]);
     setSelectedStepId(newStep.id);
+  };
+
+  const addConditionToSelectedStep = (preferredField?: string) => {
+    if (!selectedStep) {
+      return;
+    }
+
+    const nextCondition = createWhatsAppCampaignCondition(campaignConditionFieldDefinitions, preferredField);
+    updateSelectedStep({
+      conditions: [...(selectedStep.conditions ?? []), nextCondition],
+      conditionLogic: selectedStep.conditionLogic ?? 'all',
+    });
+  };
+
+  const updateSelectedStepCondition = (conditionId: string, updates: Partial<WhatsAppCampaignCondition>) => {
+    if (!selectedStep) {
+      return;
+    }
+
+    updateSelectedStep({
+      conditions: (selectedStep.conditions ?? []).map((condition) =>
+        condition.id === conditionId
+          ? {
+              ...condition,
+              ...updates,
+            }
+          : condition,
+      ),
+    });
+  };
+
+  const removeSelectedStepCondition = (conditionId: string) => {
+    if (!selectedStep) {
+      return;
+    }
+
+    updateSelectedStep({
+      conditions: (selectedStep.conditions ?? []).filter((condition) => condition.id !== conditionId),
+    });
   };
 
   const updateSelectedStep = (updates: Partial<WhatsAppCampaignFlowStep>) => {
@@ -788,12 +843,32 @@ export default function WhatsAppCampaignSettings() {
     }
 
     for (const step of steps) {
+      const delayValue = Number(step.delayValue ?? 0);
+      if (!Number.isFinite(delayValue) || delayValue < 0) {
+        return 'Toda etapa precisa ter um intervalo valido maior ou igual a zero.';
+      }
+
       if (step.type === 'text') {
         if (!(step.text || '').trim()) {
           return 'Toda etapa de mensagem precisa ter texto preenchido.';
         }
       } else if (!(step.mediaUrl || '').trim()) {
         return `A etapa ${FLOW_STEP_LABELS[step.type]} precisa de arquivo enviado.`;
+      }
+
+      for (const condition of step.conditions ?? []) {
+        const definition = campaignConditionFieldDefinitionMap.get(condition.field);
+        if (!definition) {
+          return 'Existe uma condicao com campo nao suportado nesta etapa.';
+        }
+
+        if (!definition.operators?.includes(condition.operator)) {
+          return `A condicao "${definition.label}" usa um operador nao suportado.`;
+        }
+
+        if (!condition.value.trim()) {
+          return `Preencha o valor da condicao "${definition.label}".`;
+        }
       }
     }
 
@@ -1227,9 +1302,9 @@ export default function WhatsAppCampaignSettings() {
         let query = supabase
           .from('whatsapp_campaign_targets')
           .select(
-          'id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_kind, source_payload, status, attempts, error_message, sent_at, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, created_at, updated_at, lead:leads(nome_completo, telefone)',
+          'id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_kind, source_payload, status, attempts, error_message, sent_at, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, next_step_due_at, created_at, updated_at, lead:leads(nome_completo, telefone)',
            { count: 'exact' },
-         )
+          )
           .eq('campaign_id', selectedCampaignId)
         .order('created_at', { ascending: false });
 
@@ -1327,6 +1402,9 @@ export default function WhatsAppCampaignSettings() {
         .update({
           status: 'pending',
           error_message: null,
+          next_step_due_at: null,
+          processing_started_at: null,
+          processing_expires_at: null,
         })
         .eq('campaign_id', selectedCampaign.id)
         .eq('status', 'failed');
@@ -1368,6 +1446,9 @@ export default function WhatsAppCampaignSettings() {
         .update({
           status: 'pending',
           error_message: null,
+          next_step_due_at: null,
+          processing_started_at: null,
+          processing_expires_at: null,
         })
         .eq('id', target.id);
 
@@ -1994,6 +2075,194 @@ export default function WhatsAppCampaignSettings() {
                       )}
                     </>
                   )}
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Intervalo antes desta etapa</p>
+                        <p className="text-xs text-slate-500">Use 0 para enviar logo apos a etapa anterior ou o inicio da campanha.</p>
+                      </div>
+                      <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                        {formatWhatsAppCampaignStepDelay(selectedStep)}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 sm:grid-cols-[120px_minmax(0,1fr)]">
+                      <label className="text-xs font-medium text-slate-600">
+                        Valor
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={selectedStep.delayValue ?? 0}
+                          onChange={(event) =>
+                            updateSelectedStep({
+                              delayValue: Math.max(0, Number.parseInt(event.target.value || '0', 10) || 0),
+                            })
+                          }
+                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        />
+                      </label>
+
+                      <label className="text-xs font-medium text-slate-600">
+                        Unidade
+                        <select
+                          value={selectedStep.delayUnit ?? 'hours'}
+                          onChange={(event) => updateSelectedStep({ delayUnit: event.target.value as WhatsAppCampaignFlowStepDelayUnit })}
+                          className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        >
+                          {Object.entries(WHATSAPP_CAMPAIGN_DELAY_UNIT_LABELS).map(([value, labels]) => (
+                            <option key={value} value={value}>
+                              {labels.plural}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Condicoes dinamicas</p>
+                        <p className="text-xs text-slate-500">Cada etapa pode decidir se envia ou nao com base no lead, conversa ou colunas do CSV.</p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => addConditionToSelectedStep('conversation.has_inbound_since_last_step')}>
+                          Parar se respondeu
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => addConditionToSelectedStep()}>
+                          <Plus className="h-3.5 w-3.5" />
+                          Adicionar condicao
+                        </Button>
+                      </div>
+                    </div>
+
+                    {(selectedStep.conditions?.length ?? 0) > 0 ? (
+                      <div className="mt-3 space-y-3">
+                        <label className="text-xs font-medium text-slate-600">
+                          Aplicar quando
+                          <select
+                            value={selectedStep.conditionLogic ?? 'all'}
+                            onChange={(event) => updateSelectedStep({ conditionLogic: event.target.value as WhatsAppCampaignConditionLogic })}
+                            className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                          >
+                            {CONDITION_LOGIC_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        {(selectedStep.conditions ?? []).map((condition, index) => {
+                          const definition = campaignConditionFieldDefinitionMap.get(condition.field) ?? campaignConditionFieldDefinitions[0];
+                          const operators = definition?.operators ?? ['equals'];
+
+                          return (
+                            <div key={condition.id} className="rounded-lg border border-slate-200 bg-white p-3">
+                              <div className="grid gap-2">
+                                <label className="text-xs font-medium text-slate-600">
+                                  Campo
+                                  <select
+                                    value={condition.field}
+                                    onChange={(event) => {
+                                      const nextField = event.target.value;
+                                      const nextDefinition = campaignConditionFieldDefinitionMap.get(nextField) ?? campaignConditionFieldDefinitions[0];
+                                      updateSelectedStepCondition(condition.id, {
+                                        field: nextField,
+                                        operator: nextDefinition?.operators?.[0] ?? 'equals',
+                                        value: nextDefinition?.options?.[0]?.value ?? (nextDefinition?.type === 'boolean' ? 'false' : ''),
+                                      });
+                                    }}
+                                    className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                  >
+                                    {Object.entries(CONDITION_GROUP_LABELS).map(([groupKey, groupLabel]) => {
+                                      const groupDefinitions = campaignConditionFieldDefinitions.filter((item) => item.group === groupKey);
+                                      if (groupDefinitions.length === 0) {
+                                        return null;
+                                      }
+
+                                      return (
+                                        <optgroup key={groupKey} label={groupLabel}>
+                                          {groupDefinitions.map((item) => (
+                                            <option key={item.key} value={item.key}>
+                                              {item.label}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      );
+                                    })}
+                                  </select>
+                                </label>
+
+                                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                                  <label className="text-xs font-medium text-slate-600">
+                                    Operador
+                                    <select
+                                      value={condition.operator}
+                                      onChange={(event) =>
+                                        updateSelectedStepCondition(condition.id, {
+                                          operator: event.target.value as WhatsAppCampaignConditionOperator,
+                                        })
+                                      }
+                                      className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                    >
+                                      {operators.map((operator) => (
+                                        <option key={operator} value={operator}>
+                                          {WHATSAPP_CAMPAIGN_CONDITION_OPERATOR_LABELS[operator]}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+
+                                  <label className="text-xs font-medium text-slate-600">
+                                    Valor
+                                    {definition?.options && definition.options.length > 0 ? (
+                                      <select
+                                        value={condition.value}
+                                        onChange={(event) => updateSelectedStepCondition(condition.id, { value: event.target.value })}
+                                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                      >
+                                        {definition.options.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        value={condition.value}
+                                        onChange={(event) => updateSelectedStepCondition(condition.id, { value: event.target.value })}
+                                        className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                        placeholder={definition?.type === 'datetime' ? '2026-03-21T09:30:00-03:00' : 'Digite o valor'}
+                                      />
+                                    )}
+                                  </label>
+                                </div>
+
+                                <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                                  <span>
+                                    Condicao {index + 1}
+                                    {definition?.description ? ` • ${definition.description}` : ''}
+                                  </span>
+                                  <Button size="sm" variant="danger" onClick={() => removeSelectedStepCondition(condition.id)}>
+                                    Remover
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
+                        Sem condicoes nesta etapa. Se todas as regras forem atendidas, a etapa e enviada normalmente.
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-slate-500">Selecione uma etapa no fluxo para editar.</p>
@@ -2345,6 +2614,7 @@ export default function WhatsAppCampaignSettings() {
                     <th className="px-3 py-2 text-left font-semibold">Status</th>
                     <th className="px-3 py-2 text-left font-semibold">Sent at</th>
                     <th className="px-3 py-2 text-left font-semibold">Last attempt</th>
+                    <th className="px-3 py-2 text-left font-semibold">Proxima etapa</th>
                     <th className="px-3 py-2 text-left font-semibold">Erro</th>
                     <th className="px-3 py-2 text-left font-semibold">Acao</th>
                   </tr>
@@ -2352,13 +2622,13 @@ export default function WhatsAppCampaignSettings() {
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {loadingTargets ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-4 text-center text-slate-500">
+                      <td colSpan={8} className="px-3 py-4 text-center text-slate-500">
                         Carregando alvos...
                       </td>
                     </tr>
                   ) : campaignTargets.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-3 py-4 text-center text-slate-500">
+                      <td colSpan={8} className="px-3 py-4 text-center text-slate-500">
                         Nenhum alvo encontrado para os filtros atuais.
                       </td>
                     </tr>
@@ -2375,6 +2645,7 @@ export default function WhatsAppCampaignSettings() {
                         <td className="px-3 py-2 align-top">{target.status}</td>
                         <td className="px-3 py-2 align-top">{formatDateTime(target.sent_at)}</td>
                         <td className="px-3 py-2 align-top">{formatDateTime(target.last_attempt_at)}</td>
+                        <td className="px-3 py-2 align-top">{formatDateTime(target.next_step_due_at)}</td>
                         <td className="px-3 py-2 align-top text-slate-500">{target.error_message || '-'}</td>
                         <td className="px-3 py-2 align-top">
                           <Button

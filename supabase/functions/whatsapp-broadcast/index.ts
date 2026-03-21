@@ -8,6 +8,12 @@ import {
   resolveCampaignTemplateText,
   WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS,
 } from '../../../src/lib/whatsappCampaignUtils.ts';
+import {
+  getWhatsAppCampaignStepDelayMs,
+  matchesWhatsAppCampaignConditionGroup,
+  normalizeWhatsAppCampaignFlowSteps,
+} from '../../../src/lib/whatsappCampaignFlow.ts';
+import type { WhatsAppCampaignFlowStep as CampaignFlowStep } from '../../../src/types/whatsappCampaigns.ts';
 
 declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
@@ -34,19 +40,10 @@ type CampaignRecord = {
   message: string;
   flow_steps: unknown;
   scheduled_at: string | null;
+  started_at?: string | null;
 };
 
-type CampaignStepType = 'text' | 'image' | 'video' | 'audio' | 'document';
-
-type CampaignFlowStep = {
-  id: string;
-  type: CampaignStepType;
-  order: number;
-  text?: string;
-  mediaUrl?: string;
-  caption?: string;
-  filename?: string;
-};
+type CampaignStepType = CampaignFlowStep['type'];
 
 type TargetRecord = {
   id: string;
@@ -66,6 +63,8 @@ type TargetRecord = {
   last_completed_step_index?: number | null;
   last_completed_step_id?: string | null;
   last_sent_step_at?: string | null;
+  next_step_due_at?: string | null;
+  created_at?: string | null;
   lead?: {
     nome_completo?: string | null;
     telefone?: string | null;
@@ -74,6 +73,7 @@ type TargetRecord = {
     origem?: string | null;
     cidade?: string | null;
     responsavel?: string | null;
+    canal?: string | null;
   } | null;
   campaign: CampaignRecord | null;
 };
@@ -150,71 +150,6 @@ const parseWhapiError = (payload: unknown): string => {
   } catch {
     return 'Erro ao processar resposta da Whapi.';
   }
-};
-
-const normalizeCampaignStepType = (value: unknown): CampaignStepType => {
-  if (value === 'image' || value === 'video' || value === 'audio' || value === 'document') {
-    return value;
-  }
-  return 'text';
-};
-
-const normalizeCampaignFlowSteps = (flowSteps: unknown, fallbackMessage: string): CampaignFlowStep[] => {
-  if (!Array.isArray(flowSteps)) {
-    const fallback = fallbackMessage.trim();
-    if (!fallback) {
-      return [];
-    }
-
-    return [
-      {
-        id: 'step-1',
-        type: 'text',
-        order: 0,
-        text: fallback,
-      },
-    ];
-  }
-
-  const parsed: CampaignFlowStep[] = [];
-
-  flowSteps.forEach((item, index) => {
-    if (!item || typeof item !== 'object') {
-      return;
-    }
-
-    const row = item as Record<string, unknown>;
-    const type = normalizeCampaignStepType(row.type);
-
-    parsed.push({
-      id: typeof row.id === 'string' && row.id.trim() ? row.id : `step-${index + 1}`,
-      type,
-      order: typeof row.order === 'number' ? row.order : index,
-      text: typeof row.text === 'string' ? row.text : undefined,
-      mediaUrl: typeof row.mediaUrl === 'string' ? row.mediaUrl : undefined,
-      caption: typeof row.caption === 'string' ? row.caption : undefined,
-      filename: typeof row.filename === 'string' ? row.filename : undefined,
-    });
-  });
-
-  parsed.sort((left, right) => left.order - right.order);
-
-  if (parsed.length === 0) {
-    const fallback = fallbackMessage.trim();
-    if (!fallback) {
-      return [];
-    }
-    return [
-      {
-        id: 'step-1',
-        type: 'text',
-        order: 0,
-        text: fallback,
-      },
-    ];
-  }
-
-  return parsed;
 };
 
 const isInvalidRecipientError = (message: string): boolean => {
@@ -401,6 +336,85 @@ const sendCampaignStep = async ({
   });
 };
 
+const getTimestampMs = (value: string | null | undefined): number => {
+  if (!value) {
+    return Number.NaN;
+  }
+
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? Number.NaN : parsed;
+};
+
+const getCampaignStepReferenceIso = (target: TargetRecord): string | null =>
+  target.last_sent_step_at ?? target.campaign?.started_at ?? target.created_at ?? null;
+
+const computeCampaignStepDueAt = (step: CampaignFlowStep, referenceIso: string | null, now: Date): string | null => {
+  const delayMs = getWhatsAppCampaignStepDelayMs(step);
+  if (delayMs <= 0) {
+    return null;
+  }
+
+  const referenceMs = getTimestampMs(referenceIso);
+  const baseMs = Number.isNaN(referenceMs) ? now.getTime() : referenceMs;
+  return new Date(baseMs + delayMs).toISOString();
+};
+
+const normalizeTargetChatId = (target: TargetRecord, recipient?: string | null): string => {
+  const resolvedRecipient = typeof recipient === 'string' && recipient.trim() ? normalizeChatId(recipient) : '';
+  if (resolvedRecipient) {
+    return resolvedRecipient;
+  }
+
+  const normalizedChatId = target.chat_id ? normalizeChatId(target.chat_id) : '';
+  if (normalizedChatId) {
+    return normalizedChatId;
+  }
+
+  const normalizedPhone = normalizePhoneForCampaign(target.phone);
+  return normalizedPhone ? `${normalizedPhone}@s.whatsapp.net` : '';
+};
+
+const loadConversationState = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  target: TargetRecord,
+  lastSentStepAt: string | null,
+  recipient?: string | null,
+) => {
+  const chatId = normalizeTargetChatId(target, recipient);
+  if (!chatId) {
+    return {
+      hasInbound: false,
+      hasInboundSinceLastStep: false,
+      lastInboundAt: null,
+    };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('whatsapp_messages')
+    .select('timestamp, created_at')
+    .eq('chat_id', chatId)
+    .eq('direction', 'inbound')
+    .order('timestamp', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Erro ao carregar respostas do contato: ${error.message}`);
+  }
+
+  const lastInboundAt = data?.timestamp ?? data?.created_at ?? null;
+  const lastInboundMs = getTimestampMs(lastInboundAt);
+  const referenceMs = getTimestampMs(lastSentStepAt ?? target.created_at ?? null);
+
+  return {
+    hasInbound: !Number.isNaN(lastInboundMs),
+    hasInboundSinceLastStep:
+      !Number.isNaN(lastInboundMs) && (Number.isNaN(referenceMs) || lastInboundMs > referenceMs),
+    lastInboundAt,
+  };
+};
+
 const claimTarget = async (
   supabaseAdmin: ReturnType<typeof createClient>,
   target: TargetRecord,
@@ -416,6 +430,7 @@ const claimTarget = async (
     last_attempt_at: nowIso,
     processing_started_at: nowIso,
     processing_expires_at: processingExpiresAt,
+    next_step_due_at: null,
   };
 
   const claimPending = async () => {
@@ -482,7 +497,8 @@ const persistTargetStepProgress = async (
   targetId: string,
   stepIndex: number,
   stepId: string,
-) => {
+  recipient: string,
+): Promise<string> => {
   const now = new Date();
   const nowIso = now.toISOString();
 
@@ -496,12 +512,43 @@ const persistTargetStepProgress = async (
       processing_started_at: nowIso,
       processing_expires_at: getProcessingLeaseExpiryIso(now),
       error_message: null,
+      next_step_due_at: null,
+      chat_id: recipient,
     })
     .eq('id', targetId)
     .eq('status', 'processing');
 
   if (error) {
     throw new Error(`Erro ao salvar progresso do alvo: ${error.message}`);
+  }
+
+  return nowIso;
+};
+
+const scheduleTargetNextStep = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  targetId: string,
+  dueAt: string,
+  recipient: string,
+) => {
+  const nowIso = new Date().toISOString();
+
+  const { error } = await supabaseAdmin
+    .from('whatsapp_campaign_targets')
+    .update({
+      status: 'pending',
+      last_attempt_at: nowIso,
+      processing_started_at: null,
+      processing_expires_at: null,
+      error_message: null,
+      next_step_due_at: dueAt,
+      chat_id: recipient,
+    })
+    .eq('id', targetId)
+    .eq('status', 'processing');
+
+  if (error) {
+    throw new Error(`Erro ao agendar proxima etapa do alvo: ${error.message}`);
   }
 };
 
@@ -511,6 +558,7 @@ const updateTargetResult = async (
   status: TargetStatus,
   errorMessage: string | null,
   markAsSent = false,
+  extraUpdates: Record<string, unknown> = {},
 ) => {
   const nowIso = new Date().toISOString();
 
@@ -523,6 +571,8 @@ const updateTargetResult = async (
       sent_at: markAsSent ? nowIso : null,
       processing_started_at: null,
       processing_expires_at: null,
+      next_step_due_at: null,
+      ...extraUpdates,
     })
     .eq('id', targetId);
 
@@ -600,8 +650,9 @@ const loadProcessableTargets = async (
   for (let page = 0; page < maxPages && collected.length < limit; page += 1) {
     let query = supabaseAdmin
       .from('whatsapp_campaign_targets')
-      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, lead:leads(nome_completo, telefone, email, status, origem, cidade, responsavel), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at)')
+      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, next_step_due_at, created_at, lead:leads(nome_completo, telefone, email, status, origem, cidade, responsavel, canal), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at, started_at)')
       .in('status', ['pending', 'processing'])
+      .order('next_step_due_at', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true })
       .range(offset, offset + pageSize - 1);
 
@@ -681,7 +732,7 @@ const processCampaignTargets = async ({
       continue;
     }
 
-    const campaignSteps = normalizeCampaignFlowSteps(target.campaign?.flow_steps, target.campaign?.message ?? '');
+    const campaignSteps = normalizeWhatsAppCampaignFlowSteps(target.campaign?.flow_steps, target.campaign?.message ?? '');
     if (campaignSteps.length === 0) {
       await updateTargetResult(supabaseAdmin, target.id, 'failed', 'Fluxo da campanha vazio.', false);
       summary.failed += 1;
@@ -698,21 +749,97 @@ const processCampaignTargets = async ({
         phone: target.phone,
       });
 
+      let currentLastCompletedStepIndex = lastCompletedStepIndex;
+      let currentLastSentStepAt = target.last_sent_step_at ?? null;
+      let skippedSteps = 0;
+      let lastSkippedReason: string | null = null;
+      let scheduledFutureStep = false;
+      const normalizedRecipient = normalizeTargetChatId(target, recipient);
+
       for (let stepIndex = lastCompletedStepIndex + 1; stepIndex < campaignSteps.length; stepIndex += 1) {
         const step = campaignSteps[stepIndex];
+
+        const dueAt = computeCampaignStepDueAt(
+          step,
+          currentLastSentStepAt ?? getCampaignStepReferenceIso(target),
+          new Date(),
+        );
+
+        if (dueAt) {
+          const dueAtMs = getTimestampMs(dueAt);
+          if (!Number.isNaN(dueAtMs) && dueAtMs > Date.now()) {
+            await scheduleTargetNextStep(supabaseAdmin, target.id, dueAt, normalizedRecipient);
+            scheduledFutureStep = true;
+            summary.processed += 1;
+            break;
+          }
+        }
+
+        const conversationState = await loadConversationState(
+          supabaseAdmin,
+          target,
+          currentLastSentStepAt,
+          normalizedRecipient,
+        );
+
+        const matchesConditions = matchesWhatsAppCampaignConditionGroup(step.conditions, step.conditionLogic, {
+          lead: target.lead ?? null,
+          payload: target.source_payload ?? null,
+          conversation: conversationState,
+          campaign: {
+            lastSentStepAt: currentLastSentStepAt,
+          },
+          target: {
+            createdAt: target.created_at ?? null,
+            attempts: target.attempts ?? null,
+            lastCompletedStepIndex: currentLastCompletedStepIndex,
+          },
+          now: new Date(),
+        });
+
+        if (!matchesConditions) {
+          skippedSteps += 1;
+          lastSkippedReason = `Etapa ${stepIndex + 1} ignorada porque as condicoes nao foram atendidas.`;
+          continue;
+        }
+
         await sendCampaignStep({
           token,
-          to: recipient,
+          to: normalizedRecipient,
           step,
           lead: target.lead ?? null,
           sourcePayload: target.source_payload ?? null,
         });
 
-        await persistTargetStepProgress(supabaseAdmin, target.id, stepIndex, step.id);
+        currentLastSentStepAt = await persistTargetStepProgress(
+          supabaseAdmin,
+          target.id,
+          stepIndex,
+          step.id,
+          normalizedRecipient,
+        );
+        currentLastCompletedStepIndex = stepIndex;
       }
 
-      await updateTargetResult(supabaseAdmin, target.id, 'sent', null, true);
-      summary.sent += 1;
+      if (scheduledFutureStep) {
+        continue;
+      }
+
+      const shouldMarkAsSent = currentLastCompletedStepIndex >= 0;
+      const terminalMessage = skippedSteps > 0 ? lastSkippedReason ?? 'Algumas etapas foram ignoradas por condicao.' : null;
+
+      await updateTargetResult(
+        supabaseAdmin,
+        target.id,
+        shouldMarkAsSent ? 'sent' : 'cancelled',
+        terminalMessage,
+        shouldMarkAsSent,
+        { chat_id: normalizedRecipient },
+      );
+
+      if (shouldMarkAsSent) {
+        summary.sent += 1;
+      }
       summary.processed += 1;
     } catch (error) {
       const message = toErrorMessage(error);
@@ -724,6 +851,7 @@ const processCampaignTargets = async ({
         isInvalid ? 'invalid' : 'failed',
         message,
         false,
+        {},
       );
 
       if (isInvalid) {

@@ -4313,15 +4313,6 @@ export default function WhatsAppInboxScreen() {
     }
 
     const phone = normalizePhoneNumber(chat.phone_number || extractPhoneFromChatId(chat.id));
-    const leadMatchKeys = getLeadMatchKeysForChat(chat);
-
-    for (const key of leadMatchKeys) {
-      const leadName = leadNamesByPhone.get(key);
-      if (leadName) {
-        return leadName;
-      }
-    }
-
     const contactCandidates = new Set<string>([
       normalizeChatId(chat.id) || chat.id,
       chat.id,
@@ -4341,8 +4332,18 @@ export default function WhatsAppInboxScreen() {
       return preferredContactName;
     }
 
-    if (chat.name?.trim() && chat.name !== chat.id) {
-      return chat.name;
+    const directChatName = getMeaningfulDirectChatNameCandidate(chat, chat.name);
+    if (directChatName) {
+      return directChatName;
+    }
+
+    const leadMatchKeys = getLeadMatchKeysForChat(chat);
+
+    for (const key of leadMatchKeys) {
+      const leadName = leadNamesByPhone.get(key);
+      if (leadName) {
+        return leadName;
+      }
     }
 
     if (phone) {
@@ -4462,8 +4463,12 @@ export default function WhatsAppInboxScreen() {
     const map = new Map<string, { displayName: string; preview: string; chatId: string; phone: string }>();
 
     chats.forEach((chat) => {
+      const leadName = getLeadMatchKeysForChat(chat)
+        .map((key) => leadNamesByPhone.get(key))
+        .find(Boolean) || '';
+
       map.set(chat.id, {
-        displayName: normalizeSearchText(chatListPresentationById.get(chat.id)?.displayName || chat.id),
+        displayName: normalizeSearchText(`${chatListPresentationById.get(chat.id)?.displayName || chat.id} ${leadName}`),
         preview: normalizeSearchText(sanitizeTechnicalCiphertextPreview(chat.last_message)),
         chatId: normalizeSearchText(chat.id),
         phone: normalizeSearchText(chat.phone_number || extractPhoneFromChatId(chat.id)),
@@ -4471,7 +4476,7 @@ export default function WhatsAppInboxScreen() {
     });
 
     return map;
-  }, [chatListPresentationById, chats]);
+  }, [chatListPresentationById, chats, getLeadMatchKeysForChat, leadNamesByPhone]);
 
   const {
     archivedCount,

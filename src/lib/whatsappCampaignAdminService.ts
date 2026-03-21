@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { fetchAllPages, supabase } from './supabase';
 import type {
   WhatsAppCampaign,
   WhatsAppCampaignAudienceSource,
@@ -40,6 +40,51 @@ export type WhatsAppCampaignAudiencePreview = {
   totalTargets: number;
   sampleTargets: WhatsAppCampaignAudiencePreviewLead[];
 };
+
+const WHATSAPP_CANAIS_RPC = 'list_whatsapp_campaign_canais';
+
+let shouldUseDirectCanalFallback = false;
+
+const isMissingListWhatsAppCampaignCanaisRpcError = (error: unknown) => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+  const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+  const details = 'details' in error && typeof error.details === 'string' ? error.details : '';
+  const hint = 'hint' in error && typeof error.hint === 'string' ? error.hint : '';
+  const status = 'status' in error && typeof error.status === 'number' ? error.status : null;
+  const combinedMessage = `${message} ${details} ${hint}`.toLowerCase();
+
+  return code === 'PGRST202'
+    || status === 404
+    || (combinedMessage.includes(WHATSAPP_CANAIS_RPC) && combinedMessage.includes('schema cache'))
+    || (combinedMessage.includes(WHATSAPP_CANAIS_RPC) && combinedMessage.includes('could not find'));
+};
+
+async function listWhatsAppCampaignCanaisDirect(): Promise<string[]> {
+  const rows = await fetchAllPages<{ canal: string | null }>(async (from, to) => {
+    const response = await supabase
+      .from('leads')
+      .select('canal')
+      .eq('arquivado', false)
+      .range(from, to);
+
+    return {
+      data: response.data as Array<{ canal: string | null }> | null,
+      error: response.error,
+    };
+  }, 1000);
+
+  return Array.from(
+    new Set(
+      rows
+        .map((row) => (typeof row.canal === 'string' ? row.canal.trim() : ''))
+        .filter(Boolean),
+    ),
+  );
+}
 
 const ensureCampaignResult = (data: unknown, fallbackMessage: string): WhatsAppCampaign => {
   if (Array.isArray(data)) {
@@ -128,9 +173,18 @@ export async function previewWhatsAppCampaignAudience(
 }
 
 export async function listWhatsAppCampaignCanais(): Promise<string[]> {
+  if (shouldUseDirectCanalFallback) {
+    return listWhatsAppCampaignCanaisDirect();
+  }
+
   const { data, error } = await supabase.rpc('list_whatsapp_campaign_canais');
 
   if (error) {
+    if (isMissingListWhatsAppCampaignCanaisRpcError(error)) {
+      shouldUseDirectCanalFallback = true;
+      return listWhatsAppCampaignCanaisDirect();
+    }
+
     throw error;
   }
 

@@ -232,20 +232,20 @@ const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <div className="text-xs font-semibold uppercase text-slate-400">
+    <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] px-4 py-3 shadow-sm">
+      <div className="text-xs font-semibold uppercase text-[var(--panel-text-subtle,#ab927b)]">
         Gatilho
       </div>
-      <div className="text-sm font-semibold text-slate-800">
+      <div className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">
         {data.label || "Lead criado"}
       </div>
-      <div className="text-xs text-slate-500 mt-1">
+      <div className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
         {getTriggerDescription()}
       </div>
       <Handle
         type="source"
         position={Position.Right}
-        className="w-2 h-2 bg-slate-400"
+        className="h-2 w-2 bg-[var(--panel-border-strong,#9d7f5a)]"
       />
     </div>
   );
@@ -254,68 +254,68 @@ const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
 const BOOLEAN_FIELDS = ["whatsapp_valid", "event", "lead_created"];
 
 const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
-  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
-    <div className="text-xs font-semibold uppercase text-amber-600">
+  <div className="rounded-xl border border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)] px-4 py-3 shadow-sm">
+    <div className="text-xs font-semibold uppercase text-[var(--panel-accent-strong,#b85c1f)]">
       Condição
     </div>
-    <div className="text-sm font-semibold text-amber-900">
+    <div className="text-sm font-semibold text-[var(--panel-accent-ink-strong,#4a2411)]">
       {data.label || "Condições"}
     </div>
-    <div className="text-xs text-amber-700 mt-1">
+    <div className="mt-1 text-xs text-[var(--panel-accent-ink,#6f3f16)]">
       {data.conditions?.length
         ? `${data.conditions.length} condição(ões)`
         : "Sem condições"}
     </div>
-    <div className="mt-2 flex items-center gap-2 text-[11px] text-amber-700">
-      <span className="rounded-full border border-amber-200 bg-white px-2 py-0.5">
+    <div className="mt-2 flex items-center gap-2 text-[11px] text-[var(--panel-accent-ink,#6f3f16)]">
+      <span className="rounded-full border border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-surface,#fffdfa)] px-2 py-0.5">
         Sim
       </span>
-      <span className="rounded-full border border-amber-200 bg-white px-2 py-0.5">
+      <span className="rounded-full border border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-surface,#fffdfa)] px-2 py-0.5">
         Nao
       </span>
     </div>
     <Handle
       type="target"
       position={Position.Left}
-      className="w-2 h-2 bg-amber-500"
+      className="h-2 w-2 bg-[var(--panel-accent-strong,#b85c1f)]"
     />
     <Handle
       id="yes"
       type="source"
       position={Position.Right}
-      className="w-2 h-2 bg-amber-500"
+      className="h-2 w-2 bg-[var(--panel-accent-strong,#b85c1f)]"
       style={{ top: "35%" }}
     />
     <Handle
       id="no"
       type="source"
       position={Position.Right}
-      className="w-2 h-2 bg-amber-500"
+      className="h-2 w-2 bg-[var(--panel-accent-strong,#b85c1f)]"
       style={{ top: "70%" }}
     />
   </div>
 );
 
 const ActionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
-  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-    <div className="text-xs font-semibold uppercase text-slate-400">Ação</div>
-    <div className="text-sm font-semibold text-slate-800">
+  <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] px-4 py-3 shadow-sm">
+    <div className="text-xs font-semibold uppercase text-[var(--panel-text-subtle,#ab927b)]">Ação</div>
+    <div className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">
       {data.label || "Ação"}
     </div>
     {data.step && (
-      <div className="text-xs text-slate-500 mt-1">
+      <div className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
         Esperar {data.step.delayValue} {data.step.delayUnit}
       </div>
     )}
     <Handle
       type="target"
       position={Position.Left}
-      className="w-2 h-2 bg-slate-400"
+      className="h-2 w-2 bg-[var(--panel-border-strong,#9d7f5a)]"
     />
     <Handle
       type="source"
       position={Position.Right}
-      className="w-2 h-2 bg-slate-400"
+      className="h-2 w-2 bg-[var(--panel-border-strong,#9d7f5a)]"
     />
   </div>
 );
@@ -379,12 +379,12 @@ export default function FlowBuilder({
 
   const flowThemeColors = useMemo(
     () => ({
-      exportBackground: isDarkTheme ? "#0f172a" : "#f8fafc",
-      minimapNode: isDarkTheme ? "#334155" : "#e2e8f0",
+      exportBackground: isDarkTheme ? "#120b08" : "#f6f1e8",
+      minimapNode: isDarkTheme ? "#7a573e" : "#d4c0a7",
       minimapMask: isDarkTheme
-        ? "rgba(15, 23, 42, 0.6)"
-        : "rgba(15, 23, 42, 0.1)",
-      backgroundGrid: isDarkTheme ? "#334155" : "#e2e8f0",
+        ? "rgba(18, 11, 8, 0.68)"
+        : "rgba(91, 70, 53, 0.12)",
+      backgroundGrid: isDarkTheme ? "#4b3425" : "#d4c0a7",
     }),
     [isDarkTheme],
   );
@@ -1041,17 +1041,17 @@ export default function FlowBuilder({
     <div className="panel-page-shell grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
       <div
         ref={reactFlowWrapperRef}
-        className="flex h-[520px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 sm:h-[560px] lg:h-[680px]"
+        className="flex h-[520px] flex-col overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] sm:h-[560px] lg:h-[680px]"
       >
-        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 rounded-t-2xl">
+        <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] px-4 py-3">
           <div>
-            <div className="text-xs uppercase text-slate-400 font-semibold">
+            <div className="text-xs font-semibold uppercase text-[var(--panel-text-subtle,#ab927b)]">
               Builder avancado
             </div>
-            <div className="text-sm text-slate-700">
+            <div className="text-sm text-[var(--panel-text-soft,#5b4635)]">
               Arraste e conecte as etapas do seu fluxo.
             </div>
-            <div className="text-[11px] text-slate-500 mt-1">
+            <div className="mt-1 text-[11px] text-[var(--panel-text-muted,#876f5c)]">
               Clique em uma linha para remover.
             </div>
           </div>
@@ -1095,7 +1095,7 @@ export default function FlowBuilder({
           </div>
         </div>
         {totalIssueCount > 0 && (
-          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <div className="border-b border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)] px-4 py-2 text-xs text-[var(--panel-accent-ink,#6f3f16)]">
             Existem {totalIssueCount} alerta(s) de conexao no fluxo.
           </div>
         )}
@@ -1123,7 +1123,7 @@ export default function FlowBuilder({
             onPaneClick={() => setContextMenu(null)}
             nodeTypes={nodeTypes}
             fitView
-            className="h-full bg-slate-50"
+            className="h-full bg-[color:var(--panel-surface-soft,#f4ede3)]"
           >
             <MiniMap
               nodeColor={flowThemeColors.minimapNode}
@@ -1139,7 +1139,7 @@ export default function FlowBuilder({
         </div>
         {contextMenu && (
           <div
-            className="fixed z-50 rounded-lg border border-slate-200 bg-white shadow-lg text-sm"
+            className="fixed z-50 rounded-lg border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] text-sm shadow-lg"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <Button
@@ -1155,23 +1155,23 @@ export default function FlowBuilder({
         )}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 h-[520px] sm:h-[560px] lg:h-[680px] overflow-y-auto">
-        <div className="text-xs uppercase text-slate-400 font-semibold">
+      <div className="h-[520px] overflow-y-auto rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] p-4 sm:h-[560px] lg:h-[680px]">
+        <div className="text-xs font-semibold uppercase text-[var(--panel-text-subtle,#ab927b)]">
           Inspector
         </div>
         {selectedNode ? (
           <div className="mt-3 space-y-4">
             <div>
-              <div className="text-sm font-semibold text-slate-800">
+              <div className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">
                 {selectedNode.data.label || "No"}
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-[var(--panel-text-muted,#876f5c)]">
                 Tipo: {selectedNode.type}
               </div>
             </div>
 
             {selectedNodeIssues.length > 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              <div className="rounded-lg border border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)] px-3 py-2 text-xs text-[var(--panel-accent-ink,#6f3f16)]">
                 {selectedNodeIssues.join(" • ")}
               </div>
             )}
@@ -1179,7 +1179,7 @@ export default function FlowBuilder({
             {selectedNode.type === "trigger" && (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[11px] text-slate-500 mb-1">
+                  <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                     Tipo de gatilho
                   </label>
                   <FilterSingleSelect
@@ -1237,7 +1237,7 @@ export default function FlowBuilder({
                       placeholder="Selecione os status..."
                       label="Status do lead"
                     />
-                    <div className="text-[10px] text-slate-400 mt-1">
+                    <div className="mt-1 text-[10px] text-[var(--panel-text-subtle,#ab927b)]">
                       Selecione um ou mais status
                     </div>
                   </div>
@@ -1245,7 +1245,7 @@ export default function FlowBuilder({
 
                 {selectedNode.data.triggerType === "status_duration" && (
                   <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">
+                    <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                       Tempo no status (horas)
                     </label>
                     <Input
@@ -1259,7 +1259,7 @@ export default function FlowBuilder({
                       }
                       size="compact"
                     />
-                    <div className="text-[10px] text-slate-400 mt-1">
+                    <div className="mt-1 text-[10px] text-[var(--panel-text-subtle,#ab927b)]">
                       O fluxo será executado quando o lead estiver há mais de X
                       horas neste(s) status
                     </div>
@@ -1270,7 +1270,7 @@ export default function FlowBuilder({
 
             {selectedNode.type === "condition" && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex items-center gap-2 text-xs text-[var(--panel-text-muted,#876f5c)]">
                   <span>Aplicar quando</span>
                   <div className="w-40">
                     <FilterSingleSelect
@@ -1299,7 +1299,7 @@ export default function FlowBuilder({
                     return (
                       <div
                         key={condition.id}
-                        className="space-y-2 border border-slate-200 rounded-lg p-3"
+                        className="space-y-2 rounded-lg border border-[var(--panel-border-subtle,#e7dac8)] p-3"
                       >
                         <FilterSingleSelect
                           icon={RefreshCcw}
@@ -1364,7 +1364,7 @@ export default function FlowBuilder({
                           )}
                         />
                         {BOOLEAN_FIELDS.includes(condition.field) ? (
-                          <div className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200">
+                          <div className="rounded border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] p-2 text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                             Use as conexões{" "}
                             <span className="font-semibold">Sim/Não</span> para
                             definir o fluxo quando a condição for verdadeira ou
@@ -1424,7 +1424,7 @@ export default function FlowBuilder({
                           </>
                         )}
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] text-[var(--panel-text-subtle,#ab927b)]">
                             Condicao {index + 1}
                           </span>
                           <Button
@@ -1466,7 +1466,7 @@ export default function FlowBuilder({
                 >
                   + Adicionar condicao
                 </Button>
-                <div className="text-[11px] text-slate-400">
+                <div className="text-[11px] text-[var(--panel-text-subtle,#ab927b)]">
                   Use formulas iniciando com '=' (ex.:
                   =len(lead.telefone)&gt;10).
                 </div>
@@ -1505,7 +1505,7 @@ export default function FlowBuilder({
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">
+                    <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                       Esperar
                     </label>
                     <Input
@@ -1521,7 +1521,7 @@ export default function FlowBuilder({
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">
+                    <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                       Unidade
                     </label>
                     <FilterSingleSelect
@@ -1546,7 +1546,7 @@ export default function FlowBuilder({
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
-                    <label className="block text-[11px] text-slate-500">
+                    <label className="block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                       Formula de delay (opcional)
                     </label>
                     <Button
@@ -1579,17 +1579,17 @@ export default function FlowBuilder({
                       placeholder="=if(len(lead.telefone)>10, 2, 6)"
                     />
                   )}
-                  <div className="text-[11px] text-slate-400 mt-1">
+                  <div className="mt-1 text-[11px] text-[var(--panel-text-subtle,#ab927b)]">
                     Ex.: =if(len(lead.telefone)&gt;10, 2, 6)
                   </div>
                   {delayPreview && (
-                    <div className="text-[11px] text-slate-500 mt-1">
+                    <div className="mt-1 text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                       Preview: {delayPreview}
                     </div>
                   )}
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-500 mb-1">
+                  <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                     Tipo de acao
                   </label>
                   <FilterSingleSelect
@@ -1614,11 +1614,11 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "send_message" && (
                   <div className="space-y-2">
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                       Canal ativo: WhatsApp (configurado em Integracoes).
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-500 mb-1">
+                      <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                         Origem da mensagem
                       </label>
                       <FilterSingleSelect
@@ -1643,7 +1643,7 @@ export default function FlowBuilder({
                     </div>
                     {selectedNode.data.step?.messageSource === "template" ? (
                       <div>
-                        <label className="block text-[11px] text-slate-500 mb-1">
+                        <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                           Template
                         </label>
                         <FilterSingleSelect
@@ -1666,7 +1666,7 @@ export default function FlowBuilder({
                       </div>
                     ) : (
                       <div>
-                        <label className="block text-[11px] text-slate-500 mb-1">
+                        <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                           Mensagem
                         </label>
                         <VariableAutocompleteTextarea
@@ -1687,12 +1687,12 @@ export default function FlowBuilder({
                             AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
                           }
                         />
-                        <div className="text-[11px] text-slate-400 mt-1">
+                        <div className="mt-1 text-[11px] text-[var(--panel-text-subtle,#ab927b)]">
                           Use variaveis como {"{{primeiro_nome}}"} ou formulas
                           com {"{{= ... }}"}.
                         </div>
                         {messagePreview && (
-                          <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-600">
+                          <div className="mt-2 rounded-md border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] p-2 text-[11px] text-[var(--panel-text-soft,#5b4635)]">
                             Preview: {messagePreview}
                           </div>
                         )}
@@ -1703,7 +1703,7 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "update_status" && (
                   <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">
+                    <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                       Status do lead
                     </label>
                     <FilterSingleSelect
@@ -1731,7 +1731,7 @@ export default function FlowBuilder({
                 {selectedNode.data.step?.actionType === "create_task" && (
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-[11px] text-slate-500 mb-1">
+                      <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                         Título
                       </label>
                       <Input
@@ -1744,7 +1744,7 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-500 mb-1">
+                      <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                         Descrição
                       </label>
                       <VariableAutocompleteTextarea
@@ -1759,7 +1759,7 @@ export default function FlowBuilder({
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[11px] text-slate-500 mb-1">
+                        <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                           Vencimento (h)
                         </label>
                         <Input
@@ -1775,7 +1775,7 @@ export default function FlowBuilder({
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] text-slate-500 mb-1">
+                        <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                           Prioridade
                         </label>
                         <FilterSingleSelect
@@ -1805,12 +1805,12 @@ export default function FlowBuilder({
 
                 {selectedNode.data.step?.actionType === "send_email" && (
                   <div className="space-y-2">
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                       Envio depende de conta configurada em Integracoes de
                       e-mail.
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-500 mb-1">
+                      <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                         Para
                       </label>
                       <Input
@@ -1823,7 +1823,7 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-500 mb-1">
+                      <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                         Assunto
                       </label>
                       <Input
@@ -1838,7 +1838,7 @@ export default function FlowBuilder({
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-500 mb-1">
+                      <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                         Corpo
                       </label>
                       <VariableAutocompleteTextarea
@@ -1857,7 +1857,7 @@ export default function FlowBuilder({
                 {selectedNode.data.step?.actionType === "webhook" && (
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-[11px] text-slate-500 mb-1">
+                      <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                         URL
                       </label>
                       <Input
@@ -1871,7 +1871,7 @@ export default function FlowBuilder({
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[11px] text-slate-500 mb-1">
+                        <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                           Método
                         </label>
                         <FilterSingleSelect
@@ -1897,7 +1897,7 @@ export default function FlowBuilder({
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] text-slate-500 mb-1">
+                        <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                           Headers (JSON)
                         </label>
                         <Input
@@ -1913,7 +1913,7 @@ export default function FlowBuilder({
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[11px] text-slate-500 mb-1">
+                      <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
                         Body
                       </label>
                       <VariableAutocompleteTextarea
@@ -1932,7 +1932,7 @@ export default function FlowBuilder({
             )}
           </div>
         ) : (
-          <div className="mt-3 text-xs text-slate-500">
+          <div className="mt-3 text-xs text-[var(--panel-text-muted,#876f5c)]">
             Selecione um no para editar.
           </div>
         )}

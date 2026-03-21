@@ -118,6 +118,67 @@ const EMOJI_CATEGORIES: EmojiCategoryConfig[] = EMOJI_CATEGORIES_DATA.map((categ
   icon: EMOJI_CATEGORY_ICONS[category.id],
 }));
 
+type OutgoingFileMessageType = 'image' | 'sticker' | 'video' | 'audio' | 'document';
+
+type ComposerSelectedFile = {
+  id: string;
+  file: File;
+  previewUrl: string | null;
+  type: OutgoingFileMessageType;
+};
+
+const resolveOutgoingFileMessageType = (file: File): OutgoingFileMessageType => {
+  const mimeType = file.type.toLowerCase();
+  const fileName = file.name.toLowerCase();
+  if (mimeType === 'image/webp' || mimeType === 'application/webp' || fileName.endsWith('.webp')) return 'sticker';
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  return 'document';
+};
+
+const isPreviewableOutgoingFileType = (type: OutgoingFileMessageType) => (
+  type === 'image' || type === 'sticker' || type === 'video'
+);
+
+const attachmentSupportsCaption = (type: OutgoingFileMessageType) => (
+  type === 'image' || type === 'video' || type === 'document'
+);
+
+const formatFileSize = (bytes: number) => {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${bytes} B`;
+};
+
+const buildOutgoingFileFallbackBody = (file: File, type: OutgoingFileMessageType) => {
+  if (type === 'sticker') return '[Sticker]';
+  if (file.type.startsWith('audio/')) return '[Áudio]';
+  if (file.type.startsWith('image/')) return '[Imagem]';
+  if (file.type.startsWith('video/')) return '[Vídeo]';
+  return '[Arquivo]';
+};
+
+const getOutgoingFileTypeLabel = (type: OutgoingFileMessageType) => {
+  if (type === 'image') return 'Imagem';
+  if (type === 'video') return 'Video';
+  if (type === 'audio') return 'Audio';
+  if (type === 'sticker') return 'Sticker';
+  return 'Documento';
+};
+
+const revokeSelectedFilePreview = (selectedFile: ComposerSelectedFile) => {
+  if (selectedFile.previewUrl) {
+    URL.revokeObjectURL(selectedFile.previewUrl);
+  }
+};
+
 function WhatsAppComposerComponent({
   chatId,
   onMessageSent,
@@ -140,9 +201,9 @@ function WhatsAppComposerComponent({
   const [audioPreviewDuration, setAudioPreviewDuration] = useState(0);
   const [audioPreviewMimeType, setAudioPreviewMimeType] = useState('');
   const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<ComposerSelectedFile[]>([]);
   const [selectedGif, setSelectedGif] = useState<GiphyGifItem | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isComposerDragActive, setIsComposerDragActive] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -216,11 +277,14 @@ function WhatsAppComposerComponent({
   const followUpRequestIdRef = useRef(0);
   const linkPreviewRequestIdRef = useRef(0);
   const gifSearchRequestIdRef = useRef(0);
+  const composerDragDepthRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageDraftRef = useRef('');
   const rewriteTextareaRef = useRef<HTMLTextAreaElement>(null);
   const composerActionsMenuRef = useRef<HTMLDivElement>(null);
   const shouldRestoreComposerFocusRef = useRef(false);
+  const selectedFilesRef = useRef<ComposerSelectedFile[]>([]);
+  const audioPreviewUrlRef = useRef<string | null>(null);
   const rewriteTones = [
     { value: 'claro', label: 'Claro e correto' },
     { value: 'formal', label: 'Formal' },
@@ -230,6 +294,22 @@ function WhatsAppComposerComponent({
   ];
   const normalizedEmojiSearch = useMemo(() => normalizeEmojiSearch(emojiSearch), [emojiSearch]);
   const normalizedStickerSearch = useMemo(() => normalizeEmojiSearch(stickerSearch), [stickerSearch]);
+  const hasSelectedFiles = selectedFiles.length > 0;
+  const selectedFilesTotalSize = useMemo(
+    () => selectedFiles.reduce((total, selectedFile) => total + selectedFile.file.size, 0),
+    [selectedFiles],
+  );
+  const selectedFilesHint = useMemo(() => {
+    if (selectedFiles.length === 0) return '';
+    if (selectedFiles.length > 1) return 'Todos serao enviados em sequencia; a legenda vai no primeiro item compativel.';
+
+    const selectedFile = selectedFiles[0];
+    if (!selectedFile) return '';
+
+    if (attachmentSupportsCaption(selectedFile.type)) return 'Digite uma legenda abaixo (opcional)';
+    if (selectedFile.type === 'sticker') return 'Sticker sera enviado no formato nativo do WhatsApp';
+    return 'Voce tambem pode colar ou arrastar arquivos direto no composer';
+  }, [selectedFiles]);
   const emojiTabs = useMemo(
     () => [
       {
@@ -522,11 +602,11 @@ function WhatsAppComposerComponent({
   };
 
   const detectedPreviewUrl = useMemo(() => {
-    if (selectedFile || selectedGif) return null;
+    if (hasSelectedFiles || selectedGif) return null;
     const resolvedMessage = applyTemplateVariables(deferredMessage.trim());
     const firstUrl = extractFirstUrl(resolvedMessage);
     return firstUrl ? normalizePreviewUrl(firstUrl) : null;
-  }, [applyTemplateVariables, deferredMessage, selectedFile, selectedGif]);
+  }, [applyTemplateVariables, deferredMessage, hasSelectedFiles, selectedGif]);
 
   const shouldShowInlineLinkPreview = Boolean(
     detectedPreviewUrl && linkPreviewDismissedUrl !== detectedPreviewUrl && (linkPreviewCanonical || linkPreviewLoading || linkPreviewError),
@@ -798,16 +878,6 @@ function WhatsAppComposerComponent({
     [deferredFollowUpDraft],
   );
 
-  const resolveOutgoingFileMessageType = (file: File): 'image' | 'sticker' | 'video' | 'audio' | 'document' => {
-    const mimeType = file.type.toLowerCase();
-    const fileName = file.name.toLowerCase();
-    if (mimeType === 'image/webp' || mimeType === 'application/webp' || fileName.endsWith('.webp')) return 'sticker';
-    if (mimeType.startsWith('image/')) return 'image';
-    if (mimeType.startsWith('video/')) return 'video';
-    if (mimeType.startsWith('audio/')) return 'audio';
-    return 'document';
-  };
-
   const resolveSelectedGifPreviewUrl = (gif: GiphyGifItem | null) => {
     if (!gif) return '';
     return gif.previewUrl || gif.stillUrl || gif.gifUrl || gif.mp4Url || '';
@@ -967,6 +1037,106 @@ function WhatsAppComposerComponent({
     }
   };
 
+  const sendSelectedFiles = async (
+    files: ComposerSelectedFile[],
+    options: {
+      targetChatId: string;
+      caption: string;
+      quotedMessageId?: string | null;
+    },
+  ) => {
+    const normalizedChatId = normalizeChatId(options.targetChatId);
+    const captionFileIndex = options.caption
+      ? files.findIndex((selectedFile) => attachmentSupportsCaption(selectedFile.type))
+      : -1;
+    let failedCount = 0;
+
+    for (const [index, selectedFile] of files.entries()) {
+      const caption = captionFileIndex === index ? options.caption : '';
+      const sentAt = new Date().toISOString();
+      const localRef = createClientMessageId();
+      const resolvedBody = caption || buildOutgoingFileFallbackBody(selectedFile.file, selectedFile.type);
+      let retryPayload: OutboundRetryPayload | null = null;
+
+      try {
+        retryPayload = buildMediaRetryPayload(
+          selectedFile.type,
+          selectedFile.file,
+          await fileToDataUrl(selectedFile.file),
+          {
+            caption: caption || null,
+            quotedMessageId: options.quotedMessageId ?? null,
+          },
+        );
+
+        emitMessageSent(buildRetryableSentMessage({
+          localRef,
+          chatId: normalizedChatId,
+          body: resolvedBody,
+          type: selectedFile.type,
+          hasMedia: true,
+          sentAt,
+          retryPayload,
+          sendState: 'pending',
+          errorMessage: null,
+        }));
+
+        const response = await sendMediaMessage(options.targetChatId, selectedFile.file, {
+          caption: caption || undefined,
+          quotedMessageId: options.quotedMessageId || undefined,
+        });
+
+        const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
+          response,
+          chatId: options.targetChatId,
+          type: selectedFile.type,
+          body: resolvedBody,
+          hasMedia: true,
+          sentAt,
+        });
+
+        const mediaPayload: SentMessagePayload = {
+          id: messageId,
+          local_ref: localRef,
+          chat_id: persistedChatId,
+          body: resolvedBody,
+          type: selectedFile.type,
+          has_media: true,
+          timestamp: sentAt,
+          direction: 'outbound',
+          created_at: sentAt,
+          retry_payload: null,
+          payload: response,
+        };
+
+        emitMessageSent(mediaPayload);
+      } catch (error) {
+        failedCount += 1;
+        const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar arquivo';
+
+        emitMessageSent(buildRetryableSentMessage({
+          localRef,
+          chatId: normalizedChatId,
+          body: resolvedBody,
+          type: selectedFile.type,
+          hasMedia: true,
+          sentAt,
+          retryPayload,
+          sendState: 'failed',
+          errorMessage,
+        }));
+      }
+    }
+
+    if (failedCount > 0) {
+      if (failedCount === files.length) {
+        toast.error('Nao foi possivel enviar os arquivos selecionados.');
+      } else {
+        toast.warning(`Alguns arquivos nao foram enviados (${failedCount}/${files.length}).`);
+      }
+    }
+  };
+
   useEffect(() => {
     if (editMessage) {
       updateComposerDraft(editMessage.body);
@@ -986,12 +1156,18 @@ function WhatsAppComposerComponent({
   }, [chatId]);
 
   useEffect(() => {
+    selectedFilesRef.current = selectedFiles;
+  }, [selectedFiles]);
+
+  useEffect(() => {
+    audioPreviewUrlRef.current = audioPreviewUrl;
+  }, [audioPreviewUrl]);
+
+  useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-      if (audioPreviewUrl) {
-        URL.revokeObjectURL(audioPreviewUrl);
+      selectedFilesRef.current.forEach(revokeSelectedFilePreview);
+      if (audioPreviewUrlRef.current) {
+        URL.revokeObjectURL(audioPreviewUrlRef.current);
       }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -1015,7 +1191,7 @@ function WhatsAppComposerComponent({
         audioContextRef.current.close();
       }
     };
-  }, [previewUrl, audioPreviewUrl]);
+  }, []);
 
   useEffect(() => {
     lastTypingSignalAtRef.current = 0;
@@ -1304,14 +1480,14 @@ function WhatsAppComposerComponent({
     const resolvedMessage = applyTemplateVariables(rawMessage);
     const submitChatId = chatId;
 
-    if ((!rawMessage && !selectedFile && !selectedGif) || isSending) return;
+    if ((!rawMessage && !hasSelectedFiles && !selectedGif) || isSending) return;
 
-    if (!editMessage && !selectedFile && !selectedGif && slashCommandState.active && slashCommandState.results.length > 0) {
+    if (!editMessage && !hasSelectedFiles && !selectedGif && slashCommandState.active && slashCommandState.results.length > 0) {
       handleUseSlashQuickReply(selectedSlashQuickReply || slashCommandState.results[0]);
       return;
     }
 
-    if (!editMessage && !selectedFile && !selectedGif && rawMessage) {
+    if (!editMessage && !hasSelectedFiles && !selectedGif && rawMessage) {
       const currentDetectedUrl = detectedPreviewUrl;
       const draftReplyToMessage = replyToMessage ? { ...replyToMessage } : null;
       const previewTitle = linkPreviewTitle.trim();
@@ -1474,93 +1650,22 @@ function WhatsAppComposerComponent({
           }));
           throw error;
         }
-      } else if (selectedFile) {
-        const mediaMessageType = resolveOutgoingFileMessageType(selectedFile);
-        const caption = mediaMessageType === 'sticker' ? '' : resolvedMessage;
-        const sentAt = new Date().toISOString();
-        const localRef = createClientMessageId();
-        const normalizedChatId = normalizeChatId(chatId);
-        const fallbackBody = mediaMessageType === 'sticker'
-          ? '[Sticker]'
-          : selectedFile.type.startsWith('audio/')
-            ? '[Áudio]'
-            : selectedFile.type.startsWith('image/')
-              ? '[Imagem]'
-              : selectedFile.type.startsWith('video/')
-                ? '[Vídeo]'
-                : '[Arquivo]';
-        const resolvedBody = mediaMessageType === 'sticker' ? '[Sticker]' : caption || fallbackBody;
-        const retryPayload = buildMediaRetryPayload(
-          mediaMessageType,
-          selectedFile,
-          await fileToDataUrl(selectedFile),
-          {
-            caption: caption || null,
-            quotedMessageId: replyToMessage?.id ?? null,
-          },
-        );
+      } else if (hasSelectedFiles) {
+        const draftReplyToMessage = replyToMessage ? { ...replyToMessage } : null;
+        const filesToSend = selectedFiles.map((selectedFile) => ({ ...selectedFile }));
 
-        emitMessageSent(buildRetryableSentMessage({
-          localRef,
-          chatId: normalizedChatId,
-          body: resolvedBody,
-          type: mediaMessageType,
-          hasMedia: true,
-          sentAt,
-          retryPayload,
-          sendState: 'pending',
-          errorMessage: null,
-        }));
+        clearSelectedFiles();
+        updateComposerDraft('');
+        clearLinkPreviewDraft();
+        setLinkPreviewDismissedUrl(null);
+        if (onCancelReply) onCancelReply();
+        queueComposerFocusRestore();
 
-        try {
-          const response = await sendMediaMessage(chatId, selectedFile, {
-            caption: caption || undefined,
-            quotedMessageId: replyToMessage?.id,
-          });
-
-          const { normalizedChatId: persistedChatId, messageId } = await persistOutboundMessage({
-            response,
-            chatId,
-            type: mediaMessageType,
-            body: resolvedBody,
-            hasMedia: true,
-            sentAt,
-          });
-
-          const mediaPayload: SentMessagePayload = {
-            id: messageId,
-            local_ref: localRef,
-            chat_id: persistedChatId,
-            body: resolvedBody,
-            type: mediaMessageType,
-            has_media: true,
-            timestamp: sentAt,
-            direction: 'outbound',
-            created_at: sentAt,
-            retry_payload: null,
-            payload: response,
-          };
-
-          clearFile();
-          updateComposerDraft('');
-          if (onCancelReply) onCancelReply();
-          emitMessageSent(mediaPayload);
-          queueComposerFocusRestore();
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar arquivo';
-          emitMessageSent(buildRetryableSentMessage({
-            localRef,
-            chatId: normalizedChatId,
-            body: resolvedBody,
-            type: mediaMessageType,
-            hasMedia: true,
-            sentAt,
-            retryPayload,
-            sendState: 'failed',
-            errorMessage,
-          }));
-          throw error;
-        }
+        await sendSelectedFiles(filesToSend, {
+          targetChatId: chatId,
+          caption: resolvedMessage,
+          quotedMessageId: draftReplyToMessage?.id ?? null,
+        });
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
@@ -1665,53 +1770,80 @@ function WhatsAppComposerComponent({
     return `${prefix}-${Date.now()}.${extensionFromType}`;
   };
 
-  const attachFileToComposer = (incomingFile: File) => {
-    const normalizedFile =
-      incomingFile.name?.trim()
-        ? incomingFile
-        : new File([incomingFile], buildClipboardFileName(incomingFile), {
-            type: incomingFile.type || 'application/octet-stream',
-            lastModified: incomingFile.lastModified || Date.now(),
-          });
+  const resetAttachmentInputs = () => {
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    if (stickerInputRef.current) stickerInputRef.current.value = '';
+  };
 
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
+  const appendFilesToComposer = (incomingFiles: Iterable<File>) => {
+    const nextSelectedFiles = Array.from(incomingFiles)
+      .filter((incomingFile): incomingFile is File => incomingFile instanceof File)
+      .map((incomingFile) => {
+        const normalizedFile = incomingFile.name?.trim()
+          ? incomingFile
+          : new File([incomingFile], buildClipboardFileName(incomingFile), {
+              type: incomingFile.type || 'application/octet-stream',
+              lastModified: incomingFile.lastModified || Date.now(),
+            });
+
+        const outgoingType = resolveOutgoingFileMessageType(normalizedFile);
+
+        return {
+          id: createClientMessageId(),
+          file: normalizedFile,
+          previewUrl: isPreviewableOutgoingFileType(outgoingType) ? URL.createObjectURL(normalizedFile) : null,
+          type: outgoingType,
+        } satisfies ComposerSelectedFile;
+      });
+
+    if (nextSelectedFiles.length === 0) {
+      return;
     }
 
-    setSelectedFile(normalizedFile);
+    setSelectedFiles((current) => [...current, ...nextSelectedFiles]);
     setSelectedGif(null);
 
-    const outgoingType = resolveOutgoingFileMessageType(normalizedFile);
-
-    if (outgoingType === 'image' || outgoingType === 'sticker' || outgoingType === 'video') {
-      const url = URL.createObjectURL(normalizedFile);
-      setPreviewUrl(url);
-    }
-
-    if (outgoingType === 'sticker') {
-      void rememberRecentSticker(normalizedFile).catch((error) => {
-        console.warn('Erro ao salvar figurinha recente:', error);
-      });
-    }
+    nextSelectedFiles.forEach((selectedFile) => {
+      if (selectedFile.type === 'sticker') {
+        void rememberRecentSticker(selectedFile.file).catch((error) => {
+          console.warn('Erro ao salvar figurinha recente:', error);
+        });
+      }
+    });
 
     setShowAttachMenu(false);
     setShowEmojiPicker(false);
     setShowComposerActionsMenu(false);
   };
 
+  const removeSelectedFile = (selectedFileId: string) => {
+    setSelectedFiles((current) => {
+      const fileToRemove = current.find((selectedFile) => selectedFile.id === selectedFileId);
+      if (!fileToRemove) {
+        return current;
+      }
+
+      revokeSelectedFilePreview(fileToRemove);
+      return current.filter((selectedFile) => selectedFile.id !== selectedFileId);
+    });
+    resetAttachmentInputs();
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      attachFileToComposer(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      appendFilesToComposer(files);
     }
+    e.target.value = '';
   };
 
   const handleStickerFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
 
-    attachFileToComposer(file);
+    appendFilesToComposer([file]);
 
     try {
       const result = await saveStickerToLibrary(file);
@@ -1726,35 +1858,72 @@ function WhatsAppComposerComponent({
   };
 
   const handleTextareaPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const clipboardItems = Array.from(event.clipboardData?.items || []);
-    const fileItem = clipboardItems.find((item) => item.kind === 'file');
-    const pastedFile = fileItem?.getAsFile();
+    const pastedFiles = Array.from(event.clipboardData?.items || [])
+      .filter((item) => item.kind === 'file')
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file instanceof File);
 
-    if (!pastedFile) {
+    if (pastedFiles.length === 0) {
       return;
     }
 
     event.preventDefault();
-    attachFileToComposer(pastedFile);
+    appendFilesToComposer(pastedFiles);
   };
 
-  const handleTextareaDrop = (event: React.DragEvent<HTMLTextAreaElement>) => {
-    const droppedFile = event.dataTransfer?.files?.[0];
-    if (!droppedFile) return;
+  const dragEventHasFiles = (event: { dataTransfer?: DataTransfer | null }) => (
+    Array.from(event.dataTransfer?.types || []).includes('Files')
+  );
+
+  const handleComposerDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!dragEventHasFiles(event)) return;
 
     event.preventDefault();
-    attachFileToComposer(droppedFile);
+    composerDragDepthRef.current += 1;
+    setIsComposerDragActive(true);
   };
 
-  const clearFile = () => {
-    setSelectedFile(null);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
+  const handleComposerDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!dragEventHasFiles(event)) return;
+
+    event.preventDefault();
+    composerDragDepthRef.current = Math.max(0, composerDragDepthRef.current - 1);
+
+    if (composerDragDepthRef.current === 0) {
+      setIsComposerDragActive(false);
     }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (imageInputRef.current) imageInputRef.current.value = '';
-    if (stickerInputRef.current) stickerInputRef.current.value = '';
+  };
+
+  const handleComposerDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!dragEventHasFiles(event)) return;
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+
+    if (!isComposerDragActive) {
+      setIsComposerDragActive(true);
+    }
+  };
+
+  const handleComposerDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!dragEventHasFiles(event)) return;
+
+    event.preventDefault();
+    composerDragDepthRef.current = 0;
+    setIsComposerDragActive(false);
+
+    const droppedFiles = Array.from(event.dataTransfer?.files || []);
+    if (droppedFiles.length === 0) return;
+
+    appendFilesToComposer(droppedFiles);
+  };
+
+  const clearSelectedFiles = () => {
+    setSelectedFiles((current) => {
+      current.forEach(revokeSelectedFilePreview);
+      return [];
+    });
+    resetAttachmentInputs();
   };
 
   const clearSelectedGif = () => {
@@ -1762,7 +1931,7 @@ function WhatsAppComposerComponent({
   };
 
   const handleSelectGif = (gif: GiphyGifItem) => {
-    clearFile();
+    clearSelectedFiles();
     setSelectedGif(gif);
     setShowAttachMenu(false);
     setShowEmojiPicker(false);
@@ -1772,7 +1941,7 @@ function WhatsAppComposerComponent({
   const handleSelectRecentSticker = async (sticker: RecentStickerItem) => {
     try {
       const file = await dataUrlToFile(sticker.dataUrl, sticker.name || `sticker-${sticker.id}.webp`, sticker.mimeType || 'image/webp');
-      attachFileToComposer(file);
+      appendFilesToComposer([file]);
     } catch (error) {
       console.error('Erro ao recuperar figurinha recente:', error);
       toast.error('Nao foi possivel carregar esta figurinha.');
@@ -2937,7 +3106,7 @@ function WhatsAppComposerComponent({
         />
       )}
 
-      {selectedGif && !selectedFile && (
+      {selectedGif && !hasSelectedFiles && (
         <div className="comm-banner px-4 py-3">
           <div className="flex items-start gap-3">
             <div className="h-20 w-20 overflow-hidden rounded bg-[var(--panel-surface-soft,#f4ede3)]">
@@ -2978,56 +3147,78 @@ function WhatsAppComposerComponent({
         </div>
       )}
 
-      {selectedFile && (
+      {hasSelectedFiles && (
         <div className="comm-banner px-4 py-3">
-          <div className="flex items-start gap-3">
-            {previewUrl ? (
-              selectedFile.type.startsWith('video/') ? (
-                <video
-                  src={previewUrl}
-                  className="w-20 h-20 object-cover rounded"
-                  muted
-                />
-              ) : (
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="w-20 h-20 object-cover rounded"
-                />
-              )
-            ) : (
-              <div className="comm-media-placeholder flex h-20 w-20 items-center justify-center rounded">
-                <FileIcon className="h-8 w-8" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="comm-title text-sm font-medium">
+                {selectedFiles.length === 1 ? '1 anexo pronto para envio' : `${selectedFiles.length} anexos prontos para envio`}
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="comm-title truncate text-sm font-medium">{selectedFile.name}</div>
               <div className="comm-muted text-xs">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                {formatFileSize(selectedFilesTotalSize)} no total
               </div>
-              {(['image', 'video'] as const).includes(resolveOutgoingFileMessageType(selectedFile) as 'image' | 'video') && (
-                <div className="comm-badge comm-badge-info mt-1">
-                  Digite uma legenda abaixo (opcional)
-                </div>
-              )}
-              {resolveOutgoingFileMessageType(selectedFile) === 'sticker' && (
-                <div className="comm-badge comm-badge-neutral mt-1">
-                  Sticker sera enviado no formato nativo do WhatsApp
-                </div>
-              )}
-              {!['image', 'video', 'sticker'].includes(resolveOutgoingFileMessageType(selectedFile)) && (
-                <div className="comm-badge comm-badge-neutral mt-1">
-                  Você também pode colar arquivos direto no composer
-                </div>
-              )}
             </div>
             <button
-              onClick={clearFile}
+              onClick={clearSelectedFiles}
               className="comm-icon-button rounded p-1"
               disabled={isSending}
+              title="Limpar anexos"
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+
+          <div className="mt-3 grid max-h-56 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+            {selectedFiles.map((selectedFile) => (
+              <div
+                key={selectedFile.id}
+                className="flex items-start gap-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2"
+              >
+                {selectedFile.previewUrl ? (
+                  selectedFile.type === 'video' ? (
+                    <video
+                      src={selectedFile.previewUrl}
+                      className="h-16 w-16 rounded-xl object-cover"
+                      muted
+                    />
+                  ) : (
+                    <img
+                      src={selectedFile.previewUrl}
+                      alt={selectedFile.file.name}
+                      className="h-16 w-16 rounded-xl object-cover"
+                    />
+                  )
+                ) : (
+                  <div className="comm-media-placeholder flex h-16 w-16 items-center justify-center rounded-xl">
+                    <FileIcon className="h-6 w-6" />
+                  </div>
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <div className="comm-title truncate text-sm font-medium">{selectedFile.file.name}</div>
+                  <div className="comm-muted text-xs">{formatFileSize(selectedFile.file.size)}</div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    <span className="comm-badge comm-badge-neutral">{getOutgoingFileTypeLabel(selectedFile.type)}</span>
+                    {selectedFile.type === 'sticker' && (
+                      <span className="comm-badge comm-badge-neutral">Envio nativo</span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => removeSelectedFile(selectedFile.id)}
+                  className="comm-icon-button rounded p-1"
+                  disabled={isSending}
+                  title={`Remover ${selectedFile.file.name}`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-3">
+            <div className="comm-badge comm-badge-info">{selectedFilesHint}</div>
           </div>
         </div>
       )}
@@ -3048,7 +3239,25 @@ function WhatsAppComposerComponent({
         />
       )}
 
-      <div className="relative flex items-center gap-2 p-3">
+      <div
+        className="relative flex items-center gap-2 p-3"
+        onDragEnter={handleComposerDragEnter}
+        onDragLeave={handleComposerDragLeave}
+        onDragOver={handleComposerDragOver}
+        onDrop={handleComposerDrop}
+      >
+        {isComposerDragActive && !isRecording && !audioPreviewUrl && (
+          <div
+            className="pointer-events-none absolute inset-3 z-[130] flex items-center justify-center rounded-2xl border-2 border-dashed border-[var(--panel-accent,#c97316)] px-4 text-center shadow-[0_18px_50px_rgba(111,63,22,0.12)]"
+            style={{ background: 'color-mix(in srgb, var(--panel-surface, #fffdfa) 92%, transparent)' }}
+          >
+            <div>
+              <div className="text-sm font-semibold text-[var(--panel-accent-ink,#6f3f16)]">Solte os arquivos aqui</div>
+              <div className="comm-muted mt-1 text-xs">Imagens, videos, PDFs e outros anexos entram em lote no composer.</div>
+            </div>
+          </div>
+        )}
+
         <div className="relative self-center">
           <button
             onClick={() => {
@@ -3074,7 +3283,7 @@ function WhatsAppComposerComponent({
                 <div className="comm-icon-chip comm-icon-chip-brand flex h-8 w-8 items-center justify-center">
                   <ImageIcon className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-medium">Imagem ou vídeo</span>
+                <span className="text-sm font-medium">Imagens e videos</span>
               </button>
 
               <button
@@ -3087,7 +3296,7 @@ function WhatsAppComposerComponent({
                 <div className="comm-icon-chip comm-icon-chip-info flex h-8 w-8 items-center justify-center">
                   <FileIcon className="w-4 h-4" />
                 </div>
-                <span className="text-sm font-medium">Documento</span>
+                <span className="text-sm font-medium">Documentos e PDF</span>
               </button>
 
               <button
@@ -3118,7 +3327,8 @@ function WhatsAppComposerComponent({
             <input
               ref={imageInputRef}
               type="file"
-              accept="image/jpeg,image/jpg,image/png,video/*"
+              accept="image/*,video/*"
+              multiple
               className="hidden"
               onChange={handleFileSelect}
             />
@@ -3136,6 +3346,7 @@ function WhatsAppComposerComponent({
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             className="hidden"
             onChange={handleFileSelect}
           />
@@ -3557,13 +3768,7 @@ function WhatsAppComposerComponent({
               }}
               onKeyDown={handleTextareaKeyDown}
               onPaste={handleTextareaPaste}
-              onDrop={handleTextareaDrop}
-              onDragOver={(event) => {
-                if (event.dataTransfer?.types?.includes('Files')) {
-                  event.preventDefault();
-                }
-              }}
-              placeholder={selectedFile || selectedGif ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
+              placeholder={hasSelectedFiles || selectedGif ? "Digite uma legenda (opcional)" : "Digite uma mensagem (use / para atalhos)"}
               className="comm-composer-textarea flex-1 max-h-32 min-h-[40px] resize-none bg-transparent px-2 py-2 focus:outline-none"
               rows={1}
               disabled={isSending || isRecording}
@@ -3661,7 +3866,7 @@ function WhatsAppComposerComponent({
               <Send className="w-5 h-5" />
             </button>
           </div>
-        ) : messageDraftRef.current.trim() || selectedFile || selectedGif ? (
+        ) : messageDraftRef.current.trim() || hasSelectedFiles || selectedGif ? (
           <button
             onClick={scheduleSendMessage}
             disabled={isSending}

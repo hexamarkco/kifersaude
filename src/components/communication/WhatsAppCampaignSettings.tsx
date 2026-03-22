@@ -23,6 +23,7 @@ import ReactFlow, { Background, Controls, MarkerType, MiniMap, Position, type Ed
 import 'reactflow/dist/style.css';
 import Button from '../ui/Button';
 import Checkbox from '../ui/Checkbox';
+import ModalShell from '../ui/ModalShell';
 import VariableAutocompleteTextarea from '../ui/VariableAutocompleteTextarea';
 import { fetchAllPages, supabase } from '../../lib/supabase';
 import {
@@ -365,9 +366,11 @@ const isLegacyLeadLabelColumnMessage = (message: string): boolean => {
     normalized.includes('leads.origem')
     || normalized.includes('leads.responsavel')
     || normalized.includes('leads.status')
+    || normalized.includes('leads.tipo_contratacao')
     || normalized.includes('column "origem" of relation "leads"')
     || normalized.includes('column "responsavel" of relation "leads"')
     || normalized.includes('column "status" of relation "leads"')
+    || normalized.includes('column "tipo_contratacao" of relation "leads"')
   );
 };
 
@@ -447,6 +450,10 @@ const mapCampaignFunctionBackendErrorMessage = (message: string): string | null 
     return 'O banco Supabase deste ambiente ainda nao possui a coluna `leads.canal`, exigida por esta campanha. Alinhe as migrations do ambiente e tente novamente.';
   }
 
+  if (normalized.includes('statement timeout') || normalized.includes('canceling statement due to statement timeout')) {
+    return 'A criacao da campanha excedeu o tempo limite do banco. Aplique as migrations mais recentes de performance das campanhas WhatsApp e tente novamente.';
+  }
+
   return null;
 };
 
@@ -524,6 +531,7 @@ export default function WhatsAppCampaignSettings() {
 
   const [campaigns, setCampaigns] = useState<WhatsAppCampaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [showCreateCampaignModal, setShowCreateCampaignModal] = useState(false);
 
   const [campaignName, setCampaignName] = useState('');
   const [audienceSource, setAudienceSource] = useState<WhatsAppCampaignAudienceSource>('filters');
@@ -1265,6 +1273,7 @@ export default function WhatsAppCampaignSettings() {
         await loadCampaigns();
         setSelectedCampaignId(createdCampaign.id);
         resetBuilderState();
+        setShowCreateCampaignModal(false);
         setMessageState({
           type: 'success',
           text: `Campanha CSV criada com sucesso com ${createdCampaign.total_targets} alvo(s).`,
@@ -1291,6 +1300,7 @@ export default function WhatsAppCampaignSettings() {
 
       setSelectedCampaignId(createdCampaign.id);
       resetBuilderState();
+      setShowCreateCampaignModal(false);
       setMessageState({
         type: 'success',
         text: `Campanha criada com sucesso com ${createdCampaign.total_targets} alvo(s).`,
@@ -1714,7 +1724,7 @@ export default function WhatsAppCampaignSettings() {
 
   return (
     <div className="space-y-5">
-      {messageState && (
+      {!showCreateCampaignModal && messageState && (
         <div
           className={`rounded-lg border px-3 py-2 text-sm ${
             messageState.type === 'success'
@@ -1730,25 +1740,65 @@ export default function WhatsAppCampaignSettings() {
       )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Nova campanha</h3>
-            <p className="text-xs text-slate-500">Monte o fluxo de mensagens, escolha a fonte do publico e agende o disparo quando fizer sentido.</p>
+            <h3 className="text-sm font-semibold text-slate-900">Campanhas do WhatsApp</h3>
+            <p className="text-xs text-slate-500">
+              Crie campanhas em uma janela dedicada e acompanhe a fila sem poluir a tela principal.
+            </p>
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              void handleProcessNow();
-            }}
-            loading={processingCampaignId === 'all'}
-          >
-            <RefreshCw className="h-4 w-4" />
-            Processar fila agora
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => {
+                resetBuilderState();
+                setMessageState(null);
+                setShowCreateCampaignModal(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Nova campanha
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void handleProcessNow();
+              }}
+              loading={processingCampaignId === 'all'}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Processar fila agora
+            </Button>
+          </div>
         </div>
+      </section>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+      {showCreateCampaignModal && (
+        <ModalShell
+          isOpen
+          onClose={() => setShowCreateCampaignModal(false)}
+          title="Nova campanha"
+          description="Monte o fluxo de mensagens, escolha a fonte do publico e agende o disparo quando fizer sentido."
+          size="xl"
+          bodyClassName="space-y-5"
+        >
+          <>
+            {messageState && (
+              <div
+                className={`rounded-lg border px-3 py-2 text-sm ${
+                  messageState.type === 'success'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-red-200 bg-red-50 text-red-800'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{messageState.text}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
           <label className="text-xs font-medium text-slate-600">
             Nome da campanha
             <input
@@ -2530,7 +2580,9 @@ export default function WhatsAppCampaignSettings() {
             </ul>
           </div>
         )}
-      </section>
+          </>
+        </ModalShell>
+      )}
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-2">

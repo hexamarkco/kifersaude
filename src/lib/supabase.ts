@@ -9,8 +9,22 @@ export const supabaseFunctionsUrl =
 const SUPABASE_NETWORK_HELP =
   'Falha de rede ao conectar com o Supabase. Se o navegador mostrar erros de CORS ao mesmo tempo em auth, rest e rpc, o problema tende a ser bloqueio local de navegador/extensao/proxy ou indisponibilidade temporaria da rede, nao ausencia de CORS no codigo do app.';
 
+const DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS = 15000;
+const LONG_RUNNING_SUPABASE_REQUEST_TIMEOUT_MS = 60000;
+
 const isSupabaseRequestUrl = (value: string): boolean =>
   value.startsWith(supabaseUrl) || value.startsWith(supabaseFunctionsUrl);
+
+const getSupabaseRequestTimeoutMs = (requestUrl: string): number => {
+  if (
+    requestUrl.includes('/rest/v1/rpc/create_whatsapp_campaign_atomic')
+    || requestUrl.includes('/rest/v1/rpc/preview_whatsapp_campaign_audience')
+  ) {
+    return LONG_RUNNING_SUPABASE_REQUEST_TIMEOUT_MS;
+  }
+
+  return DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS;
+};
 
 const resolveRequestUrl = (input: RequestInfo | URL): string => {
   if (typeof input === 'string') {
@@ -25,10 +39,36 @@ const resolveRequestUrl = (input: RequestInfo | URL): string => {
 };
 
 const supabaseFetch: typeof fetch = async (input, init) => {
+  const requestUrl = resolveRequestUrl(input);
+  const timeoutMs = isSupabaseRequestUrl(requestUrl)
+    ? getSupabaseRequestTimeoutMs(requestUrl)
+    : DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort(new DOMException(`Tempo limite de ${timeoutMs}ms excedido`, 'AbortError'));
+  }, timeoutMs);
+  const externalSignal = init?.signal;
+  const abortFromExternalSignal = () => {
+    controller.abort(externalSignal?.reason);
+  };
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      abortFromExternalSignal();
+    } else {
+      externalSignal.addEventListener('abort', abortFromExternalSignal, { once: true });
+    }
+  }
+
   try {
-    return await fetch(input, init);
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
   } catch (error) {
-    const requestUrl = resolveRequestUrl(input);
+    if (controller.signal.aborted && !externalSignal?.aborted && isSupabaseRequestUrl(requestUrl)) {
+      throw new Error(`${SUPABASE_NETWORK_HELP} Endpoint: ${requestUrl}. Tempo limite atingido apos ${timeoutMs / 1000}s.`);
+    }
 
     if (isSupabaseRequestUrl(requestUrl)) {
       const message = error instanceof Error && error.message.trim()
@@ -38,6 +78,9 @@ const supabaseFetch: typeof fetch = async (input, init) => {
     }
 
     throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', abortFromExternalSignal);
   }
 };
 

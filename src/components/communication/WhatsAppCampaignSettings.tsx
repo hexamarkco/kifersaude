@@ -1990,13 +1990,13 @@ export default function WhatsAppCampaignSettings() {
         )}
 
         {audienceSource === 'csv' && (
-          <div className="mt-4 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="mt-4 space-y-4 rounded-xl border border-amber-900/40 bg-stone-950/40 p-3">
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Arquivo CSV</p>
-                    <p className="text-xs text-slate-500">Selecione um arquivo com cabecalho e ao menos uma linha valida.</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-stone-200">Arquivo CSV</p>
+                    <p className="text-xs text-stone-400">Selecione um arquivo com cabecalho e ao menos uma linha valida.</p>
                   </div>
                   <Button
                     size="sm"
@@ -2027,8 +2027,8 @@ export default function WhatsAppCampaignSettings() {
                 <label
                   className={`group block cursor-pointer rounded-xl border px-4 py-4 transition ${
                     csvImport.parsed
-                      ? 'border-amber-200 bg-amber-50/60 hover:border-amber-300 hover:bg-amber-50'
-                      : 'border-dashed border-slate-300 bg-white hover:border-amber-300 hover:bg-amber-50/40'
+                      ? 'border-amber-500/35 bg-stone-900/95 hover:border-amber-400 hover:bg-stone-900'
+                      : 'border-dashed border-stone-700 bg-stone-950/80 hover:border-amber-500/40 hover:bg-stone-900'
                   }`}
                   onClick={() => csvFileInputRef.current?.click()}
                 >
@@ -2036,16 +2036,16 @@ export default function WhatsAppCampaignSettings() {
                     <div className="flex items-start gap-3">
                       <div className={`rounded-xl border px-3 py-3 ${
                         csvImport.parsed
-                          ? 'border-amber-200 bg-white text-amber-700'
-                          : 'border-slate-200 bg-slate-50 text-slate-500 group-hover:border-amber-200 group-hover:bg-white group-hover:text-amber-700'
+                          ? 'border-amber-500/35 bg-amber-500/10 text-amber-300'
+                          : 'border-stone-700 bg-stone-900 text-stone-400 group-hover:border-amber-500/30 group-hover:bg-amber-500/10 group-hover:text-amber-300'
                       }`}>
                         <FileText className="h-5 w-5" />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">
+                        <p className="truncate text-sm font-semibold text-stone-100">
                           {csvImport.fileName || 'Nenhum CSV selecionado'}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-stone-400">
                           {csvImport.parsed
                             ? `${csvImport.parsed.rows.length} linha(s) encontradas com delimitador "${csvImport.parsed.delimiter}".`
                             : 'Clique para selecionar um CSV do seu computador.'}
@@ -2053,10 +2053,10 @@ export default function WhatsAppCampaignSettings() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-slate-500">
-                      <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">.csv</span>
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-stone-300">
+                      <span className="rounded-full border border-stone-700 bg-stone-950 px-2.5 py-1 text-stone-200">.csv</span>
                       {csvImport.parsed && (
-                        <span className="rounded-full border border-amber-200 bg-white px-2.5 py-1 text-amber-700">
+                        <span className="rounded-full border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-amber-200">
                           {csvImport.parsed.normalizedHeaders.length} coluna(s)
                         </span>
                       )}
@@ -2065,10 +2065,10 @@ export default function WhatsAppCampaignSettings() {
                 </label>
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+              <div className="rounded-lg border border-stone-700 bg-stone-950/80 px-3 py-2 text-xs text-stone-300">
                 {csvImport.parsed ? (
                   <div className="space-y-1">
-                    <p className="font-semibold text-slate-800">{csvImport.fileName}</p>
+                    <p className="font-semibold text-stone-100">{csvImport.fileName}</p>
                     <p>{csvImport.parsed.rows.length} linha(s) com delimitador "{csvImport.parsed.delimiter}".</p>
                     <p>Variaveis: {csvImport.parsed.normalizedHeaders.map((header) => `{{${header}}}`).join(', ')}</p>
                   </div>

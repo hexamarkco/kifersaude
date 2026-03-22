@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Download,
@@ -565,6 +565,7 @@ export default function WhatsAppCampaignSettings() {
   const [requeueingFailures, setRequeueingFailures] = useState(false);
   const [exportingFailures, setExportingFailures] = useState(false);
   const [messageState, setMessageState] = useState<MessageState>(null);
+  const csvFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const selectedCampaign = useMemo(
     () => campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? null,
@@ -1760,7 +1761,6 @@ export default function WhatsAppCampaignSettings() {
             </Button>
             <Button
               variant="secondary"
-              size="sm"
               onClick={() => {
                 void handleProcessNow();
               }}
@@ -1781,6 +1781,37 @@ export default function WhatsAppCampaignSettings() {
           description="Monte o fluxo de mensagens, escolha a fonte do publico e agende o disparo quando fizer sentido."
           size="xl"
           bodyClassName="space-y-5"
+          footer={(
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs text-slate-500">
+                Preview:{' '}
+                <strong>
+                  {audienceSource === 'csv'
+                    ? csvAnalysis
+                      ? formatCsvSummaryLabel(csvAnalysis.summary)
+                      : 'CSV ainda nao validado'
+                    : `${previewLeadsTotal} lead(s)`}
+                </strong>
+              </span>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowCreateCampaignModal(false)}
+                  disabled={creatingCampaign || loadingPreview}
+                >
+                  Cancelar
+                </Button>
+                <Button variant="secondary" onClick={() => void handlePreviewAudience()} loading={loadingPreview}>
+                  <Send className="h-4 w-4" />
+                  Gerar preview
+                </Button>
+                <Button onClick={() => void handleCreateCampaign()} loading={creatingCampaign}>
+                  Criar campanha
+                </Button>
+              </div>
+            </div>
+          )}
         >
           <>
             {messageState && (
@@ -1961,9 +1992,24 @@ export default function WhatsAppCampaignSettings() {
         {audienceSource === 'csv' && (
           <div className="mt-4 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <label className="text-xs font-medium text-slate-600">
-                Arquivo CSV
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Arquivo CSV</p>
+                    <p className="text-xs text-slate-500">Selecione um arquivo com cabecalho e ao menos uma linha valida.</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => csvFileInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {csvImport.parsed ? 'Trocar arquivo' : 'Selecionar CSV'}
+                  </Button>
+                </div>
+
                 <input
+                  ref={csvFileInputRef}
                   type="file"
                   accept=".csv,text/csv"
                   onChange={(event) => {
@@ -1975,9 +2021,49 @@ export default function WhatsAppCampaignSettings() {
 
                     void handleCsvFileUpload(file);
                   }}
-                  className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  className="sr-only"
                 />
-              </label>
+
+                <label
+                  className={`group block cursor-pointer rounded-xl border px-4 py-4 transition ${
+                    csvImport.parsed
+                      ? 'border-amber-200 bg-amber-50/60 hover:border-amber-300 hover:bg-amber-50'
+                      : 'border-dashed border-slate-300 bg-white hover:border-amber-300 hover:bg-amber-50/40'
+                  }`}
+                  onClick={() => csvFileInputRef.current?.click()}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={`rounded-xl border px-3 py-3 ${
+                        csvImport.parsed
+                          ? 'border-amber-200 bg-white text-amber-700'
+                          : 'border-slate-200 bg-slate-50 text-slate-500 group-hover:border-amber-200 group-hover:bg-white group-hover:text-amber-700'
+                      }`}>
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">
+                          {csvImport.fileName || 'Nenhum CSV selecionado'}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {csvImport.parsed
+                            ? `${csvImport.parsed.rows.length} linha(s) encontradas com delimitador "${csvImport.parsed.delimiter}".`
+                            : 'Clique para selecionar um CSV do seu computador.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-slate-500">
+                      <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1">.csv</span>
+                      {csvImport.parsed && (
+                        <span className="rounded-full border border-amber-200 bg-white px-2.5 py-1 text-amber-700">
+                          {csvImport.parsed.normalizedHeaders.length} coluna(s)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </label>
+              </div>
 
               <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                 {csvImport.parsed ? (
@@ -2498,26 +2584,6 @@ export default function WhatsAppCampaignSettings() {
             Variaveis desconhecidas detectadas: {unknownFlowVariables.map((value) => `{{${value}}}`).join(', ')}.
           </div>
         )}
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={() => void handlePreviewAudience()} loading={loadingPreview}>
-            <Send className="h-4 w-4" />
-            Gerar preview
-          </Button>
-          <Button onClick={() => void handleCreateCampaign()} loading={creatingCampaign}>
-            Criar campanha
-          </Button>
-          <span className="text-xs text-slate-500">
-            Preview:{' '}
-            <strong>
-              {audienceSource === 'csv'
-                ? csvAnalysis
-                  ? formatCsvSummaryLabel(csvAnalysis.summary)
-                  : 'CSV ainda nao validado'
-                : `${previewLeadsTotal} lead(s)`}
-            </strong>
-          </span>
-        </div>
 
         {previewSampleMessage && (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">

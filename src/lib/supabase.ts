@@ -6,7 +6,45 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabaseFunctionsUrl =
   import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || `${supabaseUrl}/functions/v1`;
 
+const SUPABASE_NETWORK_HELP =
+  'Falha de rede ao conectar com o Supabase. Se o navegador mostrar erros de CORS ao mesmo tempo em auth, rest e rpc, o problema tende a ser bloqueio local de navegador/extensao/proxy ou indisponibilidade temporaria da rede, nao ausencia de CORS no codigo do app.';
+
+const isSupabaseRequestUrl = (value: string): boolean =>
+  value.startsWith(supabaseUrl) || value.startsWith(supabaseFunctionsUrl);
+
+const resolveRequestUrl = (input: RequestInfo | URL): string => {
+  if (typeof input === 'string') {
+    return input;
+  }
+
+  if (input instanceof URL) {
+    return input.toString();
+  }
+
+  return input.url;
+};
+
+const supabaseFetch: typeof fetch = async (input, init) => {
+  try {
+    return await fetch(input, init);
+  } catch (error) {
+    const requestUrl = resolveRequestUrl(input);
+
+    if (isSupabaseRequestUrl(requestUrl)) {
+      const message = error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : 'Erro de rede desconhecido';
+      throw new Error(`${SUPABASE_NETWORK_HELP} Endpoint: ${requestUrl}. Erro original: ${message}`);
+    }
+
+    throw error;
+  }
+};
+
 const supabaseClientOptions = {
+  global: {
+    fetch: supabaseFetch,
+  },
   functions: {
     url: supabaseFunctionsUrl,
   },

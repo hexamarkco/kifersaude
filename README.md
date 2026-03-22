@@ -17,6 +17,7 @@
    - `VITE_SUPABASE_URL`: normalmente `https://<project>.supabase.co` ou, no Supabase CLI, `http://127.0.0.1:54321`.
    - `VITE_SUPABASE_FUNCTIONS_URL`: use o endpoint das funções (`https://<project>.supabase.co/functions/v1` ou `http://127.0.0.1:54321/functions/v1`).
    - `VITE_SUPABASE_ANON_KEY`: chave anônima (`anon key`) do projeto.
+   - `SUPABASE_SERVICE_ROLE_KEY`: apenas para uso em servidor, scripts protegidos ou secrets do Supabase. Nao use prefixo `VITE_` nessa chave.
 
 ## Desenvolvimento
 

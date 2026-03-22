@@ -26,6 +26,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const loadingProfileRef = useState<{ [key: string]: boolean }>({})[0];
 
+  const getAuthErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (error && typeof error === 'object' && 'message' in error) {
+      return String((error as { message?: unknown }).message ?? '');
+    }
+
+    return '';
+  };
+
+  const isInvalidRefreshTokenError = (error: unknown): boolean => {
+    const message = getAuthErrorMessage(error).toLowerCase();
+    return (
+      message.includes('refresh token is not valid')
+      || message.includes('invalid refresh token')
+      || message.includes('refresh token not found')
+      || message.includes('jwt expired')
+    );
+  };
+
+  const clearBrokenSession = async () => {
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.warn('⚠️ Nao foi possivel limpar a sessao local automaticamente:', error);
+    }
+
+    setSession(null);
+    setUser(null);
+    setUserProfile(null);
+  };
+
   const resolveRoleFromMetadata = (userToResolve: User | null): string | null => {
     if (!userToResolve) {
       return null;
@@ -103,6 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
           console.error('❌ Erro ao obter sessão:', error);
+          if (isInvalidRefreshTokenError(error)) {
+            await clearBrokenSession();
+          }
           setLoading(false);
           return;
         }
@@ -121,6 +158,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('✅ Autenticação inicializada');
       } catch (error) {
         console.error('❌ Erro fatal na inicialização:', error);
+        if (isInvalidRefreshTokenError(error)) {
+          await clearBrokenSession();
+        }
         if (mounted) setLoading(false);
       }
     };

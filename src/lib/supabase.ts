@@ -10,12 +10,17 @@ const SUPABASE_NETWORK_HELP =
   'Falha de rede ao conectar com o Supabase. Se o navegador mostrar erros de CORS ao mesmo tempo em auth, rest e rpc, o problema tende a ser bloqueio local de navegador/extensao/proxy ou indisponibilidade temporaria da rede, nao ausencia de CORS no codigo do app.';
 
 const DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS = 15000;
+const AUTH_SUPABASE_REQUEST_TIMEOUT_MS = 30000;
 const LONG_RUNNING_SUPABASE_REQUEST_TIMEOUT_MS = 60000;
 
 const isSupabaseRequestUrl = (value: string): boolean =>
   value.startsWith(supabaseUrl) || value.startsWith(supabaseFunctionsUrl);
 
 const getSupabaseRequestTimeoutMs = (requestUrl: string): number => {
+  if (requestUrl.includes('/auth/v1/')) {
+    return AUTH_SUPABASE_REQUEST_TIMEOUT_MS;
+  }
+
   if (
     requestUrl.includes('/rest/v1/rpc/create_whatsapp_campaign_atomic')
     || requestUrl.includes('/rest/v1/rpc/preview_whatsapp_campaign_audience')
@@ -94,6 +99,35 @@ const supabaseClientOptions = {
 } as unknown as Parameters<typeof createClient>[2];
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, supabaseClientOptions);
+
+export const isSupabaseConnectivityError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return message.includes('falha de rede ao conectar com o supabase');
+};
+
+export const getSupabaseErrorMessage = (error: unknown, fallbackMessage: string): string => {
+  if (isSupabaseConnectivityError(error)) {
+    return (error as Error).message;
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message.trim();
+  }
+
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = String((error as { message?: unknown }).message ?? '').trim();
+
+    if (message) {
+      return message;
+    }
+  }
+
+  return fallbackMessage;
+};
 
 export function getUserManagementId(user: Pick<User, 'id' | 'user_metadata' | 'app_metadata'> | null | undefined): string | null {
   if (!user) {

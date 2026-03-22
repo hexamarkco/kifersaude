@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getSupabaseErrorMessage, isSupabaseConnectivityError } from '../lib/supabase';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -13,13 +14,14 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-      setError('Usuário ou senha inválidos');
+    setError('');
     setLoading(true);
 
     const { error } = await signIn(username, password);
 
     if (error) {
-      setError('Usuario ou senha invalidos');
+      const message = getSupabaseErrorMessage(error, 'Usuario ou senha invalidos');
+      setError(isSupabaseConnectivityError(error) ? message : 'Usuario ou senha invalidos');
       setLoading(false);
     } else {
       navigate('/painel');

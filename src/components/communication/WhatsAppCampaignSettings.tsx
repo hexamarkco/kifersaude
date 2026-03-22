@@ -351,6 +351,19 @@ const isMissingLeadsCanalColumnError = (error: unknown): boolean => {
   return code === '42703' && message.includes('leads.canal');
 };
 
+const isLegacyLeadLabelColumnMessage = (message: string): boolean => {
+  const normalized = message.toLowerCase();
+
+  return (
+    normalized.includes('leads.origem')
+    || normalized.includes('leads.responsavel')
+    || normalized.includes('leads.status')
+    || normalized.includes('column "origem" of relation "leads"')
+    || normalized.includes('column "responsavel" of relation "leads"')
+    || normalized.includes('column "status" of relation "leads"')
+  );
+};
+
 const isMissingLegacyLeadLabelColumnError = (error: unknown): boolean => {
   if (!error || typeof error !== 'object') {
     return false;
@@ -360,11 +373,7 @@ const isMissingLegacyLeadLabelColumnError = (error: unknown): boolean => {
   const code = typeof record.code === 'string' ? record.code : '';
   const message = typeof record.message === 'string' ? record.message.toLowerCase() : '';
 
-  return code === '42703' && (
-    message.includes('leads.origem')
-    || message.includes('leads.responsavel')
-    || message.includes('leads.status')
-  );
+  return code === '42703' && isLegacyLeadLabelColumnMessage(message);
 };
 
 const inferCsvColumnKey = (headers: string[], candidates: string[]): string => {
@@ -423,11 +432,7 @@ const mapCampaignFunctionBackendErrorMessage = (message: string): string | null 
     return 'O banco Supabase deste ambiente ainda nao recebeu a migration de agendamento por etapa (`next_step_due_at`). Aplique as migrations mais recentes das campanhas WhatsApp e tente novamente.';
   }
 
-  if (
-    normalized.includes('leads.origem')
-    || normalized.includes('leads.responsavel')
-    || normalized.includes('leads.status')
-  ) {
+  if (isLegacyLeadLabelColumnMessage(normalized)) {
     return 'O banco Supabase deste ambiente ainda nao recebeu a migration mais recente de compatibilidade das campanhas WhatsApp. Aplique as migrations e tente novamente.';
   }
 

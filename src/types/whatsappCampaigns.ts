@@ -69,6 +69,9 @@ export type WhatsAppCampaign = {
   scheduled_at: string | null;
   completed_at: string | null;
   last_error: string | null;
+  last_dispatch_at?: string | null;
+  dispatch_day?: string | null;
+  dispatches_today?: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

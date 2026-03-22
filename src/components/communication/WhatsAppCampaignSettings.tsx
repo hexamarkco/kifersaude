@@ -51,6 +51,7 @@ import {
   formatCsvSummaryLabel,
   normalizeCampaignAudienceSource,
   normalizeCampaignSourcePayload,
+  normalizeWhatsAppCampaignPacingSettings,
   normalizeCsvHeader,
   normalizePhoneForCampaign,
   parseCampaignCsvText,
@@ -59,6 +60,7 @@ import {
   type CsvAudienceAnalysis,
   type ExistingCampaignLeadMatch,
   type ParsedCampaignCsv,
+  type WhatsAppCampaignPacingSettings,
 } from '../../lib/whatsappCampaignUtils';
 import { useConfig } from '../../contexts/ConfigContext';
 import type {
@@ -157,6 +159,11 @@ const DEFAULT_CSV_CRM_DEFAULTS: CsvCrmDefaultsState = {
   tipoContratacaoId: '',
   responsavelId: '',
   confirmNewLeadDefaults: false,
+};
+
+const DEFAULT_CAMPAIGN_PACING: WhatsAppCampaignPacingSettings = {
+  dailySendLimit: null,
+  sendIntervalMinutes: null,
 };
 
 const DEFAULT_TARGET_FILTERS: CampaignTargetsFilters = {
@@ -521,6 +528,7 @@ export default function WhatsAppCampaignSettings() {
   const [campaignName, setCampaignName] = useState('');
   const [audienceSource, setAudienceSource] = useState<WhatsAppCampaignAudienceSource>('filters');
   const [scheduledAtInput, setScheduledAtInput] = useState('');
+  const [campaignPacing, setCampaignPacing] = useState<WhatsAppCampaignPacingSettings>(DEFAULT_CAMPAIGN_PACING);
   const [filters, setFilters] = useState<CampaignFilters>(DEFAULT_FILTERS);
   const [canalOptions, setCanalOptions] = useState<string[]>([]);
   const [hasCanalColumn, setHasCanalColumn] = useState(true);
@@ -553,6 +561,11 @@ export default function WhatsAppCampaignSettings() {
   const selectedCampaign = useMemo(
     () => campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? null,
     [campaigns, selectedCampaignId],
+  );
+
+  const selectedCampaignPacing = useMemo(
+    () => normalizeWhatsAppCampaignPacingSettings(selectedCampaign?.audience_config ?? null),
+    [selectedCampaign],
   );
 
   const selectedStep = useMemo(
@@ -1030,6 +1043,7 @@ export default function WhatsAppCampaignSettings() {
     setCampaignName('');
     setAudienceSource('filters');
     setScheduledAtInput('');
+    setCampaignPacing(DEFAULT_CAMPAIGN_PACING);
     setFilters(DEFAULT_FILTERS);
     setCsvImport(DEFAULT_CSV_IMPORT_STATE);
     setCsvAnalysis(null);
@@ -1197,6 +1211,10 @@ export default function WhatsAppCampaignSettings() {
       const normalizedSteps = flowSteps.map((step, index) => ({ ...step, order: index }));
       const scheduledAtIso = toIsoFromDateTimeInput(scheduledAtInput);
       const audienceFilterSnapshot = buildAudienceFilterSnapshot();
+      const pacingConfig = {
+        daily_send_limit: campaignPacing.dailySendLimit,
+        send_interval_minutes: campaignPacing.sendIntervalMinutes,
+      };
 
       if (audienceSource === 'csv' && csvImport.parsed && csvAnalysis) {
         const origemLabel = origemNameById.get(csvCrmDefaults.origemId) ?? '';
@@ -1229,6 +1247,7 @@ export default function WhatsAppCampaignSettings() {
               responsavel_id: csvCrmDefaults.responsavelId || null,
               responsavel_label: responsavelLabel || null,
             },
+            pacing: pacingConfig,
             summary: csvAnalysis.summary,
           },
           scheduledAt: scheduledAtIso,
@@ -1263,6 +1282,7 @@ export default function WhatsAppCampaignSettings() {
           source: 'filters',
           preview_count: previewLeadsTotal,
           filters: audienceFilterSnapshot,
+          pacing: pacingConfig,
         },
         scheduledAt: scheduledAtIso,
       });
@@ -1728,7 +1748,7 @@ export default function WhatsAppCampaignSettings() {
           </Button>
         </div>
 
-        <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <div className="mt-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
           <label className="text-xs font-medium text-slate-600">
             Nome da campanha
             <input
@@ -1749,7 +1769,46 @@ export default function WhatsAppCampaignSettings() {
               className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </label>
+
+          <label className="text-xs font-medium text-slate-600">
+            Limite diario de envios
+            <input
+              type="number"
+              min={1}
+              value={campaignPacing.dailySendLimit ?? ''}
+              onChange={(event) => {
+                const parsed = Number(event.target.value);
+                setCampaignPacing((current) => ({
+                  ...current,
+                  dailySendLimit: Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null,
+                }));
+              }}
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="Sem limite"
+            />
+          </label>
+
+          <label className="text-xs font-medium text-slate-600">
+            Intervalo entre envios (min)
+            <input
+              type="number"
+              min={1}
+              value={campaignPacing.sendIntervalMinutes ?? ''}
+              onChange={(event) => {
+                const parsed = Number(event.target.value);
+                setCampaignPacing((current) => ({
+                  ...current,
+                  sendIntervalMinutes: Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : null,
+                }));
+              }}
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
+              placeholder="Sem intervalo"
+            />
+          </label>
         </div>
+        <p className="mt-2 text-xs text-slate-500">
+          O limite diario conta os envios desta campanha por dia. O intervalo define quantos minutos o worker espera entre um envio e outro.
+        </p>
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -2612,6 +2671,8 @@ export default function WhatsAppCampaignSettings() {
               <span>Inicio: {formatDateTime(selectedCampaign.started_at)}</span>
               <span>Fim: {formatDateTime(selectedCampaign.completed_at)}</span>
               <span>Etapas: {selectedCampaign.flow_steps.length}</span>
+              <span>Limite diario: {selectedCampaignPacing.dailySendLimit ?? 'Sem limite'}</span>
+              <span>Intervalo: {selectedCampaignPacing.sendIntervalMinutes ? `${selectedCampaignPacing.sendIntervalMinutes} min` : 'Sem intervalo'}</span>
             </div>
           </div>
         )}

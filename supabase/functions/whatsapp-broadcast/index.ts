@@ -5,6 +5,7 @@ import {
   getCampaignIdsReadyToAutoStart,
   isCampaignTargetReadyForProcessing,
   normalizePhoneForCampaign,
+  normalizeWhatsAppCampaignPacingSettings,
   resolveCampaignTemplateText,
   WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS,
 } from '../../../src/lib/whatsappCampaignUtils.ts';
@@ -39,8 +40,12 @@ type CampaignRecord = {
   status: CampaignStatus;
   message: string;
   flow_steps: unknown;
+  audience_config?: Record<string, unknown> | null;
   scheduled_at: string | null;
   started_at?: string | null;
+  last_dispatch_at?: string | null;
+  dispatch_day?: string | null;
+  dispatches_today?: number | null;
 };
 
 type CampaignStepType = CampaignFlowStep['type'];
@@ -87,6 +92,14 @@ type ProcessSummary = {
   campaignsTouched: number;
 };
 
+type CampaignPacingRuntime = {
+  dailySendLimit: number | null;
+  sendIntervalMinutes: number | null;
+  lastDispatchAt: string | null;
+  dispatchDay: string | null;
+  dispatchesToday: number;
+};
+
 const jsonResponse = (body: Record<string, unknown>, status = 200): Response =>
   new Response(JSON.stringify(body), {
     status,
@@ -101,6 +114,86 @@ const toErrorMessage = (error: unknown): string => {
     return error.message;
   }
   return String(error);
+};
+
+const getBrasilDateKey = (date: Date): string => {
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: BRASILIA_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = formatter.formatToParts(date);
+  const year = parts.find((part) => part.type === 'year')?.value ?? '0000';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '01';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '01';
+  return `${year}-${month}-${day}`;
+};
+
+const getNextBrasilDayStartIso = (date: Date): string => {
+  const [year, month, day] = getBrasilDateKey(date).split('-').map((value) => Number(value));
+  return new Date(Date.UTC(year, (month || 1) - 1, (day || 1) + 1, 3, 0, 0, 0)).toISOString();
+};
+
+const getLaterIso = (left: string | null, right: string | null): string | null => {
+  if (!left) return right;
+  if (!right) return left;
+
+  const leftMs = getTimestampMs(left);
+  const rightMs = getTimestampMs(right);
+  if (Number.isNaN(leftMs)) return right;
+  if (Number.isNaN(rightMs)) return left;
+  return leftMs >= rightMs ? left : right;
+};
+
+const getCampaignPacingRuntime = (campaign: CampaignRecord | null | undefined): CampaignPacingRuntime => {
+  const pacing = normalizeWhatsAppCampaignPacingSettings(campaign?.audience_config ?? null);
+
+  return {
+    dailySendLimit: pacing.dailySendLimit,
+    sendIntervalMinutes: pacing.sendIntervalMinutes,
+    lastDispatchAt: campaign?.last_dispatch_at ?? null,
+    dispatchDay: campaign?.dispatch_day ?? null,
+    dispatchesToday: Number.isFinite(campaign?.dispatches_today)
+      ? Number(campaign?.dispatches_today)
+      : 0,
+  };
+};
+
+const getCampaignPacingBlock = (
+  pacing: CampaignPacingRuntime,
+  now: Date,
+): { blocked: boolean; resumeAt: string | null; reason: string | null } => {
+  const todayKey = getBrasilDateKey(now);
+  const sentToday = pacing.dispatchDay === todayKey ? pacing.dispatchesToday : 0;
+
+  if (pacing.dailySendLimit && sentToday >= pacing.dailySendLimit) {
+    return {
+      blocked: true,
+      resumeAt: getNextBrasilDayStartIso(now),
+      reason: 'daily_limit',
+    };
+  }
+
+  if (pacing.sendIntervalMinutes && pacing.lastDispatchAt) {
+    const lastDispatchMs = getTimestampMs(pacing.lastDispatchAt);
+    if (!Number.isNaN(lastDispatchMs)) {
+      const nextDispatchAt = new Date(lastDispatchMs + pacing.sendIntervalMinutes * 60 * 1000).toISOString();
+      if (getTimestampMs(nextDispatchAt) > now.getTime()) {
+        return {
+          blocked: true,
+          resumeAt: nextDispatchAt,
+          reason: 'send_interval',
+        };
+      }
+    }
+  }
+
+  return {
+    blocked: false,
+    resumeAt: null,
+    reason: null,
+  };
 };
 
 const sanitizeWhapiToken = (rawToken: string): string => rawToken.replace(/^Bearer\s+/i, '').trim();
@@ -525,6 +618,35 @@ const persistTargetStepProgress = async (
   return nowIso;
 };
 
+const persistCampaignDispatchProgress = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  campaignId: string,
+  pacing: CampaignPacingRuntime,
+  sentAtIso: string,
+) => {
+  const sentAt = new Date(sentAtIso);
+  const todayKey = getBrasilDateKey(sentAt);
+  const nextDispatchesToday = pacing.dispatchDay === todayKey ? pacing.dispatchesToday + 1 : 1;
+
+  const { error } = await supabaseAdmin
+    .from('whatsapp_campaigns')
+    .update({
+      last_dispatch_at: sentAtIso,
+      dispatch_day: todayKey,
+      dispatches_today: nextDispatchesToday,
+    })
+    .eq('id', campaignId)
+    .eq('status', 'running');
+
+  if (error) {
+    throw new Error(`Erro ao salvar cadencia da campanha: ${error.message}`);
+  }
+
+  pacing.lastDispatchAt = sentAtIso;
+  pacing.dispatchDay = todayKey;
+  pacing.dispatchesToday = nextDispatchesToday;
+};
+
 const scheduleTargetNextStep = async (
   supabaseAdmin: ReturnType<typeof createClient>,
   targetId: string,
@@ -650,7 +772,7 @@ const loadProcessableTargets = async (
   for (let page = 0; page < maxPages && collected.length < limit; page += 1) {
     let query = supabaseAdmin
       .from('whatsapp_campaign_targets')
-      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, next_step_due_at, created_at, lead:leads(nome_completo, telefone, email, cidade, canal), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at, started_at)')
+      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, next_step_due_at, created_at, lead:leads(nome_completo, telefone, email, cidade, canal), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, audience_config, scheduled_at, started_at, last_dispatch_at, dispatch_day, dispatches_today)')
       .in('status', ['pending', 'processing'])
       .order('next_step_due_at', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true })
@@ -722,9 +844,16 @@ const processCampaignTargets = async ({
 
   const touchedCampaignIds = new Set<string>();
   startedCampaignIds.forEach((startedCampaignId) => touchedCampaignIds.add(startedCampaignId));
+  const campaignPacingMap = new Map<string, CampaignPacingRuntime>();
 
   for (const target of targets) {
     touchedCampaignIds.add(target.campaign_id);
+
+    if (!campaignPacingMap.has(target.campaign_id)) {
+      campaignPacingMap.set(target.campaign_id, getCampaignPacingRuntime(target.campaign));
+    }
+
+    const campaignPacing = campaignPacingMap.get(target.campaign_id)!;
 
     const claimed = await claimTarget(supabaseAdmin, target);
     if (!claimed) {
@@ -758,21 +887,24 @@ const processCampaignTargets = async ({
 
       for (let stepIndex = lastCompletedStepIndex + 1; stepIndex < campaignSteps.length; stepIndex += 1) {
         const step = campaignSteps[stepIndex];
+        const now = new Date();
 
         const dueAt = computeCampaignStepDueAt(
           step,
           currentLastSentStepAt ?? getCampaignStepReferenceIso(target),
-          new Date(),
+          now,
         );
 
-        if (dueAt) {
-          const dueAtMs = getTimestampMs(dueAt);
-          if (!Number.isNaN(dueAtMs) && dueAtMs > Date.now()) {
-            await scheduleTargetNextStep(supabaseAdmin, target.id, dueAt, normalizedRecipient);
-            scheduledFutureStep = true;
-            summary.processed += 1;
-            break;
-          }
+        const pacingBlock = getCampaignPacingBlock(campaignPacing, now);
+        const intrinsicDueAtMs = getTimestampMs(dueAt);
+        const intrinsicFutureDueAt = !Number.isNaN(intrinsicDueAtMs) && intrinsicDueAtMs > now.getTime() ? dueAt : null;
+        const blockedUntil = getLaterIso(intrinsicFutureDueAt, pacingBlock.resumeAt);
+
+        if (blockedUntil) {
+          await scheduleTargetNextStep(supabaseAdmin, target.id, blockedUntil, normalizedRecipient);
+          scheduledFutureStep = true;
+          summary.processed += 1;
+          break;
         }
 
         const conversationState = await loadConversationState(
@@ -817,6 +949,12 @@ const processCampaignTargets = async ({
           stepIndex,
           step.id,
           normalizedRecipient,
+        );
+        await persistCampaignDispatchProgress(
+          supabaseAdmin,
+          target.campaign_id,
+          campaignPacing,
+          currentLastSentStepAt,
         );
         currentLastCompletedStepIndex = stepIndex;
       }

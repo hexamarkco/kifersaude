@@ -6,6 +6,7 @@ import {
   clampCompletedCampaignStepIndex,
   getCampaignIdsReadyToAutoStart,
   isCampaignTargetReadyForProcessing,
+  normalizeWhatsAppCampaignPacingSettings,
   normalizePhoneForCampaign,
   parseCampaignCsvText,
   resolveCampaignTemplateText,
@@ -133,4 +134,35 @@ test('normalizes campaign phones before dedupe and target creation', () => {
   assert.equal(normalizePhoneForCampaign('005521998765432'), '5521998765432');
   assert.equal(normalizePhoneForCampaign('invalid'), '');
   assert.equal(normalizePhoneForCampaign('552198499080004'), '');
+});
+
+test('normalizes campaign pacing settings from nested or flat config', () => {
+  assert.deepEqual(
+    normalizeWhatsAppCampaignPacingSettings({
+      pacing: {
+        daily_send_limit: 120,
+        send_interval_minutes: 5,
+      },
+    }),
+    {
+      dailySendLimit: 120,
+      sendIntervalMinutes: 5,
+    },
+  );
+
+  assert.deepEqual(
+    normalizeWhatsAppCampaignPacingSettings({
+      dailySendLimit: '30',
+      sendIntervalMinutes: '2',
+    }),
+    {
+      dailySendLimit: 30,
+      sendIntervalMinutes: 2,
+    },
+  );
+
+  assert.deepEqual(normalizeWhatsAppCampaignPacingSettings(null), {
+    dailySendLimit: null,
+    sendIntervalMinutes: null,
+  });
 });

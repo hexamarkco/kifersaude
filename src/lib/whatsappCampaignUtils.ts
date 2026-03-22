@@ -75,6 +75,11 @@ export type CsvAudienceAnalysis = {
   variableKeys: string[];
 };
 
+export type WhatsAppCampaignPacingSettings = {
+  dailySendLimit: number | null;
+  sendIntervalMinutes: number | null;
+};
+
 export const WHATSAPP_CAMPAIGN_PROCESSING_LEASE_MS = 10 * 60 * 1000;
 export const CAMPAIGN_TARGET_REQUEUEABLE_STATUSES: WhatsAppCampaignTargetStatus[] = ['failed'];
 export const CAMPAIGN_DEFAULT_AUDIENCE_SOURCE: WhatsAppCampaignAudienceSource = 'filters';
@@ -222,6 +227,37 @@ export const normalizeCampaignSourcePayload = (value: unknown): Record<string, s
   });
 
   return normalized;
+};
+
+export const normalizeWhatsAppCampaignPacingSettings = (value: unknown): WhatsAppCampaignPacingSettings => {
+  const source = value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+  const pacingSource = source.pacing && typeof source.pacing === 'object' && !Array.isArray(source.pacing)
+    ? (source.pacing as Record<string, unknown>)
+    : source;
+
+  const rawDailySendLimit = Number(
+    pacingSource.daily_send_limit
+      ?? pacingSource.dailySendLimit
+      ?? null,
+  );
+  const rawSendIntervalMinutes = Number(
+    pacingSource.send_interval_minutes
+      ?? pacingSource.sendIntervalMinutes
+      ?? null,
+  );
+
+  return {
+    dailySendLimit:
+      Number.isFinite(rawDailySendLimit) && rawDailySendLimit > 0
+        ? Math.floor(rawDailySendLimit)
+        : null,
+    sendIntervalMinutes:
+      Number.isFinite(rawSendIntervalMinutes) && rawSendIntervalMinutes > 0
+        ? Math.floor(rawSendIntervalMinutes)
+        : null,
+  };
 };
 
 export const normalizePhoneForCampaign = (value: string | null | undefined): string => {

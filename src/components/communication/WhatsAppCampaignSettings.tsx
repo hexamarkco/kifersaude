@@ -351,6 +351,22 @@ const isMissingLeadsCanalColumnError = (error: unknown): boolean => {
   return code === '42703' && message.includes('leads.canal');
 };
 
+const isMissingLegacyLeadLabelColumnError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const record = error as Record<string, unknown>;
+  const code = typeof record.code === 'string' ? record.code : '';
+  const message = typeof record.message === 'string' ? record.message.toLowerCase() : '';
+
+  return code === '42703' && (
+    message.includes('leads.origem')
+    || message.includes('leads.responsavel')
+    || message.includes('leads.status')
+  );
+};
+
 const inferCsvColumnKey = (headers: string[], candidates: string[]): string => {
   const normalizedCandidates = candidates.map((candidate) => normalizeCsvHeader(candidate));
   return headers.find((header) => normalizedCandidates.includes(header)) ?? '';
@@ -395,6 +411,85 @@ const escapeCsvCell = (value: unknown): string => {
 const getErrorMessage = (error: unknown, fallback: string): string => {
   if (error instanceof Error && error.message.trim()) {
     return error.message;
+  }
+
+  return fallback;
+};
+
+const mapCampaignFunctionBackendErrorMessage = (message: string): string | null => {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes('next_step_due_at')) {
+    return 'O banco Supabase deste ambiente ainda nao recebeu a migration de agendamento por etapa (`next_step_due_at`). Aplique as migrations mais recentes das campanhas WhatsApp e tente novamente.';
+  }
+
+  if (
+    normalized.includes('leads.origem')
+    || normalized.includes('leads.responsavel')
+    || normalized.includes('leads.status')
+  ) {
+    return 'O banco Supabase deste ambiente ainda nao recebeu a migration mais recente de compatibilidade das campanhas WhatsApp. Aplique as migrations e tente novamente.';
+  }
+
+  if (normalized.includes('leads.canal')) {
+    return 'O banco Supabase deste ambiente ainda nao possui a coluna `leads.canal`, exigida por esta campanha. Alinhe as migrations do ambiente e tente novamente.';
+  }
+
+  return null;
+};
+
+const extractEdgeFunctionErrorMessage = async (error: unknown, fallback: string): Promise<string> => {
+  if (!error || typeof error !== 'object') {
+    return fallback;
+  }
+
+  const record = error as {
+    message?: unknown;
+    context?: {
+      clone?: () => { json?: () => Promise<unknown>; text?: () => Promise<string> };
+      json?: () => Promise<unknown>;
+      text?: () => Promise<string>;
+    };
+  };
+
+  const response = record.context;
+  if (response && typeof response === 'object') {
+    const cloned = typeof response.clone === 'function' ? response.clone() : response;
+
+    if (cloned && typeof cloned === 'object' && typeof cloned.json === 'function') {
+      try {
+        const payload = await cloned.json();
+        if (payload && typeof payload === 'object') {
+          const payloadRecord = payload as Record<string, unknown>;
+          const rawMessage = typeof payloadRecord.error === 'string'
+            ? payloadRecord.error
+            : typeof payloadRecord.message === 'string'
+              ? payloadRecord.message
+              : '';
+
+          if (rawMessage.trim()) {
+            return mapCampaignFunctionBackendErrorMessage(rawMessage) ?? rawMessage;
+          }
+        }
+      } catch {
+        // ignore json parsing error and fall back to text
+      }
+    }
+
+    if (cloned && typeof cloned === 'object' && typeof cloned.text === 'function') {
+      try {
+        const rawText = await cloned.text();
+        if (rawText.trim()) {
+          return mapCampaignFunctionBackendErrorMessage(rawText) ?? rawText.trim();
+        }
+      } catch {
+        // ignore text parsing error and fall back to generic message
+      }
+    }
+  }
+
+  if (typeof record.message === 'string' && record.message.trim()) {
+    return mapCampaignFunctionBackendErrorMessage(record.message) ?? record.message;
   }
 
   return fallback;
@@ -911,7 +1006,7 @@ export default function WhatsAppCampaignSettings() {
         .map(async (batch) => {
           const { data, error } = await supabase
             .from('leads')
-            .select('id, nome_completo, telefone, email, status, status_id, origem, origem_id, cidade, responsavel, responsavel_id, canal')
+            .select('id, nome_completo, telefone, email, status_id, origem_id, cidade, responsavel_id, canal')
             .in('telefone', batch);
 
           if (error) {
@@ -1021,7 +1116,12 @@ export default function WhatsAppCampaignSettings() {
         setPreviewLeads([]);
         setPreviewLeadsTotal(0);
       }
-      setMessageState({ type: 'error', text: 'Não foi possível gerar o preview do público.' });
+      setMessageState({
+        type: 'error',
+        text: isMissingLegacyLeadLabelColumnError(error)
+          ? 'O banco Supabase deste ambiente ainda nao recebeu a migration mais recente das campanhas WhatsApp. Aplique as migrations e tente novamente.'
+          : 'Não foi possível gerar o preview do público.',
+      });
     } finally {
       setLoadingPreview(false);
     }
@@ -1172,7 +1272,12 @@ export default function WhatsAppCampaignSettings() {
       });
     } catch (error) {
       console.error('Erro ao criar campanha do WhatsApp:', error);
-      setMessageState({ type: 'error', text: getErrorMessage(error, 'Nao foi possivel criar a campanha.') });
+      setMessageState({
+        type: 'error',
+        text: isMissingLegacyLeadLabelColumnError(error)
+          ? 'O banco Supabase deste ambiente ainda nao recebeu a migration mais recente das campanhas WhatsApp. Aplique as migrations e tente novamente.'
+          : getErrorMessage(error, 'Nao foi possivel criar a campanha.'),
+      });
     } finally {
       setCreatingCampaign(false);
     }
@@ -1283,7 +1388,10 @@ export default function WhatsAppCampaignSettings() {
       });
     } catch (error) {
       console.error('Erro ao processar campanhas manualmente:', error);
-      setMessageState({ type: 'error', text: 'Não foi possível processar os envios agora.' });
+      setMessageState({
+        type: 'error',
+        text: await extractEdgeFunctionErrorMessage(error, 'Não foi possível processar os envios agora.'),
+      });
     } finally {
       setProcessingCampaignId(null);
     }

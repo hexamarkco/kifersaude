@@ -650,7 +650,7 @@ const loadProcessableTargets = async (
   for (let page = 0; page < maxPages && collected.length < limit; page += 1) {
     let query = supabaseAdmin
       .from('whatsapp_campaign_targets')
-      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, next_step_due_at, created_at, lead:leads(nome_completo, telefone, email, status, origem, cidade, responsavel, canal), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at, started_at)')
+      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, next_step_due_at, created_at, lead:leads(nome_completo, telefone, email, cidade, canal), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, scheduled_at, started_at)')
       .in('status', ['pending', 'processing'])
       .order('next_step_due_at', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true })

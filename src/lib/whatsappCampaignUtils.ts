@@ -228,15 +228,24 @@ export const normalizePhoneForCampaign = (value: string | null | undefined): str
   const digitsOnly = (value || '').replace(/\D/g, '');
   if (!digitsOnly) return '';
 
-  if (digitsOnly.startsWith('55') && (digitsOnly.length === 12 || digitsOnly.length === 13)) {
-    return digitsOnly;
+  let normalized = digitsOnly.replace(/^00+/, '');
+  if (!normalized) return '';
+
+  if (normalized.startsWith('55')) {
+    const localDigits = normalized.slice(2).replace(/^0+/, '');
+    if (localDigits.length === 10 || localDigits.length === 11) {
+      return `55${localDigits}`;
+    }
+
+    return '';
   }
 
-  if (!digitsOnly.startsWith('55') && (digitsOnly.length === 10 || digitsOnly.length === 11)) {
-    return `55${digitsOnly}`;
+  normalized = normalized.replace(/^0+/, '');
+  if (normalized.length === 10 || normalized.length === 11) {
+    return `55${normalized}`;
   }
 
-  return digitsOnly;
+  return '';
 };
 
 export const buildChatIdFromPhoneDigits = (digits: string): string => `${digits}@s.whatsapp.net`;

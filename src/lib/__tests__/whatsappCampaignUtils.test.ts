@@ -129,5 +129,8 @@ test('detects recoverable processing targets and clamps completed step index', (
 test('normalizes campaign phones before dedupe and target creation', () => {
   assert.equal(normalizePhoneForCampaign('(11) 99876-5432'), '5511998765432');
   assert.equal(normalizePhoneForCampaign('551198765432'), '551198765432');
+  assert.equal(normalizePhoneForCampaign('021998765432'), '5521998765432');
+  assert.equal(normalizePhoneForCampaign('005521998765432'), '5521998765432');
   assert.equal(normalizePhoneForCampaign('invalid'), '');
+  assert.equal(normalizePhoneForCampaign('552198499080004'), '');
 });

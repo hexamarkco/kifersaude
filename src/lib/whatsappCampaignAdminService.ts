@@ -26,6 +26,16 @@ export type CreateWhatsAppCampaignInput = {
   csvTargets?: CreateWhatsAppCampaignCsvTargetInput[];
 };
 
+type CreateWhatsAppCampaignCsvTargetRpcInput = {
+  normalized_phone: string;
+  raw_phone: string | null;
+  display_name: string;
+  chat_id: string | null;
+  source_payload: Record<string, string>;
+  existing_lead_id: string | null;
+  needs_lead_creation: boolean;
+};
+
 export type WhatsAppCampaignAudiencePreviewLead = {
   id: string;
   nome_completo: string;
@@ -102,6 +112,18 @@ const ensureCampaignResult = (data: unknown, fallbackMessage: string): WhatsAppC
   return data as WhatsAppCampaign;
 };
 
+const mapCsvTargetInputToRpc = (
+  target: CreateWhatsAppCampaignCsvTargetInput,
+): CreateWhatsAppCampaignCsvTargetRpcInput => ({
+  normalized_phone: target.normalizedPhone,
+  raw_phone: target.rawPhone,
+  display_name: target.displayName,
+  chat_id: target.chatId,
+  source_payload: target.sourcePayload,
+  existing_lead_id: target.existingLeadId,
+  needs_lead_creation: target.needsLeadCreation,
+});
+
 export async function createWhatsAppCampaignAtomic(input: CreateWhatsAppCampaignInput): Promise<WhatsAppCampaign> {
   const { data, error } = await supabase.rpc('create_whatsapp_campaign_atomic', {
     p_name: input.name,
@@ -111,7 +133,7 @@ export async function createWhatsAppCampaignAtomic(input: CreateWhatsAppCampaign
     p_audience_filter: input.audienceFilter,
     p_audience_config: input.audienceConfig,
     p_scheduled_at: input.scheduledAt,
-    p_csv_targets: input.csvTargets ?? [],
+    p_csv_targets: (input.csvTargets ?? []).map(mapCsvTargetInputToRpc),
   });
 
   if (error) {

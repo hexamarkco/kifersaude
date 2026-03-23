@@ -3418,6 +3418,13 @@
   box-shadow: 0 40px 90px -60px rgba(17, 13, 10, 0.92);
 }
 
+.home-conv-theme .home-conv-hero-band {
+  border-top: none;
+  border-right: none;
+  border-left: none;
+  border-radius: 0 0 2.5rem 2.5rem;
+}
+
 .home-conv-theme .home-conv-hero-card::before {
   content: '';
   position: absolute;
@@ -3532,6 +3539,10 @@
     background:
       radial-gradient(circle at top left, rgba(183, 99, 42, 0.08), transparent 28%),
       var(--home-conv-bg);
+  }
+
+  .home-conv-theme .home-conv-hero-band {
+    border-radius: 0 0 1.75rem 1.75rem;
   }
 
   .home-conv-theme .home-conv-logo-card {

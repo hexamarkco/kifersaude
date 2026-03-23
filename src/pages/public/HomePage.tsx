@@ -382,10 +382,10 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main id="conteudo" className="pb-24 pt-24 md:pt-28">
-        <section id="inicio" className="scroll-mt-28 px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8">
-          <div className={pageShellClass}>
-            <div className="home-conv-hero-card rounded-[2.5rem] px-6 py-12 sm:px-8 lg:px-12 lg:py-16">
+      <main id="conteudo" className="pb-24 pt-20 md:pt-[5.5rem]">
+        <section id="inicio" className="scroll-mt-28 pb-10">
+          <div className="home-conv-hero-card home-conv-hero-band px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+            <div className={`${pageShellClass} flex w-full`}>
               <div className="max-w-4xl">
                 <span className="home-conv-kicker">atendimento consultivo com foco em decisão rápida</span>
                 <h1 className="home-conv-heading mt-5 max-w-3xl text-4xl font-bold leading-[0.94] text-white sm:text-5xl lg:text-[4.5rem]">

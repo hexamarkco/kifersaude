@@ -264,6 +264,27 @@ const OFFSCREEN_MESSAGE_STYLE = {
   containIntrinsicSize: '280px',
 };
 
+const UNREAD_COUNTS_REFRESH_DELAY_MS = 1000;
+const SELECTED_CHAT_AUTO_SYNC_INTERVAL_MS = 2 * 60_000;
+const SELECTED_CHAT_AUTO_SYNC_FRESHNESS_MS = 3 * 60_000;
+const CONTACT_PHOTO_FALLBACK_BATCH_SIZE = 80;
+const WHATSAPP_CHAT_SELECT_FIELDS = [
+  'id',
+  'name',
+  'is_group',
+  'phone_number',
+  'lid',
+  'last_message_at',
+  'created_at',
+  'updated_at',
+  'last_message',
+  'last_message_direction',
+  'unread_count',
+  'archived',
+  'pinned',
+  'mute_until',
+].join(',');
+
 type InboxChatRowProps = {
   item: VisibleChatRowItem;
   isSelected: boolean;
@@ -470,6 +491,7 @@ export default function WhatsAppInboxScreen() {
   const activeDesktopNotificationRef = useRef<Notification | null>(null);
   const unreadCountsRefreshTimeoutRef = useRef<number | null>(null);
   const autoSyncSelectedChatInFlightRef = useRef(false);
+  const lastSelectedChatAutoSyncAtRef = useRef<Map<string, number>>(new Map());
   const muteMenuCloseTimeoutRef = useRef<number | null>(null);
   const statusMenuCloseTimeoutRef = useRef<number | null>(null);
   const shouldScrollOnChatChangeRef = useRef(false);
@@ -490,6 +512,7 @@ export default function WhatsAppInboxScreen() {
   const lastGroupNamesSyncAtRef = useRef(0);
   const directNameHydrationAttemptsRef = useRef<Set<string>>(new Set());
   const avatarProfileHydrationAttemptsRef = useRef<Set<string>>(new Set());
+  const requestedLegacyContactPhotoIdsRef = useRef<Set<string>>(new Set());
   const handledReminderQueryRef = useRef<string | null>(null);
   const reminderQuickOpenLoadingRef = useRef(false);
   const reminderQuickOpenLastLoadedAtRef = useRef(0);
@@ -1965,21 +1988,7 @@ export default function WhatsAppInboxScreen() {
   }, [chatMenu]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const loadContactPhotoFallbacks = async () => {
-      const { data, error } = await supabase
-        .from('whatsapp_contact_photos')
-        .select('contact_id, public_url');
-
-      if (error) {
-        console.error('Error loading contact photos:', error);
-        return;
-      }
-
-      setLegacyContactPhotosById(buildLegacyContactPhotoMap(data || []));
-    };
-
     void loadSavedContacts();
-    void loadContactPhotoFallbacks();
   }, [loadSavedContacts]);
 
   useEffect(() => {
@@ -2442,6 +2451,17 @@ export default function WhatsAppInboxScreen() {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       if (autoSyncSelectedChatInFlightRef.current || syncingChatId) return;
 
+      const lastAutoSyncAt = lastSelectedChatAutoSyncAtRef.current.get(activeChat.id) ?? 0;
+      const lastChatActivityAt = Date.parse(activeChat.updated_at ?? activeChat.last_message_at ?? '');
+      const freshnessReference = Math.max(
+        lastAutoSyncAt,
+        Number.isFinite(lastChatActivityAt) ? lastChatActivityAt : 0,
+      );
+
+      if (freshnessReference > 0 && Date.now() - freshnessReference < SELECTED_CHAT_AUTO_SYNC_FRESHNESS_MS) {
+        return;
+      }
+
       autoSyncSelectedChatInFlightRef.current = true;
       try {
         const { error } = await supabase.functions.invoke('whatsapp-sync', {
@@ -2451,6 +2471,8 @@ export default function WhatsAppInboxScreen() {
         if (error) {
           throw error;
         }
+
+        lastSelectedChatAutoSyncAtRef.current.set(activeChat.id, Date.now());
 
         if (selectedChatRef.current?.id === activeChat.id) {
           await loadMessages(activeChat, { silent: true });
@@ -2465,7 +2487,7 @@ export default function WhatsAppInboxScreen() {
 
     const intervalId = window.setInterval(() => {
       void runAutoSync();
-    }, 25000);
+    }, SELECTED_CHAT_AUTO_SYNC_INTERVAL_MS);
 
     return () => {
       window.clearInterval(intervalId);
@@ -2637,7 +2659,7 @@ export default function WhatsAppInboxScreen() {
     syncPendingMessagesBelow();
   };
 
-  const scheduleUnreadCountsRefresh = (delayMs: number = 250) => {
+  const scheduleUnreadCountsRefresh = (delayMs: number = UNREAD_COUNTS_REFRESH_DELAY_MS) => {
     if (unreadCountsRefreshTimeoutRef.current !== null) {
       window.clearTimeout(unreadCountsRefreshTimeoutRef.current);
     }
@@ -2723,11 +2745,14 @@ export default function WhatsAppInboxScreen() {
     const currentLoadId = activeChatsLoadIdRef.current;
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('whatsapp_chats')
-        .select('*')
+        .select(WHATSAPP_CHAT_SELECT_FIELDS)
         .order('last_message_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as unknown as Promise<{
+          data: WhatsAppChat[] | null;
+          error: unknown;
+        }>);
 
       if (error) throw error;
 
@@ -2757,7 +2782,7 @@ export default function WhatsAppInboxScreen() {
           };
         });
       } else {
-        incomingChats = data as WhatsAppChat[];
+        incomingChats = data;
       }
 
       incomingChats = incomingChats.filter((chat) => !isStatusChat(chat));
@@ -3040,16 +3065,59 @@ export default function WhatsAppInboxScreen() {
     if (!activeUser) return;
     const unreadInbound = messagesToMark.filter((message) => message.direction === 'inbound');
     if (unreadInbound.length === 0) return;
-    const rows = unreadInbound.map((message) => ({
-      message_id: message.id,
-      user_id: activeUser.id,
-      read_at: new Date().toISOString(),
-    }));
 
-    const { error } = await supabase.from('whatsapp_message_reads').upsert(rows, { onConflict: 'message_id,user_id' });
-    if (error) {
-      console.error('Error marking messages as read:', error);
-      return;
+    const latestCursorByChat = new Map<string, {
+      chat_id: string;
+      last_read_at: string;
+      last_read_message_id: string;
+    }>();
+
+    unreadInbound.forEach((message) => {
+      const chatId = message.chat_id?.trim();
+      if (!chatId) return;
+
+      const lastReadAt = getMessageDisplayTimestamp(message) ?? new Date().toISOString();
+      const existing = latestCursorByChat.get(chatId);
+      const existingTime = existing ? Date.parse(existing.last_read_at) : Number.NEGATIVE_INFINITY;
+      const nextTime = Date.parse(lastReadAt);
+
+      if (!existing || nextTime >= existingTime) {
+        latestCursorByChat.set(chatId, {
+          chat_id: chatId,
+          last_read_at: lastReadAt,
+          last_read_message_id: message.id,
+        });
+      }
+    });
+
+    let usedLegacyFallback = latestCursorByChat.size === 0;
+
+    if (!usedLegacyFallback) {
+      const cursorResponse = await supabase.rpc('advance_whatsapp_chat_read_cursor', {
+        current_user_id: activeUser.id,
+        chat_reads: Array.from(latestCursorByChat.values()),
+      });
+
+      if (cursorResponse.error) {
+        if (cursorResponse.error.code !== 'PGRST202') {
+          console.error('Error advancing chat read cursor:', cursorResponse.error);
+        }
+        usedLegacyFallback = true;
+      }
+    }
+
+    if (usedLegacyFallback) {
+      const rows = unreadInbound.map((message) => ({
+        message_id: message.id,
+        user_id: activeUser.id,
+        read_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase.from('whatsapp_message_reads').upsert(rows, { onConflict: 'message_id,user_id' });
+      if (error) {
+        console.error('Error marking messages as read:', error);
+        return;
+      }
     }
 
     scheduleUnreadCountsRefresh();
@@ -4705,6 +4773,92 @@ export default function WhatsAppInboxScreen() {
       }),
     );
   }, [directChatsMissingName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const directChatsNeedingPersistedAvatarLookup = useMemo(() => {
+    const candidateChats = new Map<string, WhatsAppChat>();
+    const lookupIds = new Set<string>();
+
+    if (selectedChat && !selectedChat.is_group && getWhatsAppChatKind(selectedChat.id) === 'direct') {
+      candidateChats.set(selectedChat.id, selectedChat);
+    }
+
+    visibleChats.slice(0, 40).forEach((chat) => {
+      if (!chat.is_group && getWhatsAppChatKind(chat.id) === 'direct') {
+        candidateChats.set(chat.id, chat);
+      }
+    });
+
+    candidateChats.forEach((chat) => {
+      const { lookupIds: nextLookupIds, aliases } = getDirectChatAvatarLookupTarget(chat);
+      const alreadyResolved = aliases.some((alias) => liveContactPhotosById.has(alias) || legacyContactPhotosById.has(alias));
+      if (alreadyResolved) {
+        return;
+      }
+
+      nextLookupIds.forEach((lookupId) => {
+        if (!requestedLegacyContactPhotoIdsRef.current.has(lookupId)) {
+          lookupIds.add(lookupId);
+        }
+      });
+    });
+
+    return Array.from(lookupIds);
+  }, [legacyContactPhotosById, liveContactPhotosById, selectedChat, visibleChats]);
+
+  useEffect(() => {
+    const pendingLookupIds = directChatsNeedingPersistedAvatarLookup.slice(0, CONTACT_PHOTO_FALLBACK_BATCH_SIZE);
+    if (pendingLookupIds.length === 0) {
+      return;
+    }
+
+    pendingLookupIds.forEach((lookupId) => requestedLegacyContactPhotoIdsRef.current.add(lookupId));
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const fetchedRows: Array<{ contact_id: string; public_url: string | null }> = [];
+
+        for (let index = 0; index < pendingLookupIds.length; index += CONTACT_PHOTO_FALLBACK_BATCH_SIZE) {
+          const lookupIdsChunk = pendingLookupIds.slice(index, index + CONTACT_PHOTO_FALLBACK_BATCH_SIZE);
+          const { data, error } = await supabase
+            .from('whatsapp_contact_photos')
+            .select('contact_id, public_url')
+            .in('contact_id', lookupIdsChunk);
+
+          if (error) {
+            throw error;
+          }
+
+          if (data?.length) {
+            fetchedRows.push(...data);
+          }
+        }
+
+        if (cancelled || fetchedRows.length === 0) {
+          return;
+        }
+
+        const nextFallbackMap = buildLegacyContactPhotoMap(fetchedRows);
+        if (nextFallbackMap.size === 0) {
+          return;
+        }
+
+        setLegacyContactPhotosById((prev) => {
+          const next = new Map(prev);
+          nextFallbackMap.forEach((url, key) => next.set(key, url));
+          return next;
+        });
+      } catch (error) {
+        pendingLookupIds.forEach((lookupId) => requestedLegacyContactPhotoIdsRef.current.delete(lookupId));
+        console.error('Error loading persisted contact photos:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [directChatsNeedingPersistedAvatarLookup]);
 
   const directChatsMissingAvatar = useMemo(() => {
     const candidateChats = new Map<string, WhatsAppChat>();

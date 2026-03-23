@@ -82,8 +82,8 @@ const modalityCards: Array<{
   {
     profile: 'pme',
     title: 'Plano PME',
-    text: 'Para empresas, MEI e CNPJ que precisam equilibrar benefício e caixa.',
-    highlight: 'Solução mais estratégica para sócios, equipe e crescimento.',
+    text: 'Para quem tem empresa, MEI ou CNPJ e quer ampliar cobertura sem perder previsibilidade no custo.',
+    highlight: 'Boa opção para sócios, equipe e estrutura empresarial.',
     Icon: Briefcase,
   },
   {
@@ -126,31 +126,31 @@ const differentials: Array<{
   },
   {
     title: 'Atendimento ágil no WhatsApp',
-    text: 'Quem chega com urgência precisa de resposta rápida. O canal principal já abre direto na conversa com a equipe.',
+    text: 'Se a sua necessidade é urgente, o atendimento começa direto no WhatsApp para acelerar a orientação e a cotação.',
     Icon: MessageCircle,
   },
 ];
 
 const testimonialPlaceholders = [
   {
-    name: 'Nome do cliente',
+    name: 'Depoimento real em breve',
     detail: 'Plano Individual / Familiar',
-    text: 'Insira aqui um depoimento real destacando atendimento, clareza na explicação e segurança na escolha.',
+    text: 'Em breve, você verá aqui um relato real de quem encontrou mais clareza e segurança para escolher o plano ideal.',
   },
   {
-    name: 'Nome do cliente',
+    name: 'Depoimento real em breve',
     detail: 'Plano PME',
-    text: 'Use este espaço para uma avaliação real falando sobre agilidade no suporte e organização do processo.',
+    text: 'Este espaço será preenchido com uma avaliação real sobre agilidade no atendimento e apoio durante a contratação.',
   },
   {
-    name: 'Nome do cliente',
+    name: 'Depoimento real em breve',
     detail: 'Plano por Adesão',
-    text: 'Adicione aqui um depoimento real mencionando economia, confiança e qualidade do acompanhamento.',
+    text: 'Aqui entra um depoimento real destacando economia, confiança no atendimento e qualidade do acompanhamento.',
   },
   {
-    name: 'Nome do cliente',
+    name: 'Depoimento real em breve',
     detail: 'Atendimento Kifer',
-    text: 'Estrutura pronta para você inserir uma prova social forte, com linguagem humana e convincente.',
+    text: 'Assim que os relatos forem publicados, você poderá ver experiências reais de clientes atendidos pela Kifer.',
   },
 ];
 
@@ -429,10 +429,10 @@ export default function HomePage() {
             <div className="home-conv-section-head max-w-[44rem]">
               <span className="home-conv-kicker">modalidades</span>
               <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
-                O cliente precisa se encontrar rápido no site.
+                Encontre a modalidade que mais combina com o seu momento.
               </h2>
               <p className="mt-4 text-base leading-8 text-[color:var(--home-conv-muted)]">
-                Por isso, a navegação começa deixando claro para quem cada caminho faz mais sentido.
+                Selecione o tipo de plano que faz sentido para o seu perfil e fale com a equipe pelo WhatsApp para receber orientação.
               </p>
             </div>
 
@@ -457,7 +457,7 @@ export default function HomePage() {
               <div className="max-w-[40rem]">
                 <span className="home-conv-kicker">operadoras e seguradoras</span>
                 <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-4xl">
-                  Autoridade aparece rápido quando o cliente reconhece com quem você trabalha.
+                  Trabalhamos com operadoras reconhecidas para encontrar a opção certa para você.
                 </h2>
               </div>
 
@@ -483,7 +483,7 @@ export default function HomePage() {
             <div className="home-conv-section-head max-w-[44rem]">
               <span className="home-conv-kicker">nossos diferenciais</span>
               <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
-                Antes de comparar preço, o cliente precisa confiar em quem está orientando.
+                Você não precisa decidir sozinho nem correr o risco de contratar no impulso.
               </h2>
             </div>
 
@@ -514,19 +514,19 @@ export default function HomePage() {
                     <span className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(197,107,37,0.12)] text-[color:var(--home-conv-accent)]">
                       <UserRound className="h-8 w-8" />
                     </span>
-                    <p className="mt-5 text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--home-conv-muted)]">espaço reservado para foto da Luiza</p>
-                    <p className="mt-3 text-sm leading-7 text-[color:var(--home-conv-muted)]">Troque este bloco pela foto oficial para humanizar ainda mais a página.</p>
+                    <p className="mt-5 text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--home-conv-muted)]">luiza kifer e equipe</p>
+                    <p className="mt-3 text-sm leading-7 text-[color:var(--home-conv-muted)]">Atendimento humano, próximo e consultivo do primeiro contato ao pós-venda.</p>
                   </div>
                 </div>
 
                 <div className="max-w-[40rem]">
                   <span className="home-conv-kicker">quem somos</span>
                   <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
-                    Cuidamos da saúde dos clientes como se fosse da nossa família.
+                    Tratamos a sua escolha com o cuidado que teríamos com a nossa própria família.
                   </h2>
                   <p className="mt-5 text-base leading-8 text-[color:var(--home-conv-muted)]">
                     A Kifer nasceu para simplificar uma decisão que quase sempre chega carregada de pressa, insegurança e dúvidas.
-                    Nosso trabalho é ouvir, orientar com honestidade e acompanhar o cliente com atenção verdadeira do primeiro contato ao pós-venda.
+                    Nosso trabalho é ouvir você, orientar com honestidade e acompanhar cada etapa com atenção verdadeira do primeiro contato ao pós-venda.
                   </p>
 
                   <div className="mt-6 space-y-3">
@@ -562,7 +562,7 @@ export default function HomePage() {
             <div className="home-conv-section-head max-w-[44rem]">
               <span className="home-conv-kicker">prova social</span>
               <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
-                Estrutura pronta para depoimentos reais de quem já confiou no seu atendimento.
+                Quem é bem atendido costuma lembrar da tranquilidade que sentiu ao escolher.
               </h2>
             </div>
 
@@ -629,10 +629,10 @@ export default function HomePage() {
               <div>
                 <span className="home-conv-kicker text-[color:var(--home-conv-accent-soft)]">contato</span>
                 <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-white sm:text-5xl">
-                  Se preferir, deixe seus dados que a equipe retorna para você.
+                  Se preferir, deixe seus dados e a equipe fala com você.
                 </h2>
                 <p className="mt-5 max-w-xl text-base leading-8 text-stone-300">
-                  O caminho principal continua sendo o WhatsApp. Mas, se fizer mais sentido, você também pode preencher o formulário e aguardar nosso retorno.
+                  Se agora não for o melhor momento para chamar no WhatsApp, preencha o formulário e aguarde nosso retorno.
                 </p>
 
                 <div className="mt-8 space-y-4 text-sm text-stone-200">

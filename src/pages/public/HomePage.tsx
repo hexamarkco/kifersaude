@@ -468,7 +468,7 @@ export default function HomePage() {
                       {item.kind === 'image' ? (
                         <img src={item.src} alt={item.alt} className={`${item.height} w-auto max-w-[8rem] object-contain`} loading="lazy" />
                       ) : (
-                        <span className="text-lg font-bold text-stone-700">{item.label}</span>
+                        <span className="home-conv-logo-text text-lg font-bold">{item.label}</span>
                       )}
                     </div>
                   ))}

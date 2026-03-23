@@ -3465,15 +3465,29 @@
   min-width: 10rem;
   align-items: center;
   justify-content: center;
-  border-radius: 1.35rem;
-  border: 1px solid var(--home-conv-line);
-  background: #fff;
-  padding: 1rem 1.25rem;
+  padding: 0.85rem 1rem;
 }
 
 .home-conv-theme .home-conv-logo-card img {
-  opacity: 0.94;
+  opacity: 0.88;
   filter: grayscale(1) contrast(1.05) brightness(0.52);
+  transition: filter 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.home-conv-theme .home-conv-logo-card:hover img {
+  opacity: 1;
+  filter: none;
+  transform: translateY(-1px);
+}
+
+.home-conv-theme .home-conv-logo-text {
+  color: #6b5c50;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.home-conv-theme .home-conv-logo-card:hover .home-conv-logo-text {
+  color: #00995d;
+  transform: translateY(-1px);
 }
 
 .home-conv-theme .home-conv-footer-card {

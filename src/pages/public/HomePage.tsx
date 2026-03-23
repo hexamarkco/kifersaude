@@ -231,7 +231,7 @@ export default function HomePage() {
         Pular para o conteudo
       </a>
 
-      <header className="sticky top-0 z-50 border-b border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.9)] backdrop-blur-xl">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.9)] backdrop-blur-xl">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--home-v2-line-strong)] bg-white text-[color:var(--home-v2-accent)] shadow-[0_16px_30px_-20px_rgba(32,23,19,0.35)]">
@@ -272,15 +272,15 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main id="conteudo" className="pb-20">
+      <main id="conteudo" className="pb-20 pt-24 md:pt-28">
         <section className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pb-14 lg:pt-8">
           <div className="mx-auto max-w-7xl">
             <div className="home-v2-dark-block home-v2-shell relative overflow-hidden rounded-[2.5rem] border p-6 md:p-8 xl:p-10">
               <div aria-hidden="true" className="home-v2-orb home-v2-orb-primary absolute left-[-7rem] top-[-5rem] h-48 w-48 rounded-full" />
               <div aria-hidden="true" className="home-v2-orb home-v2-orb-secondary absolute right-[-5rem] top-10 h-64 w-64 rounded-full" />
 
-              <div className="relative grid gap-8 xl:grid-cols-[1.02fr_0.98fr] xl:items-start">
-                <div className="home-v2-reveal">
+              <div className="relative space-y-8 xl:space-y-10">
+                <div className="home-v2-reveal max-w-5xl">
                   <span className="home-v2-kicker text-[color:var(--home-v2-accent-soft)]">consultoria forte, sem layout generico</span>
                   <h1 className="home-v2-heading mt-5 max-w-4xl text-5xl font-bold leading-[0.9] text-white sm:text-6xl xl:text-[4.8rem]">
                     Plano de saude com criterio, e nao com chute.
@@ -306,7 +306,7 @@ export default function HomePage() {
                     </Link>
                   </div>
 
-                  <div className="mt-8 grid gap-4 md:grid-cols-3">
+                  <div className="mt-8 grid gap-4 lg:grid-cols-3">
                     {heroSignals.map((signal, index) => (
                       <article
                         key={signal.label}
@@ -320,21 +320,18 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <aside className="home-v2-card home-v2-reveal home-v2-delay-1 rounded-[2rem] p-5 md:p-6">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <span className="home-v2-kicker">mapa da decisao</span>
-                      <h2 className="home-v2-heading mt-4 text-3xl font-bold leading-none text-stone-950 md:text-4xl">
-                        O comparativo nasce do cruzamento certo.
-                      </h2>
-                    </div>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--home-v2-line-strong)] bg-[rgba(239,228,212,0.8)] px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[color:var(--home-v2-accent)]">
-                      <BadgeCheck className="h-4 w-4" />
-                      humano
-                    </span>
+                <aside className="home-v2-card home-v2-reveal home-v2-delay-1 mx-auto w-full max-w-5xl rounded-[2rem] p-5 md:p-6 lg:p-7">
+                  <div className="max-w-3xl">
+                    <span className="home-v2-kicker">mapa da decisao</span>
+                    <h2 className="home-v2-heading mt-4 text-3xl font-bold leading-none text-stone-950 md:text-4xl">
+                      O comparativo nasce do cruzamento certo.
+                    </h2>
+                    <p className="mt-4 text-base leading-8 text-[color:var(--home-v2-muted)]">
+                      Antes de falar em operadora, a Kifer cruza modalidade, territorio, custo total e capacidade de suporte.
+                    </p>
                   </div>
 
-                  <div className="mt-6 grid gap-3 md:grid-cols-2">
+                  <div className="mt-8 grid gap-3 lg:grid-cols-2">
                     {decisionRows.map((row) => (
                       <article key={row.title} className="rounded-[1.35rem] border border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.88)] p-4">
                         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[color:var(--home-v2-muted)]">{row.title}</p>
@@ -390,7 +387,7 @@ export default function HomePage() {
         </section>
 
         <section id="diferenciais" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-8 xl:grid-cols-[0.42fr_0.58fr] xl:items-start">
+          <div className="mx-auto max-w-5xl space-y-8">
             <div className="home-v2-reveal">
               <span className="home-v2-kicker">o que muda aqui</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
@@ -425,32 +422,33 @@ export default function HomePage() {
         </section>
 
         <section id="metodo" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-5xl">
             <div className="home-v2-card rounded-[2.2rem] p-6 md:p-8">
-              <div className="grid gap-6 xl:grid-cols-[0.42fr_0.58fr] xl:items-end">
-                <div className="home-v2-reveal">
-                  <span className="home-v2-kicker">metodo kifer</span>
-                  <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                    Quatro movimentos para tirar peso de uma decisao sensivel.
-                  </h2>
-                </div>
-                <p className="home-v2-reveal home-v2-delay-1 max-w-2xl text-base leading-8 text-[color:var(--home-v2-muted)]">
+              <div className="home-v2-reveal max-w-4xl">
+                <span className="home-v2-kicker">metodo kifer</span>
+                <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
+                  Quatro movimentos para tirar peso de uma decisao sensivel.
+                </h2>
+                <p className="mt-5 max-w-3xl text-base leading-8 text-[color:var(--home-v2-muted)]">
                   Nada de empilhar tabela sem contexto. Primeiro a triagem, depois a curadoria, em seguida o comparativo e por fim a contratacao assistida.
                 </p>
               </div>
 
-              <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-8 space-y-4">
                 {processSteps.map((step, index) => (
                   <article
                     key={step.step}
                     className={`rounded-[1.7rem] border border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.8)] p-5 home-v2-reveal ${index === 1 ? 'home-v2-delay-1' : ''} ${index >= 2 ? 'home-v2-delay-2' : ''}`}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--home-v2-muted)]">etapa {step.step}</span>
-                      <step.Icon className="h-5 w-5 text-[color:var(--home-v2-accent)]" />
+                    <div className="grid gap-4 md:grid-cols-[5rem_minmax(0,1fr)_auto] md:items-center">
+                      <span className="home-v2-heading text-4xl font-bold leading-none text-[color:var(--home-v2-accent)] md:text-5xl">{step.step}</span>
+                      <div>
+                        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--home-v2-muted)]">etapa</p>
+                        <h3 className="mt-2 text-xl font-bold text-stone-950 md:text-2xl">{step.title}</h3>
+                        <p className="mt-3 text-sm leading-7 text-[color:var(--home-v2-muted)]">{step.text}</p>
+                      </div>
+                      <step.Icon className="h-6 w-6 text-[color:var(--home-v2-accent)]" />
                     </div>
-                    <h3 className="mt-5 text-xl font-bold text-stone-950">{step.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-[color:var(--home-v2-muted)]">{step.text}</p>
                   </article>
                 ))}
               </div>
@@ -459,7 +457,7 @@ export default function HomePage() {
         </section>
 
         <section id="rotas" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-5xl">
             <div className="max-w-3xl home-v2-reveal">
               <span className="home-v2-kicker">rotas de atendimento</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
@@ -470,17 +468,14 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="mt-8 grid gap-4 lg:grid-cols-12">
+            <div className="mt-8 space-y-4">
               {routes.map((route, index) => {
-                const spanClass =
-                  route.profile === 'pf' ? 'lg:col-span-5' : route.profile === 'pme' ? 'lg:col-span-7' : 'lg:col-span-12';
-
                 return (
                   <article
                     key={route.profile}
-                    className={`${routeToneClasses[route.tone]} ${spanClass} home-v2-reveal rounded-[2rem] border p-6 md:p-7 ${index === 1 ? 'home-v2-delay-1' : ''} ${index === 2 ? 'home-v2-delay-2' : ''}`}
+                    className={`${routeToneClasses[route.tone]} home-v2-reveal rounded-[2rem] border p-6 md:p-7 ${index === 1 ? 'home-v2-delay-1' : ''} ${index === 2 ? 'home-v2-delay-2' : ''}`}
                   >
-                    <div className="grid gap-6 xl:grid-cols-[0.26fr_0.36fr_0.38fr]">
+                    <div className="space-y-6">
                       <div>
                         <p className={`text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${route.tone === 'dark' ? 'text-stone-400' : 'text-[color:var(--home-v2-muted)]'}`}>
                           {route.slug}
@@ -490,6 +485,9 @@ export default function HomePage() {
 
                       <div>
                         <p className={`text-base leading-8 ${route.tone === 'dark' ? 'text-stone-200' : 'text-stone-800'}`}>{route.text}</p>
+                      </div>
+
+                      <div>
                         <Link
                           to={`/lp?perfil=${route.profile}`}
                           className={`mt-6 inline-flex items-center gap-2 text-sm font-semibold ${route.tone === 'dark' ? 'text-[color:var(--home-v2-accent-soft)] hover:text-white' : 'text-[color:var(--home-v2-accent)] hover:text-stone-950'}`}
@@ -497,9 +495,6 @@ export default function HomePage() {
                           Abrir triagem
                           <ArrowRight className="h-4 w-4" />
                         </Link>
-                      </div>
-
-                      <div>
                         <ul className="space-y-3">
                           {route.bullets.map((bullet) => (
                             <li key={bullet} className={`flex gap-3 text-sm leading-7 ${route.tone === 'dark' ? 'text-stone-200' : 'text-stone-700'}`}>
@@ -518,7 +513,7 @@ export default function HomePage() {
         </section>
 
         <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-4 xl:grid-cols-[0.58fr_0.42fr] xl:items-start">
+          <div className="mx-auto max-w-5xl space-y-4">
             <article className="home-v2-card home-v2-reveal rounded-[2rem] p-6 md:p-8">
               <span className="home-v2-kicker">o que entra na analise</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-5xl">
@@ -527,7 +522,7 @@ export default function HomePage() {
 
               <div className="mt-8 divide-y divide-[color:var(--home-v2-line)]">
                 {criteriaRows.map((row) => (
-                  <div key={row.label} className="grid gap-2 py-5 md:grid-cols-[12rem_1fr] md:gap-6">
+                  <div key={row.label} className="grid gap-2 py-5 lg:grid-cols-[12rem_1fr] lg:gap-6">
                     <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--home-v2-muted)]">{row.label}</p>
                     <p className="text-sm leading-7 text-stone-700">{row.text}</p>
                   </div>
@@ -535,59 +530,55 @@ export default function HomePage() {
               </div>
             </article>
 
-            <div className="grid gap-4">
-              <aside className="home-v2-card home-v2-reveal home-v2-delay-1 rounded-[2rem] p-6 md:p-7">
-                <span className="home-v2-kicker">operadoras acompanhadas</span>
-                <h3 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950">
-                  Marca forte ajuda. Encaixe certo decide.
-                </h3>
-                <p className="mt-5 text-sm leading-8 text-[color:var(--home-v2-muted)]">
-                  Produtos de nomes conhecidos podem entrar no comparativo, mas o ponto de partida continua sendo rede, modalidade, territorio e custo total.
-                </p>
+            <aside className="home-v2-card home-v2-reveal home-v2-delay-1 rounded-[2rem] p-6 md:p-7">
+              <span className="home-v2-kicker">operadoras acompanhadas</span>
+              <h3 className="home-v2-heading mt-5 max-w-3xl text-4xl font-bold leading-[0.95] text-stone-950">
+                Marca forte ajuda. Encaixe certo decide.
+              </h3>
+              <p className="mt-5 max-w-3xl text-sm leading-8 text-[color:var(--home-v2-muted)]">
+                Produtos de nomes conhecidos podem entrar no comparativo, mas o ponto de partida continua sendo rede, modalidade, territorio e custo total.
+              </p>
 
-                <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {operatorLogos.map((logo) => (
-                    <div key={logo.alt} className="home-v2-logo-tile flex min-h-[5.25rem] items-center justify-center rounded-[1.4rem] p-4">
-                      <img src={logo.src} alt={logo.alt} loading="lazy" className={`${logo.height} w-auto max-w-[7rem] object-contain`} />
-                    </div>
-                  ))}
-                </div>
-              </aside>
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {operatorLogos.map((logo) => (
+                  <div key={logo.alt} className="home-v2-logo-tile flex min-h-[5.25rem] items-center justify-center rounded-[1.4rem] p-4">
+                    <img src={logo.src} alt={logo.alt} loading="lazy" className={`${logo.height} w-auto max-w-[7rem] object-contain`} />
+                  </div>
+                ))}
+              </div>
+            </aside>
 
-              <aside className="home-v2-dark-block home-v2-reveal home-v2-delay-2 rounded-[2rem] border p-6 md:p-7 text-white">
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-400">diretriz da casa</p>
-                <p className="mt-4 text-lg leading-8 text-stone-100">
-                  A Kifer nao tenta empurrar o plano mais chamativo. A consultoria filtra o que realmente fecha com o seu cenario.
-                </p>
-              </aside>
-            </div>
+            <aside className="home-v2-dark-block home-v2-reveal home-v2-delay-2 rounded-[2rem] border p-6 md:p-7 text-white">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-400">diretriz da casa</p>
+              <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-100">
+                A Kifer nao tenta empurrar o plano mais chamativo. A consultoria filtra o que realmente fecha com o seu cenario.
+              </p>
+            </aside>
           </div>
         </section>
 
         <section id="faq" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[0.58fr_0.42fr] xl:items-start">
-            <div>
-              <div className="max-w-3xl home-v2-reveal">
-                <span className="home-v2-kicker">faq</span>
-                <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                  Perguntas que precisam estar resolvidas antes de assinar.
-                </h2>
-              </div>
-
-              <div className="mt-8 space-y-4">
-                {faqItems.map((item, index) => (
-                  <article
-                    key={item.question}
-                    className={`home-v2-card home-v2-reveal rounded-[1.7rem] p-5 md:p-6 ${index === 1 ? 'home-v2-delay-1' : ''} ${index >= 2 ? 'home-v2-delay-2' : ''}`}
-                  >
-                    <p className="text-base font-bold leading-7 text-stone-950">{item.question}</p>
-                    <p className="mt-3 text-sm leading-7 text-[color:var(--home-v2-muted)]">{item.answer}</p>
-                  </article>
-                ))}
-              </div>
+          <div className="mx-auto max-w-5xl space-y-6">
+            <div className="max-w-3xl home-v2-reveal">
+              <span className="home-v2-kicker">faq</span>
+              <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
+                Perguntas que precisam estar resolvidas antes de assinar.
+              </h2>
             </div>
 
-            <aside className="home-v2-dark-block home-v2-reveal home-v2-delay-1 rounded-[2.2rem] border p-7 md:p-8 text-white xl:sticky xl:top-24">
+            <div className="space-y-4">
+              {faqItems.map((item, index) => (
+                <article
+                  key={item.question}
+                  className={`home-v2-card home-v2-reveal rounded-[1.7rem] p-5 md:p-6 ${index === 1 ? 'home-v2-delay-1' : ''} ${index >= 2 ? 'home-v2-delay-2' : ''}`}
+                >
+                  <p className="text-base font-bold leading-7 text-stone-950">{item.question}</p>
+                  <p className="mt-3 text-sm leading-7 text-[color:var(--home-v2-muted)]">{item.answer}</p>
+                </article>
+              ))}
+            </div>
+
+            <aside className="home-v2-dark-block home-v2-reveal home-v2-delay-1 rounded-[2.2rem] border p-7 md:p-8 text-white">
               <span className="home-v2-kicker text-[color:var(--home-v2-accent-soft)]">proximo passo</span>
               <h3 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-white md:text-5xl">
                 Vamos montar o comparativo que faz sentido para o seu caso.

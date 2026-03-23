@@ -11,6 +11,7 @@ import {
   Phone,
   Search,
   Shield,
+  Sparkles,
   Star,
   ThumbsUp,
   TrendingUp,
@@ -136,6 +137,15 @@ const partnerLogos: PartnerLogo[] = [
   { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saude' },
 ];
 
+const heroRibbonItems = [
+  'Consultoria em Planos de Saude',
+  'Atendimento Humanizado',
+  'Cotacao Sem Compromisso',
+  'Especialista no RJ',
+  'Suporte do Inicio ao Pos-venda',
+];
+
+const loopedHeroRibbonItems = [...heroRibbonItems, ...heroRibbonItems];
 const loopedPartnerLogos = [...partnerLogos, ...partnerLogos];
 
 const testimonials: Testimonial[] = [
@@ -686,20 +696,53 @@ export default function HomePage() {
 
         .partner-logos-card {
           flex: 0 0 auto;
-          width: clamp(10rem, 18vw, 18rem);
+          width: clamp(8rem, 14vw, 12rem);
+        }
+
+        @keyframes hero-ribbon-slide {
+          from {
+            transform: translateX(0);
+          }
+
+          to {
+            transform: translateX(-50%);
+          }
+        }
+
+        .hero-ribbon-marquee {
+          overflow: hidden;
+          background: linear-gradient(90deg, rgba(255, 243, 235, 0.94), rgba(255, 250, 245, 0.98), rgba(255, 243, 235, 0.94));
+          border-top: 1px solid rgba(249, 115, 22, 0.18);
+          border-bottom: 1px solid rgba(249, 115, 22, 0.18);
+          box-shadow: 0 10px 24px rgba(148, 86, 38, 0.06);
+        }
+
+        .hero-ribbon-track {
+          display: flex;
+          width: max-content;
+          animation: hero-ribbon-slide 22s linear infinite;
+        }
+
+        .hero-ribbon-item {
+          flex: 0 0 auto;
         }
 
         @media (max-width: 768px) {
+          .hero-ribbon-track {
+            animation-duration: 16s;
+          }
+
           .partner-logos-track {
             animation-duration: 18s;
           }
 
           .partner-logos-card {
-            width: clamp(8.5rem, 42vw, 12rem);
+            width: clamp(6.5rem, 26vw, 8.75rem);
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
+          .hero-ribbon-track,
           .partner-logos-track {
             animation: none;
           }
@@ -848,6 +891,17 @@ export default function HomePage() {
           </div>
         </section>
 
+        <div className="hero-ribbon-marquee relative z-20 -mt-8 mb-2">
+          <div className="hero-ribbon-track items-center gap-8 px-4 py-4 sm:gap-10 sm:px-6">
+            {loopedHeroRibbonItems.map((item, index) => (
+              <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-8 sm:gap-10" aria-hidden={index >= heroRibbonItems.length}>
+                <span className="whitespace-nowrap text-lg font-semibold tracking-[0.02em] text-slate-800 sm:text-2xl">{item}</span>
+                <Sparkles className="h-5 w-5 text-orange-400 sm:h-6 sm:w-6" />
+              </div>
+            ))}
+          </div>
+        </div>
+
         <section id="quem-somos" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-6xl">
             <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
@@ -935,15 +989,19 @@ export default function HomePage() {
               <p className="text-xl text-slate-600">Trabalhamos com as principais operadoras do mercado</p>
             </div>
 
-            <div className="partner-logos-marquee py-4">
-              <div className="partner-logos-track gap-6 sm:gap-8">
+            <div className="partner-logos-marquee py-3">
+              <div className="partner-logos-track items-center gap-8 sm:gap-10">
                 {loopedPartnerLogos.map((logo, index) => (
                   <div
                     key={`${logo.alt}-${index}`}
-                    className="partner-logos-card flex h-32 items-center justify-center rounded-2xl bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.08)]"
+                    className="partner-logos-card group flex h-20 items-center justify-center"
                     aria-hidden={index >= partnerLogos.length}
                   >
-                    <img src={logo.src} alt={logo.alt} className="max-h-20 max-w-full object-contain" />
+                    <img
+                      src={logo.src}
+                      alt={logo.alt}
+                      className="max-h-12 w-auto max-w-full object-contain grayscale opacity-65 transition duration-300 group-hover:grayscale-0 group-hover:opacity-100 sm:max-h-14"
+                    />
                   </div>
                 ))}
               </div>

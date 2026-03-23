@@ -136,6 +136,8 @@ const partnerLogos: PartnerLogo[] = [
   { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saude' },
 ];
 
+const loopedPartnerLogos = [...partnerLogos, ...partnerLogos];
+
 const testimonials: Testimonial[] = [
   {
     quote: 'Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede DOr. Atendimento nota 10!',
@@ -659,6 +661,51 @@ export default function HomePage() {
         faqItems={faqItems}
       />
 
+      <style>{`
+        @keyframes partner-logos-slide {
+          from {
+            transform: translateX(0);
+          }
+
+          to {
+            transform: translateX(-50%);
+          }
+        }
+
+        .partner-logos-marquee {
+          overflow: hidden;
+          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        }
+
+        .partner-logos-track {
+          display: flex;
+          width: max-content;
+          animation: partner-logos-slide 24s linear infinite;
+        }
+
+        .partner-logos-card {
+          flex: 0 0 auto;
+          width: clamp(10rem, 18vw, 18rem);
+        }
+
+        @media (max-width: 768px) {
+          .partner-logos-track {
+            animation-duration: 18s;
+          }
+
+          .partner-logos-card {
+            width: clamp(8.5rem, 42vw, 12rem);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .partner-logos-track {
+            animation: none;
+          }
+        }
+      `}</style>
+
       <div className="min-h-screen overflow-x-hidden bg-white text-slate-900">
         <nav
           className={`fixed top-0 z-40 w-full transition-all duration-300 ${
@@ -888,16 +935,18 @@ export default function HomePage() {
               <p className="text-xl text-slate-600">Trabalhamos com as principais operadoras do mercado</p>
             </div>
 
-            <div className="grid grid-cols-2 items-center gap-8 md:grid-cols-3 lg:grid-cols-5">
-              {partnerLogos.map((logo) => (
-                <div key={logo.alt} className="group flex h-32 items-center justify-center rounded-xl bg-white p-6 transition-all hover:shadow-lg">
-                  <img
-                    src={logo.src}
-                    alt={logo.alt}
-                    className="max-h-20 max-w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0"
-                  />
-                </div>
-              ))}
+            <div className="partner-logos-marquee py-4">
+              <div className="partner-logos-track gap-6 sm:gap-8">
+                {loopedPartnerLogos.map((logo, index) => (
+                  <div
+                    key={`${logo.alt}-${index}`}
+                    className="partner-logos-card flex h-32 items-center justify-center rounded-2xl bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.08)]"
+                    aria-hidden={index >= partnerLogos.length}
+                  >
+                    <img src={logo.src} alt={logo.alt} className="max-h-20 max-w-full object-contain" />
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="mt-12 text-center">

@@ -237,6 +237,8 @@ type WhapiWebhook = {
   messages_removed_all?: string;
   chats_updates?: WhapiChatUpdate[];
   statuses?: WhapiStatus[];
+  presences?: Array<Record<string, unknown>>;
+  contacts?: Array<Record<string, unknown>>;
   groups?: WhapiGroup[];
   groups_participants?: WhapiGroupParticipants[];
   groups_updates?: WhapiGroupUpdate[];
@@ -277,6 +279,18 @@ if (!supabaseUrl || !serviceRoleKey) {
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey);
+const WEBHOOK_ARCHIVE_BUCKET = 'whatsapp-webhook-archive';
+const WEBHOOK_ARCHIVE_MIN_PAYLOAD_BYTES = 2 * 1024;
+const archivedWebhookEventNames = new Set([
+  'channel.post',
+  'chats.patch',
+  'contacts.patch',
+  'messages.patch',
+  'presences.post',
+  'statuses.post',
+  'statuses.put',
+  'users.post',
+]);
 
 const sensitiveHeaderKeys = new Set([
   'authorization',
@@ -440,8 +454,289 @@ function extractHeaders(headers: Headers): Record<string, string> {
   return result;
 }
 
+function sanitizeArchiveSegment(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized || 'unknown';
+}
+
+function truncateStoredText(value: unknown, maxLength = 280): string | null {
+  const text = toCleanText(value);
+  if (!text) return null;
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 3))}...`;
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return bytesToHex(new Uint8Array(digest));
+}
+
+function summarizeWhapiMessageForArchive(message: WhapiMessage | null | undefined): Record<string, unknown> | null {
+  if (!message) return null;
+
+  const messageBody = buildMessageBody(message);
+
+  return {
+    id: toCleanText(message.id) || null,
+    chat_id: (normalizeMaybeDirectId(message.chat_id) ?? toCleanText(message.chat_id)) || null,
+    from_me: Boolean(message.from_me),
+    type: toCleanText(message.type) || null,
+    subtype: toCleanText(message.subtype) || null,
+    timestamp: toIsoString(message.timestamp),
+    edited_at: toIsoString(message.edited_at),
+    source: toCleanText(message.source) || null,
+    status: toCleanText(message.status) || null,
+    from: (normalizeMaybeDirectId(message.from) ?? toCleanText(message.from)) || null,
+    author: truncateStoredText((message as { author?: string }).author, 80),
+    body: truncateStoredText(messageBody.body, 280),
+    has_media: messageBody.hasMedia,
+    action: message.action
+      ? {
+          type: toCleanText(message.action.type) || null,
+          target: toCleanText(message.action.target) || null,
+          emoji: truncateStoredText(message.action.emoji, 32),
+        }
+      : null,
+    context: message.context
+      ? {
+          quoted_id: toCleanText(message.context.quoted_id) || null,
+          quoted_author: truncateStoredText(message.context.quoted_author, 80),
+          quoted_type: toCleanText(message.context.quoted_type) || null,
+        }
+      : null,
+    image: message.image
+      ? {
+          mime_type: toCleanText(message.image.mime_type) || null,
+          file_size: typeof message.image.file_size === 'number' ? message.image.file_size : null,
+          caption: truncateStoredText(message.image.caption, 160),
+          has_link: Boolean(message.image.link),
+        }
+      : null,
+    video: message.video
+      ? {
+          mime_type: toCleanText(message.video.mime_type) || null,
+          file_size: typeof message.video.file_size === 'number' ? message.video.file_size : null,
+          caption: truncateStoredText(message.video.caption, 160),
+          has_link: Boolean(message.video.link),
+        }
+      : null,
+    audio: message.audio
+      ? {
+          mime_type: toCleanText(message.audio.mime_type) || null,
+          file_size: typeof message.audio.file_size === 'number' ? message.audio.file_size : null,
+          has_link: Boolean(message.audio.link),
+        }
+      : null,
+    voice: message.voice
+      ? {
+          mime_type: toCleanText(message.voice.mime_type) || null,
+          file_size: typeof message.voice.file_size === 'number' ? message.voice.file_size : null,
+          has_link: Boolean(message.voice.link),
+        }
+      : null,
+    document: message.document
+      ? {
+          mime_type: toCleanText(message.document.mime_type) || null,
+          file_size: typeof message.document.file_size === 'number' ? message.document.file_size : null,
+          filename: truncateStoredText(message.document.filename, 120),
+          caption: truncateStoredText(message.document.caption, 160),
+          has_link: Boolean(message.document.link),
+        }
+      : null,
+  };
+}
+
+function summarizeWhapiStatusForArchive(status: WhapiStatus): Record<string, unknown> {
+  return {
+    id: toCleanText(status.id) || null,
+    code: status.code ?? null,
+    status: toCleanText(status.status) || null,
+    recipient_id: (normalizeMaybeDirectId(status.recipient_id) ?? toCleanText(status.recipient_id)) || null,
+    timestamp: toIsoString(status.timestamp),
+  };
+}
+
+function summarizeWhapiChatUpdateForArchive(update: WhapiChatUpdate): Record<string, unknown> {
+  const snapshot = update.after_update || update.chat || update.before_update;
+  const chatId = resolveChatUpdateChatId(update);
+  const lastMessage = update.after_update?.last_message || update.chat?.last_message || update.last_message || null;
+
+  return {
+    chat_id: chatId || null,
+    name: truncateStoredText(resolveChatUpdateName(update), 120),
+    unread: typeof snapshot?.unread === 'number' ? snapshot.unread : null,
+    archived: typeof snapshot?.archived === 'boolean' ? snapshot.archived : null,
+    mute_until: toIsoString(snapshot?.mute_until),
+    timestamp: toIsoString(snapshot?.timestamp),
+    changes: toArray<string>(update.changes).map((item) => toCleanText(item)).filter(Boolean),
+    last_message: summarizeWhapiMessageForArchive(lastMessage),
+  };
+}
+
+function summarizeGroupForArchive(group: WhapiGroup): Record<string, unknown> {
+  return {
+    id: toCleanText(group.id) || null,
+    name: truncateStoredText(group.name, 120),
+    type: toCleanText(group.type) || null,
+    timestamp: toIsoString(group.timestamp),
+    created_at: toIsoString(group.created_at),
+    created_by: (normalizeMaybeDirectId(group.created_by) ?? toCleanText(group.created_by)) || null,
+    participants_count: Array.isArray(group.participants) ? group.participants.length : 0,
+  };
+}
+
+function summarizeWebhookPayloadForStorage(eventName: string, payload: WhapiWebhook, payloadSizeBytes: number): Record<string, unknown> {
+  return {
+    _summary_version: 1,
+    _archived: true,
+    _event: eventName,
+    _payload_size_bytes: payloadSizeBytes,
+    channel_id: toCleanText(payload.channel_id) || null,
+    event: payload.event && typeof payload.event === 'object'
+      ? {
+          type: toCleanText(payload.event.type) || null,
+          event: toCleanText(payload.event.event) || null,
+        }
+      : null,
+    counts: {
+      messages: toArray(payload.messages).length,
+      messages_updates: toArray(payload.messages_updates).length,
+      messages_removed: toArray(payload.messages_removed).length,
+      chats_updates: toArray(payload.chats_updates).length,
+      statuses: toArray(payload.statuses).length,
+      presences: toArray(payload.presences).length,
+      contacts: toArray(payload.contacts).length,
+      groups: toArray(payload.groups).length,
+      groups_participants: toArray(payload.groups_participants).length,
+      groups_updates: toArray(payload.groups_updates).length,
+    },
+    messages: toArray<WhapiMessage>(payload.messages).map((message) => summarizeWhapiMessageForArchive(message)).filter(Boolean),
+    messages_updates: toArray<WhapiMessageUpdate>(payload.messages_updates).map((update) => ({
+      id: toCleanText(update.id) || null,
+      changes: toArray<string>(update.changes).map((item) => toCleanText(item)).filter(Boolean),
+      after_update: summarizeWhapiMessageForArchive(update.after_update),
+    })),
+    messages_removed: toArray<string | { id?: string; message_id?: string; chat_id?: string }>(payload.messages_removed).map((removed) => {
+      if (typeof removed === 'string') {
+        return toCleanText(removed) || null;
+      }
+
+      return {
+        id: toCleanText(removed.id) || null,
+        message_id: toCleanText(removed.message_id) || null,
+        chat_id: (normalizeMaybeDirectId(removed.chat_id) ?? toCleanText(removed.chat_id)) || null,
+      };
+    }),
+    messages_removed_all: toCleanText(payload.messages_removed_all) || null,
+    chats_updates: toArray<WhapiChatUpdate>(payload.chats_updates).map((update) => summarizeWhapiChatUpdateForArchive(update)),
+    statuses: toArray<WhapiStatus>(payload.statuses).map((status) => summarizeWhapiStatusForArchive(status)),
+    presences: toArray<Record<string, unknown>>(payload.presences).map((presence) => ({
+      id: truncateStoredText(presence.id, 80),
+      chat_id: normalizeMaybeDirectId(toCleanText(presence.chat_id)) ?? truncateStoredText(presence.chat_id, 80),
+      status: truncateStoredText(presence.status, 80),
+      timestamp: toIsoString(presence.timestamp),
+    })),
+    contacts: toArray<Record<string, unknown>>(payload.contacts).map((contact) => ({
+      id: truncateStoredText(contact.id, 80),
+      name: truncateStoredText(contact.name, 120),
+      pushname: truncateStoredText(contact.pushname, 120),
+    })),
+    groups: toArray<WhapiGroup>(payload.groups).map((group) => summarizeGroupForArchive(group)),
+    groups_participants: toArray<WhapiGroupParticipants>(payload.groups_participants).map((groupParticipants) => ({
+      group_id: toCleanText(groupParticipants.group_id) || null,
+      action: toCleanText(groupParticipants.action) || null,
+      participants_count: Array.isArray(groupParticipants.participants) ? groupParticipants.participants.length : 0,
+    })),
+    groups_updates: toArray<WhapiGroupUpdate>(payload.groups_updates).map((groupUpdate) => ({
+      group_id: toCleanText(groupUpdate.after_update?.id || groupUpdate.before_update?.id) || null,
+      changes: toArray<string>(groupUpdate.changes).map((item) => toCleanText(item)).filter(Boolean),
+      after_update: groupUpdate.after_update ? summarizeGroupForArchive(groupUpdate.after_update) : null,
+    })),
+  };
+}
+
+function shouldArchiveWebhookPayload(eventName: string, payload: WhapiWebhook, payloadSizeBytes: number): boolean {
+  if (payloadSizeBytes >= WEBHOOK_ARCHIVE_MIN_PAYLOAD_BYTES) {
+    return true;
+  }
+
+  if (archivedWebhookEventNames.has(eventName)) {
+    return true;
+  }
+
+  return Boolean(
+    payload.chats_updates?.length ||
+      payload.presences?.length ||
+      payload.contacts?.length ||
+      (payload.statuses?.length ?? 0) > 1,
+  );
+}
+
+async function archiveWebhookPayload(eventName: string, payload: WhapiWebhook, headers: Record<string, string>): Promise<string> {
+  const archivedAt = new Date().toISOString();
+  const payloadJson = JSON.stringify(payload);
+  const payloadDigest = await sha256Hex(payloadJson);
+  const [year, month, day] = archivedAt.slice(0, 10).split('-');
+  const filePath = `${sanitizeArchiveSegment(eventName)}/${year}/${month}/${day}/${Date.now()}-${payloadDigest.slice(0, 16)}.json`;
+  const archiveContents = JSON.stringify({
+    event: eventName,
+    archived_at: archivedAt,
+    headers,
+    payload,
+  });
+
+  const uploadResult = await supabase.storage.from(WEBHOOK_ARCHIVE_BUCKET).upload(
+    filePath,
+    new TextEncoder().encode(archiveContents),
+    {
+      contentType: 'application/json',
+      upsert: false,
+    },
+  );
+
+  if (uploadResult.error) {
+    throw new Error(`Erro ao arquivar payload do webhook: ${uploadResult.error.message}`);
+  }
+
+  return filePath;
+}
+
 async function storeEvent(event: StoredEvent) {
-  const { error } = await supabase.from('whatsapp_webhook_events').insert(event);
+  const rawPayload = event.payload as WhapiWebhook;
+  const payloadJson = JSON.stringify(rawPayload);
+  const payloadSizeBytes = new TextEncoder().encode(payloadJson).length;
+
+  let storedPayload: Record<string, unknown> = event.payload;
+  let payloadArchived = false;
+  let payloadArchivePath: string | null = null;
+
+  if (shouldArchiveWebhookPayload(event.event, rawPayload, payloadSizeBytes)) {
+    try {
+      payloadArchivePath = await archiveWebhookPayload(event.event, rawPayload, event.headers);
+      storedPayload = summarizeWebhookPayloadForStorage(event.event, rawPayload, payloadSizeBytes);
+      payloadArchived = true;
+    } catch (error) {
+      console.warn('whatsapp-webhook: falha ao arquivar payload bruto, mantendo evento completo no banco', {
+        event: event.event,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const { error } = await supabase.from('whatsapp_webhook_events').insert({
+    event: event.event,
+    payload: storedPayload,
+    headers: event.headers,
+    payload_archive_path: payloadArchivePath,
+    payload_archived: payloadArchived,
+    payload_size_bytes: payloadSizeBytes,
+  });
 
   if (error) {
     throw new Error(`Erro ao salvar evento: ${error.message}`);

@@ -2998,3 +2998,250 @@
     transform: none;
   }
 }
+
+.root-redesign-theme {
+  --root-bg: #f6efe5;
+  --root-surface: rgba(255, 251, 244, 0.9);
+  --root-ink: #18120e;
+  --root-muted: #6c5a4e;
+  --root-line: rgba(102, 73, 52, 0.18);
+  --root-line-strong: rgba(102, 73, 52, 0.3);
+  --root-accent: #c46a24;
+  --root-accent-deep: #7c3b16;
+  --root-accent-soft: #f2d2a4;
+  color: var(--root-ink);
+  font-family: 'Poppins', 'DM Sans', 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(196, 106, 36, 0.16), transparent 32%),
+    radial-gradient(circle at 100% 8%, rgba(120, 80, 54, 0.11), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 24%),
+    repeating-linear-gradient(90deg, rgba(124, 59, 22, 0.035) 0, rgba(124, 59, 22, 0.035) 1px, transparent 1px, transparent 118px),
+    var(--root-bg);
+}
+
+.root-redesign-theme .root-heading {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  letter-spacing: -0.04em;
+}
+
+.root-redesign-theme .root-paper {
+  border: 1px solid var(--root-line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.84) 0%, rgba(255, 247, 237, 0.94) 100%);
+  box-shadow: 0 34px 72px -52px rgba(44, 25, 14, 0.34), 0 14px 24px -20px rgba(44, 25, 14, 0.16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.root-redesign-theme .root-note {
+  border: 1px dashed rgba(124, 59, 22, 0.28);
+  background: linear-gradient(180deg, rgba(244, 226, 199, 0.72) 0%, rgba(255, 248, 238, 0.8) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.48);
+}
+
+.root-redesign-theme .root-cta-panel {
+  position: relative;
+  border: 1px solid rgba(255, 210, 164, 0.16);
+  background: linear-gradient(160deg, #201713 0%, #120d0a 48%, #7c3b16 100%);
+  box-shadow: 0 44px 88px -54px rgba(12, 10, 9, 0.92);
+}
+
+.root-redesign-theme .root-logo-tile {
+  border: 1px solid var(--root-line);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56);
+}
+
+.root-redesign-theme .root-logo-tile img {
+  opacity: 0.88;
+  filter: grayscale(1) contrast(1.08) brightness(0.45);
+}
+
+.root-redesign-theme .root-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--root-accent-deep);
+}
+
+.root-redesign-theme .root-kicker::before {
+  content: '';
+  width: 2.8rem;
+  height: 1px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, var(--root-accent), transparent);
+}
+
+.root-redesign-theme .root-nav-link {
+  transition: color 220ms ease, opacity 220ms ease;
+}
+
+.root-redesign-theme .root-nav-link:hover {
+  color: var(--root-ink);
+}
+
+.root-redesign-theme .root-button-primary,
+.root-redesign-theme .root-button-secondary,
+.root-redesign-theme .root-button-cream,
+.root-redesign-theme .root-button-outline,
+.root-redesign-theme .root-fab {
+  cursor: pointer;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease;
+}
+
+.root-redesign-theme .root-button-primary {
+  border: 1px solid rgba(124, 59, 22, 0.22);
+  background: linear-gradient(135deg, var(--root-accent) 0%, var(--root-accent-deep) 100%);
+  color: #fff;
+  box-shadow: 0 20px 40px -26px rgba(124, 59, 22, 0.72);
+}
+
+.root-redesign-theme .root-button-secondary {
+  border: 1px solid var(--root-line-strong);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--root-ink);
+}
+
+.root-redesign-theme .root-button-cream {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 247, 236, 0.96);
+  color: var(--root-accent-deep);
+}
+
+.root-redesign-theme .root-button-outline {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.root-redesign-theme .root-button-primary:hover,
+.root-redesign-theme .root-button-secondary:hover,
+.root-redesign-theme .root-button-cream:hover,
+.root-redesign-theme .root-button-outline:hover,
+.root-redesign-theme .root-fab:hover {
+  transform: translateY(-1px);
+}
+
+.root-redesign-theme .root-button-secondary:hover {
+  border-color: rgba(124, 59, 22, 0.42);
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.root-redesign-theme .root-button-outline:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.root-redesign-theme .root-button-primary:focus-visible,
+.root-redesign-theme .root-button-secondary:focus-visible,
+.root-redesign-theme .root-button-cream:focus-visible,
+.root-redesign-theme .root-button-outline:focus-visible,
+.root-redesign-theme .root-nav-link:focus-visible,
+.root-redesign-theme .root-fab:focus-visible,
+.root-redesign-theme .root-skip-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(196, 106, 36, 0.22);
+}
+
+.root-redesign-theme .root-fab {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: linear-gradient(135deg, var(--root-accent) 0%, var(--root-accent-deep) 100%);
+}
+
+.root-redesign-theme .root-skip-link {
+  position: fixed;
+  left: 1rem;
+  top: 1rem;
+  z-index: 70;
+  transform: translateY(-220%);
+  border-radius: 9999px;
+  border: 1px solid var(--root-line-strong);
+  background: rgba(255, 255, 255, 0.94);
+  padding: 0.7rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--root-ink);
+}
+
+.root-redesign-theme .root-skip-link:focus {
+  transform: translateY(0);
+}
+
+.root-redesign-theme .root-orb {
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.58;
+  animation: root-drift 18s ease-in-out infinite alternate;
+}
+
+.root-redesign-theme .root-orb-primary {
+  background: rgba(196, 106, 36, 0.32);
+}
+
+.root-redesign-theme .root-orb-secondary {
+  background: rgba(92, 63, 46, 0.22);
+  animation-duration: 22s;
+}
+
+.root-redesign-theme .root-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: root-rise 0.74s cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+}
+
+.root-redesign-theme .root-delay-1 {
+  animation-delay: 0.1s;
+}
+
+.root-redesign-theme .root-delay-2 {
+  animation-delay: 0.2s;
+}
+
+@keyframes root-rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes root-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(24px, -18px, 0);
+  }
+}
+
+@media (max-width: 768px) {
+  .root-redesign-theme {
+    background:
+      radial-gradient(circle at 0% 0%, rgba(196, 106, 36, 0.16), transparent 34%),
+      radial-gradient(circle at 100% 10%, rgba(120, 80, 54, 0.11), transparent 28%),
+      var(--root-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root-redesign-theme .root-reveal,
+  .root-redesign-theme .root-orb,
+  .root-redesign-theme .root-button-primary,
+  .root-redesign-theme .root-button-secondary,
+  .root-redesign-theme .root-button-cream,
+  .root-redesign-theme .root-button-outline,
+  .root-redesign-theme .root-fab {
+    animation: none !important;
+    transform: none !important;
+    transition: none !important;
+    opacity: 1;
+  }
+}

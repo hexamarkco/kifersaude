@@ -1,407 +1,719 @@
 import { Link } from 'react-router-dom';
-import { Helmet } from 'react-helmet';
 import {
   ArrowRight,
   BadgeCheck,
+  Briefcase,
+  Building2,
   CheckCircle2,
+  ClipboardCheck,
   Clock3,
+  FileCheck2,
+  HeartPulse,
+  Landmark,
   MessageCircle,
-  Sparkles,
+  ShieldCheck,
   Stethoscope,
+  Users,
 } from 'lucide-react';
+import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 
-const serviceProfiles = [
+type TrackProfile = 'pf' | 'pme' | 'adesao';
+
+const trustSignals = [
   {
-    id: 'pf',
-    title: 'Pessoa física',
-    subtitle: 'Decisão individual com previsibilidade e cobertura inteligente.',
-    bullets: [
-      'Comparativo com foco no seu uso real',
-      'Validação de rede por região de atendimento',
-      'Leitura clara de carências e reajustes',
-    ],
+    value: '+3.200',
+    label: 'jornadas orientadas',
+    text: 'Comparativos conduzidos com leitura de rede, carencia, reajuste e rotina de uso.',
   },
   {
-    id: 'pme',
-    title: 'PME e CNPJ',
-    subtitle: 'Benefício de saúde estruturado para empresas de pequeno e médio porte.',
-    bullets: [
-      'Apoio de elegibilidade e documentação',
-      'Análise de custo total por composição',
-      'Curadoria por perfil da equipe',
-    ],
+    value: 'Mesmo dia',
+    label: 'primeiro retorno',
+    text: 'Triagem rapida para transformar duvida em um recorte claro de possibilidades.',
   },
   {
-    id: 'adesao',
-    title: 'Coletivo por adesão',
-    subtitle: 'Alternativa para perfis elegíveis que querem equilíbrio entre custo e rede.',
-    bullets: [
-      'Triagem de regras de entrada',
-      'Comparativo técnico de operadoras',
-      'Acompanhamento do início ao pós-venda',
-    ],
+    value: 'PF | PME | adesao',
+    label: 'trilhas de contratacao',
+    text: 'A recomendacao muda conforme o tipo de entrada, elegibilidade e composicao.',
   },
 ];
 
-const methodSteps = [
+const heroChecklist = [
+  'Rede validada pelo territorio onde a vida acontece, e nao por promessa generica.',
+  'Custo total anual e impacto de coparticipacao antes de falar em mensalidade de vitrine.',
+  'Leitura honesta de carencias, regras de entrada e suporte ate a ativacao.',
+];
+
+const manifestoCards: Array<{
+  title: string;
+  text: string;
+  note: string;
+  Icon: typeof BadgeCheck;
+}> = [
+  {
+    title: 'Rede com territorio',
+    text: 'Hospitais, laboratorios, bairros e cidades entram primeiro na analise.',
+    note: 'Decisao pensada para uso real.',
+    Icon: HeartPulse,
+  },
+  {
+    title: 'Custo total, nao fachada',
+    text: 'Mensalidade isolada nao basta; a conta inclui coparticipacao, reajuste e faixa etaria.',
+    note: 'Mais previsibilidade para o medio prazo.',
+    Icon: Landmark,
+  },
+  {
+    title: 'Elegibilidade sem improviso',
+    text: 'PF, PME e adesao seguem caminhos distintos e pedem estrategias diferentes.',
+    note: 'Menos ruído e menos retrabalho.',
+    Icon: Briefcase,
+  },
+  {
+    title: 'Pos-venda como parte da entrega',
+    text: 'Apoio em proposta, pendencias e primeiros passos para a contratacao virar uso.',
+    note: 'A consultoria continua depois do sim.',
+    Icon: ShieldCheck,
+  },
+];
+
+const processChapters: Array<{
+  step: string;
+  title: string;
+  text: string;
+  deliverable: string;
+  Icon: typeof ClipboardCheck;
+}> = [
   {
     step: '01',
-    title: 'Briefing consultivo',
-    text: 'Entendemos vidas, cidade, rotina de uso e faixa de investimento para montar o recorte certo.',
+    title: 'Briefing com contexto',
+    text: 'Mapeamos cidade, vidas, faixa de investimento, urgencia e historico de uso.',
+    deliverable: 'Sai um recorte do que merece entrar ou sair da mesa.',
+    Icon: ClipboardCheck,
   },
   {
     step: '02',
-    title: 'Curadoria de opções',
-    text: 'Filtramos planos com foco em rede relevante, sustentabilidade financeira e segurança de uso.',
+    title: 'Curadoria de opcoes',
+    text: 'Filtramos produtos por modalidade, elegibilidade e coerencia de rede e custo.',
+    deliverable: 'Voce recebe opcoes que fazem sentido para o seu cenario.',
+    Icon: FileCheck2,
   },
   {
     step: '03',
     title: 'Comparativo guiado',
-    text: 'Você recebe recomendação principal, alternativa de segurança e leitura honesta dos pontos sensíveis.',
+    text: 'A recomendacao principal vem acompanhada de alternativa de seguranca e leitura dos pontos sensiveis.',
+    deliverable: 'A decisao fica clara, mesmo quando existem trocas de cobertura e preco.',
+    Icon: BadgeCheck,
   },
   {
     step: '04',
-    title: 'Apoio na contratação',
-    text: 'Acompanhamos proposta, pendências e ativação para transformar escolha em resultado prático.',
+    title: 'Contratacao assistida',
+    text: 'Acompanhamos proposta, documentacao, pendencias e ativacao para reduzir atrito.',
+    deliverable: 'Menos desgaste operacional e mais confianca no fechamento.',
+    Icon: CheckCircle2,
   },
 ];
 
-const testimonials = [
+const serviceTracks: Array<{
+  profile: TrackProfile;
+  slug: string;
+  title: string;
+  summary: string;
+  fit: string;
+  bullets: string[];
+  Icon: typeof Users;
+}> = [
   {
-    name: 'Regina S.',
-    context: 'Família com 3 vidas',
-    quote: 'Consegui reduzir custo sem abrir mão dos hospitais que já usávamos. A clareza no comparativo foi essencial.',
+    profile: 'pf',
+    slug: 'PF',
+    title: 'Pessoa fisica e familia',
+    summary: 'Para quem quer previsibilidade sem cair na tentacao de fechar pelo menor valor anunciado.',
+    fit: 'Faz mais sentido quando a rotina de uso, a rede desejada e a leitura de reajuste precisam entrar na mesma conta.',
+    bullets: [
+      'Comparativo por uso real e nao por ranking generico.',
+      'Leitura clara de carencias, coparticipacao e faixa etaria.',
+      'Recomendacao principal com alternativa de seguranca.',
+    ],
+    Icon: Users,
   },
   {
-    name: 'Marcelo R.',
-    context: 'PME de serviços',
-    quote: 'Estruturamos o plano empresarial com menos burocracia e mais previsibilidade para o caixa da empresa.',
+    profile: 'pme',
+    slug: 'PME',
+    title: 'PME, socios e CNPJ',
+    summary: 'Para empresas que querem estruturar beneficio de saude com equilibrio entre cobertura e caixa.',
+    fit: 'Ideal quando a elegibilidade documental e a composicao do grupo influenciam diretamente no custo-beneficio.',
+    bullets: [
+      'Triagem de elegibilidade e desenho de composicao.',
+      'Leitura do custo total por perfil da equipe.',
+      'Suporte na proposta e na ativacao do beneficio.',
+    ],
+    Icon: Briefcase,
   },
   {
-    name: 'Ana Paula F.',
-    context: 'Transição de benefício corporativo',
-    quote: 'Atendimento consultivo de verdade. Entendi riscos e vantagens antes de tomar decisão.',
+    profile: 'adesao',
+    slug: 'AD',
+    title: 'Coletivo por adesao',
+    summary: 'Para perfis elegiveis que precisam equilibrar rede, entrada e regra de contratacao.',
+    fit: 'Funciona melhor quando a entidade correta, a cobertura esperada e o territorio de uso sao avaliados juntos.',
+    bullets: [
+      'Checagem de regra de entrada e documentacao.',
+      'Comparativo tecnico entre opcoes de adesao.',
+      'Acompanhamento do inicio ao uso inicial do plano.',
+    ],
+    Icon: Building2,
   },
 ];
 
-const faqItems = [
+const criteriaRows = [
   {
-    question: 'A consultoria da Kifer tem custo para o cliente final?',
-    answer:
-      'Não. A orientação consultiva é gratuita para o cliente final e inclui triagem, comparativo e apoio no processo de contratação.',
+    label: 'Rede por territorio',
+    text: 'A validacao precisa acontecer no produto especifico, no bairro, cidade e categoria onde voce realmente vai usar.',
   },
   {
-    question: 'Como vocês garantem que a rede informada é a correta?',
-    answer:
-      'A validação é feita no produto específico, por categoria e território de uso, evitando confirmações genéricas por nome de operadora.',
+    label: 'Carencias e reentrada',
+    text: 'Mudanca de plano, transicao de beneficio e historico recente de contratacao alteram bastante o desenho ideal.',
   },
   {
-    question: 'Atendem PF, PME e adesão com a mesma metodologia?',
-    answer:
-      'Sim. O método é o mesmo, mas a estratégia muda conforme perfil, elegibilidade, objetivo de cobertura e realidade financeira.',
+    label: 'Coparticipacao',
+    text: 'Em baixo uso ela pode ajudar; em uso recorrente, pode virar custo invisivel e desorganizar a conta.',
   },
   {
-    question: 'Vocês acompanham depois da assinatura?',
+    label: 'Faixa etaria e horizonte',
+    text: 'A escolha precisa considerar a sustentabilidade nos proximos anos, e nao so o primeiro boleto.',
+  },
+  {
+    label: 'Suporte operacional',
+    text: 'Tempo de resposta, fluxo de proposta e clareza no pos-venda tambem pesam na experiencia final.',
+  },
+];
+
+const operatorLogos = [
+  { src: '/amil-logo-1-2.png', alt: 'Amil', height: 'h-8' },
+  { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saude', height: 'h-10' },
+  { src: '/sulamerica-saude-logo.png', alt: 'SulAmerica Saude', height: 'h-9' },
+  { src: '/porto-logo.png', alt: 'Porto', height: 'h-7' },
+  { src: '/assim-saude-logo.png', alt: 'Assim Saude', height: 'h-7' },
+];
+
+const faqItems: PublicFaqItem[] = [
+  {
+    question: 'A consultoria da Kifer tem custo para quem esta buscando plano?',
     answer:
-      'Sim. O pós-venda faz parte da entrega, com apoio em dúvidas operacionais, pendências e primeiros passos de uso.',
+      'Nao. O atendimento consultivo para PF, PME e adesao e gratuito para o cliente final e inclui triagem, comparativo e apoio no processo de contratacao.',
+  },
+  {
+    question: 'Como voces validam se a rede credenciada atende mesmo minha regiao?',
+    answer:
+      'A confirmacao acontece no produto especifico, na categoria correta e no territorio de uso informado. Isso evita respostas genericas baseadas apenas no nome da operadora.',
+  },
+  {
+    question: 'Vocês atendem so pessoa fisica?',
+    answer:
+      'Nao. A Kifer atende pessoa fisica, familia, PME/CNPJ e coletivo por adesao, adaptando a estrategia conforme elegibilidade e objetivo de cobertura.',
+  },
+  {
+    question: 'O apoio termina quando a proposta e assinada?',
+    answer:
+      'Nao. O pos-venda faz parte da entrega, com acompanhamento de pendencias, ativacao e duvidas operacionais dos primeiros passos.',
   },
 ];
 
 export default function HomePage() {
   return (
-    <div className="clinic-theme kifer-ds kifer-home-theme min-h-screen text-slate-900">
-      <Helmet>
-        <title>Kifer Saúde | Site institucional</title>
-        <meta
-          name="description"
-          content="Consultoria institucional da Kifer Saúde para PF, PME e adesão, com comparativo técnico e acompanhamento consultivo completo."
-        />
-        <link rel="canonical" href="https://www.kifersaude.com.br/" />
-      </Helmet>
+    <div className="root-redesign-theme relative isolate min-h-screen overflow-x-hidden">
+      <PublicSeo
+        title="Kifer Saude | Consultoria para planos de saude no RJ"
+        description="Consultoria da Kifer Saude para PF, PME e adesao com comparativo tecnico, leitura de rede por territorio e apoio humano ate a contratacao."
+        canonicalPath="/"
+        faqItems={faqItems}
+      />
 
-      <header className="sticky top-0 z-40 border-b border-orange-100/80 bg-white/92 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-900/20">
+      <a href="#conteudo" className="root-skip-link">
+        Pular para o conteudo
+      </a>
+
+      <header className="sticky top-0 z-50 border-b border-[color:var(--root-line)] bg-[rgba(246,239,229,0.86)] backdrop-blur-xl">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+          <Link to="/" className="group flex items-center gap-4">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-[1.4rem] border border-[color:var(--root-line-strong)] bg-white/80 text-[color:var(--root-accent-deep)] shadow-[0_18px_28px_-22px_rgba(44,25,14,0.44)] transition-transform duration-300 group-hover:-translate-y-0.5">
               <Stethoscope className="h-5 w-5" />
             </span>
             <span>
-              <span className="clinic-heading block text-2xl font-semibold leading-none">Kifer Saúde</span>
-              <span className="block text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">institucional</span>
+              <span className="root-heading block text-[2rem] font-semibold leading-none text-stone-950">Kifer Saude</span>
+              <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.28em] text-[color:var(--root-muted)]">
+                consultoria em saude suplementar
+              </span>
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-700 md:flex">
-            <a href="#metodo" className="transition hover:text-orange-700">
-              Método
+          <nav className="hidden items-center gap-6 text-sm font-semibold text-[color:var(--root-muted)] lg:flex">
+            <a href="#diferencial" className="root-nav-link">
+              Diferencial
             </a>
-            <a href="#perfis" className="transition hover:text-orange-700">
-              Perfis
+            <a href="#metodo" className="root-nav-link">
+              Metodo
             </a>
-            <a href="#faq" className="transition hover:text-orange-700">
+            <a href="#trilhas" className="root-nav-link">
+              Trilhas
+            </a>
+            <a href="#faq" className="root-nav-link">
               FAQ
             </a>
-            <Link to="/planos" className="transition hover:text-orange-700">
-              Planos
-            </Link>
           </nav>
 
-          <Link
-            to="/lp"
-            className="ks-btn-primary inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white"
-          >
-            Quero cotar
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+          <div className="flex items-center gap-3">
+            <a
+              href="tel:+5521979302389"
+              className="hidden rounded-full border border-[color:var(--root-line-strong)] px-4 py-2 text-sm font-semibold text-stone-700 transition hover:border-[color:var(--root-accent)] hover:text-stone-950 xl:inline-flex"
+            >
+              (21) 97930-2389
+            </a>
+            <Link to="/lp" className="root-button-primary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold">
+              Quero cotar
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main className="pb-24">
-        <section className="relative overflow-hidden px-4 pb-14 pt-16 sm:px-6 lg:px-8">
-          <div className="clinic-glow pointer-events-none absolute left-[-9rem] top-[-6rem] h-80 w-80 rounded-full bg-orange-300/35 blur-3xl" />
-          <div className="clinic-glow pointer-events-none absolute bottom-[-8rem] right-[-10rem] h-96 w-96 rounded-full bg-orange-200/35 blur-3xl" />
+      <main id="conteudo" className="pb-20">
+        <section className="relative px-4 pb-12 pt-8 sm:px-6 lg:px-8 lg:pb-16 lg:pt-12">
+          <div aria-hidden="true" className="root-orb root-orb-primary absolute left-[-8rem] top-[-5rem] h-72 w-72" />
+          <div aria-hidden="true" className="root-orb root-orb-secondary absolute right-[-6rem] top-16 h-80 w-80" />
 
-          <div className="relative mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.06fr_0.94fr] lg:items-center">
-            <div className="clinic-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-700">site principal</p>
-              <h1 className="clinic-heading mt-4 text-5xl font-semibold leading-[0.93] text-slate-900 md:text-7xl">
-                Consultoria de saúde com linguagem clara e decisão segura.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600">
-                Estruturamos comparativos para PF, PME e adesão com critério técnico, leitura honesta de risco e apoio
-                humano em toda a jornada de contratação.
-              </p>
+          <div className="relative mx-auto max-w-7xl">
+            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr] xl:items-start">
+              <div className="grid gap-6">
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_15rem] xl:grid-cols-[minmax(0,1fr)_17rem]">
+                  <div className="root-reveal">
+                    <span className="root-kicker">home institucional repensada do zero</span>
+                    <h1 className="root-heading mt-5 max-w-4xl text-[3.5rem] leading-[0.86] text-stone-950 sm:text-[4.5rem] lg:text-[5.3rem] xl:text-[6.15rem]">
+                      Plano de saude nao se escolhe por vitrine. Se escolhe por encaixe.
+                    </h1>
+                    <p className="mt-5 max-w-2xl text-base leading-8 text-[color:var(--root-muted)] sm:text-lg">
+                      A Kifer transforma uma decisao confusa em um comparativo com contexto: rede por territorio, carencias,
+                      reajustes, coparticipacao e apoio humano ate a contratacao.
+                    </p>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Link
-                  to="/lp"
-                  className="ks-btn-primary inline-flex items-center gap-2 rounded-2xl px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-white"
-                >
-                  Receber comparativo
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  to="/planos"
-                  className="ks-btn-secondary inline-flex items-center rounded-2xl px-7 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800"
-                >
-                  Explorar planos
-                </Link>
+                    <div className="mt-8 flex flex-wrap gap-3">
+                      <Link
+                        to="/lp"
+                        className="root-button-primary inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold"
+                      >
+                        Receber comparativo
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                      <Link
+                        to="/planos"
+                        className="root-button-secondary inline-flex items-center rounded-full px-6 py-3.5 text-sm font-semibold"
+                      >
+                        Explorar guia de planos
+                      </Link>
+                    </div>
+                  </div>
+
+                  <aside className="root-note root-reveal root-delay-1 flex flex-col justify-between gap-4 rounded-[1.75rem] p-5 lg:mt-10">
+                    <div>
+                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[color:var(--root-accent-deep)]">
+                        ponto de vista
+                      </p>
+                      <p className="mt-4 text-sm leading-7 text-stone-700">
+                        No nicho de saude, a escolha certa quase nunca e a mais anunciada. Ela e a que fecha com cidade,
+                        faixa de investimento, rotina de uso e suporte que voce realmente vai precisar.
+                      </p>
+                    </div>
+                    <p className="border-t border-[color:var(--root-line)] pt-4 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--root-muted)]">
+                      decisao com menos ruido
+                    </p>
+                  </aside>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  {trustSignals.map((signal, index) => (
+                    <article
+                      key={signal.label}
+                      className={`root-paper root-reveal rounded-[1.7rem] p-5 ${index === 1 ? 'root-delay-1' : ''} ${index === 2 ? 'root-delay-2' : ''}`}
+                    >
+                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-muted)]">
+                        {signal.label}
+                      </p>
+                      <p className="root-heading mt-3 text-4xl font-semibold leading-none text-stone-950">{signal.value}</p>
+                      <p className="mt-3 text-sm leading-7 text-[color:var(--root-muted)]">{signal.text}</p>
+                    </article>
+                  ))}
+                </div>
+
+                <section className="root-paper root-reveal root-delay-2 rounded-[2rem] p-5 md:p-6">
+                  <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="max-w-xl">
+                      <span className="root-kicker">operadoras no radar</span>
+                      <p className="mt-3 text-sm leading-7 text-[color:var(--root-muted)]">
+                        A recomendacao parte do encaixe do seu cenario. A bandeira vem depois, como consequencia da analise.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-5 sm:grid-cols-5 sm:items-center">
+                      {operatorLogos.map((logo) => (
+                        <div key={logo.alt} className="flex items-center justify-center">
+                          <img
+                            src={logo.src}
+                            alt={logo.alt}
+                            loading="lazy"
+                            className={`${logo.height} w-auto max-w-[8rem] object-contain opacity-80 grayscale [filter:grayscale(1)_contrast(1.05)_brightness(0.42)]`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </section>
               </div>
 
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">+3.200 clientes orientados</div>
-                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Retorno no mesmo dia útil</div>
-                <div className="clinic-card ks-card rounded-2xl p-4 text-sm font-semibold text-slate-700">Acompanhamento no pós-venda</div>
+              <aside className="root-paper root-reveal root-delay-2 overflow-hidden rounded-[2.2rem] p-5 sm:p-7">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <span className="root-kicker">mesa de decisao kifer</span>
+                    <h2 className="root-heading mt-4 text-4xl font-semibold leading-none text-stone-950 sm:text-5xl">
+                      Seu comparativo nasce daqui.
+                    </h2>
+                  </div>
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--root-line-strong)] bg-white/80 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--root-accent-deep)]">
+                    <BadgeCheck className="h-4 w-4" />
+                    atendimento humano
+                  </span>
+                </div>
+
+                <figure className="mt-6 overflow-hidden rounded-[1.85rem] border border-[color:var(--root-line)] bg-[#ddc4a9]">
+                  <img
+                    src="/freepik__portrait-of-a-natural-redhaired-woman-about-158-me__96601.png"
+                    alt="Representacao de uma consultoria humana em saude"
+                    className="h-[24rem] w-full object-cover object-top sm:h-[29rem]"
+                    loading="eager"
+                  />
+                </figure>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[1.4rem] border border-[color:var(--root-line)] bg-white/70 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--root-muted)]">
+                      perfis atendidos
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-stone-800">PF, familias, PME, socios e adesao com leitura adaptada ao tipo de contratacao.</p>
+                  </div>
+                  <div className="rounded-[1.4rem] border border-[color:var(--root-line)] bg-white/70 p-4">
+                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[color:var(--root-muted)]">
+                      foco geografico
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-stone-800">RJ e entorno com validacao de rede pelo territorio onde a rotina realmente acontece.</p>
+                  </div>
+                </div>
+
+                <div className="root-note mt-5 rounded-[1.7rem] p-5">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-accent-deep)]">
+                    o que entra na triagem
+                  </p>
+                  <ul className="mt-4 space-y-3">
+                    {heroChecklist.map((item) => (
+                      <li key={item} className="flex gap-3 text-sm leading-7 text-stone-800">
+                        <CheckCircle2 className="mt-1 h-4 w-4 flex-shrink-0 text-[color:var(--root-accent)]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-5 flex items-center gap-3 rounded-[1.5rem] bg-stone-950 px-5 py-4 text-sm text-stone-50 shadow-[0_24px_48px_-34px_rgba(12,10,9,0.9)]">
+                  <Clock3 className="h-5 w-5 flex-shrink-0 text-[color:var(--root-accent-soft)]" />
+                  <span>Primeiro retorno em horario comercial, normalmente no mesmo dia util.</span>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+
+        <section id="diferencial" className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-8 xl:grid-cols-[0.42fr_0.58fr]">
+            <div className="root-reveal">
+              <span className="root-kicker">capitulo 01</span>
+              <h2 className="root-heading mt-5 text-5xl font-semibold leading-[0.92] text-stone-950 md:text-6xl">
+                Quando a analise e consultiva, o plano deixa de ser vitrine e vira estrategia.
+              </h2>
+              <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--root-muted)]">
+                A funcao da Kifer e reduzir arrependimento. Por isso, a pagina conversa mais com criterio do que com propaganda:
+                o que importa e o encaixe entre uso, rede, modalidade e horizonte financeiro.
+              </p>
+
+              <div className="root-note mt-8 rounded-[1.85rem] p-6">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-accent-deep)]">
+                  o que voce recebe
+                </p>
+                <p className="mt-3 text-lg leading-8 text-stone-800">
+                  Uma recomendacao principal, uma alternativa de seguranca e uma leitura clara dos pontos sensiveis antes da assinatura.
+                </p>
               </div>
             </div>
 
-            <article className="clinic-card ks-card clinic-reveal clinic-delay-1 rounded-[2rem] p-7">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-orange-700">sua consultora</p>
-              <h2 className="clinic-heading mt-3 text-4xl font-semibold text-slate-900">Atendimento com rosto e responsabilidade</h2>
-
-              <div className="clinic-photo-slot mt-6 aspect-[4/5] rounded-2xl border border-orange-200/80 bg-gradient-to-br from-orange-100/60 to-white p-6">
-                <div className="flex h-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-300/90 text-center text-slate-600">
-                  <BadgeCheck className="h-8 w-8 text-orange-600" />
-                  <p className="mt-3 text-sm font-black uppercase tracking-[0.12em] text-orange-700">Espaço para foto da corretora</p>
-                  <p className="mt-2 max-w-[18rem] text-xs">Substituir por retrato profissional em plano médio, fundo claro e identidade visual da marca.</p>
-                </div>
-              </div>
-
-              <ul className="mt-6 space-y-3 text-sm text-slate-700">
-                <li className="flex gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                  Comparativo consultivo sem pressão de fechamento.
-                </li>
-                <li className="flex gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                  Análise de rede por uso real e não por vitrine comercial.
-                </li>
-                <li className="flex gap-3">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                  Suporte de documentação, proposta e ativação.
-                </li>
-              </ul>
-            </article>
+            <div className="grid gap-4 md:grid-cols-2 md:pt-6">
+              {manifestoCards.map((card, index) => (
+                <article
+                  key={card.title}
+                  className={`root-paper root-reveal rounded-[1.9rem] p-6 ${index % 2 === 1 ? 'md:mt-10' : ''} ${index === 1 ? 'root-delay-1' : ''} ${index >= 2 ? 'root-delay-2' : ''}`}
+                >
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-[1.2rem] border border-[color:var(--root-line)] bg-[rgba(244,226,199,0.56)] text-[color:var(--root-accent-deep)]">
+                    <card.Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="root-heading mt-5 text-4xl font-semibold leading-none text-stone-950">{card.title}</h3>
+                  <p className="mt-4 text-sm leading-7 text-stone-700">{card.text}</p>
+                  <p className="mt-6 border-t border-[color:var(--root-line)] pt-4 text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--root-muted)]">
+                    {card.note}
+                  </p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
 
         <section id="metodo" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[2rem] bg-slate-900 px-8 py-11 text-white shadow-[0_40px_90px_-56px_rgba(15,23,42,0.92)] md:px-12">
-            <div className="max-w-3xl clinic-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">método institucional</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold leading-tight">Uma jornada de decisão, não uma página de oferta</h2>
-              <p className="mt-4 text-sm leading-relaxed text-slate-300">
-                Nosso processo é desenhado para reduzir risco de arrependimento e aumentar segurança de uso no curto e médio prazo.
+          <div className="mx-auto max-w-7xl rounded-[2.35rem] bg-stone-950 px-6 py-10 text-stone-50 shadow-[0_42px_90px_-54px_rgba(12,10,9,0.92)] md:px-10 md:py-12">
+            <div className="grid gap-8 xl:grid-cols-[0.38fr_0.62fr] xl:items-start">
+              <div className="root-reveal">
+                <span className="root-kicker text-[color:var(--root-accent-soft)]">
+                  capitulo 02
+                </span>
+                <h2 className="root-heading mt-5 text-5xl font-semibold leading-[0.94] text-white md:text-6xl">
+                  Quatro etapas para tirar peso de uma decisao sensivel.
+                </h2>
+                <p className="mt-5 max-w-md text-base leading-8 text-stone-300">
+                  Em vez de empilhar ofertas, o processo organiza contexto, corta ruído e chega a uma recomendacao com argumento tecnico.
+                </p>
+
+                <div className="mt-8 rounded-[1.8rem] border border-white/10 bg-white/5 p-6">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-accent-soft)]">
+                    principio
+                  </p>
+                  <p className="mt-3 text-sm leading-7 text-stone-300">
+                    Cada etapa reduz uma camada de incerteza: primeiro o contexto, depois a filtragem, em seguida o comparativo e por fim a contratacao assistida.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {processChapters.map((chapter, index) => (
+                  <article
+                    key={chapter.step}
+                    className={`rounded-[1.9rem] border border-white/10 bg-white/5 p-6 root-reveal ${index === 1 ? 'root-delay-1' : ''} ${index >= 2 ? 'root-delay-2' : ''}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-accent-soft)]">
+                        etapa {chapter.step}
+                      </span>
+                      <chapter.Icon className="h-5 w-5 text-[color:var(--root-accent-soft)]" />
+                    </div>
+                    <h3 className="root-heading mt-5 text-4xl font-semibold leading-none text-white">{chapter.title}</h3>
+                    <p className="mt-4 text-sm leading-7 text-stone-300">{chapter.text}</p>
+                    <p className="mt-6 border-t border-white/10 pt-4 text-sm leading-7 text-[color:var(--root-accent-soft)]">
+                      {chapter.deliverable}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="trilhas" className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="max-w-3xl root-reveal">
+              <span className="root-kicker">capitulo 03</span>
+              <h2 className="root-heading mt-5 text-5xl font-semibold leading-[0.92] text-stone-950 md:text-6xl">
+                Trilhas diferentes para quem contrata de jeitos diferentes.
+              </h2>
+              <p className="mt-5 text-base leading-8 text-[color:var(--root-muted)]">
+                A home institucional deixa claro que PF, PME e adesao nao recebem a mesma resposta pronta. Cada trilha muda o recorte da analise e o que precisa ser validado primeiro.
               </p>
             </div>
 
-            <div className="mt-10 grid gap-4 md:grid-cols-2">
-              {methodSteps.map((step, index) => (
+            <div className="mt-8 space-y-4">
+              {serviceTracks.map((track, index) => (
                 <article
-                  key={step.step}
-                  className={`rounded-2xl border border-white/15 bg-white/5 p-6 clinic-reveal ${index === 1 ? 'clinic-delay-1' : ''} ${index > 1 ? 'clinic-delay-2' : ''}`}
+                  key={track.profile}
+                  className={`root-paper root-reveal rounded-[2rem] p-6 md:p-7 ${index === 1 ? 'root-delay-1' : ''} ${index === 2 ? 'root-delay-2' : ''}`}
                 >
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-200">etapa {step.step}</p>
-                  <h3 className="mt-3 text-2xl font-black">{step.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-300">{step.text}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
+                  <div className="grid gap-6 lg:grid-cols-[0.24fr_0.43fr_0.33fr] lg:items-start lg:gap-8">
+                    <div className="flex items-start gap-4">
+                      <span className="inline-flex h-14 w-14 items-center justify-center rounded-[1.35rem] border border-[color:var(--root-line)] bg-[rgba(244,226,199,0.56)] text-[color:var(--root-accent-deep)]">
+                        <track.Icon className="h-6 w-6" />
+                      </span>
+                      <div>
+                        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-muted)]">{track.slug}</p>
+                        <h3 className="root-heading mt-2 text-4xl font-semibold leading-none text-stone-950">{track.title}</h3>
+                      </div>
+                    </div>
 
-        <section id="perfis" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="max-w-3xl clinic-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">frentes de atendimento</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Trilhas específicas para PF, PME e adesão</h2>
-            </div>
+                    <div>
+                      <p className="text-base leading-8 text-stone-800">{track.summary}</p>
+                      <p className="mt-5 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-muted)]">
+                        quando faz sentido
+                      </p>
+                      <p className="mt-2 text-sm leading-7 text-[color:var(--root-muted)]">{track.fit}</p>
+                    </div>
 
-            <div className="mt-10 grid gap-5 lg:grid-cols-3">
-              {serviceProfiles.map((profile, index) => (
-                <article
-                  key={profile.id}
-                  className={`clinic-card ks-card clinic-reveal rounded-2xl p-7 ${index === 1 ? 'clinic-delay-1' : ''} ${index === 2 ? 'clinic-delay-2' : ''}`}
-                >
-                  <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-700">{profile.id}</p>
-                  <h3 className="mt-2 text-2xl font-black text-slate-900">{profile.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{profile.subtitle}</p>
+                    <div>
+                      <ul className="space-y-3">
+                        {track.bullets.map((item) => (
+                          <li key={item} className="flex gap-3 text-sm leading-7 text-stone-700">
+                            <CheckCircle2 className="mt-1 h-4 w-4 flex-shrink-0 text-[color:var(--root-accent)]" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
 
-                  <ul className="mt-5 space-y-3">
-                    {profile.bullets.map((item) => (
-                      <li key={item} className="flex gap-3 text-sm text-slate-700">
-                        <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Link
-                    to="/lp"
-                    className="mt-6 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-orange-700 hover:text-orange-800"
-                  >
-                    Iniciar atendimento
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="max-w-3xl clinic-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">depoimentos</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Quem passou pela consultoria descreve clareza e segurança</h2>
-            </div>
-
-            <div className="mt-10 grid gap-5 md:grid-cols-3">
-              {testimonials.map((testimonial, index) => (
-                <article
-                  key={testimonial.name}
-                  className={`clinic-card ks-card clinic-reveal rounded-2xl p-7 ${index === 1 ? 'clinic-delay-1' : ''} ${index === 2 ? 'clinic-delay-2' : ''}`}
-                >
-                  <div className="flex items-center gap-1 text-orange-500">
-                    <Sparkles className="h-4 w-4" />
-                    <Sparkles className="h-4 w-4" />
-                    <Sparkles className="h-4 w-4" />
+                      <Link
+                        to={`/lp?perfil=${track.profile}`}
+                        className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--root-accent-deep)] transition hover:text-stone-950"
+                      >
+                        Abrir trilha de atendimento
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
                   </div>
-                  <p className="mt-4 text-sm leading-relaxed text-slate-700">"{testimonial.quote}"</p>
-                  <p className="mt-5 text-sm font-black text-slate-900">{testimonial.name}</p>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{testimonial.context}</p>
                 </article>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section id="criterios" className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[0.58fr_0.42fr] xl:items-start">
+            <article className="root-paper root-reveal rounded-[2rem] p-6 md:p-8">
+              <span className="root-kicker">capitulo 04</span>
+              <h2 className="root-heading mt-5 text-5xl font-semibold leading-[0.94] text-stone-950 md:text-6xl">
+                O que a Kifer coloca na mesa antes de recomendar.
+              </h2>
+              <div className="mt-8 divide-y divide-[color:var(--root-line)]">
+                {criteriaRows.map((row) => (
+                  <div key={row.label} className="grid gap-2 py-5 md:grid-cols-[13rem_1fr] md:gap-6">
+                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-muted)]">{row.label}</p>
+                    <p className="text-sm leading-7 text-stone-700">{row.text}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <aside className="root-paper root-reveal root-delay-1 rounded-[2rem] p-6 md:p-8">
+              <span className="root-kicker">ecossistema analisado</span>
+              <h3 className="root-heading mt-5 text-5xl font-semibold leading-[0.94] text-stone-950">
+                Operadora e variavel. O ponto de partida e o seu cenario.
+              </h3>
+              <p className="mt-5 text-sm leading-8 text-[color:var(--root-muted)]">
+                Produtos de nomes fortes podem entrar no comparativo, mas a escolha final depende do encaixe entre rede, modalidade, territorio e custo total. A marca so faz sentido quando fecha com a sua realidade.
+              </p>
+
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {operatorLogos.map((logo) => (
+                  <div key={logo.alt} className="root-logo-tile flex min-h-[5.5rem] items-center justify-center rounded-[1.45rem] p-4">
+                    <img src={logo.src} alt={logo.alt} loading="lazy" className={`${logo.height} w-auto max-w-[7rem] object-contain`} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="root-note mt-8 rounded-[1.7rem] p-5">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[color:var(--root-accent-deep)]">importante</p>
+                <p className="mt-3 text-sm leading-7 text-stone-800">
+                  Validar hospital ou laboratorio so pelo nome da operadora e pouco. A confirmacao precisa acontecer no produto, na categoria e no territorio corretos.
+                </p>
+              </div>
+
+              <Link
+                to="/planos"
+                className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--root-accent-deep)] transition hover:text-stone-950"
+              >
+                Ver o guia de planos e operadoras
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </aside>
           </div>
         </section>
 
         <section id="faq" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="clinic-reveal">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">faq institucional</p>
-              <h2 className="clinic-heading mt-3 text-5xl font-semibold text-slate-900">Dúvidas que aparecem antes de contratar</h2>
-              <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                Reunimos respostas objetivas para os temas que mais influenciam sua decisão.
-              </p>
-              <Link
-                to="/lp"
-                className="ks-btn-secondary mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-800"
-              >
-                Quero meu comparativo
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
-
-            <div className="space-y-3">
-              {faqItems.map((faq, index) => (
-                <details
-                  key={faq.question}
-                  className={`clinic-card ks-card clinic-reveal rounded-2xl p-5 ${index === 1 ? 'clinic-delay-1' : ''} ${index >= 2 ? 'clinic-delay-2' : ''}`}
-                >
-                  <summary className="cursor-pointer list-none text-sm font-black text-slate-900">
-                    <span className="inline-flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4 text-orange-600" />
-                      {faq.question}
-                    </span>
-                  </summary>
-                  <p className="mt-3 text-sm leading-relaxed text-slate-600">{faq.answer}</p>
-                </details>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="px-4 pb-8 pt-14 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[2.2rem] bg-gradient-to-r from-orange-700 via-orange-600 to-orange-500 p-10 text-white shadow-[0_40px_80px_-48px_rgba(124,45,18,0.65)] md:p-14">
-            <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-100">próximo passo</p>
-                <h2 className="clinic-heading mt-3 text-5xl font-semibold leading-tight md:text-6xl">
-                  Vamos construir seu comparativo com critério técnico.
+          <div className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[0.58fr_0.42fr] xl:items-start">
+            <div>
+              <div className="max-w-3xl root-reveal">
+                <span className="root-kicker">capitulo 05</span>
+                <h2 className="root-heading mt-5 text-5xl font-semibold leading-[0.94] text-stone-950 md:text-6xl">
+                  Duvidas que precisam ser respondidas antes de fechar.
                 </h2>
-                <p className="mt-4 max-w-2xl text-orange-50">
-                  Se você quer decidir com mais segurança, nossa equipe inicia pelo briefing e organiza as melhores opções para seu perfil.
+                <p className="mt-5 text-base leading-8 text-[color:var(--root-muted)]">
+                  Em plano de saude, boa pergunta evita erro caro. Por isso a home termina esclarecendo as objecoes que mais pesam na decisao.
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <Link
-                  to="/lp"
-                  className="ks-btn-secondary inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-orange-700"
-                >
-                  Iniciar atendimento
-                </Link>
-                <a
-                  href="https://wa.me/5521979302389"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/40 bg-white/10 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-white/20"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Falar no WhatsApp
-                </a>
-                <p className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-orange-100">
-                  <Clock3 className="h-4 w-4" />
-                  retorno em horário comercial
-                </p>
+              <div className="mt-8 space-y-4">
+                {faqItems.map((item, index) => (
+                  <article
+                    key={item.question}
+                    className={`root-paper root-reveal rounded-[1.8rem] p-6 ${index === 1 ? 'root-delay-1' : ''} ${index >= 2 ? 'root-delay-2' : ''}`}
+                  >
+                    <p className="text-base font-semibold leading-7 text-stone-950">{item.question}</p>
+                    <p className="mt-3 text-sm leading-7 text-[color:var(--root-muted)]">{item.answer}</p>
+                  </article>
+                ))}
               </div>
             </div>
+
+            <aside className="root-cta-panel root-reveal root-delay-1 overflow-hidden rounded-[2.2rem] p-7 text-white md:p-8">
+              <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.18),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(255,208,166,0.14),transparent_34%)]" />
+              <div className="relative">
+                <span className="root-kicker text-[color:var(--root-accent-soft)]">
+                  proximo passo
+                </span>
+                <h3 className="root-heading mt-5 text-5xl font-semibold leading-[0.94] text-white md:text-6xl">
+                  Vamos montar o comparativo que faz sentido para o seu cenario.
+                </h3>
+                <p className="mt-5 text-sm leading-8 text-stone-200">
+                  Se a ideia e decidir com mais seguranca, o melhor proximo movimento e abrir o briefing. A partir dele, a Kifer organiza as opcoes e conduz a leitura com criterio tecnico.
+                </p>
+
+                <div className="mt-8 space-y-3">
+                  <Link
+                    to="/lp"
+                    className="root-button-cream inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-semibold"
+                  >
+                    Receber comparativo
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <a
+                    href="https://wa.me/5521979302389?text=Ola%2C%20quero%20um%20comparativo%20de%20plano%20de%20saude."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="root-button-outline inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-semibold"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Falar no WhatsApp
+                  </a>
+                </div>
+
+                <p className="mt-5 flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-stone-200/90">
+                  <Clock3 className="h-4 w-4 text-[color:var(--root-accent-soft)]" />
+                  retorno em horario comercial
+                </p>
+              </div>
+            </aside>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-orange-100 bg-white/85 px-4 py-7 text-sm text-slate-600 sm:px-6 lg:px-8">
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-3 md:flex-row">
-          <p>Kifer Saúde - Consultoria institucional em saúde suplementar no RJ.</p>
-          <div className="flex items-center gap-4">
-            <Link to="/planos" className="font-semibold text-slate-700 hover:text-orange-700">
+      <footer className="px-4 pb-8 pt-3 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-[color:var(--root-line)] pt-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="root-heading text-3xl font-semibold leading-none text-stone-950">Kifer Saude</p>
+            <p className="mt-2 text-sm text-[color:var(--root-muted)]">Consultoria em saude suplementar para PF, PME e adesao no RJ.</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-sm font-semibold text-stone-700">
+            <Link to="/planos" className="root-nav-link">
               Planos
             </Link>
-            <Link to="/lp" className="font-semibold text-slate-700 hover:text-orange-700">
-              Cotação
+            <Link to="/lp" className="root-nav-link">
+              Cotacao
             </Link>
-            <a href="tel:+5521979302389" className="font-semibold text-slate-700 hover:text-orange-700">
+            <a href="tel:+5521979302389" className="root-nav-link">
               (21) 97930-2389
             </a>
           </div>
@@ -409,13 +721,13 @@ export default function HomePage() {
       </footer>
 
       <a
-        href="https://wa.me/5521979302389"
+        href="https://wa.me/5521979302389?text=Ola%2C%20quero%20um%20comparativo%20de%20plano%20de%20saude."
         target="_blank"
         rel="noopener noreferrer"
-        className="ks-btn-primary fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full text-white"
+        className="root-fab fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[0_24px_46px_-24px_rgba(12,10,9,0.76)]"
         aria-label="Abrir WhatsApp"
       >
-        <MessageCircle className="h-7 w-7" />
+        <MessageCircle className="h-6 w-6" />
       </a>
     </div>
   );

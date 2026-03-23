@@ -12,11 +12,9 @@ import {
   FinanceiroAgendaTab,
   FinanceiroComissoesTab,
   HomePage,
-  LandingPage,
   LeadsManagerWrapper,
   LoginPage,
   PainelWrapper,
-  PlanosPage,
   ProtectedRoute,
   RemindersManagerEnhanced,
   RouteLoading,
@@ -40,14 +38,15 @@ createRoot(document.getElementById('root')!).render(
         <Suspense fallback={<RouteLoading />}>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/planos" element={<PlanosPage />} />
-            <Route path="/lp" element={<LandingPage />} />
-            <Route path="/cotacao" element={<Navigate to="/lp" replace />} />
-            <Route path="/operadoras" element={<Navigate to="/planos" replace />} />
+            <Route path="/planos" element={<Navigate to="/" replace />} />
+            <Route path="/lp" element={<Navigate to="/" replace />} />
+            <Route path="/lp/*" element={<Navigate to="/" replace />} />
+            <Route path="/cotacao" element={<Navigate to="/" replace />} />
+            <Route path="/operadoras" element={<Navigate to="/" replace />} />
             <Route path="/como-funciona" element={<Navigate to="/" replace />} />
             <Route path="/depoimentos" element={<Navigate to="/" replace />} />
             <Route path="/faq" element={<Navigate to="/" replace />} />
-            <Route path="/planos/*" element={<Navigate to="/planos" replace />} />
+            <Route path="/planos/*" element={<Navigate to="/" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route
               path="/painel"

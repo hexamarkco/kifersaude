@@ -2745,14 +2745,24 @@ export default function WhatsAppInboxScreen() {
     const currentLoadId = activeChatsLoadIdRef.current;
 
     try {
-      const { data, error } = await (supabase
+      const loadChatsFromSupabase = async (selectClause: string): Promise<{
+        data: WhatsAppChat[] | null;
+        error: unknown;
+      }> => (supabase
         .from('whatsapp_chats')
-        .select(WHATSAPP_CHAT_SELECT_FIELDS)
+        .select(selectClause)
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false }) as unknown as Promise<{
           data: WhatsAppChat[] | null;
           error: unknown;
         }>);
+
+      let { data, error } = await loadChatsFromSupabase(WHATSAPP_CHAT_SELECT_FIELDS);
+
+      if (error && typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '42703') {
+        console.warn('WhatsApp inbox: fallback para select(*) em whatsapp_chats por schema desatualizado.', error);
+        ({ data, error } = await loadChatsFromSupabase('*'));
+      }
 
       if (error) throw error;
 

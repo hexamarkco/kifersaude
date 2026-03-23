@@ -3008,12 +3008,13 @@
   --home-v2-accent: #c56b25;
   --home-v2-accent-deep: #7c3f1b;
   --home-v2-accent-soft: #f4c995;
+  --home-v2-page-max: 72rem;
   color: var(--home-v2-ink);
   font-family: 'DM Sans', 'Poppins', 'Segoe UI', sans-serif;
   background:
     radial-gradient(circle at 0% 0%, rgba(197, 107, 37, 0.11), transparent 28%),
     radial-gradient(circle at 100% 12%, rgba(88, 64, 48, 0.08), transparent 24%),
-    repeating-linear-gradient(90deg, rgba(124, 63, 27, 0.022) 0, rgba(124, 63, 27, 0.022) 1px, transparent 1px, transparent 110px),
+    repeating-linear-gradient(90deg, rgba(124, 63, 27, 0.014) 0, rgba(124, 63, 27, 0.014) 1px, transparent 1px, transparent 128px),
     linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 18%),
     var(--home-v2-bg);
 }
@@ -3025,8 +3026,8 @@
 
 .home-v2-theme .home-v2-card {
   border: 1px solid var(--home-v2-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(250, 246, 239, 0.96) 100%);
-  box-shadow: 0 28px 64px -50px rgba(32, 23, 19, 0.26), 0 12px 24px -20px rgba(32, 23, 19, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(250, 246, 239, 0.98) 100%);
+  box-shadow: 0 24px 48px -42px rgba(32, 23, 19, 0.18), 0 10px 18px -16px rgba(32, 23, 19, 0.08);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
@@ -3034,7 +3035,7 @@
 .home-v2-theme .home-v2-dark-block {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(160deg, #181310 0%, #0f0c0a 58%, #241912 100%);
-  box-shadow: 0 40px 90px -58px rgba(15, 12, 10, 0.92);
+  box-shadow: 0 30px 70px -50px rgba(15, 12, 10, 0.82);
 }
 
 .home-v2-theme .home-v2-accent-block {
@@ -3062,6 +3063,22 @@
 .home-v2-theme .home-v2-logo-tile img {
   opacity: 0.88;
   filter: grayscale(1) contrast(1.06) brightness(0.48);
+}
+
+.home-v2-theme .home-v2-route-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.home-v2-theme .home-v2-route-card::before {
+  content: '';
+  position: absolute;
+  left: 1.5rem;
+  top: 0;
+  width: 4.5rem;
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--home-v2-accent), rgba(244, 201, 149, 0.72));
 }
 
 .home-v2-theme .home-v2-kicker {

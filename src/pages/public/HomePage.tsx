@@ -210,10 +210,19 @@ const faqItems: PublicFaqItem[] = [
   },
 ];
 
+const pageShellClass = 'mx-auto w-full max-w-[72rem]';
+const sectionIntroClass = 'home-v2-reveal max-w-[46rem]';
+
 const routeToneClasses: Record<(typeof routes)[number]['tone'], string> = {
-  light: 'home-v2-card border-[color:var(--home-v2-line)] bg-white text-stone-950',
-  dark: 'home-v2-dark-block border-white/10 text-white',
-  accent: 'home-v2-accent-block border-[color:var(--home-v2-line-strong)] text-stone-950',
+  light: 'home-v2-card text-stone-950',
+  dark: 'home-v2-card text-stone-950',
+  accent: 'home-v2-card text-stone-950',
+};
+
+const routeBadgeClasses: Record<(typeof routes)[number]['tone'], string> = {
+  light: 'border-[color:var(--home-v2-line-strong)] bg-[rgba(244,201,149,0.18)] text-[color:var(--home-v2-accent-deep)]',
+  dark: 'border-stone-300/60 bg-stone-950 text-white',
+  accent: 'border-[color:var(--home-v2-line-strong)] bg-[rgba(197,107,37,0.12)] text-[color:var(--home-v2-accent)]',
 };
 
 export default function HomePage() {
@@ -298,7 +307,7 @@ export default function HomePage() {
       </a>
 
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.9)] backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div className={`${pageShellClass} flex w-full items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8`}>
           <Link to="/" className="flex items-center gap-3">
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--home-v2-line-strong)] bg-white text-[color:var(--home-v2-accent)] shadow-[0_16px_30px_-20px_rgba(32,23,19,0.35)]">
               <Stethoscope className="h-5 w-5" />
@@ -340,7 +349,7 @@ export default function HomePage() {
 
       <main id="conteudo" className="pb-20 pt-24 md:pt-28">
         <section className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pb-14 lg:pt-8">
-          <div className="mx-auto max-w-7xl">
+          <div className={pageShellClass}>
             <div className="home-v2-dark-block home-v2-shell relative overflow-hidden rounded-[2.5rem] border p-6 md:p-8 xl:p-10">
               <div aria-hidden="true" className="home-v2-orb home-v2-orb-primary absolute left-[-7rem] top-[-5rem] h-48 w-48 rounded-full" />
               <div aria-hidden="true" className="home-v2-orb home-v2-orb-secondary absolute right-[-5rem] top-10 h-64 w-64 rounded-full" />
@@ -386,7 +395,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <aside className="home-v2-card home-v2-reveal home-v2-delay-1 mx-auto w-full max-w-5xl rounded-[2rem] p-5 md:p-6 lg:p-7">
+                <aside className="home-v2-card home-v2-reveal home-v2-delay-1 w-full rounded-[2rem] p-5 md:p-6 lg:p-7">
                   <div className="max-w-3xl">
                     <span className="home-v2-kicker">mapa da decisão</span>
                     <h2 className="home-v2-heading mt-4 text-3xl font-bold leading-none text-stone-950 md:text-4xl">
@@ -453,8 +462,8 @@ export default function HomePage() {
         </section>
 
         <section id="diferenciais" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl space-y-8">
-            <div className="home-v2-reveal">
+          <div className={`${pageShellClass} space-y-8`}>
+            <div className={sectionIntroClass}>
               <span className="home-v2-kicker">o que muda aqui</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
                 O problema não é falta de opção. É excesso de opção sem filtro.
@@ -488,7 +497,7 @@ export default function HomePage() {
         </section>
 
         <section id="metodo" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl">
+          <div className={pageShellClass}>
             <div className="home-v2-card rounded-[2.2rem] p-6 md:p-8">
               <div className="home-v2-reveal max-w-4xl">
                 <span className="home-v2-kicker">metodo kifer</span>
@@ -523,8 +532,8 @@ export default function HomePage() {
         </section>
 
         <section id="rotas" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl">
-            <div className="max-w-3xl home-v2-reveal">
+          <div className={pageShellClass}>
+            <div className={sectionIntroClass}>
               <span className="home-v2-kicker">rotas de atendimento</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
                 PF, PME e adesão não podem receber a mesma resposta pronta.
@@ -539,32 +548,34 @@ export default function HomePage() {
                 return (
                   <article
                     key={route.profile}
-                    className={`${routeToneClasses[route.tone]} home-v2-reveal rounded-[2rem] border p-6 md:p-7 ${index === 1 ? 'home-v2-delay-1' : ''} ${index === 2 ? 'home-v2-delay-2' : ''}`}
+                    className={`${routeToneClasses[route.tone]} home-v2-route-card home-v2-reveal rounded-[2rem] border p-6 md:p-7 ${index === 1 ? 'home-v2-delay-1' : ''} ${index === 2 ? 'home-v2-delay-2' : ''}`}
                   >
                     <div className="space-y-6">
                       <div>
-                        <p className={`text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${route.tone === 'dark' ? 'text-stone-400' : 'text-[color:var(--home-v2-muted)]'}`}>
+                        <span
+                          className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${routeBadgeClasses[route.tone]}`}
+                        >
                           {route.slug}
-                        </p>
+                        </span>
                         <h3 className="mt-3 text-3xl font-bold leading-[0.95]">{route.title}</h3>
                       </div>
 
                       <div>
-                        <p className={`text-base leading-8 ${route.tone === 'dark' ? 'text-stone-200' : 'text-stone-800'}`}>{route.text}</p>
+                        <p className="text-base leading-8 text-stone-800">{route.text}</p>
                       </div>
 
                       <div>
                         <Link
                           to={`/lp?perfil=${route.profile}`}
-                          className={`mt-6 inline-flex items-center gap-2 text-sm font-semibold ${route.tone === 'dark' ? 'text-[color:var(--home-v2-accent-soft)] hover:text-white' : 'text-[color:var(--home-v2-accent)] hover:text-stone-950'}`}
+                          className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--home-v2-accent)] hover:text-stone-950"
                         >
                           Abrir triagem
                           <ArrowRight className="h-4 w-4" />
                         </Link>
                         <ul className="space-y-3">
                           {route.bullets.map((bullet) => (
-                            <li key={bullet} className={`flex gap-3 text-sm leading-7 ${route.tone === 'dark' ? 'text-stone-200' : 'text-stone-700'}`}>
-                              <CheckCircle2 className={`mt-1 h-4 w-4 flex-shrink-0 ${route.tone === 'dark' ? 'text-[color:var(--home-v2-accent-soft)]' : 'text-[color:var(--home-v2-accent)]'}`} />
+                            <li key={bullet} className="flex gap-3 text-sm leading-7 text-stone-700">
+                              <CheckCircle2 className="mt-1 h-4 w-4 flex-shrink-0 text-[color:var(--home-v2-accent)]" />
                               <span>{bullet}</span>
                             </li>
                           ))}
@@ -579,7 +590,7 @@ export default function HomePage() {
         </section>
 
         <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl space-y-4">
+          <div className={`${pageShellClass} space-y-4`}>
             <article className="home-v2-card home-v2-reveal rounded-[2rem] p-6 md:p-8">
               <span className="home-v2-kicker">o que entra na análise</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-5xl">
@@ -624,8 +635,8 @@ export default function HomePage() {
         </section>
 
         <section id="faq" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl space-y-6">
-            <div className="max-w-3xl home-v2-reveal">
+          <div className={`${pageShellClass} space-y-6`}>
+            <div className={sectionIntroClass}>
               <span className="home-v2-kicker">faq</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
                 Perguntas que precisam estar resolvidas antes de assinar.
@@ -682,7 +693,7 @@ export default function HomePage() {
       </main>
 
       <footer className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-[color:var(--home-v2-line)] pt-6 md:flex-row md:items-center md:justify-between">
+        <div className={`${pageShellClass} flex flex-col gap-4 border-t border-[color:var(--home-v2-line)] pt-6 md:flex-row md:items-center md:justify-between`}>
           <div>
             <p className="home-v2-heading text-2xl font-bold text-stone-950">Kifer Saúde</p>
             <p className="mt-2 text-sm text-[color:var(--home-v2-muted)]">Consultoria em saúde suplementar para PF, PME e adesão no RJ.</p>

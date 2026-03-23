@@ -3422,7 +3422,7 @@
   border-top: none;
   border-right: none;
   border-left: none;
-  border-radius: 0 0 2.5rem 2.5rem;
+  border-radius: 0;
 }
 
 .home-conv-theme .home-conv-hero-card::before {
@@ -3553,10 +3553,6 @@
     background:
       radial-gradient(circle at top left, rgba(183, 99, 42, 0.08), transparent 28%),
       var(--home-conv-bg);
-  }
-
-  .home-conv-theme .home-conv-hero-band {
-    border-radius: 0 0 1.75rem 1.75rem;
   }
 
   .home-conv-theme .home-conv-logo-card {

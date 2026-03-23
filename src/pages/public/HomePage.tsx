@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -13,15 +14,13 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
+import { supabase } from '../../lib/supabase';
 
 type RouteProfile = 'pf' | 'pme' | 'adesao';
 
-const heroSignals = [
-  {
-    value: '+3.200',
-    label: 'atendimentos consultivos',
-    text: 'Jornadas conduzidas com comparativo técnico e apoio até a contratação.',
-  },
+const FALLBACK_DASHBOARD_LEAD_COUNT = 3200;
+
+const staticHeroSignals = [
   {
     value: 'Mesmo dia',
     label: 'primeiro retorno',
@@ -218,6 +217,73 @@ const routeToneClasses: Record<(typeof routes)[number]['tone'], string> = {
 };
 
 export default function HomePage() {
+  const [dashboardLeadCount, setDashboardLeadCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDashboardLeadCount = async () => {
+      try {
+        const { data: activeStatuses, error: activeStatusesError } = await supabase
+          .from('lead_status_config')
+          .select('nome')
+          .eq('ativo', true);
+
+        if (activeStatusesError) {
+          throw activeStatusesError;
+        }
+
+        const activeStatusNames = (activeStatuses ?? [])
+          .map((status) => String(status.nome ?? '').trim())
+          .filter(Boolean);
+
+        let countQuery = supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('arquivado', false);
+
+        if (activeStatusNames.length > 0) {
+          countQuery = countQuery.in('status', activeStatusNames);
+        }
+
+        const { count, error: countError } = await countQuery;
+
+        if (countError) {
+          throw countError;
+        }
+
+        if (isMounted) {
+          setDashboardLeadCount(count ?? 0);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar total real de leads do dashboard para a home:', error);
+      }
+    };
+
+    void loadDashboardLeadCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const formattedDashboardLeadCount = useMemo(() => {
+    const count = dashboardLeadCount ?? FALLBACK_DASHBOARD_LEAD_COUNT;
+    return `+${new Intl.NumberFormat('pt-BR').format(count)}`;
+  }, [dashboardLeadCount]);
+
+  const heroSignals = useMemo(
+    () => [
+      {
+        value: formattedDashboardLeadCount,
+        label: 'base ativa no dashboard',
+        text: 'Volume real da base ativa acompanhada pela equipe comercial.',
+      },
+      ...staticHeroSignals,
+    ],
+    [formattedDashboardLeadCount],
+  );
+
   return (
     <div className="home-v2-theme min-h-screen overflow-x-hidden">
       <PublicSeo
@@ -300,7 +366,7 @@ export default function HomePage() {
                     </Link>
                     <Link
                       to="/planos"
-                        className="home-v2-button-secondary-dark inline-flex items-center rounded-full px-6 py-3.5 text-sm font-semibold"
+                      className="home-v2-button-secondary-dark inline-flex items-center rounded-full px-6 py-3.5 text-sm font-semibold"
                     >
                       Ver guia de planos
                     </Link>
@@ -322,9 +388,9 @@ export default function HomePage() {
 
                 <aside className="home-v2-card home-v2-reveal home-v2-delay-1 mx-auto w-full max-w-5xl rounded-[2rem] p-5 md:p-6 lg:p-7">
                   <div className="max-w-3xl">
-                      <span className="home-v2-kicker">mapa da decisão</span>
+                    <span className="home-v2-kicker">mapa da decisão</span>
                     <h2 className="home-v2-heading mt-4 text-3xl font-bold leading-none text-stone-950 md:text-4xl">
-                        O comparativo nasce do cruzamento certo.
+                      O comparativo nasce do cruzamento certo.
                     </h2>
                     <p className="mt-4 text-base leading-8 text-[color:var(--home-v2-muted)]">
                       Antes de falar em operadora, a Kifer cruza modalidade, território, custo total e capacidade de suporte.

@@ -20,16 +20,16 @@ const heroSignals = [
   {
     value: '+3.200',
     label: 'atendimentos consultivos',
-    text: 'Jornadas conduzidas com comparativo tecnico e apoio ate a contratacao.',
+    text: 'Jornadas conduzidas com comparativo técnico e apoio até a contratação.',
   },
   {
     value: 'Mesmo dia',
     label: 'primeiro retorno',
-    text: 'Triagem rapida para sair da duvida e entrar em um recorte viavel.',
+    text: 'Triagem rápida para sair da dúvida e entrar em um recorte viável.',
   },
   {
-    value: 'PF | PME | Adesao',
-    label: 'frentes de atuacao',
+    value: 'PF | PME | Adesão',
+    label: 'frentes de atuação',
     text: 'Cada modalidade pede uma leitura diferente de rede, regra e custo.',
   },
 ];
@@ -37,19 +37,19 @@ const heroSignals = [
 const decisionRows = [
   {
     title: 'Perfil',
-    text: 'PF, familia, PME, socios ou adesao.',
+    text: 'PF, família, PME, sócios ou adesão.',
   },
   {
-    title: 'Territorio de uso',
-    text: 'Bairro, cidade, hospitais e laboratorios que importam para sua rotina.',
+    title: 'Território de uso',
+    text: 'Bairro, cidade, hospitais e laboratórios que importam para sua rotina.',
   },
   {
     title: 'Conta real',
-    text: 'Mensalidade, coparticipacao, reajuste e horizonte de medio prazo.',
+    text: 'Mensalidade, coparticipação, reajuste e horizonte de médio prazo.',
   },
   {
     title: 'Entrega',
-    text: 'Recomendacao principal, alternativa de seguranca e apoio na proposta.',
+    text: 'Recomendação principal, alternativa de segurança e apoio na proposta.',
   },
 ];
 
@@ -62,19 +62,19 @@ const differenceCards: Array<{
   {
     number: '01',
     title: 'Rede antes da marca',
-    text: 'Nao adianta comecar pela operadora se o produto nao encaixa no territorio onde voce realmente usa o plano.',
+    text: 'Não adianta começar pela operadora se o produto não encaixa no território onde você realmente usa o plano.',
     Icon: HeartPulse,
   },
   {
     number: '02',
-    title: 'Custo total antes do preco de entrada',
-    text: 'Mensalidade bonita sozinha engana. A leitura precisa incluir coparticipacao, reajuste e faixa etaria.',
+    title: 'Custo total antes do preço de entrada',
+    text: 'Mensalidade bonita sozinha engana. A leitura precisa incluir coparticipação, reajuste e faixa etária.',
     Icon: Landmark,
   },
   {
     number: '03',
-    title: 'Pos-venda como parte da entrega',
-    text: 'Apoio em proposta, pendencias e ativacao para a decisao virar uso sem atrito desnecessario.',
+    title: 'Pós-venda como parte da entrega',
+    text: 'Apoio em proposta, pendências e ativação para a decisão virar uso sem atrito desnecessário.',
     Icon: ShieldCheck,
   },
 ];
@@ -94,19 +94,19 @@ const processSteps: Array<{
   {
     step: '02',
     title: 'Curadoria',
-    text: 'Filtramos produtos por modalidade, elegibilidade e coerencia de rede.',
+    text: 'Filtramos produtos por modalidade, elegibilidade e coerência de rede.',
     Icon: FileCheck2,
   },
   {
     step: '03',
     title: 'Comparativo',
-    text: 'Voce recebe leitura clara de vantagem, risco e ponto de atencao.',
+    text: 'Você recebe leitura clara de vantagem, risco e ponto de atenção.',
     Icon: BadgeCheck,
   },
   {
     step: '04',
-    title: 'Contratacao assistida',
-    text: 'Acompanhamos proposta, documentacao e ativacao.',
+    title: 'Contratação assistida',
+    text: 'Acompanhamos proposta, documentação e ativação.',
     Icon: CheckCircle2,
   },
 ];
@@ -122,35 +122,35 @@ const routes: Array<{
   {
     slug: 'PF',
     profile: 'pf',
-    title: 'Pessoa fisica e familia',
+    title: 'Pessoa física e família',
     text: 'Para quem quer previsibilidade sem cair na armadilha de fechar apenas pelo menor valor anunciado.',
     bullets: [
-      'Comparativo por uso real e nao por ranking generico.',
-      'Leitura clara de carencias, rede e coparticipacao.',
-      'Recomendacao principal com alternativa de seguranca.',
+      'Comparativo por uso real e não por ranking genérico.',
+      'Leitura clara de carências, rede e coparticipação.',
+      'Recomendação principal com alternativa de segurança.',
     ],
     tone: 'light',
   },
   {
     slug: 'PME',
     profile: 'pme',
-    title: 'PME, socios e CNPJ',
-    text: 'Para empresas que querem estruturar beneficio de saude com mais criterio e menos improviso documental.',
+    title: 'PME, sócios e CNPJ',
+    text: 'Para empresas que querem estruturar benefício de saúde com mais critério e menos improviso documental.',
     bullets: [
-      'Triagem de elegibilidade e composicao do grupo.',
+      'Triagem de elegibilidade e composição do grupo.',
       'Leitura do custo total por perfil da equipe.',
-      'Suporte do briefing ate a ativacao do beneficio.',
+      'Suporte do briefing até a ativação do benefício.',
     ],
     tone: 'dark',
   },
   {
     slug: 'AD',
     profile: 'adesao',
-    title: 'Coletivo por adesao',
-    text: 'Para perfis elegiveis que precisam equilibrar regra de entrada, rede e custo com orientacao tecnica.',
+    title: 'Coletivo por adesão',
+    text: 'Para perfis elegíveis que precisam equilibrar regra de entrada, rede e custo com orientação técnica.',
     bullets: [
-      'Checagem de entidade e documentacao de acesso.',
-      'Comparativo tecnico entre opcoes de adesao.',
+      'Checagem de entidade e documentação de acesso.',
+      'Comparativo técnico entre opções de adesão.',
       'Acompanhamento da proposta ao uso inicial do plano.',
     ],
     tone: 'accent',
@@ -160,54 +160,54 @@ const routes: Array<{
 const criteriaRows = [
   {
     label: 'Rede credenciada',
-    text: 'A validacao precisa acontecer no produto, na categoria e no territorio corretos.',
+    text: 'A validação precisa acontecer no produto, na categoria e no território corretos.',
   },
   {
-    label: 'Carencias e transicao',
-    text: 'Mudanca de plano, saida de beneficio corporativo e historico recente alteram a estrategia.',
+    label: 'Carências e transição',
+    text: 'Mudança de plano, saída de benefício corporativo e histórico recente alteram a estratégia.',
   },
   {
-    label: 'Coparticipacao',
-    text: 'Em baixo uso pode ajudar. Em rotina intensa, pode desorganizar a conta sem que isso fique obvio no inicio.',
+    label: 'Coparticipação',
+    text: 'Em baixo uso pode ajudar. Em rotina intensa, pode desorganizar a conta sem que isso fique óbvio no início.',
   },
   {
-    label: 'Faixa etaria',
-    text: 'A decisao precisa considerar sustentabilidade de medio prazo, nao apenas o primeiro boleto.',
+    label: 'Faixa etária',
+    text: 'A decisão precisa considerar sustentabilidade de médio prazo, não apenas o primeiro boleto.',
   },
   {
-    label: 'Operacao e suporte',
-    text: 'Tempo de resposta, clareza comercial e pos-venda tambem pesam no resultado final.',
+    label: 'Operação e suporte',
+    text: 'Tempo de resposta, clareza comercial e pós-venda também pesam no resultado final.',
   },
 ];
 
 const operatorLogos = [
   { src: '/amil-logo-1-2.png', alt: 'Amil', height: 'h-7' },
-  { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saude', height: 'h-9' },
-  { src: '/sulamerica-saude-logo.png', alt: 'SulAmerica Saude', height: 'h-8' },
+  { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saúde', height: 'h-9' },
+  { src: '/sulamerica-saude-logo.png', alt: 'SulAmérica Saúde', height: 'h-8' },
   { src: '/porto-logo.png', alt: 'Porto', height: 'h-6' },
-  { src: '/assim-saude-logo.png', alt: 'Assim Saude', height: 'h-6' },
+  { src: '/assim-saude-logo.png', alt: 'Assim Saúde', height: 'h-6' },
 ];
 
 const faqItems: PublicFaqItem[] = [
   {
-    question: 'A consultoria tem custo para quem esta buscando plano?',
+    question: 'A consultoria tem custo para quem está buscando plano?',
     answer:
-      'Nao. O atendimento consultivo para PF, PME e adesao e gratuito para o cliente final e inclui triagem, comparativo e apoio no processo de contratacao.',
+      'Não. O atendimento consultivo para PF, PME e adesão é gratuito para o cliente final e inclui triagem, comparativo e apoio no processo de contratação.',
   },
   {
-    question: 'Como voces validam se a rede realmente atende minha regiao?',
+    question: 'Como vocês validam se a rede realmente atende minha região?',
     answer:
-      'A confirmacao acontece no produto especifico, na categoria correta e no territorio informado. Isso evita resposta generica baseada apenas no nome da operadora.',
+      'A confirmação acontece no produto específico, na categoria correta e no território informado. Isso evita resposta genérica baseada apenas no nome da operadora.',
   },
   {
-    question: 'Voces atendem apenas pessoa fisica?',
+    question: 'Vocês atendem apenas pessoa física?',
     answer:
-      'Nao. A Kifer atende pessoa fisica, familia, PME/CNPJ e coletivo por adesao, com estrategia adaptada ao tipo de contratacao.',
+      'Não. A Kifer atende pessoa física, família, PME/CNPJ e coletivo por adesão, com estratégia adaptada ao tipo de contratação.',
   },
   {
-    question: 'O apoio termina quando a proposta e assinada?',
+    question: 'O apoio termina quando a proposta é assinada?',
     answer:
-      'Nao. O pos-venda faz parte da entrega, com apoio em pendencias, ativacao e primeiros passos de uso.',
+      'Não. O pós-venda faz parte da entrega, com apoio em pendências, ativação e primeiros passos de uso.',
   },
 ];
 
@@ -221,14 +221,14 @@ export default function HomePage() {
   return (
     <div className="home-v2-theme min-h-screen overflow-x-hidden">
       <PublicSeo
-        title="Kifer Saude | Consultoria para planos de saude no RJ"
-        description="Consultoria da Kifer Saude para PF, PME e adesao com comparativo tecnico, leitura de rede por territorio e apoio humano ate a contratacao."
+        title="Kifer Saúde | Consultoria para planos de saúde no RJ"
+        description="Consultoria da Kifer Saúde para PF, PME e adesão com comparativo técnico, leitura de rede por território e apoio humano até a contratação."
         canonicalPath="/"
         faqItems={faqItems}
       />
 
       <a href="#conteudo" className="home-v2-skip-link">
-        Pular para o conteudo
+        Pular para o conteúdo
       </a>
 
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.9)] backdrop-blur-xl">
@@ -238,9 +238,9 @@ export default function HomePage() {
               <Stethoscope className="h-5 w-5" />
             </span>
             <span>
-              <span className="home-v2-heading block text-[1.7rem] font-bold leading-none text-stone-950">Kifer Saude</span>
+              <span className="home-v2-heading block text-[1.7rem] font-bold leading-none text-stone-950">Kifer Saúde</span>
               <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-[color:var(--home-v2-muted)]">
-                consultoria em saude suplementar
+                consultoria em saúde suplementar
               </span>
             </span>
           </Link>
@@ -250,7 +250,7 @@ export default function HomePage() {
               Diferenciais
             </a>
             <a href="#metodo" className="home-v2-link">
-              Metodo
+              Método
             </a>
             <a href="#rotas" className="home-v2-link">
               Rotas
@@ -281,13 +281,13 @@ export default function HomePage() {
 
               <div className="relative space-y-8 xl:space-y-10">
                 <div className="home-v2-reveal max-w-5xl">
-                  <span className="home-v2-kicker text-[color:var(--home-v2-accent-soft)]">consultoria forte, sem layout generico</span>
+                  <span className="home-v2-kicker text-[color:var(--home-v2-accent-soft)]">consultoria forte, sem layout genérico</span>
                   <h1 className="home-v2-heading mt-5 max-w-4xl text-5xl font-bold leading-[0.9] text-white sm:text-6xl xl:text-[4.8rem]">
-                    Plano de saude com criterio, e nao com chute.
+                    Plano de saúde com critério, e não com chute.
                   </h1>
                   <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-                    A Kifer organiza a decisao do jeito certo: rede por territorio, regra de contratacao, custo total e apoio humano
-                    do briefing ate a assinatura.
+                    A Kifer organiza a decisão do jeito certo: rede por território, regra de contratação, custo total e apoio humano
+                    do briefing até a assinatura.
                   </p>
 
                   <div className="mt-8 flex flex-wrap gap-3">
@@ -322,12 +322,12 @@ export default function HomePage() {
 
                 <aside className="home-v2-card home-v2-reveal home-v2-delay-1 mx-auto w-full max-w-5xl rounded-[2rem] p-5 md:p-6 lg:p-7">
                   <div className="max-w-3xl">
-                    <span className="home-v2-kicker">mapa da decisao</span>
+                      <span className="home-v2-kicker">mapa da decisão</span>
                     <h2 className="home-v2-heading mt-4 text-3xl font-bold leading-none text-stone-950 md:text-4xl">
-                      O comparativo nasce do cruzamento certo.
+                        O comparativo nasce do cruzamento certo.
                     </h2>
                     <p className="mt-4 text-base leading-8 text-[color:var(--home-v2-muted)]">
-                      Antes de falar em operadora, a Kifer cruza modalidade, territorio, custo total e capacidade de suporte.
+                      Antes de falar em operadora, a Kifer cruza modalidade, território, custo total e capacidade de suporte.
                     </p>
                   </div>
 
@@ -343,12 +343,12 @@ export default function HomePage() {
                   <div className="mt-6 rounded-[1.5rem] border border-[color:var(--home-v2-line)] bg-stone-950 px-4 py-4 text-sm text-stone-100">
                     <p className="flex items-center gap-2 font-semibold">
                       <Clock3 className="h-4 w-4 text-[color:var(--home-v2-accent-soft)]" />
-                      Retorno inicial em horario comercial, normalmente no mesmo dia util.
+                      Retorno inicial em horário comercial, normalmente no mesmo dia útil.
                     </p>
                   </div>
 
                   <a
-                    href="https://wa.me/5521979302389?text=Ola%2C%20quero%20um%20comparativo%20de%20plano%20de%20saude."
+                    href="https://wa.me/5521979302389?text=Ol%C3%A1%2C%20quero%20um%20comparativo%20de%20plano%20de%20sa%C3%BAde."
                     target="_blank"
                     rel="noopener noreferrer"
                     className="home-v2-button-secondary-light mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-sm font-semibold"
@@ -364,7 +364,7 @@ export default function HomePage() {
                   <div>
                     <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-400">operadoras acompanhadas</p>
                     <p className="mt-2 text-sm leading-7 text-stone-300">
-                      A marca entra na analise depois do encaixe. O ponto de partida e o seu cenario.
+                      A marca entra na análise depois do encaixe. O ponto de partida é o seu cenário.
                     </p>
                   </div>
 
@@ -391,11 +391,11 @@ export default function HomePage() {
             <div className="home-v2-reveal">
               <span className="home-v2-kicker">o que muda aqui</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                O problema nao e falta de opcao. E excesso de opcao sem filtro.
+                O problema não é falta de opção. É excesso de opção sem filtro.
               </h2>
               <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--home-v2-muted)]">
-                A home foi reposicionada para vender criterio. Em saude suplementar, o valor nao esta em mostrar muita coisa.
-                Esta em mostrar o que realmente entra na decisao.
+                A home foi reposicionada para vender critério. Em saúde suplementar, o valor não está em mostrar muita coisa.
+                Está em mostrar o que realmente entra na decisão.
               </p>
             </div>
 
@@ -427,10 +427,10 @@ export default function HomePage() {
               <div className="home-v2-reveal max-w-4xl">
                 <span className="home-v2-kicker">metodo kifer</span>
                 <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                  Quatro movimentos para tirar peso de uma decisao sensivel.
+                    Quatro movimentos para tirar peso de uma decisão sensível.
                 </h2>
                 <p className="mt-5 max-w-3xl text-base leading-8 text-[color:var(--home-v2-muted)]">
-                  Nada de empilhar tabela sem contexto. Primeiro a triagem, depois a curadoria, em seguida o comparativo e por fim a contratacao assistida.
+                  Nada de empilhar tabela sem contexto. Primeiro a triagem, depois a curadoria, em seguida o comparativo e por fim a contratação assistida.
                 </p>
               </div>
 
@@ -461,10 +461,10 @@ export default function HomePage() {
             <div className="max-w-3xl home-v2-reveal">
               <span className="home-v2-kicker">rotas de atendimento</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                PF, PME e adesao nao podem receber a mesma resposta pronta.
+                PF, PME e adesão não podem receber a mesma resposta pronta.
               </h2>
               <p className="mt-5 text-base leading-8 text-[color:var(--home-v2-muted)]">
-                Cada trilha tem regra propria, ponto de risco proprio e um jeito certo de montar o comparativo.
+                Cada trilha tem regra própria, ponto de risco próprio e um jeito certo de montar o comparativo.
               </p>
             </div>
 
@@ -515,9 +515,9 @@ export default function HomePage() {
         <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-5xl space-y-4">
             <article className="home-v2-card home-v2-reveal rounded-[2rem] p-6 md:p-8">
-              <span className="home-v2-kicker">o que entra na analise</span>
+              <span className="home-v2-kicker">o que entra na análise</span>
               <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-5xl">
-                A recomendacao boa nasce de uma mesa organizada.
+                A recomendação boa nasce de uma mesa organizada.
               </h2>
 
               <div className="mt-8 divide-y divide-[color:var(--home-v2-line)]">
@@ -536,7 +536,7 @@ export default function HomePage() {
                 Marca forte ajuda. Encaixe certo decide.
               </h3>
               <p className="mt-5 max-w-3xl text-sm leading-8 text-[color:var(--home-v2-muted)]">
-                Produtos de nomes conhecidos podem entrar no comparativo, mas o ponto de partida continua sendo rede, modalidade, territorio e custo total.
+                Produtos de nomes conhecidos podem entrar no comparativo, mas o ponto de partida continua sendo rede, modalidade, território e custo total.
               </p>
 
               <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -551,7 +551,7 @@ export default function HomePage() {
             <aside className="home-v2-dark-block home-v2-reveal home-v2-delay-2 rounded-[2rem] border p-6 md:p-7 text-white">
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-400">diretriz da casa</p>
               <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-100">
-                A Kifer nao tenta empurrar o plano mais chamativo. A consultoria filtra o que realmente fecha com o seu cenario.
+                A Kifer não tenta empurrar o plano mais chamativo. A consultoria filtra o que realmente fecha com o seu cenário.
               </p>
             </aside>
           </div>
@@ -584,7 +584,7 @@ export default function HomePage() {
                 Vamos montar o comparativo que faz sentido para o seu caso.
               </h3>
               <p className="mt-5 text-sm leading-8 text-stone-300">
-                Se a ideia e decidir com mais seguranca, o melhor movimento agora e abrir o briefing. A partir dele, a Kifer organiza as opcoes certas e conduz a leitura com criterio tecnico.
+                Se a ideia é decidir com mais segurança, o melhor movimento agora é abrir o briefing. A partir dele, a Kifer organiza as opções certas e conduz a leitura com critério técnico.
               </p>
 
               <div className="mt-8 space-y-3">
@@ -596,7 +596,7 @@ export default function HomePage() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <a
-                  href="https://wa.me/5521979302389?text=Ola%2C%20quero%20um%20comparativo%20de%20plano%20de%20saude."
+                  href="https://wa.me/5521979302389?text=Ol%C3%A1%2C%20quero%20um%20comparativo%20de%20plano%20de%20sa%C3%BAde."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="home-v2-button-outline inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-semibold"
@@ -608,7 +608,7 @@ export default function HomePage() {
 
               <p className="mt-5 flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-stone-300">
                 <Clock3 className="h-4 w-4 text-[color:var(--home-v2-accent-soft)]" />
-                retorno em horario comercial
+                retorno em horário comercial
               </p>
             </aside>
           </div>
@@ -618,8 +618,8 @@ export default function HomePage() {
       <footer className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 border-t border-[color:var(--home-v2-line)] pt-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="home-v2-heading text-2xl font-bold text-stone-950">Kifer Saude</p>
-            <p className="mt-2 text-sm text-[color:var(--home-v2-muted)]">Consultoria em saude suplementar para PF, PME e adesao no RJ.</p>
+            <p className="home-v2-heading text-2xl font-bold text-stone-950">Kifer Saúde</p>
+            <p className="mt-2 text-sm text-[color:var(--home-v2-muted)]">Consultoria em saúde suplementar para PF, PME e adesão no RJ.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm font-semibold text-stone-700">
@@ -627,7 +627,7 @@ export default function HomePage() {
               Planos
             </Link>
             <Link to="/lp" className="home-v2-link">
-              Cotacao
+              Cotação
             </Link>
             <a href="tel:+5521979302389" className="home-v2-link">
               (21) 97930-2389
@@ -637,7 +637,7 @@ export default function HomePage() {
       </footer>
 
       <a
-        href="https://wa.me/5521979302389?text=Ola%2C%20quero%20um%20comparativo%20de%20plano%20de%20saude."
+        href="https://wa.me/5521979302389?text=Ol%C3%A1%2C%20quero%20um%20comparativo%20de%20plano%20de%20sa%C3%BAde."
         target="_blank"
         rel="noopener noreferrer"
         className="home-v2-fab fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[0_26px_46px_-24px_rgba(32,23,19,0.6)]"

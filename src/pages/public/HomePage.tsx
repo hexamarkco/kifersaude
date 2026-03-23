@@ -1,278 +1,283 @@
-import { useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   BadgeCheck,
+  Briefcase,
+  Building2,
   CheckCircle2,
-  ClipboardCheck,
-  Clock3,
-  FileCheck2,
-  HeartPulse,
-  Landmark,
+  ChevronDown,
+  FileText,
+  Handshake,
+  Instagram,
+  Mail,
   MessageCircle,
+  Phone,
   ShieldCheck,
+  Star,
   Stethoscope,
+  UserRound,
+  Users,
 } from 'lucide-react';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
-import { supabase } from '../../lib/supabase';
+import { formatPhoneInput } from '../../lib/inputFormatters';
+import { supabase, type ConfigOption, type LeadOrigem, type LeadStatusConfig } from '../../lib/supabase';
+import { toast } from '../../lib/toast';
 
-type RouteProfile = 'pf' | 'pme' | 'adesao';
+type ProfileSlug = 'pf' | 'pme' | 'adesao';
 
+type ContractTypeRow = ConfigOption & {
+  nome?: string | null;
+};
+
+type FooterFormValues = {
+  nome: string;
+  whatsapp: string;
+  email: string;
+  perfil: ProfileSlug;
+};
+
+type LogoItem =
+  | {
+      kind: 'image';
+      src: string;
+      alt: string;
+      height: string;
+    }
+  | {
+      kind: 'text';
+      label: string;
+    };
+
+const WHATSAPP_PHONE = '5521979302389';
+const WHATSAPP_DEFAULT_MESSAGE = 'Olá! Quero falar com a Kifer sobre um plano de saúde.';
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(WHATSAPP_DEFAULT_MESSAGE)}`;
+const CNPJ = '46.423.078/0001-10';
+const EMAIL = 'contato@kifersaude.com.br';
+const INSTAGRAM_URL = 'https://instagram.com/souluizakifer';
 const FALLBACK_DASHBOARD_LEAD_COUNT = 3200;
+const pageShellClass = 'mx-auto w-full max-w-[74rem]';
 
-const staticHeroSignals = [
-  {
-    value: 'Mesmo dia',
-    label: 'primeiro retorno',
-    text: 'Triagem rápida para sair da dúvida e entrar em um recorte viável.',
-  },
-  {
-    value: 'PF | PME | Adesão',
-    label: 'frentes de atuação',
-    text: 'Cada modalidade pede uma leitura diferente de rede, regra e custo.',
-  },
+const navItems = [
+  { label: 'Início', href: '#inicio' },
+  { label: 'Planos', href: '#modalidades' },
+  { label: 'Sobre', href: '#quem-somos' },
+  { label: 'Contato', href: '#contato' },
 ];
 
-const decisionRows = [
-  {
-    title: 'Perfil',
-    text: 'PF, família, PME, sócios ou adesão.',
-  },
-  {
-    title: 'Território de uso',
-    text: 'Bairro, cidade, hospitais e laboratórios que importam para sua rotina.',
-  },
-  {
-    title: 'Conta real',
-    text: 'Mensalidade, coparticipação, reajuste e horizonte de médio prazo.',
-  },
-  {
-    title: 'Entrega',
-    text: 'Recomendação principal, alternativa de segurança e apoio na proposta.',
-  },
-];
-
-const differenceCards: Array<{
-  number: string;
+const modalityCards: Array<{
+  profile: ProfileSlug;
   title: string;
   text: string;
-  Icon: typeof BadgeCheck;
+  highlight: string;
+  Icon: typeof Users;
 }> = [
   {
-    number: '01',
-    title: 'Rede antes da marca',
-    text: 'Não adianta começar pela operadora se o produto não encaixa no território onde você realmente usa o plano.',
-    Icon: HeartPulse,
+    profile: 'pf',
+    title: 'Plano Individual / Familiar',
+    text: 'Para quem quer segurança para a rotina da família sem decidir no impulso.',
+    highlight: 'Comparativo claro de rede, carências e custo real.',
+    Icon: Users,
   },
   {
-    number: '02',
-    title: 'Custo total antes do preço de entrada',
-    text: 'Mensalidade bonita sozinha engana. A leitura precisa incluir coparticipação, reajuste e faixa etária.',
-    Icon: Landmark,
+    profile: 'pme',
+    title: 'Plano PME',
+    text: 'Para empresas, MEI e CNPJ que precisam equilibrar benefício e caixa.',
+    highlight: 'Solução mais estratégica para sócios, equipe e crescimento.',
+    Icon: Briefcase,
   },
   {
-    number: '03',
-    title: 'Pós-venda como parte da entrega',
-    text: 'Apoio em proposta, pendências e ativação para a decisão virar uso sem atrito desnecessário.',
-    Icon: ShieldCheck,
+    profile: 'adesao',
+    title: 'Plano por Adesão',
+    text: 'Para perfis elegíveis que buscam boa cobertura com orientação técnica.',
+    highlight: 'Checagem de elegibilidade e apoio completo na contratação.',
+    Icon: Building2,
   },
 ];
 
-const processSteps: Array<{
-  step: string;
+const operatorLogos: LogoItem[] = [
+  { kind: 'image', src: '/amil-logo-1-2.png', alt: 'Amil', height: 'h-7' },
+  { kind: 'image', src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saúde', height: 'h-9' },
+  { kind: 'image', src: '/sulamerica-saude-logo.png', alt: 'SulAmérica Saúde', height: 'h-8' },
+  { kind: 'text', label: 'Unimed' },
+  { kind: 'image', src: '/porto-logo.png', alt: 'Porto Saúde', height: 'h-6' },
+  { kind: 'image', src: '/assim-saude-logo.png', alt: 'Assim Saúde', height: 'h-6' },
+];
+
+const differentials: Array<{
   title: string;
   text: string;
-  Icon: typeof ClipboardCheck;
+  Icon: typeof ShieldCheck;
 }> = [
   {
-    step: '01',
-    title: 'Briefing',
-    text: 'Mapeamos vidas, cidade, uso esperado e faixa de investimento.',
-    Icon: ClipboardCheck,
+    title: 'Consultoria personalizada',
+    text: 'Cada indicação parte da sua rotina, do seu orçamento e do tipo de cobertura que realmente faz sentido.',
+    Icon: Handshake,
   },
   {
-    step: '02',
-    title: 'Curadoria',
-    text: 'Filtramos produtos por modalidade, elegibilidade e coerência de rede.',
-    Icon: FileCheck2,
+    title: 'Transparência nos contratos',
+    text: 'A gente explica carências, coparticipação, regras de entrada e pontos de atenção antes da assinatura.',
+    Icon: FileText,
   },
   {
-    step: '03',
-    title: 'Comparativo',
-    text: 'Você recebe leitura clara de vantagem, risco e ponto de atenção.',
+    title: 'Pós-venda humanizado',
+    text: 'O suporte continua depois da venda, com ajuda em proposta, pendências e primeiros passos do plano.',
     Icon: BadgeCheck,
   },
   {
-    step: '04',
-    title: 'Contratação assistida',
-    text: 'Acompanhamos proposta, documentação e ativação.',
-    Icon: CheckCircle2,
+    title: 'Atendimento ágil no WhatsApp',
+    text: 'Quem chega com urgência precisa de resposta rápida. O canal principal já abre direto na conversa com a equipe.',
+    Icon: MessageCircle,
   },
 ];
 
-const routes: Array<{
-  slug: string;
-  profile: RouteProfile;
-  title: string;
-  text: string;
-  bullets: string[];
-  tone: 'light' | 'dark' | 'accent';
-}> = [
+const testimonialPlaceholders = [
   {
-    slug: 'PF',
-    profile: 'pf',
-    title: 'Pessoa física e família',
-    text: 'Para quem quer previsibilidade sem cair na armadilha de fechar apenas pelo menor valor anunciado.',
-    bullets: [
-      'Comparativo por uso real e não por ranking genérico.',
-      'Leitura clara de carências, rede e coparticipação.',
-      'Recomendação principal com alternativa de segurança.',
-    ],
-    tone: 'light',
+    name: 'Nome do cliente',
+    detail: 'Plano Individual / Familiar',
+    text: 'Insira aqui um depoimento real destacando atendimento, clareza na explicação e segurança na escolha.',
   },
   {
-    slug: 'PME',
-    profile: 'pme',
-    title: 'PME, sócios e CNPJ',
-    text: 'Para empresas que querem estruturar benefício de saúde com mais critério e menos improviso documental.',
-    bullets: [
-      'Triagem de elegibilidade e composição do grupo.',
-      'Leitura do custo total por perfil da equipe.',
-      'Suporte do briefing até a ativação do benefício.',
-    ],
-    tone: 'dark',
+    name: 'Nome do cliente',
+    detail: 'Plano PME',
+    text: 'Use este espaço para uma avaliação real falando sobre agilidade no suporte e organização do processo.',
   },
   {
-    slug: 'AD',
-    profile: 'adesao',
-    title: 'Coletivo por adesão',
-    text: 'Para perfis elegíveis que precisam equilibrar regra de entrada, rede e custo com orientação técnica.',
-    bullets: [
-      'Checagem de entidade e documentação de acesso.',
-      'Comparativo técnico entre opções de adesão.',
-      'Acompanhamento da proposta ao uso inicial do plano.',
-    ],
-    tone: 'accent',
-  },
-];
-
-const criteriaRows = [
-  {
-    label: 'Rede credenciada',
-    text: 'A validação precisa acontecer no produto, na categoria e no território corretos.',
+    name: 'Nome do cliente',
+    detail: 'Plano por Adesão',
+    text: 'Adicione aqui um depoimento real mencionando economia, confiança e qualidade do acompanhamento.',
   },
   {
-    label: 'Carências e transição',
-    text: 'Mudança de plano, saída de benefício corporativo e histórico recente alteram a estratégia.',
+    name: 'Nome do cliente',
+    detail: 'Atendimento Kifer',
+    text: 'Estrutura pronta para você inserir uma prova social forte, com linguagem humana e convincente.',
   },
-  {
-    label: 'Coparticipação',
-    text: 'Em baixo uso pode ajudar. Em rotina intensa, pode desorganizar a conta sem que isso fique óbvio no início.',
-  },
-  {
-    label: 'Faixa etária',
-    text: 'A decisão precisa considerar sustentabilidade de médio prazo, não apenas o primeiro boleto.',
-  },
-  {
-    label: 'Operação e suporte',
-    text: 'Tempo de resposta, clareza comercial e pós-venda também pesam no resultado final.',
-  },
-];
-
-const operatorLogos = [
-  { src: '/amil-logo-1-2.png', alt: 'Amil', height: 'h-7' },
-  { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saúde', height: 'h-9' },
-  { src: '/sulamerica-saude-logo.png', alt: 'SulAmérica Saúde', height: 'h-8' },
-  { src: '/porto-logo.png', alt: 'Porto', height: 'h-6' },
-  { src: '/assim-saude-logo.png', alt: 'Assim Saúde', height: 'h-6' },
 ];
 
 const faqItems: PublicFaqItem[] = [
   {
-    question: 'A consultoria tem custo para quem está buscando plano?',
+    question: 'O que é carência no plano de saúde?',
     answer:
-      'Não. O atendimento consultivo para PF, PME e adesão é gratuito para o cliente final e inclui triagem, comparativo e apoio no processo de contratação.',
+      'Carência é o prazo contado a partir da contratação para começar a usar determinados procedimentos. Esse prazo muda conforme o tipo de cobertura e a regra do produto.',
   },
   {
-    question: 'Como vocês validam se a rede realmente atende minha região?',
+    question: 'Quem pode entrar como dependente?',
     answer:
-      'A confirmação acontece no produto específico, na categoria correta e no território informado. Isso evita resposta genérica baseada apenas no nome da operadora.',
+      'Isso depende da modalidade do plano e das regras da operadora. Em geral, entram cônjuge, filhos e, em alguns casos, outros vínculos permitidos pelo contrato.',
   },
   {
-    question: 'Vocês atendem apenas pessoa física?',
+    question: 'Plano PME precisa mesmo ter CNPJ?',
     answer:
-      'Não. A Kifer atende pessoa física, família, PME/CNPJ e coletivo por adesão, com estratégia adaptada ao tipo de contratação.',
+      'Sim. Para contratar plano PME é necessário cumprir a regra de elegibilidade da modalidade empresarial, o que normalmente envolve CNPJ ativo e composição mínima do grupo.',
   },
   {
-    question: 'O apoio termina quando a proposta é assinada?',
+    question: 'Vocês ajudam também depois da contratação?',
     answer:
-      'Não. O pós-venda faz parte da entrega, com apoio em pendências, ativação e primeiros passos de uso.',
+      'Sim. O pós-venda faz parte da nossa entrega, com apoio em proposta, pendências, ativação e orientações dos primeiros passos.',
   },
 ];
 
-const pageShellClass = 'mx-auto w-full max-w-[72rem]';
-const sectionIntroClass = 'home-v2-reveal max-w-[46rem]';
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 
-const routeToneClasses: Record<(typeof routes)[number]['tone'], string> = {
-  light: 'home-v2-card text-stone-950',
-  dark: 'home-v2-card text-stone-950',
-  accent: 'home-v2-card text-stone-950',
+const buildWhatsAppUrl = (message: string) =>
+  `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
+
+const findOriginId = (origins: LeadOrigem[]) => {
+  const priorities = ['site', 'home', 'footer', 'lp', 'landing'];
+  const match = origins.find((origin) => {
+    const normalized = normalizeText(origin.nome);
+    return priorities.some((term) => normalized.includes(term));
+  });
+
+  return match?.id ?? origins[0]?.id ?? null;
 };
 
-const routeBadgeClasses: Record<(typeof routes)[number]['tone'], string> = {
-  light: 'border-[color:var(--home-v2-line-strong)] bg-[rgba(244,201,149,0.18)] text-[color:var(--home-v2-accent-deep)]',
-  dark: 'border-stone-300/60 bg-stone-950 text-white',
-  accent: 'border-[color:var(--home-v2-line-strong)] bg-[rgba(197,107,37,0.12)] text-[color:var(--home-v2-accent)]',
+const findStatusId = (statuses: LeadStatusConfig[]) => {
+  const match = statuses.find((status) => normalizeText(status.nome).includes('novo'));
+  return match?.id ?? statuses[0]?.id ?? null;
+};
+
+const resolveContractTypeId = (rows: ContractTypeRow[], profile: ProfileSlug) => {
+  const aliases: Record<ProfileSlug, string[]> = {
+    pf: ['pf', 'pessoa fisica', 'pessoa física', 'individual', 'familiar'],
+    pme: ['pme', 'mei', 'empresa', 'empresarial', 'cnpj', 'pj'],
+    adesao: ['adesao', 'adesão', 'coletivo por adesao', 'coletivo por adesão', 'entidade'],
+  };
+
+  const targets = aliases[profile];
+  const match = rows.find((row) => {
+    const candidate = normalizeText(`${row.label} ${row.value} ${row.nome ?? ''}`);
+    return targets.some((target) => candidate.includes(target));
+  });
+
+  return match?.id ?? null;
 };
 
 export default function HomePage() {
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [dashboardLeadCount, setDashboardLeadCount] = useState<number | null>(null);
+  const [origins, setOrigins] = useState<LeadOrigem[]>([]);
+  const [statuses, setStatuses] = useState<LeadStatusConfig[]>([]);
+  const [contractTypeRows, setContractTypeRows] = useState<ContractTypeRow[]>([]);
+  const [footerForm, setFooterForm] = useState<FooterFormValues>({
+    nome: '',
+    whatsapp: '',
+    email: '',
+    perfil: 'pf',
+  });
+  const [submittingFooterForm, setSubmittingFooterForm] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
 
-    const loadDashboardLeadCount = async () => {
+    const loadPublicData = async () => {
+      const [originsResponse, statusesResponse, contractTypesResponse] = await Promise.all([
+        supabase.from('lead_origens').select('*').eq('ativo', true),
+        supabase.from('lead_status_config').select('*').eq('ativo', true).order('ordem', { ascending: true }),
+        supabase.from('lead_tipos_contratacao').select('*').eq('ativo', true).order('ordem', { ascending: true }),
+      ]);
+
+      if (!active) {
+        return;
+      }
+
+      setOrigins(originsResponse.data ?? []);
+      setStatuses(statusesResponse.data ?? []);
+      setContractTypeRows((contractTypesResponse.data ?? []) as ContractTypeRow[]);
+
       try {
-        const { data: activeStatuses, error: activeStatusesError } = await supabase
-          .from('lead_status_config')
-          .select('nome')
-          .eq('ativo', true);
-
-        if (activeStatusesError) {
-          throw activeStatusesError;
-        }
-
-        const activeStatusNames = (activeStatuses ?? [])
+        const activeStatusNames = (statusesResponse.data ?? [])
           .map((status) => String(status.nome ?? '').trim())
           .filter(Boolean);
 
-        let countQuery = supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('arquivado', false);
+        let countQuery = supabase.from('leads').select('id', { count: 'exact', head: true }).eq('arquivado', false);
 
         if (activeStatusNames.length > 0) {
           countQuery = countQuery.in('status', activeStatusNames);
         }
 
-        const { count, error: countError } = await countQuery;
+        const { count, error } = await countQuery;
 
-        if (countError) {
-          throw countError;
+        if (error) {
+          throw error;
         }
 
-        if (isMounted) {
+        if (active) {
           setDashboardLeadCount(count ?? 0);
         }
       } catch (error) {
-        console.error('Erro ao carregar total real de leads do dashboard para a home:', error);
+        console.error('Erro ao carregar total real de leads na home pública:', error);
       }
     };
 
-    void loadDashboardLeadCount();
+    void loadPublicData();
 
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, []);
 
@@ -281,214 +286,218 @@ export default function HomePage() {
     return `+${new Intl.NumberFormat('pt-BR').format(count)}`;
   }, [dashboardLeadCount]);
 
-  const heroSignals = useMemo(
+  const heroTrustItems = useMemo(
     () => [
-      {
-        value: formattedDashboardLeadCount,
-        label: 'base ativa no dashboard',
-        text: 'Volume real da base ativa acompanhada pela equipe comercial.',
-      },
-      ...staticHeroSignals,
+      { label: 'Base ativa', value: formattedDashboardLeadCount },
+      { label: 'Consultoria', value: 'Sem custo' },
+      { label: 'Canal principal', value: 'WhatsApp' },
     ],
     [formattedDashboardLeadCount],
   );
 
+  const handleFooterSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (submittingFooterForm) {
+      return;
+    }
+
+    const cleanName = footerForm.nome.trim();
+    const cleanPhone = footerForm.whatsapp.replace(/\D/g, '');
+
+    if (cleanName.length < 3 || cleanPhone.length < 10) {
+      toast.warning('Preencha nome e WhatsApp corretamente para enviar seus dados.');
+      return;
+    }
+
+    setSubmittingFooterForm(true);
+
+    const selectedProfile = modalityCards.find((item) => item.profile === footerForm.perfil);
+    const payload = {
+      nome_completo: cleanName,
+      telefone: cleanPhone,
+      email: footerForm.email.trim() || null,
+      origem_id: findOriginId(origins),
+      status_id: findStatusId(statuses),
+      tipo_contratacao_id: resolveContractTypeId(contractTypeRows, footerForm.perfil),
+      observacoes: `Lead home | Perfil: ${selectedProfile?.title ?? footerForm.perfil} | Formulário de contato do rodapé`,
+      data_criacao: new Date().toISOString(),
+      ultimo_contato: new Date().toISOString(),
+      arquivado: false,
+    };
+
+    const { error } = await supabase.from('leads').insert([payload]);
+
+    if (error) {
+      toast.error('Não foi possível enviar agora. Tente novamente ou chame no WhatsApp.');
+      setSubmittingFooterForm(false);
+      return;
+    }
+
+    toast.success('Recebemos seus dados. Nossa equipe deve retornar em breve.');
+    setFooterForm({ nome: '', whatsapp: '', email: '', perfil: 'pf' });
+    setSubmittingFooterForm(false);
+  };
+
+  const secondaryWhatsAppUrl = buildWhatsAppUrl('Olá! Quero entender qual plano de saúde faz mais sentido para mim.');
+
   return (
-    <div className="home-v2-theme min-h-screen overflow-x-hidden">
+    <div className="home-conv-theme min-h-screen overflow-x-hidden">
       <PublicSeo
         title="Kifer Saúde | Consultoria para planos de saúde no RJ"
-        description="Consultoria da Kifer Saúde para PF, PME e adesão com comparativo técnico, leitura de rede por território e apoio humano até a contratação."
+        description="Planos de saúde com consultoria personalizada, atendimento humanizado e foco total em te levar direto para o WhatsApp da Kifer Saúde."
         canonicalPath="/"
         faqItems={faqItems}
       />
 
-      <a href="#conteudo" className="home-v2-skip-link">
+      <a href="#conteudo" className="home-conv-skip-link">
         Pular para o conteúdo
       </a>
 
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.9)] backdrop-blur-xl">
-        <div className={`${pageShellClass} flex w-full items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8`}>
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--home-conv-line)] bg-[rgba(250,247,242,0.92)] backdrop-blur-xl">
+        <div className={`${pageShellClass} flex items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8`}>
           <Link to="/" className="flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--home-v2-line-strong)] bg-white text-[color:var(--home-v2-accent)] shadow-[0_16px_30px_-20px_rgba(32,23,19,0.35)]">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--home-conv-line-strong)] bg-white text-[color:var(--home-conv-accent)] shadow-[0_14px_24px_-18px_rgba(26,22,18,0.22)]">
               <Stethoscope className="h-5 w-5" />
             </span>
             <span>
-              <span className="home-v2-heading block text-[1.7rem] font-bold leading-none text-stone-950">Kifer Saúde</span>
-              <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.26em] text-[color:var(--home-v2-muted)]">
+              <span className="home-conv-heading block text-[1.55rem] font-bold leading-none text-stone-950">Kifer Saúde</span>
+              <span className="block text-[0.62rem] font-semibold uppercase tracking-[0.24em] text-[color:var(--home-conv-muted)]">
                 consultoria em saúde suplementar
               </span>
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-semibold text-[color:var(--home-v2-muted)] lg:flex">
-            <a href="#diferenciais" className="home-v2-link">
-              Diferenciais
-            </a>
-            <a href="#metodo" className="home-v2-link">
-              Método
-            </a>
-            <a href="#rotas" className="home-v2-link">
-              Rotas
-            </a>
-            <a href="#faq" className="home-v2-link">
-              FAQ
-            </a>
+          <nav className="hidden items-center gap-6 text-sm font-semibold text-[color:var(--home-conv-muted)] lg:flex">
+            {navItems.map((item) => (
+              <a key={item.href} href={item.href} className="home-conv-nav-link">
+                {item.label}
+              </a>
+            ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <a href="tel:+5521979302389" className="hidden text-sm font-semibold text-stone-700 xl:inline-flex">
-              (21) 97930-2389
-            </a>
-            <Link to="/lp" className="home-v2-button-primary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold">
-              Quero cotar
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
+          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="home-conv-header-cta">
+            Falar no WhatsApp
+          </a>
         </div>
       </header>
 
-      <main id="conteudo" className="pb-20 pt-24 md:pt-28">
-        <section className="px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:pb-14 lg:pt-8">
+      <main id="conteudo" className="pb-24 pt-24 md:pt-28">
+        <section id="inicio" className="scroll-mt-28 px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8">
           <div className={pageShellClass}>
-            <div className="home-v2-dark-block home-v2-shell relative overflow-hidden rounded-[2.5rem] border p-6 md:p-8 xl:p-10">
-              <div aria-hidden="true" className="home-v2-orb home-v2-orb-primary absolute left-[-7rem] top-[-5rem] h-48 w-48 rounded-full" />
-              <div aria-hidden="true" className="home-v2-orb home-v2-orb-secondary absolute right-[-5rem] top-10 h-64 w-64 rounded-full" />
+            <div className="home-conv-hero-card rounded-[2.5rem] px-6 py-12 sm:px-8 lg:px-12 lg:py-16">
+              <div className="max-w-4xl">
+                <span className="home-conv-kicker">atendimento consultivo com foco em decisão rápida</span>
+                <h1 className="home-conv-heading mt-5 max-w-3xl text-4xl font-bold leading-[0.94] text-white sm:text-5xl lg:text-[4.5rem]">
+                  Seu próximo passo precisa ser clicar no WhatsApp e resolver isso com segurança.
+                </h1>
+                <p className="mt-5 max-w-2xl text-base leading-8 text-stone-300 sm:text-lg">
+                  A Kifer atende quem chega com dor, urgência ou dúvida. A gente entende seu perfil, filtra as melhores opções e
+                  conduz a contratação com clareza, agilidade e credibilidade.
+                </p>
 
-              <div className="relative space-y-8 xl:space-y-10">
-                <div className="home-v2-reveal max-w-5xl">
-                  <span className="home-v2-kicker text-[color:var(--home-v2-accent-soft)]">consultoria forte, sem layout genérico</span>
-                  <h1 className="home-v2-heading mt-5 max-w-4xl text-5xl font-bold leading-[0.9] text-white sm:text-6xl xl:text-[4.8rem]">
-                    Plano de saúde com critério, e não com chute.
-                  </h1>
-                  <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-300">
-                    A Kifer organiza a decisão do jeito certo: rede por território, regra de contratação, custo total e apoio humano
-                    do briefing até a assinatura.
-                  </p>
-
-                  <div className="mt-8 flex flex-wrap gap-3">
-                    <Link
-                      to="/lp"
-                      className="home-v2-button-primary inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold"
-                    >
-                      Receber comparativo
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                    <Link
-                      to="/planos"
-                      className="home-v2-button-secondary-dark inline-flex items-center rounded-full px-6 py-3.5 text-sm font-semibold"
-                    >
-                      Ver guia de planos
-                    </Link>
-                  </div>
-
-                  <div className="mt-8 grid gap-4 lg:grid-cols-3">
-                    {heroSignals.map((signal, index) => (
-                      <article
-                        key={signal.label}
-                        className={`rounded-[1.6rem] border border-white/10 bg-white/5 p-4 home-v2-reveal ${index === 1 ? 'home-v2-delay-1' : ''} ${index === 2 ? 'home-v2-delay-2' : ''}`}
-                      >
-                        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-400">{signal.label}</p>
-                        <p className="mt-3 text-2xl font-bold text-white">{signal.value}</p>
-                        <p className="mt-2 text-sm leading-6 text-stone-300">{signal.text}</p>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-
-                <aside className="home-v2-card home-v2-reveal home-v2-delay-1 w-full rounded-[2rem] p-5 md:p-6 lg:p-7">
-                  <div className="max-w-3xl">
-                    <span className="home-v2-kicker">mapa da decisão</span>
-                    <h2 className="home-v2-heading mt-4 text-3xl font-bold leading-none text-stone-950 md:text-4xl">
-                      O comparativo nasce do cruzamento certo.
-                    </h2>
-                    <p className="mt-4 text-base leading-8 text-[color:var(--home-v2-muted)]">
-                      Antes de falar em operadora, a Kifer cruza modalidade, território, custo total e capacidade de suporte.
-                    </p>
-                  </div>
-
-                  <div className="mt-8 grid gap-3 lg:grid-cols-2">
-                    {decisionRows.map((row) => (
-                      <article key={row.title} className="rounded-[1.35rem] border border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.88)] p-4">
-                        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[color:var(--home-v2-muted)]">{row.title}</p>
-                        <p className="mt-2 text-sm leading-7 text-stone-800">{row.text}</p>
-                      </article>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 rounded-[1.5rem] border border-[color:var(--home-v2-line)] bg-stone-950 px-4 py-4 text-sm text-stone-100">
-                    <p className="flex items-center gap-2 font-semibold">
-                      <Clock3 className="h-4 w-4 text-[color:var(--home-v2-accent-soft)]" />
-                      Retorno inicial em horário comercial, normalmente no mesmo dia útil.
-                    </p>
-                  </div>
-
+                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                   <a
-                    href="https://wa.me/5521979302389?text=Ol%C3%A1%2C%20quero%20um%20comparativo%20de%20plano%20de%20sa%C3%BAde."
+                    href={WHATSAPP_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="home-v2-button-secondary-light mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3.5 text-sm font-semibold"
+                    className="home-conv-whatsapp-cta inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-base font-semibold"
                   >
-                    <MessageCircle className="h-4 w-4" />
-                    Falar no WhatsApp
+                    <MessageCircle className="h-5 w-5" />
+                    Falar agora no WhatsApp
                   </a>
-                </aside>
-              </div>
+                  <a href="#contato" className="home-conv-secondary-cta inline-flex items-center justify-center rounded-full px-6 py-4 text-sm font-semibold">
+                    Prefiro deixar meus dados
+                  </a>
+                </div>
 
-              <div className="relative mt-8 rounded-[1.8rem] border border-white/10 bg-white/5 p-4 md:p-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-400">operadoras acompanhadas</p>
-                    <p className="mt-2 text-sm leading-7 text-stone-300">
-                      A marca entra na análise depois do encaixe. O ponto de partida é o seu cenário.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 items-center gap-x-6 gap-y-4 sm:grid-cols-5">
-                    {operatorLogos.map((logo) => (
-                      <div key={logo.alt} className="flex items-center justify-center">
-                        <img
-                          src={logo.src}
-                          alt={logo.alt}
-                          loading="lazy"
-                          className={`${logo.height} w-auto max-w-[7rem] object-contain opacity-80 brightness-0 invert`}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  {heroTrustItems.map((item) => (
+                    <div key={item.label} className="home-conv-trust-pill rounded-full px-4 py-3">
+                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-stone-400">{item.label}</p>
+                      <p className="mt-1 text-sm font-semibold text-white">{item.value}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="diferenciais" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className={`${pageShellClass} space-y-8`}>
-            <div className={sectionIntroClass}>
-              <span className="home-v2-kicker">o que muda aqui</span>
-              <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                O problema não é falta de opção. É excesso de opção sem filtro.
+        <section id="modalidades" className="scroll-mt-28 px-4 py-16 sm:px-6 lg:px-8">
+          <div className={pageShellClass}>
+            <div className="home-conv-section-head max-w-[44rem]">
+              <span className="home-conv-kicker">modalidades</span>
+              <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
+                O cliente precisa se encontrar rápido no site.
               </h2>
-              <p className="mt-5 max-w-xl text-base leading-8 text-[color:var(--home-v2-muted)]">
-                A home foi reposicionada para vender critério. Em saúde suplementar, o valor não está em mostrar muita coisa.
-                Está em mostrar o que realmente entra na decisão.
+              <p className="mt-4 text-base leading-8 text-[color:var(--home-conv-muted)]">
+                Por isso, a navegação começa deixando claro para quem cada caminho faz mais sentido.
               </p>
             </div>
 
-            <div className="grid gap-4">
-              {differenceCards.map((card, index) => (
-                <article
-                  key={card.number}
-                  className={`home-v2-card home-v2-reveal rounded-[1.8rem] p-5 md:p-6 ${index === 1 ? 'home-v2-delay-1' : ''} ${index === 2 ? 'home-v2-delay-2' : ''}`}
-                >
-                  <div className="grid gap-4 md:grid-cols-[5rem_1fr_auto] md:items-start">
-                    <p className="home-v2-heading text-4xl font-bold leading-none text-[color:var(--home-v2-accent)] md:text-5xl">{card.number}</p>
-                    <div>
-                      <h3 className="text-xl font-bold text-stone-950 md:text-2xl">{card.title}</h3>
-                      <p className="mt-3 text-sm leading-7 text-[color:var(--home-v2-muted)]">{card.text}</p>
+            <div className="mt-8 grid gap-5 md:grid-cols-3">
+              {modalityCards.map((card) => (
+                <article key={card.profile} className="home-conv-surface-card rounded-[2rem] p-6 md:p-7">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(197,107,37,0.12)] text-[color:var(--home-conv-accent)]">
+                    <card.Icon className="h-6 w-6" />
+                  </span>
+                  <h3 className="mt-5 text-2xl font-bold text-stone-950">{card.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-[color:var(--home-conv-muted)]">{card.text}</p>
+                  <p className="mt-5 border-t border-[color:var(--home-conv-line)] pt-4 text-sm font-semibold text-stone-900">{card.highlight}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 py-8 sm:px-6 lg:px-8">
+          <div className={pageShellClass}>
+            <div className="home-conv-surface-card overflow-hidden rounded-[2rem] px-6 py-8 md:px-8">
+              <div className="max-w-[40rem]">
+                <span className="home-conv-kicker">operadoras e seguradoras</span>
+                <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-4xl">
+                  Autoridade aparece rápido quando o cliente reconhece com quem você trabalha.
+                </h2>
+              </div>
+
+              <div className="home-conv-marquee mt-8">
+                <div className="home-conv-marquee-track">
+                  {[...operatorLogos, ...operatorLogos].map((item, index) => (
+                    <div key={`${item.kind === 'image' ? item.alt : item.label}-${index}`} className="home-conv-logo-card">
+                      {item.kind === 'image' ? (
+                        <img src={item.src} alt={item.alt} className={`${item.height} w-auto max-w-[8rem] object-contain`} loading="lazy" />
+                      ) : (
+                        <span className="text-lg font-bold text-stone-700">{item.label}</span>
+                      )}
                     </div>
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--home-v2-line)] bg-[rgba(239,228,212,0.75)] text-[color:var(--home-v2-accent)]">
-                      <card.Icon className="h-5 w-5" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
+          <div className={pageShellClass}>
+            <div className="home-conv-section-head max-w-[44rem]">
+              <span className="home-conv-kicker">nossos diferenciais</span>
+              <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
+                Antes de comparar preço, o cliente precisa confiar em quem está orientando.
+              </h2>
+            </div>
+
+            <div className="mt-8 grid gap-5 md:grid-cols-2">
+              {differentials.map((item) => (
+                <article key={item.title} className="home-conv-surface-card rounded-[2rem] p-6 md:p-7">
+                  <div className="flex items-start gap-4">
+                    <span className="inline-flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[rgba(197,107,37,0.12)] text-[color:var(--home-conv-accent)]">
+                      <item.Icon className="h-5 w-5" />
                     </span>
+                    <div>
+                      <h3 className="text-xl font-bold text-stone-950">{item.title}</h3>
+                      <p className="mt-3 text-sm leading-7 text-[color:var(--home-conv-muted)]">{item.text}</p>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -496,90 +505,113 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="metodo" className="px-4 py-16 sm:px-6 lg:px-8">
+        <section id="quem-somos" className="scroll-mt-28 px-4 py-16 sm:px-6 lg:px-8">
           <div className={pageShellClass}>
-            <div className="home-v2-card rounded-[2.2rem] p-6 md:p-8">
-              <div className="home-v2-reveal max-w-4xl">
-                <span className="home-v2-kicker">metodo kifer</span>
-                <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                    Quatro movimentos para tirar peso de uma decisão sensível.
-                </h2>
-                <p className="mt-5 max-w-3xl text-base leading-8 text-[color:var(--home-v2-muted)]">
-                  Nada de empilhar tabela sem contexto. Primeiro a triagem, depois a curadoria, em seguida o comparativo e por fim a contratação assistida.
-                </p>
-              </div>
+            <div className="home-conv-surface-card rounded-[2.2rem] p-6 md:p-8 lg:p-10">
+              <div className="grid gap-8 lg:grid-cols-[0.42fr_0.58fr] lg:items-center">
+                <div className="home-conv-photo-placeholder flex min-h-[26rem] items-center justify-center rounded-[2rem] border border-dashed border-[color:var(--home-conv-line-strong)] bg-[linear-gradient(180deg,rgba(255,255,255,0.75),rgba(245,235,222,0.95))] p-6">
+                  <div className="text-center">
+                    <span className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(197,107,37,0.12)] text-[color:var(--home-conv-accent)]">
+                      <UserRound className="h-8 w-8" />
+                    </span>
+                    <p className="mt-5 text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--home-conv-muted)]">espaço reservado para foto da Luiza</p>
+                    <p className="mt-3 text-sm leading-7 text-[color:var(--home-conv-muted)]">Troque este bloco pela foto oficial para humanizar ainda mais a página.</p>
+                  </div>
+                </div>
 
-              <div className="mt-8 space-y-4">
-                {processSteps.map((step, index) => (
-                  <article
-                    key={step.step}
-                    className={`rounded-[1.7rem] border border-[color:var(--home-v2-line)] bg-[rgba(247,243,236,0.8)] p-5 home-v2-reveal ${index === 1 ? 'home-v2-delay-1' : ''} ${index >= 2 ? 'home-v2-delay-2' : ''}`}
-                  >
-                    <div className="grid gap-4 md:grid-cols-[5rem_minmax(0,1fr)_auto] md:items-center">
-                      <span className="home-v2-heading text-4xl font-bold leading-none text-[color:var(--home-v2-accent)] md:text-5xl">{step.step}</span>
-                      <div>
-                        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--home-v2-muted)]">etapa</p>
-                        <h3 className="mt-2 text-xl font-bold text-stone-950 md:text-2xl">{step.title}</h3>
-                        <p className="mt-3 text-sm leading-7 text-[color:var(--home-v2-muted)]">{step.text}</p>
+                <div className="max-w-[40rem]">
+                  <span className="home-conv-kicker">quem somos</span>
+                  <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
+                    Cuidamos da saúde dos clientes como se fosse da nossa família.
+                  </h2>
+                  <p className="mt-5 text-base leading-8 text-[color:var(--home-conv-muted)]">
+                    A Kifer nasceu para simplificar uma decisão que quase sempre chega carregada de pressa, insegurança e dúvidas.
+                    Nosso trabalho é ouvir, orientar com honestidade e acompanhar o cliente com atenção verdadeira do primeiro contato ao pós-venda.
+                  </p>
+
+                  <div className="mt-6 space-y-3">
+                    {[
+                      'Atendimento próximo, humano e consultivo.',
+                      'Explicação clara antes de qualquer assinatura.',
+                      'Compromisso real com confiança e continuidade.',
+                    ].map((item) => (
+                      <div key={item} className="flex gap-3 text-sm leading-7 text-stone-700">
+                        <CheckCircle2 className="mt-1 h-4 w-4 flex-shrink-0 text-[color:var(--home-conv-accent)]" />
+                        <span>{item}</span>
                       </div>
-                      <step.Icon className="h-6 w-6 text-[color:var(--home-v2-accent)]" />
-                    </div>
-                  </article>
-                ))}
+                    ))}
+                  </div>
+
+                  <a
+                    href={secondaryWhatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="home-conv-inline-link mt-8 inline-flex items-center gap-2 text-sm font-semibold"
+                  >
+                    Conversar com a equipe
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="rotas" className="px-4 py-16 sm:px-6 lg:px-8">
+        <section className="px-4 py-16 sm:px-6 lg:px-8">
           <div className={pageShellClass}>
-            <div className={sectionIntroClass}>
-              <span className="home-v2-kicker">rotas de atendimento</span>
-              <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                PF, PME e adesão não podem receber a mesma resposta pronta.
+            <div className="home-conv-section-head max-w-[44rem]">
+              <span className="home-conv-kicker">prova social</span>
+              <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
+                Estrutura pronta para depoimentos reais de quem já confiou no seu atendimento.
               </h2>
-              <p className="mt-5 text-base leading-8 text-[color:var(--home-v2-muted)]">
-                Cada trilha tem regra própria, ponto de risco próprio e um jeito certo de montar o comparativo.
-              </p>
             </div>
 
-            <div className="mt-8 space-y-4">
-              {routes.map((route, index) => {
+            <div className="mt-8 grid gap-5 md:grid-cols-2">
+              {testimonialPlaceholders.map((item, index) => (
+                <article key={`${item.name}-${index}`} className="home-conv-surface-card rounded-[2rem] p-6 md:p-7">
+                  <div className="flex items-center gap-1 text-[color:var(--home-conv-accent)]">
+                    {Array.from({ length: 5 }).map((_, starIndex) => (
+                      <Star key={starIndex} className="h-4 w-4 fill-current" />
+                    ))}
+                  </div>
+                  <p className="mt-5 text-base leading-8 text-stone-800">“{item.text}”</p>
+                  <div className="mt-6 border-t border-[color:var(--home-conv-line)] pt-4">
+                    <p className="font-semibold text-stone-950">{item.name}</p>
+                    <p className="mt-1 text-sm text-[color:var(--home-conv-muted)]">{item.detail}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="faq" className="scroll-mt-28 px-4 py-16 sm:px-6 lg:px-8">
+          <div className={pageShellClass}>
+            <div className="home-conv-section-head max-w-[44rem]">
+              <span className="home-conv-kicker">perguntas frequentes</span>
+              <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-stone-950 sm:text-5xl">
+                Dúvidas comuns merecem respostas claras sem ocupar espaço demais na página.
+              </h2>
+            </div>
+
+            <div className="mt-8 space-y-3">
+              {faqItems.map((item, index) => {
+                const isOpen = openFaq === index;
+
                 return (
-                  <article
-                    key={route.profile}
-                    className={`${routeToneClasses[route.tone]} home-v2-route-card home-v2-reveal rounded-[2rem] border p-6 md:p-7 ${index === 1 ? 'home-v2-delay-1' : ''} ${index === 2 ? 'home-v2-delay-2' : ''}`}
-                  >
-                    <div className="space-y-6">
-                      <div>
-                        <span
-                          className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] ${routeBadgeClasses[route.tone]}`}
-                        >
-                          {route.slug}
-                        </span>
-                        <h3 className="mt-3 text-3xl font-bold leading-[0.95]">{route.title}</h3>
-                      </div>
-
-                      <div>
-                        <p className="text-base leading-8 text-stone-800">{route.text}</p>
-                      </div>
-
-                      <div>
-                        <Link
-                          to={`/lp?perfil=${route.profile}`}
-                          className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[color:var(--home-v2-accent)] hover:text-stone-950"
-                        >
-                          Abrir triagem
-                          <ArrowRight className="h-4 w-4" />
-                        </Link>
-                        <ul className="space-y-3">
-                          {route.bullets.map((bullet) => (
-                            <li key={bullet} className="flex gap-3 text-sm leading-7 text-stone-700">
-                              <CheckCircle2 className="mt-1 h-4 w-4 flex-shrink-0 text-[color:var(--home-v2-accent)]" />
-                              <span>{bullet}</span>
-                            </li>
-                          ))}
-                        </ul>
+                  <article key={item.question} className="home-conv-faq-card rounded-[1.7rem] border border-[color:var(--home-conv-line)] bg-white/92">
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? null : index)}
+                      className="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
+                      aria-expanded={isOpen}
+                    >
+                      <span className="text-base font-semibold leading-7 text-stone-950">{item.question}</span>
+                      <ChevronDown className={`h-5 w-5 flex-shrink-0 text-[color:var(--home-conv-accent)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    <div className={`grid transition-[grid-template-rows] duration-300 ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                      <div className="overflow-hidden">
+                        <p className="px-5 pb-5 text-sm leading-7 text-[color:var(--home-conv-muted)] md:px-6">{item.answer}</p>
                       </div>
                     </div>
                   </article>
@@ -588,139 +620,144 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+      </main>
 
-        <section className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className={`${pageShellClass} space-y-4`}>
-            <article className="home-v2-card home-v2-reveal rounded-[2rem] p-6 md:p-8">
-              <span className="home-v2-kicker">o que entra na análise</span>
-              <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-5xl">
-                A recomendação boa nasce de uma mesa organizada.
-              </h2>
+      <footer id="contato" className="scroll-mt-28 px-4 pb-10 pt-4 sm:px-6 lg:px-8">
+        <div className={pageShellClass}>
+          <div className="home-conv-footer-card rounded-[2.3rem] p-6 md:p-8 lg:p-10">
+            <div className="grid gap-10 lg:grid-cols-[0.42fr_0.58fr]">
+              <div>
+                <span className="home-conv-kicker text-[color:var(--home-conv-accent-soft)]">contato</span>
+                <h2 className="home-conv-heading mt-4 text-3xl font-bold leading-[0.96] text-white sm:text-5xl">
+                  Se preferir, deixe seus dados que a equipe retorna para você.
+                </h2>
+                <p className="mt-5 max-w-xl text-base leading-8 text-stone-300">
+                  O caminho principal continua sendo o WhatsApp. Mas, se fizer mais sentido, você também pode preencher o formulário e aguardar nosso retorno.
+                </p>
 
-              <div className="mt-8 divide-y divide-[color:var(--home-v2-line)]">
-                {criteriaRows.map((row) => (
-                  <div key={row.label} className="grid gap-2 py-5 lg:grid-cols-[12rem_1fr] lg:gap-6">
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[color:var(--home-v2-muted)]">{row.label}</p>
-                    <p className="text-sm leading-7 text-stone-700">{row.text}</p>
+                <div className="mt-8 space-y-4 text-sm text-stone-200">
+                  <a href={`tel:+${WHATSAPP_PHONE}`} className="home-conv-contact-link flex items-center gap-3">
+                    <Phone className="h-4 w-4 text-[color:var(--home-conv-accent-soft)]" />
+                    (21) 97930-2389
+                  </a>
+                  <a href={`mailto:${EMAIL}`} className="home-conv-contact-link flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-[color:var(--home-conv-accent-soft)]" />
+                    {EMAIL}
+                  </a>
+                  <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="home-conv-contact-link flex items-center gap-3">
+                    <Instagram className="h-4 w-4 text-[color:var(--home-conv-accent-soft)]" />
+                    @souluizakifer
+                  </a>
+                  <div className="flex items-start gap-3 text-stone-200">
+                    <ShieldCheck className="mt-1 h-4 w-4 text-[color:var(--home-conv-accent-soft)]" />
+                    <span>CNPJ: {CNPJ}</span>
                   </div>
-                ))}
-              </div>
-            </article>
+                </div>
 
-            <aside className="home-v2-card home-v2-reveal home-v2-delay-1 rounded-[2rem] p-6 md:p-7">
-              <span className="home-v2-kicker">operadoras acompanhadas</span>
-              <h3 className="home-v2-heading mt-5 max-w-3xl text-4xl font-bold leading-[0.95] text-stone-950">
-                Marca forte ajuda. Encaixe certo decide.
-              </h3>
-              <p className="mt-5 max-w-3xl text-sm leading-8 text-[color:var(--home-v2-muted)]">
-                Produtos de nomes conhecidos podem entrar no comparativo, mas o ponto de partida continua sendo rede, modalidade, território e custo total.
-              </p>
-
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                {operatorLogos.map((logo) => (
-                  <div key={logo.alt} className="home-v2-logo-tile flex min-h-[5.25rem] items-center justify-center rounded-[1.4rem] p-4">
-                    <img src={logo.src} alt={logo.alt} loading="lazy" className={`${logo.height} w-auto max-w-[7rem] object-contain`} />
-                  </div>
-                ))}
-              </div>
-            </aside>
-
-            <aside className="home-v2-dark-block home-v2-reveal home-v2-delay-2 rounded-[2rem] border p-6 md:p-7 text-white">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-stone-400">diretriz da casa</p>
-              <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-100">
-                A Kifer não tenta empurrar o plano mais chamativo. A consultoria filtra o que realmente fecha com o seu cenário.
-              </p>
-            </aside>
-          </div>
-        </section>
-
-        <section id="faq" className="px-4 py-16 sm:px-6 lg:px-8">
-          <div className={`${pageShellClass} space-y-6`}>
-            <div className={sectionIntroClass}>
-              <span className="home-v2-kicker">faq</span>
-              <h2 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-stone-950 md:text-6xl">
-                Perguntas que precisam estar resolvidas antes de assinar.
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              {faqItems.map((item, index) => (
-                <article
-                  key={item.question}
-                  className={`home-v2-card home-v2-reveal rounded-[1.7rem] p-5 md:p-6 ${index === 1 ? 'home-v2-delay-1' : ''} ${index >= 2 ? 'home-v2-delay-2' : ''}`}
-                >
-                  <p className="text-base font-bold leading-7 text-stone-950">{item.question}</p>
-                  <p className="mt-3 text-sm leading-7 text-[color:var(--home-v2-muted)]">{item.answer}</p>
-                </article>
-              ))}
-            </div>
-
-            <aside className="home-v2-dark-block home-v2-reveal home-v2-delay-1 rounded-[2.2rem] border p-7 md:p-8 text-white">
-              <span className="home-v2-kicker text-[color:var(--home-v2-accent-soft)]">proximo passo</span>
-              <h3 className="home-v2-heading mt-5 text-4xl font-bold leading-[0.95] text-white md:text-5xl">
-                Vamos montar o comparativo que faz sentido para o seu caso.
-              </h3>
-              <p className="mt-5 text-sm leading-8 text-stone-300">
-                Se a ideia é decidir com mais segurança, o melhor movimento agora é abrir o briefing. A partir dele, a Kifer organiza as opções certas e conduz a leitura com critério técnico.
-              </p>
-
-              <div className="mt-8 space-y-3">
-                <Link
-                  to="/lp"
-                  className="home-v2-button-cream inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-semibold"
-                >
-                  Receber comparativo
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
                 <a
-                  href="https://wa.me/5521979302389?text=Ol%C3%A1%2C%20quero%20um%20comparativo%20de%20plano%20de%20sa%C3%BAde."
+                  href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="home-v2-button-outline inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-semibold"
+                  className="home-conv-whatsapp-cta mt-8 inline-flex items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-semibold"
                 >
-                  <MessageCircle className="h-4 w-4" />
-                  Conversar no WhatsApp
+                  <MessageCircle className="h-5 w-5" />
+                  Ir direto para o WhatsApp
                 </a>
               </div>
 
-              <p className="mt-5 flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-stone-300">
-                <Clock3 className="h-4 w-4 text-[color:var(--home-v2-accent-soft)]" />
-                retorno em horário comercial
-              </p>
-            </aside>
-          </div>
-        </section>
-      </main>
+              <form onSubmit={handleFooterSubmit} className="home-conv-form-panel rounded-[2rem] p-5 md:p-6">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="home-conv-field-group md:col-span-2">
+                    <span className="home-conv-field-label">Nome</span>
+                    <input
+                      type="text"
+                      value={footerForm.nome}
+                      onChange={(event) => setFooterForm((current) => ({ ...current, nome: event.target.value }))}
+                      className="home-conv-field"
+                      placeholder="Seu nome completo"
+                    />
+                  </label>
 
-      <footer className="px-4 pb-8 pt-2 sm:px-6 lg:px-8">
-        <div className={`${pageShellClass} flex flex-col gap-4 border-t border-[color:var(--home-v2-line)] pt-6 md:flex-row md:items-center md:justify-between`}>
-          <div>
-            <p className="home-v2-heading text-2xl font-bold text-stone-950">Kifer Saúde</p>
-            <p className="mt-2 text-sm text-[color:var(--home-v2-muted)]">Consultoria em saúde suplementar para PF, PME e adesão no RJ.</p>
+                  <label className="home-conv-field-group">
+                    <span className="home-conv-field-label">WhatsApp</span>
+                    <input
+                      type="tel"
+                      value={footerForm.whatsapp}
+                      onChange={(event) =>
+                        setFooterForm((current) => ({
+                          ...current,
+                          whatsapp: formatPhoneInput(event.target.value),
+                        }))
+                      }
+                      className="home-conv-field"
+                      placeholder="(21) 99999-9999"
+                    />
+                  </label>
+
+                  <label className="home-conv-field-group">
+                    <span className="home-conv-field-label">E-mail</span>
+                    <input
+                      type="email"
+                      value={footerForm.email}
+                      onChange={(event) => setFooterForm((current) => ({ ...current, email: event.target.value }))}
+                      className="home-conv-field"
+                      placeholder="voce@exemplo.com"
+                    />
+                  </label>
+
+                  <label className="home-conv-field-group md:col-span-2">
+                    <span className="home-conv-field-label">Modalidade de interesse</span>
+                    <select
+                      value={footerForm.perfil}
+                      onChange={(event) =>
+                        setFooterForm((current) => ({
+                          ...current,
+                          perfil: event.target.value as ProfileSlug,
+                        }))
+                      }
+                      className="home-conv-field"
+                    >
+                      <option value="pf">Plano Individual / Familiar</option>
+                      <option value="pme">Plano PME</option>
+                      <option value="adesao">Plano por Adesão</option>
+                    </select>
+                  </label>
+                </div>
+
+                <button type="submit" disabled={submittingFooterForm} className="home-conv-form-submit mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-semibold">
+                  {submittingFooterForm ? 'Enviando...' : 'Quero receber retorno da equipe'}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+
+                <p className="mt-4 text-xs leading-6 text-stone-400">
+                  Ao enviar, seus dados entram no nosso atendimento para retorno comercial. Se preferir agilidade imediata, o WhatsApp continua sendo o caminho mais rápido.
+                </p>
+              </form>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-sm font-semibold text-stone-700">
-            <Link to="/planos" className="home-v2-link">
-              Planos
-            </Link>
-            <Link to="/lp" className="home-v2-link">
-              Cotação
-            </Link>
-            <a href="tel:+5521979302389" className="home-v2-link">
-              (21) 97930-2389
-            </a>
+          <div className="flex flex-col gap-3 px-1 pt-5 text-xs text-[color:var(--home-conv-muted)] md:flex-row md:items-center md:justify-between">
+            <p>Kifer Saúde. Todos os direitos reservados.</p>
+            <div className="flex flex-wrap items-center gap-4">
+              {navItems.map((item) => (
+                <a key={item.href} href={item.href} className="home-conv-nav-link">
+                  {item.label}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
       </footer>
 
       <a
-        href="https://wa.me/5521979302389?text=Ol%C3%A1%2C%20quero%20um%20comparativo%20de%20plano%20de%20sa%C3%BAde."
+        href={WHATSAPP_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="home-v2-fab fixed bottom-5 right-5 z-50 inline-flex h-14 w-14 items-center justify-center rounded-full text-white shadow-[0_26px_46px_-24px_rgba(32,23,19,0.6)]"
-        aria-label="Abrir WhatsApp"
+        className="home-conv-floating-whatsapp fixed bottom-5 right-5 z-50 inline-flex items-center gap-3 rounded-full px-4 py-3 text-sm font-semibold text-white shadow-[0_24px_48px_-24px_rgba(21,128,61,0.65)]"
+        aria-label="Abrir conversa no WhatsApp"
       >
-        <MessageCircle className="h-6 w-6" />
+        <MessageCircle className="h-5 w-5" />
+        <span className="hidden sm:inline">WhatsApp</span>
       </a>
     </div>
   );

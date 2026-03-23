@@ -80,7 +80,7 @@ type OverlayModalProps = {
 
 const AGE_RANGES = ['00 - 18', '19 - 23', '24 - 28', '29 - 33', '34 - 38', '39 - 43', '44 - 48', '49 - 53', '54 - 58', '59+'] as const;
 const WHATSAPP_PHONE = '5521979302389';
-const WHATSAPP_DEFAULT_MESSAGE = 'Ola! Quero uma cotacao de plano de saude com a Kifer.';
+const WHATSAPP_DEFAULT_MESSAGE = 'Olá! Quero uma cotação de plano de saúde com a Kifer.';
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(WHATSAPP_DEFAULT_MESSAGE)}`;
 const EMAIL = 'contato@kifersaude.com.br';
 const CNPJ = '46.423.078/0001-10';
@@ -88,61 +88,61 @@ const INSTAGRAM_URL = 'https://instagram.com/souluizakifer';
 
 const faqItems: PublicFaqItem[] = [
   {
-    question: 'Qual a diferenca entre pessoa fisica e MEI?',
+    question: 'Qual a diferença entre pessoa física e MEI?',
     answer:
-      'Planos para pessoa fisica sao individuais ou familiares contratados em seu nome. Ja planos MEI ou empresariais sao contratados com CNPJ e podem trazer melhor custo-beneficio quando existe elegibilidade correta.',
+      'Planos para pessoa física são individuais ou familiares contratados em seu nome. Já planos MEI ou empresariais são contratados com CNPJ e podem trazer melhor custo-benefício quando existe elegibilidade correta.',
   },
   {
     question: 'Quanto tempo demora para o plano ser ativado?',
     answer:
-      'Depois da aprovacao da proposta, o prazo costuma variar conforme a operadora e a analise documental. Em muitos casos o retorno acontece em poucos dias uteis.',
+      'Depois da aprovação da proposta, o prazo costuma variar conforme a operadora e a análise documental. Em muitos casos o retorno acontece em poucos dias úteis.',
   },
   {
-    question: 'Posso incluir minha familia no plano?',
+    question: 'Posso incluir minha família no plano?',
     answer:
-      'Sim. Dependendo da modalidade, e possivel incluir conjuge, filhos e dependentes permitidos pela operadora. A Kifer orienta a melhor composicao para o seu caso.',
+      'Sim. Dependendo da modalidade, é possível incluir cônjuge, filhos e dependentes permitidos pela operadora. A Kifer orienta a melhor composição para o seu caso.',
   },
   {
-    question: 'Existe carencia para usar o plano?',
+    question: 'Existe carência para usar o plano?',
     answer:
-      'Sim. A carencia muda conforme o procedimento e as regras do produto. Urgencias, consultas, exames e internacoes podem ter prazos diferentes.',
+      'Sim. A carência muda conforme o procedimento e as regras do produto. Urgências, consultas, exames e internações podem ter prazos diferentes.',
   },
   {
-    question: 'Posso escolher meus medicos e hospitais?',
+    question: 'Posso escolher meus médicos e hospitais?',
     answer:
-      'Isso depende da rede credenciada de cada plano. A analise correta considera hospitais, laboratorios e bairros que fazem sentido para sua rotina.',
+      'Isso depende da rede credenciada de cada plano. A análise correta considera hospitais, laboratórios e bairros que fazem sentido para sua rotina.',
   },
   {
-    question: 'O que e coparticipacao?',
+    question: 'O que é coparticipação?',
     answer:
-      'Coparticipacao e quando a mensalidade tende a ser menor, mas parte do valor de consultas ou exames e cobrada quando ha utilizacao. Pode valer a pena para perfis de baixo uso.',
+      'Coparticipação é quando a mensalidade tende a ser menor, mas parte do valor de consultas ou exames é cobrada quando há utilização. Pode valer a pena para perfis de baixo uso.',
   },
   {
     question: 'Posso cancelar o plano quando quiser?',
     answer:
-      'As regras de cancelamento variam conforme o contrato e a modalidade. Antes da assinatura, a Kifer explica as condicoes e pontos de atencao de cada proposta.',
+      'As regras de cancelamento variam conforme o contrato e a modalidade. Antes da assinatura, a Kifer explica as condições e pontos de atenção de cada proposta.',
   },
   {
-    question: 'Qual a diferenca entre abrangencia estadual e nacional?',
+    question: 'Qual a diferença entre abrangência estadual e nacional?',
     answer:
-      'Planos estaduais costumam atender melhor quem concentra uso em uma regiao especifica. Ja os nacionais fazem mais sentido para quem viaja ou precisa de rede ampla fora do estado.',
+      'Planos estaduais costumam atender melhor quem concentra uso em uma região específica. Já os nacionais fazem mais sentido para quem viaja ou precisa de rede ampla fora do estado.',
   },
 ];
 
 const partnerLogos: PartnerLogo[] = [
   { src: '/amil-logo-1-2.png', alt: 'Amil' },
   { src: '/porto-logo.png', alt: 'Porto Seguro' },
-  { src: '/assim-saude-logo.png', alt: 'Assim Saude' },
-  { src: '/sulamerica-saude-logo.png', alt: 'SulAmerica Saude' },
-  { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saude' },
+  { src: '/assim-saude-logo.png', alt: 'Assim Saúde' },
+  { src: '/sulamerica-saude-logo.png', alt: 'SulAmérica Saúde' },
+  { src: '/bradesco-saude-logo-1-1.png', alt: 'Bradesco Saúde' },
 ];
 
 const heroRibbonItems = [
-  'Consultoria em Planos de Saude',
+  'Consultoria em Planos de Saúde',
   'Atendimento Humanizado',
-  'Cotacao Sem Compromisso',
+  'Cotação Sem Compromisso',
   'Especialista no RJ',
-  'Suporte do Inicio ao Pos-venda',
+  'Suporte do Início ao Pós-venda',
 ];
 
 const loopedHeroRibbonItems = [...heroRibbonItems, ...heroRibbonItems];
@@ -150,19 +150,19 @@ const loopedPartnerLogos = [...partnerLogos, ...partnerLogos];
 
 const testimonials: Testimonial[] = [
   {
-    quote: 'Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede DOr. Atendimento nota 10!',
+    quote: 'Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede D\'Or. Atendimento nota 10!',
     initial: 'R',
     name: 'Regina',
     detail: '44 anos',
   },
   {
-    quote: 'Atendimento super rapido pelo WhatsApp. Em menos de 1 hora ja tinha minha cotacao com varias opcoes.',
+    quote: 'Atendimento super rápido pelo WhatsApp. Em menos de 1 hora já tinha minha cotação com várias opções.',
     initial: 'M',
     name: 'Marcelo',
     detail: '38 anos',
   },
   {
-    quote: 'Excelente suporte durante todo o processo. A Kifer Saude realmente se importa com o cliente!',
+    quote: 'Excelente suporte durante todo o processo. A Kifer Saúde realmente se importa com o cliente!',
     initial: 'A',
     name: 'Ana Paula',
     detail: '52 anos',
@@ -172,32 +172,32 @@ const testimonials: Testimonial[] = [
 const valueCards: ValueCard[] = [
   {
     title: 'Atendimento humanizado',
-    description: 'Tratamos cada cliente com cuidado e atencao personalizada.',
+    description: 'Tratamos cada cliente com cuidado e atenção personalizada.',
     icon: Heart,
   },
   {
-    title: 'Resposta rapida via WhatsApp',
-    description: 'Atendimento agil e eficiente pelo canal que voce prefere.',
+    title: 'Resposta rápida via WhatsApp',
+    description: 'Atendimento ágil e eficiente pelo canal que você prefere.',
     icon: Zap,
   },
   {
-    title: 'Suporte durante toda a vigencia',
-    description: 'Acompanhamos voce do primeiro contato ao pos-venda.',
+    title: 'Suporte durante toda a vigência',
+    description: 'Acompanhamos você do primeiro contato ao pós-venda.',
     icon: Phone,
   },
   {
-    title: 'Cotacoes personalizadas',
+    title: 'Cotações personalizadas',
     description: 'Sem custo e montadas de acordo com seu perfil real de uso.',
     icon: Search,
   },
   {
     title: 'Comparativo claro',
-    description: 'Explicamos carencias, rede, coparticipacao e custo com linguagem simples.',
+    description: 'Explicamos carências, rede, coparticipação e custo com linguagem simples.',
     icon: CheckCircle,
   },
   {
     title: 'Operadoras regulamentadas',
-    description: 'Trabalhamos com parceiros certificados e opcoes validadas para o RJ.',
+    description: 'Trabalhamos com parceiros certificados e opções validadas para o RJ.',
     icon: Shield,
   },
 ];
@@ -207,49 +207,49 @@ const reviewItems: Review[] = [
     name: 'Regina Silva',
     age: 44,
     rating: 5,
-    date: 'Ha 2 semanas',
+    date: 'Há 2 semanas',
     review:
-      'Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede DOr. Atendimento nota 10! Ela explicou cada detalhe e me ajudou a escolher o melhor custo-beneficio.',
+      'Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede D\'Or. Atendimento nota 10! Ela explicou cada detalhe e me ajudou a escolher o melhor custo-benefício.',
   },
   {
     name: 'Marcelo Santos',
     age: 38,
     rating: 5,
-    date: 'Ha 1 mes',
+    date: 'Há 1 mês',
     review:
-      'Atendimento super rapido pelo WhatsApp. Em menos de 1 hora ja tinha minha cotacao com varias opcoes. A Luiza e muito atenciosa e profissional!',
+      'Atendimento super rápido pelo WhatsApp. Em menos de 1 hora já tinha minha cotação com várias opções. A Luiza é muito atenciosa e profissional!',
   },
   {
     name: 'Ana Paula Ferreira',
     age: 52,
     rating: 5,
-    date: 'Ha 1 mes',
+    date: 'Há 1 mês',
     review:
-      'Excelente suporte durante todo o processo. A Kifer Saude realmente se importa com o cliente! Tirou todas as minhas duvidas e ainda me ligou depois para saber se estava tudo certo.',
+      'Excelente suporte durante todo o processo. A Kifer Saúde realmente se importa com o cliente! Tirou todas as minhas dúvidas e ainda me ligou depois para saber se estava tudo certo.',
   },
   {
     name: 'Carlos Eduardo',
     age: 29,
     rating: 5,
-    date: 'Ha 2 meses',
+    date: 'Há 2 meses',
     review:
-      'Como MEI, consegui economizar muito no plano empresarial. A Luiza me mostrou opcoes que eu nem sabia que existiam. Recomendo demais!',
+      'Como MEI, consegui economizar muito no plano empresarial. A Luiza me mostrou opções que eu nem sabia que existiam. Recomendo demais!',
   },
   {
     name: 'Juliana Oliveira',
     age: 35,
     rating: 5,
-    date: 'Ha 2 meses',
+    date: 'Há 2 meses',
     review:
-      'Contratei plano para toda minha familia e foi super tranquilo. A Luiza tem um conhecimento incrivel sobre as operadoras e me ajudou a escolher o melhor.',
+      'Contratei plano para toda minha família e foi super tranquilo. A Luiza tem um conhecimento incrível sobre as operadoras e me ajudou a escolher o melhor.',
   },
   {
     name: 'Roberto Alves',
     age: 47,
     rating: 5,
-    date: 'Ha 3 meses',
+    date: 'Há 3 meses',
     review:
-      'Precisava migrar de operadora com urgencia e a Kifer Saude resolveu tudo rapidinho. Atendimento excepcional e muito profissional!',
+      'Precisava migrar de operadora com urgência e a Kifer Saúde resolveu tudo rapidinho. Atendimento excepcional e muito profissional!',
   },
 ];
 
@@ -455,12 +455,12 @@ export default function HomePage() {
     }
 
     if (cleanPhone.length < 10) {
-      toast.warning('Preencha um WhatsApp valido para continuar.');
+      toast.warning('Preencha um WhatsApp válido para continuar.');
       return;
     }
 
     if (cleanCity.length < 2) {
-      toast.warning('Informe sua cidade para montar a cotacao.');
+      toast.warning('Informe sua cidade para montar a cotação.');
       return;
     }
 
@@ -470,12 +470,12 @@ export default function HomePage() {
     }
 
     if (totalLives > 1 && filledAgeRanges.length === 0) {
-      toast.warning('Distribua as vidas nas faixas etarias para continuar.');
+      toast.warning('Distribua as vidas nas faixas etárias para continuar.');
       return;
     }
 
     if (totalLives > 1 && ageRangeTotal !== totalLives) {
-      toast.warning('A soma das faixas etarias precisa bater com a quantidade total de vidas.');
+      toast.warning('A soma das faixas etárias precisa bater com a quantidade total de vidas.');
       return;
     }
 
@@ -498,7 +498,7 @@ export default function HomePage() {
       origem_id: findOriginId(origins),
       status_id: findStatusId(statuses),
       tipo_contratacao_id: resolveContractTypeId(contractTypeRows, formData.tipoContratacao),
-      observacoes: `Lead site | Visual 11/2025 | Tipo: ${formData.tipoContratacao} | Cidade: ${cleanCity} | Beneficiarios: ${agesText}`,
+      observacoes: `Lead site | Visual 11/2025 | Tipo: ${formData.tipoContratacao} | Cidade: ${cleanCity} | Beneficiários: ${agesText}`,
       data_criacao: new Date().toISOString(),
       ultimo_contato: new Date().toISOString(),
       arquivado: false,
@@ -507,21 +507,21 @@ export default function HomePage() {
     const { error } = await supabase.from('leads').insert([payload]);
 
     if (error) {
-      toast.error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a cotacao agora. Tente novamente ou fale no WhatsApp.'));
+      toast.error(getSupabaseErrorMessage(error, 'Não foi possível enviar a cotação agora. Tente novamente ou fale no WhatsApp.'));
       setSubmitting(false);
       return;
     }
 
     const whatsappMessage = [
-      'Ola! Acabei de preencher a cotacao no site da Kifer.',
+      'Olá! Acabei de preencher a cotação no site da Kifer.',
       `Nome: ${cleanName}`,
       `Cidade: ${cleanCity}`,
       `Tipo: ${formData.tipoContratacao}`,
-      `Beneficiarios: ${agesText}`,
+      `Beneficiários: ${agesText}`,
     ].join('\n');
 
     openWhatsApp(whatsappMessage);
-    toast.success('Cotacao enviada com sucesso. Abrimos o WhatsApp para agilizar o atendimento.');
+    toast.success('Cotação enviada com sucesso. Abrimos o WhatsApp para agilizar o atendimento.');
     resetForm();
     setShowQuoteModal(false);
     setSubmitting(false);
@@ -581,7 +581,7 @@ export default function HomePage() {
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="quote-contract-type">
-          Tipo de contratacao *
+          Tipo de contratação *
         </label>
         <select
           id="quote-contract-type"
@@ -594,7 +594,7 @@ export default function HomePage() {
           }
           className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
         >
-          <option value="PF">Pessoa Fisica</option>
+          <option value="PF">Pessoa Física</option>
           <option value="MEI">MEI</option>
           <option value="CNPJ">CNPJ</option>
         </select>
@@ -602,7 +602,7 @@ export default function HomePage() {
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="quote-lives">
-          Quantas vidas sao no contrato? *
+          Quantas vidas são no contrato? *
         </label>
         <input
           id="quote-lives"
@@ -621,7 +621,7 @@ export default function HomePage() {
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <label className="block text-sm font-semibold text-slate-700">Idade das vidas *</label>
             <span className={`text-xs font-semibold ${ageRangeTotal === totalLives ? 'text-green-700' : 'text-slate-500'}`}>
-              Distribuidas: {ageRangeTotal} de {totalLives}
+              Distribuídas: {ageRangeTotal} de {totalLives}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -665,8 +665,8 @@ export default function HomePage() {
   return (
     <>
       <PublicSeo
-        title="Kifer Saude | Planos de saude no RJ"
-        description="Volta ao visual classico da Kifer com atendimento humano, cotacao personalizada e suporte consultivo para planos de saude no Rio de Janeiro."
+        title="Kifer Saúde | Planos de saúde no RJ"
+        description="Volta ao visual clássico da Kifer com atendimento humano, cotação personalizada e suporte consultivo para planos de saúde no Rio de Janeiro."
         canonicalPath="/"
         faqItems={faqItems}
       />

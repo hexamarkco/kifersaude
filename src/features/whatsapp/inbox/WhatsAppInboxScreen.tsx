@@ -563,6 +563,7 @@ export default function WhatsAppInboxScreen() {
   const muteMenuCloseTimeoutRef = useRef<number | null>(null);
   const statusMenuCloseTimeoutRef = useRef<number | null>(null);
   const shouldScrollOnChatChangeRef = useRef(false);
+  const shouldRevealSelectedChatInListRef = useRef(false);
   const previousSelectedChatRef = useRef<WhatsAppChat | null>(null);
   const pendingInitialScrollMessageIdRef = useRef<string | null>(null);
   const lastRenderedMessageIdRef = useRef<string | null>(null);
@@ -735,6 +736,10 @@ export default function WhatsAppInboxScreen() {
       setChatListScrollTop((current) => (current === nextScrollTop ? current : nextScrollTop));
     });
   }, []);
+
+  useEffect(() => {
+    shouldRevealSelectedChatInListRef.current = Boolean(selectedChat);
+  }, [selectedChat?.id, isMobileView]);
 
   useLayoutEffect(() => {
     const viewport = chatListViewportRef.current;
@@ -5835,7 +5840,7 @@ export default function WhatsAppInboxScreen() {
   useLayoutEffect(() => {
     const viewport = chatListViewportRef.current;
     const selectedChatId = selectedChat?.id;
-    if (!viewport || !selectedChatId || visibleChatItems.length === 0) {
+    if (!shouldRevealSelectedChatInListRef.current || !viewport || !selectedChatId || visibleChatItems.length === 0) {
       return;
     }
 
@@ -5843,6 +5848,8 @@ export default function WhatsAppInboxScreen() {
     if (selectedIndex < 0) {
       return;
     }
+
+    shouldRevealSelectedChatInListRef.current = false;
 
     const rowTop = selectedIndex * CHAT_ROW_HEIGHT;
     const rowBottom = rowTop + CHAT_ROW_HEIGHT;

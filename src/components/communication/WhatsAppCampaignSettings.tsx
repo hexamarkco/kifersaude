@@ -39,10 +39,15 @@ import {
 import {
   cancelWhatsAppCampaignAtomic,
   createWhatsAppCampaignAtomic,
+  createWhatsAppCampaignCsvImport,
   listWhatsAppCampaignCanais,
   previewWhatsAppCampaignAudience,
   recomputeWhatsAppCampaignCounters,
 } from '../../lib/whatsappCampaignAdminService';
+import {
+  deleteWhatsAppCampaignImportFile,
+  uploadWhatsAppCampaignImportFile,
+} from '../../lib/whatsappCampaignImportService';
 import { getAcceptedFileTypesByStepType, uploadWhatsAppCampaignMedia } from '../../lib/whatsappCampaignMediaService';
 import {
   analyzeCsvAudience,
@@ -52,12 +57,15 @@ import {
   formatCsvSummaryLabel,
   normalizeCampaignAudienceSource,
   normalizeCampaignSourcePayload,
+  normalizeWhatsAppCampaignImportStatus,
   normalizeWhatsAppCampaignPacingSettings,
   normalizeCsvHeader,
   normalizePhoneForCampaign,
   parseCampaignCsvText,
   resolveCampaignTemplateText,
   splitIntoBatches,
+  isWhatsAppCampaignImportPending,
+  isWhatsAppCampaignImportReady,
   type CsvAudienceAnalysis,
   type ExistingCampaignLeadMatch,
   type ParsedCampaignCsv,
@@ -73,6 +81,7 @@ import type {
   WhatsAppCampaignFlowStep,
   WhatsAppCampaignFlowStepDelayUnit,
   WhatsAppCampaignFlowStepType,
+  WhatsAppCampaignImportStatus,
   WhatsAppCampaignStatus,
   WhatsAppCampaignTarget,
   WhatsAppCampaignTargetStatus,
@@ -192,6 +201,22 @@ const STATUS_CLASSNAMES: Record<WhatsAppCampaignStatus, string> = {
   paused: 'bg-amber-100 text-amber-700',
   completed: 'bg-blue-100 text-blue-700',
   cancelled: 'bg-red-100 text-red-700',
+};
+
+const IMPORT_STATUS_LABELS: Record<WhatsAppCampaignImportStatus, string> = {
+  ready: 'Importacao pronta',
+  queued: 'Na fila',
+  processing: 'Importando',
+  failed: 'Importacao falhou',
+  cancelled: 'Importacao cancelada',
+};
+
+const IMPORT_STATUS_CLASSNAMES: Record<WhatsAppCampaignImportStatus, string> = {
+  ready: 'bg-emerald-100 text-emerald-700',
+  queued: 'bg-slate-100 text-slate-700',
+  processing: 'bg-amber-100 text-amber-700',
+  failed: 'bg-red-100 text-red-700',
+  cancelled: 'bg-slate-200 text-slate-700',
 };
 
 const FLOW_STEP_LABELS: Record<WhatsAppCampaignFlowStepType, string> = {
@@ -394,6 +419,22 @@ const inferCsvColumnKey = (headers: string[], candidates: string[]): string => {
 const formatAudienceSourceLabel = (value: WhatsAppCampaignAudienceSource): string =>
   value === 'csv' ? 'CSV importado' : 'Leads filtrados';
 
+const formatImportProgressLabel = (campaign: WhatsAppCampaign): string | null => {
+  if (campaign.audience_source !== 'csv') {
+    return null;
+  }
+
+  const totalRows = Math.max(Number(campaign.import_total_rows ?? 0) || 0, 0);
+  const processedRows = Math.max(Number(campaign.import_processed_rows ?? 0) || 0, 0);
+  const failedRows = Math.max(Number(campaign.import_failed_rows ?? 0) || 0, 0);
+
+  if (totalRows <= 0) {
+    return null;
+  }
+
+  return `${processedRows}/${totalRows} linhas processadas${failedRows > 0 ? ` - ${failedRows} ignoradas` : ''}`;
+};
+
 const formatTargetSourceKindLabel = (value: WhatsAppCampaignTarget['source_kind']): string =>
   value === 'csv_import' ? 'CSV' : 'Lead';
 
@@ -587,6 +628,11 @@ export default function WhatsAppCampaignSettings() {
     [campaigns],
   );
 
+  const hasPendingCampaignImports = useMemo(
+    () => campaigns.some((campaign) => isWhatsAppCampaignImportPending(campaign.import_status)),
+    [campaigns],
+  );
+
   const statusOptions = useMemo<SelectOption[]>(
     () =>
       leadStatuses
@@ -711,6 +757,7 @@ export default function WhatsAppCampaignSettings() {
 
       const nextCampaigns = rows.map((campaign) => ({
         ...campaign,
+        import_status: normalizeWhatsAppCampaignImportStatus((campaign as WhatsAppCampaign & { import_status?: unknown }).import_status),
         audience_source: normalizeCampaignAudienceSource((campaign as WhatsAppCampaign & { audience_source?: unknown }).audience_source),
         audience_config:
           (campaign as WhatsAppCampaign & { audience_config?: Record<string, unknown> | null }).audience_config ?? {},
@@ -773,7 +820,7 @@ export default function WhatsAppCampaignSettings() {
   }, [flowSteps, selectedStepId]);
 
   useEffect(() => {
-    if (!hasRunningCampaign) {
+    if (!hasRunningCampaign && !hasPendingCampaignImports) {
       return;
     }
 
@@ -784,7 +831,7 @@ export default function WhatsAppCampaignSettings() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [hasRunningCampaign, loadCampaigns]);
+  }, [hasPendingCampaignImports, hasRunningCampaign, loadCampaigns]);
 
   useEffect(() => {
     setCsvCrmDefaults((current) => ({
@@ -1230,23 +1277,53 @@ export default function WhatsAppCampaignSettings() {
         const statusLabel = statusNameById.get(csvCrmDefaults.statusId) ?? '';
         const tipoContratacaoLabel = tipoContratacaoNameById.get(csvCrmDefaults.tipoContratacaoId) ?? '';
         const responsavelLabel = responsavelNameById.get(csvCrmDefaults.responsavelId) ?? '';
+        let uploadedImportPath: string | null = null;
+        let createdCampaign: WhatsAppCampaign;
 
-        const createdCampaign = await createWhatsAppCampaignAtomic({
-          name: campaignTitle,
-          message: composeFallbackMessage(normalizedSteps),
-          flowSteps: normalizedSteps,
-          audienceSource: 'csv',
-          audienceFilter: {},
-          audienceConfig: {
-            csv_file_name: csvImport.fileName,
-            csv_delimiter: csvImport.parsed.delimiter,
-            csv_headers: csvImport.parsed.headers,
-            csv_normalized_headers: csvImport.parsed.normalizedHeaders,
-            mapping: {
-              phone_column_key: csvImport.phoneColumnKey,
-              name_column_key: csvImport.nameColumnKey || null,
+        try {
+          const uploadedImport = await uploadWhatsAppCampaignImportFile(
+            csvImport.fileName || `${slugifyFileName(campaignTitle)}.csv`,
+            csvImport.rawText,
+          );
+          uploadedImportPath = uploadedImport.path;
+
+          createdCampaign = await createWhatsAppCampaignCsvImport({
+            name: campaignTitle,
+            message: composeFallbackMessage(normalizedSteps),
+            flowSteps: normalizedSteps,
+            audienceConfig: {
+              csv_file_name: csvImport.fileName,
+              csv_delimiter: csvImport.parsed.delimiter,
+              csv_headers: csvImport.parsed.headers,
+              csv_normalized_headers: csvImport.parsed.normalizedHeaders,
+              preview_valid_target_count: csvAnalysis.validItems.length,
+              mapping: {
+                phone_column_key: csvImport.phoneColumnKey,
+                name_column_key: csvImport.nameColumnKey || null,
+              },
+              crm_defaults: {
+                origem_id: csvCrmDefaults.origemId || null,
+                origem_label: origemLabel || null,
+                status_id: csvCrmDefaults.statusId || null,
+                status_label: statusLabel || null,
+                tipo_contratacao_id: csvCrmDefaults.tipoContratacaoId || null,
+                tipo_contratacao_label: tipoContratacaoLabel || null,
+                responsavel_id: csvCrmDefaults.responsavelId || null,
+                responsavel_label: responsavelLabel || null,
+              },
+              pacing: pacingConfig,
+              summary: csvAnalysis.summary,
             },
-            crm_defaults: {
+            scheduledAt: scheduledAtIso,
+            storageBucket: uploadedImport.bucket,
+            storagePath: uploadedImport.path,
+            fileName: csvImport.fileName,
+            delimiter: csvImport.parsed.delimiter,
+            mapping: {
+              phoneColumnKey: csvImport.phoneColumnKey,
+              nameColumnKey: csvImport.nameColumnKey || null,
+            },
+            crmDefaults: {
               origem_id: csvCrmDefaults.origemId || null,
               origem_label: origemLabel || null,
               status_id: csvCrmDefaults.statusId || null,
@@ -1256,20 +1333,19 @@ export default function WhatsAppCampaignSettings() {
               responsavel_id: csvCrmDefaults.responsavelId || null,
               responsavel_label: responsavelLabel || null,
             },
-            pacing: pacingConfig,
-            summary: csvAnalysis.summary,
-          },
-          scheduledAt: scheduledAtIso,
-          csvTargets: csvAnalysis.validItems.map((item) => ({
-            normalizedPhone: item.normalizedPhone,
-            rawPhone: item.rawPhone || null,
-            displayName: item.displayName,
-            chatId: item.chatId,
-            sourcePayload: normalizeCampaignSourcePayload(item.payload),
-            existingLeadId: item.existingLead?.id ?? null,
-            needsLeadCreation: item.needsLeadCreation,
-          })),
-        });
+            totalRows: csvImport.parsed.rows.length,
+          });
+        } catch (error) {
+          if (uploadedImportPath) {
+            try {
+              await deleteWhatsAppCampaignImportFile(uploadedImportPath);
+            } catch (cleanupError) {
+              console.warn('Falha ao limpar CSV de campanha apos erro na criacao:', cleanupError);
+            }
+          }
+
+          throw error;
+        }
 
         await loadCampaigns();
         setSelectedCampaignId(createdCampaign.id);
@@ -1277,7 +1353,7 @@ export default function WhatsAppCampaignSettings() {
         setShowCreateCampaignModal(false);
         setMessageState({
           type: 'success',
-          text: `Campanha CSV criada com sucesso com ${createdCampaign.total_targets} alvo(s).`,
+          text: 'Campanha CSV criada com sucesso. A importacao foi enfileirada e os alvos serao materializados em lotes.',
         });
         return;
       }
@@ -1324,6 +1400,14 @@ export default function WhatsAppCampaignSettings() {
     status: WhatsAppCampaignStatus,
     options?: { clearCompletedAt?: boolean; setCompletedAt?: boolean },
   ) => {
+    if (status === 'running' && !isWhatsAppCampaignImportReady(campaign)) {
+      setMessageState({
+        type: 'error',
+        text: 'A campanha ainda esta importando o CSV. Aguarde a importacao terminar antes de iniciar os envios.',
+      });
+      return;
+    }
+
     setActionCampaignId(campaign.id);
     setMessageState(null);
 
@@ -2672,7 +2756,9 @@ export default function WhatsAppCampaignSettings() {
               const isSelected = campaign.id === selectedCampaignId;
               const isActionLoading = actionCampaignId === campaign.id;
               const isProcessing = processingCampaignId === campaign.id;
-              const canStart = campaign.status === 'draft' || campaign.status === 'paused';
+              const importStatus = normalizeWhatsAppCampaignImportStatus(campaign.import_status);
+              const importProgressLabel = formatImportProgressLabel(campaign);
+              const canStart = (campaign.status === 'draft' || campaign.status === 'paused') && isWhatsAppCampaignImportReady(campaign);
               const canPause = campaign.status === 'running';
               const canCancel = campaign.status === 'draft' || campaign.status === 'running' || campaign.status === 'paused';
 
@@ -2698,15 +2784,30 @@ export default function WhatsAppCampaignSettings() {
                           <p className="text-xs text-slate-500">Agendada para {formatDateTime(campaign.scheduled_at)}</p>
                         )}
                       </div>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                          STATUS_CLASSNAMES[campaign.status]
-                        }`}
-                      >
-                        {STATUS_LABELS[campaign.status]}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            STATUS_CLASSNAMES[campaign.status]
+                          }`}
+                        >
+                          {STATUS_LABELS[campaign.status]}
+                        </span>
+                        {campaign.audience_source === 'csv' && (
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              IMPORT_STATUS_CLASSNAMES[importStatus]
+                            }`}
+                          >
+                            {IMPORT_STATUS_LABELS[importStatus]}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
+
+                  {campaign.audience_source === 'csv' && importProgressLabel && (
+                    <p className="mt-2 text-xs text-slate-600">{importProgressLabel}</p>
+                  )}
 
                   <div className="mt-3 grid gap-2 text-xs text-slate-700 sm:grid-cols-5">
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">Total: {campaign.total_targets}</div>
@@ -2721,6 +2822,18 @@ export default function WhatsAppCampaignSettings() {
                   {campaign.last_error && (
                     <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
                       Ultimo erro: {campaign.last_error}
+                    </p>
+                  )}
+
+                  {campaign.import_error && (
+                    <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+                      Erro da importacao: {campaign.import_error}
+                    </p>
+                  )}
+
+                  {campaign.audience_source === 'csv' && !isWhatsAppCampaignImportReady(campaign) && (
+                    <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                      A importacao do CSV ainda esta em andamento. A campanha so pode iniciar quando todos os lotes forem processados.
                     </p>
                   )}
 

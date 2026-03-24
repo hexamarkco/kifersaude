@@ -38,6 +38,8 @@ type TargetStatus = 'pending' | 'processing' | 'sent' | 'failed' | 'invalid' | '
 type CampaignRecord = {
   id: string;
   status: CampaignStatus;
+  import_status?: 'ready' | 'queued' | 'processing' | 'failed' | 'cancelled' | null;
+  audience_source?: 'filters' | 'csv' | null;
   message: string;
   flow_steps: unknown;
   audience_config?: Record<string, unknown> | null;
@@ -719,7 +721,7 @@ const startScheduledCampaigns = async (
 ): Promise<string[]> => {
   let query = supabaseAdmin
     .from('whatsapp_campaigns')
-    .select('id, status, scheduled_at')
+    .select('id, status, import_status, audience_source, scheduled_at')
     .eq('status', 'draft')
     .not('scheduled_at', 'is', null);
 
@@ -733,7 +735,13 @@ const startScheduledCampaigns = async (
   }
 
   const readyIds = getCampaignIdsReadyToAutoStart(
-    ((data ?? []) as Array<{ id: string; status: CampaignStatus; scheduled_at: string | null }>),
+    ((data ?? []) as Array<{
+      id: string;
+      status: CampaignStatus;
+      import_status?: CampaignRecord['import_status'];
+      audience_source?: CampaignRecord['audience_source'];
+      scheduled_at: string | null;
+    }>),
     new Date(),
   );
 

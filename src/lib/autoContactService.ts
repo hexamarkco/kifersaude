@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Lead, supabase } from './supabase';
+import { BRAZIL_STATES } from './brasilLocations';
 import { formatGreetingTitle, getGreetingForDate } from './greeting';
 import { normalizeChatId, sendWhatsAppMessage } from './whatsappApiService';
 
@@ -233,6 +234,53 @@ const DEFAULT_LOGGING: AutoContactLoggingSettings = {
   retentionDays: 30,
   includePayloads: false,
 };
+const NATIONAL_FIXED_HOLIDAYS = [
+  '01-01',
+  '04-21',
+  '05-01',
+  '09-07',
+  '10-12',
+  '11-02',
+  '11-15',
+  '11-20',
+  '12-25',
+];
+const STATE_FIXED_HOLIDAYS: Partial<Record<string, string[]>> = {
+  AC: ['01-23', '06-15', '09-05', '11-17'],
+  AL: ['06-24', '06-29', '09-16', '11-20'],
+  AP: ['03-19', '07-25', '09-13'],
+  AM: ['09-05', '12-08'],
+  BA: ['07-02'],
+  CE: ['03-19', '03-25'],
+  DF: ['11-30'],
+  GO: ['10-24'],
+  MA: ['07-28'],
+  MS: ['10-11'],
+  MT: ['11-20'],
+  PA: ['08-15'],
+  PB: ['08-05'],
+  PE: ['03-06'],
+  PI: ['10-19'],
+  PR: ['12-19'],
+  RJ: ['04-23', '11-20'],
+  RN: ['10-03'],
+  RO: ['01-04', '06-18'],
+  RR: ['10-05'],
+  RS: ['09-20'],
+  SC: ['08-11'],
+  SE: ['07-08'],
+  SP: ['07-09'],
+  TO: ['03-18', '09-08', '10-05'],
+};
+const DEFAULT_STATE_BY_TIMEZONE: Partial<Record<string, string>> = {
+  'America/Sao_Paulo': 'SP',
+  'America/Manaus': 'AM',
+  'America/Cuiaba': 'MT',
+  'America/Rio_Branco': 'AC',
+};
+const BRAZIL_STATE_NAME_TO_UF = new Map(
+  BRAZIL_STATES.map((state) => [normalizeHolidayText(state.nome), state.uf]),
+);
 
 export const DEFAULT_MESSAGE_TEMPLATES: AutoContactTemplate[] = [
   {
@@ -1001,30 +1049,122 @@ const formatDateKey = (zoned: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-const getHolidayCalendarForYear = (_year: number, _timeZone: string): string[] => {
-  // TODO: consultar calendário de feriados configurado (stub 2).
-  return [];
+function normalizeHolidayText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase();
+}
+
+const getEasterSunday = (year: number): Date => {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(year, month - 1, day));
 };
 
-const isHolidayDate = (zoned: Date, timeZone: string): boolean => {
-  const calendar = getHolidayCalendarForYear(zoned.getUTCFullYear(), timeZone);
-  return calendar.includes(formatDateKey(zoned));
+const shiftUtcDate = (date: Date, days: number) => {
+  const shifted = new Date(date.getTime());
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return shifted;
+};
+
+const toDateKeyFromDate = (date: Date) =>
+  toDateKey(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+
+const getLeadHolidayState = (lead?: Lead | null, timeZone?: string): string | null => {
+  const rawState = typeof lead?.estado === 'string' ? normalizeHolidayText(lead.estado) : '';
+
+  if (rawState.length === 2 && STATE_FIXED_HOLIDAYS[rawState]?.length) {
+    return rawState;
+  }
+
+  const byName = BRAZIL_STATE_NAME_TO_UF.get(rawState);
+  if (byName && STATE_FIXED_HOLIDAYS[byName]?.length) {
+    return byName;
+  }
+
+  const byTimezone = timeZone ? DEFAULT_STATE_BY_TIMEZONE[timeZone] : null;
+  return byTimezone && STATE_FIXED_HOLIDAYS[byTimezone]?.length ? byTimezone : null;
+};
+
+const getHolidayCalendarForYear = (year: number, timeZone: string, lead?: Lead | null): string[] => {
+  const holidays = new Set<string>();
+
+  NATIONAL_FIXED_HOLIDAYS.forEach((monthDay) => {
+    const [month, day] = monthDay.split('-').map(Number);
+    holidays.add(toDateKey(year, month, day));
+  });
+
+  const easterSunday = getEasterSunday(year);
+  holidays.add(toDateKeyFromDate(shiftUtcDate(easterSunday, -2)));
+
+  const stateCode = getLeadHolidayState(lead, timeZone);
+  const stateHolidays = stateCode ? STATE_FIXED_HOLIDAYS[stateCode] ?? [] : [];
+  stateHolidays.forEach((monthDay) => {
+    const [month, day] = monthDay.split('-').map(Number);
+    holidays.add(toDateKey(year, month, day));
+  });
+
+  return Array.from(holidays);
+};
+
+const createHolidayMatcher = (
+  scheduling: AutoContactSchedulingSettings,
+  lead?: Lead,
+) => {
+  const holidays = buildHolidaySet(scheduling.holidays);
+  const automaticCalendarByYear = new Map<number, Set<string>>();
+
+  return (zoned: Date): boolean => {
+    const year = zoned.getUTCFullYear();
+    let automaticCalendar = automaticCalendarByYear.get(year);
+
+    if (!automaticCalendar) {
+      automaticCalendar = new Set(
+        getHolidayCalendarForYear(year, scheduling.timezone, lead),
+      );
+      automaticCalendarByYear.set(year, automaticCalendar);
+    }
+
+    const dateKey = formatDateKey(zoned);
+    const monthDayKey = toMonthDayKey(zoned.getUTCMonth() + 1, zoned.getUTCDate());
+    return (
+      automaticCalendar.has(dateKey)
+      || holidays.specificDates.has(dateKey)
+      || holidays.recurringDates.has(monthDayKey)
+    );
+  };
 };
 
 export const getNextAllowedSendAt = (
   reference: Date,
   scheduling: AutoContactSchedulingSettings,
+  lead?: Lead,
 ): Date => {
   const allowedWeekdays = scheduling.allowedWeekdays?.length ? scheduling.allowedWeekdays : [1, 2, 3, 4, 5, 6, 7];
   const start = parseHourMinute(scheduling.startHour);
   const end = parseHourMinute(scheduling.endHour);
+  const isHolidayDate = createHolidayMatcher(scheduling, lead);
   let candidate = new Date(reference.getTime());
 
   for (let attempt = 0; attempt < 370; attempt += 1) {
     const zoned = toZonedDate(candidate, scheduling.timezone);
     const weekday = getWeekdayNumber(zoned);
     const isAllowedWeekday = allowedWeekdays.includes(weekday);
-    const shouldSkipHoliday = scheduling.skipHolidays && isHolidayDate(zoned, scheduling.timezone);
+    const shouldSkipHoliday = scheduling.skipHolidays && isHolidayDate(zoned);
 
     if (!isAllowedWeekday || shouldSkipHoliday) {
       const nextDay = addDaysToZoned(zoned, 1);
@@ -1261,7 +1401,7 @@ export async function runAutoContactFlow({
     if (shouldExitFlow(matchingFlow, lead, event)) return;
     const stepDelayMs = getAutoContactStepDelayMs(step, lead);
     const desiredAt = new Date(previousStepAt.getTime() + stepDelayMs);
-    const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
+    const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling, lead);
     const now = new Date();
     const waitMs = scheduledAt.getTime() - now.getTime();
 
@@ -1658,7 +1798,7 @@ export const buildAutoContactScheduleTimeline = ({
   const allowedWeekdays = scheduling.allowedWeekdays?.length
     ? scheduling.allowedWeekdays
     : DEFAULT_SCHEDULING.allowedWeekdays;
-  const holidays = buildHolidaySet(scheduling.holidays);
+  const isHolidayDate = createHolidayMatcher(scheduling, lead);
 
   let cursor = utcToZonedTime(startAt, timeZone);
   return steps.map((step) => {
@@ -1668,15 +1808,7 @@ export const buildAutoContactScheduleTimeline = ({
     for (let guard = 0; guard < 366; guard += 1) {
       const weekdayNumber = getWeekdayNumber(scheduled);
       const isWeekend = weekdayNumber === 6 || weekdayNumber === 7;
-      const dateKey = toDateKey(
-        scheduled.getUTCFullYear(),
-        scheduled.getUTCMonth() + 1,
-        scheduled.getUTCDate(),
-      );
-      const monthDayKey = toMonthDayKey(scheduled.getUTCMonth() + 1, scheduled.getUTCDate());
-      const isHoliday =
-        scheduling.skipHolidays &&
-        (holidays.specificDates.has(dateKey) || holidays.recurringDates.has(monthDayKey));
+      const isHoliday = scheduling.skipHolidays && isHolidayDate(scheduled);
 
       if (isHoliday) {
         adjustmentReasons.add('holiday');

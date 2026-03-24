@@ -144,11 +144,11 @@ export default function AutoContactFlowSettingsScreen() {
   const autoSaveInFlightRef = useRef(false);
   const timezoneOptions = useMemo(
     () => [
-      { value: "America/Sao_Paulo", label: "America/Sao_Paulo" },
-      { value: "America/Manaus", label: "America/Manaus" },
-      { value: "America/Cuiaba", label: "America/Cuiaba" },
-      { value: "America/Rio_Branco", label: "America/Rio_Branco" },
-      { value: "UTC", label: "UTC" },
+      { value: "America/Sao_Paulo", label: "São Paulo (UTC-3)" },
+      { value: "America/Manaus", label: "Manaus (UTC-4)" },
+      { value: "America/Cuiaba", label: "Cuiabá (UTC-4)" },
+      { value: "America/Rio_Branco", label: "Rio Branco (UTC-5)" },
+      { value: "UTC", label: "UTC (padrão global)" },
     ],
     [],
   );
@@ -1723,18 +1723,24 @@ export default function AutoContactFlowSettingsScreen() {
                     A janela diária, os dias permitidos e o limite diário são
                     definidos em cada fluxo.
                   </p>
-                  <label className="inline-flex items-center gap-2 text-sm text-[var(--panel-text-soft)]">
-                    <Checkbox
-                      checked={schedulingDraft.skipHolidays}
-                      onChange={(event) =>
-                        setSchedulingDraft((previous) => ({
-                          ...previous,
-                          skipHolidays: event.target.checked,
-                        }))
-                      }
-                    />
-                    Pausar envios em feriados configurados
-                  </label>
+                  <div className="space-y-1">
+                    <label className="inline-flex items-center gap-2 text-sm text-[var(--panel-text-soft)]">
+                      <Checkbox
+                        checked={schedulingDraft.skipHolidays}
+                        onChange={(event) =>
+                          setSchedulingDraft((previous) => ({
+                            ...previous,
+                            skipHolidays: event.target.checked,
+                          }))
+                        }
+                      />
+                      Pausar envios em feriados nacionais e estaduais
+                    </label>
+                    <p className="text-[11px] text-[var(--panel-text-subtle)]">
+                      O sistema considera automaticamente os feriados oficiais e
+                      respeita datas extras configuradas manualmente.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4 space-y-4 lg:col-span-2">

@@ -1,7 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { useNavigate } from "react-router-dom";
-import { supabase, Reminder, Lead, Contract } from "../../lib/supabase";
+import {
+  supabase,
+  Reminder,
+  Lead,
+  Contract,
+  fetchAllPages,
+} from "../../lib/supabase";
 import {
   Bell,
   Check,
@@ -62,6 +68,71 @@ import {
   normalizeReminderLeadPhone as normalizeLeadPhone,
 } from "./shared/reminderHelpers";
 import type { ManualReminderPrompt } from "./shared/reminderTypes";
+
+const RELATED_ENTITY_BATCH_SIZE = 100;
+
+const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
+  if (batchSize <= 0) {
+    return [items];
+  }
+
+  const batches: T[][] = [];
+  for (let index = 0; index < items.length; index += batchSize) {
+    batches.push(items.slice(index, index + batchSize));
+  }
+
+  return batches;
+};
+
+const fetchContractsByIds = async (ids: string[]) => {
+  const uniqueIds = Array.from(
+    new Set(ids.filter((id): id is string => Boolean(id))),
+  );
+
+  if (uniqueIds.length === 0) {
+    return [] as Contract[];
+  }
+
+  const batches = splitIntoBatches(uniqueIds, RELATED_ENTITY_BATCH_SIZE);
+  const results = await Promise.all(
+    batches.map(async (batch) => {
+      const { data, error } = await supabase
+        .from("contracts")
+        .select("*")
+        .in("id", batch);
+
+      if (error) throw error;
+      return (data ?? []) as Contract[];
+    }),
+  );
+
+  return results.flat();
+};
+
+const fetchLeadsByIds = async (ids: string[]) => {
+  const uniqueIds = Array.from(
+    new Set(ids.filter((id): id is string => Boolean(id))),
+  );
+
+  if (uniqueIds.length === 0) {
+    return [] as Lead[];
+  }
+
+  const batches = splitIntoBatches(uniqueIds, RELATED_ENTITY_BATCH_SIZE);
+  const results = await Promise.all(
+    batches.map(async (batch) => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .in("id", batch);
+
+      if (error) throw error;
+      return (data ?? []) as Lead[];
+    }),
+  );
+
+  return results.flat();
+};
 
 export default function RemindersManagerEnhanced() {
   const navigate = useNavigate();
@@ -159,8 +230,85 @@ export default function RemindersManagerEnhanced() {
     window.open(whatsappLink, "_blank", "noopener,noreferrer");
   };
 
+  const loadReminders = useCallback(
+    async (options?: { showLoading?: boolean }) => {
+      const showLoading = options?.showLoading ?? false;
+
+      if (showLoading) {
+        setLoading(true);
+      }
+
+      try {
+        const remindersData = await fetchAllPages<Reminder>(
+          (from, to) =>
+            supabase
+              .from("reminders")
+              .select("*")
+              .order("data_lembrete", { ascending: true })
+              .order("id", { ascending: true })
+              .range(from, to) as unknown as Promise<{
+              data: Reminder[] | null;
+              error: unknown;
+            }>,
+        );
+
+        setReminders(remindersData);
+        setLastUpdated(new Date());
+
+        const contractIds = [
+          ...new Set(
+            remindersData
+              .map((reminder) => reminder.contract_id)
+              .filter((id): id is string => Boolean(id)),
+          ),
+        ];
+        const fetchedContracts = await fetchContractsByIds(contractIds);
+        const newContractsMap = new Map<string, Contract>();
+
+        fetchedContracts.forEach((contract) => {
+          newContractsMap.set(contract.id, contract);
+        });
+
+        setContractsMap(newContractsMap);
+
+        const contractLeadIds = [
+          ...new Set(
+            fetchedContracts
+              .map((contract) => contract.lead_id)
+              .filter(Boolean) as string[],
+          ),
+        ];
+
+        const leadIds = [
+          ...new Set([
+            ...remindersData
+              .map((reminder) => reminder.lead_id)
+              .filter((id): id is string => Boolean(id)),
+            ...contractLeadIds,
+          ]),
+        ];
+
+        const fetchedLeads = await fetchLeadsByIds(leadIds);
+        const newLeadsMap = new Map<string, Lead>();
+
+        fetchedLeads.forEach((lead) => {
+          newLeadsMap.set(lead.id, lead);
+        });
+
+        setLeadsMap(newLeadsMap);
+      } catch (error) {
+        console.error("Erro ao carregar lembretes:", error);
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
-    loadReminders({ showLoading: true });
+    void loadReminders({ showLoading: true });
 
     const channel = supabase
       .channel("reminders-changes")
@@ -181,7 +329,7 @@ export default function RemindersManagerEnhanced() {
             return;
           }
 
-          loadReminders();
+          void loadReminders();
         },
       )
       .subscribe();
@@ -189,81 +337,7 @@ export default function RemindersManagerEnhanced() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
-
-  const loadReminders = async (options?: { showLoading?: boolean }) => {
-    const showLoading = options?.showLoading ?? false;
-
-    if (showLoading) {
-      setLoading(true);
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from("reminders")
-        .select("*")
-        .order("data_lembrete", { ascending: true });
-
-      if (error) throw error;
-      setReminders(data || []);
-      setLastUpdated(new Date());
-
-      const contractIds = [
-        ...new Set((data || []).map((r) => r.contract_id).filter(Boolean)),
-      ];
-      let fetchedContracts = [] as Contract[];
-
-      if (contractIds.length > 0) {
-        const { data: contractsData } = await supabase
-          .from("contracts")
-          .select("*")
-          .in("id", contractIds);
-
-        if (contractsData) {
-          fetchedContracts = contractsData as Contract[];
-          const newContractsMap = new Map();
-          contractsData.forEach((contract) =>
-            newContractsMap.set(contract.id, contract),
-          );
-          setContractsMap(newContractsMap);
-        }
-      }
-
-      const contractLeadIds = [
-        ...new Set(
-          fetchedContracts
-            .map((contract) => contract.lead_id)
-            .filter(Boolean) as string[],
-        ),
-      ];
-
-      const leadIds = [
-        ...new Set([
-          ...(data || []).map((r) => r.lead_id).filter(Boolean),
-          ...contractLeadIds,
-        ]),
-      ];
-
-      if (leadIds.length > 0) {
-        const { data: leadsData } = await supabase
-          .from("leads")
-          .select("*")
-          .in("id", leadIds);
-
-        if (leadsData) {
-          const newLeadsMap = new Map();
-          leadsData.forEach((lead) => newLeadsMap.set(lead.id, lead));
-          setLeadsMap(newLeadsMap);
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao carregar lembretes:", error);
-    } finally {
-      if (showLoading) {
-        setLoading(false);
-      }
-    }
-  };
+  }, [loadReminders]);
 
   const fetchLeadInfo = async (leadId: string) => {
     if (!leadId) {

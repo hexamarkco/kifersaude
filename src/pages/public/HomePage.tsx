@@ -696,7 +696,7 @@ export default function HomePage() {
 
         .partner-logos-card {
           flex: 0 0 auto;
-          width: clamp(8rem, 14vw, 12rem);
+          width: clamp(6.75rem, 11vw, 9rem);
         }
 
         @keyframes hero-ribbon-slide {
@@ -737,7 +737,7 @@ export default function HomePage() {
           }
 
           .partner-logos-card {
-            width: clamp(6.5rem, 26vw, 8.75rem);
+            width: clamp(5.5rem, 22vw, 7.25rem);
           }
         }
 
@@ -990,7 +990,7 @@ export default function HomePage() {
             </div>
 
             <div className="partner-logos-marquee py-3">
-              <div className="partner-logos-track items-center gap-8 sm:gap-10">
+              <div className="partner-logos-track items-center gap-12 sm:gap-16">
                 {loopedPartnerLogos.map((logo, index) => (
                   <div
                     key={`${logo.alt}-${index}`}
@@ -1000,7 +1000,7 @@ export default function HomePage() {
                     <img
                       src={logo.src}
                       alt={logo.alt}
-                      className="max-h-12 w-auto max-w-full object-contain grayscale opacity-65 transition duration-300 group-hover:grayscale-0 group-hover:opacity-100 sm:max-h-14"
+                      className="max-h-9 w-auto max-w-full object-contain grayscale opacity-65 transition duration-300 group-hover:grayscale-0 group-hover:opacity-100 sm:max-h-11"
                     />
                   </div>
                 ))}

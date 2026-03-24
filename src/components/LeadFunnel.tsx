@@ -47,12 +47,17 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
     return funnelLeads.filter((lead) => lead.status === statusName);
   };
 
+  const getStageCount = (index: number) => getLeadsByStatus(stages[index].id).length;
+
+  const getTailCount = (startIndex: number) =>
+    stages.slice(startIndex).reduce((total, _stage, indexOffset) => total + getStageCount(startIndex + indexOffset), 0);
+
   const calculateConversionRate = (index: number): number => {
     if (index === 0) return 100;
-    const previousCount = getLeadsByStatus(stages[index - 1].id).length;
-    const currentCount = getLeadsByStatus(stages[index].id).length;
-    if (previousCount === 0) return 0;
-    return (currentCount / previousCount) * 100;
+    const previousReachCount = getTailCount(index - 1);
+    const currentReachCount = getTailCount(index);
+    if (previousReachCount === 0) return 0;
+    return (currentReachCount / previousReachCount) * 100;
   };
 
   const totalLeads = funnelLeads.length;

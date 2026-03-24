@@ -1,4 +1,5 @@
 export type WhatsAppCampaignStatus = 'draft' | 'running' | 'paused' | 'completed' | 'cancelled';
+export type WhatsAppCampaignImportStatus = 'ready' | 'queued' | 'processing' | 'failed' | 'cancelled';
 export type WhatsAppCampaignAudienceSource = 'filters' | 'csv';
 export type WhatsAppCampaignTargetSourceKind = 'lead_filter' | 'csv_import';
 
@@ -57,6 +58,7 @@ export type WhatsAppCampaign = {
   message: string;
   flow_steps: WhatsAppCampaignFlowStep[];
   status: WhatsAppCampaignStatus;
+  import_status: WhatsAppCampaignImportStatus;
   audience_source: WhatsAppCampaignAudienceSource;
   audience_filter: Record<string, unknown>;
   audience_config: Record<string, unknown>;
@@ -69,6 +71,12 @@ export type WhatsAppCampaign = {
   scheduled_at: string | null;
   completed_at: string | null;
   last_error: string | null;
+  import_total_rows?: number | null;
+  import_processed_rows?: number | null;
+  import_failed_rows?: number | null;
+  import_started_at?: string | null;
+  import_completed_at?: string | null;
+  import_error?: string | null;
   last_dispatch_at?: string | null;
   dispatch_day?: string | null;
   dispatches_today?: number | null;

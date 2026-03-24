@@ -26,6 +26,24 @@ export type CreateWhatsAppCampaignInput = {
   csvTargets?: CreateWhatsAppCampaignCsvTargetInput[];
 };
 
+export type CreateWhatsAppCampaignCsvImportInput = {
+  name: string;
+  message: string;
+  flowSteps: WhatsAppCampaignFlowStep[];
+  audienceConfig: Record<string, unknown>;
+  scheduledAt: string | null;
+  storageBucket: string;
+  storagePath: string;
+  fileName: string;
+  delimiter: ',' | ';';
+  mapping: {
+    phoneColumnKey: string;
+    nameColumnKey?: string | null;
+  };
+  crmDefaults: Record<string, unknown>;
+  totalRows: number;
+};
+
 type CreateWhatsAppCampaignCsvTargetRpcInput = {
   normalized_phone: string;
   raw_phone: string | null;
@@ -141,6 +159,32 @@ export async function createWhatsAppCampaignAtomic(input: CreateWhatsAppCampaign
   }
 
   return ensureCampaignResult(data, 'Nao foi possivel criar a campanha do WhatsApp.');
+}
+
+export async function createWhatsAppCampaignCsvImport(input: CreateWhatsAppCampaignCsvImportInput): Promise<WhatsAppCampaign> {
+  const { data, error } = await supabase.rpc('create_whatsapp_campaign_csv_import_atomic', {
+    p_name: input.name,
+    p_message: input.message,
+    p_flow_steps: input.flowSteps,
+    p_audience_config: input.audienceConfig,
+    p_scheduled_at: input.scheduledAt,
+    p_storage_bucket: input.storageBucket,
+    p_storage_path: input.storagePath,
+    p_file_name: input.fileName,
+    p_delimiter: input.delimiter,
+    p_mapping: {
+      phone_column_key: input.mapping.phoneColumnKey,
+      name_column_key: input.mapping.nameColumnKey ?? null,
+    },
+    p_crm_defaults: input.crmDefaults,
+    p_total_rows: input.totalRows,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return ensureCampaignResult(data, 'Nao foi possivel iniciar a importacao da campanha do WhatsApp.');
 }
 
 export async function cancelWhatsAppCampaignAtomic(campaignId: string, reason: string): Promise<WhatsAppCampaign> {

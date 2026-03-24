@@ -6,7 +6,10 @@ import {
   clampCompletedCampaignStepIndex,
   getCampaignIdsReadyToAutoStart,
   isCampaignTargetReadyForProcessing,
+  isWhatsAppCampaignImportPending,
+  isWhatsAppCampaignImportReady,
   normalizeWhatsAppCampaignPacingSettings,
+  normalizeWhatsAppCampaignImportStatus,
   normalizePhoneForCampaign,
   parseCampaignCsvText,
   resolveCampaignTemplateText,
@@ -61,8 +64,9 @@ test('collects campaigns ready to auto start and exposes requeue status helper',
   const readyIds = getCampaignIdsReadyToAutoStart(
     [
       { id: '1', status: 'draft', scheduled_at: '2026-03-12T09:00:00.000Z' },
-      { id: '2', status: 'draft', scheduled_at: '2026-03-13T09:00:00.000Z' },
-      { id: '3', status: 'running', scheduled_at: '2026-03-11T09:00:00.000Z' },
+      { id: '2', status: 'draft', scheduled_at: '2026-03-11T09:00:00.000Z', audience_source: 'csv', import_status: 'processing' },
+      { id: '3', status: 'draft', scheduled_at: '2026-03-13T09:00:00.000Z' },
+      { id: '4', status: 'running', scheduled_at: '2026-03-11T09:00:00.000Z' },
     ],
     new Date('2026-03-12T12:00:00.000Z'),
   );
@@ -165,4 +169,14 @@ test('normalizes campaign pacing settings from nested or flat config', () => {
     dailySendLimit: null,
     sendIntervalMinutes: null,
   });
+});
+
+test('normalizes import status and exposes readiness helpers', () => {
+  assert.equal(normalizeWhatsAppCampaignImportStatus('processing'), 'processing');
+  assert.equal(normalizeWhatsAppCampaignImportStatus('unknown'), 'ready');
+  assert.equal(isWhatsAppCampaignImportPending('queued'), true);
+  assert.equal(isWhatsAppCampaignImportPending('ready'), false);
+  assert.equal(isWhatsAppCampaignImportReady({ audience_source: 'csv', import_status: 'ready' }), true);
+  assert.equal(isWhatsAppCampaignImportReady({ audience_source: 'csv', import_status: 'processing' }), false);
+  assert.equal(isWhatsAppCampaignImportReady({ audience_source: 'filters', import_status: 'processing' }), true);
 });

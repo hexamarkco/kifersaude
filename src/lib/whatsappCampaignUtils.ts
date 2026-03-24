@@ -1,5 +1,6 @@
 import type {
   WhatsAppCampaignAudienceSource,
+  WhatsAppCampaignImportStatus,
   WhatsAppCampaignFlowStep,
   WhatsAppCampaignStatus,
   WhatsAppCampaignTargetStatus,
@@ -604,12 +605,22 @@ export const splitIntoBatches = <T>(items: T[], batchSize: number): T[][] => {
 };
 
 export const getCampaignIdsReadyToAutoStart = (
-  campaigns: Array<{ id: string; status: WhatsAppCampaignStatus; scheduled_at: string | null }>,
+  campaigns: Array<{
+    id: string;
+    status: WhatsAppCampaignStatus;
+    scheduled_at: string | null;
+    audience_source?: WhatsAppCampaignAudienceSource | null;
+    import_status?: WhatsAppCampaignImportStatus | null;
+  }>,
   now: Date = new Date(),
 ): string[] =>
   campaigns
     .filter((campaign) => {
       if (campaign.status !== 'draft' || !campaign.scheduled_at) {
+        return false;
+      }
+
+      if (!isWhatsAppCampaignImportReady(campaign)) {
         return false;
       }
 
@@ -673,6 +684,32 @@ export const canRequeueCampaignTarget = (status: WhatsAppCampaignTargetStatus): 
 
 export const normalizeCampaignAudienceSource = (value: unknown): WhatsAppCampaignAudienceSource =>
   value === 'csv' ? 'csv' : CAMPAIGN_DEFAULT_AUDIENCE_SOURCE;
+
+export const normalizeWhatsAppCampaignImportStatus = (value: unknown): WhatsAppCampaignImportStatus => {
+  switch (value) {
+    case 'queued':
+    case 'processing':
+    case 'failed':
+    case 'cancelled':
+      return value;
+    default:
+      return 'ready';
+  }
+};
+
+export const isWhatsAppCampaignImportPending = (value: unknown): boolean => {
+  const status = normalizeWhatsAppCampaignImportStatus(value);
+  return status === 'queued' || status === 'processing';
+};
+
+export const isWhatsAppCampaignImportReady = (
+  campaign: {
+    audience_source?: unknown;
+    import_status?: unknown;
+  } | null | undefined,
+): boolean =>
+  normalizeCampaignAudienceSource(campaign?.audience_source) !== 'csv'
+  || normalizeWhatsAppCampaignImportStatus(campaign?.import_status) === 'ready';
 
 export const formatCsvSummaryLabel = (summary: CsvAudienceAnalysisSummary): string =>
   `${summary.validRows} validos, ${summary.existingLeadRows} existentes, ${summary.newLeadRows} novos, ${summary.duplicateRows} duplicados`;

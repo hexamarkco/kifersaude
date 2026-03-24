@@ -1118,7 +1118,7 @@ export default function WhatsAppInboxScreen() {
     selectChat(nextChat);
   };
 
-  const getChatKind = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
+  const getChatKind = useCallback((chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
     if (chat.is_group) return 'group' as const;
 
     const kind = getWhatsAppChatKind(chat.id);
@@ -1130,12 +1130,12 @@ export default function WhatsAppInboxScreen() {
     }
 
     return kind;
-  };
+  }, []);
 
   const isStatusChat = useCallback((chat: Pick<WhatsAppChat, 'id' | 'is_group'> | null | undefined) => {
     if (!chat) return false;
     return getChatKind(chat) === 'status';
-  }, []);
+  }, [getChatKind]);
 
   const isStatusMessage = (message: Pick<WhatsAppMessage, 'chat_id' | 'type'> | null | undefined) => {
     if (!message) return false;
@@ -1170,33 +1170,33 @@ export default function WhatsAppInboxScreen() {
     if (kind === 'status') return 'Status';
     if (kind === 'broadcast') return 'Transmissao';
     return null;
-  }, []);
+  }, [getChatKind]);
 
-  const getNonDirectFallbackName = (chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
+  const getNonDirectFallbackName = useCallback((chat: Pick<WhatsAppChat, 'id' | 'is_group'>) => {
     const kind = getChatKind(chat);
     if (kind === 'newsletter') return 'Canal sem nome';
     if (kind === 'status') return 'Status';
     if (kind === 'broadcast') return 'Transmissao sem nome';
     return chat.id;
-  };
+  }, [getChatKind]);
 
-  const isPhoneLikeLabel = (value: string | null | undefined) => {
+  const isPhoneLikeLabel = useCallback((value: string | null | undefined) => {
     if (!value) return false;
     const trimmed = value.trim();
     if (!trimmed) return false;
     if (!/^[+\d\s().-]+$/.test(trimmed)) return false;
     const digits = trimmed.replace(/\D/g, '');
     return digits.length >= 10;
-  };
+  }, []);
 
-  const getMeaningfulContactLabel = (value: string | null | undefined) => {
+  const getMeaningfulContactLabel = useCallback((value: string | null | undefined) => {
     const trimmed = value?.trim();
     if (!trimmed || isPhoneLikeLabel(trimmed)) {
       return null;
     }
 
     return trimmed;
-  };
+  }, [isPhoneLikeLabel]);
 
   const buildContactDirectoryEntry = (
     contact: Pick<WhapiContact, 'name' | 'pushname' | 'saved' | 'is_business'>,
@@ -1239,26 +1239,29 @@ export default function WhatsAppInboxScreen() {
     );
   };
 
-  const getPreferredContactNameFromCandidates = (candidates: Iterable<string>) => {
-    let pushnameFallback: string | null = null;
-
+  const getSavedContactNameFromCandidates = useCallback((candidates: Iterable<string>) => {
     for (const candidate of candidates) {
-      const contact = contactsById.get(candidate);
-      const savedName = getMeaningfulContactLabel(contact?.savedName);
+      const savedName = getMeaningfulContactLabel(contactsById.get(candidate)?.savedName);
       if (savedName) {
         return savedName;
       }
+    }
 
-      const pushname = getMeaningfulContactLabel(contact?.pushname);
-      if (!pushnameFallback && pushname) {
-        pushnameFallback = pushname;
+    return null;
+  }, [contactsById, getMeaningfulContactLabel]);
+
+  const getPushnameFromCandidates = useCallback((candidates: Iterable<string>) => {
+    for (const candidate of candidates) {
+      const pushname = getMeaningfulContactLabel(contactsById.get(candidate)?.pushname);
+      if (pushname) {
+        return pushname;
       }
     }
 
-    return pushnameFallback;
-  };
+    return null;
+  }, [contactsById, getMeaningfulContactLabel]);
 
-  const getMeaningfulDirectChatNameCandidate = (
+  const getMeaningfulDirectChatNameCandidate = useCallback((
     chat: Pick<WhatsAppChat, 'id' | 'phone_number'>,
     value: string | null | undefined,
   ) => {
@@ -1266,7 +1269,7 @@ export default function WhatsAppInboxScreen() {
     if (!trimmed || trimmed === chat.id) return null;
     if (isPhoneLikeLabel(trimmed)) return null;
     return trimmed;
-  };
+  }, [isPhoneLikeLabel]);
 
   const getDirectChatAvatarLookupTarget = (chat: Pick<WhatsAppChat, 'id' | 'is_group' | 'phone_number' | 'lid'>) => {
     const aliases = new Set<string>(getChatIdVariants(chat));
@@ -4290,13 +4293,6 @@ export default function WhatsAppInboxScreen() {
         collectPhoneMatchKeys(value).forEach((key) => candidateKeys.add(key));
       });
 
-      for (const key of candidateKeys) {
-        const lead = leadByPhoneMatchKey.get(key);
-        if (lead?.name?.trim()) {
-          return lead.name.trim();
-        }
-      }
-
       const contactCandidates = new Set<string>();
       [message.chat_id, message.from_number, resolvedChat?.phone_number].forEach((value) => {
         if (!value) return;
@@ -4313,9 +4309,19 @@ export default function WhatsAppInboxScreen() {
         }
       });
 
-      const contactName = getPreferredContactNameFromCandidates(contactCandidates);
-      if (contactName) {
-        return contactName;
+      const savedContactName = getSavedContactNameFromCandidates(contactCandidates);
+      if (savedContactName) {
+        return savedContactName;
+      }
+
+      const crmName = getCrmNameFromLeadMatchKeys(candidateKeys);
+      if (crmName) {
+        return crmName;
+      }
+
+      const pushname = getPushnameFromCandidates(contactCandidates);
+      if (pushname) {
+        return pushname;
       }
 
       return preferredName || getChatDisplayNameFromId(message.chat_id);
@@ -4376,6 +4382,17 @@ export default function WhatsAppInboxScreen() {
     return map;
   }, [leadByPhoneMatchKey]);
 
+  const getCrmNameFromLeadMatchKeys = useCallback((matchKeys: Iterable<string>) => {
+    for (const key of matchKeys) {
+      const leadName = leadByPhoneMatchKey.get(key)?.name?.trim();
+      if (leadName) {
+        return leadName;
+      }
+    }
+
+    return null;
+  }, [leadByPhoneMatchKey]);
+
   const getChatDisplayName = useCallback((chat: WhatsAppChat) => {
     const chatKind = getChatKind(chat);
     if (chatKind === 'group') {
@@ -4405,9 +4422,19 @@ export default function WhatsAppInboxScreen() {
       getDirectIdVariantsFromDigits(digits).forEach((variant) => contactCandidates.add(variant));
     });
 
-    const preferredContactName = getPreferredContactNameFromCandidates(contactCandidates);
-    if (preferredContactName) {
-      return preferredContactName;
+    const savedContactName = getSavedContactNameFromCandidates(contactCandidates);
+    if (savedContactName) {
+      return savedContactName;
+    }
+
+    const crmName = getCrmNameFromLeadMatchKeys(getLeadMatchKeysForChat(chat));
+    if (crmName) {
+      return crmName;
+    }
+
+    const pushname = getPushnameFromCandidates(contactCandidates);
+    if (pushname) {
+      return pushname;
     }
 
     const directChatName = getMeaningfulDirectChatNameCandidate(chat, chat.name);
@@ -4415,21 +4442,12 @@ export default function WhatsAppInboxScreen() {
       return directChatName;
     }
 
-    const leadMatchKeys = getLeadMatchKeysForChat(chat);
-
-    for (const key of leadMatchKeys) {
-      const leadName = leadNamesByPhone.get(key);
-      if (leadName) {
-        return leadName;
-      }
-    }
-
     if (phone) {
       return formatPhone(phone);
     }
 
     return chat.id;
-  }, [formatPhone, getLeadMatchKeysForChat, getNonDirectFallbackName, getPreferredContactNameFromCandidates, groupNamesById, leadNamesByPhone, newsletterNamesById]);
+  }, [formatPhone, getChatKind, getCrmNameFromLeadMatchKeys, getLeadMatchKeysForChat, getMeaningfulDirectChatNameCandidate, getNonDirectFallbackName, getPushnameFromCandidates, getSavedContactNameFromCandidates, groupNamesById, isPhoneLikeLabel, newsletterNamesById]);
 
   const chatListPresentationById = useMemo(() => {
     const map = new Map<
@@ -4690,6 +4708,7 @@ export default function WhatsAppInboxScreen() {
     chats,
     deferredSearchQuery,
     isStatusChat,
+    getChatKind,
     prioritizeUnread,
     showArchived,
   ]);
@@ -5372,6 +5391,7 @@ export default function WhatsAppInboxScreen() {
       getChatTypeLabel,
       formatChatListPreview,
       formatTime,
+      getChatKind,
       getLeadStatusBadgeStyle,
       getUnreadWaitingLabel,
       isChatMuted,

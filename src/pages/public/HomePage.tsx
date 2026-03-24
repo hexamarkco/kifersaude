@@ -760,7 +760,7 @@ export default function HomePage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
                 <Heart className="h-6 w-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-slate-900">Kifer Saude</span>
+              <span className="text-2xl font-bold text-slate-900">Kifer Saúde</span>
             </a>
 
             <div className="hidden flex-1 items-center justify-center space-x-6 md:flex">
@@ -786,7 +786,7 @@ export default function HomePage() {
               onClick={() => setShowQuoteModal(true)}
               className="rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-orange-600 hover:to-orange-700 sm:px-6"
             >
-              Cotacao Gratis
+              Cotação Grátis
             </button>
           </div>
         </nav>
@@ -806,17 +806,17 @@ export default function HomePage() {
                 <div className="mb-6">
                   <span className="inline-flex items-center rounded-full bg-gradient-to-r from-orange-600 to-amber-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg">
                     <Star className="mr-2 h-4 w-4 fill-current" />
-                    Especialista em planos de saude no RJ
+                    Especialista em planos de saúde no RJ
                   </span>
                 </div>
 
                 <h1 className="mb-6 text-4xl font-extrabold leading-tight text-slate-900 md:text-5xl lg:text-6xl">
-                  O plano ideal comeca com{' '}
+                  O plano ideal começa com{' '}
                   <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">gente de verdade.</span>
                 </h1>
 
                 <p className="mb-5 text-lg font-light leading-relaxed text-slate-700 md:text-xl">
-                  Atendimento humano e especializado em planos de saude para todo o estado do Rio de Janeiro.
+                  Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
                   <span className="mt-2 block font-semibold text-orange-700">Mais de 500 clientes satisfeitos.</span>
                 </p>
 
@@ -831,7 +831,7 @@ export default function HomePage() {
                   </div>
                   <div className="inline-flex items-center rounded-full border border-slate-300/50 bg-slate-800/10 px-4 py-2 backdrop-blur-sm">
                     <ThumbsUp className="mr-1.5 h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-semibold text-slate-900">98% Satisfacao</span>
+                    <span className="text-sm font-semibold text-slate-900">98% Satisfação</span>
                   </div>
                 </div>
 
@@ -841,7 +841,7 @@ export default function HomePage() {
                     onClick={() => setShowQuoteModal(true)}
                     className="whitespace-nowrap rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-8 py-4 text-base font-bold text-white shadow-2xl transition-all hover:scale-105 hover:from-orange-600 hover:to-orange-700 hover:shadow-orange-300 md:text-lg"
                   >
-                    Quero minha cotacao gratuita
+                    Quero minha cotação gratuita
                   </button>
 
                   <button
@@ -864,7 +864,7 @@ export default function HomePage() {
 
                   <div className="absolute -right-2 bottom-32 z-10 rounded-2xl bg-white px-5 py-3 shadow-xl">
                     <div className="mb-0 text-2xl font-bold text-orange-600">4.9★</div>
-                    <div className="text-xs font-medium text-slate-600">Avaliacao</div>
+                    <div className="text-xs font-medium text-slate-600">Avaliação</div>
                   </div>
 
                   <div className="relative h-[480px] w-[320px] md:h-[540px] md:w-[360px]">
@@ -875,7 +875,7 @@ export default function HomePage() {
                     <div className="absolute inset-0 overflow-hidden rounded-2xl border-4 border-white bg-gradient-to-br from-orange-200 to-amber-200 shadow-2xl">
                       <img
                         src="/image.png"
-                        alt="Luiza Kifer - Especialista em planos de saude"
+                        alt="Luiza Kifer - Especialista em planos de saúde"
                         className="h-full w-full object-cover object-[center_35%] scale-105"
                       />
                     </div>
@@ -883,7 +883,7 @@ export default function HomePage() {
 
                   <div className="absolute -bottom-6 left-1/2 z-10 min-w-[280px] -translate-x-1/2 rounded-2xl bg-white px-8 py-4 text-center shadow-xl">
                     <h3 className="mb-1 text-xl font-bold text-slate-900">Luiza Kifer</h3>
-                    <p className="font-semibold whitespace-nowrap text-orange-600">Sua especialista em saude</p>
+                    <p className="font-semibold whitespace-nowrap text-orange-600">Sua especialista em saúde</p>
                   </div>
                 </div>
               </div>
@@ -909,7 +909,7 @@ export default function HomePage() {
                 <div className="h-[500px] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 shadow-2xl">
                   <img
                     src="/freepik__portrait-of-a-natural-redhaired-woman-about-158-me__96601.png"
-                    alt="Luiza Kifer - Especialista em planos de saude"
+                      alt="Luiza Kifer - Especialista em planos de saúde"
                     className="h-full w-full object-cover object-[center_20%]"
                   />
                 </div>
@@ -919,19 +919,19 @@ export default function HomePage() {
                 <h2 className="mb-6 text-4xl font-bold text-slate-900 md:text-5xl">Quem Somos</h2>
                 <div className="mb-6 rounded-r-xl border-l-4 border-orange-500 bg-orange-50 p-6">
                   <p className="mb-4 text-lg italic text-slate-700">
-                    "Sou a Luiza Kifer, especialista em planos de saude. Acredito que contratar um plano nao e so uma escolha financeira - e uma decisao sobre cuidado, seguranca e tranquilidade."
+                      "Sou a Luiza Kifer, especialista em planos de saúde. Acredito que contratar um plano não é só uma escolha financeira — é uma decisão sobre cuidado, segurança e tranquilidade."
                   </p>
-                  <p className="text-sm font-semibold text-slate-600">- Luiza Kifer, Fundadora</p>
+                  <p className="text-sm font-semibold text-slate-600">— Luiza Kifer, Fundadora</p>
                 </div>
                 <p className="mb-6 text-lg text-slate-700">
-                  A Kifer Saude nasceu para simplificar o acesso aos melhores planos, com atendimento humano e solucoes que cabem no seu bolso.
+                  A Kifer Saúde nasceu para simplificar o acesso aos melhores planos, com atendimento humano e soluções que cabem no seu bolso.
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowStoryModal(true)}
                   className="inline-flex items-center font-semibold text-orange-600 transition-colors hover:text-orange-700"
                 >
-                  Conheca nossa historia completa
+                  Conheça nossa história completa
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </button>
               </div>
@@ -943,27 +943,27 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
               <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Como Funciona</h2>
-              <p className="text-xl text-slate-600">Simples, rapido e sem burocracia</p>
+              <p className="text-xl text-slate-600">Simples, rápido e sem burocracia</p>
             </div>
 
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
               {[
                 {
                   step: '1',
-                  title: 'Conte sobre voce',
+                  title: 'Conte sobre você',
                   text: 'Informe idade, cidade e quem deseja incluir no plano.',
                   icon: MessageCircle,
                 },
                 {
                   step: '2',
-                  title: 'Receba as opcoes',
+                  title: 'Receba as opções',
                   text: 'Comparativos claros com valores e coberturas personalizadas.',
                   icon: Search,
                 },
                 {
                   step: '3',
                   title: 'Escolha e ative',
-                  text: 'Sem burocracia, com acompanhamento ate a carteirinha.',
+                  text: 'Sem burocracia, com acompanhamento até a carteirinha.',
                   icon: CheckCircle,
                 },
               ].map((item) => (
@@ -1011,7 +1011,7 @@ export default function HomePage() {
               <div className="inline-flex items-center justify-center rounded-2xl border-2 border-orange-200 bg-orange-50 px-6 py-4">
                 <CheckCircle className="mr-3 h-6 w-6 flex-shrink-0 text-orange-600" />
                 <p className="text-lg text-slate-700">
-                  <span className="font-semibold text-slate-900">E muitas outras operadoras.</span> Trabalhamos com varias opcoes para encontrar o plano ideal para voce.
+                  <span className="font-semibold text-slate-900">E muitas outras operadoras.</span> Trabalhamos com várias opções para encontrar o plano ideal para você.
                 </p>
               </div>
             </div>
@@ -1022,7 +1022,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
               <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Depoimentos Reais</h2>
-              <p className="text-xl text-slate-600">O que nossos clientes dizem sobre nos</p>
+              <p className="text-xl text-slate-600">O que nossos clientes dizem sobre nós</p>
             </div>
 
             <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -1053,7 +1053,7 @@ export default function HomePage() {
                 onClick={() => setShowReviewsModal(true)}
                 className="inline-flex items-center font-semibold text-orange-600 transition-colors hover:text-orange-700"
               >
-                Mais avaliacoes no Google
+                Mais avaliações no Google
                 <ChevronRight className="ml-1 h-4 w-4" />
               </button>
             </div>
@@ -1065,7 +1065,7 @@ export default function HomePage() {
             <div className="rounded-3xl bg-white p-12 shadow-2xl">
               <TrendingUp className="mx-auto mb-6 h-16 w-16 text-orange-600" />
               <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Planos para Empresas e MEI</h2>
-              <p className="mb-8 text-xl text-slate-700">Tem CNPJ ou MEI? Voce pode economizar ate 40% no plano de saude.</p>
+              <p className="mb-8 text-xl text-slate-700">Tem CNPJ ou MEI? Você pode economizar até 40% no plano de saúde.</p>
               <button
                 type="button"
                 onClick={scrollToForm}
@@ -1081,7 +1081,7 @@ export default function HomePage() {
         <section className="bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Por Que Escolher a Kifer Saude</h2>
+              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Por Que Escolher a Kifer Saúde</h2>
               <p className="text-xl text-slate-600">O que nos torna diferentes</p>
             </div>
 
@@ -1101,7 +1101,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
               <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Perguntas Frequentes</h2>
-              <p className="text-xl text-slate-600">Tire suas duvidas sobre planos de saude</p>
+              <p className="text-xl text-slate-600">Tire suas dúvidas sobre planos de saúde</p>
             </div>
 
             <div className="mx-auto max-w-4xl space-y-4">
@@ -1128,7 +1128,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-12 text-center">
-              <p className="mb-4 text-slate-600">Nao encontrou sua resposta?</p>
+              <p className="mb-4 text-slate-600">Não encontrou sua resposta?</p>
               <button
                 type="button"
                 onClick={() => setShowQuoteModal(true)}
@@ -1143,8 +1143,8 @@ export default function HomePage() {
         <section id="cotacao" className="scroll-mt-32 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl">
             <div className="mb-12 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Faca sua Cotacao Personalizada</h2>
-              <p className="text-xl text-orange-50">Prometemos zero spam. Seu contato e usado apenas para montar as melhores opcoes.</p>
+              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Faça sua Cotação Personalizada</h2>
+              <p className="text-xl text-orange-50">Prometemos zero spam. Seu contato é usado apenas para montar as melhores opções.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="rounded-3xl bg-white p-8 shadow-2xl md:p-12">
@@ -1155,11 +1155,11 @@ export default function HomePage() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg transition-all hover:scale-[1.02] hover:from-orange-600 hover:to-orange-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {submitting ? 'Enviando cotacao...' : 'Quero minha cotacao personalizada agora'}
+                {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
                 <ChevronRight className="ml-2 inline-block h-5 w-5" />
               </button>
 
-              <p className="mt-4 text-center text-sm text-slate-500">Resposta em ate 10 minutos</p>
+              <p className="mt-4 text-center text-sm text-slate-500">Resposta em até 10 minutos</p>
             </form>
           </div>
         </section>
@@ -1193,7 +1193,7 @@ export default function HomePage() {
                   <MessageCircle className="h-8 w-8 text-white" />
                 </div>
                 <h3 className="mb-2 text-center text-xl font-bold text-white">WhatsApp</h3>
-                <p className="text-center text-slate-300">Atendimento rapido</p>
+                <p className="text-center text-slate-300">Atendimento rápido</p>
               </a>
             </div>
           </div>
@@ -1207,22 +1207,22 @@ export default function HomePage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600">
                     <Heart className="h-6 w-6 text-white" />
                   </div>
-                  <span className="text-2xl font-bold">Kifer Saude</span>
+                  <span className="text-2xl font-bold">Kifer Saúde</span>
                 </div>
-                <p className="leading-relaxed text-slate-400">Corretora especializada em planos de saude para todo o estado do Rio de Janeiro.</p>
+                <p className="leading-relaxed text-slate-400">Corretora especializada em planos de saúde para todo o estado do Rio de Janeiro.</p>
               </div>
 
               <div>
-                <h3 className="mb-4 text-lg font-bold">Links Uteis</h3>
+                <h3 className="mb-4 text-lg font-bold">Links Úteis</h3>
                 <ul className="space-y-3 text-slate-400">
                   <li>
                     <a href="#quem-somos" className="transition-colors hover:text-orange-400">
-                      Sobre Nos
+                      Sobre Nós
                     </a>
                   </li>
                   <li>
                     <a href="#cotacao" className="transition-colors hover:text-orange-400">
-                      Cotacao
+                      Cotação
                     </a>
                   </li>
                   <li>
@@ -1265,7 +1265,7 @@ export default function HomePage() {
             </div>
 
             <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
-              <p>Kifer Saude. Todos os direitos reservados.</p>
+              <p>Kifer Saúde. Todos os direitos reservados.</p>
             </div>
           </div>
         </footer>
@@ -1282,7 +1282,7 @@ export default function HomePage() {
         </a>
 
         {showQuoteModal ? (
-          <OverlayModal title="Faca sua Cotacao" subtitle="Preencha os dados abaixo e receba sua cotacao personalizada via WhatsApp" onClose={() => setShowQuoteModal(false)}>
+          <OverlayModal title="Faça sua Cotação" subtitle="Preencha os dados abaixo e receba sua cotação personalizada via WhatsApp" onClose={() => setShowQuoteModal(false)}>
             <form onSubmit={handleSubmit}>
               <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
 
@@ -1291,32 +1291,32 @@ export default function HomePage() {
                 disabled={submitting}
                 className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg transition-all hover:from-orange-600 hover:to-orange-700 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {submitting ? 'Enviando cotacao...' : 'Enviar cotacao via WhatsApp'}
+                {submitting ? 'Enviando cotação...' : 'Enviar cotação via WhatsApp'}
                 <MessageCircle className="ml-2 inline-block h-5 w-5" />
               </button>
 
-              <p className="mt-4 text-center text-sm text-slate-500">Resposta em ate 10 minutos</p>
+              <p className="mt-4 text-center text-sm text-slate-500">Resposta em até 10 minutos</p>
             </form>
           </OverlayModal>
         ) : null}
 
         {showStoryModal ? (
-          <OverlayModal title="Nossa Historia" maxWidthClass="max-w-4xl" onClose={() => setShowStoryModal(false)}>
+          <OverlayModal title="Nossa História" maxWidthClass="max-w-4xl" onClose={() => setShowStoryModal(false)}>
             <div className="space-y-6">
               <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Como Tudo Comecou</h3>
+                <h3 className="mb-4 text-2xl font-bold text-slate-900">Como Tudo Começou</h3>
                 <p className="mb-4 leading-relaxed text-slate-700">
-                  A Kifer Saude nasceu da visao de tornar o acesso a planos de saude mais simples, transparente e humano. Percebemos que muitas pessoas se sentiam perdidas em meio a tantas opcoes, termos tecnicos e processos burocraticos no mercado de saude suplementar.
+                  A Kifer Saúde nasceu da visão de tornar o acesso a planos de saúde mais simples, transparente e humano. Percebemos que muitas pessoas se sentiam perdidas em meio a tantas opções, termos técnicos e processos burocráticos no mercado de saúde suplementar.
                 </p>
                 <p className="leading-relaxed text-slate-700">
-                  Por isso, criamos uma consultoria que nao vende apenas planos: orienta, compara, explica riscos e acompanha cada etapa da jornada do cliente com proximidade real.
+                  Por isso, criamos uma consultoria que não vende apenas planos: orienta, compara, explica riscos e acompanha cada etapa da jornada do cliente com proximidade real.
                 </p>
               </div>
 
               <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossa Missao</h3>
+                <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossa Missão</h3>
                 <p className="leading-relaxed text-slate-700">
-                  Contratar um plano de saude nao deve ser complicado. Nossa missao e traduzir o contrato para a linguagem do dia a dia, comparar as melhores opcoes do mercado e encontrar o plano que realmente faz sentido para cada pessoa, familia ou empresa.
+                  Contratar um plano de saúde não deve ser complicado. Nossa missão é traduzir o contrato para a linguagem do dia a dia, comparar as melhores opções do mercado e encontrar o plano que realmente faz sentido para cada pessoa, família ou empresa.
                 </p>
               </div>
 
@@ -1325,10 +1325,10 @@ export default function HomePage() {
                 <div className="rounded-r-xl border-l-4 border-orange-500 bg-orange-50 p-6">
                   <ul className="space-y-3 text-slate-700">
                     {[
-                      'Atendimento humanizado para entender contexto, urgencia e rotina.',
-                      'Transparencia total sobre rede, carencias e custo real.',
-                      'Acompanhamento continuo, inclusive depois da contratacao.',
-                      'Especializacao regional com leitura pratica do mercado no RJ.',
+                      'Atendimento humanizado para entender contexto, urgência e rotina.',
+                      'Transparência total sobre rede, carências e custo real.',
+                      'Acompanhamento contínuo, inclusive depois da contratação.',
+                      'Especialização regional com leitura prática do mercado no RJ.',
                     ].map((item) => (
                       <li key={item} className="flex items-start">
                         <CheckCircle className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
@@ -1342,14 +1342,14 @@ export default function HomePage() {
               <div>
                 <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossos Valores</h3>
                 <p className="leading-relaxed text-slate-700">
-                  Construimos nossa empresa sobre tres pilares: confianca, transparencia e compromisso. Cada cliente que atendemos representa uma relacao de longo prazo baseada em respeito, clareza e cuidado genuino.
+                  Construímos nossa empresa sobre três pilares: confiança, transparência e compromisso. Cada cliente que atendemos representa uma relação de longo prazo baseada em respeito, clareza e cuidado genuíno.
                 </p>
               </div>
 
               <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 p-8 text-white">
                 <h3 className="mb-4 text-2xl font-bold">Mais de 500 clientes satisfeitos</h3>
                 <p className="mb-4 leading-relaxed text-white/90">
-                  Ja ajudamos centenas de familias a encontrarem o plano certo. Nossa taxa de satisfacao reflete o compromisso que temos com cada pessoa que confia no nosso trabalho.
+                  Já ajudamos centenas de famílias a encontrarem o plano certo. Nossa taxa de satisfação reflete o compromisso que temos com cada pessoa que confia no nosso trabalho.
                 </p>
                 <button
                   type="button"
@@ -1359,7 +1359,7 @@ export default function HomePage() {
                   }}
                   className="rounded-xl bg-white px-6 py-3 font-bold text-orange-600 transition-all hover:bg-orange-50"
                 >
-                  Faca parte dessa historia
+                  Faça parte dessa história
                 </button>
               </div>
             </div>
@@ -1368,8 +1368,8 @@ export default function HomePage() {
 
         {showReviewsModal ? (
           <OverlayModal
-            title="Avaliacoes de Clientes"
-            subtitle="Nota media: 4.9 estrelas"
+            title="Avaliações de Clientes"
+            subtitle="Nota média: 4.9 estrelas"
             maxWidthClass="max-w-5xl"
             onClose={() => setShowReviewsModal(false)}
           >
@@ -1399,7 +1399,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-8 rounded-2xl border-2 border-orange-200 bg-orange-50 p-6 text-center">
-              <p className="mb-4 text-slate-700">Quer ver mais avaliacoes ou deixar a sua opiniao?</p>
+              <p className="mb-4 text-slate-700">Quer ver mais avaliações ou deixar a sua opinião?</p>
               <a
                 href="https://www.google.com/search?q=kifer+saude"
                 target="_blank"

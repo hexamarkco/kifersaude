@@ -83,7 +83,7 @@ export default function LeadOriginsManager() {
   const handleDelete = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: 'Excluir origem',
-      description: 'Deseja remover esta origem? Esta acao nao pode ser desfeita.',
+      description: 'Deseja remover esta origem? Esta ação não pode ser desfeita.',
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -186,7 +186,7 @@ export default function LeadOriginsManager() {
                 <div className="mt-1 flex flex-col gap-1">
                   <p className="text-xs text-[color:var(--panel-text-soft)]">{origin.ativo ? 'Ativo' : 'Inativo'}</p>
                   <p className="text-xs text-[color:var(--panel-text-soft)]">
-                    {origin.visivel_para_observadores ? 'Visivel para observadores' : 'Oculto para observadores'}
+                    {origin.visivel_para_observadores ? 'Visível para observadores' : 'Oculto para observadores'}
                   </p>
                 </div>
               </div>
@@ -211,7 +211,7 @@ export default function LeadOriginsManager() {
                     className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                     disabled={isBusy}
                   />
-                  <span>Visivel para observadores</span>
+                  <span>Visível para observadores</span>
                 </label>
 
                 {editingId === origin.id ? (
@@ -255,7 +255,7 @@ export default function LeadOriginsManager() {
               type="text"
               value={newOrigin}
               onChange={(event) => setNewOrigin(event.target.value)}
-              placeholder="Ex: Indicacao"
+               placeholder="Ex: Indicação"
             />
           </div>
 

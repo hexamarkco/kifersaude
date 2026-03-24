@@ -97,14 +97,14 @@ export default function AccessControlManagerScreen() {
       updates,
     );
     if (error) {
-      showMessage("error", "Erro ao atualizar permissao.");
+      showMessage("error", "Erro ao atualizar permissão.");
       setUpdatingKey(null);
       return;
     }
 
     await refreshProfilePermissions();
     setUpdatingKey(null);
-    showMessage("success", "Permissao atualizada.");
+    showMessage("success", "Permissão atualizada.");
   };
 
   const handleToggleView = async (
@@ -239,7 +239,7 @@ export default function AccessControlManagerScreen() {
 
     await Promise.all([refreshAccessProfiles(), refreshProfilePermissions()]);
     resetProfileForm();
-    showMessage("success", "Perfil excluido com sucesso.");
+    showMessage("success", "Perfil excluído com sucesso.");
   };
 
   const profileFormTitle = editingProfileId
@@ -255,7 +255,7 @@ export default function AccessControlManagerScreen() {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">
-              Perfis e permissoes dinamicas
+              Perfis e permissões dinâmicas
             </h3>
             <p className="text-sm text-[color:var(--panel-text-soft)]">
               Crie perfis pelo sistema, marque perfis administrativos e controle
@@ -339,14 +339,14 @@ export default function AccessControlManagerScreen() {
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Descricao
+                  Descrição
                 </label>
                 <Input
                   value={profileDescription}
                   onChange={(event) =>
                     setProfileDescription(event.target.value)
                   }
-                  placeholder="Resumo rapido do escopo deste perfil"
+                    placeholder="Resumo rápido do escopo deste perfil"
                 />
               </div>
             </div>
@@ -403,7 +403,7 @@ export default function AccessControlManagerScreen() {
                     {profile.slug}
                   </p>
                   <p className="mt-2 text-sm text-[color:var(--panel-text-soft)]">
-                    {profile.description || "Sem descricao cadastrada."}
+                    {profile.description || "Sem descrição cadastrada."}
                   </p>
                 </div>
 
@@ -459,7 +459,7 @@ export default function AccessControlManagerScreen() {
                 Módulo
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[color:var(--panel-text-muted)]">
-                Descricao
+                Descrição
               </th>
               {accessProfiles.map((profile) => (
                 <th

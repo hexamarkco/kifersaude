@@ -128,7 +128,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
   const handleDelete = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: 'Excluir operadora',
-      description: 'Tem certeza que deseja excluir esta operadora? Esta acao nao pode ser desfeita.',
+      description: 'Tem certeza que deseja excluir esta operadora? Esta ação não pode ser desfeita.',
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -189,9 +189,9 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                 <Building2 className="h-3.5 w-3.5" />
                 Operadoras
               </div>
-              <h3 className="text-2xl font-semibold text-[color:var(--panel-text)]">Configure regras comerciais sem sair das configuracoes gerais</h3>
+              <h3 className="text-2xl font-semibold text-[color:var(--panel-text)]">Configure regras comerciais sem sair das configurações gerais</h3>
               <p className="mt-2 text-sm text-[color:var(--panel-text-soft)]">
-                Cadastre operadoras, ajuste comissao, prazo e bonus em um fluxo unico e mais facil de revisar.
+                Cadastre operadoras, ajuste comissão, prazo e bônus em um fluxo único e mais fácil de revisar.
               </p>
             </div>
 
@@ -206,7 +206,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
             <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h4 className="text-lg font-semibold text-[color:var(--panel-text)]">Carteira de operadoras</h4>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Revise regras rapidamente e abra a edicao certa sem trocar de aba.</p>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Revise regras rapidamente e abra a edição certa sem trocar de aba.</p>
               </div>
             </div>
 
@@ -214,7 +214,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
               <div className="rounded-2xl border border-dashed border-[color:var(--panel-border)] bg-[var(--panel-surface-soft)] py-14 text-center">
                 <Building2 className="mx-auto h-12 w-12 text-[color:var(--panel-text-muted)]" />
                 <p className="mt-4 text-sm font-medium text-[color:var(--panel-text)]">Nenhuma operadora cadastrada</p>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Crie a primeira operadora para liberar configuracoes comerciais.</p>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Crie a primeira operadora para liberar configurações comerciais.</p>
               </div>
             ) : (
               <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-2">
@@ -241,14 +241,14 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                             )}
                             {operadora.bonus_por_vida && (
                               <span className="rounded-full border border-[color:var(--panel-accent-emerald-border)] bg-[var(--panel-accent-emerald-bg)] px-2.5 py-1 text-xs font-medium text-[var(--panel-accent-emerald-text)]">
-                                Bonus por vida
+                                Bônus por vida
                               </span>
                             )}
                           </div>
 
                           <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-[color:var(--panel-text-soft)] sm:grid-cols-3">
                             <div className="rounded-xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-3 py-2">
-                              <p className="text-xs uppercase tracking-wide text-[color:var(--panel-text-muted)]">Comissao</p>
+                              <p className="text-xs uppercase tracking-wide text-[color:var(--panel-text-muted)]">Comissão</p>
                               <p className="mt-1 font-semibold text-[color:var(--panel-text)]">{operadora.comissao_padrao}%</p>
                             </div>
                             <div className="rounded-xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-3 py-2">
@@ -256,9 +256,9 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                               <p className="mt-1 font-semibold text-[color:var(--panel-text)]">{operadora.prazo_recebimento_dias} dias</p>
                             </div>
                             <div className="rounded-xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-3 py-2">
-                              <p className="text-xs uppercase tracking-wide text-[color:var(--panel-text-muted)]">Bonus</p>
+                              <p className="text-xs uppercase tracking-wide text-[color:var(--panel-text-muted)]">Bônus</p>
                               <p className="mt-1 font-semibold text-[color:var(--panel-text)]">
-                                {operadora.bonus_por_vida ? `R$ ${operadora.bonus_padrao.toFixed(2)}` : 'Nao possui'}
+                                {operadora.bonus_por_vida ? `R$ ${operadora.bonus_padrao.toFixed(2)}` : 'Não possui'}
                               </p>
                             </div>
                           </div>
@@ -298,7 +298,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
           isOpen={isModalOpen}
           onClose={resetForm}
           title={editingId ? 'Editar operadora' : 'Nova operadora'}
-          description="Defina regras padrao para comissao, prazo e eventuais bonus."
+          description="Defina regras padrão para comissão, prazo e eventuais bônus."
           size="md"
         >
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -315,7 +315,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Comissao padrao (%)</label>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Comissão padrão (%)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -357,8 +357,8 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                   className="mt-0.5 h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
                 />
                 <div>
-                  <p className="text-sm font-semibold text-[color:var(--panel-text)]">Bonus por vida</p>
-                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Ative se a operadora tiver bonus recorrente adicional.</p>
+                  <p className="text-sm font-semibold text-[color:var(--panel-text)]">Bônus por vida</p>
+                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Ative se a operadora tiver bônus recorrente adicional.</p>
                 </div>
               </label>
 
@@ -371,14 +371,14 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                 />
                 <div>
                   <p className="text-sm font-semibold text-[color:var(--panel-text)]">Operadora ativa</p>
-                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Mantem a operadora disponivel para novos contratos.</p>
+                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Mantém a operadora disponível para novos contratos.</p>
                 </div>
               </label>
             </div>
 
             {formData.bonus_por_vida && (
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Bonus padrao (R$)</label>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Bônus padrão (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -396,20 +396,20 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
             )}
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Observacoes</label>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Observações</label>
               <Textarea
                 value={formData.observacoes}
                 onChange={(event) => setFormData({ ...formData, observacoes: event.target.value })}
                 rows={4}
                 className="min-h-[104px]"
-                placeholder="Notas comerciais, regras especificas ou excecoes..."
+                placeholder="Notas comerciais, regras específicas ou exceções..."
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <Button type="submit">
                 <Save className="h-4 w-4" />
-                <span>{editingId ? 'Salvar alteracoes' : 'Criar operadora'}</span>
+                <span>{editingId ? 'Salvar alterações' : 'Criar operadora'}</span>
               </Button>
               <Button type="button" onClick={resetForm} variant="secondary">
                 Cancelar

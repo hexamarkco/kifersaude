@@ -17,16 +17,16 @@ type ConfigTabDefinition = {
 
 export const CONFIG_TAB_DEFINITIONS: ConfigTabDefinition[] = [
   { id: "system", label: "Geral", icon: Settings, moduleId: "config-system" },
-  { id: "users", label: "Usuarios", icon: Users, moduleId: "config-users" },
+  { id: "users", label: "Usuários", icon: Users, moduleId: "config-users" },
   {
     id: "automation",
-    label: "Automacoes",
+    label: "Automações",
     icon: GitBranch,
     moduleId: "config-automation",
   },
   {
     id: "integrations",
-    label: "Integracoes",
+    label: "Integrações",
     icon: Plug,
     moduleId: "config-integrations",
   },

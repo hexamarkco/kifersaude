@@ -102,14 +102,14 @@ const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string }> =
     },
     {
       key: "follow_up_generation",
-      label: "Geracao de follow-up",
+      label: "Geração de follow-up",
       description: "Usado em lembretes para sugerir mensagens de follow-up.",
     },
     {
       key: "whatsapp_audio_transcription",
-      label: "Transcricao de audio",
+      label: "Transcrição de áudio",
       description:
-        "Usado para transcrever audios recebidos no WhatsApp e reaproveitar a transcricao no chat.",
+        "Usado para transcrever áudios recebidos no WhatsApp e reaproveitar a transcrição no chat.",
     },
   ];
 
@@ -453,7 +453,7 @@ export default function IntegrationsScreen() {
         [provider]: {
           loading: false,
           options: [],
-          error: "Nao foi possivel carregar os modelos da API do provedor.",
+          error: "Não foi possível carregar os modelos da API do provedor.",
         },
       }));
     }
@@ -516,10 +516,10 @@ export default function IntegrationsScreen() {
         }
       }
     } catch (error) {
-      console.error("Erro ao carregar configuracoes de IA:", error);
+      console.error("Erro ao carregar configurações de IA:", error);
       setAiMessage({
         type: "error",
-        text: "Nao foi possivel carregar as configuracoes de IA.",
+        text: "Não foi possível carregar as configurações de IA.",
       });
     } finally {
       setLoadingAi(false);
@@ -554,7 +554,7 @@ export default function IntegrationsScreen() {
     if (result.error) {
       setAiMessage({
         type: "error",
-        text: `Erro ao salvar configuracao de ${providerMeta.name}.`,
+        text: `Erro ao salvar configuração de ${providerMeta.name}.`,
       });
     } else {
       const savedIntegration = result.data ?? integration;
@@ -680,16 +680,16 @@ export default function IntegrationsScreen() {
         )
       : await configService.createIntegrationSetting({
           slug: AI_FOLLOW_UP_PROMPT_SLUG,
-          name: "IA - Instrucoes de follow-up",
+          name: "IA - Instruções de follow-up",
           description:
-            "Instrui a IA do WhatsApp sobre como gerar follow-ups a partir do historico do chat.",
+            "Instrui a IA do WhatsApp sobre como gerar follow-ups a partir do histórico do chat.",
           settings: settingsPayload,
         });
 
     if (result.error) {
       setAiMessage({
         type: "error",
-        text: "Erro ao salvar as instrucoes de follow-up.",
+        text: "Erro ao salvar as instruções de follow-up.",
       });
     } else {
       const savedIntegration = result.data ?? aiFollowUpPromptIntegration;
@@ -728,7 +728,7 @@ export default function IntegrationsScreen() {
       const { data, error } = await configService.createIntegrationSetting({
         slug: META_PIXEL_SLUG,
         name: "Meta Pixel",
-        description: "Codigo do Meta Pixel (Facebook) para rastreamento",
+        description: "Código do Meta Pixel (Facebook) para rastreamento",
         settings: { pixelId: metaPixelId.trim() },
       });
       if (error) {
@@ -774,7 +774,7 @@ export default function IntegrationsScreen() {
       const { data, error } = await configService.createIntegrationSetting({
         slug: GTM_SLUG,
         name: "Google Tag Manager",
-        description: "Codigo do GTM para rastreamento",
+        description: "Código do GTM para rastreamento",
         settings: { gtmId: gtmId.trim() },
       });
       if (error) {
@@ -824,8 +824,8 @@ export default function IntegrationsScreen() {
       phase={loadingUi.phase}
       hasContent={hasIntegrationSnapshot}
       skeleton={<IntegrationsSkeleton />}
-      stageLabel="Carregando integracoes..."
-      overlayLabel="Atualizando integracoes..."
+      stageLabel="Carregando integrações..."
+      overlayLabel="Atualizando integrações..."
       stageClassName="min-h-[460px]"
     >
       <div className="panel-page-shell space-y-8">
@@ -834,7 +834,7 @@ export default function IntegrationsScreen() {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-text-muted)]">
                 <Plug className="h-3.5 w-3.5 text-amber-600" />
-                Integracoes
+                Integrações
               </div>
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
@@ -842,12 +842,12 @@ export default function IntegrationsScreen() {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-2xl font-semibold text-[var(--panel-text)]">
-                    Integracoes e conectores
+                    Integrações e conectores
                   </h2>
                   <p className="max-w-3xl text-sm leading-6 text-[var(--panel-text-muted)]">
                     Conecte IA, WhatsApp e rastreamento em uma estrutura visual
-                    compativel com as configuracoes gerais, com menos contraste
-                    solto entre secoes.
+                    compatível com as configurações gerais, com menos contraste
+                    solto entre seções.
                   </p>
                 </div>
               </div>
@@ -858,7 +858,7 @@ export default function IntegrationsScreen() {
         <section className="space-y-4">
           <div className="space-y-1">
             <h2 className="text-xl font-semibold text-[var(--panel-text)]">
-              Integracoes de IA
+              Integrações de IA
             </h2>
             <p className="text-sm text-[var(--panel-text-muted)]">
               Conecte OpenAI, Gemini e Claude e escolha qual provedor/modelo
@@ -1038,7 +1038,7 @@ export default function IntegrationsScreen() {
                       ? "Salve a API key do provedor"
                       : providerModelOptions.length > 0
                         ? "Selecione o modelo"
-                        : "Nenhum modelo disponivel";
+                        : "Nenhum modelo disponível";
 
                   return (
                     <div
@@ -1137,8 +1137,8 @@ export default function IntegrationsScreen() {
                                 : providerModelsState.error
                                   ? providerModelsState.error
                                   : providerModelOptions.length > 0
-                                    ? `${providerModelOptions.length} modelos disponiveis.`
-                                    : "Nenhum modelo disponivel para este provedor."}
+                                    ? `${providerModelOptions.length} modelos disponíveis.`
+                                    : "Nenhum modelo disponível para este provedor."}
                           </p>
                         </div>
                       </div>
@@ -1183,7 +1183,7 @@ export default function IntegrationsScreen() {
                   Follow-up no WhatsApp
                 </h3>
                 <p className="text-sm text-[var(--panel-text-muted)]">
-                  Defina instrucoes extras para a IA ao gerar follow-ups direto
+                  Defina instruções extras para a IA ao gerar follow-ups direto
                   do chat. O sistema continua enviando uma mensagem por linha.
                 </p>
               </div>
@@ -1191,7 +1191,7 @@ export default function IntegrationsScreen() {
               <div className="space-y-3">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">
-                    Instrucoes adicionais
+                    Instruções adicionais
                   </label>
                   <VariableAutocompleteTextarea
                     value={aiFollowUpInstructions}
@@ -1201,23 +1201,23 @@ export default function IntegrationsScreen() {
                     className="text-sm"
                     placeholder={
                       "Exemplo:\n" +
-                      "- Fale como consultora de planos de saude.\n" +
+                      "- Fale como consultora de planos de saúde.\n" +
                       "- Seja objetiva e acolhedora.\n" +
-                      "- Considere que agora em Brasilia sao {{hora_agora}} do dia {{data_hoje}}.\n" +
+                      "- Considere que agora em Brasília são {{hora_agora}} do dia {{data_hoje}}.\n" +
                       "- Evite texto longo.\n" +
                       "- Quando fizer sentido, termine com uma CTA simples."
                     }
                   />
                   <p className="mt-2 text-xs text-[var(--panel-text-muted)]">
                     Use este campo para orientar tom, abordagem comercial,
-                    limites e preferencias da sua operacao. Variaveis
-                    disponiveis: {"{{nome}}"}, {"{{primeiro_nome}}"},{" "}
+                    limites e preferências da sua operação. Variáveis
+                    disponíveis: {"{{nome}}"}, {"{{primeiro_nome}}"},{" "}
                     {"{{data_hoje}}"}, {"{{hora_agora}}"} e{" "}
                     {"{{data_hora_atual_brasilia}}"}.
                   </p>
                   <p className="text-xs text-[var(--panel-text-muted)]">
-                    As datas e horas sao resolvidas no fuso de Brasilia. Nao
-                    precisa repetir regras basicas do sistema.
+                    As datas e horas são resolvidas no fuso de Brasília. Não
+                    precisa repetir regras básicas do sistema.
                   </p>
                 </div>
               </div>
@@ -1231,7 +1231,7 @@ export default function IntegrationsScreen() {
                   <span>
                     {savingAiFollowUpPrompt
                       ? "Salvando..."
-                      : "Salvar instrucoes de follow-up"}
+                      : "Salvar instruções de follow-up"}
                   </span>
                 </Button>
               </div>
@@ -1259,7 +1259,7 @@ export default function IntegrationsScreen() {
               Rastreamento - Landing Page
             </h2>
             <p className="text-sm text-[var(--panel-text-muted)] mt-1">
-              Configure os codigos de rastreamento para a pagina de conversao
+              Configure os códigos de rastreamento para a página de conversão
               (/lp)
             </p>
           </div>
@@ -1275,7 +1275,7 @@ export default function IntegrationsScreen() {
                     Meta Pixel
                   </h3>
                   <p className="text-sm text-[var(--panel-text-muted)]">
-                    Codigo de rastreamento do Facebook/Instagram
+                    Código de rastreamento do Facebook/Instagram
                   </p>
                 </div>
               </div>
@@ -1304,7 +1304,7 @@ export default function IntegrationsScreen() {
                   placeholder="1234567890"
                 />
                 <p className="mt-2 text-xs text-[var(--panel-text-muted)]">
-                  Ex: 1234567890 (somente numeros)
+                  Ex: 1234567890 (somente números)
                 </p>
               </div>
 
@@ -1384,9 +1384,9 @@ export default function IntegrationsScreen() {
                   Como usar:
                 </p>
                 <p>
-                  Essas configuracoes serao aplicadas automaticamente na landing
-                  page de conversao (/lp). Meta Pixel e GTM ajudam a rastrear
-                  conversoes e otimizar campanhas.
+                  Essas configurações serão aplicadas automaticamente na landing
+                  page de conversão (/lp). Meta Pixel e GTM ajudam a rastrear
+                  conversões e otimizar campanhas.
                 </p>
               </div>
             </div>

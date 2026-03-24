@@ -9,14 +9,14 @@ import {
 
 test("normalizeConfigSearchText removes accents and trims text", () => {
   assert.equal(
-    normalizeConfigSearchText("  Configuracoes Gerais  "),
+    normalizeConfigSearchText("  Configurações Gerais  "),
     "configuracoes gerais",
   );
 });
 
 test("matchesConfigSearch compares normalized values", () => {
   assert.equal(
-    matchesConfigSearch("integracoes", ["Integracoes", "WhatsApp"]),
+    matchesConfigSearch("integracoes", ["Integrações", "WhatsApp"]),
     true,
   );
   assert.equal(matchesConfigSearch("usuarios", ["Leads", "Contratos"]), false);

@@ -271,7 +271,7 @@ const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
         Sim
       </span>
       <span className="rounded-full border border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-surface,#fffdfa)] px-2 py-0.5">
-        Nao
+        Não
       </span>
     </div>
     <Handle
@@ -435,7 +435,7 @@ export default function FlowBuilder({
       setEdges((eds) => {
         const label =
           connection.sourceHandle === "no"
-            ? "Nao"
+            ? "Não"
             : connection.sourceHandle === "yes"
               ? "Sim"
               : undefined;
@@ -827,7 +827,7 @@ export default function FlowBuilder({
           (edge) => String(edge.label ?? "").toLowerCase() === "nao",
         );
         if (!hasYes) warnings.push("Sem caminho Sim");
-        if (!hasNo) warnings.push("Sem caminho Nao");
+        if (!hasNo) warnings.push("Sem caminho Não");
       } else if (node.type !== "action" && outgoing.length === 0) {
         warnings.push("Sem saida conectada");
       }
@@ -1285,7 +1285,7 @@ export default function FlowBuilder({
                       placeholder="Lógica"
                       includePlaceholderOption={false}
                       options={[
-                        { value: "all", label: "todas as condicoes" },
+                        { value: "all", label: "todas as condições" },
                         { value: "any", label: "qualquer condicao" },
                       ]}
                     />
@@ -1590,7 +1590,7 @@ export default function FlowBuilder({
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
-                    Tipo de acao
+                    Tipo de ação
                   </label>
                   <FilterSingleSelect
                     icon={RefreshCcw}
@@ -1601,7 +1601,7 @@ export default function FlowBuilder({
                         actionType: value as AutoContactFlowActionType,
                       })
                     }
-                    placeholder="Tipo de acao"
+                    placeholder="Tipo de ação"
                     includePlaceholderOption={false}
                     options={Object.entries(flowActionLabels).map(
                       ([value, label]) => ({
@@ -1615,7 +1615,7 @@ export default function FlowBuilder({
                 {selectedNode.data.step?.actionType === "send_message" && (
                   <div className="space-y-2">
                     <div className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">
-                      Canal ativo: WhatsApp (configurado em Integracoes).
+                      Canal ativo: WhatsApp (configurado em Integrações).
                     </div>
                     <div>
                       <label className="mb-1 block text-[11px] text-[var(--panel-text-muted,#876f5c)]">
@@ -1688,7 +1688,7 @@ export default function FlowBuilder({
                           }
                         />
                         <div className="mt-1 text-[11px] text-[var(--panel-text-subtle,#ab927b)]">
-                          Use variaveis como {"{{primeiro_nome}}"} ou formulas
+                          Use variáveis como {"{{primeiro_nome}}"} ou fórmulas
                           com {"{{= ... }}"}.
                         </div>
                         {messagePreview && (
@@ -1806,7 +1806,7 @@ export default function FlowBuilder({
                 {selectedNode.data.step?.actionType === "send_email" && (
                   <div className="space-y-2">
                     <div className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">
-                      Envio depende de conta configurada em Integracoes de
+                      Envio depende de conta configurada em Integrações de
                       e-mail.
                     </div>
                     <div>

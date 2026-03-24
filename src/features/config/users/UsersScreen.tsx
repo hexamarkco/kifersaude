@@ -89,8 +89,8 @@ export default function UsersScreen() {
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error("Erro ao carregar usuarios:", error);
-      showMessage("error", "Erro ao carregar usuarios");
+      console.error("Erro ao carregar usuários:", error);
+      showMessage("error", "Erro ao carregar usuários");
     } finally {
       setLoading(false);
     }
@@ -123,12 +123,12 @@ export default function UsersScreen() {
       const trimmedEmail = newUserEmail.trim();
 
       if (!trimmedUsername) {
-        showMessage("error", "Informe um nome de usuario");
+          showMessage("error", "Informe um nome de usuário");
         return;
       }
 
       if (!trimmedEmail) {
-        showMessage("error", "Informe um email valido");
+        showMessage("error", "Informe um e-mail válido");
         return;
       }
 
@@ -148,21 +148,21 @@ export default function UsersScreen() {
       });
 
       if (error) {
-        throw new Error(error.message || "Erro ao criar usuario");
+        throw new Error(error.message || "Erro ao criar usuário");
       }
 
       if (data?.error) {
         throw new Error(data.error);
       }
 
-      showMessage("success", "Usuario criado com sucesso");
+      showMessage("success", "Usuário criado com sucesso");
       resetCreateForm();
       await loadUsers();
     } catch (error: unknown) {
-      console.error("Erro ao criar usuario:", error);
+      console.error("Erro ao criar usuário:", error);
       showMessage(
         "error",
-        error instanceof Error ? error.message : "Erro ao criar usuario",
+        error instanceof Error ? error.message : "Erro ao criar usuário",
       );
     } finally {
       setActionLoading(false);
@@ -186,12 +186,12 @@ export default function UsersScreen() {
     const trimmedEmail = editUserEmail.trim();
 
     if (!trimmedUsername) {
-      showMessage("error", "Informe um nome de usuario");
+      showMessage("error", "Informe um nome de usuário");
       return;
     }
 
     if (!trimmedEmail) {
-      showMessage("error", "Informe um email valido");
+      showMessage("error", "Informe um e-mail válido");
       return;
     }
 
@@ -217,14 +217,14 @@ export default function UsersScreen() {
       });
 
       if (error) {
-        throw new Error(error.message || "Erro ao atualizar usuario");
+        throw new Error(error.message || "Erro ao atualizar usuário");
       }
 
       if (data?.error) {
         throw new Error(data.error);
       }
 
-      showMessage("success", "Usuario atualizado com sucesso");
+      showMessage("success", "Usuário atualizado com sucesso");
       setEditingUser(null);
       setEditUserPassword("");
 
@@ -235,10 +235,10 @@ export default function UsersScreen() {
 
       await loadUsers();
     } catch (error: unknown) {
-      console.error("Erro ao atualizar usuario:", error);
+      console.error("Erro ao atualizar usuário:", error);
       showMessage(
         "error",
-        error instanceof Error ? error.message : "Erro ao atualizar usuario",
+        error instanceof Error ? error.message : "Erro ao atualizar usuário",
       );
     } finally {
       setActionLoading(false);
@@ -247,10 +247,10 @@ export default function UsersScreen() {
 
   const handleDeleteUser = async (userId: string) => {
     const confirmed = await requestConfirmation({
-      title: "Excluir usuario",
+      title: "Excluir usuário",
       description:
-        "Tem certeza que deseja excluir este usuario? Esta acao nao pode ser desfeita.",
-      confirmLabel: "Excluir usuario",
+        "Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.",
+      confirmLabel: "Excluir usuário",
       cancelLabel: "Cancelar",
       tone: "danger",
     });
@@ -267,20 +267,20 @@ export default function UsersScreen() {
       });
 
       if (error) {
-        throw new Error(error.message || "Erro ao excluir usuario");
+        throw new Error(error.message || "Erro ao excluir usuário");
       }
 
       if (data?.error) {
         throw new Error(data.error);
       }
 
-      showMessage("success", "Usuario excluido com sucesso");
+      showMessage("success", "Usuário excluído com sucesso");
       await loadUsers();
     } catch (error: unknown) {
-      console.error("Erro ao excluir usuario:", error);
+      console.error("Erro ao excluir usuário:", error);
       showMessage(
         "error",
-        error instanceof Error ? error.message : "Erro ao excluir usuario",
+        error instanceof Error ? error.message : "Erro ao excluir usuário",
       );
     } finally {
       setActionLoading(false);
@@ -296,7 +296,7 @@ export default function UsersScreen() {
         <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-600" />
         <h3 className="text-lg font-semibold text-red-900">Acesso restrito</h3>
         <p className="mt-2 text-sm text-red-700">
-          Seu perfil nao possui permissao para gerenciar usuarios do sistema.
+          Seu perfil não possui permissão para gerenciar usuários do sistema.
         </p>
       </div>
     );
@@ -308,8 +308,8 @@ export default function UsersScreen() {
       phase={loadingUi.phase}
       hasContent={hasUsersSnapshot}
       skeleton={<UsersSkeleton />}
-      stageLabel="Carregando usuarios..."
-      overlayLabel="Atualizando usuarios..."
+      stageLabel="Carregando usuários..."
+      overlayLabel="Atualizando usuários..."
       stageClassName="min-h-[420px]"
     >
       <div className="panel-page-shell space-y-6">
@@ -318,7 +318,7 @@ export default function UsersScreen() {
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-text-muted)]">
                 <Shield className="h-3.5 w-3.5 text-amber-600" />
-                Usuarios
+                Usuários
               </div>
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
@@ -326,12 +326,12 @@ export default function UsersScreen() {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-2xl font-semibold text-[var(--panel-text)]">
-                    Usuarios do sistema
+                    Usuários do sistema
                   </h2>
                   <p className="max-w-3xl text-sm leading-6 text-[var(--panel-text-muted)]">
-                    Associe cada usuario a um perfil dinamico de acesso,
-                    mantendo a administracao centralizada no mesmo padrao visual
-                    de configuracoes gerais.
+                    Associe cada usuário a um perfil dinâmico de acesso,
+                    mantendo a administração centralizada no mesmo padrão visual
+                    de configurações gerais.
                   </p>
                 </div>
               </div>
@@ -339,7 +339,7 @@ export default function UsersScreen() {
 
             <Button onClick={() => setShowAddUser(true)} variant="primary">
               <Plus className="h-4 w-4" />
-              <span>Novo Usuario</span>
+              <span>Novo Usuário</span>
             </Button>
           </div>
         </section>
@@ -365,11 +365,11 @@ export default function UsersScreen() {
               <Users className="h-6 w-6 text-amber-600" />
               <div>
                 <h3 className="text-xl font-semibold text-[var(--panel-text)]">
-                  Carteira de usuarios
+                  Carteira de usuários
                 </h3>
                 <p className="text-sm text-[var(--panel-text-muted)]">
-                  Revise perfis, dados de acesso e manutencao da equipe em um
-                  unico lugar.
+                  Revise perfis, dados de acesso e manutenção da equipe em um
+                  único lugar.
                 </p>
               </div>
             </div>
@@ -380,7 +380,7 @@ export default function UsersScreen() {
               <div className={`${USERS_INSET_CARD_CLASS} py-12 text-center`}>
                 <Users className="mx-auto mb-4 h-12 w-12 text-[var(--panel-text-muted)]/40" />
                 <p className="text-[var(--panel-text-muted)]">
-                  Nenhum usuario cadastrado
+                  Nenhum usuário cadastrado
                 </p>
               </div>
             ) : (
@@ -430,7 +430,7 @@ export default function UsersScreen() {
                         variant="icon"
                         size="icon"
                         className="h-8 w-8 text-[var(--panel-text-muted)] hover:bg-[var(--panel-surface)]"
-                        title="Editar usuario"
+                        title="Editar usuário"
                       >
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -441,13 +441,13 @@ export default function UsersScreen() {
                           variant="icon"
                           size="icon"
                           className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                          title="Excluir usuario"
+                          title="Excluir usuário"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       ) : (
                         <span className="text-sm italic text-[var(--panel-text-muted)]">
-                          Voce
+                          Você
                         </span>
                       )}
                     </div>
@@ -467,15 +467,15 @@ export default function UsersScreen() {
               </h4>
               <ul className="space-y-2 text-sm text-[var(--panel-text-muted)]">
                 <li>
-                  Os perfis disponiveis aqui sao dinamicos e podem ser criados
-                  na area "Perfis e Acessos".
+                  Os perfis disponíveis aqui são dinâmicos e podem ser criados
+                  na área "Perfis e Acessos".
                 </li>
                 <li>
                   Perfis marcados como administrativos recebem acesso total ao
                   sistema automaticamente.
                 </li>
                 <li>
-                  Perfis comuns nascem sem acesso e voce libera cada modulo de
+                  Perfis comuns nascem sem acesso e você libera cada módulo de
                   forma granular.
                 </li>
               </ul>
@@ -486,15 +486,15 @@ export default function UsersScreen() {
         <ModalShell
           isOpen={showAddUser}
           onClose={resetCreateForm}
-          title="Novo Usuario"
-          description="Crie um novo usuario e associe a um perfil dinamico de acesso."
+          title="Novo Usuário"
+          description="Crie um novo usuário e associe a um perfil dinâmico de acesso."
           size="lg"
         >
           <form onSubmit={handleCreateUser} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Usuario
+                  Usuário
                 </label>
                 <Input
                   type="text"
@@ -528,7 +528,7 @@ export default function UsersScreen() {
                   onChange={(e) => setNewUserPassword(e.target.value)}
                   required
                   minLength={6}
-                  placeholder="Digite uma senha temporaria"
+                  placeholder="Digite uma senha temporária"
                 />
               </div>
 
@@ -549,7 +549,7 @@ export default function UsersScreen() {
 
             <div className="flex items-center gap-3">
               <Button type="submit" disabled={actionLoading}>
-                {actionLoading ? "Criando..." : "Criar Usuario"}
+                  {actionLoading ? "Criando..." : "Criar Usuário"}
               </Button>
               <Button
                 type="button"
@@ -564,15 +564,15 @@ export default function UsersScreen() {
         <ModalShell
           isOpen={Boolean(editingUser)}
           onClose={resetEditForm}
-          title="Editar Usuario"
-          description="Atualize os dados e o perfil de acesso do usuario."
+          title="Editar Usuário"
+          description="Atualize os dados e o perfil de acesso do usuário."
           size="lg"
         >
           <form onSubmit={handleUpdateUser} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Usuario
+                  Usuário
                 </label>
                 <Input
                   type="text"
@@ -629,7 +629,7 @@ export default function UsersScreen() {
 
             <div className="flex items-center gap-3">
               <Button type="submit" disabled={actionLoading} variant="warning">
-                {actionLoading ? "Salvando..." : "Salvar Alteracoes"}
+                  {actionLoading ? "Salvando..." : "Salvar Alterações"}
               </Button>
               <Button type="button" onClick={resetEditForm} variant="secondary">
                 Cancelar

@@ -107,10 +107,10 @@ export default function SystemSettingsScreen() {
     const { error } = await configService.updateSystemSettings(settings);
 
     if (error) {
-      showMessage("error", "Erro ao salvar configuracoes do sistema.");
+      showMessage("error", "Erro ao salvar configurações do sistema.");
     } else {
       setSavedSettings(settings);
-      showMessage("success", "Preferencias do sistema salvas com sucesso.");
+      showMessage("success", "Preferências do sistema salvas com sucesso.");
     }
 
     setSaving(false);
@@ -127,7 +127,7 @@ export default function SystemSettingsScreen() {
     });
     showMessage(
       "success",
-      "Padroes aplicados. Clique em salvar para confirmar.",
+      "Padrões aplicados. Clique em salvar para confirmar.",
     );
   };
 
@@ -267,7 +267,7 @@ export default function SystemSettingsScreen() {
         phase={loadingUi.phase}
         hasContent={false}
         skeleton={<SystemSettingsSkeleton />}
-        stageLabel="Carregando configuracoes do sistema..."
+        stageLabel="Carregando configurações do sistema..."
         stageClassName="min-h-[440px]"
       >
         <div />
@@ -280,7 +280,7 @@ export default function SystemSettingsScreen() {
       <div className="rounded-lg border border-red-200 bg-red-50 p-8 text-center">
         <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-600" />
         <p className="text-red-700">
-          Erro ao carregar configuracoes do sistema.
+          Erro ao carregar configurações do sistema.
         </p>
       </div>
     );
@@ -292,8 +292,8 @@ export default function SystemSettingsScreen() {
       phase={loadingUi.phase}
       hasContent
       skeleton={<SystemSettingsSkeleton />}
-      stageLabel="Carregando configuracoes do sistema..."
-      overlayLabel="Atualizando configuracoes do sistema..."
+      stageLabel="Carregando configurações do sistema..."
+      overlayLabel="Atualizando configurações do sistema..."
       stageClassName="min-h-[440px]"
     >
       <div className="panel-page-shell space-y-6">
@@ -319,14 +319,14 @@ export default function SystemSettingsScreen() {
             <div className="max-w-3xl">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-soft)]">
                 <Settings className="h-3.5 w-3.5" />
-                Central de configuracoes
+                Central de configurações
               </div>
               <h2 className="text-2xl font-semibold text-[color:var(--panel-text)]">
                 Sistema e operadoras agora vivem no mesmo fluxo
               </h2>
               <p className="mt-2 text-sm text-[color:var(--panel-text-soft)]">
-                Organize preferencias, acessos, operadoras, leads e contratos em
-                uma experiencia unica, com busca e atalhos por area.
+                Organize preferências, acessos, operadoras, leads e contratos em
+                uma experiência única, com busca e atalhos por área.
               </p>
             </div>
 
@@ -335,7 +335,7 @@ export default function SystemSettingsScreen() {
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por operadoras, permissoes, leads, contratos..."
+                placeholder="Buscar por operadoras, permissões, leads, contratos..."
                 leftIcon={Search}
               />
             </div>
@@ -351,21 +351,23 @@ export default function SystemSettingsScreen() {
                   key={section.id}
                   type="button"
                   onClick={() => revealSection(section.id)}
-                  className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[color:var(--panel-border)] hover:bg-[var(--panel-surface)] hover:shadow-md"
+                  className="flex min-h-[196px] flex-col rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[color:var(--panel-border)] hover:bg-[var(--panel-surface)] hover:shadow-md"
                 >
                   <div
                     className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ${section.accentClassName}`}
                   >
                     <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="mt-4 text-sm font-semibold text-[color:var(--panel-text)]">
-                    {section.title}
-                  </h3>
-                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">
-                    {section.description}
-                  </p>
-                  <p className="mt-3 text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--panel-text-muted)]">
-                    {expanded ? "Visivel" : "Fechada"}
+                  <div className="mt-5 space-y-2">
+                    <h3 className="text-[1.05rem] font-semibold leading-tight text-[color:var(--panel-text)]">
+                      {section.title}
+                    </h3>
+                    <p className="max-w-[24ch] text-sm leading-7 text-[color:var(--panel-text-soft)]">
+                      {section.description}
+                    </p>
+                  </div>
+                  <p className="mt-auto pt-5 text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--panel-text-muted)]">
+                    {expanded ? "Visível" : "Fechada"}
                   </p>
                 </button>
               );
@@ -394,10 +396,10 @@ export default function SystemSettingsScreen() {
                 </div>
                 <div>
                   <h3 className="text-base font-semibold text-[color:var(--panel-text)]">
-                    Preferencias do sistema
+                    Preferências do sistema
                   </h3>
                   <p className="text-sm text-[color:var(--panel-text-soft)]">
-                    Notificacoes, formato de data e tempo de sessao.
+                    Notificações, formato de data e tempo de sessão.
                   </p>
                 </div>
               </div>
@@ -420,8 +422,8 @@ export default function SystemSettingsScreen() {
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-current" />
                     {hasPendingGeneralChanges
-                      ? "Alteracoes pendentes"
-                      : "Sem alteracoes pendentes"}
+                      ? "Alterações pendentes"
+                      : "Sem alterações pendentes"}
                   </div>
 
                   <button
@@ -430,7 +432,7 @@ export default function SystemSettingsScreen() {
                     className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
-                    Restaurar padroes
+                    Restaurar padrões
                   </button>
                 </div>
 
@@ -457,7 +459,7 @@ export default function SystemSettingsScreen() {
 
                   <div>
                     <label className="mb-2 block text-sm font-medium text-slate-700">
-                      Tempo de sessao (minutos)
+                      Tempo de sessão (minutos)
                     </label>
                     <Input
                       type="number"
@@ -473,7 +475,7 @@ export default function SystemSettingsScreen() {
                       }
                     />
                     <p className="mt-1 text-xs text-slate-500">
-                      Padrao recomendado: 480 minutos (8 horas).
+                      Padrão recomendado: 480 minutos (8 horas).
                     </p>
                   </div>
 
@@ -497,7 +499,7 @@ export default function SystemSettingsScreen() {
                           <VolumeX className="h-5 w-5 text-slate-400" />
                         )}
                         <span className="text-sm font-medium text-slate-700">
-                          Ativar sons de notificacao
+                          Ativar sons de notificação
                         </span>
                       </div>
                     </label>
@@ -506,7 +508,7 @@ export default function SystemSettingsScreen() {
                   {settings.notification_sound_enabled && (
                     <div className="lg:col-span-2">
                       <label className="mb-2 block text-sm font-medium text-slate-700">
-                        Volume das notificacoes:{" "}
+                        Volume das notificações:{" "}
                         {Math.round(settings.notification_volume * 100)}%
                       </label>
                       <input
@@ -532,7 +534,7 @@ export default function SystemSettingsScreen() {
                     <label className="mb-2 flex items-center space-x-2 text-sm font-medium text-slate-700">
                       <Clock className="h-4 w-4" />
                       <span>
-                        Intervalo de verificacao de notificacoes (segundos)
+                        Intervalo de verificação de notificações (segundos)
                       </span>
                     </label>
                     <Input
@@ -561,7 +563,7 @@ export default function SystemSettingsScreen() {
                   >
                     <Save className="h-4 w-4" />
                     <span>
-                      {saving ? "Salvando..." : "Salvar preferencias"}
+                      {saving ? "Salvando..." : "Salvar preferências"}
                     </span>
                   </Button>
                 </div>
@@ -586,7 +588,7 @@ export default function SystemSettingsScreen() {
                     Operadoras
                   </h3>
                   <p className="text-sm text-[color:var(--panel-text-soft)]">
-                    Comissao, prazo, bonus e manutencao da carteira comercial.
+                    Comissão, prazo, bônus e manutenção da carteira comercial.
                   </p>
                 </div>
               </div>
@@ -618,10 +620,10 @@ export default function SystemSettingsScreen() {
                 </div>
                 <div>
                   <h3 className="text-base font-semibold text-[color:var(--panel-text)]">
-                    Permissoes por perfil
+                    Permissões por perfil
                   </h3>
                   <p className="text-sm text-[color:var(--panel-text-soft)]">
-                    Controle de acesso aos modulos para cada tipo de usuario.
+                    Controle de acesso aos módulos para cada tipo de usuário.
                   </p>
                 </div>
               </div>

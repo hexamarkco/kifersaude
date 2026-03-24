@@ -6,19 +6,19 @@ export type AccessModuleDefinition = {
 };
 
 export const ACCESS_MODULES: AccessModuleDefinition[] = [
-  { id: 'dashboard', label: 'Dashboard', description: 'Resumo geral das operacoes e indicadores-chave.', group: 'workspace' },
-  { id: 'leads', label: 'Leads', description: 'Gestao completa do funil de leads.', group: 'workspace' },
-  { id: 'contracts', label: 'Contratos', description: 'Gestao de contratos, titulares e dependentes.', group: 'workspace' },
-  { id: 'reminders', label: 'Lembretes', description: 'Agenda e lembretes automaticos para acompanhamento.', group: 'workspace' },
-  { id: 'financeiro-agenda', label: 'Financeiro - Tarefas', description: 'Acesso as tarefas do modulo financeiro.', group: 'workspace' },
-  { id: 'financeiro-comissoes', label: 'Financeiro - Comissoes', description: 'Acesso ao acompanhamento de comissoes.', group: 'workspace' },
-  { id: 'whatsapp', label: 'WhatsApp', description: 'Gestao de conversas e mensagens do WhatsApp.', group: 'workspace' },
-  { id: 'blog', label: 'Blog', description: 'Gestao de conteudo do blog e SEO.', group: 'workspace' },
-  { id: 'config-system', label: 'Configuracoes - Sistema', description: 'Preferencias do sistema, operadoras, leads e contratos.', group: 'config' },
-  { id: 'config-access', label: 'Configuracoes - Perfis e Acessos', description: 'Criacao de perfis e definicao detalhada de acessos.', group: 'config' },
-  { id: 'config-users', label: 'Configuracoes - Usuarios', description: 'Criacao, edicao e exclusao de usuarios do sistema.', group: 'config' },
-  { id: 'config-automation', label: 'Configuracoes - Automacoes', description: 'Gestao dos fluxos de automacao do sistema.', group: 'config' },
-  { id: 'config-integrations', label: 'Configuracoes - Integracoes', description: 'Parametros e credenciais de integracoes.', group: 'config' },
+  { id: 'dashboard', label: 'Dashboard', description: 'Resumo geral das operações e indicadores-chave.', group: 'workspace' },
+  { id: 'leads', label: 'Leads', description: 'Gestão completa do funil de leads.', group: 'workspace' },
+  { id: 'contracts', label: 'Contratos', description: 'Gestão de contratos, titulares e dependentes.', group: 'workspace' },
+  { id: 'reminders', label: 'Lembretes', description: 'Agenda e lembretes automáticos para acompanhamento.', group: 'workspace' },
+  { id: 'financeiro-agenda', label: 'Financeiro - Tarefas', description: 'Acesso às tarefas do módulo financeiro.', group: 'workspace' },
+  { id: 'financeiro-comissoes', label: 'Financeiro - Comissões', description: 'Acesso ao acompanhamento de comissões.', group: 'workspace' },
+  { id: 'whatsapp', label: 'WhatsApp', description: 'Gestão de conversas e mensagens do WhatsApp.', group: 'workspace' },
+  { id: 'blog', label: 'Blog', description: 'Gestão de conteúdo do blog e SEO.', group: 'workspace' },
+  { id: 'config-system', label: 'Configurações - Sistema', description: 'Preferências do sistema, operadoras, leads e contratos.', group: 'config' },
+  { id: 'config-access', label: 'Configurações - Perfis e Acessos', description: 'Criação de perfis e definição detalhada de acessos.', group: 'config' },
+  { id: 'config-users', label: 'Configurações - Usuários', description: 'Criação, edição e exclusão de usuários do sistema.', group: 'config' },
+  { id: 'config-automation', label: 'Configurações - Automações', description: 'Gestão dos fluxos de automação do sistema.', group: 'config' },
+  { id: 'config-integrations', label: 'Configurações - Integrações', description: 'Parâmetros e credenciais de integrações.', group: 'config' },
 ];
 
 export const CONFIG_MODULE_IDS = ACCESS_MODULES.filter((module) => module.group === 'config').map((module) => module.id);

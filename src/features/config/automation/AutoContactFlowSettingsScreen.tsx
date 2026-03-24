@@ -2095,7 +2095,7 @@ export default function AutoContactFlowSettingsScreen() {
                           <span className="rounded-full border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] px-2 py-0.5">
                             {activeFlow.triggerStatus
                               ? `Status: ${activeFlow.triggerStatus}`
-                              : "Disparo por condicoes"}
+                              : "Disparo por condições"}
                           </span>
                           <span className="rounded-full border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] px-2 py-0.5">
                             Janela {activeFlowScheduling.startHour} -{" "}
@@ -3106,7 +3106,7 @@ export default function AutoContactFlowSettingsScreen() {
                                     placeholder='{"lead_id":"{{= lead.id }}"}'
                                   />
                                   <p className="text-[11px] text-[var(--panel-text-subtle)] mt-1">
-                                    Se vazio, envia JSON padrao com dados do
+                                    Se vazio, envia JSON padrão com dados do
                                     lead.
                                   </p>
                                 </div>
@@ -3184,8 +3184,8 @@ export default function AutoContactFlowSettingsScreen() {
                               Simulação operacional
                             </div>
                             <p className="text-xs text-[var(--panel-accent-ink-strong)]">
-                              Dry run do fluxo. Nenhuma mensagem e enviada;
-                              mostramos somente a previsao de execucao.
+                              Dry run do fluxo. Nenhuma mensagem é enviada;
+                              mostramos somente a previsão de execução.
                             </p>
                           </div>
                           <div className="rounded-full border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] px-3 py-1 text-[11px] font-medium text-[var(--panel-accent-ink)]">

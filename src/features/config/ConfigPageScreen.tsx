@@ -33,7 +33,7 @@ export default function ConfigPageScreen() {
             Acesso Negado
           </h2>
           <p className="text-red-700">
-            Voce nao tem permissao para acessar esta pagina.
+            Você não tem permissão para acessar esta página.
           </p>
         </Card>
       </div>
@@ -48,10 +48,10 @@ export default function ConfigPageScreen() {
     <div className="config-transparent-buttons panel-page-shell w-full">
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold text-slate-900">
-          Configuracoes
+          Configurações
         </h1>
         <p className="text-slate-600">
-          Centralize regras do sistema, operadoras, acessos e integracoes
+          Centralize regras do sistema, operadoras, acessos e integrações
         </p>
       </div>
 

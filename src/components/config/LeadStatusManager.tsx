@@ -96,7 +96,7 @@ export default function LeadStatusManager() {
     const nextName = drafts[id]?.nome?.trim() ?? '';
     if (!nextName) {
       updateDraft(id, { nome: originalName });
-      showMessage('error', 'O nome do status nao pode ficar vazio.');
+      showMessage('error', 'O nome do status não pode ficar vazio.');
       return;
     }
     if (nextName === originalName) {
@@ -109,14 +109,14 @@ export default function LeadStatusManager() {
     const rawOrder = drafts[id]?.ordem?.trim() ?? '';
     if (!rawOrder) {
       updateDraft(id, { ordem: String(originalOrder) });
-      showMessage('error', 'Informe uma ordem valida para o status.');
+      showMessage('error', 'Informe uma ordem válida para o status.');
       return;
     }
 
     const parsedOrder = Number.parseInt(rawOrder, 10);
     if (!Number.isFinite(parsedOrder) || parsedOrder < 0) {
       updateDraft(id, { ordem: String(originalOrder) });
-      showMessage('error', 'Informe uma ordem valida para o status.');
+      showMessage('error', 'Informe uma ordem válida para o status.');
       return;
     }
 
@@ -134,13 +134,13 @@ export default function LeadStatusManager() {
     }
 
     if (status.padrao) {
-      showMessage('error', 'Defina outro status como padrao antes de remover este item.');
+      showMessage('error', 'Defina outro status como padrão antes de remover este item.');
       return;
     }
 
     const confirmed = await requestConfirmation({
       title: 'Excluir status',
-      description: 'Deseja remover este status? Esta acao nao pode ser desfeita.',
+      description: 'Deseja remover este status? Esta ação não pode ser desfeita.',
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -180,13 +180,13 @@ export default function LeadStatusManager() {
     );
 
     if (results.some((result) => Boolean(result.error))) {
-      showMessage('error', 'Erro ao definir status padrao.');
+      showMessage('error', 'Erro ao definir status padrão.');
       setProcessingId(null);
       return;
     }
 
     await refreshLeadStatuses();
-    showMessage('success', 'Status padrao atualizado.');
+    showMessage('success', 'Status padrão atualizado.');
     setProcessingId(null);
   };
 
@@ -238,7 +238,7 @@ export default function LeadStatusManager() {
                     <span className="text-sm font-semibold text-[color:var(--panel-text)]">{status.nome}</span>
                     {status.padrao && (
                       <span className="rounded-full border border-[color:var(--panel-accent-amber-border)] bg-[var(--panel-accent-amber-bg)] px-2.5 py-1 text-xs font-medium text-[var(--panel-accent-amber-text)]">
-                        Padrao
+                        Padrão
                       </span>
                     )}
                     <span className="rounded-full border px-2.5 py-1 text-xs font-medium" style={getBadgeStyle(status.cor)}>
@@ -272,7 +272,7 @@ export default function LeadStatusManager() {
                 />
                 <Button onClick={() => void handleSetDefault(status.id)} variant="secondary" disabled={isProcessing || status.padrao}>
                   <Star className="h-4 w-4" />
-                  <span>Padrao</span>
+                  <span>Padrão</span>
                 </Button>
                 <Button onClick={() => void handleDelete(status.id)} variant="danger" size="icon" disabled={isProcessing}>
                   <Trash2 className="h-4 w-4" />
@@ -299,7 +299,7 @@ export default function LeadStatusManager() {
               type="text"
               value={newStatus.nome}
               onChange={(event) => setNewStatus((current) => ({ ...current, nome: event.target.value }))}
-              placeholder="Ex: Em negociacao"
+              placeholder="Ex: Em negociação"
             />
           </div>
 

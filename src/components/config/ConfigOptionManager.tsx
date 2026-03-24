@@ -71,7 +71,7 @@ export default function ConfigOptionManager({
 
   const handleCreate = async () => {
     if (!newLabel.trim()) {
-      showMessage('error', 'Informe o nome da opcao.');
+      showMessage('error', 'Informe o nome da opção.');
       return;
     }
 
@@ -83,12 +83,12 @@ export default function ConfigOptionManager({
     });
 
     if (error) {
-      showMessage('error', 'Erro ao adicionar opcao.');
+      showMessage('error', 'Erro ao adicionar opção.');
     } else {
       setNewLabel('');
       setIsCreateModalOpen(false);
       await refreshCategory(category);
-      showMessage('success', 'Opcao adicionada com sucesso.');
+      showMessage('success', 'Opção adicionada com sucesso.');
     }
     setSaving(false);
   };
@@ -101,7 +101,7 @@ export default function ConfigOptionManager({
     setBusyId(id);
     const { error } = await configService.updateConfigOption(category, id, updates);
     if (error) {
-      showMessage('error', 'Erro ao atualizar opcao.');
+      showMessage('error', 'Erro ao atualizar opção.');
     } else {
       await refreshCategory(category);
       if (successMessage) {
@@ -115,7 +115,7 @@ export default function ConfigOptionManager({
     const nextLabel = drafts[id]?.label?.trim() ?? '';
     if (!nextLabel) {
       updateDraft(id, { label: originalLabel });
-      showMessage('error', 'O rotulo nao pode ficar vazio.');
+      showMessage('error', 'O rótulo não pode ficar vazio.');
       return;
     }
 
@@ -123,21 +123,21 @@ export default function ConfigOptionManager({
       return;
     }
 
-    await handleUpdate(id, { label: nextLabel }, 'Rotulo atualizado com sucesso.');
+    await handleUpdate(id, { label: nextLabel }, 'Rótulo atualizado com sucesso.');
   };
 
   const handleOrderBlur = async (id: string, originalOrder: number) => {
     const rawOrder = drafts[id]?.ordem?.trim() ?? '';
     if (!rawOrder) {
       updateDraft(id, { ordem: String(originalOrder) });
-      showMessage('error', 'Informe uma ordem valida.');
+      showMessage('error', 'Informe uma ordem válida.');
       return;
     }
 
     const parsedOrder = Number.parseInt(rawOrder, 10);
     if (!Number.isFinite(parsedOrder) || parsedOrder < 0) {
       updateDraft(id, { ordem: String(originalOrder) });
-      showMessage('error', 'Informe uma ordem valida.');
+      showMessage('error', 'Informe uma ordem válida.');
       return;
     }
 
@@ -150,8 +150,8 @@ export default function ConfigOptionManager({
 
   const handleDelete = async (id: string) => {
     const confirmed = await requestConfirmation({
-      title: 'Excluir opcao',
-      description: 'Deseja remover esta opcao? Esta acao nao pode ser desfeita.',
+      title: 'Excluir opção',
+      description: 'Deseja remover esta opção? Esta ação não pode ser desfeita.',
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -163,10 +163,10 @@ export default function ConfigOptionManager({
     setBusyId(id);
     const { error } = await configService.deleteConfigOption(category, id);
     if (error) {
-      showMessage('error', 'Erro ao remover opcao.');
+      showMessage('error', 'Erro ao remover opção.');
     } else {
       await refreshCategory(category);
-      showMessage('success', 'Opcao removida com sucesso.');
+      showMessage('success', 'Opção removida com sucesso.');
     }
     setBusyId(null);
   };
@@ -181,7 +181,7 @@ export default function ConfigOptionManager({
 
         <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
           <Plus className="h-4 w-4" />
-          <span>Nova opcao</span>
+          <span>Nova opção</span>
         </Button>
       </div>
 
@@ -209,7 +209,7 @@ export default function ConfigOptionManager({
             >
               <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="flex flex-col text-xs text-[color:var(--panel-text-soft)]">
-                  Rotulo
+                  Rótulo
                   <Input
                     type="text"
                     value={drafts[item.id]?.label ?? item.label}
@@ -250,7 +250,7 @@ export default function ConfigOptionManager({
                   variant="danger"
                   size="icon"
                   className="h-9 w-9"
-                  title="Remover opcao"
+                  title="Remover opção"
                   disabled={isBusy}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -266,18 +266,18 @@ export default function ConfigOptionManager({
           setIsCreateModalOpen(false);
           setNewLabel('');
         }}
-        title={`Nova opcao${title ? ` - ${title}` : ''}`}
+        title={`Nova opção${title ? ` - ${title}` : ''}`}
         description="Adicione um novo item a esta lista."
         size="sm"
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da opcao</label>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da opção</label>
             <Input
               type="text"
               value={newLabel}
               onChange={(event) => setNewLabel(event.target.value)}
-              placeholder={placeholder || 'Nova opcao'}
+              placeholder={placeholder || 'Nova opção'}
             />
           </div>
 

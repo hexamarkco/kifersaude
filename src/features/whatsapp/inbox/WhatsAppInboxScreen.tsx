@@ -163,6 +163,16 @@ type VisibleChatRowItem = {
   previewText: string;
 };
 
+type RenderedMessageItem = {
+  message: WhatsAppMessage;
+  timestamp: string | null;
+  shouldShowDaySeparator: boolean;
+  daySeparatorLabel: string;
+  authorName?: string;
+  reactions?: Array<{ emoji: string; count: number }>;
+  forwardPlan: ForwardMessagePlan | null;
+};
+
 type InboxLeadSummary = {
   id: string;
   name: string;
@@ -256,6 +266,10 @@ type ContactPhotoSyncResponse = {
 
 const CHAT_ROW_HEIGHT = 96;
 const CHAT_LIST_OVERSCAN = 8;
+const MESSAGE_ROW_BASE_ESTIMATED_HEIGHT = 88;
+const MESSAGE_ROW_VISUAL_MEDIA_ESTIMATED_HEIGHT = 320;
+const MESSAGE_LIST_OVERSCAN_PX = 720;
+const MESSAGE_LIST_VIRTUALIZATION_THRESHOLD = 60;
 const MESSAGES_VIEWPORT_NEAR_BOTTOM_PX = 40;
 
 const OFFSCREEN_CHAT_ROW_STYLE = {
@@ -564,6 +578,7 @@ export default function WhatsAppInboxScreen() {
   const chatSelectionFrameRef = useRef<number | null>(null);
   const chatListScrollFrameRef = useRef<number | null>(null);
   const messagesViewportScrollFrameRef = useRef<number | null>(null);
+  const messageRowHeightsFrameRef = useRef<number | null>(null);
   const composerResizeFrameRef = useRef<number | null>(null);
   const lastGroupNamesSyncAtRef = useRef(0);
   const directNameHydrationAttemptsRef = useRef<Set<string>>(new Set());
@@ -574,10 +589,16 @@ export default function WhatsAppInboxScreen() {
   const reminderQuickOpenLastLoadedAtRef = useRef(0);
   const messagesCacheRef = useRef<Map<string, MessagesCacheState>>(new Map());
   const messageByIdRef = useRef<Map<string, WhatsAppMessage>>(new Map());
+  const messageRowElementsRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const messageRowHeightsRef = useRef<Map<string, number>>(new Map());
+  const messageRowsResizeObserverRef = useRef<ResizeObserver | null>(null);
   const mediaGalleryItemsRef = useRef<MessageBubbleMediaGalleryItem[]>([]);
   const visibleChatItemsCacheRef = useRef<Map<string, VisibleChatRowItem>>(new Map());
   const [chatListScrollTop, setChatListScrollTop] = useState(0);
   const [chatListViewportHeight, setChatListViewportHeight] = useState(0);
+  const [messagesViewportScrollTop, setMessagesViewportScrollTop] = useState(0);
+  const [messagesViewportHeight, setMessagesViewportHeight] = useState(0);
+  const [messageRowHeightsVersion, setMessageRowHeightsVersion] = useState(0);
   const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
@@ -605,11 +626,102 @@ export default function WhatsAppInboxScreen() {
       if (messagesViewportScrollFrameRef.current !== null) {
         cancelAnimationFrame(messagesViewportScrollFrameRef.current);
       }
+      if (messageRowHeightsFrameRef.current !== null) {
+        cancelAnimationFrame(messageRowHeightsFrameRef.current);
+      }
       if (composerResizeFrameRef.current !== null) {
         cancelAnimationFrame(composerResizeFrameRef.current);
       }
+      if (messageRowsResizeObserverRef.current) {
+        messageRowsResizeObserverRef.current.disconnect();
+      }
     };
   }, []);
+
+  const scheduleMessageRowHeightsRefresh = useCallback(() => {
+    if (messageRowHeightsFrameRef.current !== null) {
+      return;
+    }
+
+    messageRowHeightsFrameRef.current = requestAnimationFrame(() => {
+      messageRowHeightsFrameRef.current = null;
+      setMessageRowHeightsVersion((current) => current + 1);
+    });
+  }, []);
+
+  const syncMeasuredMessageRowHeight = useCallback(
+    (messageId: string, nextHeight: number) => {
+      const roundedHeight = Math.ceil(nextHeight);
+      if (!Number.isFinite(roundedHeight) || roundedHeight <= 0) {
+        return;
+      }
+
+      const currentHeight = messageRowHeightsRef.current.get(messageId);
+      if (currentHeight === roundedHeight) {
+        return;
+      }
+
+      messageRowHeightsRef.current.set(messageId, roundedHeight);
+      scheduleMessageRowHeightsRefresh();
+    },
+    [scheduleMessageRowHeightsRefresh],
+  );
+
+  const setMessageRowElement = useCallback(
+    (messageId: string, node: HTMLDivElement | null) => {
+      const elementMap = messageRowElementsRef.current;
+      const previousNode = elementMap.get(messageId);
+      const observer = messageRowsResizeObserverRef.current;
+
+      if (previousNode && previousNode !== node && observer) {
+        observer.unobserve(previousNode);
+      }
+
+      if (!node) {
+        elementMap.delete(messageId);
+        return;
+      }
+
+      elementMap.set(messageId, node);
+
+      if (observer) {
+        observer.observe(node);
+      }
+
+      syncMeasuredMessageRowHeight(messageId, node.getBoundingClientRect().height);
+    },
+    [syncMeasuredMessageRowHeight],
+  );
+
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      entries.forEach((entry) => {
+        const target = entry.target as HTMLDivElement;
+        const messageId = target.dataset.messageId;
+        if (!messageId) {
+          return;
+        }
+
+        syncMeasuredMessageRowHeight(messageId, entry.contentRect.height);
+      });
+    });
+
+    messageRowsResizeObserverRef.current = observer;
+    messageRowElementsRef.current.forEach((element) => {
+      observer.observe(element);
+    });
+
+    return () => {
+      observer.disconnect();
+      if (messageRowsResizeObserverRef.current === observer) {
+        messageRowsResizeObserverRef.current = null;
+      }
+    };
+  }, [syncMeasuredMessageRowHeight]);
 
   const handleChatListScroll = useCallback(() => {
     const viewport = chatListViewportRef.current;
@@ -659,6 +771,42 @@ export default function WhatsAppInboxScreen() {
       observer.disconnect();
     };
   }, [isMobileView, selectedChat?.id]);
+
+  useLayoutEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) {
+      setMessagesViewportHeight(0);
+      setMessagesViewportScrollTop(0);
+      return;
+    }
+
+    const syncMessagesViewportMetrics = () => {
+      const nextHeight = viewport.clientHeight || 0;
+      const nextScrollTop = viewport.scrollTop || 0;
+
+      setMessagesViewportHeight((current) => (current === nextHeight ? current : nextHeight));
+      setMessagesViewportScrollTop((current) => (current === nextScrollTop ? current : nextScrollTop));
+    };
+
+    syncMessagesViewportMetrics();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', syncMessagesViewportMetrics);
+      return () => {
+        window.removeEventListener('resize', syncMessagesViewportMetrics);
+      };
+    }
+
+    const observer = new ResizeObserver(() => {
+      syncMessagesViewportMetrics();
+    });
+
+    observer.observe(viewport);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [selectedChat?.id]);
 
   const normalizeSearchText = (value: string | null | undefined) =>
     (value || '')
@@ -2715,7 +2863,9 @@ export default function WhatsAppInboxScreen() {
     if (!viewport) return;
 
     messagesViewportNearBottomRef.current = true;
-    viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+    const nextScrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    viewport.scrollTo({ top: nextScrollTop, behavior });
+    setMessagesViewportScrollTop((current) => (current === nextScrollTop ? current : nextScrollTop));
   }, []);
 
   const getMessagesViewportDistanceFromBottom = useCallback(() => {
@@ -2740,6 +2890,7 @@ export default function WhatsAppInboxScreen() {
 
     const nextScrollTop = pendingRestore.previousScrollTop + (viewport.scrollHeight - pendingRestore.previousScrollHeight);
     viewport.scrollTop = Math.max(0, nextScrollTop);
+    setMessagesViewportScrollTop((current) => (current === viewport.scrollTop ? current : viewport.scrollTop));
     pendingPrependScrollRestoreRef.current = null;
     if (syncMessagesViewportBottomState()) {
       clearPendingMessagesBelow();
@@ -2749,6 +2900,21 @@ export default function WhatsAppInboxScreen() {
     syncPendingMessagesBelowCount();
   }, [clearPendingMessagesBelow, messages, messagesChatId, syncMessagesViewportBottomState, syncPendingMessagesBelowCount]);
 
+  useLayoutEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport || !messagesViewportNearBottomRef.current) {
+      return;
+    }
+
+    const nextScrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    if (Math.abs(viewport.scrollTop - nextScrollTop) <= 1) {
+      return;
+    }
+
+    viewport.scrollTop = nextScrollTop;
+    setMessagesViewportScrollTop((current) => (current === nextScrollTop ? current : nextScrollTop));
+  }, [messageRowHeightsVersion, selectedChat?.id]);
+
   const handleMessagesViewportScroll = useCallback(() => {
     const viewport = messagesViewportRef.current;
     if (!viewport || messagesViewportScrollFrameRef.current !== null) {
@@ -2757,6 +2923,8 @@ export default function WhatsAppInboxScreen() {
 
     messagesViewportScrollFrameRef.current = requestAnimationFrame(() => {
       messagesViewportScrollFrameRef.current = null;
+      const nextScrollTop = viewport.scrollTop;
+      setMessagesViewportScrollTop((current) => (current === nextScrollTop ? current : nextScrollTop));
       if (syncMessagesViewportBottomState()) {
         clearPendingMessagesBelow();
       }
@@ -2778,12 +2946,13 @@ export default function WhatsAppInboxScreen() {
     const viewport = messagesViewportRef.current;
     if (!viewport) return false;
 
-    const target = viewport.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
-    if (!target) return false;
+    const targetEntry = messageLayout.byId.get(messageId);
+    if (!targetEntry) return false;
 
-    const offsetTop = target.offsetTop;
+    const offsetTop = targetEntry.offsetTop;
     const targetScrollTop = Math.max(0, offsetTop - Math.max(24, viewport.clientHeight * 0.18));
     viewport.scrollTo({ top: targetScrollTop, behavior });
+    setMessagesViewportScrollTop((current) => (current === targetScrollTop ? current : targetScrollTop));
     return true;
   };
 
@@ -5161,7 +5330,7 @@ export default function WhatsAppInboxScreen() {
   const selectedChatTypeBadgeClass = getChatTypeBadgeClass(selectedChatKind);
   const selectedChatIsDirect = selectedChat ? isDirectChat(selectedChat) : false;
 
-  const renderedMessageItems = useMemo(
+  const renderedMessageItems = useMemo<RenderedMessageItem[]>(
     () =>
       renderedMessages.map((message, index) => {
         const previousMessage = index > 0 ? renderedMessages[index - 1] : null;
@@ -5182,6 +5351,125 @@ export default function WhatsAppInboxScreen() {
       }),
     [reactionsByTargetId, renderedMessages, selectedChatKind], // eslint-disable-line react-hooks/exhaustive-deps
   );
+
+  const estimateRenderedMessageRowHeight = useCallback((item: RenderedMessageItem) => {
+    const normalizedType = (item.message.type || '').toLowerCase();
+    let estimatedHeight = MESSAGE_ROW_BASE_ESTIMATED_HEIGHT;
+
+    if (item.shouldShowDaySeparator) {
+      estimatedHeight += 40;
+    }
+
+    if (item.authorName) {
+      estimatedHeight += 20;
+    }
+
+    if (item.message.has_media) {
+      if (
+        normalizedType === 'sticker' ||
+        normalizedType === 'gif' ||
+        normalizedType.startsWith('image') ||
+        normalizedType.startsWith('video')
+      ) {
+        estimatedHeight += MESSAGE_ROW_VISUAL_MEDIA_ESTIMATED_HEIGHT;
+      } else if (normalizedType.startsWith('audio') || normalizedType === 'ptt' || normalizedType === 'voice') {
+        estimatedHeight += 112;
+      } else {
+        estimatedHeight += 136;
+      }
+    } else {
+      const bodyLength = item.message.body?.trim().length ?? 0;
+      estimatedHeight += Math.min(180, Math.ceil(bodyLength / 88) * 24);
+    }
+
+    if (item.reactions?.length) {
+      estimatedHeight += 26;
+    }
+
+    return estimatedHeight;
+  }, []);
+
+  const messageLayout = useMemo(() => {
+    let offsetTop = 0;
+    const entries = renderedMessageItems.map((item) => {
+      const measuredHeight = messageRowHeightsRef.current.get(item.message.id);
+      const height = measuredHeight ?? estimateRenderedMessageRowHeight(item);
+      const entry = {
+        item,
+        offsetTop,
+        offsetBottom: offsetTop + height,
+        height,
+      };
+
+      offsetTop += height;
+      return entry;
+    });
+
+    return {
+      entries,
+      byId: new Map(entries.map((entry) => [entry.item.message.id, entry])),
+      totalHeight: offsetTop,
+    };
+  }, [estimateRenderedMessageRowHeight, messageRowHeightsVersion, renderedMessageItems]);
+
+  const {
+    visibleRenderedMessageItems,
+    virtualMessagePaddingTop,
+    virtualMessagePaddingBottom,
+  } = useMemo(() => {
+    if (!renderedMessageItems.length) {
+      return {
+        visibleRenderedMessageItems: [] as RenderedMessageItem[],
+        virtualMessagePaddingTop: 0,
+        virtualMessagePaddingBottom: 0,
+      };
+    }
+
+    if (
+      messagesViewportHeight <= 0 ||
+      renderedMessageItems.length <= MESSAGE_LIST_VIRTUALIZATION_THRESHOLD
+    ) {
+      return {
+        visibleRenderedMessageItems: renderedMessageItems,
+        virtualMessagePaddingTop: 0,
+        virtualMessagePaddingBottom: 0,
+      };
+    }
+
+    const visibleTop = Math.max(0, messagesViewportScrollTop - MESSAGE_LIST_OVERSCAN_PX);
+    const visibleBottom = messagesViewportScrollTop + messagesViewportHeight + MESSAGE_LIST_OVERSCAN_PX;
+    let startIndex = 0;
+
+    while (
+      startIndex < messageLayout.entries.length &&
+      messageLayout.entries[startIndex].offsetBottom < visibleTop
+    ) {
+      startIndex += 1;
+    }
+
+    let endIndex = startIndex;
+    while (
+      endIndex < messageLayout.entries.length &&
+      messageLayout.entries[endIndex].offsetTop <= visibleBottom
+    ) {
+      endIndex += 1;
+    }
+
+    if (endIndex <= startIndex) {
+      endIndex = Math.min(messageLayout.entries.length, startIndex + 1);
+    }
+
+    const visibleEntries = messageLayout.entries.slice(startIndex, endIndex);
+    const lastVisibleEntry = visibleEntries[visibleEntries.length - 1] ?? null;
+
+    return {
+      visibleRenderedMessageItems: visibleEntries.map((entry) => entry.item),
+      virtualMessagePaddingTop: visibleEntries[0]?.offsetTop ?? 0,
+      virtualMessagePaddingBottom: lastVisibleEntry
+        ? Math.max(0, messageLayout.totalHeight - lastVisibleEntry.offsetBottom)
+        : 0,
+    };
+  }, [messageLayout, messagesViewportHeight, messagesViewportScrollTop, renderedMessageItems]);
 
   const isVisualMediaMessage = useCallback((message: Pick<WhatsAppMessage, 'type' | 'has_media' | 'is_deleted' | 'payload'>) => {
     const payload = message.payload && typeof message.payload === 'object' ? (message.payload as MessageBubblePayload) : null;
@@ -8506,50 +8794,57 @@ export default function WhatsAppInboxScreen() {
                                 <p>{isLoadingMessages ? 'Carregando atualizações...' : isSelectedStatusChat ? 'Nenhuma atualização de status ainda' : 'Nenhuma mensagem ainda'}</p>
                   </div>
                 ) : (
-                  renderedMessageItems.map(({ message, timestamp, shouldShowDaySeparator, daySeparatorLabel, authorName, reactions, forwardPlan }) => {
-                    return (
-                      <div key={message.id} data-message-id={message.id} style={OFFSCREEN_MESSAGE_STYLE}>
-                        {shouldShowDaySeparator && daySeparatorLabel && (
-                          <div className="my-4 flex justify-center">
-                            <span className="message-day-separator rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-[11px] font-medium text-slate-700">
-                              {daySeparatorLabel}
-                            </span>
-                          </div>
-                        )}
-                        <MessageBubble
-                          id={message.id}
-                          chatId={selectedChat.id}
-                          body={message.body}
-                          type={message.type}
-                          direction={message.direction || 'inbound'}
-                          timestamp={timestamp}
-                          ackStatus={message.ack_status}
-                          sendState={message.send_state}
-                          errorMessage={message.error_message}
-                          hasMedia={message.has_media}
-                          payload={message.payload}
-                          reactions={reactions}
-                          fromName={authorName}
-                          isDeleted={message.is_deleted}
-                          deletedAt={message.deleted_at}
-                          editCount={message.edit_count}
-                          editedAt={message.edited_at}
-                          originalBody={message.original_body}
-                          isForwarded={isWhatsAppPayloadForwarded(message.payload)}
-                          onReact={isSelectedStatusChat ? undefined : handleReact}
-                          onReply={isSelectedStatusChat ? undefined : handleReply}
-                          onForward={forwardPlan ? () => handleOpenForwardModal(message) : undefined}
-                          onEdit={isSelectedStatusChat ? undefined : handleEdit}
-                          onRetryFailed={message.send_state === 'failed' ? () => void retryFailedMessage(message) : undefined}
-                          onDismissFailed={message.send_state === 'failed' ? () => removeFailedMessage(message.chat_id, message.id) : undefined}
-                          onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
-                          onSaveSharedContact={isSelectedStatusChat ? undefined : handleSaveSharedContact}
-                          onOpenSharedContactChat={isSelectedStatusChat ? undefined : handleOpenSharedContactChat}
-                          getMediaGalleryItems={isVisualMediaMessage(message) ? getMediaGalleryItems : undefined}
-                         />
-                       </div>
-                     );
-                  })
+                  <div style={{ paddingTop: virtualMessagePaddingTop, paddingBottom: virtualMessagePaddingBottom }}>
+                    {visibleRenderedMessageItems.map(({ message, timestamp, shouldShowDaySeparator, daySeparatorLabel, authorName, reactions, forwardPlan }) => {
+                      return (
+                        <div
+                          key={message.id}
+                          ref={(node) => setMessageRowElement(message.id, node)}
+                          data-message-id={message.id}
+                          style={OFFSCREEN_MESSAGE_STYLE}
+                        >
+                          {shouldShowDaySeparator && daySeparatorLabel && (
+                            <div className="my-4 flex justify-center">
+                              <span className="message-day-separator rounded-full border border-slate-300 bg-slate-200/80 px-3 py-1 text-[11px] font-medium text-slate-700">
+                                {daySeparatorLabel}
+                              </span>
+                            </div>
+                          )}
+                          <MessageBubble
+                            id={message.id}
+                            chatId={selectedChat.id}
+                            body={message.body}
+                            type={message.type}
+                            direction={message.direction || 'inbound'}
+                            timestamp={timestamp}
+                            ackStatus={message.ack_status}
+                            sendState={message.send_state}
+                            errorMessage={message.error_message}
+                            hasMedia={message.has_media}
+                            payload={message.payload}
+                            reactions={reactions}
+                            fromName={authorName}
+                            isDeleted={message.is_deleted}
+                            deletedAt={message.deleted_at}
+                            editCount={message.edit_count}
+                            editedAt={message.edited_at}
+                            originalBody={message.original_body}
+                            isForwarded={isWhatsAppPayloadForwarded(message.payload)}
+                            onReact={isSelectedStatusChat ? undefined : handleReact}
+                            onReply={isSelectedStatusChat ? undefined : handleReply}
+                            onForward={forwardPlan ? () => handleOpenForwardModal(message) : undefined}
+                            onEdit={isSelectedStatusChat ? undefined : handleEdit}
+                            onRetryFailed={message.send_state === 'failed' ? () => void retryFailedMessage(message) : undefined}
+                            onDismissFailed={message.send_state === 'failed' ? () => removeFailedMessage(message.chat_id, message.id) : undefined}
+                            onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
+                            onSaveSharedContact={isSelectedStatusChat ? undefined : handleSaveSharedContact}
+                            onOpenSharedContactChat={isSelectedStatusChat ? undefined : handleOpenSharedContactChat}
+                            getMediaGalleryItems={isVisualMediaMessage(message) ? getMediaGalleryItems : undefined}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
                 <div ref={messagesEndRef} />
               </div>

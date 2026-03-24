@@ -316,7 +316,7 @@ export default function ConversionLandingPage() {
       tipo_contratacao_id: tipoId,
       status_id: statusId,
       responsavel_id: 1,
-      observacoes: `Lead Landing Page de Conversão - Tipo: ${formData.tipo}`,
+      observacoes: `Lead landing page de conversão - Tipo: ${formData.tipo}`,
       data_criacao: new Date().toISOString(),
       ultimo_contato: new Date().toISOString(),
       arquivado: false
@@ -476,9 +476,9 @@ export default function ConversionLandingPage() {
   }, [microDuration, motionEnabled, openFaq]);
 
   const testimonials = [
-    { name: 'Rafael Silva', city: 'Rio de Janeiro', plan: 'Amil - Família', text: 'Economizei mais de R$200/mês com a ajuda da Luiza. Processo super rápido!', stars: 5, icon: ThumbsUp },
+    { name: 'Rafael Silva', city: 'Rio de Janeiro', plan: 'Amil - família', text: 'Economizei mais de R$200/mês com a ajuda da Luiza. Processo super rápido!', stars: 5, icon: ThumbsUp },
     { name: 'Carla Oliveira', city: 'Niterói', plan: 'SulAmérica - MEI', text: 'Atendimento excelente. Ela explicou tudo sem letra miúda.', stars: 5, icon: Heart },
-    { name: 'Marcos Santos', city: 'São Gonçalo', plan: 'Bradesco - Empresa', text: 'Minha empresa agora tem plano de saúde thanks to Kifer Saúde.', stars: 5, icon: BadgeCheck },
+    { name: 'Marcos Santos', city: 'São Gonçalo', plan: 'Bradesco - empresa', text: 'Minha empresa agora tem plano de saúde graças à Kifer Saúde.', stars: 5, icon: BadgeCheck },
   ];
 
   const scrollToForm = () => {
@@ -512,7 +512,7 @@ export default function ConversionLandingPage() {
   return (
     <>
       <Helmet>
-        <title>Plano de Saúde - Cotação Grátis em 2 Minutos | Kifer Saúde</title>
+        <title>Plano de saúde - cotação grátis em 2 minutos | Kifer Saúde</title>
         <meta name="description" content="Cotação gratuita de planos de saúde. Sem enrolação, sem letra miúda. Atendimento especializado em 2 minutos." />
         {renderMetaPixel()}
         {renderGTM()}
@@ -656,7 +656,7 @@ export default function ConversionLandingPage() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
                 <Rocket className="w-4 h-4" />
-                Processo Simples
+                Processo simples
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Como funciona</h2>
               <p className="text-slate-600">Em apenas 3 passos simples</p>
@@ -730,7 +730,7 @@ export default function ConversionLandingPage() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
                 <Target className="w-4 h-4" />
-                Ideal Para Você
+                Ideal para você
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Para quem é</h2>
               <p className="text-slate-600">Temos opções para todas as necessidades</p>
@@ -744,7 +744,7 @@ export default function ConversionLandingPage() {
                 <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                   <Users className="w-8 h-8 text-orange-600" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Pessoa Física / Família</h3>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Pessoa física / família</h3>
                 <p className="text-slate-600 mb-4">Planos individuais e familiares com o melhor custo-benefício.</p>
                 <button onClick={scrollToForm} className="text-orange-600 font-semibold hover:underline flex items-center gap-1 group-hover:gap-2 transition-all">
                   Quero esse plano <ArrowRight className="w-4 h-4" />
@@ -787,7 +787,7 @@ export default function ConversionLandingPage() {
             <div className="text-center mb-4">
               <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
                 <Building2 className="w-4 h-4" />
-                Parcerias Estratégicas
+                Parcerias estratégicas
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Trabalhamos com as maiores operadoras do Brasil</h2>
             </div>
@@ -815,7 +815,7 @@ export default function ConversionLandingPage() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
                 <Heart className="w-4 h-4" />
-                Clientes Satisfeitos
+                Clientes satisfeitos
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">O que nossos clientes dizem</h2>
               <p className="text-slate-600">Avaliações reais no Google</p>
@@ -865,7 +865,7 @@ export default function ConversionLandingPage() {
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
                 <Calculator className="w-4 h-4" />
-                Tire suas Dúvidas
+                Tire suas dúvidas
               </div>
               <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Dúvidas que aparecem muito por aqui</h2>
             </div>
@@ -910,7 +910,7 @@ export default function ConversionLandingPage() {
           <div className="max-w-4xl mx-auto text-center relative z-10">
             <div className="inline-flex items-center gap-2 bg-white/20 text-white px-4 py-1.5 rounded-full text-sm font-semibold mb-6">
               <Calendar className="w-4 h-4" />
-              Não Perca Tempo
+              Não perca tempo
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ainda sem plano de saúde?</h2>
             <p className="text-orange-100 text-lg mb-8">Isso tem solução em 2 minutos.</p>
@@ -978,7 +978,7 @@ export default function ConversionLandingPage() {
           </div>
           <p className="mb-4 text-sm text-[#c7b19a]">CNPJ: 00.000.000/0001-00 | Regulamentado pela ANS</p>
           <div className="flex justify-center gap-6">
-            <a href="/politica-de-privacidade" className="text-slate-400 hover:text-white text-sm transition-colors">Política de Privacidade</a>
+            <a href="/politica-de-privacidade" className="text-slate-400 hover:text-white text-sm transition-colors">Política de privacidade</a>
             <a href="https://wa.me/5521979302389" className="flex items-center gap-1 text-sm text-[#efb36c] transition-colors hover:text-[#f7c48a]">
               <MessageCircle className="w-4 h-4" /> Falar no WhatsApp
             </a>

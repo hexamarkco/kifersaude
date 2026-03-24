@@ -351,7 +351,7 @@ export default function LandingPage() {
   return (
     <div className="clinic-theme kifer-ds kifer-landing-theme min-h-screen text-slate-900">
       <Helmet>
-        <title>Landing Kifer | Cotação para PME, PF e Adesão</title>
+        <title>Kifer | cotação para PME, PF e adesão</title>
         <meta
           name="description"
           content="Landing da Kifer Saúde focada em conversão para PF, PME e adesão com comparativo consultivo e atendimento rápido."

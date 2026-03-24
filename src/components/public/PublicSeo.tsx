@@ -23,7 +23,7 @@ const siteUrl = 'https://www.kifersaude.com.br';
 const organizationSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Kifer Saude',
+  name: 'Kifer Saúde',
   url: siteUrl,
   logo: `${siteUrl}/image.png`,
   email: 'contato@kifersaude.com.br',
@@ -47,7 +47,7 @@ export default function PublicSeo({
   const canonicalUrl = `${siteUrl}${canonicalPath}`;
   const breadcrumbItems =
     breadcrumbs.length > 0 && breadcrumbs[0].path !== '/'
-      ? [{ name: 'Inicio', path: '/' }, ...breadcrumbs]
+      ? [{ name: 'Início', path: '/' }, ...breadcrumbs]
       : breadcrumbs;
 
   const webPageSchema = {
@@ -59,7 +59,7 @@ export default function PublicSeo({
     inLanguage: 'pt-BR',
     publisher: {
       '@type': 'Organization',
-      name: 'Kifer Saude',
+      name: 'Kifer Saúde',
       url: siteUrl,
     },
   };
@@ -102,7 +102,7 @@ export default function PublicSeo({
       <meta property="og:description" content={description} />
       <meta property="og:type" content="website" />
       <meta property="og:url" content={canonicalUrl} />
-      <meta property="og:site_name" content="Kifer Saude" />
+      <meta property="og:site_name" content="Kifer Saúde" />
       <meta property="og:locale" content="pt_BR" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />

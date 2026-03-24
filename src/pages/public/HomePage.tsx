@@ -138,11 +138,11 @@ const partnerLogos: PartnerLogo[] = [
 ];
 
 const heroRibbonItems = [
-  'Consultoria em Planos de Saúde',
-  'Atendimento Humanizado',
-  'Cotação Sem Compromisso',
+  'Consultoria em planos de saúde',
+  'Atendimento humanizado',
+  'Cotação sem compromisso',
   'Especialista no RJ',
-  'Suporte do Início ao Pós-venda',
+  'Suporte do início ao pós-venda',
 ];
 
 const loopedHeroRibbonItems = [...heroRibbonItems, ...heroRibbonItems];
@@ -594,7 +594,7 @@ export default function HomePage() {
           }
           className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
         >
-          <option value="PF">Pessoa Física</option>
+          <option value="PF">Pessoa física</option>
           <option value="MEI">MEI</option>
           <option value="CNPJ">CNPJ</option>
         </select>
@@ -720,7 +720,7 @@ export default function HomePage() {
         .hero-ribbon-track {
           display: flex;
           width: max-content;
-          animation: hero-ribbon-slide 22s linear infinite;
+          animation: hero-ribbon-slide 34s linear infinite;
         }
 
         .hero-ribbon-item {
@@ -729,7 +729,7 @@ export default function HomePage() {
 
         @media (max-width: 768px) {
           .hero-ribbon-track {
-            animation-duration: 16s;
+            animation-duration: 24s;
           }
 
           .partner-logos-track {
@@ -765,10 +765,10 @@ export default function HomePage() {
 
             <div className="hidden flex-1 items-center justify-center space-x-6 md:flex">
               <a href="#quem-somos" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
-                Quem Somos
+                Quem somos
               </a>
               <a href="#como-funciona" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
-                Como Funciona
+                Como funciona
               </a>
               <a href="#planos" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
                 Planos
@@ -786,7 +786,7 @@ export default function HomePage() {
               onClick={() => setShowQuoteModal(true)}
               className="rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-orange-600 hover:to-orange-700 sm:px-6"
             >
-              Cotação Grátis
+              Cotação grátis
             </button>
           </div>
         </nav>
@@ -827,7 +827,7 @@ export default function HomePage() {
                   </div>
                   <div className="inline-flex items-center rounded-full border border-slate-300/50 bg-slate-800/10 px-4 py-2 backdrop-blur-sm">
                     <CheckCircle className="mr-1.5 h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-semibold text-slate-900">Sem Compromisso</span>
+                    <span className="text-sm font-semibold text-slate-900">Sem compromisso</span>
                   </div>
                   <div className="inline-flex items-center rounded-full border border-slate-300/50 bg-slate-800/10 px-4 py-2 backdrop-blur-sm">
                     <ThumbsUp className="mr-1.5 h-4 w-4 text-orange-600" />
@@ -870,12 +870,12 @@ export default function HomePage() {
                   <div className="relative h-[480px] w-[320px] md:h-[540px] md:w-[360px]">
                     <div className="absolute right-0 top-0 z-20 flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 shadow-xl">
                       <div className="h-2 w-2 rounded-full bg-white" />
-                      <span className="text-xs font-bold whitespace-nowrap text-white">Online Agora</span>
+                      <span className="text-xs font-bold whitespace-nowrap text-white">Online agora</span>
                     </div>
                     <div className="absolute inset-0 overflow-hidden rounded-2xl border-4 border-white bg-gradient-to-br from-orange-200 to-amber-200 shadow-2xl">
                       <img
                         src="/image.png"
-                        alt="Luiza Kifer - Especialista em planos de saúde"
+                        alt="Luiza Kifer - especialista em planos de saúde"
                         className="h-full w-full object-cover object-[center_35%] scale-105"
                       />
                     </div>
@@ -892,11 +892,11 @@ export default function HomePage() {
         </section>
 
         <div className="hero-ribbon-marquee relative z-20 -mt-8 mb-2">
-          <div className="hero-ribbon-track items-center gap-8 px-4 py-4 sm:gap-10 sm:px-6">
+          <div className="hero-ribbon-track items-center gap-6 px-4 py-3 sm:gap-8 sm:px-6">
             {loopedHeroRibbonItems.map((item, index) => (
-              <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-8 sm:gap-10" aria-hidden={index >= heroRibbonItems.length}>
-                <span className="whitespace-nowrap text-lg font-semibold tracking-[0.02em] text-slate-800 sm:text-2xl">{item}</span>
-                <Sparkles className="h-5 w-5 text-orange-400 sm:h-6 sm:w-6" />
+              <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-6 sm:gap-8" aria-hidden={index >= heroRibbonItems.length}>
+                <span className="whitespace-nowrap text-sm font-semibold tracking-[0.01em] text-slate-800 sm:text-lg lg:text-xl">{item}</span>
+                <Sparkles className="h-4 w-4 text-orange-400 sm:h-5 sm:w-5" />
               </div>
             ))}
           </div>
@@ -909,19 +909,19 @@ export default function HomePage() {
                 <div className="h-[500px] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 shadow-2xl">
                   <img
                     src="/freepik__portrait-of-a-natural-redhaired-woman-about-158-me__96601.png"
-                      alt="Luiza Kifer - Especialista em planos de saúde"
+                      alt="Luiza Kifer - especialista em planos de saúde"
                     className="h-full w-full object-cover object-[center_20%]"
                   />
                 </div>
               </div>
 
               <div>
-                <h2 className="mb-6 text-4xl font-bold text-slate-900 md:text-5xl">Quem Somos</h2>
+                <h2 className="mb-6 text-4xl font-bold text-slate-900 md:text-5xl">Quem somos</h2>
                 <div className="mb-6 rounded-r-xl border-l-4 border-orange-500 bg-orange-50 p-6">
                   <p className="mb-4 text-lg italic text-slate-700">
                       "Sou a Luiza Kifer, especialista em planos de saúde. Acredito que contratar um plano não é só uma escolha financeira — é uma decisão sobre cuidado, segurança e tranquilidade."
                   </p>
-                  <p className="text-sm font-semibold text-slate-600">— Luiza Kifer, Fundadora</p>
+                  <p className="text-sm font-semibold text-slate-600">— Luiza Kifer, fundadora</p>
                 </div>
                 <p className="mb-6 text-lg text-slate-700">
                   A Kifer Saúde nasceu para simplificar o acesso aos melhores planos, com atendimento humano e soluções que cabem no seu bolso.
@@ -942,7 +942,7 @@ export default function HomePage() {
         <section id="como-funciona" className="scroll-mt-32 bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Como Funciona</h2>
+              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Como funciona</h2>
               <p className="text-xl text-slate-600">Simples, rápido e sem burocracia</p>
             </div>
 
@@ -985,7 +985,7 @@ export default function HomePage() {
         <section id="planos" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Operadoras Parceiras</h2>
+              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Operadoras parceiras</h2>
               <p className="text-xl text-slate-600">Trabalhamos com as principais operadoras do mercado</p>
             </div>
 
@@ -1021,7 +1021,7 @@ export default function HomePage() {
         <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Depoimentos Reais</h2>
+              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Depoimentos reais</h2>
               <p className="text-xl text-slate-600">O que nossos clientes dizem sobre nós</p>
             </div>
 
@@ -1064,7 +1064,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-5xl text-center">
             <div className="rounded-3xl bg-white p-12 shadow-2xl">
               <TrendingUp className="mx-auto mb-6 h-16 w-16 text-orange-600" />
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Planos para Empresas e MEI</h2>
+              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Planos para empresas e MEI</h2>
               <p className="mb-8 text-xl text-slate-700">Tem CNPJ ou MEI? Você pode economizar até 40% no plano de saúde.</p>
               <button
                 type="button"
@@ -1081,7 +1081,7 @@ export default function HomePage() {
         <section className="bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Por Que Escolher a Kifer Saúde</h2>
+              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Por que escolher a Kifer Saúde</h2>
               <p className="text-xl text-slate-600">O que nos torna diferentes</p>
             </div>
 
@@ -1100,7 +1100,7 @@ export default function HomePage() {
         <section id="faq" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Perguntas Frequentes</h2>
+              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Perguntas frequentes</h2>
               <p className="text-xl text-slate-600">Tire suas dúvidas sobre planos de saúde</p>
             </div>
 
@@ -1143,7 +1143,7 @@ export default function HomePage() {
         <section id="cotacao" className="scroll-mt-32 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-3xl">
             <div className="mb-12 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Faça sua Cotação Personalizada</h2>
+              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Faça sua cotação personalizada</h2>
               <p className="text-xl text-orange-50">Prometemos zero spam. Seu contato é usado apenas para montar as melhores opções.</p>
             </div>
 
@@ -1167,7 +1167,7 @@ export default function HomePage() {
         <section id="contato" className="scroll-mt-32 bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mb-12 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Entre em Contato</h2>
+              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Entre em contato</h2>
               <p className="text-xl text-slate-300">Estamos prontos para te ajudar a encontrar o plano ideal</p>
             </div>
 
@@ -1213,11 +1213,11 @@ export default function HomePage() {
               </div>
 
               <div>
-                <h3 className="mb-4 text-lg font-bold">Links Úteis</h3>
+                <h3 className="mb-4 text-lg font-bold">Links úteis</h3>
                 <ul className="space-y-3 text-slate-400">
                   <li>
                     <a href="#quem-somos" className="transition-colors hover:text-orange-400">
-                      Sobre Nós
+                      Sobre nós
                     </a>
                   </li>
                   <li>
@@ -1282,7 +1282,7 @@ export default function HomePage() {
         </a>
 
         {showQuoteModal ? (
-          <OverlayModal title="Faça sua Cotação" subtitle="Preencha os dados abaixo e receba sua cotação personalizada via WhatsApp" onClose={() => setShowQuoteModal(false)}>
+          <OverlayModal title="Faça sua cotação" subtitle="Preencha os dados abaixo e receba sua cotação personalizada via WhatsApp" onClose={() => setShowQuoteModal(false)}>
             <form onSubmit={handleSubmit}>
               <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
 
@@ -1301,10 +1301,10 @@ export default function HomePage() {
         ) : null}
 
         {showStoryModal ? (
-          <OverlayModal title="Nossa História" maxWidthClass="max-w-4xl" onClose={() => setShowStoryModal(false)}>
+          <OverlayModal title="Nossa história" maxWidthClass="max-w-4xl" onClose={() => setShowStoryModal(false)}>
             <div className="space-y-6">
               <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Como Tudo Começou</h3>
+                <h3 className="mb-4 text-2xl font-bold text-slate-900">Como tudo começou</h3>
                 <p className="mb-4 leading-relaxed text-slate-700">
                   A Kifer Saúde nasceu da visão de tornar o acesso a planos de saúde mais simples, transparente e humano. Percebemos que muitas pessoas se sentiam perdidas em meio a tantas opções, termos técnicos e processos burocráticos no mercado de saúde suplementar.
                 </p>
@@ -1314,14 +1314,14 @@ export default function HomePage() {
               </div>
 
               <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossa Missão</h3>
+                <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossa missão</h3>
                 <p className="leading-relaxed text-slate-700">
                   Contratar um plano de saúde não deve ser complicado. Nossa missão é traduzir o contrato para a linguagem do dia a dia, comparar as melhores opções do mercado e encontrar o plano que realmente faz sentido para cada pessoa, família ou empresa.
                 </p>
               </div>
 
               <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Por Que Somos Diferentes</h3>
+                <h3 className="mb-4 text-2xl font-bold text-slate-900">Por que somos diferentes</h3>
                 <div className="rounded-r-xl border-l-4 border-orange-500 bg-orange-50 p-6">
                   <ul className="space-y-3 text-slate-700">
                     {[
@@ -1340,7 +1340,7 @@ export default function HomePage() {
               </div>
 
               <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossos Valores</h3>
+                <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossos valores</h3>
                 <p className="leading-relaxed text-slate-700">
                   Construímos nossa empresa sobre três pilares: confiança, transparência e compromisso. Cada cliente que atendemos representa uma relação de longo prazo baseada em respeito, clareza e cuidado genuíno.
                 </p>
@@ -1368,7 +1368,7 @@ export default function HomePage() {
 
         {showReviewsModal ? (
           <OverlayModal
-            title="Avaliações de Clientes"
+            title="Avaliações de clientes"
             subtitle="Nota média: 4.9 estrelas"
             maxWidthClass="max-w-5xl"
             onClose={() => setShowReviewsModal(false)}

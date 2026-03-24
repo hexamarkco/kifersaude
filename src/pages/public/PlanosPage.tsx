@@ -16,26 +16,26 @@ import {
 const planTypes = [
   {
     title: 'Plano individual (PF)',
-    description: 'Para quem busca contratacao direta e quer equilibrar previsibilidade de custo com cobertura para rotina pessoal.',
-    bestFor: 'Perfis com uso moderado, que precisam de uma leitura clara de carencia e reajuste.',
+    description: 'Para quem busca contratação direta e quer equilibrar previsibilidade de custo com cobertura para rotina pessoal.',
+    bestFor: 'Perfis com uso moderado, que precisam de uma leitura clara de carência e reajuste.',
     Icon: UserRound,
   },
   {
     title: 'Plano familiar',
-    description: 'Centraliza beneficiarios em um mesmo contrato para organizar cobertura de diferentes fases da vida.',
-    bestFor: 'Familias que querem combinar rede de qualidade com controle do custo total da casa.',
+    description: 'Centraliza beneficiários em um mesmo contrato para organizar cobertura de diferentes fases da vida.',
+    bestFor: 'Famílias que querem combinar rede de qualidade com controle do custo total da casa.',
     Icon: UsersRound,
   },
   {
     title: 'Plano MEI/CNPJ',
-    description: 'Modelo empresarial com potencial de melhor relacao custo-beneficio quando existe elegibilidade correta.',
-    bestFor: 'MEI, pequenas empresas e socios que querem estrutura de beneficio com governanca documental.',
+    description: 'Modelo empresarial com potencial de melhor relação custo-benefício quando existe elegibilidade correta.',
+    bestFor: 'MEI, pequenas empresas e sócios que querem estrutura de benefício com governança documental.',
     Icon: Briefcase,
   },
   {
-    title: 'Plano senior e transicao de faixa',
+    title: 'Plano sênior e transição de faixa',
     description: 'Escolha orientada para continuidade de atendimento, previsibilidade e rede forte para acompanhamento recorrente.',
-    bestFor: 'Quem prioriza estabilidade de uso e suporte em decisoes de medio e longo prazo.',
+    bestFor: 'Quem prioriza estabilidade de uso e suporte em decisões de médio e longo prazo.',
     Icon: HeartPulse,
   },
 ];
@@ -48,16 +48,16 @@ const operatorProfiles = [
       'Portfólio amplo para diferentes perfis, com opções que variam de entrada até categorias com cobertura mais robusta.',
   },
   {
-    name: 'Bradesco Saude',
+    name: 'Bradesco Saúde',
     logo: '/bradesco-saude-logo-1-1.png',
     highlight:
       'Histórico forte em produtos corporativos e posicionamento premium para quem prioriza rede consolidada.',
   },
   {
-    name: 'SulAmerica Saude',
+    name: 'SulAmérica Saúde',
     logo: '/sulamerica-saude-logo.png',
     highlight:
-      'Alternativas empresariais com boa flexibilidade de composicao, dependendo do perfil e da regiao de uso.',
+      'Alternativas empresariais com boa flexibilidade de composição, dependendo do perfil e da região de uso.',
   },
   {
     name: 'Porto',
@@ -65,9 +65,9 @@ const operatorProfiles = [
     highlight: 'Foco em experiencia de servico e jornada mais assistida para familias e empresas que valorizam suporte.',
   },
   {
-    name: 'Assim Saude',
+    name: 'Assim Saúde',
     logo: '/assim-saude-logo.png',
-    highlight: 'Presenca regional relevante no RJ para perfis que buscam cobertura local com analise de custo-beneficio.',
+    highlight: 'Presença regional relevante no RJ para perfis que buscam cobertura local com análise de custo-benefício.',
   },
 ];
 
@@ -76,18 +76,18 @@ const decisionChecklist = [
   'Custo anual projetado, e não apenas mensalidade de entrada.',
   'Leitura de carências e regras de uso antes da assinatura.',
   'Análise de coparticipação conforme frequência de consultas e exames.',
-  'Impacto de reajuste e mudanca de faixa etaria no medio prazo.',
+  'Impacto de reajuste e mudança de faixa etária no médio prazo.',
   'Capacidade de suporte operacional da operadora para o seu perfil.',
 ];
 
 const financialModels = [
   {
-    title: 'Sem coparticipacao',
-    text: 'Mensalidade maior, com mais previsibilidade no uso rotineiro. Em perfis de uso frequente, pode reduzir variacao de gasto.',
+    title: 'Sem coparticipação',
+    text: 'Mensalidade maior, com mais previsibilidade no uso rotineiro. Em perfis de uso frequente, pode reduzir variação de gasto.',
     Icon: Landmark,
   },
   {
-    title: 'Com coparticipacao',
+    title: 'Com coparticipação',
     text: 'Entrada inicial menor, com custo por utilização. Funciona melhor para baixo uso e quando existe disciplina de acompanhamento.',
     Icon: ShieldCheck,
   },
@@ -97,7 +97,7 @@ export default function PlanosPage() {
   return (
     <div className="marketing-theme kifer-ds kifer-home-theme min-h-screen text-slate-900">
       <Helmet>
-        <title>Planos de saude | Kifer Saude</title>
+        <title>Planos de saúde | Kifer Saúde</title>
         <meta
           name="description"
           content="Guia completo para comparar tipos de plano e operadoras no RJ com criterio de rede, uso e custo total."
@@ -112,20 +112,20 @@ export default function PlanosPage() {
               <BadgeCheck className="h-5 w-5" />
             </span>
             <span>
-              <span className="marketing-display block text-2xl font-semibold leading-none">Kifer Saude</span>
+              <span className="marketing-display block text-2xl font-semibold leading-none">Kifer Saúde</span>
               <span className="block text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">guia de planos</span>
             </span>
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-700 md:flex">
             <Link to="/" className="transition hover:text-slate-900">
-              Home
+              Início
             </Link>
             <a href="#operadoras" className="transition hover:text-slate-900">
               Operadoras
             </a>
             <a href="#criterios" className="transition hover:text-slate-900">
-              Criterios
+              Critérios
             </a>
           </nav>
 
@@ -147,8 +147,8 @@ export default function PlanosPage() {
               Compare planos com criterio de uso, cobertura e custo anual.
             </h1>
             <p className="mt-6 max-w-3xl text-lg leading-relaxed text-slate-600">
-              O objetivo desta pagina e concentrar tudo que realmente importa para sua decisao: tipos de contratacao,
-              operadoras parceiras e checklist pratico para evitar erro caro.
+              O objetivo desta página é concentrar tudo que realmente importa para sua decisão: tipos de contratação,
+              operadoras parceiras e checklist prático para evitar erro caro.
             </p>
           </div>
         </section>
@@ -178,9 +178,9 @@ export default function PlanosPage() {
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl marketing-reveal">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">operadoras</p>
-              <h2 className="marketing-display mt-3 text-5xl font-semibold text-slate-900">Comparativo de operadoras na mesma pagina</h2>
+              <h2 className="marketing-display mt-3 text-5xl font-semibold text-slate-900">Comparativo de operadoras na mesma página</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                Conforme solicitado, o conteudo de /operadoras foi consolidado aqui para facilitar analise em um unico fluxo.
+                Conforme solicitado, o conteúdo de /operadoras foi consolidado aqui para facilitar análise em um único fluxo.
               </p>
             </div>
 
@@ -205,7 +205,7 @@ export default function PlanosPage() {
           <div className="mx-auto max-w-7xl">
             <div className="max-w-3xl marketing-reveal">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">modelo financeiro</p>
-              <h2 className="marketing-display mt-3 text-5xl font-semibold">Quando a coparticipacao ajuda e quando ela pesa</h2>
+              <h2 className="marketing-display mt-3 text-5xl font-semibold">Quando a coparticipação ajuda e quando ela pesa</h2>
             </div>
             <div className="mt-10 grid gap-5 md:grid-cols-2">
               {financialModels.map(({ title, text, Icon }, index) => (
@@ -242,16 +242,16 @@ export default function PlanosPage() {
             </article>
 
             <article className="marketing-surface ks-card marketing-reveal marketing-delay-1 rounded-2xl p-7">
-              <h2 className="text-2xl font-black text-slate-900">Como usamos esses criterios na consultoria</h2>
+              <h2 className="text-2xl font-black text-slate-900">Como usamos estes critérios na consultoria</h2>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                Primeiro entendemos seu objetivo real de uso. Depois filtramos opções viáveis, comparamos custo anual e
-                validamos rede funcional por território. Só então recomendamos um plano principal e alternativas seguras.
+                 Primeiro entendemos seu objetivo real de uso. Depois filtramos opções viáveis, comparamos custo anual e
+                 validamos rede funcional por território. Só então recomendamos um plano principal e alternativas seguras.
               </p>
               <p className="mt-4 text-sm leading-relaxed text-slate-600">
-                Essa abordagem reduz risco de arrependimento e evita contratacao baseada apenas em valor de entrada.
+                 Essa abordagem reduz risco de arrependimento e evita contratação baseada apenas em valor de entrada.
               </p>
               <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700">
-                Resultado esperado: decisao tecnica com linguagem simples e acompanhamento ate a ativacao.
+                Resultado esperado: decisão técnica com linguagem simples e acompanhamento até a ativação.
               </div>
             </article>
           </div>
@@ -263,11 +263,11 @@ export default function PlanosPage() {
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">fale com a equipe</p>
                 <h2 className="marketing-display mt-3 text-5xl font-semibold leading-tight md:text-6xl">
-                  Quer uma recomendacao para o seu perfil?
+                  Quer uma recomendação para o seu perfil?
                 </h2>
                 <p className="mt-4 max-w-2xl text-slate-200">
-                  Receba um comparativo objetivo com plano principal, alternativa de seguranca e orientacao completa de
-                  contratacao.
+                  Receba um comparativo objetivo com plano principal, alternativa de segurança e orientação completa de
+                  contratação.
                 </p>
               </div>
 
@@ -276,7 +276,7 @@ export default function PlanosPage() {
                   to="/lp"
                   className="ks-btn-secondary inline-flex w-full items-center justify-center rounded-2xl px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-slate-800"
                 >
-                  Solicitar cotacao
+                  Solicitar cotação
                 </Link>
                 <Link
                   to="/"

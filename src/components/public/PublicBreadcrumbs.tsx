@@ -7,7 +7,7 @@ type PublicBreadcrumbsProps = {
 };
 
 export default function PublicBreadcrumbs({ items }: PublicBreadcrumbsProps) {
-  const breadcrumbItems = items.length > 0 && items[0].path !== '/' ? [{ name: 'Inicio', path: '/' }, ...items] : items;
+  const breadcrumbItems = items.length > 0 && items[0].path !== '/' ? [{ name: 'Início', path: '/' }, ...items] : items;
 
   if (breadcrumbItems.length === 0) {
     return null;

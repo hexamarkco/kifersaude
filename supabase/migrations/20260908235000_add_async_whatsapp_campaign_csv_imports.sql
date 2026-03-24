@@ -528,6 +528,7 @@ DECLARE
   v_duplicate_rows integer := 0;
   v_created_leads integer := 0;
   v_unresolved_rows integer := 0;
+  v_conflict_rows integer := 0;
   v_inserted_targets integer := 0;
 BEGIN
   IF auth.uid() IS NULL AND COALESCE(v_auth_role, '') <> 'service_role' THEN
@@ -562,6 +563,7 @@ BEGIN
       'duplicate_rows', 0,
       'created_leads', 0,
       'unresolved_rows', 0,
+      'conflict_rows', 0,
       'inserted_targets', 0
     );
   END IF;
@@ -819,10 +821,12 @@ BEGIN
   SELECT
     COALESCE((SELECT COUNT(*)::int FROM inserted_leads), 0),
     COALESCE((SELECT COUNT(*)::int FROM resolved_items WHERE lead_id IS NULL AND normalized_phone <> ''), 0),
+    COALESCE((SELECT COUNT(*)::int FROM resolved_items WHERE lead_id IS NOT NULL), 0) - COALESCE((SELECT COUNT(*)::int FROM inserted_targets), 0),
     COALESCE((SELECT COUNT(*)::int FROM inserted_targets), 0)
   INTO
     v_created_leads,
     v_unresolved_rows,
+    v_conflict_rows,
     v_inserted_targets;
 
   IF v_inserted_targets > 0 THEN
@@ -840,6 +844,7 @@ BEGIN
     'duplicate_rows', v_duplicate_rows,
     'created_leads', v_created_leads,
     'unresolved_rows', v_unresolved_rows,
+    'conflict_rows', v_conflict_rows,
     'inserted_targets', v_inserted_targets
   );
 END;

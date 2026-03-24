@@ -76,6 +76,7 @@ type BatchAppendResult = {
   duplicate_rows: number;
   created_leads: number;
   unresolved_rows: number;
+  conflict_rows: number;
   inserted_targets: number;
 };
 
@@ -211,7 +212,6 @@ const loadCandidateJobs = async (
   }
 
   return ((data ?? []) as ImportJobRecord[])
-    .filter((job) => job.campaign?.status !== 'cancelled')
     .filter((job) => isJobReadyForClaim(job));
 };
 
@@ -318,6 +318,7 @@ const appendBatch = async (
     duplicate_rows: Number(payload.duplicate_rows ?? 0) || 0,
     created_leads: Number(payload.created_leads ?? 0) || 0,
     unresolved_rows: Number(payload.unresolved_rows ?? 0) || 0,
+    conflict_rows: Number(payload.conflict_rows ?? 0) || 0,
     inserted_targets: Number(payload.inserted_targets ?? 0) || 0,
   };
 };
@@ -471,7 +472,8 @@ const processSingleJob = async (
   const nextFailedRows = toNonNegativeInt(job.failed_rows)
     + batchResult.invalid_phone_rows
     + batchResult.duplicate_rows
-    + batchResult.unresolved_rows;
+    + batchResult.unresolved_rows
+    + batchResult.conflict_rows;
   const nextCreatedLeads = toNonNegativeInt(job.created_leads) + batchResult.created_leads;
   const nextCreatedTargets = toNonNegativeInt(job.created_targets) + batchResult.inserted_targets;
   const ready = nextRowOffset >= actualTotalRows && nextCreatedTargets > 0;

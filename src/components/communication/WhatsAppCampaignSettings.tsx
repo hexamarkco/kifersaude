@@ -1273,6 +1273,7 @@ export default function WhatsAppCampaignSettings() {
       };
 
       if (audienceSource === 'csv' && csvImport.parsed && csvAnalysis) {
+        const csvFileName = csvImport.fileName || `${slugifyFileName(campaignTitle)}.csv`;
         const origemLabel = origemNameById.get(csvCrmDefaults.origemId) ?? '';
         const statusLabel = statusNameById.get(csvCrmDefaults.statusId) ?? '';
         const tipoContratacaoLabel = tipoContratacaoNameById.get(csvCrmDefaults.tipoContratacaoId) ?? '';
@@ -1281,10 +1282,7 @@ export default function WhatsAppCampaignSettings() {
         let createdCampaign: WhatsAppCampaign;
 
         try {
-          const uploadedImport = await uploadWhatsAppCampaignImportFile(
-            csvImport.fileName || `${slugifyFileName(campaignTitle)}.csv`,
-            csvImport.rawText,
-          );
+          const uploadedImport = await uploadWhatsAppCampaignImportFile(csvFileName, csvImport.rawText);
           uploadedImportPath = uploadedImport.path;
 
           createdCampaign = await createWhatsAppCampaignCsvImport({
@@ -1292,7 +1290,7 @@ export default function WhatsAppCampaignSettings() {
             message: composeFallbackMessage(normalizedSteps),
             flowSteps: normalizedSteps,
             audienceConfig: {
-              csv_file_name: csvImport.fileName,
+              csv_file_name: csvFileName,
               csv_delimiter: csvImport.parsed.delimiter,
               csv_headers: csvImport.parsed.headers,
               csv_normalized_headers: csvImport.parsed.normalizedHeaders,
@@ -1317,7 +1315,7 @@ export default function WhatsAppCampaignSettings() {
             scheduledAt: scheduledAtIso,
             storageBucket: uploadedImport.bucket,
             storagePath: uploadedImport.path,
-            fileName: csvImport.fileName,
+            fileName: csvFileName,
             delimiter: csvImport.parsed.delimiter,
             mapping: {
               phoneColumnKey: csvImport.phoneColumnKey,
@@ -2898,12 +2896,16 @@ export default function WhatsAppCampaignSettings() {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <span>Selecionada: {selectedCampaign.name}</span>
               <span>Fonte: {formatAudienceSourceLabel(selectedCampaign.audience_source)}</span>
+              {selectedCampaign.audience_source === 'csv' && (
+                <span>Importacao: {IMPORT_STATUS_LABELS[normalizeWhatsAppCampaignImportStatus(selectedCampaign.import_status)]}</span>
+              )}
               <span>Agendada: {formatDateTime(selectedCampaign.scheduled_at)}</span>
               <span>Inicio: {formatDateTime(selectedCampaign.started_at)}</span>
               <span>Fim: {formatDateTime(selectedCampaign.completed_at)}</span>
               <span>Etapas: {selectedCampaign.flow_steps.length}</span>
               <span>Limite diario: {selectedCampaignPacing.dailySendLimit ?? 'Sem limite'}</span>
               <span>Intervalo: {selectedCampaignPacing.sendIntervalMinutes ? `${selectedCampaignPacing.sendIntervalMinutes} min` : 'Sem intervalo'}</span>
+              {formatImportProgressLabel(selectedCampaign) && <span>{formatImportProgressLabel(selectedCampaign)}</span>}
             </div>
           </div>
         )}

@@ -720,7 +720,7 @@ export default function HomePage() {
         .hero-ribbon-track {
           display: flex;
           width: max-content;
-          animation: hero-ribbon-slide 34s linear infinite;
+          animation: hero-ribbon-slide 46s linear infinite;
         }
 
         .hero-ribbon-item {
@@ -729,7 +729,7 @@ export default function HomePage() {
 
         @media (max-width: 768px) {
           .hero-ribbon-track {
-            animation-duration: 24s;
+            animation-duration: 32s;
           }
 
           .partner-logos-track {
@@ -892,11 +892,11 @@ export default function HomePage() {
         </section>
 
         <div className="hero-ribbon-marquee relative z-20 -mt-8 mb-2">
-          <div className="hero-ribbon-track items-center gap-6 px-4 py-3 sm:gap-8 sm:px-6">
+          <div className="hero-ribbon-track items-center gap-5 px-4 py-3 sm:gap-6 sm:px-6">
             {loopedHeroRibbonItems.map((item, index) => (
-              <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-6 sm:gap-8" aria-hidden={index >= heroRibbonItems.length}>
-                <span className="whitespace-nowrap text-sm font-semibold tracking-[0.01em] text-slate-800 sm:text-lg lg:text-xl">{item}</span>
-                <Sparkles className="h-4 w-4 text-orange-400 sm:h-5 sm:w-5" />
+              <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-5 sm:gap-6" aria-hidden={index >= heroRibbonItems.length}>
+                <span className="whitespace-nowrap text-xs font-semibold tracking-[0.01em] text-slate-800 sm:text-sm lg:text-base">{item}</span>
+                <Sparkles className="h-3.5 w-3.5 text-orange-400 sm:h-4 sm:w-4" />
               </div>
             ))}
           </div>

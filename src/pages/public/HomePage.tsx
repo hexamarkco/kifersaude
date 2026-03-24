@@ -895,7 +895,7 @@ export default function HomePage() {
           <div className="hero-ribbon-track items-center gap-5 px-4 py-3 sm:gap-6 sm:px-6">
             {loopedHeroRibbonItems.map((item, index) => (
               <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-5 sm:gap-6" aria-hidden={index >= heroRibbonItems.length}>
-                <span className="whitespace-nowrap text-xs font-semibold tracking-[0.01em] text-slate-800 sm:text-sm lg:text-base">{item}</span>
+                <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.01em] text-slate-800 sm:text-xs lg:text-sm">{item}</span>
                 <Sparkles className="h-3.5 w-3.5 text-orange-400 sm:h-4 sm:w-4" />
               </div>
             ))}

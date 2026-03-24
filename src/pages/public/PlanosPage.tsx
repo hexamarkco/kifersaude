@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
+import PublicBrandMark from '../../components/public/PublicBrandMark';
 import {
   ArrowRight,
-  BadgeCheck,
   Briefcase,
   Building2,
   CheckCircle2,
@@ -109,7 +109,7 @@ export default function PlanosPage() {
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white shadow-lg shadow-slate-900/30">
-              <BadgeCheck className="h-5 w-5" />
+              <PublicBrandMark className="h-5 w-auto text-white" />
             </span>
             <span>
               <span className="marketing-display block text-2xl font-semibold leading-none">Kifer Saúde</span>

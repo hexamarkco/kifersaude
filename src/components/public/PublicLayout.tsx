@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { Link, NavLink, useLocation } from 'react-router-dom';
-import { ArrowUpRight, Heart, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
+import { ArrowUpRight, Mail, MapPin, Menu, MessageCircle, Phone, X } from 'lucide-react';
+import PublicBrandMark from './PublicBrandMark';
 import { usePanelMotion } from '../../hooks/usePanelMotion';
 
 type PublicLayoutProps = {
@@ -259,7 +260,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div className="mt-3 flex items-center justify-between gap-3 rounded-[1.35rem] border border-[color:rgba(111,63,22,0.12)] bg-[color:rgba(255,251,245,0.82)] px-4 py-3 shadow-[0_18px_45px_-32px_rgba(42,24,12,0.35)] backdrop-blur-xl">
             <NavLink to="/" className="flex items-center gap-3" onClick={() => setIsMenuOpen(false)}>
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7a3e16] via-[#c86f1d] to-[#df8b2f] shadow-lg shadow-[#7a3e16]/25">
-                <Heart className="h-6 w-6 text-white" />
+                <PublicBrandMark className="h-6 w-auto text-white" />
               </span>
               <span>
                 <span className="public-display block text-[1.5rem] font-semibold leading-none text-[var(--public-ink)]">Kifer Saúde</span>
@@ -339,7 +340,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div>
             <div className="mb-4 flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-700 to-orange-600 shadow-lg shadow-black/30">
-                <Heart className="h-5 w-5 text-white" />
+                <PublicBrandMark className="h-5 w-auto text-white" />
               </span>
               <span className="public-display text-[1.65rem] font-semibold text-white">Kifer Saúde</span>
             </div>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet';
+import PublicBrandMark from '../components/public/PublicBrandMark';
 import { gsap } from 'gsap';
 import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -523,7 +524,7 @@ export default function ConversionLandingPage() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#7a3e16] to-[#c86f1d] shadow-md transition-transform duration-300 hover:scale-110">
-              <span className="text-white font-bold text-xl">K</span>
+              <PublicBrandMark className="h-6 w-auto text-white" />
             </div>
             <span className="text-xl font-bold text-slate-800">Kifer Saúde</span>
           </div>
@@ -972,7 +973,7 @@ export default function ConversionLandingPage() {
         <div className="max-w-6xl mx-auto text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">K</span>
+              <PublicBrandMark className="h-4 w-auto text-white" />
             </div>
             <span className="text-lg font-bold">Kifer Saúde</span>
           </div>

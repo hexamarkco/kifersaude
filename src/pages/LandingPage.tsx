@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useLocation } from 'react-router-dom';
+import PublicBrandMark from '../components/public/PublicBrandMark';
 import {
   ArrowRight,
   BadgeCheck,
@@ -365,7 +366,7 @@ export default function LandingPage() {
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
           <Link to="/" className="flex items-center gap-3">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-600 to-orange-500 text-white shadow-lg shadow-orange-900/20">
-              <BadgeCheck className="h-5 w-5" />
+              <PublicBrandMark className="h-5 w-auto text-white" />
             </span>
             <span className="clinic-heading text-2xl font-semibold">Kifer Saúde</span>
           </Link>

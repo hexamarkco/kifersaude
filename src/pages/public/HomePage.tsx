@@ -18,6 +18,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import { formatPhoneInput } from '../../lib/inputFormatters';
 import {
@@ -758,7 +759,7 @@ export default function HomePage() {
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <a href="#topo" className="flex items-center space-x-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
-                <Heart className="h-6 w-6 text-white" />
+                <PublicBrandMark className="h-6 w-auto text-white" />
               </div>
               <span className="text-2xl font-bold text-slate-900">Kifer Saúde</span>
             </a>
@@ -1205,7 +1206,7 @@ export default function HomePage() {
               <div>
                 <div className="mb-4 flex items-center space-x-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600">
-                    <Heart className="h-6 w-6 text-white" />
+                    <PublicBrandMark className="h-6 w-auto text-white" />
                   </div>
                   <span className="text-2xl font-bold">Kifer Saúde</span>
                 </div>

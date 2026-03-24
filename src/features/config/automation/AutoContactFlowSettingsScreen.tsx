@@ -8,6 +8,7 @@ import {
   Edit3,
   File,
   Film,
+  Globe2,
   Image as ImageIcon,
   Info,
   Loader2,
@@ -141,6 +142,16 @@ export default function AutoContactFlowSettingsScreen() {
   const autoSaveSkipRef = useRef(false);
   const autoSaveTimerRef = useRef<number | null>(null);
   const autoSaveInFlightRef = useRef(false);
+  const timezoneOptions = useMemo(
+    () => [
+      { value: "America/Sao_Paulo", label: "America/Sao_Paulo" },
+      { value: "America/Manaus", label: "America/Manaus" },
+      { value: "America/Cuiaba", label: "America/Cuiaba" },
+      { value: "America/Rio_Branco", label: "America/Rio_Branco" },
+      { value: "UTC", label: "UTC" },
+    ],
+    [],
+  );
 
   useEffect(() => {
     void loadAutoContactSettings();
@@ -1593,7 +1604,7 @@ export default function AutoContactFlowSettingsScreen() {
                   </div>
                   <Activity className="w-4 h-4 text-[var(--panel-text-subtle)]" />
                 </div>
-                <div className="text-sm font-semibold text-[var(--panel-text)] mt-2">
+                <div className="text-2xl font-semibold text-[var(--panel-text)] mt-2">
                   {lastRefreshAt.toLocaleTimeString("pt-BR", {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -1692,17 +1703,19 @@ export default function AutoContactFlowSettingsScreen() {
                       <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
                         Fuso horário
                       </label>
-                      <Input
-                        type="text"
+                      <FilterSingleSelect
+                        icon={Globe2}
                         value={schedulingDraft.timezone}
-                        onChange={(event) =>
+                        onChange={(value) =>
                           setSchedulingDraft((previous) => ({
                             ...previous,
-                            timezone: event.target.value,
+                            timezone: value,
                           }))
                         }
+                        placeholder="Selecione um fuso"
+                        includePlaceholderOption={false}
+                        options={timezoneOptions}
                         size="compact"
-                        placeholder="America/Sao_Paulo"
                       />
                     </div>
                   </div>

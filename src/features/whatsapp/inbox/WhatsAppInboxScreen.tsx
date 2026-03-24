@@ -254,9 +254,14 @@ type ContactPhotoSyncResponse = {
   }>;
 };
 
+const CHAT_ROW_HEIGHT = 96;
+const CHAT_LIST_OVERSCAN = 8;
+const MESSAGES_VIEWPORT_NEAR_BOTTOM_PX = 40;
+
 const OFFSCREEN_CHAT_ROW_STYLE = {
   contentVisibility: 'auto' as const,
-  containIntrinsicSize: '96px',
+  containIntrinsicSize: `${CHAT_ROW_HEIGHT}px`,
+  minHeight: CHAT_ROW_HEIGHT,
 };
 
 const OFFSCREEN_MESSAGE_STYLE = {
@@ -291,6 +296,54 @@ type InboxChatRowProps = {
   onSelectChat: (chat: WhatsAppChat | null) => void;
   onOpenChatContextMenu: (chatId: string, anchorRect: DOMRect, source: ChatMenuSource) => void;
 };
+
+function areStringArraysEqual(left: string[], right: string[]) {
+  if (left === right) {
+    return true;
+  }
+
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
+
+function areBadgeStylesEqual(
+  left: ReturnType<typeof getBadgeStyle> | null,
+  right: ReturnType<typeof getBadgeStyle> | null,
+) {
+  if (left === right) {
+    return true;
+  }
+
+  if (!left || !right) {
+    return false;
+  }
+
+  return (
+    left.backgroundColor === right.backgroundColor &&
+    left.color === right.color &&
+    left.borderColor === right.borderColor
+  );
+}
+
+function areVisibleChatRowItemsEqual(left: VisibleChatRowItem, right: VisibleChatRowItem) {
+  return (
+    left.chat === right.chat &&
+    left.displayName === right.displayName &&
+    left.kind === right.kind &&
+    left.typeLabel === right.typeLabel &&
+    left.typeBadgeClass === right.typeBadgeClass &&
+    left.leadStatus === right.leadStatus &&
+    areBadgeStylesEqual(left.leadStatusStyles, right.leadStatusStyles) &&
+    areStringArraysEqual(left.photoSources, right.photoSources) &&
+    left.muted === right.muted &&
+    left.unreadWaitingLabel === right.unreadWaitingLabel &&
+    left.formattedTime === right.formattedTime &&
+    left.previewText === right.previewText
+  );
+}
 
 const InboxChatRow = memo(function InboxChatRow({
   item,
@@ -469,6 +522,7 @@ export default function WhatsAppInboxScreen() {
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesViewportRef = useRef<HTMLDivElement | null>(null);
+  const chatListViewportRef = useRef<HTMLDivElement | null>(null);
   const composerContainerRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const chatSegmentsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -508,6 +562,8 @@ export default function WhatsAppInboxScreen() {
   const activeMessagesLoadIdRef = useRef(0);
   const activeChatsLoadIdRef = useRef(0);
   const chatSelectionFrameRef = useRef<number | null>(null);
+  const chatListScrollFrameRef = useRef<number | null>(null);
+  const messagesViewportScrollFrameRef = useRef<number | null>(null);
   const composerResizeFrameRef = useRef<number | null>(null);
   const lastGroupNamesSyncAtRef = useRef(0);
   const directNameHydrationAttemptsRef = useRef<Set<string>>(new Set());
@@ -518,6 +574,10 @@ export default function WhatsAppInboxScreen() {
   const reminderQuickOpenLastLoadedAtRef = useRef(0);
   const messagesCacheRef = useRef<Map<string, MessagesCacheState>>(new Map());
   const messageByIdRef = useRef<Map<string, WhatsAppMessage>>(new Map());
+  const mediaGalleryItemsRef = useRef<MessageBubbleMediaGalleryItem[]>([]);
+  const visibleChatItemsCacheRef = useRef<Map<string, VisibleChatRowItem>>(new Map());
+  const [chatListScrollTop, setChatListScrollTop] = useState(0);
+  const [chatListViewportHeight, setChatListViewportHeight] = useState(0);
   const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
@@ -539,11 +599,66 @@ export default function WhatsAppInboxScreen() {
       if (chatSelectionFrameRef.current !== null) {
         cancelAnimationFrame(chatSelectionFrameRef.current);
       }
+      if (chatListScrollFrameRef.current !== null) {
+        cancelAnimationFrame(chatListScrollFrameRef.current);
+      }
+      if (messagesViewportScrollFrameRef.current !== null) {
+        cancelAnimationFrame(messagesViewportScrollFrameRef.current);
+      }
       if (composerResizeFrameRef.current !== null) {
         cancelAnimationFrame(composerResizeFrameRef.current);
       }
     };
   }, []);
+
+  const handleChatListScroll = useCallback(() => {
+    const viewport = chatListViewportRef.current;
+    if (!viewport || chatListScrollFrameRef.current !== null) {
+      return;
+    }
+
+    chatListScrollFrameRef.current = requestAnimationFrame(() => {
+      chatListScrollFrameRef.current = null;
+      const nextScrollTop = viewport.scrollTop;
+      setChatListScrollTop((current) => (current === nextScrollTop ? current : nextScrollTop));
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    const viewport = chatListViewportRef.current;
+    if (!viewport) {
+      setChatListViewportHeight(0);
+      setChatListScrollTop(0);
+      return;
+    }
+
+    const syncChatListMetrics = () => {
+      const nextHeight = viewport.clientHeight || 0;
+      const nextScrollTop = viewport.scrollTop || 0;
+
+      setChatListViewportHeight((current) => (current === nextHeight ? current : nextHeight));
+      setChatListScrollTop((current) => (current === nextScrollTop ? current : nextScrollTop));
+    };
+
+    syncChatListMetrics();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', syncChatListMetrics);
+      return () => {
+        window.removeEventListener('resize', syncChatListMetrics);
+      };
+    }
+
+    const observer = new ResizeObserver(() => {
+      syncChatListMetrics();
+    });
+
+    observer.observe(viewport);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isMobileView, selectedChat?.id]);
 
   const normalizeSearchText = (value: string | null | undefined) =>
     (value || '')
@@ -1612,14 +1727,14 @@ export default function WhatsAppInboxScreen() {
         composerResizeFrameRef.current = null;
         if (!wasNearBottom) {
           syncMessagesViewportBottomState();
-          syncPendingMessagesBelow();
+          syncPendingMessagesBelowCount();
           return;
         }
 
         scrollToBottom('auto');
         requestAnimationFrame(() => {
           syncMessagesViewportBottomState();
-          syncPendingMessagesBelow();
+          clearPendingMessagesBelow();
         });
       });
     };
@@ -2371,8 +2486,7 @@ export default function WhatsAppInboxScreen() {
       setSelectedLeadInfo(null);
       setReplyToMessage(null);
       setEditMessage(null);
-      setPendingMessagesBelow(0);
-      pendingMessageIdsBelowRef.current.clear();
+      clearPendingMessagesBelow();
       pendingInitialScrollMessageIdRef.current = null;
       pendingPrependScrollRestoreRef.current = null;
       messagesViewportNearBottomRef.current = true;
@@ -2403,8 +2517,7 @@ export default function WhatsAppInboxScreen() {
     setHasOlderMessages(false);
     setLoadedMessagesCount(0);
     setLoadedMessagesQueryOffset(0);
-    setPendingMessagesBelow(0);
-    pendingMessageIdsBelowRef.current.clear();
+    clearPendingMessagesBelow();
     pendingPrependScrollRestoreRef.current = null;
     messagesViewportNearBottomRef.current = true;
     lastRenderedMessageIdRef.current = null;
@@ -2512,8 +2625,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       shouldScrollOnChatChangeRef.current = false;
-      pendingMessageIdsBelowRef.current.clear();
-      setPendingMessagesBelow(0);
+      clearPendingMessagesBelow();
       lastRenderedMessageIdRef.current = lastRenderedMessageId;
       requestAnimationFrame(() => {
         const targetMessageId =
@@ -2522,7 +2634,7 @@ export default function WhatsAppInboxScreen() {
         if (targetMessageId && scrollMessageIntoView(targetMessageId, 'auto')) {
           requestAnimationFrame(() => {
             syncMessagesViewportBottomState();
-            syncPendingMessagesBelow();
+            clearPendingMessagesBelow();
           });
           return;
         }
@@ -2533,9 +2645,8 @@ export default function WhatsAppInboxScreen() {
 
     if (!selectedChat) {
       lastRenderedMessageIdRef.current = null;
-      pendingMessageIdsBelowRef.current.clear();
       messagesViewportNearBottomRef.current = true;
-      setPendingMessagesBelow(0);
+      clearPendingMessagesBelow();
       return;
     }
 
@@ -2549,24 +2660,19 @@ export default function WhatsAppInboxScreen() {
     const isNearBottom = syncMessagesViewportBottomState();
 
     if (appendedMessages.length > 0 && isNearBottom) {
-      pendingMessageIdsBelowRef.current.clear();
-      setPendingMessagesBelow(0);
+      clearPendingMessagesBelow();
       requestAnimationFrame(() => {
         scrollToBottom('auto');
         requestAnimationFrame(() => {
           syncMessagesViewportBottomState();
-          syncPendingMessagesBelow();
+          clearPendingMessagesBelow();
         });
       });
     } else if (appendedInboundMessages.length > 0) {
-      requestAnimationFrame(() => {
-        appendedInboundMessages.forEach((message) => {
-          if (!isMessageVisibleInViewport(message.id)) {
-            pendingMessageIdsBelowRef.current.add(message.id);
-          }
-        });
-        syncPendingMessagesBelow();
+      appendedInboundMessages.forEach((message) => {
+        pendingMessageIdsBelowRef.current.add(message.id);
       });
+      syncPendingMessagesBelowCount();
     }
 
     lastRenderedMessageIdRef.current = lastRenderedMessageId;
@@ -2590,51 +2696,39 @@ export default function WhatsAppInboxScreen() {
     }));
   }, [createMessagesCacheState, hasOlderMessages, loadedMessagesCount, loadedMessagesQueryOffset, messages]);
 
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+  const syncPendingMessagesBelowCount = useCallback(() => {
+    const nextSize = pendingMessageIdsBelowRef.current.size;
+    setPendingMessagesBelow((current) => (current === nextSize ? current : nextSize));
+    return nextSize;
+  }, []);
+
+  const clearPendingMessagesBelow = useCallback(() => {
+    if (pendingMessageIdsBelowRef.current.size > 0) {
+      pendingMessageIdsBelowRef.current.clear();
+    }
+
+    setPendingMessagesBelow((current) => (current === 0 ? current : 0));
+  }, []);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     const viewport = messagesViewportRef.current;
     if (!viewport) return;
 
     messagesViewportNearBottomRef.current = true;
     viewport.scrollTo({ top: viewport.scrollHeight, behavior });
-  };
+  }, []);
 
-  const getMessagesViewportDistanceFromBottom = () => {
+  const getMessagesViewportDistanceFromBottom = useCallback(() => {
     const viewport = messagesViewportRef.current;
     if (!viewport) return 0;
     return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
-  };
+  }, []);
 
-  const syncMessagesViewportBottomState = () => {
-    const nearBottom = getMessagesViewportDistanceFromBottom() <= 40;
+  const syncMessagesViewportBottomState = useCallback(() => {
+    const nearBottom = getMessagesViewportDistanceFromBottom() <= MESSAGES_VIEWPORT_NEAR_BOTTOM_PX;
     messagesViewportNearBottomRef.current = nearBottom;
     return nearBottom;
-  };
-
-  const isMessageVisibleInViewport = (messageId: string) => {
-    const viewport = messagesViewportRef.current;
-    if (!viewport) return false;
-
-    const target = viewport.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
-    if (!target) return false;
-
-    const viewportRect = viewport.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
-
-    return targetRect.bottom > viewportRect.top + 8 && targetRect.top < viewportRect.bottom - 8;
-  };
-
-  const syncPendingMessagesBelow = () => {
-    const nextPending = new Set<string>();
-
-    pendingMessageIdsBelowRef.current.forEach((messageId) => {
-      if (!isMessageVisibleInViewport(messageId)) {
-        nextPending.add(messageId);
-      }
-    });
-
-    pendingMessageIdsBelowRef.current = nextPending;
-    setPendingMessagesBelow(nextPending.size);
-  };
+  }, [getMessagesViewportDistanceFromBottom]);
 
   useLayoutEffect(() => {
     const pendingRestore = pendingPrependScrollRestoreRef.current;
@@ -2647,20 +2741,27 @@ export default function WhatsAppInboxScreen() {
     const nextScrollTop = pendingRestore.previousScrollTop + (viewport.scrollHeight - pendingRestore.previousScrollHeight);
     viewport.scrollTop = Math.max(0, nextScrollTop);
     pendingPrependScrollRestoreRef.current = null;
-    syncMessagesViewportBottomState();
-    syncPendingMessagesBelow();
-  }, [messages, messagesChatId]);
-
-  const handleMessagesViewportScroll = () => {
-    const nearBottom = syncMessagesViewportBottomState();
-    if (nearBottom) {
-      pendingMessageIdsBelowRef.current.clear();
-      setPendingMessagesBelow(0);
+    if (syncMessagesViewportBottomState()) {
+      clearPendingMessagesBelow();
       return;
     }
 
-    syncPendingMessagesBelow();
-  };
+    syncPendingMessagesBelowCount();
+  }, [clearPendingMessagesBelow, messages, messagesChatId, syncMessagesViewportBottomState, syncPendingMessagesBelowCount]);
+
+  const handleMessagesViewportScroll = useCallback(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport || messagesViewportScrollFrameRef.current !== null) {
+      return;
+    }
+
+    messagesViewportScrollFrameRef.current = requestAnimationFrame(() => {
+      messagesViewportScrollFrameRef.current = null;
+      if (syncMessagesViewportBottomState()) {
+        clearPendingMessagesBelow();
+      }
+    });
+  }, [clearPendingMessagesBelow, syncMessagesViewportBottomState]);
 
   const scheduleUnreadCountsRefresh = (delayMs: number = UNREAD_COUNTS_REFRESH_DELAY_MS) => {
     if (unreadCountsRefreshTimeoutRef.current !== null) {
@@ -5076,6 +5177,7 @@ export default function WhatsAppInboxScreen() {
           daySeparatorLabel: shouldShowDaySeparator ? formatDaySeparatorLabel(message) : '',
           authorName: showAuthor ? formatPhone(message.author!) : undefined,
           reactions: reactionsByTargetId.get(message.id),
+          forwardPlan: isSelectedStatusChat ? null : buildForwardMessagePlan(message),
         };
       }),
     [reactionsByTargetId, renderedMessages, selectedChatKind], // eslint-disable-line react-hooks/exhaustive-deps
@@ -5123,6 +5225,12 @@ export default function WhatsAppInboxScreen() {
       }),
     [isVisualMediaMessage, renderedMessageItems],
   );
+
+  useEffect(() => {
+    mediaGalleryItemsRef.current = mediaGalleryItems;
+  }, [mediaGalleryItems]);
+
+  const getMediaGalleryItems = useCallback(() => mediaGalleryItemsRef.current, []);
 
   const selectedChatDisplayName = selectedChat
     ? chatListPresentationById.get(selectedChat.id)?.displayName || getChatDisplayName(selectedChat)
@@ -5363,14 +5471,16 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const visibleChatItems = useMemo(
-    () =>
-      visibleChats.map((chat) => {
+    () => {
+      const nextCache = new Map<string, VisibleChatRowItem>();
+
+      const nextItems = visibleChats.map((chat) => {
         const chatPresentation = chatListPresentationById.get(chat.id);
         const resolvedKind = chatPresentation?.kind ?? getChatKind(chat);
         const leadStatus = chatPresentation?.leadStatus ?? null;
         const statusConfig = leadStatus ? statusByName.get(leadStatus) : null;
 
-        return {
+        const nextItem = {
           chat,
           displayName: chatPresentation?.displayName || getChatDisplayName(chat),
           kind: resolvedKind,
@@ -5384,7 +5494,17 @@ export default function WhatsAppInboxScreen() {
           formattedTime: formatTime(chat.last_message_at),
           previewText: formatChatListPreview(chat),
         } satisfies VisibleChatRowItem;
-      }),
+
+        const previousItem = visibleChatItemsCacheRef.current.get(chat.id);
+        const resolvedItem = previousItem && areVisibleChatRowItemsEqual(previousItem, nextItem) ? previousItem : nextItem;
+
+        nextCache.set(chat.id, resolvedItem);
+        return resolvedItem;
+      });
+
+      visibleChatItemsCacheRef.current = nextCache;
+      return nextItems;
+    },
     [
       chatListPresentationById,
       getChatDisplayName,
@@ -5399,6 +5519,60 @@ export default function WhatsAppInboxScreen() {
       visibleChats,
     ],
   );
+
+  const {
+    virtualChatItems,
+    virtualChatPaddingTop,
+    virtualChatPaddingBottom,
+  } = useMemo(() => {
+    if (chatListViewportHeight <= 0 || visibleChatItems.length <= CHAT_LIST_OVERSCAN * 4) {
+      return {
+        virtualChatItems: visibleChatItems,
+        virtualChatPaddingTop: 0,
+        virtualChatPaddingBottom: 0,
+      };
+    }
+
+    const startIndex = Math.max(0, Math.floor(chatListScrollTop / CHAT_ROW_HEIGHT) - CHAT_LIST_OVERSCAN);
+    const visibleCount = Math.ceil(chatListViewportHeight / CHAT_ROW_HEIGHT) + (CHAT_LIST_OVERSCAN * 2);
+    const endIndex = Math.min(visibleChatItems.length, startIndex + visibleCount);
+
+    return {
+      virtualChatItems: visibleChatItems.slice(startIndex, endIndex),
+      virtualChatPaddingTop: startIndex * CHAT_ROW_HEIGHT,
+      virtualChatPaddingBottom: Math.max(0, (visibleChatItems.length - endIndex) * CHAT_ROW_HEIGHT),
+    };
+  }, [chatListScrollTop, chatListViewportHeight, visibleChatItems]);
+
+  useLayoutEffect(() => {
+    const viewport = chatListViewportRef.current;
+    const selectedChatId = selectedChat?.id;
+    if (!viewport || !selectedChatId || visibleChatItems.length === 0) {
+      return;
+    }
+
+    const selectedIndex = visibleChatItems.findIndex((item) => item.chat.id === selectedChatId);
+    if (selectedIndex < 0) {
+      return;
+    }
+
+    const rowTop = selectedIndex * CHAT_ROW_HEIGHT;
+    const rowBottom = rowTop + CHAT_ROW_HEIGHT;
+    const viewportTop = viewport.scrollTop;
+    const viewportBottom = viewportTop + viewport.clientHeight;
+
+    if (rowTop < viewportTop) {
+      viewport.scrollTo({ top: rowTop, behavior: 'auto' });
+      setChatListScrollTop(rowTop);
+      return;
+    }
+
+    if (rowBottom > viewportBottom) {
+      const nextScrollTop = Math.max(0, rowBottom - viewport.clientHeight);
+      viewport.scrollTo({ top: nextScrollTop, behavior: 'auto' });
+      setChatListScrollTop(nextScrollTop);
+    }
+  }, [selectedChat?.id, visibleChatItems]);
 
   const clearMuteMenuCloseTimeout = useCallback(() => {
     if (muteMenuCloseTimeoutRef.current !== null) {
@@ -7956,7 +8130,7 @@ export default function WhatsAppInboxScreen() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div ref={chatListViewportRef} className="flex-1 overflow-y-auto" onScroll={handleChatListScroll}>
             {visibleChats.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-500">
                 <MessageCircle className="w-16 h-16 mb-4 text-slate-300" />
@@ -7964,15 +8138,17 @@ export default function WhatsAppInboxScreen() {
                 <p className="text-sm">As mensagens do WhatsApp aparecerão aqui</p>
               </div>
             ) : (
-              visibleChatItems.map((item) => (
-                <InboxChatRow
-                  key={item.chat.id}
-                  item={item}
-                  isSelected={selectedChat?.id === item.chat.id}
-                  onSelectChat={selectChat}
-                  onOpenChatContextMenu={openChatContextMenu}
-                />
-              ))
+              <div style={{ paddingTop: virtualChatPaddingTop, paddingBottom: virtualChatPaddingBottom }}>
+                {virtualChatItems.map((item) => (
+                  <InboxChatRow
+                    key={item.chat.id}
+                    item={item}
+                    isSelected={selectedChat?.id === item.chat.id}
+                    onSelectChat={selectChat}
+                    onOpenChatContextMenu={openChatContextMenu}
+                  />
+                ))}
+              </div>
             )}
           </div>
           {chatMenu && chatMenuLayout && chatMenuTarget?.chat && (
@@ -8330,10 +8506,7 @@ export default function WhatsAppInboxScreen() {
                                 <p>{isLoadingMessages ? 'Carregando atualizações...' : isSelectedStatusChat ? 'Nenhuma atualização de status ainda' : 'Nenhuma mensagem ainda'}</p>
                   </div>
                 ) : (
-                  renderedMessageItems.map(({ message, timestamp, shouldShowDaySeparator, daySeparatorLabel, authorName, reactions }) => {
-                    const forwardPlan = isSelectedStatusChat ? null : buildForwardMessagePlan(message);
-                    const messageMediaGalleryItems = isVisualMediaMessage(message) ? mediaGalleryItems : undefined;
-
+                  renderedMessageItems.map(({ message, timestamp, shouldShowDaySeparator, daySeparatorLabel, authorName, reactions, forwardPlan }) => {
                     return (
                       <div key={message.id} data-message-id={message.id} style={OFFSCREEN_MESSAGE_STYLE}>
                         {shouldShowDaySeparator && daySeparatorLabel && (
@@ -8372,10 +8545,10 @@ export default function WhatsAppInboxScreen() {
                           onTranscriptionSaved={isSelectedStatusChat ? undefined : handleAudioTranscriptionSaved}
                           onSaveSharedContact={isSelectedStatusChat ? undefined : handleSaveSharedContact}
                           onOpenSharedContactChat={isSelectedStatusChat ? undefined : handleOpenSharedContactChat}
-                          mediaGalleryItems={messageMediaGalleryItems}
-                        />
-                      </div>
-                    );
+                          getMediaGalleryItems={isVisualMediaMessage(message) ? getMediaGalleryItems : undefined}
+                         />
+                       </div>
+                     );
                   })
                 )}
                 <div ref={messagesEndRef} />
@@ -8390,9 +8563,8 @@ export default function WhatsAppInboxScreen() {
                     size="sm"
                     className="pointer-events-auto h-auto rounded-full px-3 py-1.5 text-xs shadow-lg"
                     onClick={() => {
-                      pendingMessageIdsBelowRef.current.clear();
                       scrollToBottom();
-                      setPendingMessagesBelow(0);
+                      clearPendingMessagesBelow();
                     }}
                   >
                     <MessageCircle className="h-3.5 w-3.5" />

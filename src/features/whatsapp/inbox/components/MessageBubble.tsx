@@ -87,7 +87,7 @@ export interface MessageBubbleProps {
   onSaveSharedContact?: (contact: { name: string; phone: string }) => Promise<SaveSharedContactResult | void> | SaveSharedContactResult | void;
   onOpenSharedContactChat?: (contact: { name: string; phone: string }) => void;
   isForwarded?: boolean;
-  mediaGalleryItems?: MediaGalleryItem[];
+  getMediaGalleryItems?: () => MediaGalleryItem[];
 }
 
 type MediaPayload = {
@@ -204,7 +204,7 @@ function areMessageBubblePropsEqual(
     Boolean(prev.onSaveSharedContact) === Boolean(next.onSaveSharedContact) &&
     Boolean(prev.onOpenSharedContactChat) === Boolean(next.onOpenSharedContactChat) &&
     prev.isForwarded === next.isForwarded &&
-    prev.mediaGalleryItems === next.mediaGalleryItems
+    prev.getMediaGalleryItems === next.getMediaGalleryItems
   );
 }
 
@@ -409,7 +409,7 @@ function MessageBubbleComponent({
   onSaveSharedContact,
   onOpenSharedContactChat,
   isForwarded = false,
-  mediaGalleryItems,
+  getMediaGalleryItems,
 }: MessageBubbleProps) {
   const isOutbound = direction === 'outbound';
   const [showHistory, setShowHistory] = useState(false);
@@ -808,9 +808,20 @@ function MessageBubbleComponent({
     }),
     [body, fromName, hasMedia, id, isDeleted, payloadData, timestamp, type],
   );
-  const availableMediaGalleryItems = useMemo(
-    () => (mediaGalleryItems && mediaGalleryItems.length > 0 ? mediaGalleryItems : isVisualMediaMessage ? [currentMediaGalleryItem] : []),
-    [currentMediaGalleryItem, isVisualMediaMessage, mediaGalleryItems],
+  const resolveAvailableMediaGalleryItems = useCallback(
+    (galleryItemsOverride?: MediaGalleryItem[]) => {
+      if (galleryItemsOverride && galleryItemsOverride.length > 0) {
+        return galleryItemsOverride;
+      }
+
+      const sharedGalleryItems = getMediaGalleryItems?.() ?? [];
+      if (sharedGalleryItems.length > 0) {
+        return sharedGalleryItems;
+      }
+
+      return isVisualMediaMessage ? [currentMediaGalleryItem] : [];
+    },
+    [currentMediaGalleryItem, getMediaGalleryItems, isVisualMediaMessage],
   );
 
   useEffect(() => {
@@ -1724,7 +1735,7 @@ function MessageBubbleComponent({
       galleryItemsOverride?: MediaGalleryItem[],
       galleryIndexOverride?: number,
     ): MediaPreviewState => {
-      const fallbackItems = galleryItemsOverride && galleryItemsOverride.length > 0 ? galleryItemsOverride : availableMediaGalleryItems;
+      const fallbackItems = resolveAvailableMediaGalleryItems(galleryItemsOverride);
       const galleryItems = fallbackItems.length > 0 ? fallbackItems : [item];
       const galleryIndex =
         typeof galleryIndexOverride === 'number'
@@ -1746,7 +1757,7 @@ function MessageBubbleComponent({
         galleryIndex,
       };
     },
-    [availableMediaGalleryItems],
+    [resolveAvailableMediaGalleryItems],
   );
 
   const handleDownloadMediaPreview = useCallback(() => {
@@ -1811,7 +1822,7 @@ function MessageBubbleComponent({
         return;
       }
 
-      const galleryItems = galleryItemsOverride && galleryItemsOverride.length > 0 ? galleryItemsOverride : availableMediaGalleryItems;
+      const galleryItems = resolveAvailableMediaGalleryItems(galleryItemsOverride);
       const galleryIndex =
         typeof galleryIndexOverride === 'number'
           ? galleryIndexOverride
@@ -1842,11 +1853,12 @@ function MessageBubbleComponent({
         return { ...current, src: loadedUrl, isLoading: false };
       });
     },
-    [availableMediaGalleryItems, buildMediaPreviewState, id, loadMediaUrlById, loadVisualMedia],
+    [buildMediaPreviewState, id, loadMediaUrlById, loadVisualMedia, resolveAvailableMediaGalleryItems],
   );
 
   async function openMediaPreview(_previewType: 'image' | 'video' | 'sticker', fallbackSrc?: string | null) {
-    const baseGalleryItems = availableMediaGalleryItems.length > 0 ? availableMediaGalleryItems : [currentMediaGalleryItem];
+    const resolvedGalleryItems = resolveAvailableMediaGalleryItems();
+    const baseGalleryItems = resolvedGalleryItems.length > 0 ? resolvedGalleryItems : [currentMediaGalleryItem];
     const currentIndex = baseGalleryItems.findIndex((entry) => entry.messageId === currentMediaGalleryItem.messageId);
     const galleryItems = currentIndex >= 0 ? baseGalleryItems : [currentMediaGalleryItem];
     const galleryIndex = currentIndex >= 0 ? currentIndex : 0;

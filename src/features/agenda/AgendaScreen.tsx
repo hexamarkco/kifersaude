@@ -1264,7 +1264,7 @@ export default function AgendaScreen() {
             leadId={reminder.lead_id ?? contract?.lead_id}
             contractId={reminder.contract_id}
             leadName={leadInfo?.nome_completo}
-            isLoading={loadingLeadId === reminder.lead_id}
+            isLoading={loadingLeadId === leadId}
           />
         )
       : null;
@@ -1951,7 +1951,6 @@ type AgendaReminderContextLinkProps = {
   leadId?: string;
   contractId?: string;
   leadName?: string;
-  onLeadClick?: (leadId: string) => void;
   isLoading?: boolean;
 };
 
@@ -1963,7 +1962,6 @@ function AgendaReminderContextLink({
   leadId,
   contractId,
   leadName,
-  onLeadClick,
   isLoading,
 }: AgendaReminderContextLinkProps) {
   const [contextInfo, setContextInfo] = useState<ContextInfo | null>(null);
@@ -2017,27 +2015,9 @@ function AgendaReminderContextLink({
     return null;
   }
 
-  if (contextInfo.type === "lead" && leadId && onLeadClick) {
-    return (
-      <button
-        type="button"
-        onClick={() => onLeadClick(leadId)}
-        className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors hover:bg-black/5"
-        style={{
-          ...getPanelToneStyle("neutral"),
-          cursor: isLoading ? "wait" : "pointer",
-        }}
-        disabled={isLoading}
-      >
-        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
-        <span>{contextInfo.label}</span>
-      </button>
-    );
-  }
-
   return (
     <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle("neutral")}>
-      <Bell className="h-3 w-3" />
+      {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
       <span>{contextInfo.label}</span>
     </span>
   );

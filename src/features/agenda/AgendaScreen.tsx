@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
@@ -1249,12 +1257,53 @@ export default function AgendaScreen() {
     const hasLeadPhone = Boolean(leadInfo?.telefone);
     const overdue = isOverdue(reminder.data_lembrete);
     const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
+    const canOpenLead = Boolean(leadId);
+    const contextBadge = reminder.lead_id || reminder.contract_id
+      ? (
+          <AgendaReminderContextLink
+            leadId={reminder.lead_id ?? contract?.lead_id}
+            contractId={reminder.contract_id}
+            leadName={leadInfo?.nome_completo}
+            isLoading={loadingLeadId === reminder.lead_id}
+          />
+        )
+      : null;
+
+    const handleCardOpen = () => {
+      if (!leadId) {
+        return;
+      }
+
+      void handleOpenLead(leadId);
+    };
+
+    const handleCardKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+      if (!canOpenLead || event.target !== event.currentTarget) {
+        return;
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        void handleOpenLead(leadId!);
+      }
+    };
+
+    const handleCardAction = (callback: () => unknown | Promise<unknown>) =>
+      (event: ReactMouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation();
+        void callback();
+      };
 
     return (
       <article
         key={reminder.id}
-        className="panel-glass-lite rounded-[1.35rem] border p-4 shadow-sm transition-all"
+        className={`panel-glass-lite rounded-[1.35rem] border p-4 shadow-sm transition-all ${canOpenLead ? "cursor-pointer" : ""}`}
         style={getReminderCardStyle(reminder)}
+        onClick={canOpenLead ? handleCardOpen : undefined}
+        onKeyDown={canOpenLead ? handleCardKeyDown : undefined}
+        role={canOpenLead ? "button" : undefined}
+        tabIndex={canOpenLead ? 0 : undefined}
+        aria-label={canOpenLead ? `Abrir edicao do lead ${leadInfo?.nome_completo ?? ""}`.trim() : undefined}
       >
         <div className="flex min-w-0 items-start gap-3">
           <div className="rounded-[1rem] border p-3" style={reminder.lido ? getPanelToneStyle("success") : getReminderTypeStyle(reminder.tipo)}>
@@ -1264,9 +1313,12 @@ export default function AgendaScreen() {
           <div className="min-w-0 flex-1">
             <div className="space-y-3">
               <div>
-                <h3 className="text-base font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
-                  {reminder.titulo}
-                </h3>
+                <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-3">
+                  <h3 className="text-base font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
+                    {reminder.titulo}
+                  </h3>
+                  {contextBadge && <div className="hidden xl:flex xl:items-center">{contextBadge}</div>}
+                </div>
                 {reminder.descricao && (
                   <p className="mt-1 text-sm" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
                     {reminder.descricao}
@@ -1275,6 +1327,7 @@ export default function AgendaScreen() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {contextBadge && <div className="xl:hidden">{contextBadge}</div>}
                 <span
                   className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
                   style={getReminderPriorityStyle(reminder.prioridade)}
@@ -1319,22 +1372,13 @@ export default function AgendaScreen() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
-              </div>
-                {(reminder.lead_id || reminder.contract_id) && (
-                  <AgendaReminderContextLink
-                    leadId={reminder.lead_id ?? contract?.lead_id}
-                    contractId={reminder.contract_id}
-                    leadName={leadInfo?.nome_completo}
-                    onLeadClick={handleOpenLead}
-                    isLoading={loadingLeadId === reminder.lead_id}
-                  />
-                )}
+                  <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
+                </div>
               </div>
 
               <div className="flex w-full flex-wrap items-center gap-2">
                 <Button
-                  onClick={() => openLeadInWhatsAppTab(leadInfo ?? null)}
+                  onClick={handleCardAction(() => openLeadInWhatsAppTab(leadInfo ?? null))}
                   variant="secondary"
                   size="icon"
                   className="h-9 w-9"
@@ -1344,7 +1388,7 @@ export default function AgendaScreen() {
                   <MessageCircle className="h-4 w-4" />
                 </Button>
                 <Button
-                  onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
+                  onClick={handleCardAction(() => openLeadInOfficialWhatsApp(leadInfo ?? null))}
                   disabled={!hasLeadPhone}
                   variant="soft"
                   size="icon"
@@ -1357,9 +1401,7 @@ export default function AgendaScreen() {
                 {!reminder.lido && (
                   <>
                     <Button
-                      onClick={() => {
-                        void handleQuickSchedule(reminder, 1);
-                      }}
+                      onClick={handleCardAction(() => handleQuickSchedule(reminder, 1))}
                       disabled={isQuickSchedulingCurrentReminder}
                       variant="primary"
                       size="icon"
@@ -1382,9 +1424,7 @@ export default function AgendaScreen() {
                       )}
                     </Button>
                     <Button
-                      onClick={() => {
-                        void handleQuickSchedule(reminder, 2);
-                      }}
+                      onClick={handleCardAction(() => handleQuickSchedule(reminder, 2))}
                       disabled={isQuickSchedulingCurrentReminder}
                       variant="primary"
                       size="icon"
@@ -1409,9 +1449,7 @@ export default function AgendaScreen() {
                   </>
                 )}
                 <Button
-                  onClick={() => {
-                    void handleMarkAsRead(reminder.id, reminder.lido);
-                  }}
+                  onClick={handleCardAction(() => handleMarkAsRead(reminder.id, reminder.lido))}
                   variant={reminder.lido ? "secondary" : "soft"}
                   size="icon"
                   className="h-9 w-9"
@@ -1422,7 +1460,7 @@ export default function AgendaScreen() {
                 </Button>
                 {!reminder.lido && (
                   <Button
-                    onClick={() => setReschedulingReminderId(reminder.id)}
+                    onClick={handleCardAction(() => setReschedulingReminderId(reminder.id))}
                     variant="secondary"
                     size="icon"
                     className="h-9 w-9"
@@ -1434,9 +1472,7 @@ export default function AgendaScreen() {
                 )}
                 {leadId && (
                   <Button
-                    onClick={() => {
-                      void handleMarkLeadAsLost(reminder);
-                    }}
+                    onClick={handleCardAction(() => handleMarkLeadAsLost(reminder))}
                     variant="danger"
                     size="icon"
                     className="h-9 w-9"
@@ -1449,7 +1485,7 @@ export default function AgendaScreen() {
                   </Button>
                 )}
                 <Button
-                  onClick={() => handleDelete(reminder.id)}
+                  onClick={handleCardAction(() => handleDelete(reminder.id))}
                   variant="danger"
                   size="icon"
                   className="h-9 w-9"
@@ -1731,7 +1767,7 @@ export default function AgendaScreen() {
                 </div>
 
                 {pendingSelectedReminders.length > 0 ? (
-                  <div className="space-y-3">{pendingSelectedReminders.map(renderReminderCard)}</div>
+                  <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">{pendingSelectedReminders.map(renderReminderCard)}</div>
                 ) : (
                   <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
                     Nenhum item pendente neste dia.

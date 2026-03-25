@@ -891,6 +891,7 @@ const processCampaignTargets = async ({
       let skippedSteps = 0;
       let lastSkippedReason: string | null = null;
       let scheduledFutureStep = false;
+      let shouldApplyPacingForTarget = currentLastCompletedStepIndex < 0 && !currentLastSentStepAt;
       const normalizedRecipient = normalizeTargetChatId(target, recipient);
 
       for (let stepIndex = lastCompletedStepIndex + 1; stepIndex < campaignSteps.length; stepIndex += 1) {
@@ -903,10 +904,14 @@ const processCampaignTargets = async ({
           now,
         );
 
-        const pacingBlock = getCampaignPacingBlock(campaignPacing, now);
+        const pacingBlock = shouldApplyPacingForTarget
+          ? getCampaignPacingBlock(campaignPacing, now)
+          : { blocked: false, resumeAt: null, reason: null };
         const intrinsicDueAtMs = getTimestampMs(dueAt);
         const intrinsicFutureDueAt = !Number.isNaN(intrinsicDueAtMs) && intrinsicDueAtMs > now.getTime() ? dueAt : null;
-        const blockedUntil = getLaterIso(intrinsicFutureDueAt, pacingBlock.resumeAt);
+        const blockedUntil = shouldApplyPacingForTarget
+          ? getLaterIso(intrinsicFutureDueAt, pacingBlock.resumeAt)
+          : intrinsicFutureDueAt;
 
         if (blockedUntil) {
           await scheduleTargetNextStep(supabaseAdmin, target.id, blockedUntil, normalizedRecipient);
@@ -958,12 +963,15 @@ const processCampaignTargets = async ({
           step.id,
           normalizedRecipient,
         );
-        await persistCampaignDispatchProgress(
-          supabaseAdmin,
-          target.campaign_id,
-          campaignPacing,
-          currentLastSentStepAt,
-        );
+        if (shouldApplyPacingForTarget) {
+          await persistCampaignDispatchProgress(
+            supabaseAdmin,
+            target.campaign_id,
+            campaignPacing,
+            currentLastSentStepAt,
+          );
+          shouldApplyPacingForTarget = false;
+        }
         currentLastCompletedStepIndex = stepIndex;
       }
 

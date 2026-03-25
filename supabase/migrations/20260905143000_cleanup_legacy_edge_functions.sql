@@ -41,6 +41,11 @@ DECLARE
   event_type text;
   is_status_change boolean;
 BEGIN
+  IF TG_OP = 'INSERT' AND COALESCE(NEW.canal, '') = 'whatsapp_campaign' THEN
+    RAISE LOG 'Skipping auto-contact trigger for campaign lead %', NEW.id;
+    RETURN NEW;
+  END IF;
+
   is_status_change := (OLD IS NOT NULL AND OLD.status IS DISTINCT FROM NEW.status);
 
   IF TG_OP = 'INSERT' THEN

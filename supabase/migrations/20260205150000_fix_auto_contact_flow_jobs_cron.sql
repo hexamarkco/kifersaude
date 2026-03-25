@@ -12,26 +12,26 @@ DECLARE
   has_config_value boolean := false;
 BEGIN
   BEGIN
-    function_url := current_setting('app.settings.supabase_url', true);
+    function_url := NULLIF(trim(both '"' FROM COALESCE(current_setting('app.settings.supabase_url', true), '')), '');
   EXCEPTION WHEN OTHERS THEN
     function_url := NULL;
   END;
 
   BEGIN
-    service_role_key := current_setting('app.settings.supabase_service_role_key', true);
+    service_role_key := NULLIF(trim(both '"' FROM COALESCE(current_setting('app.settings.supabase_service_role_key', true), '')), '');
   EXCEPTION WHEN OTHERS THEN
     service_role_key := NULL;
   END;
 
   IF function_url IS NULL THEN
-    SELECT value INTO function_url
+    SELECT NULLIF(trim(both '"' FROM value), '') INTO function_url
     FROM system_configurations
     WHERE label = 'supabase_url'
     LIMIT 1;
   END IF;
 
   IF service_role_key IS NULL THEN
-    SELECT value INTO service_role_key
+    SELECT NULLIF(trim(both '"' FROM value), '') INTO service_role_key
     FROM system_configurations
     WHERE label = 'supabase_service_role_key'
     LIMIT 1;
@@ -49,7 +49,7 @@ BEGIN
 
   IF function_url IS NULL AND has_config_key AND has_config_value THEN
     EXECUTE $sql$
-      SELECT config_value
+      SELECT NULLIF(trim(both '"' FROM config_value::text), '')
       FROM system_configurations
       WHERE config_key = 'supabase_url'
       LIMIT 1
@@ -58,7 +58,7 @@ BEGIN
 
   IF service_role_key IS NULL AND has_config_key AND has_config_value THEN
     EXECUTE $sql$
-      SELECT config_value
+      SELECT NULLIF(trim(both '"' FROM config_value::text), '')
       FROM system_configurations
       WHERE config_key = 'supabase_service_role_key'
       LIMIT 1
@@ -66,7 +66,7 @@ BEGIN
   END IF;
 
   IF function_url IS NOT NULL THEN
-    function_url := function_url || '/functions/v1/leads-api?action=process-flow-jobs';
+    function_url := rtrim(function_url, '/') || '/functions/v1/leads-api?action=process-flow-jobs';
   END IF;
 
   IF function_url IS NULL OR service_role_key IS NULL THEN
@@ -82,9 +82,9 @@ BEGIN
     'process-auto-contact-flow-jobs',
     '* * * * *',
     format(
-      'SELECT net.http_post(url := %L, headers := jsonb_build_object(''Content-Type'', ''application/json'', ''Authorization'', ''Bearer %s''), body := jsonb_build_object(''source'', ''cron''));',
+      'SELECT net.http_post(url := %L, headers := jsonb_build_object(''Content-Type'', ''application/json'', ''Authorization'', %L), body := jsonb_build_object(''source'', ''cron''), timeout_milliseconds := 30000);',
       function_url,
-      service_role_key
+      'Bearer ' || service_role_key
     )
   );
 END $$;

@@ -2169,6 +2169,11 @@ async function loadAutoContactFlowSettings(
   return normalizeAutoContactFlowSettings(data?.settings) ?? null;
 }
 
+const isCampaignImportedLead = (lead: Record<string, unknown> | null | undefined): boolean => {
+  const canal = typeof lead?.canal === 'string' ? lead.canal.trim().toLowerCase() : '';
+  return canal === 'whatsapp_campaign';
+};
+
 const matchTextCondition = (
   source: string,
   expected: string,
@@ -3429,6 +3434,17 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      if (event === 'lead_created' && isCampaignImportedLead(record as Record<string, unknown>)) {
+        logWithContext('Ignorando automação lead_created para lead originado por campanha WhatsApp', {
+          leadId: (record as Record<string, unknown>).id,
+        });
+
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: 'campaign_lead' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const lookups = await getLookups();
 
       const mapLeadForMatch = (lead: any) => {
@@ -3443,7 +3459,17 @@ Deno.serve(async (req: Request) => {
       const settings = await loadAutoContactFlowSettings(supabase);
 
       const tryLegacyFallback = async (reason: string) => {
-        if (event !== 'lead_created') {
+        if (event !== 'lead_created' || isCampaignImportedLead(record as Record<string, unknown>)) {
+          return false;
+        }
+
+        const legacySettings = await loadAutoContactSettings(supabase);
+        const hasLegacyFlow = Boolean(
+          legacySettings?.enabled
+          && legacySettings.messageFlow.some((step) => step.active && step.message.trim()),
+        );
+
+        if (!hasLegacyFlow) {
           return false;
         }
 
@@ -3463,9 +3489,16 @@ Deno.serve(async (req: Request) => {
         return true;
       };
 
-      if (!settings || !settings.enabled || !settings.autoSend || settings.flows.length === 0) {
-        const fallbackUsed = await tryLegacyFallback('flow_settings_unavailable');
-        return new Response(JSON.stringify({ success: true, skipped: !fallbackUsed, fallback: 'legacy' }), {
+      if (!settings || !settings.enabled || !settings.autoSend) {
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: 'flow_settings_unavailable' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (settings.flows.length === 0) {
+        const fallbackUsed = await tryLegacyFallback('legacy_only_mode');
+        return new Response(JSON.stringify({ success: true, skipped: !fallbackUsed, fallback: fallbackUsed ? 'legacy' : null }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -3601,7 +3634,10 @@ Deno.serve(async (req: Request) => {
           error: automationError instanceof Error ? automationError.message : String(automationError),
         });
 
-        await tryLegacyFallback('flow_engine_error');
+        return new Response(JSON.stringify({ success: false, error: 'Erro ao executar automação automática.' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
       return new Response(JSON.stringify({ success: true }), {

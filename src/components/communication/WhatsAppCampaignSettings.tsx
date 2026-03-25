@@ -2934,7 +2934,12 @@ export default function WhatsAppCampaignSettings() {
               <span>Etapas: {selectedCampaign.flow_steps.length}</span>
               <span>Limite diário: {selectedCampaignPacing.dailySendLimit ?? 'Sem limite'}</span>
               <span>Intervalo: {selectedCampaignPacing.sendIntervalMinutes ? `${selectedCampaignPacing.sendIntervalMinutes} min` : 'Sem intervalo'}</span>
-              {formatImportProgressLabel(selectedCampaign) && <span>{formatImportProgressLabel(selectedCampaign)}</span>}
+               {formatImportProgressLabel(selectedCampaign) && (
+                 <span>
+                   {formatImportProgressLabel(selectedCampaign)}
+                   {getImportProgressPercent(selectedCampaign) !== null ? ` (${getImportProgressPercent(selectedCampaign)}%)` : ''}
+                 </span>
+               )}
             </div>
           </div>
         )}

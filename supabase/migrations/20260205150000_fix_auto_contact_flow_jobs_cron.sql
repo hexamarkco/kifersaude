@@ -8,6 +8,8 @@ DO $$
 DECLARE
   function_url text;
   service_role_key text;
+  has_label boolean := false;
+  has_value boolean := false;
   has_config_key boolean := false;
   has_config_value boolean := false;
 BEGIN
@@ -23,18 +25,32 @@ BEGIN
     service_role_key := NULL;
   END;
 
-  IF function_url IS NULL THEN
-    SELECT NULLIF(trim(both '"' FROM value), '') INTO function_url
-    FROM system_configurations
-    WHERE label = 'supabase_url'
-    LIMIT 1;
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'system_configurations' AND column_name = 'label'
+  ) INTO has_label;
+
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'system_configurations' AND column_name = 'value'
+  ) INTO has_value;
+
+  IF function_url IS NULL AND has_label AND has_value THEN
+    EXECUTE $sql$
+      SELECT NULLIF(trim(both '"' FROM value), '')
+      FROM system_configurations
+      WHERE label = 'supabase_url'
+      LIMIT 1
+    $sql$ INTO function_url;
   END IF;
 
-  IF service_role_key IS NULL THEN
-    SELECT NULLIF(trim(both '"' FROM value), '') INTO service_role_key
-    FROM system_configurations
-    WHERE label = 'supabase_service_role_key'
-    LIMIT 1;
+  IF service_role_key IS NULL AND has_label AND has_value THEN
+    EXECUTE $sql$
+      SELECT NULLIF(trim(both '"' FROM value), '')
+      FROM system_configurations
+      WHERE label = 'supabase_service_role_key'
+      LIMIT 1
+    $sql$ INTO service_role_key;
   END IF;
 
   SELECT EXISTS (

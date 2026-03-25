@@ -41,7 +41,28 @@ DECLARE
   event_type text;
   is_status_change boolean;
 BEGIN
-  IF TG_OP = 'INSERT' AND COALESCE(NEW.canal, '') = 'whatsapp_campaign' THEN
+  IF TG_OP = 'INSERT' AND COALESCE(NEW.skip_automation, false) THEN
+    UPDATE public.leads
+    SET skip_automation = false
+    WHERE id = NEW.id;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'UPDATE'
+    AND COALESCE(OLD.skip_automation, false)
+    AND NOT COALESCE(NEW.skip_automation, false)
+  THEN
+    RETURN NEW;
+  END IF;
+
+  IF COALESCE(NEW.canal, '') = 'whatsapp_campaign' THEN
+    IF TG_OP = 'INSERT' AND NOT COALESCE(NEW.skip_automation, false) THEN
+      UPDATE public.leads
+      SET skip_automation = true
+      WHERE id = NEW.id
+        AND NOT COALESCE(skip_automation, false);
+    END IF;
+
     RAISE LOG 'Skipping auto-contact trigger for campaign lead %', NEW.id;
     RETURN NEW;
   END IF;

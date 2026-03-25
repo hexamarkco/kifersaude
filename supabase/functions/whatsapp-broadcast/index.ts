@@ -64,6 +64,7 @@ type TargetRecord = {
   status: TargetStatus;
   attempts: number | null;
   error_message?: string | null;
+  sent_at?: string | null;
   last_attempt_at?: string | null;
   processing_started_at?: string | null;
   processing_expires_at?: string | null;
@@ -593,23 +594,29 @@ const persistTargetStepProgress = async (
   stepIndex: number,
   stepId: string,
   recipient: string,
-): Promise<string> => {
+  markAsStarted = false,
+): Promise<{ lastSentStepAt: string; sentAt: string | null }> => {
   const now = new Date();
   const nowIso = now.toISOString();
+  const updatePayload: Record<string, unknown> = {
+    last_completed_step_index: stepIndex,
+    last_completed_step_id: stepId,
+    last_sent_step_at: nowIso,
+    last_attempt_at: nowIso,
+    processing_started_at: nowIso,
+    processing_expires_at: getProcessingLeaseExpiryIso(now),
+    error_message: null,
+    next_step_due_at: null,
+    chat_id: recipient,
+  };
+
+  if (markAsStarted) {
+    updatePayload.sent_at = nowIso;
+  }
 
   const { error } = await supabaseAdmin
     .from('whatsapp_campaign_targets')
-    .update({
-      last_completed_step_index: stepIndex,
-      last_completed_step_id: stepId,
-      last_sent_step_at: nowIso,
-      last_attempt_at: nowIso,
-      processing_started_at: nowIso,
-      processing_expires_at: getProcessingLeaseExpiryIso(now),
-      error_message: null,
-      next_step_due_at: null,
-      chat_id: recipient,
-    })
+    .update(updatePayload)
     .eq('id', targetId)
     .eq('status', 'processing');
 
@@ -617,7 +624,10 @@ const persistTargetStepProgress = async (
     throw new Error(`Erro ao salvar progresso do alvo: ${error.message}`);
   }
 
-  return nowIso;
+  return {
+    lastSentStepAt: nowIso,
+    sentAt: markAsStarted ? nowIso : null,
+  };
 };
 
 const persistCampaignDispatchProgress = async (
@@ -683,21 +693,28 @@ const updateTargetResult = async (
   errorMessage: string | null,
   markAsSent = false,
   extraUpdates: Record<string, unknown> = {},
+  sentAtValue?: string | null,
 ) => {
   const nowIso = new Date().toISOString();
+  const updatePayload: Record<string, unknown> = {
+    status,
+    error_message: errorMessage,
+    last_attempt_at: nowIso,
+    processing_started_at: null,
+    processing_expires_at: null,
+    next_step_due_at: null,
+    ...extraUpdates,
+  };
+
+  if (markAsSent) {
+    updatePayload.sent_at = sentAtValue ?? nowIso;
+  } else if (typeof sentAtValue !== 'undefined') {
+    updatePayload.sent_at = sentAtValue;
+  }
 
   const { error } = await supabaseAdmin
     .from('whatsapp_campaign_targets')
-    .update({
-      status,
-      error_message: errorMessage,
-      last_attempt_at: nowIso,
-      sent_at: markAsSent ? nowIso : null,
-      processing_started_at: null,
-      processing_expires_at: null,
-      next_step_due_at: null,
-      ...extraUpdates,
-    })
+    .update(updatePayload)
     .eq('id', targetId);
 
   if (error) {
@@ -780,7 +797,7 @@ const loadProcessableTargets = async (
   for (let page = 0; page < maxPages && collected.length < limit; page += 1) {
     let query = supabaseAdmin
       .from('whatsapp_campaign_targets')
-      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, next_step_due_at, created_at, lead:leads(nome_completo, telefone, email, cidade, canal), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, audience_config, scheduled_at, started_at, last_dispatch_at, dispatch_day, dispatches_today)')
+      .select('id, campaign_id, lead_id, phone, raw_phone, display_name, chat_id, source_payload, status, attempts, error_message, sent_at, last_attempt_at, processing_started_at, processing_expires_at, last_completed_step_index, last_completed_step_id, last_sent_step_at, next_step_due_at, created_at, lead:leads(nome_completo, telefone, email, cidade, canal), campaign:whatsapp_campaigns!inner(id, status, message, flow_steps, audience_config, scheduled_at, started_at, last_dispatch_at, dispatch_day, dispatches_today)')
       .in('status', ['pending', 'processing'])
       .order('next_step_due_at', { ascending: true, nullsFirst: true })
       .order('created_at', { ascending: true })
@@ -878,6 +895,7 @@ const processCampaignTargets = async ({
     }
 
     const lastCompletedStepIndex = clampCompletedCampaignStepIndex(target.last_completed_step_index, campaignSteps.length);
+    let currentSentAt = target.sent_at ?? null;
 
     try {
       const recipient = await resolveWhapiRecipient({
@@ -891,7 +909,7 @@ const processCampaignTargets = async ({
       let skippedSteps = 0;
       let lastSkippedReason: string | null = null;
       let scheduledFutureStep = false;
-      let shouldApplyPacingForTarget = currentLastCompletedStepIndex < 0 && !currentLastSentStepAt;
+      let shouldApplyPacingForTarget = currentLastCompletedStepIndex < 0 && !currentSentAt;
       const normalizedRecipient = normalizeTargetChatId(target, recipient);
 
       for (let stepIndex = lastCompletedStepIndex + 1; stepIndex < campaignSteps.length; stepIndex += 1) {
@@ -956,13 +974,19 @@ const processCampaignTargets = async ({
           sourcePayload: target.source_payload ?? null,
         });
 
-        currentLastSentStepAt = await persistTargetStepProgress(
+        const markAsStarted = currentLastCompletedStepIndex < 0 && !currentSentAt;
+        const progressSnapshot = await persistTargetStepProgress(
           supabaseAdmin,
           target.id,
           stepIndex,
           step.id,
           normalizedRecipient,
+          markAsStarted,
         );
+        currentLastSentStepAt = progressSnapshot.lastSentStepAt;
+        if (progressSnapshot.sentAt) {
+          currentSentAt = progressSnapshot.sentAt;
+        }
         if (shouldApplyPacingForTarget) {
           await persistCampaignDispatchProgress(
             supabaseAdmin,
@@ -989,6 +1013,7 @@ const processCampaignTargets = async ({
         terminalMessage,
         shouldMarkAsSent,
         { chat_id: normalizedRecipient },
+        currentSentAt,
       );
 
       if (shouldMarkAsSent) {
@@ -1006,6 +1031,7 @@ const processCampaignTargets = async ({
         message,
         false,
         {},
+        currentSentAt,
       );
 
       if (isInvalid) {

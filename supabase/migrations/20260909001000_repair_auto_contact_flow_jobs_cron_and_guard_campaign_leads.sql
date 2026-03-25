@@ -1,8 +1,9 @@
 /*
   # Repair auto-contact cron and guard campaign-imported leads
 
-  - Recreates the lead auto-contact trigger with a guard for `canal = 'whatsapp_campaign'`
+  - Recreates the lead auto-contact trigger with guards for `skip_automation` and `canal = 'whatsapp_campaign'`
   - Recreates the `process-auto-contact-flow-jobs` cron using sanitized configuration values
+  - Cancels pending/processing auto-contact jobs for leads already created by campaigns
 */
 
 CREATE OR REPLACE FUNCTION trigger_auto_send_lead_messages()
@@ -21,7 +22,28 @@ DECLARE
   has_config_key boolean := false;
   has_config_value boolean := false;
 BEGIN
-  IF TG_OP = 'INSERT' AND COALESCE(NEW.canal, '') = 'whatsapp_campaign' THEN
+  IF TG_OP = 'INSERT' AND COALESCE(NEW.skip_automation, false) THEN
+    UPDATE public.leads
+    SET skip_automation = false
+    WHERE id = NEW.id;
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP = 'UPDATE'
+    AND COALESCE(OLD.skip_automation, false)
+    AND NOT COALESCE(NEW.skip_automation, false)
+  THEN
+    RETURN NEW;
+  END IF;
+
+  IF COALESCE(NEW.canal, '') = 'whatsapp_campaign' THEN
+    IF TG_OP = 'INSERT' AND NOT COALESCE(NEW.skip_automation, false) THEN
+      UPDATE public.leads
+      SET skip_automation = true
+      WHERE id = NEW.id
+        AND NOT COALESCE(skip_automation, false);
+    END IF;
+
     RAISE LOG 'Skipping auto-contact trigger for campaign lead %', NEW.id;
     RETURN NEW;
   END IF;
@@ -154,6 +176,20 @@ CREATE TRIGGER trigger_auto_send_on_lead_change
   AFTER INSERT OR UPDATE ON leads
   FOR EACH ROW
   EXECUTE FUNCTION trigger_auto_send_lead_messages();
+
+UPDATE public.leads
+SET skip_automation = true
+WHERE COALESCE(canal, '') = 'whatsapp_campaign'
+  AND NOT COALESCE(skip_automation, false);
+
+UPDATE public.auto_contact_flow_jobs j
+SET
+  status = 'skipped',
+  last_error = 'Lead de campanha removido retroativamente das automacoes.'
+FROM public.leads l
+WHERE j.lead_id = l.id
+  AND COALESCE(l.canal, '') = 'whatsapp_campaign'
+  AND j.status IN ('pending', 'processing');
 
 DO $$
 DECLARE

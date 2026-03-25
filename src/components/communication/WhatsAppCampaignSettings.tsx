@@ -222,10 +222,29 @@ const IMPORT_STATUS_CLASSNAMES: Record<WhatsAppCampaignImportStatus, string> = {
 const TARGET_STATUS_LABELS: Record<WhatsAppCampaignTargetStatus, string> = {
   pending: 'Pendente',
   processing: 'Processando',
-  sent: 'Enviado',
+  sent: 'Concluido',
   failed: 'Falhou',
   invalid: 'Inválido',
   cancelled: 'Cancelado',
+};
+
+const hasCampaignTargetBeenContacted = (target: Pick<WhatsAppCampaignTarget, 'last_completed_step_index' | 'last_sent_step_at' | 'sent_at'>): boolean =>
+  (typeof target.last_completed_step_index === 'number' && target.last_completed_step_index >= 0)
+  || Boolean(target.last_sent_step_at)
+  || Boolean(target.sent_at);
+
+const getCampaignTargetDisplayStatusLabel = (
+  target: Pick<WhatsAppCampaignTarget, 'status' | 'last_completed_step_index' | 'last_sent_step_at' | 'sent_at'>,
+): string => {
+  if (target.status === 'pending' && hasCampaignTargetBeenContacted(target)) {
+    return 'Aguardando proxima etapa';
+  }
+
+  if (target.status === 'processing' && hasCampaignTargetBeenContacted(target)) {
+    return 'Enviando proxima etapa';
+  }
+
+  return TARGET_STATUS_LABELS[target.status];
 };
 
 const FLOW_STEP_LABELS: Record<WhatsAppCampaignFlowStepType, string> = {
@@ -1626,9 +1645,9 @@ export default function WhatsAppCampaignSettings() {
       }
 
       if (campaignTargetsFilters.sentState === 'sent') {
-        query = query.not('sent_at', 'is', null);
+        query = query.or('sent_at.not.is.null,last_completed_step_index.gte.0');
       } else if (campaignTargetsFilters.sentState === 'not_sent') {
-        query = query.is('sent_at', null);
+        query = query.is('sent_at', null).lt('last_completed_step_index', 0);
       }
 
       if (campaignTargetsFilters.attemptState === 'attempted') {
@@ -2913,7 +2932,7 @@ export default function WhatsAppCampaignSettings() {
                   <div className="mt-3 grid gap-2 text-xs text-slate-700 sm:grid-cols-5">
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">Total: {campaign.total_targets}</div>
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">Pendentes: {campaign.pending_targets}</div>
-                    <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">Enviadas: {campaign.sent_targets}</div>
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">Abordadas: {campaign.sent_targets}</div>
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">Falhas: {campaign.failed_targets}</div>
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1">Invalidos: {campaign.invalid_targets}</div>
                   </div>
@@ -3077,8 +3096,8 @@ export default function WhatsAppCampaignSettings() {
                   className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="all">Todos</option>
-                  <option value="sent">Enviados</option>
-                  <option value="not_sent">Não enviados</option>
+                    <option value="sent">Abordados</option>
+                    <option value="not_sent">Nao abordados</option>
                 </select>
               </label>
 
@@ -3127,7 +3146,7 @@ export default function WhatsAppCampaignSettings() {
                     <th className="px-3 py-2 text-left font-semibold">Alvo</th>
                     <th className="px-3 py-2 text-left font-semibold">Fonte</th>
                     <th className="px-3 py-2 text-left font-semibold">Status</th>
-                    <th className="px-3 py-2 text-left font-semibold">Envio</th>
+                    <th className="px-3 py-2 text-left font-semibold">Primeiro envio</th>
                     <th className="px-3 py-2 text-left font-semibold">Última tentativa</th>
                     <th className="px-3 py-2 text-left font-semibold">Próxima etapa</th>
                     <th className="px-3 py-2 text-left font-semibold">Erro</th>
@@ -3157,8 +3176,8 @@ export default function WhatsAppCampaignSettings() {
                           <div className="text-slate-500">{target.raw_phone || target.phone || target.lead?.telefone || '-'}</div>
                         </td>
                         <td className="px-3 py-2 align-top">{formatTargetSourceKindLabel(target.source_kind)}</td>
-                        <td className="px-3 py-2 align-top">{TARGET_STATUS_LABELS[target.status]}</td>
-                        <td className="px-3 py-2 align-top">{formatDateTime(target.sent_at)}</td>
+                        <td className="px-3 py-2 align-top">{getCampaignTargetDisplayStatusLabel(target)}</td>
+                        <td className="px-3 py-2 align-top">{formatDateTime(target.sent_at || target.last_sent_step_at)}</td>
                         <td className="px-3 py-2 align-top">{formatDateTime(target.last_attempt_at)}</td>
                         <td className="px-3 py-2 align-top">{formatDateTime(target.next_step_due_at)}</td>
                         <td className="px-3 py-2 align-top text-slate-500">{target.error_message || '-'}</td>

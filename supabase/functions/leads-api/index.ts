@@ -2619,6 +2619,19 @@ async function processFlowJobs({
       continue;
     }
 
+    if (isCampaignImportedLead(lead as Record<string, unknown>)) {
+      await cancelFlowJobs({
+        supabase,
+        leadId: job.lead_id,
+        reason: 'Lead de campanha excluido retroativamente das automacoes.',
+      });
+      await supabase
+        .from('auto_contact_flow_jobs')
+        .update({ status: 'skipped', last_error: 'Lead de campanha excluido retroativamente das automacoes.' })
+        .eq('id', job.id);
+      continue;
+    }
+
     const flow = settings.flows.find((item) => item.id === job.flow_id);
     if (!flow) {
       await supabase
@@ -3434,9 +3447,16 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      if (event === 'lead_created' && isCampaignImportedLead(record as Record<string, unknown>)) {
-        logWithContext('Ignorando automação lead_created para lead originado por campanha WhatsApp', {
+      if (isCampaignImportedLead(record as Record<string, unknown>)) {
+        await cancelFlowJobs({
+          supabase,
+          leadId: String((record as Record<string, unknown>).id),
+          reason: 'Lead de campanha excluido retroativamente das automacoes.',
+        });
+
+        logWithContext('Ignorando automacao para lead originado por campanha WhatsApp', {
           leadId: (record as Record<string, unknown>).id,
+          event,
         });
 
         return new Response(JSON.stringify({ success: true, skipped: true, reason: 'campaign_lead' }), {

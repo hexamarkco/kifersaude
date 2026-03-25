@@ -749,7 +749,8 @@ BEGIN
       responsavel_id,
       data_criacao,
       ultimo_contato,
-      canal
+      canal,
+      skip_automation
     )
     SELECT
       matched_items.display_name,
@@ -760,7 +761,8 @@ BEGIN
       v_responsavel_id,
       now(),
       now(),
-      'whatsapp_campaign'
+      'whatsapp_campaign',
+      true
     FROM matched_items
     WHERE matched_items.matched_lead_id IS NULL
       AND matched_items.needs_lead_creation = true

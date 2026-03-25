@@ -12,7 +12,6 @@ import {
   Circle,
   Clock3,
   ExternalLink,
-  FileText,
   Loader2,
   MessageCircle,
   Plus,
@@ -20,7 +19,6 @@ import {
   Tag,
   Timer,
   Trash2,
-  UserRound,
   X,
 } from "lucide-react";
 import {
@@ -1251,100 +1249,79 @@ export default function AgendaScreen() {
     const hasLeadPhone = Boolean(leadInfo?.telefone);
     const overdue = isOverdue(reminder.data_lembrete);
     const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
-    const isTask = reminder.tipo === "Tarefa";
-    const isCompleted = reminder.lido;
 
     return (
       <article
         key={reminder.id}
-        className="panel-glass-lite rounded-[1.5rem] border p-5 shadow-sm transition-all"
+        className="panel-glass-lite rounded-[1.35rem] border p-4 shadow-sm transition-all"
         style={getReminderCardStyle(reminder)}
       >
-        <div className="flex min-w-0 items-start gap-4">
-          <div className="rounded-[1.1rem] border p-3.5" style={isCompleted ? getPanelToneStyle("success") : getReminderTypeStyle(reminder.tipo)}>
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="rounded-[1rem] border p-3" style={reminder.lido ? getPanelToneStyle("success") : getReminderTypeStyle(reminder.tipo)}>
             {getReminderIcon(reminder.tipo)}
           </div>
 
-          <div className="min-w-0 flex-1 space-y-4">
+          <div className="min-w-0 flex-1">
             <div className="space-y-3">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-lg font-semibold leading-tight" style={{ color: "var(--panel-text,#1c1917)" }}>
-                    {reminder.titulo}
-                  </h3>
-
-                  {reminder.descricao && (
-                    <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
-                      {reminder.descricao}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 lg:max-w-[46%] lg:justify-end">
-                  <span
-                    className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
-                    style={getReminderPriorityStyle(reminder.prioridade)}
-                  >
-                    {reminder.prioridade}
-                  </span>
-                  <span
-                    className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
-                    style={getReminderTypeStyle(reminder.tipo)}
-                  >
-                    {reminder.tipo}
-                  </span>
-                  {reminder.tempo_estimado_minutos && (
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold"
-                      style={getPanelToneStyle("info")}
-                    >
-                      <Timer className="h-3 w-3" />
-                      <span>{formatEstimatedTime(reminder.tempo_estimado_minutos)}</span>
-                    </span>
-                  )}
-                  {overdue && !isCompleted && (
-                    <span
-                      className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
-                      style={getPanelToneStyle("danger")}
-                    >
-                      Atrasado
-                    </span>
-                  )}
-                  {isTask && (
-                    <span
-                      className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
-                      style={getPanelToneStyle("neutral")}
-                    >
-                      Agenda interna
-                    </span>
-                  )}
-                </div>
+              <div>
+                <h3 className="text-base font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
+                  {reminder.titulo}
+                </h3>
+                {reminder.descricao && (
+                  <p className="mt-1 text-sm" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+                    {reminder.descricao}
+                  </p>
+                )}
               </div>
 
-              {reminder.tags && reminder.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {reminder.tags.map((tag, index) => (
-                    <span
-                      key={`${tag}-${index}`}
-                      className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium"
-                      style={getPanelToneStyle("info")}
-                    >
-                      <Tag className="h-3 w-3" />
-                      <span>{tag}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                  style={getReminderPriorityStyle(reminder.prioridade)}
+                >
+                  {reminder.prioridade}
+                </span>
+                <span
+                  className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                  style={getReminderTypeStyle(reminder.tipo)}
+                >
+                  {reminder.tipo}
+                </span>
+                {reminder.tempo_estimado_minutos && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold"
+                    style={getPanelToneStyle("info")}
+                  >
+                    <Timer className="h-3 w-3" />
+                    <span>{formatEstimatedTime(reminder.tempo_estimado_minutos)}</span>
+                  </span>
+                )}
+                {overdue && !reminder.lido && (
+                  <span
+                    className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                    style={getPanelToneStyle("danger")}
+                  >
+                    Atrasado
+                  </span>
+                )}
+                {reminder.tags?.map((tag, index) => (
+                  <span
+                    key={`${tag}-${index}`}
+                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium"
+                    style={getPanelToneStyle("info")}
+                  >
+                    <Tag className="h-3 w-3" />
+                    <span>{tag}</span>
+                  </span>
+                ))}
+              </div>
 
-            <div className="grid gap-3 rounded-[1.1rem] border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto]" style={PANEL_MUTED_INSET_STYLE}>
-              <div className="flex min-w-0 items-center gap-2 text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
-                <Calendar className="h-4 w-4 shrink-0" />
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
                 <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
               </div>
-
-              {(reminder.lead_id || reminder.contract_id) && (
-                <div className="sm:justify-self-start lg:justify-self-end">
+                {(reminder.lead_id || reminder.contract_id) && (
                   <AgendaReminderContextLink
                     leadId={reminder.lead_id ?? contract?.lead_id}
                     contractId={reminder.contract_id}
@@ -1352,145 +1329,135 @@ export default function AgendaScreen() {
                     onLeadClick={handleOpenLead}
                     isLoading={loadingLeadId === reminder.lead_id}
                   />
-                </div>
-              )}
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
-              <div className="rounded-[1.1rem] border p-3" style={PANEL_MUTED_INSET_STYLE}>
-                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
-                  Contato
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => openLeadInWhatsAppTab(leadInfo ?? null)}
-                    variant="secondary"
-                    size="sm"
-                    title="Abrir /painel/whatsapp"
-                    aria-label="Abrir /painel/whatsapp"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    Chat
-                  </Button>
-                  <Button
-                    onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
-                    disabled={!hasLeadPhone}
-                    variant="soft"
-                    size="sm"
-                    title={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
-                    aria-label={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Oficial
-                  </Button>
-                </div>
+                )}
               </div>
 
-              <div className="rounded-[1.1rem] border p-3" style={PANEL_MUTED_INSET_STYLE}>
-                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
-                  Acompanhamento
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {!isCompleted && (
-                    <>
-                      <Button
-                        onClick={() => {
-                          void handleQuickSchedule(reminder, 1);
-                        }}
-                        disabled={isQuickSchedulingCurrentReminder}
-                        variant="primary"
-                        size="sm"
-                        title="Agendar +1 dia util e marcar atual como lido"
-                        aria-label="Agendar +1 dia util e marcar atual como lido"
-                      >
-                        {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <CalendarPlus className="h-3.5 w-3.5" />
-                        )}
-                        +1 dia
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          void handleQuickSchedule(reminder, 2);
-                        }}
-                        disabled={isQuickSchedulingCurrentReminder}
-                        variant="primary"
-                        size="sm"
-                        title="Agendar +2 dias uteis e marcar atual como lido"
-                        aria-label="Agendar +2 dias uteis e marcar atual como lido"
-                      >
-                        {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <CalendarPlus className="h-3.5 w-3.5" />
-                        )}
-                        +2 dias
-                      </Button>
-                      <Button
-                        onClick={() => setReschedulingReminderId(reminder.id)}
-                        variant="secondary"
-                        size="sm"
-                        title="Reagendar item"
-                        aria-label="Reagendar item"
-                      >
-                        <Calendar className="h-3.5 w-3.5" />
-                        Reagendar
-                      </Button>
-                    </>
-                  )}
-                  {isCompleted && (
-                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle("neutral")}>
-                      Sem follow-up rapido
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-[1.1rem] border p-3" style={PANEL_MUTED_INSET_STYLE}>
-                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
-                  Status
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => {
-                      void handleMarkAsRead(reminder.id, reminder.lido);
-                    }}
-                    variant={isCompleted ? "secondary" : "soft"}
-                    size="sm"
-                    title={isCompleted ? "Marcar como nao lido" : "Marcar como lido"}
-                    aria-label={isCompleted ? "Marcar como nao lido" : "Marcar como lido"}
-                  >
-                    {isCompleted ? <Circle className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
-                    {isCompleted ? "Reabrir" : "Concluir"}
-                  </Button>
-                  {leadId && (
+              <div className="flex w-full flex-wrap items-center gap-2">
+                <Button
+                  onClick={() => openLeadInWhatsAppTab(leadInfo ?? null)}
+                  variant="secondary"
+                  size="icon"
+                  className="h-9 w-9"
+                  title="Abrir /painel/whatsapp"
+                  aria-label="Abrir /painel/whatsapp"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
+                  disabled={!hasLeadPhone}
+                  variant="soft"
+                  size="icon"
+                  className="h-9 w-9"
+                  title={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
+                  aria-label={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+                {!reminder.lido && (
+                  <>
                     <Button
                       onClick={() => {
-                        void handleMarkLeadAsLost(reminder);
+                        void handleQuickSchedule(reminder, 1);
                       }}
-                      variant="danger"
-                      size="sm"
-                      title="Marcar lead como perdido e limpar lembretes"
-                      aria-label="Marcar lead como perdido e limpar lembretes"
-                      disabled={markingLostLeadId === leadId}
-                      loading={markingLostLeadId === leadId}
+                      disabled={isQuickSchedulingCurrentReminder}
+                      variant="primary"
+                      size="icon"
+                      className="h-9 w-9"
+                      title="Agendar +1 dia util e marcar atual como lido"
+                      aria-label="Agendar +1 dia util e marcar atual como lido"
                     >
-                      {markingLostLeadId !== leadId && <X className="h-3.5 w-3.5" />}
-                      Perdido
+                      {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <span className="relative inline-flex">
+                          <CalendarPlus className="h-4 w-4" />
+                          <span
+                            className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border px-0.5 text-[9px] font-bold leading-none"
+                            style={getPanelToneStyle("neutral")}
+                          >
+                            1
+                          </span>
+                        </span>
+                      )}
                     </Button>
-                  )}
+                    <Button
+                      onClick={() => {
+                        void handleQuickSchedule(reminder, 2);
+                      }}
+                      disabled={isQuickSchedulingCurrentReminder}
+                      variant="primary"
+                      size="icon"
+                      className="h-9 w-9"
+                      title="Agendar +2 dias uteis e marcar atual como lido"
+                      aria-label="Agendar +2 dias uteis e marcar atual como lido"
+                    >
+                      {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <span className="relative inline-flex">
+                          <CalendarPlus className="h-4 w-4" />
+                          <span
+                            className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border px-0.5 text-[9px] font-bold leading-none"
+                            style={getPanelToneStyle("neutral")}
+                          >
+                            2
+                          </span>
+                        </span>
+                      )}
+                    </Button>
+                  </>
+                )}
+                <Button
+                  onClick={() => {
+                    void handleMarkAsRead(reminder.id, reminder.lido);
+                  }}
+                  variant={reminder.lido ? "secondary" : "soft"}
+                  size="icon"
+                  className="h-9 w-9"
+                  title={reminder.lido ? "Marcar como nao lido" : "Marcar como lido"}
+                  aria-label={reminder.lido ? "Marcar como nao lido" : "Marcar como lido"}
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                {!reminder.lido && (
                   <Button
-                    onClick={() => handleDelete(reminder.id)}
-                    variant="danger"
-                    size="sm"
-                    title="Excluir item"
-                    aria-label="Excluir item"
+                    onClick={() => setReschedulingReminderId(reminder.id)}
+                    variant="secondary"
+                    size="icon"
+                    className="h-9 w-9"
+                    title="Reagendar item"
+                    aria-label="Reagendar item"
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Excluir
+                    <Calendar className="h-4 w-4" />
                   </Button>
-                </div>
+                )}
+                {leadId && (
+                  <Button
+                    onClick={() => {
+                      void handleMarkLeadAsLost(reminder);
+                    }}
+                    variant="danger"
+                    size="icon"
+                    className="h-9 w-9"
+                    title="Marcar lead como perdido e limpar lembretes"
+                    aria-label="Marcar lead como perdido e limpar lembretes"
+                    disabled={markingLostLeadId === leadId}
+                    loading={markingLostLeadId === leadId}
+                  >
+                    {markingLostLeadId !== leadId && <X className="h-4 w-4" />}
+                  </Button>
+                )}
+                <Button
+                  onClick={() => handleDelete(reminder.id)}
+                  variant="danger"
+                  size="icon"
+                  className="h-9 w-9"
+                  title="Excluir item"
+                  aria-label="Excluir item"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           </div>
@@ -2026,7 +1993,7 @@ function AgendaReminderContextLink({
         }}
         disabled={isLoading}
       >
-        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserRound className="h-3 w-3" />}
+        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
         <span>{contextInfo.label}</span>
       </button>
     );
@@ -2034,7 +2001,7 @@ function AgendaReminderContextLink({
 
   return (
     <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle("neutral")}>
-      <FileText className="h-3 w-3" />
+      <Bell className="h-3 w-3" />
       <span>{contextInfo.label}</span>
     </span>
   );

@@ -16,7 +16,6 @@ import {
   LoginPage,
   PainelWrapper,
   ProtectedRoute,
-  RemindersManagerEnhanced,
   RouteLoading,
   WhatsAppInboxPage,
   WhatsAppSettingsPage,
@@ -63,8 +62,9 @@ createRoot(document.getElementById('root')!).render(
               <Route path="leads" element={<LeadsManagerWrapper />} />
               <Route path="contratos" element={<ContractsManagerWrapper />} />
               <Route path="comissoes" element={<FinanceiroComissoesTab />} />
-              <Route path="tarefas" element={<FinanceiroAgendaTab />} />
-              <Route path="lembretes" element={<RemindersManagerEnhanced />} />
+              <Route path="agenda" element={<FinanceiroAgendaTab />} />
+              <Route path="tarefas" element={<Navigate to="/painel/agenda" replace />} />
+              <Route path="lembretes" element={<Navigate to="/painel/agenda" replace />} />
               <Route path="whatsapp" element={<WhatsAppInboxPage />} />
               <Route path="whatsapp/config" element={<WhatsAppSettingsPage />} />
               <Route path="blog" element={<BlogTab />} />

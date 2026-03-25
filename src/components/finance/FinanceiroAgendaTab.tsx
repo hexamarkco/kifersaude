@@ -1,1 +1,1 @@
-export { default } from "../../features/tasks/TasksAgendaScreen";
+export { default } from "../../features/agenda/AgendaScreen";

@@ -137,8 +137,7 @@ export default function Layout({
   const crmChildren = [
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-orange-500' },
     { id: 'contracts', label: 'Contratos', icon: FileText },
-    { id: 'financeiro-agenda', label: 'Tarefas', icon: Calendar },
-    { id: 'reminders', label: 'Lembretes', icon: BellRing, badge: unreadReminders },
+    { id: 'agenda', label: 'Agenda', icon: Calendar, badge: unreadReminders },
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
@@ -862,7 +861,7 @@ export default function Layout({
                     className={`${
                       tab.badgeColor || 'bg-orange-500'
                     } absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                      hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
+                       hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda') ? 'animate-pulse' : ''
                     } ${
                       (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
                     }`}
@@ -881,7 +880,7 @@ export default function Layout({
                 className={`${
                   tab.badgeColor || 'bg-orange-500'
                 } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                  hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
+                   hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda') ? 'animate-pulse' : ''
                 } ${
                   (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
                 } absolute -right-1 -top-1`}
@@ -916,7 +915,7 @@ export default function Layout({
                         className={`${
                           child.badgeColor || 'bg-orange-500'
                         } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                          child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
+                           child.id === 'agenda' && hasActiveNotification ? 'animate-pulse' : ''
                         } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
                       >
                         {child.badge > 9 ? '9+' : child.badge}
@@ -950,7 +949,7 @@ export default function Layout({
             className={`${
               tab.badgeColor || 'bg-orange-500'
             } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-              hasActiveNotification && (tab.id === 'crm' || activeTab === 'reminders') ? 'animate-pulse' : ''
+               hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda') ? 'animate-pulse' : ''
             } ${
               (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
             }`}
@@ -1057,7 +1056,7 @@ export default function Layout({
                       </div>
                       <button
                         onClick={() => {
-                          onTabChange('reminders');
+                          onTabChange('agenda');
                           setShowNotificationsDropdown(false);
                         }}
                         className="text-xs font-semibold text-orange-600 hover:text-orange-700"
@@ -1212,7 +1211,7 @@ export default function Layout({
                       className={`${
                         child.badgeColor || 'bg-orange-500'
                       } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                        child.id === 'reminders' && hasActiveNotification ? 'animate-pulse' : ''
+                        child.id === 'agenda' && hasActiveNotification ? 'animate-pulse' : ''
                       } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
                     >
                       {child.badge > 9 ? '9+' : child.badge}

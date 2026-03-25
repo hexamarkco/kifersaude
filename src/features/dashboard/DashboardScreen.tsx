@@ -2220,7 +2220,7 @@ export default function DashboardScreen({
       toast.error("Erro ao criar lembrete.");
       return;
     }
-    onNavigateToTab?.("reminders");
+    onNavigateToTab?.("agenda");
     toast.success("Lembrete criado com sucesso.");
   };
 

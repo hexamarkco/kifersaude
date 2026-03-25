@@ -16,8 +16,9 @@ const ROUTE_TAB_MAP: Record<string, string> = {
   'leads': 'leads',
   'contratos': 'contracts',
   'comissoes': 'financeiro-comissoes',
-  'tarefas': 'financeiro-agenda',
-  'lembretes': 'reminders',
+  'agenda': 'agenda',
+  'tarefas': 'agenda',
+  'lembretes': 'agenda',
   'whatsapp': 'whatsapp',
   'blog': 'blog',
   'config': 'config',
@@ -28,8 +29,7 @@ const TAB_ROUTE_MAP: Record<string, string> = {
   'leads': 'leads',
   'contracts': 'contratos',
   'financeiro-comissoes': 'comissoes',
-  'financeiro-agenda': 'tarefas',
-  'reminders': 'lembretes',
+  'agenda': 'agenda',
   'whatsapp': 'whatsapp',
   'blog': 'blog',
   'config': 'config',
@@ -56,8 +56,7 @@ export default function PainelWrapper() {
       ['leads', getRoleModulePermission(role, 'leads').can_view],
       ['contracts', getRoleModulePermission(role, 'contracts').can_view],
       ['financeiro-comissoes', getRoleModulePermission(role, 'financeiro-comissoes').can_view],
-      ['financeiro-agenda', getRoleModulePermission(role, 'financeiro-agenda').can_view],
-      ['reminders', getRoleModulePermission(role, 'reminders').can_view],
+      ['agenda', getRoleModulePermission(role, 'agenda').can_view],
       ['whatsapp', getRoleModulePermission(role, 'whatsapp').can_view],
       ['blog', getRoleModulePermission(role, 'blog').can_view],
       [
@@ -158,7 +157,7 @@ export default function PainelWrapper() {
   };
 
   const handleViewReminders = () => {
-    handleTabChange('reminders');
+    handleTabChange('agenda');
   };
 
   const handleTabChange = (tab: string, options?: TabNavigationOptions) => {
@@ -171,7 +170,7 @@ export default function PainelWrapper() {
       navigate(`/painel/${route}`);
     }
 
-    if (tab === 'reminders') {
+    if (tab === 'agenda') {
       setHasActiveNotification(false);
       setActiveNotifications([]);
     }

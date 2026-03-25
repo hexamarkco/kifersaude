@@ -133,6 +133,7 @@ import {
   type WhapiContact,
   type WhapiGroup,
 } from '../../../lib/whatsappApiService';
+import { getWhatsAppChatIdType } from '../../../lib/whatsappChatIdentity';
 import { isWhatsAppPayloadForwarded, markWhatsAppPayloadAsForwarded } from '../shared/messageForwarding';
 
 type FirstResponseSLA =
@@ -303,6 +304,56 @@ const WHATSAPP_CHAT_SELECT_FIELDS = [
   'pinned',
   'mute_until',
 ].join(',');
+
+function isWhatsAppChatsSchemaMismatchError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const code = 'code' in error && typeof error.code === 'string' ? error.code : '';
+  const status = 'status' in error && typeof error.status === 'number' ? error.status : null;
+  const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+  const details = 'details' in error && typeof error.details === 'string' ? error.details : '';
+  const hint = 'hint' in error && typeof error.hint === 'string' ? error.hint : '';
+  const combined = `${message} ${details} ${hint}`.toLowerCase();
+
+  return code === '42703'
+    || code === 'PGRST204'
+    || (status === 400 && combined.includes('whatsapp_chats') && (
+      combined.includes('last_message_direction')
+      || combined.includes('last_message')
+      || combined.includes('phone_number')
+      || combined.includes('lid')
+      || combined.includes('archived')
+      || combined.includes('pinned')
+      || combined.includes('mute_until')
+      || combined.includes('unread_count')
+    ));
+}
+
+function isWhapiChatNotFoundError(error: unknown) {
+  if (!error) {
+    return false;
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return message.toLowerCase().includes('specified chat not found');
+}
+
+const UNRESOLVED_DIRECT_CHAT_LABEL = 'Contato WhatsApp';
+
+function extractPhoneMatchSource(value: string | null | undefined) {
+  const trimmed = value?.trim() || '';
+  if (!trimmed) return '';
+  if (!trimmed.includes('@')) return trimmed;
+
+  const chatIdType = getWhatsAppChatIdType(trimmed);
+  if (chatIdType === 'phone') {
+    return extractPhoneFromChatId(trimmed) || trimmed;
+  }
+
+  return '';
+}
 
 type InboxChatRowProps = {
   item: VisibleChatRowItem;
@@ -886,7 +937,7 @@ export default function WhatsAppInboxScreen() {
   }), [buildMessagesSearchIndex]);
 
   const collectPhoneMatchKeys = (value: string | null | undefined): string[] => {
-    const digitsOnly = (value || '').replace(/\D/g, '');
+    const digitsOnly = extractPhoneMatchSource(value).replace(/\D/g, '');
     if (!digitsOnly) {
       return [];
     }
@@ -937,11 +988,15 @@ export default function WhatsAppInboxScreen() {
     }
 
     const keys = new Set<string>();
-    [chat.id, chat.name, normalizeChatId(chat.id), chat.phone_number, chat.lid].forEach((value) => {
+    [chat.id, chat.name, normalizeChatId(chat.id), chat.phone_number].forEach((value) => {
       collectPhoneMatchKeys(value).forEach((key) => keys.add(key));
     });
 
-    const digitCandidates = [getPhoneDigits(chat.id), getPhoneDigits(chat.phone_number), normalizePhoneNumber(chat.id)].filter(Boolean);
+    const digitCandidates = [
+      extractPhoneFromChatId(chat.id),
+      normalizePhoneNumber(chat.phone_number),
+      getPhoneDigits(chat.phone_number),
+    ].filter(Boolean);
     digitCandidates.forEach((digits) => {
       collectPhoneMatchKeys(digits).forEach((key) => keys.add(key));
       getDirectIdVariantsFromDigits(digits).forEach((variant) => {
@@ -3037,7 +3092,7 @@ export default function WhatsAppInboxScreen() {
 
       let { data, error } = await loadChatsFromSupabase(WHATSAPP_CHAT_SELECT_FIELDS);
 
-      if (error && typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === '42703') {
+      if (isWhatsAppChatsSchemaMismatchError(error)) {
         console.warn('WhatsApp inbox: fallback para select(*) em whatsapp_chats por schema desatualizado.', error);
         ({ data, error } = await loadChatsFromSupabase('*'));
       }
@@ -4692,7 +4747,7 @@ export default function WhatsAppInboxScreen() {
       chat.lid ?? '',
     ].filter(Boolean));
 
-    const candidateDigits = [getPhoneDigits(chat.id), getPhoneDigits(chat.phone_number), phone].filter(Boolean);
+    const candidateDigits = [getPhoneDigits(chat.phone_number), phone].filter(Boolean);
     candidateDigits.forEach((digits) => {
       getDirectIdVariantsFromDigits(digits).forEach((variant) => contactCandidates.add(variant));
     });
@@ -4721,7 +4776,7 @@ export default function WhatsAppInboxScreen() {
       return formatPhone(phone);
     }
 
-    return chat.id;
+    return normalizeChatId(chat.id).endsWith('@lid') ? UNRESOLVED_DIRECT_CHAT_LABEL : chat.id;
   }, [formatPhone, getChatKind, getCrmNameFromLeadMatchKeys, getLeadMatchKeysForChat, getMeaningfulDirectChatNameCandidate, getNonDirectFallbackName, getPushnameFromCandidates, getSavedContactNameFromCandidates, groupNamesById, isPhoneLikeLabel, newsletterNamesById]);
 
   const chatListPresentationById = useMemo(() => {
@@ -5017,6 +5072,7 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     const chatsToHydrate = directChatsMissingName
+      .filter((chat) => !normalizeChatId(chat.id).endsWith('@lid'))
       .filter((chat) => !directNameHydrationAttemptsRef.current.has(chat.id))
       .slice(0, 8);
 
@@ -5072,6 +5128,9 @@ export default function WhatsAppInboxScreen() {
             console.warn('Error persisting hydrated direct chat name:', { chatId: chat.id, error });
           }
         } catch (error) {
+          if (isWhapiChatNotFoundError(error)) {
+            return;
+          }
           console.warn('Error hydrating direct chat name from chat metadata:', { chatId: chat.id, error });
         }
       }),
@@ -5710,7 +5769,7 @@ export default function WhatsAppInboxScreen() {
 
         if (queryDigits.length >= 3) {
           const phoneMatch = getPhoneDigits(chat.phone_number || '').includes(queryDigits);
-          const chatIdMatch = getPhoneDigits(chat.id).includes(queryDigits);
+          const chatIdMatch = getPhoneDigits(extractPhoneFromChatId(chat.id)).includes(queryDigits);
           return phoneMatch || chatIdMatch;
         }
 

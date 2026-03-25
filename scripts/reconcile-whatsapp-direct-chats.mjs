@@ -157,6 +157,19 @@ const pickBestName = (targetName, targetId, sourceName, sourceId) => {
   return current || fallback || null;
 };
 
+const isMissingRelationError = (error, relationName) => {
+  if (!error || typeof error !== 'object') return false;
+  const code = typeof error.code === 'string' ? error.code.toUpperCase() : '';
+  const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+  const relation = relationName.toLowerCase();
+  return (
+    code === '42P01' ||
+    message.includes(`relation "${relation}"`) ||
+    message.includes(`relation '${relation}'`) ||
+    message.includes(relation)
+  );
+};
+
 const toMillis = (value) => {
   const parsed = new Date(value || '').getTime();
   return Number.isNaN(parsed) ? 0 : parsed;
@@ -515,6 +528,70 @@ async function moveMessageHistoryToTarget(sourceChatId, targetChatId) {
   }
 }
 
+async function moveCampaignTargetsToTarget(sourceChatId, targetChatId) {
+  if (dryRun) return;
+
+  const { error } = await supabase
+    .from('whatsapp_campaign_targets')
+    .update({ chat_id: targetChatId })
+    .eq('chat_id', sourceChatId);
+
+  if (error && !isMissingRelationError(error, 'whatsapp_campaign_targets')) {
+    throw new Error(`Erro ao mover campaign targets de ${sourceChatId} para ${targetChatId}: ${error.message}`);
+  }
+}
+
+async function mergeChatReadCursorToTarget(sourceChatId, targetChatId) {
+  if (dryRun) return;
+
+  const { data, error } = await supabase
+    .from('whatsapp_chat_read_cursors')
+    .select('chat_id, last_read_at, last_read_message_id, marked_by_user_id, created_at, updated_at')
+    .in('chat_id', [sourceChatId, targetChatId]);
+
+  if (error) {
+    if (isMissingRelationError(error, 'whatsapp_chat_read_cursors')) {
+      return;
+    }
+    throw new Error(`Erro ao carregar cursores de leitura de ${sourceChatId}: ${error.message}`);
+  }
+
+  const sourceCursor = (data || []).find((row) => row.chat_id === sourceChatId);
+  const targetCursor = (data || []).find((row) => row.chat_id === targetChatId);
+  if (!sourceCursor) return;
+
+  const preferSource = toMillis(sourceCursor.last_read_at) >= toMillis(targetCursor?.last_read_at);
+  const preferredCursor = preferSource ? sourceCursor : targetCursor;
+  const nowIso = new Date().toISOString();
+
+  const { error: upsertError } = await supabase.from('whatsapp_chat_read_cursors').upsert(
+    {
+      chat_id: targetChatId,
+      last_read_at: sourceCursor.last_read_at && targetCursor?.last_read_at
+        ? (toMillis(sourceCursor.last_read_at) >= toMillis(targetCursor.last_read_at) ? sourceCursor.last_read_at : targetCursor.last_read_at)
+        : sourceCursor.last_read_at || targetCursor?.last_read_at || nowIso,
+      last_read_message_id: preferredCursor?.last_read_message_id ?? targetCursor?.last_read_message_id ?? null,
+      marked_by_user_id: preferredCursor?.marked_by_user_id ?? targetCursor?.marked_by_user_id ?? null,
+      created_at: targetCursor?.created_at || sourceCursor.created_at || nowIso,
+      updated_at: nowIso,
+    },
+    { onConflict: 'chat_id' },
+  );
+
+  if (upsertError) {
+    throw new Error(`Erro ao consolidar cursor de leitura de ${sourceChatId} para ${targetChatId}: ${upsertError.message}`);
+  }
+
+  const { error: deleteError } = await supabase
+    .from('whatsapp_chat_read_cursors')
+    .delete()
+    .eq('chat_id', sourceChatId);
+
+  if (deleteError) {
+    throw new Error(`Erro ao remover cursor legado ${sourceChatId}: ${deleteError.message}`);
+  }
+}
+
 async function deleteChat(chatId) {
   if (dryRun) return;
 
@@ -599,6 +676,8 @@ async function reconcileDirectChats() {
     await ensureTargetChat(normalizedTargetId, sourceChat, resolvedPhone, nowIso);
     await moveMessagesToTarget(sourceChat.id, normalizedTargetId);
     await moveMessageHistoryToTarget(sourceChat.id, normalizedTargetId);
+    await moveCampaignTargetsToTarget(sourceChat.id, normalizedTargetId);
+    await mergeChatReadCursorToTarget(sourceChat.id, normalizedTargetId);
     if (!dryRun) {
       await refreshChatLastMessage(normalizedTargetId);
     }

@@ -1,4 +1,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import {
+  buildDirectChatIdVariantsFromPhone as buildDirectChatIdVariantsFromPhoneShared,
+  buildPhoneLookupVariants as buildPhoneLookupVariantsShared,
+  choosePreferredDirectChatIdForPhone as choosePreferredDirectChatIdShared,
+  extractDirectPhoneNumber as extractPhoneNumberShared,
+  getWhatsAppChatIdType as getChatIdTypeShared,
+  normalizeMaybeDirectChatId as normalizeMaybeDirectIdShared,
+  normalizeWhatsAppChatId as normalizeDirectChatIdShared,
+  resolveInboundCanonicalDirectChatId as resolveInboundCanonicalDirectChatIdShared,
+} from '../../../src/lib/whatsappChatIdentity.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,6 +16,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers':
     'Content-Type, Authorization, X-Client-Info, Apikey, X-Whapi-Event, X-Webhook-Secret, X-Webhook-Signature, X-Whapi-Signature',
 };
+
+const UNRESOLVED_DIRECT_CHAT_NAME = 'Contato WhatsApp';
 
 type StoredEvent = {
   event: string;
@@ -977,37 +989,11 @@ function getLatestIsoTimestamp(...values: Array<string | null | undefined>): str
 }
 
 function normalizeDirectChatId(chatId: string): string {
-  const trimmed = chatId.trim();
-  if (!trimmed) return trimmed;
-
-  if (/@c\.us$/i.test(trimmed)) {
-    return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
-  }
-
-  if (/@s\.whatsapp\.net$/i.test(trimmed)) {
-    return trimmed.replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
-  }
-
-  if (!trimmed.includes('@')) {
-    const digits = trimmed.replace(/\D/g, '');
-    if (digits.length >= 7 && digits.length <= 15) {
-      return `${digits}@s.whatsapp.net`;
-    }
-  }
-
-  return trimmed;
+  return normalizeDirectChatIdShared(chatId);
 }
 
 function normalizeMaybeDirectId(value: string | null | undefined): string | null {
-  const cleaned = toCleanText(value);
-  if (!cleaned) return null;
-
-  const type = getChatIdType(cleaned);
-  if (type === 'phone') {
-    return normalizeDirectChatId(cleaned);
-  }
-
-  return cleaned;
+  return normalizeMaybeDirectIdShared(value);
 }
 
 function resolveInboundCanonicalDirectChatId(
@@ -1015,29 +1001,7 @@ function resolveInboundCanonicalDirectChatId(
   normalizedChatId: string,
   normalizedFrom: string | null,
 ): string {
-  if (!normalizedFrom || getChatIdType(normalizedFrom) !== 'phone') {
-    return normalizedChatId;
-  }
-
-  const chatType = getChatIdType(normalizedChatId);
-  if (chatType === 'group' || chatType === 'newsletter' || chatType === 'broadcast' || chatType === 'status') {
-    return normalizedChatId;
-  }
-
-  if (chatType === 'lid' || chatType === 'unknown') {
-    return normalizedFrom;
-  }
-
-  if (chatType === 'phone' && normalizedChatId !== normalizedFrom) {
-    const raw = rawChatId.trim().toLowerCase();
-    if (!raw || raw.endsWith('@lid') || !raw.includes('@')) {
-      return normalizedFrom;
-    }
-
-    return normalizedFrom;
-  }
-
-  return normalizedChatId;
+  return resolveInboundCanonicalDirectChatIdShared(rawChatId, normalizedChatId, normalizedFrom);
 }
 
 function toPayloadObject(value: unknown): Record<string, unknown> | null {
@@ -1887,22 +1851,7 @@ async function fetchWhapiMessageById(messageId: string, attempt = 0): Promise<Wh
 }
 
 function getChatIdType(chatId: string): 'group' | 'phone' | 'lid' | 'newsletter' | 'broadcast' | 'status' | 'unknown' {
-  const normalized = chatId.trim().toLowerCase();
-  if (normalized.endsWith('@g.us')) return 'group';
-  if (normalized === 'status@broadcast' || normalized === 'stories') return 'status';
-  if (normalized.endsWith('@newsletter')) return 'newsletter';
-  if (normalized.endsWith('@broadcast')) return 'broadcast';
-  if (normalized.endsWith('@c.us') || normalized.endsWith('@s.whatsapp.net')) return 'phone';
-  if (normalized.endsWith('@lid')) return 'lid';
-
-  if (!normalized.includes('@')) {
-    const digits = normalized.replace(/\D/g, '');
-    if (digits.length >= 7 && digits.length <= 15) {
-      return 'phone';
-    }
-  }
-
-  return 'unknown';
+  return getChatIdTypeShared(chatId);
 }
 
 function isStatusChatId(chatId: string | null | undefined): boolean {
@@ -1949,63 +1898,15 @@ function shouldSkipEventStorage(payload: WhapiWebhook): boolean {
 }
 
 function extractPhoneNumber(chatId: string): string | null {
-  const normalizedChatId = normalizeDirectChatId(chatId);
-  if (getChatIdType(normalizedChatId) !== 'phone') return null;
-  const phone = normalizedChatId.replace(/@c\.us$|@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
-  return phone || null;
+  return extractPhoneNumberShared(chatId);
 }
 
 function buildPhoneLookupVariants(phoneNumber: string): string[] {
-  const rawDigits = phoneNumber.replace(/\D/g, '');
-  if (!rawDigits) return [];
-
-  const variants = new Set<string>();
-  const push = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (!digits) return;
-    variants.add(digits);
-
-    if (digits.startsWith('55') && digits.length > 11) {
-      variants.add(digits.slice(2));
-    }
-
-    if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
-      variants.add(`55${digits}`);
-    }
-  };
-
-  push(rawDigits);
-
-  const snapshot = Array.from(variants);
-  snapshot.forEach((value) => {
-    const local = value.startsWith('55') && (value.length === 12 || value.length === 13) ? value.slice(2) : value;
-
-    if (local.length === 11 && local[2] === '9') {
-      const withoutNinthDigit = `${local.slice(0, 2)}${local.slice(3)}`;
-      push(withoutNinthDigit);
-      push(`55${withoutNinthDigit}`);
-    }
-
-    if (local.length === 10) {
-      const withNinthDigit = `${local.slice(0, 2)}9${local.slice(2)}`;
-      push(withNinthDigit);
-      push(`55${withNinthDigit}`);
-    }
-  });
-
-  return Array.from(variants);
+  return buildPhoneLookupVariantsShared(phoneNumber);
 }
 
 function buildDirectChatIdVariantsFromPhone(phoneNumber: string): string[] {
-  const phoneVariants = buildPhoneLookupVariants(phoneNumber);
-  const chatIdVariants = new Set<string>();
-
-  phoneVariants.forEach((digits) => {
-    chatIdVariants.add(`${digits}@s.whatsapp.net`);
-    chatIdVariants.add(`${digits}@c.us`);
-  });
-
-  return Array.from(chatIdVariants);
+  return buildDirectChatIdVariantsFromPhoneShared(phoneNumber);
 }
 
 async function getChatRefreshVariants(chatId: string): Promise<string[]> {
@@ -2047,29 +1948,8 @@ async function getChatRefreshVariants(chatId: string): Promise<string[]> {
   return Array.from(variants);
 }
 
-function getDirectChatMergePriority(chatId: string, phoneNumber: string | null): number {
-  const normalized = chatId.trim().toLowerCase();
-  if (!normalized) return -1;
-
-  if (phoneNumber) {
-    if (normalized === `${phoneNumber}@s.whatsapp.net`) return 120;
-    if (normalized === `${phoneNumber}@c.us`) return 110;
-  }
-
-  if (normalized.endsWith('@s.whatsapp.net')) return 90;
-  if (normalized.endsWith('@c.us')) return 80;
-  if (normalized.endsWith('@lid')) return 20;
-  if (!normalized.includes('@')) return 10;
-  return 0;
-}
-
 function choosePreferredDirectChatId(primaryChatId: string, secondaryChatId: string, phoneNumber: string | null): string {
-  const primaryScore = getDirectChatMergePriority(primaryChatId, phoneNumber);
-  const secondaryScore = getDirectChatMergePriority(secondaryChatId, phoneNumber);
-  if (secondaryScore > primaryScore) {
-    return secondaryChatId;
-  }
-  return primaryChatId;
+  return choosePreferredDirectChatIdShared(primaryChatId, secondaryChatId, phoneNumber);
 }
 
 function resolveLegacyInboundLidChatId(message: NormalizedMessage): string | null {
@@ -2594,6 +2474,14 @@ async function ensureStatusResolvedChatExists(
       ? extractPhoneNumber(targetChatId) || toCleanText(existingChat?.phone_number) || null
       : null;
 
+  if (chatType === 'lid' && !existingChat?.id && !phoneNumber) {
+    console.log('whatsapp-webhook: ignorando upsert de chat @lid sem canonicidade via status', {
+      chatId: targetChatId,
+      recipientId: recipientId || null,
+    });
+    return;
+  }
+
   const lid =
     isDirect
       ? chatType === 'lid'
@@ -2610,7 +2498,7 @@ async function ensureStatusResolvedChatExists(
   const { error: upsertError } = await supabase.from('whatsapp_chats').upsert(
     {
       id: targetChatId,
-      name: existingChat?.name ?? (phoneNumber || targetChatId),
+      name: existingChat?.name ?? (phoneNumber || UNRESOLVED_DIRECT_CHAT_NAME),
       is_group: existingChat?.is_group ?? chatType === 'group',
       phone_number: isDirect ? phoneNumber : null,
       lid: isDirect ? lid : null,
@@ -2930,6 +2818,110 @@ async function reconcileMessageChatFromStatus(
   };
 }
 
+function isMissingRelationError(error: { code?: string; message?: string } | null | undefined, relationName: string): boolean {
+  if (!error) return false;
+  const code = typeof error.code === 'string' ? error.code.toUpperCase() : '';
+  const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+  const relation = relationName.toLowerCase();
+  return (
+    code === '42P01' ||
+    message.includes(`relation "${relation}"`) ||
+    message.includes(`relation '${relation}'`) ||
+    message.includes(relation)
+  );
+}
+
+async function bestEffortRepointChatScopedTable(tableName: string, sourceChatId: string, targetChatId: string): Promise<void> {
+  const { error } = await supabase
+    .from(tableName)
+    .update({ chat_id: targetChatId })
+    .eq('chat_id', sourceChatId);
+
+  if (error && !isMissingRelationError(error, tableName)) {
+    console.warn('whatsapp-webhook: erro ao repontar referencias auxiliares do chat', {
+      tableName,
+      sourceChatId,
+      targetChatId,
+      error: error.message,
+    });
+  }
+}
+
+async function mergeChatReadCursor(sourceChatId: string, targetChatId: string): Promise<void> {
+  const { data, error } = await supabase
+    .from('whatsapp_chat_read_cursors')
+    .select('chat_id, last_read_at, last_read_message_id, marked_by_user_id, created_at, updated_at')
+    .in('chat_id', [sourceChatId, targetChatId]);
+
+  if (error) {
+    if (!isMissingRelationError(error, 'whatsapp_chat_read_cursors')) {
+      console.warn('whatsapp-webhook: erro ao carregar cursores de leitura para merge de chats', {
+        sourceChatId,
+        targetChatId,
+        error: error.message,
+      });
+    }
+    return;
+  }
+
+  const sourceCursor = (data || []).find((row) => row.chat_id === sourceChatId);
+  const targetCursor = (data || []).find((row) => row.chat_id === targetChatId);
+  if (!sourceCursor) {
+    return;
+  }
+
+  const sourceAt = toEpochMillis(toCleanText(sourceCursor.last_read_at));
+  const targetAt = toEpochMillis(toCleanText(targetCursor?.last_read_at));
+  const preferSource = Number.isNaN(targetAt) || (!Number.isNaN(sourceAt) && sourceAt >= targetAt);
+  const preferredCursor = preferSource ? sourceCursor : targetCursor;
+  const nowIso = new Date().toISOString();
+  const mergedLastReadAt =
+    getLatestIsoTimestamp(sourceCursor.last_read_at, targetCursor?.last_read_at) ||
+    sourceCursor.last_read_at ||
+    targetCursor?.last_read_at ||
+    nowIso;
+
+  const { error: upsertError } = await supabase.from('whatsapp_chat_read_cursors').upsert(
+    {
+      chat_id: targetChatId,
+      last_read_at: mergedLastReadAt,
+      last_read_message_id: preferredCursor?.last_read_message_id ?? targetCursor?.last_read_message_id ?? null,
+      marked_by_user_id: preferredCursor?.marked_by_user_id ?? targetCursor?.marked_by_user_id ?? null,
+      created_at: targetCursor?.created_at ?? sourceCursor.created_at ?? nowIso,
+      updated_at: nowIso,
+    },
+    { onConflict: 'chat_id' },
+  );
+
+  if (upsertError) {
+    console.warn('whatsapp-webhook: erro ao consolidar cursor de leitura no merge de chats', {
+      sourceChatId,
+      targetChatId,
+      error: upsertError.message,
+    });
+    return;
+  }
+
+  const { error: deleteError } = await supabase
+    .from('whatsapp_chat_read_cursors')
+    .delete()
+    .eq('chat_id', sourceChatId);
+
+  if (deleteError) {
+    console.warn('whatsapp-webhook: erro ao limpar cursor legado apos merge de chats', {
+      sourceChatId,
+      targetChatId,
+      error: deleteError.message,
+    });
+  }
+}
+
+async function moveAuxiliaryChatReferences(sourceChatId: string, targetChatId: string): Promise<void> {
+  await bestEffortRepointChatScopedTable('whatsapp_message_history', sourceChatId, targetChatId);
+  await bestEffortRepointChatScopedTable('whatsapp_campaign_targets', sourceChatId, targetChatId);
+  await mergeChatReadCursor(sourceChatId, targetChatId);
+}
+
 async function mergeChatMessages(fromChatId: string, toChatId: string) {
   const normalizedFromChatId = normalizeDirectChatId(toCleanText(fromChatId));
   const normalizedToChatId = normalizeDirectChatId(toCleanText(toChatId));
@@ -3035,6 +3027,8 @@ async function mergeChatMessages(fromChatId: string, toChatId: string) {
       console.error('whatsapp-webhook: erro ao consolidar metadata do chat destino', patchTargetError);
     }
   }
+
+  await moveAuxiliaryChatReferences(normalizedFromChatId, normalizedToChatId);
 
   const { error: deleteError } = await supabase
     .from('whatsapp_chats')
@@ -3284,7 +3278,7 @@ async function resolveChatName(message: NormalizedMessage): Promise<string> {
     return whapiDirectName;
   }
 
-  return resolvedPhoneNumber || message.chatId;
+  return resolvedPhoneNumber || UNRESOLVED_DIRECT_CHAT_NAME;
 }
 
 type UpsertChatOptions = {
@@ -4150,7 +4144,7 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
         ? 'Canal sem nome'
         : chatType === 'broadcast'
           ? 'Transmissao sem nome'
-          : phoneNumber || chatId;
+          : phoneNumber || UNRESOLVED_DIRECT_CHAT_NAME;
 
   const resolvedPhoneNumber = phoneNumber || toCleanText(existingChat?.phone_number) || null;
   const nextDirectChatName = isDirectChat
@@ -4163,6 +4157,14 @@ async function touchChatFromChatUpdate(update: WhapiChatUpdate) {
     isDirectChat && !preservedDirectChatName && !nextDirectChatName
       ? await fetchMeaningfulWhapiDirectChatName(chatId, resolvedPhoneNumber)
       : null;
+
+  if (chatType === 'lid' && !existingChat?.id && !resolvedPhoneNumber) {
+    console.log('whatsapp-webhook: ignorando chats.patch para chat @lid sem telefone canonico', {
+      chatId,
+      updateName: updateName || null,
+    });
+    return null;
+  }
 
   const { error: upsertError } = await supabase.from('whatsapp_chats').upsert(
     {

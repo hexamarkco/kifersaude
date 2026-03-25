@@ -24,6 +24,7 @@ export const ACCESS_MODULES: AccessModuleDefinition[] = [
 export const CONFIG_MODULE_IDS = ACCESS_MODULES.filter((module) => module.group === 'config').map((module) => module.id);
 
 const MODULE_ALIASES: Record<string, string[]> = {
+  agenda: ['reminders', 'financeiro-agenda'],
   config: CONFIG_MODULE_IDS,
   'config-system': ['config'],
   'config-access': ['config'],

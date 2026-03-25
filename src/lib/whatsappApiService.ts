@@ -1,4 +1,11 @@
 import { supabase } from './supabase';
+import {
+  buildDirectChatIdVariantsFromPhone,
+  extractDirectPhoneNumber,
+  getWhatsAppChatKindFromId,
+  isDirectWhatsAppChatId as isDirectWhatsAppChatIdShared,
+  normalizeWhatsAppChatId,
+} from './whatsappChatIdentity';
 
 interface WhatsAppSettings {
   token: string;
@@ -7,38 +14,14 @@ interface WhatsAppSettings {
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 
-const DIRECT_CHAT_SUFFIXES = ['@s.whatsapp.net', '@c.us', '@lid'] as const;
-const GROUP_CHAT_SUFFIX = '@g.us';
-const NEWSLETTER_CHAT_SUFFIX = '@newsletter';
-const BROADCAST_CHAT_SUFFIX = '@broadcast';
-const STATUS_CHAT_ID = 'status@broadcast';
-
 export type WhatsAppChatKind = 'group' | 'direct' | 'newsletter' | 'broadcast' | 'status' | 'unknown';
 
 export function getWhatsAppChatKind(chatId: string): WhatsAppChatKind {
-  if (!chatId) return 'unknown';
-
-  const normalized = chatId.trim().toLowerCase();
-  if (!normalized) return 'unknown';
-
-  if (normalized.endsWith(GROUP_CHAT_SUFFIX)) return 'group';
-  if (normalized === STATUS_CHAT_ID || normalized === 'stories') return 'status';
-  if (normalized.endsWith(NEWSLETTER_CHAT_SUFFIX)) return 'newsletter';
-  if (normalized.endsWith(BROADCAST_CHAT_SUFFIX)) return 'broadcast';
-  if (DIRECT_CHAT_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) return 'direct';
-
-  if (!normalized.includes('@')) {
-    const digits = normalized.replace(/\D/g, '');
-    if (digits.length >= 7 && digits.length <= 15) {
-      return 'direct';
-    }
-  }
-
-  return 'unknown';
+  return getWhatsAppChatKindFromId(chatId);
 }
 
 export function isDirectWhatsAppChatId(chatId: string): boolean {
-  return getWhatsAppChatKind(chatId) === 'direct';
+  return isDirectWhatsAppChatIdShared(chatId);
 }
 
 function sanitizeWhapiToken(rawToken: string): string {
@@ -130,39 +113,11 @@ async function getWhatsAppSettings(): Promise<WhatsAppSettings> {
 }
 
 export function normalizeChatId(chatIdOrPhone: string): string {
-  if (!chatIdOrPhone) return chatIdOrPhone;
-
-  const trimmed = chatIdOrPhone.trim();
-  if (!trimmed) return trimmed;
-
-  if (!trimmed.includes('@')) {
-    return buildChatIdFromPhone(trimmed);
-  }
-
-  if (/@c\.us$/i.test(trimmed)) {
-    return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
-  }
-
-  if (/@s\.whatsapp\.net$/i.test(trimmed)) {
-    return trimmed.replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
-  }
-
-  const chatKind = getWhatsAppChatKind(trimmed);
-  if (chatKind !== 'unknown') {
-    return trimmed;
-  }
-
-  return trimmed;
+  return normalizeWhatsAppChatId(chatIdOrPhone);
 }
 
 function normalizePhoneFromChatId(chatId: string): string | null {
-  const normalizedChatId = normalizeChatId(chatId);
-
-  if (!normalizedChatId.endsWith('@s.whatsapp.net')) return null;
-
-  const phone = normalizedChatId.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
-
-  return phone || null;
+  return extractDirectPhoneNumber(chatId);
 }
 
 async function validateWhatsAppRecipient(chatId: string, token: string): Promise<string> {
@@ -267,10 +222,9 @@ function buildRecipientCandidates(chatId: string, validatedRecipient?: string | 
     add(normalized.replace(/@c\.us$/i, '@s.whatsapp.net'));
   }
 
-  const digits = normalized.replace(/@.+$/, '').replace(/\D/g, '');
-  if (digits.length >= 10 && digits.length <= 15) {
-    add(`${digits}@s.whatsapp.net`);
-    add(`${digits}@c.us`);
+  const directPhone = extractDirectPhoneNumber(normalized);
+  if (directPhone) {
+    buildDirectChatIdVariantsFromPhone(directPhone).forEach(add);
   }
 
   return Array.from(candidates);

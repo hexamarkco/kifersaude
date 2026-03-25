@@ -1,21 +1,12 @@
 import { supabase } from '../../../lib/supabase';
-import { getWhatsAppChatKind, normalizeChatId } from '../../../lib/whatsappApiService';
+import {
+  extractDirectLid,
+  extractDirectPhoneNumber,
+  getWhatsAppChatIdType,
+  getWhatsAppChatKindFromId,
+  normalizeWhatsAppChatId,
+} from '../../../lib/whatsappChatIdentity';
 import type { OutboundRetryPayload, SentMessagePayload } from '../composer/types';
-
-const extractDirectPhoneNumber = (normalizedChatId: string): string | null => {
-  const trimmed = normalizedChatId.trim();
-  if (!trimmed) return null;
-  if (trimmed.toLowerCase().endsWith('@lid')) return null;
-  const withoutSuffix = trimmed.replace(/@c\.us$|@s\.whatsapp\.net$/i, '');
-  const digits = withoutSuffix.replace(/\D/g, '');
-  return digits || null;
-};
-
-const extractChatLid = (normalizedChatId: string): string | null => {
-  const trimmed = normalizedChatId.trim();
-  if (!trimmed) return null;
-  return trimmed.toLowerCase().endsWith('@lid') ? trimmed : null;
-};
 
 export const extractResponseMessageId = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
@@ -55,8 +46,29 @@ export const buildOutboundSentMessagePayload = (params: {
   payload: params.payload ?? null,
 });
 
+async function resolvePersistedOutboundChatId(rawChatId: string): Promise<string> {
+  const normalizedChatId = normalizeWhatsAppChatId(rawChatId);
+  if (getWhatsAppChatIdType(normalizedChatId) !== 'lid') {
+    return normalizedChatId;
+  }
+
+  const { data, error } = await supabase
+    .from('whatsapp_chats')
+    .select('id')
+    .eq('lid', normalizedChatId)
+    .order('updated_at', { ascending: false })
+    .limit(5);
+
+  if (error || !data?.length) {
+    return normalizedChatId;
+  }
+
+  const preferred = data.find((row) => getWhatsAppChatIdType(row.id) === 'phone') ?? data[0];
+  return preferred?.id ? normalizeWhatsAppChatId(preferred.id) : normalizedChatId;
+}
+
 export async function ensureOutboundChatExists(normalizedChatId: string, sentAt: string, lastMessage?: string | null) {
-  const chatKind = getWhatsAppChatKind(normalizedChatId);
+  const chatKind = getWhatsAppChatKindFromId(normalizedChatId);
   const isGroup = chatKind === 'group';
   const normalizedPreview = typeof lastMessage === 'string' && lastMessage.trim() ? lastMessage.trim() : null;
 
@@ -65,7 +77,7 @@ export async function ensureOutboundChatExists(normalizedChatId: string, sentAt:
       id: normalizedChatId,
       is_group: isGroup,
       phone_number: chatKind === 'direct' ? extractDirectPhoneNumber(normalizedChatId) : null,
-      lid: chatKind === 'direct' ? extractChatLid(normalizedChatId) : null,
+      lid: chatKind === 'direct' ? extractDirectLid(normalizedChatId) : null,
       last_message: normalizedPreview,
       last_message_direction: normalizedPreview ? 'outbound' : null,
       last_message_at: sentAt,
@@ -94,7 +106,7 @@ export async function persistOutboundMessage(params: {
   storedPayload: Record<string, unknown> | null;
 }> {
   const { response, chatId: rawChatId, type, body, hasMedia, sentAt, payloadOverride } = params;
-  const normalizedChatId = normalizeChatId(rawChatId);
+  const normalizedChatId = await resolvePersistedOutboundChatId(rawChatId);
   await ensureOutboundChatExists(normalizedChatId, sentAt, body);
 
   const responsePayload = response && typeof response === 'object'

@@ -1,5 +1,14 @@
 import { createClient } from 'npm:@supabase/supabase-js@^2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+import {
+  buildDirectChatIdVariantsFromPhone as buildDirectChatIdVariantsFromPhoneShared,
+  extractDirectLid as extractChatLidShared,
+  extractDirectPhoneNumber as extractChatPhoneNumberShared,
+  getWhatsAppChatIdType as getChatIdTypeShared,
+  normalizeMaybeDirectChatId as normalizeMaybeDirectIdShared,
+  normalizeWhatsAppChatId as normalizeDirectChatIdShared,
+  resolveInboundCanonicalDirectChatId as resolveInboundCanonicalDirectChatIdShared,
+} from '../../../src/lib/whatsappChatIdentity.ts';
 
 declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
@@ -103,6 +112,7 @@ type WhapiMessageListResponse = {
 };
 
 const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
+const UNRESOLVED_DIRECT_CHAT_NAME = 'Contato WhatsApp';
 
 type ChatIdKind = 'group' | 'direct' | 'newsletter' | 'broadcast' | 'status' | 'unknown';
 
@@ -124,23 +134,12 @@ type WhapiNewsletterListResponse = {
 };
 
 const getChatIdKind = (chatId: string): ChatIdKind => {
-  const normalized = chatId.trim().toLowerCase();
-  if (!normalized) return 'unknown';
-  if (normalized.endsWith('@g.us')) return 'group';
-  if (normalized === 'status@broadcast' || normalized === 'stories') return 'status';
-  if (normalized.endsWith('@newsletter')) return 'newsletter';
-  if (normalized.endsWith('@broadcast')) return 'broadcast';
-  if (normalized.endsWith('@c.us') || normalized.endsWith('@s.whatsapp.net') || normalized.endsWith('@lid')) {
-    return 'direct';
-  }
-
-  if (!normalized.includes('@')) {
-    const digits = normalized.replace(/\D/g, '');
-    if (digits.length >= 7 && digits.length <= 15) {
-      return 'direct';
-    }
-  }
-
+  const type = getChatIdTypeShared(chatId);
+  if (type === 'phone' || type === 'lid') return 'direct';
+  if (type === 'group') return 'group';
+  if (type === 'newsletter') return 'newsletter';
+  if (type === 'broadcast') return 'broadcast';
+  if (type === 'status') return 'status';
   return 'unknown';
 };
 
@@ -262,31 +261,11 @@ const getLatestIsoTimestamp = (...values: Array<string | null | undefined>): str
 };
 
 const normalizeDirectChatId = (chatId: string): string => {
-  const trimmed = chatId.trim();
-  if (!trimmed) return trimmed;
-
-  if (/@c\.us$/i.test(trimmed)) {
-    return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
-  }
-
-  if (/@s\.whatsapp\.net$/i.test(trimmed)) {
-    return trimmed.replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
-  }
-
-  if (!trimmed.includes('@')) {
-    const digits = trimmed.replace(/\D/g, '');
-    if (digits.length >= 7 && digits.length <= 15) {
-      return `${digits}@s.whatsapp.net`;
-    }
-  }
-
-  return trimmed;
+  return normalizeDirectChatIdShared(chatId);
 };
 
 const normalizeMaybeDirectId = (value: string | null | undefined): string | null => {
-  const cleaned = toCleanText(value);
-  if (!cleaned) return null;
-  return getChatIdKind(cleaned) === 'direct' ? normalizeDirectChatId(cleaned) : cleaned;
+  return normalizeMaybeDirectIdShared(value);
 };
 
 const resolveInboundCanonicalDirectChatId = (
@@ -294,32 +273,7 @@ const resolveInboundCanonicalDirectChatId = (
   normalizedChatId: string,
   normalizedFrom: string | null,
 ): string => {
-  if (!normalizedFrom || getChatIdKind(normalizedFrom) !== 'direct') {
-    return normalizedChatId;
-  }
-
-  if (normalizedFrom.trim().toLowerCase().endsWith('@lid')) {
-    return normalizedChatId;
-  }
-
-  const normalizedRaw = rawChatId.trim().toLowerCase();
-  if (!normalizedRaw) {
-    return normalizedFrom;
-  }
-
-  if (normalizedRaw.endsWith('@g.us') || normalizedRaw.endsWith('@newsletter') || normalizedRaw.endsWith('@broadcast')) {
-    return normalizedChatId;
-  }
-
-  if (normalizedRaw === 'status@broadcast' || normalizedRaw === 'stories') {
-    return normalizedChatId;
-  }
-
-  if (normalizedChatId !== normalizedFrom) {
-    return normalizedFrom;
-  }
-
-  return normalizedChatId;
+  return resolveInboundCanonicalDirectChatIdShared(rawChatId, normalizedChatId, normalizedFrom);
 };
 
 const resolveRequestedChatIdFromMessages = (requestedChatId: string, messages: WhapiMessage[]): string => {
@@ -764,8 +718,7 @@ const buildChatRefreshVariants = (chatId: string, phoneNumber?: string | null, l
 
     const resolvedPhoneNumber = toCleanText(phoneNumber) || extractChatPhoneNumber(normalizedChatId) || '';
     if (resolvedPhoneNumber) {
-      variants.add(`${resolvedPhoneNumber}@s.whatsapp.net`);
-      variants.add(`${resolvedPhoneNumber}@c.us`);
+      buildDirectChatIdVariantsFromPhoneShared(resolvedPhoneNumber).forEach((variant) => variants.add(variant));
     }
 
     const resolvedLid = toCleanText(lid) || extractChatLid(normalizedChatId) || '';
@@ -881,20 +834,91 @@ const refreshChatLastMessageState = async (supabaseAdmin: ReturnType<typeof crea
   }
 };
 
-const extractChatPhoneNumber = (chatId: string): string | null => {
-  const normalized = chatId.trim();
-  if (!normalized) return null;
-  if (normalized.toLowerCase().endsWith('@lid')) return null;
+const isMissingRelationError = (error: { code?: string; message?: string } | null | undefined, relationName: string) => {
+  if (!error) return false;
+  const code = typeof error.code === 'string' ? error.code.toUpperCase() : '';
+  const message = typeof error.message === 'string' ? error.message.toLowerCase() : '';
+  const relation = relationName.toLowerCase();
+  return (
+    code === '42P01' ||
+    message.includes(`relation "${relation}"`) ||
+    message.includes(`relation '${relation}'`) ||
+    message.includes(relation)
+  );
+};
 
-  const withoutSuffix = normalized.replace(/@c\.us$|@s\.whatsapp\.net$/i, '');
-  const digits = withoutSuffix.replace(/\D/g, '');
-  return digits || null;
+const mergeChatReadCursor = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  sourceChatId: string,
+  targetChatId: string,
+) => {
+  const { data, error } = await supabaseAdmin
+    .from('whatsapp_chat_read_cursors')
+    .select('chat_id, last_read_at, last_read_message_id, marked_by_user_id, created_at, updated_at')
+    .in('chat_id', [sourceChatId, targetChatId]);
+
+  if (error) {
+    if (!isMissingRelationError(error, 'whatsapp_chat_read_cursors')) {
+      throw new Error(`Erro ao carregar cursores de leitura dos chats: ${error.message}`);
+    }
+    return;
+  }
+
+  const sourceCursor = (data || []).find((row) => row.chat_id === sourceChatId);
+  const targetCursor = (data || []).find((row) => row.chat_id === targetChatId);
+  if (!sourceCursor) {
+    return;
+  }
+
+  const sourceAt = new Date(sourceCursor.last_read_at || '').getTime();
+  const targetAt = new Date(targetCursor?.last_read_at || '').getTime();
+  const preferSource = Number.isNaN(targetAt) || (!Number.isNaN(sourceAt) && sourceAt >= targetAt);
+  const preferredCursor = preferSource ? sourceCursor : targetCursor;
+  const nowIso = new Date().toISOString();
+
+  const { error: upsertError } = await supabaseAdmin.from('whatsapp_chat_read_cursors').upsert(
+    {
+      chat_id: targetChatId,
+      last_read_at: getLatestIsoTimestamp(sourceCursor.last_read_at, targetCursor?.last_read_at) || nowIso,
+      last_read_message_id: preferredCursor?.last_read_message_id ?? targetCursor?.last_read_message_id ?? null,
+      marked_by_user_id: preferredCursor?.marked_by_user_id ?? targetCursor?.marked_by_user_id ?? null,
+      created_at: targetCursor?.created_at ?? sourceCursor.created_at ?? nowIso,
+      updated_at: nowIso,
+    },
+    { onConflict: 'chat_id' },
+  );
+  throwIfMutationError('Erro ao consolidar cursor de leitura do chat canônico', upsertError);
+
+  const { error: deleteError } = await supabaseAdmin
+    .from('whatsapp_chat_read_cursors')
+    .delete()
+    .eq('chat_id', sourceChatId);
+  throwIfMutationError('Erro ao remover cursor legado do chat canônico', deleteError);
+};
+
+const moveSupplementaryChatReferences = async (
+  supabaseAdmin: ReturnType<typeof createClient>,
+  sourceChatId: string,
+  targetChatId: string,
+) => {
+  const { error: campaignTargetsError } = await supabaseAdmin
+    .from('whatsapp_campaign_targets')
+    .update({ chat_id: targetChatId })
+    .eq('chat_id', sourceChatId);
+
+  if (campaignTargetsError && !isMissingRelationError(campaignTargetsError, 'whatsapp_campaign_targets')) {
+    throw new Error(`Erro ao atualizar campaign targets do chat canônico: ${campaignTargetsError.message}`);
+  }
+
+  await mergeChatReadCursor(supabaseAdmin, sourceChatId, targetChatId);
+};
+
+const extractChatPhoneNumber = (chatId: string): string | null => {
+  return extractChatPhoneNumberShared(chatId);
 };
 
 const extractChatLid = (chatId: string): string | null => {
-  const normalized = chatId.trim();
-  if (!normalized) return null;
-  return normalized.toLowerCase().endsWith('@lid') ? normalized : null;
+  return extractChatLidShared(chatId);
 };
 
 const toIsoString = (timestamp: unknown): string | null => {
@@ -1038,6 +1062,8 @@ const syncSingleChat = async ({
     } else {
       chatName = existingChatName ?? 'Transmissao sem nome';
     }
+  } else if (chatKind === 'direct' && !existingChatName && !extractChatPhoneNumber(resolvedRequestedChatId)) {
+    chatName = UNRESOLVED_DIRECT_CHAT_NAME;
   }
 
   const nextLastMessageAt =
@@ -1081,6 +1107,8 @@ const syncSingleChat = async ({
       .update({ chat_id: resolvedRequestedChatId })
       .eq('chat_id', requestedChatId);
     throwIfMutationError('Erro ao atualizar historico do chat canonico apos sync', historyUpdateError);
+
+    await moveSupplementaryChatReferences(supabaseAdmin, requestedChatId, resolvedRequestedChatId);
 
     const { error: deleteCanonicalSourceChatError } = await supabaseAdmin
       .from('whatsapp_chats')

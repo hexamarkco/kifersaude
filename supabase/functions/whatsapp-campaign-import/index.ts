@@ -21,7 +21,7 @@ const corsHeaders = {
 };
 
 const WHATSAPP_CAMPAIGN_IMPORT_LEASE_MS = 10 * 60 * 1000;
-const DEFAULT_BATCH_SIZE = 150;
+const DEFAULT_BATCH_SIZE = 100;
 const DEFAULT_JOB_LIMIT = 1;
 const MAX_JOB_LIMIT = 3;
 

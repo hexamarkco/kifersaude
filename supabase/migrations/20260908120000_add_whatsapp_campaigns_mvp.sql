@@ -451,13 +451,13 @@ BEGIN
   END IF;
 
   BEGIN
-    function_url := current_setting('app.settings.supabase_url', true);
+    function_url := NULLIF(trim(both '"' FROM COALESCE(current_setting('app.settings.supabase_url', true), '')), '');
   EXCEPTION WHEN OTHERS THEN
     function_url := NULL;
   END;
 
   BEGIN
-    service_role_key := current_setting('app.settings.supabase_service_role_key', true);
+    service_role_key := NULLIF(trim(both '"' FROM COALESCE(current_setting('app.settings.supabase_service_role_key', true), '')), '');
   EXCEPTION WHEN OTHERS THEN
     service_role_key := NULL;
   END;
@@ -495,14 +495,14 @@ BEGIN
   ) INTO has_config_value;
 
   IF function_url IS NULL AND has_label AND has_value THEN
-    SELECT value INTO function_url
+    SELECT NULLIF(trim(both '"' FROM value), '') INTO function_url
     FROM public.system_configurations
     WHERE label = 'supabase_url'
     LIMIT 1;
   END IF;
 
   IF service_role_key IS NULL AND has_label AND has_value THEN
-    SELECT value INTO service_role_key
+    SELECT NULLIF(trim(both '"' FROM value), '') INTO service_role_key
     FROM public.system_configurations
     WHERE label = 'supabase_service_role_key'
     LIMIT 1;
@@ -510,7 +510,7 @@ BEGIN
 
   IF function_url IS NULL AND has_config_key AND has_config_value THEN
     EXECUTE $sql$
-      SELECT config_value
+      SELECT NULLIF(trim(both '"' FROM config_value::text), '')
       FROM public.system_configurations
       WHERE config_key = 'supabase_url'
       LIMIT 1
@@ -519,7 +519,7 @@ BEGIN
 
   IF service_role_key IS NULL AND has_config_key AND has_config_value THEN
     EXECUTE $sql$
-      SELECT config_value
+      SELECT NULLIF(trim(both '"' FROM config_value::text), '')
       FROM public.system_configurations
       WHERE config_key = 'supabase_service_role_key'
       LIMIT 1

@@ -219,6 +219,15 @@ const IMPORT_STATUS_CLASSNAMES: Record<WhatsAppCampaignImportStatus, string> = {
   cancelled: 'bg-slate-200 text-slate-700',
 };
 
+const TARGET_STATUS_LABELS: Record<WhatsAppCampaignTargetStatus, string> = {
+  pending: 'Pendente',
+  processing: 'Processando',
+  sent: 'Enviado',
+  failed: 'Falhou',
+  invalid: 'Inválido',
+  cancelled: 'Cancelado',
+};
+
 const FLOW_STEP_LABELS: Record<WhatsAppCampaignFlowStepType, string> = {
   text: 'Mensagem',
   image: 'Imagem',
@@ -507,7 +516,7 @@ const mapCampaignFunctionBackendErrorMessage = (message: string): string | null 
   }
 
   if (normalized.includes('statement timeout') || normalized.includes('canceling statement due to statement timeout')) {
-    return 'A criação da campanha excedeu o tempo limite do banco. Aplique as migrations mais recentes de performance das campanhas WhatsApp e tente novamente.';
+    return 'A operacao da campanha excedeu o tempo limite do banco. Aplique as migrations mais recentes de performance das campanhas WhatsApp e tente novamente.';
   }
 
   return null;
@@ -1169,7 +1178,7 @@ export default function WhatsAppCampaignSettings() {
     try {
       if (audienceSource === 'csv') {
         if (!csvImport.parsed || csvImport.parsed.rows.length === 0) {
-          setMessageState({ type: 'error', text: 'Importe um CSV antes de gerar o preview.' });
+          setMessageState({ type: 'error', text: 'Importe um CSV antes de gerar a prévia.' });
           return;
         }
 
@@ -1210,7 +1219,7 @@ export default function WhatsAppCampaignSettings() {
         type: 'error',
         text: isMissingLegacyLeadLabelColumnError(error)
           ? 'O banco Supabase deste ambiente ainda não recebeu a migration mais recente das campanhas WhatsApp. Aplique as migrations e tente novamente.'
-          : 'Não foi possível gerar o preview do público.',
+          : 'Não foi possível gerar a prévia do público.',
       });
     } finally {
       setLoadingPreview(false);
@@ -1234,7 +1243,7 @@ export default function WhatsAppCampaignSettings() {
 
     if (audienceSource === 'csv') {
       if (!csvImport.parsed || !csvAnalysis) {
-        setMessageState({ type: 'error', text: 'Gere o preview do CSV antes de criar a campanha.' });
+        setMessageState({ type: 'error', text: 'Gere a prévia do CSV antes de criar a campanha.' });
         return;
       }
 
@@ -1248,13 +1257,13 @@ export default function WhatsAppCampaignSettings() {
           { value: csvCrmDefaults.origemId, label: 'origem' },
           { value: csvCrmDefaults.statusId, label: 'status' },
           { value: csvCrmDefaults.tipoContratacaoId, label: 'tipo de contratação' },
-          { value: csvCrmDefaults.responsavelId, label: 'responsavel' },
+          { value: csvCrmDefaults.responsavelId, label: 'responsável' },
         ].find((item) => !item.value);
 
         if (missingDefaults) {
           setMessageState({
             type: 'error',
-            text: `Defina o default de ${missingDefaults.label} para criar novos leads a partir do CSV.`,
+            text: `Defina o padrão de ${missingDefaults.label} para criar novos leads a partir do CSV.`,
           });
           return;
         }
@@ -1262,7 +1271,7 @@ export default function WhatsAppCampaignSettings() {
         if (!csvCrmDefaults.confirmNewLeadDefaults) {
           setMessageState({
             type: 'error',
-            text: 'Confirme os defaults do CRM antes de criar novos leads pelo CSV.',
+            text: 'Confirme os padrões do CRM antes de criar novos leads pelo CSV.',
           });
           return;
         }
@@ -1270,7 +1279,7 @@ export default function WhatsAppCampaignSettings() {
     }
 
     if (audienceSource === 'filters' && previewLeadsTotal === 0) {
-      setMessageState({ type: 'error', text: 'Gere o preview de público antes de criar a campanha.' });
+      setMessageState({ type: 'error', text: 'Gere a prévia de público antes de criar a campanha.' });
       return;
     }
 
@@ -1484,10 +1493,68 @@ export default function WhatsAppCampaignSettings() {
   };
 
   const handleProcessNow = async (campaignId?: string) => {
+    const targetCampaign = campaignId ? campaigns.find((campaign) => campaign.id === campaignId) ?? null : null;
+    const shouldProcessImportNow = Boolean(
+      targetCampaign
+      && targetCampaign.audience_source === 'csv'
+      && isWhatsAppCampaignImportPending(targetCampaign.import_status),
+    );
+
     setProcessingCampaignId(campaignId || 'all');
     setMessageState(null);
 
     try {
+      if (shouldProcessImportNow && targetCampaign) {
+        const { data, error } = await supabase.functions.invoke('whatsapp-campaign-import', {
+          body: {
+            action: 'process',
+            campaignId: targetCampaign.id,
+            limit: 1,
+            source: 'manual-ui',
+          },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        const responseData = (data ?? null) as {
+          error?: string;
+          jobsClaimed?: number;
+          jobsFailed?: number;
+          rowsProcessed?: number;
+          createdLeads?: number;
+          createdTargets?: number;
+        } | null;
+        if (responseData?.error) {
+          throw new Error(responseData.error);
+        }
+
+        await loadCampaigns();
+        if (selectedCampaignId) {
+          await loadCampaignTargets();
+        }
+
+        const jobsClaimed = typeof responseData?.jobsClaimed === 'number' ? responseData.jobsClaimed : 0;
+        const jobsFailed = typeof responseData?.jobsFailed === 'number' ? responseData.jobsFailed : 0;
+        const rowsProcessed = typeof responseData?.rowsProcessed === 'number' ? responseData.rowsProcessed : 0;
+        const createdLeads = typeof responseData?.createdLeads === 'number' ? responseData.createdLeads : 0;
+        const createdTargets = typeof responseData?.createdTargets === 'number' ? responseData.createdTargets : 0;
+
+        setMessageState({
+          type: jobsFailed > 0 ? 'error' : 'success',
+          text:
+            jobsFailed > 0
+              ? 'A importacao do CSV encontrou falhas ao processar o lote atual.'
+              : rowsProcessed > 0 || createdLeads > 0 || createdTargets > 0
+                ? `Importacao processada: ${rowsProcessed} linha(s), ${createdLeads} lead(s) e ${createdTargets} alvo(s) tratados neste lote.`
+                : jobsClaimed > 0
+                  ? 'A importacao do CSV foi acionada, mas este lote nao gerou novos alvos.'
+                  : 'Nenhum lote de importacao estava pronto para processar agora.',
+        });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('whatsapp-broadcast', {
         body: {
           action: 'process',
@@ -1516,14 +1583,19 @@ export default function WhatsAppCampaignSettings() {
         type: 'success',
         text:
           processedCount > 0
-            ? `Processamento concluído: ${processedCount} alvo(s) processado(s).`
-            : 'Processamento concluído sem novos envios.',
+            ? `Processamento concluido: ${processedCount} alvo(s) processado(s).`
+            : 'Processamento concluido sem novos envios.',
       });
     } catch (error) {
       console.error('Erro ao processar campanhas manualmente:', error);
       setMessageState({
         type: 'error',
-        text: await extractEdgeFunctionErrorMessage(error, 'Não foi possível processar os envios agora.'),
+        text: await extractEdgeFunctionErrorMessage(
+          error,
+          shouldProcessImportNow
+            ? 'Nao foi possivel processar a importacao do CSV agora.'
+            : 'Nao foi possivel processar os envios agora.',
+        ),
       });
     } finally {
       setProcessingCampaignId(null);
@@ -1881,7 +1953,7 @@ export default function WhatsAppCampaignSettings() {
           footer={(
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-xs text-slate-500">
-                Preview:{' '}
+                Prévia:{' '}
                 <strong>
                   {audienceSource === 'csv'
                     ? csvAnalysis
@@ -1901,7 +1973,7 @@ export default function WhatsAppCampaignSettings() {
                 </Button>
                 <Button variant="secondary" onClick={() => void handlePreviewAudience()} loading={loadingPreview}>
                   <Send className="h-4 w-4" />
-                  Gerar preview
+                  Gerar prévia
                 </Button>
                 <Button onClick={() => void handleCreateCampaign()} loading={creatingCampaign}>
                   Criar campanha
@@ -1985,7 +2057,7 @@ export default function WhatsAppCampaignSettings() {
           </label>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          O limite diário conta os envios desta campanha por dia. O intervalo define quantos minutos o worker espera entre um envio e outro.
+          O limite diário conta os envios desta campanha por dia. O intervalo define quantos minutos o processador espera entre um envio e outro.
         </p>
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2224,11 +2296,11 @@ export default function WhatsAppCampaignSettings() {
                 <div className="rounded-lg border border-slate-200 bg-white p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Defaults do CRM</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Padrões do CRM</p>
                       <p className="text-xs text-slate-500">Aplicados apenas nas linhas do CSV que virarem novos leads.</p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600">
-                      Novos leads no preview: {csvAnalysis?.summary.newLeadRows ?? 0}
+                      Novos leads na prévia: {csvAnalysis?.summary.newLeadRows ?? 0}
                     </span>
                   </div>
 
@@ -2684,7 +2756,7 @@ export default function WhatsAppCampaignSettings() {
 
         {previewSampleMessage && (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sample resolvido</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Prévia resolvida</p>
             <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{previewSampleMessage}</p>
           </div>
         )}
@@ -2715,7 +2787,7 @@ export default function WhatsAppCampaignSettings() {
                     <span className="text-slate-500">
                       {item.invalidReason === 'missing_phone' && 'Sem telefone'}
                       {item.invalidReason === 'duplicate_phone' && `Duplicado da linha ${item.duplicateOfRowNumber}`}
-                      {item.invalidReason === 'missing_name' && 'Nome obrigatorio para novo lead'}
+                        {item.invalidReason === 'missing_name' && 'Nome obrigatório para novo lead'}
                       {!item.invalidReason && (item.existingLead ? 'Lead existente' : 'Novo lead')}
                     </span>
                   </div>
@@ -2728,7 +2800,7 @@ export default function WhatsAppCampaignSettings() {
         {audienceSource === 'filters' && previewLeads.length > 0 && (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Amostra do preview ({previewLeads.length} de {previewLeadsTotal} lead(s) deduplicado(s))
+              Amostra da prévia ({previewLeads.length} de {previewLeadsTotal} lead(s) deduplicado(s))
             </p>
             <ul className="mt-2 max-h-44 space-y-1 overflow-y-auto text-xs text-slate-700">
               {previewLeads.slice(0, 80).map((lead) => (
@@ -2772,8 +2844,10 @@ export default function WhatsAppCampaignSettings() {
               const importStatus = normalizeWhatsAppCampaignImportStatus(campaign.import_status);
               const importProgressLabel = formatImportProgressLabel(campaign);
               const importProgressPercent = getImportProgressPercent(campaign);
+              const canProcessImportNow = campaign.audience_source === 'csv' && isWhatsAppCampaignImportPending(campaign.import_status);
               const canStart = (campaign.status === 'draft' || campaign.status === 'paused') && isWhatsAppCampaignImportReady(campaign);
               const canPause = campaign.status === 'running';
+              const canProcessNow = (campaign.status === 'running' && isWhatsAppCampaignImportReady(campaign)) || canProcessImportNow;
               const canCancel = campaign.status === 'draft' || campaign.status === 'running' || campaign.status === 'paused';
 
               return (
@@ -2896,10 +2970,10 @@ export default function WhatsAppCampaignSettings() {
                         void handleProcessNow(campaign.id);
                       }}
                       loading={isProcessing}
-                      disabled={campaign.status !== 'running' || isActionLoading}
+                      disabled={!canProcessNow || isActionLoading}
                     >
-                      <Send className="h-4 w-4" />
-                      Processar agora
+                      {canProcessImportNow ? <RefreshCw className="h-4 w-4" /> : <Send className="h-4 w-4" />}
+                      {canProcessImportNow ? 'Importar agora' : 'Processar agora'}
                     </Button>
 
                     <Button
@@ -2984,14 +3058,14 @@ export default function WhatsAppCampaignSettings() {
                   <option value="">Todos</option>
                   {(['pending', 'processing', 'sent', 'failed', 'invalid', 'cancelled'] as WhatsAppCampaignTargetStatus[]).map((status) => (
                     <option key={status} value={status}>
-                      {status}
+                      {TARGET_STATUS_LABELS[status]}
                     </option>
                   ))}
                 </select>
               </label>
 
               <label className="text-xs font-medium text-slate-600">
-                Sent at
+                Envio
                 <select
                   value={campaignTargetsFilters.sentState}
                   onChange={(event) =>
@@ -3009,7 +3083,7 @@ export default function WhatsAppCampaignSettings() {
               </label>
 
               <label className="text-xs font-medium text-slate-600">
-                Last attempt
+                Última tentativa
                 <select
                   value={campaignTargetsFilters.attemptState}
                   onChange={(event) =>
@@ -3040,7 +3114,7 @@ export default function WhatsAppCampaignSettings() {
                       }))
                     }
                     className="h-10 w-full border-0 bg-transparent text-sm focus:outline-none"
-                    placeholder="Ex: numero invalido"
+                    placeholder="Ex: número inválido"
                   />
                 </div>
               </label>
@@ -3053,11 +3127,11 @@ export default function WhatsAppCampaignSettings() {
                     <th className="px-3 py-2 text-left font-semibold">Alvo</th>
                     <th className="px-3 py-2 text-left font-semibold">Fonte</th>
                     <th className="px-3 py-2 text-left font-semibold">Status</th>
-                    <th className="px-3 py-2 text-left font-semibold">Sent at</th>
-                    <th className="px-3 py-2 text-left font-semibold">Last attempt</th>
-                    <th className="px-3 py-2 text-left font-semibold">Proxima etapa</th>
+                    <th className="px-3 py-2 text-left font-semibold">Envio</th>
+                    <th className="px-3 py-2 text-left font-semibold">Última tentativa</th>
+                    <th className="px-3 py-2 text-left font-semibold">Próxima etapa</th>
                     <th className="px-3 py-2 text-left font-semibold">Erro</th>
-                    <th className="px-3 py-2 text-left font-semibold">Acao</th>
+                    <th className="px-3 py-2 text-left font-semibold">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -3083,7 +3157,7 @@ export default function WhatsAppCampaignSettings() {
                           <div className="text-slate-500">{target.raw_phone || target.phone || target.lead?.telefone || '-'}</div>
                         </td>
                         <td className="px-3 py-2 align-top">{formatTargetSourceKindLabel(target.source_kind)}</td>
-                        <td className="px-3 py-2 align-top">{target.status}</td>
+                        <td className="px-3 py-2 align-top">{TARGET_STATUS_LABELS[target.status]}</td>
                         <td className="px-3 py-2 align-top">{formatDateTime(target.sent_at)}</td>
                         <td className="px-3 py-2 align-top">{formatDateTime(target.last_attempt_at)}</td>
                         <td className="px-3 py-2 align-top">{formatDateTime(target.next_step_due_at)}</td>
@@ -3109,7 +3183,7 @@ export default function WhatsAppCampaignSettings() {
 
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
               <span>
-                Pagina {campaignTargetsPage + 1} de {campaignTargetsPageCount} • {campaignTargetsTotalCount} alvo(s)
+                 Página {campaignTargetsPage + 1} de {campaignTargetsPageCount} • {campaignTargetsTotalCount} alvo(s)
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -3128,7 +3202,7 @@ export default function WhatsAppCampaignSettings() {
                   }
                   disabled={campaignTargetsPage + 1 >= campaignTargetsPageCount}
                 >
-                  Proxima
+                  Próxima
                 </Button>
               </div>
             </div>

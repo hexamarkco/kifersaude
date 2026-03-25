@@ -162,7 +162,7 @@ export default function WhatsAppSettingsPage() {
     <div className="panel-page-shell w-full">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Configuracoes do WhatsApp</h1>
+          <h1 className="text-3xl font-bold text-slate-900">Configurações do WhatsApp</h1>
           <p className="mt-2 text-sm text-slate-600">Ajuste a inbox e gerencie disparos de campanhas em uma tela dedicada.</p>
         </div>
         <Button variant="secondary" size="sm" onClick={() => navigate('/painel/whatsapp')}>
@@ -180,7 +180,7 @@ export default function WhatsAppSettingsPage() {
               <section className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <h2 className="text-sm font-semibold text-slate-900">Configuracoes da inbox</h2>
+                    <h2 className="text-sm font-semibold text-slate-900">Configurações da inbox</h2>
               <p className="text-xs text-slate-500">Sincronização, visualização e prioridades da fila de conversas.</p>
                   </div>
                   <Button
@@ -221,12 +221,12 @@ export default function WhatsAppSettingsPage() {
                   <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
                     <div className="flex items-center justify-between text-xs text-amber-700">
                       <span>
-                        {syncAllChatsProgress.completed}/{syncAllChatsProgress.total} concluido(s)
+                        {syncAllChatsProgress.completed}/{syncAllChatsProgress.total} concluído(s)
                       </span>
                       {syncAllChatsProgress.failed > 0 && <span>{syncAllChatsProgress.failed} com falha</span>}
                     </div>
                     <div className="mt-1 truncate text-[11px] text-amber-800/90">
-                      {syncingChatLabel ? `Sincronizando agora: ${syncingChatLabel}` : 'Preparando proximo chat...'}
+                      {syncingChatLabel ? `Sincronizando agora: ${syncingChatLabel}` : 'Preparando próximo chat...'}
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-amber-100">
                       <div
@@ -253,13 +253,13 @@ export default function WhatsAppSettingsPage() {
                     className="sm:col-span-2"
                   >
                     {notificationsActive ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-                    Notificacoes desktop ({notificationsLabel})
+                    Notificações desktop ({notificationsLabel})
                   </Button>
                 </div>
               </section>
 
               <section className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                <p className="font-semibold text-slate-700">Atalhos rapidos</p>
+                <p className="font-semibold text-slate-700">Atalhos rápidos</p>
               <p className="mt-1">Ctrl/Cmd + K busca, Ctrl/Cmd + N novo chat, Ctrl/Cmd + Shift + J próxima não lida.</p>
               </section>
             </div>

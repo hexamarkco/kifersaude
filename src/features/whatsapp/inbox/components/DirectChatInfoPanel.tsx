@@ -97,7 +97,7 @@ export function DirectChatInfoPanel({
     });
   }, [lead]);
 
-  const contactStatusLabel = contact?.saved ? 'Contato salvo' : 'Numero avulso';
+  const contactStatusLabel = contact?.saved ? 'Contato salvo' : 'Número avulso';
   const hasLead = Boolean(lead);
   const helperPushname = useMemo(() => {
     const trimmedPushname = (contact?.pushname || '').trim();
@@ -110,10 +110,10 @@ export function DirectChatInfoPanel({
     <div className={panelShellClass}>
       <div className="flex items-center justify-between border-b border-[var(--panel-border-subtle,#e7dac8)] px-4 py-3">
         <div>
-          <h3 className="comm-title font-semibold">Informacoes</h3>
-          <p className="comm-muted text-xs">Contato, lead e acoes rapidas</p>
+          <h3 className="comm-title font-semibold">Informações</h3>
+          <p className="comm-muted text-xs">Contato, lead e ações rápidas</p>
         </div>
-        <button onClick={onClose} className="comm-icon-button rounded p-1" aria-label="Fechar painel de informacoes">
+        <button onClick={onClose} className="comm-icon-button rounded p-1" aria-label="Fechar painel de informações">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -146,7 +146,7 @@ export function DirectChatInfoPanel({
           <div>
             <p className="comm-title text-sm font-semibold">Dados do contato</p>
             <p className="comm-muted mt-1 text-xs">
-              Edite o nome de exibicao ou salve este numero na agenda do WhatsApp.
+              Edite o nome de exibição ou salve este número na agenda do WhatsApp.
             </p>
           </div>
 
@@ -211,7 +211,7 @@ export function DirectChatInfoPanel({
             <div>
               <p className="comm-title text-sm font-semibold">Dados do lead</p>
               <p className="comm-muted mt-1 text-xs">
-                {lead ? 'Ajuste os dados principais sem sair da conversa.' : 'Nenhum lead vinculado a este numero.'}
+                {lead ? 'Ajuste os dados principais sem sair da conversa.' : 'Nenhum lead vinculado a este número.'}
               </p>
             </div>
             {lead?.status && <span className="comm-badge comm-badge-neutral text-[11px]">{lead.status}</span>}
@@ -264,19 +264,19 @@ export function DirectChatInfoPanel({
                 />
               </Field>
 
-              <Field label="Observacoes" htmlFor="chat-info-lead-notes">
+              <Field label="Observações" htmlFor="chat-info-lead-notes">
                 <Textarea
                   id="chat-info-lead-notes"
                   value={leadForm.observacoes}
                   onChange={(event) => setLeadForm((current) => ({ ...current, observacoes: event.target.value }))}
-                  placeholder="Anote contexto, preferencia ou proximo passo"
+                  placeholder="Anote contexto, preferência ou próximo passo"
                   size="compact"
                 />
               </Field>
 
               {lead.responsavel && (
                 <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-xs text-[var(--panel-text,#1a120d)]">
-                  Responsavel atual: <span className="font-semibold">{lead.responsavel}</span>
+                  Responsável atual: <span className="font-semibold">{lead.responsavel}</span>
                 </div>
               )}
 
@@ -318,7 +318,7 @@ export function DirectChatInfoPanel({
           ) : (
             <div className="space-y-3">
               <div className="rounded-xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-4 text-sm text-[var(--panel-text-soft,#6f5b4b)]">
-                Assim que esse numero estiver vinculado a um lead, os dados aparecem aqui para edicao rapida.
+                Assim que esse número estiver vinculado a um lead, os dados aparecem aqui para edição rápida.
               </div>
               {onCreateLead && (
                 <Button

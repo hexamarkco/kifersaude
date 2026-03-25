@@ -204,11 +204,11 @@ const STATUS_CLASSNAMES: Record<WhatsAppCampaignStatus, string> = {
 };
 
 const IMPORT_STATUS_LABELS: Record<WhatsAppCampaignImportStatus, string> = {
-  ready: 'Importacao pronta',
+  ready: 'Importação pronta',
   queued: 'Na fila',
   processing: 'Importando',
-  failed: 'Importacao falhou',
-  cancelled: 'Importacao cancelada',
+  failed: 'Importação falhou',
+  cancelled: 'Importação cancelada',
 };
 
 const IMPORT_STATUS_CLASSNAMES: Record<WhatsAppCampaignImportStatus, string> = {
@@ -222,7 +222,7 @@ const IMPORT_STATUS_CLASSNAMES: Record<WhatsAppCampaignImportStatus, string> = {
 const FLOW_STEP_LABELS: Record<WhatsAppCampaignFlowStepType, string> = {
   text: 'Mensagem',
   image: 'Imagem',
-  video: 'Video',
+  video: 'Vídeo',
   audio: 'Áudio',
   document: 'PDF / Documento',
 };
@@ -266,8 +266,8 @@ const CONDITION_GROUP_LABELS: Record<ConditionGroupOption['value'], string> = {
 };
 
 const CONDITION_LOGIC_OPTIONS: Array<{ value: WhatsAppCampaignConditionLogic; label: string }> = [
-  { value: 'all', label: 'Todas as condicoes' },
-  { value: 'any', label: 'Qualquer condicao' },
+  { value: 'all', label: 'Todas as condições' },
+  { value: 'any', label: 'Qualquer condição' },
 ];
 
 const formatDateTime = (value: string | null): string => {
@@ -435,6 +435,21 @@ const formatImportProgressLabel = (campaign: WhatsAppCampaign): string | null =>
   return `${processedRows}/${totalRows} linhas processadas${failedRows > 0 ? ` - ${failedRows} ignoradas` : ''}`;
 };
 
+const getImportProgressPercent = (campaign: WhatsAppCampaign): number | null => {
+  if (campaign.audience_source !== 'csv') {
+    return null;
+  }
+
+  const totalRows = Math.max(Number(campaign.import_total_rows ?? 0) || 0, 0);
+  const processedRows = Math.max(Number(campaign.import_processed_rows ?? 0) || 0, 0);
+
+  if (totalRows <= 0) {
+    return null;
+  }
+
+  return Math.min(100, Math.max(0, Math.round((processedRows / totalRows) * 100)));
+};
+
 const formatTargetSourceKindLabel = (value: WhatsAppCampaignTarget['source_kind']): string =>
   value === 'csv_import' ? 'CSV' : 'Lead';
 
@@ -480,19 +495,19 @@ const mapCampaignFunctionBackendErrorMessage = (message: string): string | null 
   const normalized = message.toLowerCase();
 
   if (normalized.includes('next_step_due_at')) {
-    return 'O banco Supabase deste ambiente ainda nao recebeu a migration de agendamento por etapa (`next_step_due_at`). Aplique as migrations mais recentes das campanhas WhatsApp e tente novamente.';
+    return 'O banco Supabase deste ambiente ainda não recebeu a migration de agendamento por etapa (`next_step_due_at`). Aplique as migrations mais recentes das campanhas WhatsApp e tente novamente.';
   }
 
   if (isLegacyLeadLabelColumnMessage(normalized)) {
-    return 'O banco Supabase deste ambiente ainda nao recebeu a migration mais recente de compatibilidade das campanhas WhatsApp. Aplique as migrations e tente novamente.';
+    return 'O banco Supabase deste ambiente ainda não recebeu a migration mais recente de compatibilidade das campanhas WhatsApp. Aplique as migrations e tente novamente.';
   }
 
   if (normalized.includes('leads.canal')) {
-    return 'O banco Supabase deste ambiente ainda nao possui a coluna `leads.canal`, exigida por esta campanha. Alinhe as migrations do ambiente e tente novamente.';
+    return 'O banco Supabase deste ambiente ainda não possui a coluna `leads.canal`, exigida por esta campanha. Alinhe as migrations do ambiente e tente novamente.';
   }
 
   if (normalized.includes('statement timeout') || normalized.includes('canceling statement due to statement timeout')) {
-    return 'A criacao da campanha excedeu o tempo limite do banco. Aplique as migrations mais recentes de performance das campanhas WhatsApp e tente novamente.';
+    return 'A criação da campanha excedeu o tempo limite do banco. Aplique as migrations mais recentes de performance das campanhas WhatsApp e tente novamente.';
   }
 
   return null;
@@ -1028,15 +1043,15 @@ export default function WhatsAppCampaignSettings() {
       for (const condition of step.conditions ?? []) {
         const definition = campaignConditionFieldDefinitionMap.get(condition.field);
         if (!definition) {
-          return 'Existe uma condicao com campo nao suportado nesta etapa.';
+          return 'Existe uma condição com campo não suportado nesta etapa.';
         }
 
         if (!definition.operators?.includes(condition.operator)) {
-          return `A condicao "${definition.label}" usa um operador nao suportado.`;
+          return `A condição "${definition.label}" usa um operador não suportado.`;
         }
 
         if (!condition.value.trim()) {
-          return `Preencha o valor da condicao "${definition.label}".`;
+          return `Preencha o valor da condição "${definition.label}".`;
         }
       }
     }
@@ -1122,7 +1137,7 @@ export default function WhatsAppCampaignSettings() {
       const parsed = parseCampaignCsvText(rawText);
 
       if (parsed.headers.length === 0 || parsed.rows.length === 0) {
-        setMessageState({ type: 'error', text: 'O CSV precisa ter cabecalho e ao menos uma linha de dados.' });
+        setMessageState({ type: 'error', text: 'O CSV precisa ter cabeçalho e ao menos uma linha de dados.' });
         return;
       }
 
@@ -1143,7 +1158,7 @@ export default function WhatsAppCampaignSettings() {
       });
     } catch (error) {
       console.error('Erro ao carregar CSV da campanha:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel ler o arquivo CSV.' });
+      setMessageState({ type: 'error', text: 'Não foi possível ler o arquivo CSV.' });
     }
   }, []);
 
@@ -1186,7 +1201,7 @@ export default function WhatsAppCampaignSettings() {
       setPreviewLeadsTotal(preview.totalTargets);
       setCsvAnalysis(null);
     } catch (error) {
-      console.error('Erro ao gerar preview de publico da campanha:', error);
+      console.error('Erro ao gerar preview de público da campanha:', error);
       if (audienceSource === 'filters') {
         setPreviewLeads([]);
         setPreviewLeadsTotal(0);
@@ -1194,7 +1209,7 @@ export default function WhatsAppCampaignSettings() {
       setMessageState({
         type: 'error',
         text: isMissingLegacyLeadLabelColumnError(error)
-          ? 'O banco Supabase deste ambiente ainda nao recebeu a migration mais recente das campanhas WhatsApp. Aplique as migrations e tente novamente.'
+          ? 'O banco Supabase deste ambiente ainda não recebeu a migration mais recente das campanhas WhatsApp. Aplique as migrations e tente novamente.'
           : 'Não foi possível gerar o preview do público.',
       });
     } finally {
@@ -1212,7 +1227,7 @@ export default function WhatsAppCampaignSettings() {
     if (unknownFlowVariables.length > 0) {
       setMessageState({
         type: 'error',
-        text: `Existem variaveis desconhecidas no fluxo: ${unknownFlowVariables.map((value) => `{{${value}}}`).join(', ')}`,
+        text: `Existem variáveis desconhecidas no fluxo: ${unknownFlowVariables.map((value) => `{{${value}}}`).join(', ')}`,
       });
       return;
     }
@@ -1224,7 +1239,7 @@ export default function WhatsAppCampaignSettings() {
       }
 
       if (csvAnalysis.validItems.length === 0) {
-        setMessageState({ type: 'error', text: 'Nenhuma linha valida encontrada no CSV.' });
+        setMessageState({ type: 'error', text: 'Nenhuma linha válida encontrada no CSV.' });
         return;
       }
 
@@ -1232,7 +1247,7 @@ export default function WhatsAppCampaignSettings() {
         const missingDefaults = [
           { value: csvCrmDefaults.origemId, label: 'origem' },
           { value: csvCrmDefaults.statusId, label: 'status' },
-          { value: csvCrmDefaults.tipoContratacaoId, label: 'tipo de contratacao' },
+          { value: csvCrmDefaults.tipoContratacaoId, label: 'tipo de contratação' },
           { value: csvCrmDefaults.responsavelId, label: 'responsavel' },
         ].find((item) => !item.value);
 
@@ -1255,7 +1270,7 @@ export default function WhatsAppCampaignSettings() {
     }
 
     if (audienceSource === 'filters' && previewLeadsTotal === 0) {
-      setMessageState({ type: 'error', text: 'Gere o preview de publico antes de criar a campanha.' });
+      setMessageState({ type: 'error', text: 'Gere o preview de público antes de criar a campanha.' });
       return;
     }
 
@@ -1385,8 +1400,8 @@ export default function WhatsAppCampaignSettings() {
       setMessageState({
         type: 'error',
         text: isMissingLegacyLeadLabelColumnError(error)
-          ? 'O banco Supabase deste ambiente ainda nao recebeu a migration mais recente das campanhas WhatsApp. Aplique as migrations e tente novamente.'
-          : getErrorMessage(error, 'Nao foi possivel criar a campanha.'),
+          ? 'O banco Supabase deste ambiente ainda não recebeu a migration mais recente das campanhas WhatsApp. Aplique as migrations e tente novamente.'
+          : getErrorMessage(error, 'Não foi possível criar a campanha.'),
       });
     } finally {
       setCreatingCampaign(false);
@@ -1401,7 +1416,7 @@ export default function WhatsAppCampaignSettings() {
     if (status === 'running' && !isWhatsAppCampaignImportReady(campaign)) {
       setMessageState({
         type: 'error',
-        text: 'A campanha ainda esta importando o CSV. Aguarde a importacao terminar antes de iniciar os envios.',
+        text: 'A campanha ainda está importando o CSV. Aguarde a importação terminar antes de iniciar os envios.',
       });
       return;
     }
@@ -1462,7 +1477,7 @@ export default function WhatsAppCampaignSettings() {
       setMessageState({ type: 'success', text: 'Campanha cancelada com sucesso.' });
     } catch (error) {
       console.error('Erro ao cancelar campanha:', error);
-      setMessageState({ type: 'error', text: getErrorMessage(error, 'Nao foi possivel cancelar a campanha.') });
+      setMessageState({ type: 'error', text: getErrorMessage(error, 'Não foi possível cancelar a campanha.') });
     } finally {
       setActionCampaignId(null);
     }
@@ -1501,8 +1516,8 @@ export default function WhatsAppCampaignSettings() {
         type: 'success',
         text:
           processedCount > 0
-            ? `Processamento concluido: ${processedCount} alvo(s) processado(s).`
-            : 'Processamento concluido sem novos envios.',
+            ? `Processamento concluído: ${processedCount} alvo(s) processado(s).`
+            : 'Processamento concluído sem novos envios.',
       });
     } catch (error) {
       console.error('Erro ao processar campanhas manualmente:', error);
@@ -1576,7 +1591,7 @@ export default function WhatsAppCampaignSettings() {
       setCampaignTargetsTotalCount(count ?? 0);
     } catch (error) {
       console.error('Erro ao carregar alvos da campanha:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel carregar o historico de alvos.' });
+      setMessageState({ type: 'error', text: 'Não foi possível carregar o histórico de alvos.' });
     } finally {
       setLoadingTargets(false);
     }
@@ -1613,7 +1628,7 @@ export default function WhatsAppCampaignSettings() {
     }
 
     if (selectedCampaign.status === 'cancelled') {
-      setMessageState({ type: 'error', text: 'Campanhas canceladas nao podem ser reenfileiradas.' });
+      setMessageState({ type: 'error', text: 'Campanhas canceladas não podem ser reenfileiradas.' });
       return;
     }
 
@@ -1645,7 +1660,7 @@ export default function WhatsAppCampaignSettings() {
       setMessageState({ type: 'success', text: 'Falhas reenfileiradas com sucesso.' });
     } catch (error) {
       console.error('Erro ao reenfileirar falhas da campanha:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel reenfileirar as falhas.' });
+      setMessageState({ type: 'error', text: 'Não foi possível reenfileirar as falhas.' });
     } finally {
       setRequeueingFailures(false);
     }
@@ -1657,7 +1672,7 @@ export default function WhatsAppCampaignSettings() {
     }
 
     if (selectedCampaign.status === 'cancelled') {
-      setMessageState({ type: 'error', text: 'Campanhas canceladas nao podem ser reenfileiradas.' });
+      setMessageState({ type: 'error', text: 'Campanhas canceladas não podem ser reenfileiradas.' });
       return;
     }
 
@@ -1688,7 +1703,7 @@ export default function WhatsAppCampaignSettings() {
       setMessageState({ type: 'success', text: 'Alvo reenfileirado com sucesso.' });
     } catch (error) {
       console.error('Erro ao reenfileirar alvo:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel reenfileirar este alvo.' });
+      setMessageState({ type: 'error', text: 'Não foi possível reenfileirar este alvo.' });
     } finally {
       setRequeueingTargetId(null);
     }
@@ -1723,7 +1738,7 @@ export default function WhatsAppCampaignSettings() {
       }));
 
       if (rows.length === 0) {
-        setMessageState({ type: 'error', text: 'Nao ha falhas para exportar nesta campanha.' });
+        setMessageState({ type: 'error', text: 'Não há falhas para exportar nesta campanha.' });
         return;
       }
 
@@ -1756,7 +1771,7 @@ export default function WhatsAppCampaignSettings() {
       setMessageState({ type: 'success', text: 'CSV de falhas exportado com sucesso.' });
     } catch (error) {
       console.error('Erro ao exportar falhas da campanha:', error);
-      setMessageState({ type: 'error', text: 'Nao foi possivel exportar as falhas.' });
+      setMessageState({ type: 'error', text: 'Não foi possível exportar as falhas.' });
     } finally {
       setExportingFailures(false);
     }
@@ -1860,7 +1875,7 @@ export default function WhatsAppCampaignSettings() {
           isOpen
           onClose={() => setShowCreateCampaignModal(false)}
           title="Nova campanha"
-          description="Monte o fluxo de mensagens, escolha a fonte do publico e agende o disparo quando fizer sentido."
+          description="Monte o fluxo de mensagens, escolha a fonte do público e agende o disparo quando fizer sentido."
           size="xl"
           bodyClassName="space-y-5"
           footer={(
@@ -1871,7 +1886,7 @@ export default function WhatsAppCampaignSettings() {
                   {audienceSource === 'csv'
                     ? csvAnalysis
                       ? formatCsvSummaryLabel(csvAnalysis.summary)
-                      : 'CSV ainda nao validado'
+                      : 'CSV ainda não validado'
                     : `${previewLeadsTotal} lead(s)`}
                 </strong>
               </span>
@@ -1924,7 +1939,7 @@ export default function WhatsAppCampaignSettings() {
           </label>
 
           <label className="text-xs font-medium text-slate-600">
-            Agendamento unico (opcional)
+            Agendamento único (opcional)
             <input
               type="datetime-local"
               value={scheduledAtInput}
@@ -1934,7 +1949,7 @@ export default function WhatsAppCampaignSettings() {
           </label>
 
           <label className="text-xs font-medium text-slate-600">
-            Limite diario de envios
+            Limite diário de envios
             <input
               type="number"
               min={1}
@@ -1970,12 +1985,12 @@ export default function WhatsAppCampaignSettings() {
           </label>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          O limite diario conta os envios desta campanha por dia. O intervalo define quantos minutos o worker espera entre um envio e outro.
+          O limite diário conta os envios desta campanha por dia. O intervalo define quantos minutos o worker espera entre um envio e outro.
         </p>
         <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fonte do publico</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fonte do público</p>
               <p className="text-xs text-slate-500">Uma campanha pode usar leads filtrados ou um CSV importado.</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -2017,7 +2032,7 @@ export default function WhatsAppCampaignSettings() {
           </label>
 
           <label className="text-xs font-medium text-slate-600">
-            Responsavel
+            Responsável
             <select
               value={filters.responsavelId}
               onChange={(event) => setFilters((current) => ({ ...current, responsavelId: event.target.value }))}
@@ -2078,7 +2093,7 @@ export default function WhatsAppCampaignSettings() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-stone-200">Arquivo CSV</p>
-                    <p className="text-xs text-stone-400">Selecione um arquivo com cabecalho e ao menos uma linha valida.</p>
+                    <p className="text-xs text-stone-400">Selecione um arquivo com cabeçalho e ao menos uma linha válida.</p>
                   </div>
                   <Button
                     size="sm"
@@ -2152,7 +2167,7 @@ export default function WhatsAppCampaignSettings() {
                   <div className="space-y-1">
                     <p className="font-semibold text-stone-100">{csvImport.fileName}</p>
                     <p>{csvImport.parsed.rows.length} linha(s) com delimitador "{csvImport.parsed.delimiter}".</p>
-                    <p>Variaveis: {csvImport.parsed.normalizedHeaders.map((header) => `{{${header}}}`).join(', ')}</p>
+                    <p>Variáveis: {csvImport.parsed.normalizedHeaders.map((header) => `{{${header}}}`).join(', ')}</p>
                   </div>
                 ) : (
                   <p>Importe um CSV com colunas como nome, plano e telefone.</p>
@@ -2175,7 +2190,7 @@ export default function WhatsAppCampaignSettings() {
                       }
                       className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-teal-500"
                     >
-                      <option value="">Selecione a coluna obrigatoria</option>
+                        <option value="">Selecione a coluna obrigatória</option>
                       {csvImport.parsed.normalizedHeaders.map((header, index) => (
                         <option key={header} value={header}>
                           {(csvImport.parsed?.headers[index] || header).trim() || header} ({`{{${header}}}`})
@@ -2263,7 +2278,7 @@ export default function WhatsAppCampaignSettings() {
                     </label>
 
                     <label className="text-xs font-medium text-slate-600">
-                      Tipo de contratacao
+                      Tipo de contratação
                       <select
                         value={csvCrmDefaults.tipoContratacaoId}
                         onChange={(event) =>
@@ -2285,7 +2300,7 @@ export default function WhatsAppCampaignSettings() {
                     </label>
 
                     <label className="text-xs font-medium text-slate-600">
-                      Responsavel
+                      Responsável
                       <select
                         value={csvCrmDefaults.responsavelId}
                         onChange={(event) =>
@@ -2330,7 +2345,7 @@ export default function WhatsAppCampaignSettings() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Fluxo da campanha</p>
               <p className="text-xs text-slate-500">
-                Variaveis disponiveis: {campaignVariableSuggestions.map((item) => `{{${item.key}}}`).join(', ')}
+                Variáveis disponíveis: {campaignVariableSuggestions.map((item) => `{{${item.key}}}`).join(', ')}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -2447,7 +2462,7 @@ export default function WhatsAppCampaignSettings() {
                           rows={3}
                           className="mt-1 text-sm"
                           suggestions={campaignVariableSuggestions}
-                          placeholder="Legenda para acompanhar a midia"
+                          placeholder="Legenda para acompanhar a mídia"
                         />
                       </label>
 
@@ -2470,7 +2485,7 @@ export default function WhatsAppCampaignSettings() {
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Intervalo antes desta etapa</p>
-                        <p className="text-xs text-slate-500">Use 0 para enviar logo apos a etapa anterior ou o inicio da campanha.</p>
+                        <p className="text-xs text-slate-500">Use 0 para enviar logo após a etapa anterior ou o início da campanha.</p>
                       </div>
                       <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600">
                         {formatWhatsAppCampaignStepDelay(selectedStep)}
@@ -2514,8 +2529,8 @@ export default function WhatsAppCampaignSettings() {
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Condicoes dinamicas</p>
-                        <p className="text-xs text-slate-500">Cada etapa pode decidir se envia ou nao com base no lead, conversa ou colunas do CSV.</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Condições dinâmicas</p>
+                        <p className="text-xs text-slate-500">Cada etapa pode decidir se envia ou não com base no lead, conversa ou colunas do CSV.</p>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
@@ -2524,7 +2539,7 @@ export default function WhatsAppCampaignSettings() {
                         </Button>
                         <Button size="sm" variant="secondary" onClick={() => addConditionToSelectedStep()}>
                           <Plus className="h-3.5 w-3.5" />
-                          Adicionar condicao
+                          Adicionar condição
                         </Button>
                       </div>
                     </div>
@@ -2649,7 +2664,7 @@ export default function WhatsAppCampaignSettings() {
                       </div>
                     ) : (
                       <div className="mt-3 rounded-lg border border-dashed border-slate-200 bg-white px-3 py-3 text-xs text-slate-500">
-                        Sem condicoes nesta etapa. Se todas as regras forem atendidas, a etapa e enviada normalmente.
+                        Sem condições nesta etapa. Se todas as regras forem atendidas, a etapa é enviada normalmente.
                       </div>
                     )}
                   </div>
@@ -2663,7 +2678,7 @@ export default function WhatsAppCampaignSettings() {
 
         {unknownFlowVariables.length > 0 && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            Variaveis desconhecidas detectadas: {unknownFlowVariables.map((value) => `{{${value}}}`).join(', ')}.
+            Variáveis desconhecidas detectadas: {unknownFlowVariables.map((value) => `{{${value}}}`).join(', ')}.
           </div>
         )}
 
@@ -2677,7 +2692,7 @@ export default function WhatsAppCampaignSettings() {
         {audienceSource === 'csv' && csvAnalysis && (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
             <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">
-              <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Validos: {csvAnalysis.summary.validRows}</div>
+              <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Válidos: {csvAnalysis.summary.validRows}</div>
               <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Sem telefone: {csvAnalysis.summary.missingPhoneRows}</div>
               <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Duplicados: {csvAnalysis.summary.duplicateRows}</div>
               <div className="rounded-md border border-slate-200 bg-white px-2 py-2 text-xs text-slate-700">Existentes: {csvAnalysis.summary.existingLeadRows}</div>
@@ -2720,7 +2735,7 @@ export default function WhatsAppCampaignSettings() {
                 <li key={lead.id} className="rounded-md border border-slate-200 bg-white px-2 py-1">
                   {lead.nome_completo} - {lead.telefone}
                   <span className="ml-1 text-slate-500">
-                    ({statusNameById.get(lead.status_id || '') || 'Sem status'} / {responsavelNameById.get(lead.responsavel_id || '') || 'Sem responsavel'} /{' '}
+                    ({statusNameById.get(lead.status_id || '') || 'Sem status'} / {responsavelNameById.get(lead.responsavel_id || '') || 'Sem responsável'} /{' '}
                     {origemNameById.get(lead.origem_id || '') || 'Sem origem'})
                   </span>
                 </li>
@@ -2756,6 +2771,7 @@ export default function WhatsAppCampaignSettings() {
               const isProcessing = processingCampaignId === campaign.id;
               const importStatus = normalizeWhatsAppCampaignImportStatus(campaign.import_status);
               const importProgressLabel = formatImportProgressLabel(campaign);
+              const importProgressPercent = getImportProgressPercent(campaign);
               const canStart = (campaign.status === 'draft' || campaign.status === 'paused') && isWhatsAppCampaignImportReady(campaign);
               const canPause = campaign.status === 'running';
               const canCancel = campaign.status === 'draft' || campaign.status === 'running' || campaign.status === 'paused';
@@ -2804,7 +2820,20 @@ export default function WhatsAppCampaignSettings() {
                   </button>
 
                   {campaign.audience_source === 'csv' && importProgressLabel && (
-                    <p className="mt-2 text-xs text-slate-600">{importProgressLabel}</p>
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex items-center justify-between gap-3 text-xs text-slate-600">
+                        <p>{importProgressLabel}</p>
+                        {importProgressPercent !== null && <span className="font-semibold text-slate-700">{importProgressPercent}%</span>}
+                      </div>
+                      {importProgressPercent !== null && (
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-200/80" role="progressbar" aria-valuenow={importProgressPercent} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso da importacao do CSV">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 transition-all duration-500 ease-out"
+                            style={{ width: `${importProgressPercent}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   <div className="mt-3 grid gap-2 text-xs text-slate-700 sm:grid-cols-5">
@@ -2897,13 +2926,13 @@ export default function WhatsAppCampaignSettings() {
               <span>Selecionada: {selectedCampaign.name}</span>
               <span>Fonte: {formatAudienceSourceLabel(selectedCampaign.audience_source)}</span>
               {selectedCampaign.audience_source === 'csv' && (
-                <span>Importacao: {IMPORT_STATUS_LABELS[normalizeWhatsAppCampaignImportStatus(selectedCampaign.import_status)]}</span>
+                <span>Importação: {IMPORT_STATUS_LABELS[normalizeWhatsAppCampaignImportStatus(selectedCampaign.import_status)]}</span>
               )}
               <span>Agendada: {formatDateTime(selectedCampaign.scheduled_at)}</span>
               <span>Inicio: {formatDateTime(selectedCampaign.started_at)}</span>
               <span>Fim: {formatDateTime(selectedCampaign.completed_at)}</span>
               <span>Etapas: {selectedCampaign.flow_steps.length}</span>
-              <span>Limite diario: {selectedCampaignPacing.dailySendLimit ?? 'Sem limite'}</span>
+              <span>Limite diário: {selectedCampaignPacing.dailySendLimit ?? 'Sem limite'}</span>
               <span>Intervalo: {selectedCampaignPacing.sendIntervalMinutes ? `${selectedCampaignPacing.sendIntervalMinutes} min` : 'Sem intervalo'}</span>
               {formatImportProgressLabel(selectedCampaign) && <span>{formatImportProgressLabel(selectedCampaign)}</span>}
             </div>
@@ -2970,7 +2999,7 @@ export default function WhatsAppCampaignSettings() {
                 >
                   <option value="all">Todos</option>
                   <option value="sent">Enviados</option>
-                  <option value="not_sent">Nao enviados</option>
+                  <option value="not_sent">Não enviados</option>
                 </select>
               </label>
 

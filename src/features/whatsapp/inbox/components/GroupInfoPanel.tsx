@@ -74,7 +74,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
         body: { chatId: groupId, count: 50 },
       });
     } catch (syncError) {
-      console.warn('Nao foi possivel sincronizar o grupo sob demanda:', syncError);
+      console.warn('Não foi possível sincronizar o grupo sob demanda:', syncError);
     }
 
     const refreshedSnapshot = await loadLocalGroupSnapshot();
@@ -154,19 +154,19 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
         }
 
         if (groupResult.error) {
-          throw new Error(`Nao foi possivel carregar os dados do grupo: ${groupResult.error.message}`);
+          throw new Error(`Não foi possível carregar os dados do grupo: ${groupResult.error.message}`);
         }
 
         if (!groupResult.data) {
           const fallbackGroupInfo = await buildFallbackGroupInfo();
 
           if (!fallbackGroupInfo) {
-            setError('Grupo nao encontrado.');
+            setError('Grupo não encontrado.');
             return;
           }
 
           setGroupInfo(fallbackGroupInfo);
-          setError('Dados completos do grupo ainda nao foram sincronizados.');
+          setError('Dados completos do grupo ainda não foram sincronizados.');
           return;
         }
 
@@ -187,7 +187,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
         }
 
         if (partialErrors.length > 0) {
-          setError(`Nao foi possivel carregar ${partialErrors.join(' e ')} do grupo.`);
+          setError(`Não foi possível carregar ${partialErrors.join(' e ')} do grupo.`);
         }
       } catch (error) {
         if (cancelled || requestIdRef.current !== requestId) {
@@ -195,7 +195,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
         }
 
         console.error('Erro ao carregar dados do grupo:', error);
-        setError(error instanceof Error ? error.message : 'Nao foi possivel carregar os dados do grupo.');
+        setError(error instanceof Error ? error.message : 'Não foi possível carregar os dados do grupo.');
       } finally {
         if (!cancelled && requestIdRef.current === requestId) {
           setLoading(false);
@@ -246,7 +246,7 @@ export function GroupInfoPanel({ groupId, onClose }: GroupInfoPanelProps) {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) {
-      return 'data indisponivel';
+      return 'data indisponível';
     }
 
     const date = new Date(dateString);

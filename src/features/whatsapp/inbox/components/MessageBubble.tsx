@@ -946,7 +946,7 @@ function MessageBubbleComponent({
         } else if (mediaResponse.url) {
           const fetched = await fetch(mediaResponse.url);
           if (!fetched.ok) {
-            throw new Error('Nao foi possivel baixar a figurinha.');
+            throw new Error('Não foi possível baixar a figurinha.');
           }
           stickerBlob = await fetched.blob();
         }
@@ -955,7 +955,7 @@ function MessageBubbleComponent({
       if (!stickerBlob && visualDisplayUrl) {
         const fetched = await fetch(visualDisplayUrl);
         if (!fetched.ok) {
-          throw new Error('Nao foi possivel baixar a figurinha.');
+          throw new Error('Não foi possível baixar a figurinha.');
         }
         stickerBlob = await fetched.blob();
       }
@@ -974,7 +974,7 @@ function MessageBubbleComponent({
       closeActionMenu();
     } catch (error) {
       console.error('Erro ao salvar figurinha na loja:', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar a figurinha.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar a figurinha.');
     } finally {
       setSavingStickerToLibrary(false);
     }
@@ -1441,7 +1441,7 @@ function MessageBubbleComponent({
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">🎬</div>
                 <div>
-                  <div className="font-medium">Video</div>
+                  <div className="font-medium">Vídeo</div>
                   <div className="text-xs">{visualMediaLoading ? 'Carregando...' : 'Clique para carregar'}</div>
                 </div>
               </div>
@@ -1676,7 +1676,7 @@ function MessageBubbleComponent({
         return nextUrl;
       }
     } catch (error) {
-      console.error('Erro ao carregar midia visual:', error);
+      console.error('Erro ao carregar mídia visual:', error);
     } finally {
       setVisualMediaLoading(false);
     }
@@ -1721,7 +1721,7 @@ function MessageBubbleComponent({
       const response = await getWhatsAppMedia(mediaId, { preferObjectUrl: true });
       return response.url || response.objectUrl || null;
     } catch (error) {
-      console.error('Erro ao carregar midia da galeria:', error);
+      console.error('Erro ao carregar mídia da galeria:', error);
       return null;
     }
   }, []);

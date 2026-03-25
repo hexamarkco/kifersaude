@@ -3499,7 +3499,7 @@ export default function WhatsAppInboxScreen() {
   const handleEdit = (messageId: string, body: string) => {
     const targetMessage = messageByIdRef.current.get(messageId);
     if (!targetMessage) {
-      toast.error('Nao foi possivel localizar a mensagem para editar.');
+      toast.error('Não foi possível localizar a mensagem para editar.');
       return;
     }
 
@@ -3610,7 +3610,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleOpenForwardModal = (message: WhatsAppMessage) => {
     if (!buildForwardMessagePlan(message)) {
-      toast.warning('Esse tipo de mensagem ainda nao pode ser encaminhado.');
+      toast.warning('Esse tipo de mensagem ainda não pode ser encaminhado.');
       return;
     }
 
@@ -3633,7 +3633,7 @@ export default function WhatsAppInboxScreen() {
     let successCount = 0;
     let failureCount = 0;
     let lastSuccessfulChatId: string | null = null;
-    let lastErrorMessage = 'Nao foi possivel encaminhar a mensagem.';
+    let lastErrorMessage = 'Não foi possível encaminhar a mensagem.';
 
     try {
       for (const targetChatId of Array.from(new Set(forwardTargetChatIds))) {
@@ -4410,21 +4410,21 @@ export default function WhatsAppInboxScreen() {
       if (!blob && mediaUrl) {
         const response = await fetch(mediaUrl);
         if (!response.ok) {
-          throw new Error('Nao foi possivel baixar a midia para encaminhar.');
+          throw new Error('Não foi possível baixar a mídia para encaminhar.');
         }
         blob = await response.blob();
       }
     } else if (plan.url) {
       const response = await fetch(plan.url);
       if (!response.ok) {
-        throw new Error('Nao foi possivel baixar a midia para encaminhar.');
+        throw new Error('Não foi possível baixar a mídia para encaminhar.');
       }
       blob = await response.blob();
       mimeType = blob.type || mimeType;
     }
 
     if (!blob) {
-      throw new Error('Nao foi possivel carregar a midia para encaminhar.');
+      throw new Error('Não foi possível carregar a mídia para encaminhar.');
     }
 
     return new File([blob], fileName, {
@@ -4439,7 +4439,7 @@ export default function WhatsAppInboxScreen() {
   ) => {
     const plan = buildForwardMessagePlan(message);
     if (!plan) {
-      throw new Error('Este tipo de mensagem ainda nao pode ser encaminhado.');
+      throw new Error('Este tipo de mensagem ainda não pode ser encaminhado.');
     }
 
     let response: unknown;
@@ -4861,7 +4861,7 @@ export default function WhatsAppInboxScreen() {
       if (filter === 'direct') return 'Diretas';
       if (filter === 'groups') return 'Grupos';
       if (filter === 'channels') return 'Canais';
-      return 'Transmissoes';
+        return 'Transmissões';
     }),
   ]
     .filter(Boolean)
@@ -4876,7 +4876,7 @@ export default function WhatsAppInboxScreen() {
       ? `Status: ${chatLeadStatusFilter === EMPTY_FILTER_VALUE ? 'Sem status' : chatLeadStatusFilter}`
       : null,
     chatLeadOwnerFilter !== 'all'
-      ? `Responsavel: ${chatLeadOwnerFilter === EMPTY_FILTER_VALUE ? 'Sem responsavel' : chatLeadOwnerFilter}`
+      ? `Responsável: ${chatLeadOwnerFilter === EMPTY_FILTER_VALUE ? 'Sem responsável' : chatLeadOwnerFilter}`
       : null,
     chatLeadPresenceFilter !== 'all'
       ? `CRM: ${chatLeadPresenceFilter === 'withLead' ? 'Com lead' : 'Sem lead'}`
@@ -6195,7 +6195,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleSaveSelectedContactInfo = async ({ name }: { name: string }) => {
     if (!selectedChatIsDirect || !selectedChatPhone) {
-      toast.warning('Nao foi possivel identificar o telefone deste chat.');
+      toast.warning('Não foi possível identificar o telefone deste chat.');
       return;
     }
 
@@ -6218,7 +6218,7 @@ export default function WhatsAppInboxScreen() {
       toast.success(selectedContact?.saved ? 'Contato atualizado com sucesso.' : 'Contato adicionado com sucesso.');
     } catch (error) {
       console.error('Erro ao salvar contato do WhatsApp:', error);
-      const message = error instanceof Error ? error.message : 'Nao foi possivel salvar o contato.';
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar o contato.';
       toast.error(message);
     } finally {
       setIsSavingSelectedContact(false);
@@ -6243,10 +6243,10 @@ export default function WhatsAppInboxScreen() {
     try {
       await deleteWhatsAppContact(selectedContact.id);
       await loadSavedContacts();
-      toast.success('Contato excluido com sucesso.');
+      toast.success('Contato excluído com sucesso.');
     } catch (error) {
       console.error('Erro ao excluir contato do WhatsApp:', error);
-      const message = error instanceof Error ? error.message : 'Nao foi possivel excluir o contato.';
+      const message = error instanceof Error ? error.message : 'Não foi possível excluir o contato.';
       toast.error(message);
     } finally {
       setIsDeletingSelectedContact(false);
@@ -6270,7 +6270,7 @@ export default function WhatsAppInboxScreen() {
 
     const normalizedEmail = payload.email.trim().toLowerCase();
     if (normalizedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      toast.warning('Informe um e-mail valido.');
+      toast.warning('Informe um e-mail válido.');
       return;
     }
 
@@ -6322,7 +6322,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Lead atualizado com sucesso.');
     } catch (error) {
       console.error('Erro ao atualizar lead pelo WhatsApp:', error);
-      const message = error instanceof Error ? error.message : 'Nao foi possivel salvar os dados do lead.';
+      const message = error instanceof Error ? error.message : 'Não foi possível salvar os dados do lead.';
       toast.error(message);
     } finally {
       setIsSavingSelectedLeadInfo(false);
@@ -6351,10 +6351,10 @@ export default function WhatsAppInboxScreen() {
 
       setLeadsList((prev) => prev.filter((lead) => lead.id !== currentLead.id));
       setSelectedLeadInfo(null);
-      toast.success('Lead excluido com sucesso.');
+      toast.success('Lead excluído com sucesso.');
     } catch (error) {
       console.error('Erro ao excluir lead pelo WhatsApp:', error);
-      const message = error instanceof Error ? error.message : 'Nao foi possivel excluir o lead.';
+      const message = error instanceof Error ? error.message : 'Não foi possível excluir o lead.';
       toast.error(message);
     } finally {
       setIsDeletingSelectedLeadInfo(false);
@@ -6372,7 +6372,7 @@ export default function WhatsAppInboxScreen() {
 
     const initialPhone = payload.phone.trim() || selectedChatPhoneFormatted || selectedChatPhone || '';
     if (!initialPhone) {
-      toast.warning('Nao foi possivel identificar o telefone deste chat.');
+      toast.warning('Não foi possível identificar o telefone deste chat.');
       return;
     }
 
@@ -6539,7 +6539,7 @@ export default function WhatsAppInboxScreen() {
   const effectiveFirstResponseSlaBadge =
     selectedChatIsDirect && isLoadingMessages && messages.length === 0
       ? {
-          label: 'SLA 1a resposta: carregando...',
+          label: 'SLA 1ª resposta: carregando...',
           className: 'comm-badge-neutral',
         }
       : firstResponseSlaBadge;
@@ -6645,7 +6645,7 @@ export default function WhatsAppInboxScreen() {
           return;
         }
 
-        console.error(`Erro ao transcrever audio ${chunk[chunkIndex]?.id}:`, result.reason);
+        console.error(`Erro ao transcrever áudio ${chunk[chunkIndex]?.id}:`, result.reason);
       });
     }
 
@@ -6833,7 +6833,7 @@ export default function WhatsAppInboxScreen() {
   const handleOpenSharedContactChat = (contact: { name: string; phone: string }) => {
     const digits = getPhoneDigits(contact.phone);
     if (!digits) {
-      toast.warning('Esse contato nao possui um telefone valido para abrir conversa.');
+      toast.warning('Esse contato não possui um telefone válido para abrir conversa.');
       return;
     }
 
@@ -6843,7 +6843,7 @@ export default function WhatsAppInboxScreen() {
   const handleSaveSharedContact = async (contact: { name: string; phone: string }) => {
     const digits = getPhoneDigits(contact.phone);
     if (!digits) {
-      const message = 'Esse contato nao possui um telefone valido para salvar.';
+      const message = 'Esse contato não possui um telefone válido para salvar.';
       toast.warning(message);
       throw new Error(message);
     }
@@ -7838,7 +7838,7 @@ export default function WhatsAppInboxScreen() {
                 size="sm"
                 className="h-auto rounded-full px-3 py-1 text-xs"
               >
-                Numero
+                Número
               </Button>
             </div>
             <div className="pt-3">
@@ -8244,8 +8244,8 @@ export default function WhatsAppInboxScreen() {
                   )}
                 </Button>
                 <Button
-                  title="Configuracoes do WhatsApp"
-                  aria-label="Configuracoes do WhatsApp"
+                  title="Configurações do WhatsApp"
+                  aria-label="Configurações do WhatsApp"
                   variant="secondary"
                   size="icon"
                   className="h-9 w-9"
@@ -8313,7 +8313,7 @@ export default function WhatsAppInboxScreen() {
                     { id: 'direct', label: 'Diretas', count: directInboxCount },
                     { id: 'groups', label: 'Grupos', count: groupInboxCount },
                     { id: 'channels', label: 'Canais', count: channelInboxCount },
-                    { id: 'broadcasts', label: 'Transmissoes', count: broadcastInboxCount },
+                    { id: 'broadcasts', label: 'Transmissões', count: broadcastInboxCount },
                   ].map((item) => {
                     const checked = item.id === 'unread' ? chatOnlyUnread : chatKindFilters.includes(item.id as ChatKindFilter);
 
@@ -8398,7 +8398,7 @@ export default function WhatsAppInboxScreen() {
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                               <p className="text-sm font-semibold text-slate-900">Segmentação CRM</p>
-                      <p className="text-[11px] text-slate-500">Combine status, responsavel e vinculo sem poluir a inbox.</p>
+                      <p className="text-[11px] text-slate-500">Combine status, responsável e vínculo sem poluir a inbox.</p>
                     </div>
                     {hasAdvancedChatFilters && (
                       <Button
@@ -8433,14 +8433,14 @@ export default function WhatsAppInboxScreen() {
                       </select>
                     </label>
                     <label className="flex flex-col gap-1">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Responsavel</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Responsável</span>
                       <select
                         value={chatLeadOwnerFilter}
                         onChange={(event) => setChatLeadOwnerFilter(event.target.value)}
                         className="h-10 rounded-xl border border-[var(--panel-border-subtle,#d8c5ae)] bg-white/90 px-3 text-sm text-slate-800 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
                       >
-                        <option value="all">Todos os responsaveis</option>
-                        <option value={EMPTY_FILTER_VALUE}>Sem responsavel</option>
+                        <option value="all">Todos os responsáveis</option>
+                        <option value={EMPTY_FILTER_VALUE}>Sem responsável</option>
                         {chatLeadOwnerOptions.map((owner) => (
                           <option key={owner} value={owner}>
                             {owner}
@@ -8449,7 +8449,7 @@ export default function WhatsAppInboxScreen() {
                       </select>
                     </label>
                     <label className="flex flex-col gap-1">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Vinculo CRM</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Vínculo CRM</span>
                       <select
                         value={chatLeadPresenceFilter}
                         onChange={(event) => setChatLeadPresenceFilter(event.target.value as ChatLeadPresenceFilter)}
@@ -8536,7 +8536,7 @@ export default function WhatsAppInboxScreen() {
                 }}
               >
                 <Circle className="h-4 w-4" />
-                <span>Marcar como nao lida</span>
+                <span>Marcar como não lida</span>
               </Button>
               <Button
                 variant="ghost"
@@ -8558,7 +8558,7 @@ export default function WhatsAppInboxScreen() {
                   { label: '1 hora', ms: 60 * 60 * 1000 },
                   { label: '1 dia', ms: 24 * 60 * 60 * 1000 },
                   { label: '1 semana', ms: 7 * 24 * 60 * 60 * 1000 },
-                  { label: '1 mes', ms: 30 * 24 * 60 * 60 * 1000 },
+                  { label: '1 mês', ms: 30 * 24 * 60 * 60 * 1000 },
                   { label: 'Definitivo', ms: 365 * 24 * 60 * 60 * 1000 },
                 ];
                 return (
@@ -8637,7 +8637,7 @@ export default function WhatsAppInboxScreen() {
                       disabled={!chatMenuTarget.phone}
                     >
                       <Copy className="h-4 w-4" />
-                      <span>Copiar numero</span>
+                        <span>Copiar número</span>
                     </Button>
                     <Button
                       variant="ghost"
@@ -8780,7 +8780,7 @@ export default function WhatsAppInboxScreen() {
                       size="icon"
                       className="h-9 w-9 rounded-full"
                       onClick={() => setShowConversationInfo(!showConversationInfo)}
-                      title={selectedChatKind === 'group' ? 'Informacoes do grupo' : 'Informacoes do contato'}
+                      title={selectedChatKind === 'group' ? 'Informações do grupo' : 'Informações do contato'}
                     >
                       <Info className="w-5 h-5 text-slate-600" />
                     </Button>

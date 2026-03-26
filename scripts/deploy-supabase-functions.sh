@@ -87,7 +87,6 @@ fi
 
 deployed_count=0
 NO_VERIFY_JWT_FUNCTIONS=(
-  "whatsapp-webhook"
   "create-initial-admin"
 )
 

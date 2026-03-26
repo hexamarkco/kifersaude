@@ -11,7 +11,6 @@ const SUPABASE_NETWORK_HELP =
 
 const DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS = 15000;
 const AUTH_SUPABASE_REQUEST_TIMEOUT_MS = 30000;
-const LONG_RUNNING_SUPABASE_REQUEST_TIMEOUT_MS = 60000;
 
 const isSupabaseRequestUrl = (value: string): boolean =>
   value.startsWith(supabaseUrl) || value.startsWith(supabaseFunctionsUrl);
@@ -19,13 +18,6 @@ const isSupabaseRequestUrl = (value: string): boolean =>
 const getSupabaseRequestTimeoutMs = (requestUrl: string): number => {
   if (requestUrl.includes('/auth/v1/')) {
     return AUTH_SUPABASE_REQUEST_TIMEOUT_MS;
-  }
-
-  if (
-    requestUrl.includes('/rest/v1/rpc/create_whatsapp_campaign_atomic')
-    || requestUrl.includes('/rest/v1/rpc/preview_whatsapp_campaign_audience')
-  ) {
-    return LONG_RUNNING_SUPABASE_REQUEST_TIMEOUT_MS;
   }
 
   return DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS;

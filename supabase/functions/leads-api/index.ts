@@ -2169,11 +2169,6 @@ async function loadAutoContactFlowSettings(
   return normalizeAutoContactFlowSettings(data?.settings) ?? null;
 }
 
-const isCampaignImportedLead = (lead: Record<string, unknown> | null | undefined): boolean => {
-  const canal = typeof lead?.canal === 'string' ? lead.canal.trim().toLowerCase() : '';
-  return canal === 'whatsapp_campaign';
-};
-
 const matchTextCondition = (
   source: string,
   expected: string,
@@ -2615,19 +2610,6 @@ async function processFlowJobs({
       await supabase
         .from('auto_contact_flow_jobs')
         .update({ status: 'failed', last_error: leadError?.message ?? 'Lead não encontrado' })
-        .eq('id', job.id);
-      continue;
-    }
-
-    if (isCampaignImportedLead(lead as Record<string, unknown>)) {
-      await cancelFlowJobs({
-        supabase,
-        leadId: job.lead_id,
-        reason: 'Lead de campanha excluido retroativamente das automacoes.',
-      });
-      await supabase
-        .from('auto_contact_flow_jobs')
-        .update({ status: 'skipped', last_error: 'Lead de campanha excluido retroativamente das automacoes.' })
         .eq('id', job.id);
       continue;
     }
@@ -3447,24 +3429,6 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      if (isCampaignImportedLead(record as Record<string, unknown>)) {
-        await cancelFlowJobs({
-          supabase,
-          leadId: String((record as Record<string, unknown>).id),
-          reason: 'Lead de campanha excluido retroativamente das automacoes.',
-        });
-
-        logWithContext('Ignorando automacao para lead originado por campanha WhatsApp', {
-          leadId: (record as Record<string, unknown>).id,
-          event,
-        });
-
-        return new Response(JSON.stringify({ success: true, skipped: true, reason: 'campaign_lead' }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
       const lookups = await getLookups();
 
       const mapLeadForMatch = (lead: any) => {
@@ -3479,7 +3443,7 @@ Deno.serve(async (req: Request) => {
       const settings = await loadAutoContactFlowSettings(supabase);
 
       const tryLegacyFallback = async (reason: string) => {
-        if (event !== 'lead_created' || isCampaignImportedLead(record as Record<string, unknown>)) {
+        if (event !== 'lead_created') {
           return false;
         }
 

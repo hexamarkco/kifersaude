@@ -70,7 +70,6 @@ test("normalizeRoutingSettings and helpers keep provider models stable", () => {
   });
 
   const preferredModel = getPreferredTaskModel(
-    "follow_up_generation",
     "claude",
     [{ value: "claude-3-5-sonnet-latest", label: "Claude Sonnet" }],
   );

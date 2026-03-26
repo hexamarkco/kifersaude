@@ -17,8 +17,6 @@ import {
   PainelWrapper,
   ProtectedRoute,
   RouteLoading,
-  WhatsAppInboxPage,
-  WhatsAppSettingsPage,
 } from './routes/lazyRouteComponents';
 import './index.css';
 
@@ -65,8 +63,6 @@ createRoot(document.getElementById('root')!).render(
               <Route path="agenda" element={<FinanceiroAgendaTab />} />
               <Route path="tarefas" element={<Navigate to="/painel/agenda" replace />} />
               <Route path="lembretes" element={<Navigate to="/painel/agenda" replace />} />
-              <Route path="whatsapp" element={<WhatsAppInboxPage />} />
-              <Route path="whatsapp/config" element={<WhatsAppSettingsPage />} />
               <Route path="blog" element={<BlogTab />} />
               <Route path="config" element={<ConfigPage />} />
             </Route>

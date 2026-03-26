@@ -7,7 +7,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   Bell,
@@ -21,7 +20,6 @@ import {
   Clock3,
   ExternalLink,
   Loader2,
-  MessageCircle,
   Plus,
   Search,
   Tag,
@@ -65,7 +63,6 @@ import { toast } from "../../lib/toast";
 import {
   getReminderWhatsappLink,
   isReminderPriority,
-  normalizeReminderLeadPhone,
 } from "../reminders/shared/reminderHelpers";
 import type { ManualReminderPrompt } from "../reminders/shared/reminderTypes";
 
@@ -140,7 +137,6 @@ const fetchLeadsByIds = async (ids: string[]) => {
 };
 
 export default function AgendaScreen() {
-  const navigate = useNavigate();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -348,28 +344,6 @@ export default function AgendaScreen() {
     },
     [leadsMap],
   );
-
-  const openLeadInWhatsAppTab = (lead?: Pick<Lead, "id" | "nome_completo" | "telefone"> | null) => {
-    const normalizedPhone = normalizeReminderLeadPhone(lead?.telefone);
-
-    if (!normalizedPhone) {
-      navigate("/painel/whatsapp");
-      return;
-    }
-
-    const params = new URLSearchParams();
-    params.set("openPhone", normalizedPhone);
-
-    if (lead?.nome_completo) {
-      params.set("leadName", lead.nome_completo);
-    }
-
-    if (lead?.id) {
-      params.set("leadId", lead.id);
-    }
-
-    navigate(`/painel/whatsapp?${params.toString()}`);
-  };
 
   const openLeadInOfficialWhatsApp = (lead?: Pick<Lead, "telefone"> | null) => {
     const whatsappLink = getReminderWhatsappLink(lead?.telefone);
@@ -1377,16 +1351,6 @@ export default function AgendaScreen() {
               </div>
 
               <div className="flex w-full flex-wrap items-center gap-2">
-                <Button
-                  onClick={handleCardAction(() => openLeadInWhatsAppTab(leadInfo ?? null))}
-                  variant="secondary"
-                  size="icon"
-                  className="h-9 w-9"
-                  title="Abrir /painel/whatsapp"
-                  aria-label="Abrir /painel/whatsapp"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                </Button>
                 <Button
                   onClick={handleCardAction(() => openLeadInOfficialWhatsApp(leadInfo ?? null))}
                   disabled={!hasLeadPhone}

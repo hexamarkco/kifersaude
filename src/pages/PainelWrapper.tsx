@@ -19,7 +19,6 @@ const ROUTE_TAB_MAP: Record<string, string> = {
   'agenda': 'agenda',
   'tarefas': 'agenda',
   'lembretes': 'agenda',
-  'whatsapp': 'whatsapp',
   'blog': 'blog',
   'config': 'config',
 };
@@ -30,7 +29,6 @@ const TAB_ROUTE_MAP: Record<string, string> = {
   'contracts': 'contratos',
   'financeiro-comissoes': 'comissoes',
   'agenda': 'agenda',
-  'whatsapp': 'whatsapp',
   'blog': 'blog',
   'config': 'config',
 };
@@ -57,7 +55,6 @@ export default function PainelWrapper() {
       ['contracts', getRoleModulePermission(role, 'contracts').can_view],
       ['financeiro-comissoes', getRoleModulePermission(role, 'financeiro-comissoes').can_view],
       ['agenda', getRoleModulePermission(role, 'agenda').can_view],
-      ['whatsapp', getRoleModulePermission(role, 'whatsapp').can_view],
       ['blog', getRoleModulePermission(role, 'blog').can_view],
       [
         'config',
@@ -76,8 +73,6 @@ export default function PainelWrapper() {
     const requestedTab = ROUTE_TAB_MAP[route] || 'dashboard';
     return validTabIds.has(requestedTab) ? requestedTab : (Array.from(validTabIds)[0] ?? 'dashboard');
   }, [location.pathname, validTabIds]);
-
-  const useFullBleedContent = useMemo(() => location.pathname === '/painel/whatsapp', [location.pathname]);
 
   const restrictedOriginNamesForObservers = useMemo(
     () => leadOrigins.filter((origin) => origin.visivel_para_observadores === false).map((origin) => origin.nome),
@@ -214,7 +209,6 @@ export default function PainelWrapper() {
       </Helmet>
       <Layout
         activeTab={activeTab}
-        useFullBleedContent={useFullBleedContent}
         onTabChange={handleTabChange}
         unreadReminders={unreadReminders}
         hasActiveNotification={hasActiveNotification}

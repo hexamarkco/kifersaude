@@ -34,7 +34,6 @@ const META_PIXEL_SLUG = "meta_pixel";
 const GTM_SLUG = "google_tag_manager";
 
 const OPENAI_DEFAULT_TEXT_MODEL = "gpt-4o-mini";
-const OPENAI_DEFAULT_TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
 const GEMINI_DEFAULT_TEXT_MODEL = "gemini-2.0-flash";
 const CLAUDE_DEFAULT_TEXT_MODEL = "claude-3-5-sonnet-latest";
 
@@ -42,8 +41,7 @@ type MessageState = { type: "success" | "error"; text: string } | null;
 type AiProvider = "openai" | "gemini" | "claude";
 type AiTaskKey =
   | "rewrite_message"
-  | "follow_up_generation"
-  | "whatsapp_audio_transcription";
+  | "follow_up_generation";
 type ModelOption = { value: string; label: string };
 
 type AiProviderFormState = {
@@ -104,12 +102,6 @@ const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string }> =
       key: "follow_up_generation",
       label: "Geração de follow-up",
       description: "Usado em lembretes para sugerir mensagens de follow-up.",
-    },
-    {
-      key: "whatsapp_audio_transcription",
-      label: "Transcrição de áudio",
-      description:
-        "Usado para transcrever áudios recebidos no WhatsApp e reaproveitar a transcrição no chat.",
     },
   ];
 
@@ -184,12 +176,8 @@ const createDefaultProviderModelsState = (): Record<
   },
 });
 
-const getDefaultTaskModel = (task: AiTaskKey, provider: AiProvider): string => {
+const getDefaultTaskModel = (provider: AiProvider): string => {
   if (provider === "openai") {
-    if (task === "whatsapp_audio_transcription") {
-      return OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
-    }
-
     return OPENAI_DEFAULT_TEXT_MODEL;
   }
 
@@ -201,11 +189,10 @@ const getDefaultTaskModel = (task: AiTaskKey, provider: AiProvider): string => {
 };
 
 const getPreferredTaskModel = (
-  task: AiTaskKey,
   provider: AiProvider,
   providerOptions: ModelOption[],
 ): string => {
-  const defaultModel = getDefaultTaskModel(task, provider);
+  const defaultModel = getDefaultTaskModel(provider);
 
   if (providerOptions.some((option) => option.value === defaultModel)) {
     return defaultModel;
@@ -235,17 +222,12 @@ const createDefaultProviderForms = (): Record<
 const createDefaultRoutingForm = (): AiRoutingFormState => ({
   rewrite_message: {
     provider: "openai",
-    model: getDefaultTaskModel("rewrite_message", "openai"),
+    model: getDefaultTaskModel("openai"),
     fallbackToOpenAi: true,
   },
   follow_up_generation: {
     provider: "openai",
-    model: getDefaultTaskModel("follow_up_generation", "openai"),
-    fallbackToOpenAi: true,
-  },
-  whatsapp_audio_transcription: {
-    provider: "openai",
-    model: getDefaultTaskModel("whatsapp_audio_transcription", "openai"),
+    model: getDefaultTaskModel("openai"),
     fallbackToOpenAi: true,
   },
 });
@@ -297,7 +279,7 @@ const normalizeRoutingSettings = (
     const model =
       toTrimmedString(rawTask.model) ||
       toTrimmedString(rawTask.textModel) ||
-      getDefaultTaskModel(task.key, provider);
+      getDefaultTaskModel(provider);
 
     const fallbackToOpenAi =
       typeof rawTask.fallbackToOpenAi === "boolean"
@@ -603,7 +585,7 @@ export default function IntegrationsScreen() {
       (accumulator, task) => {
         const route = aiRoutingForm[task.key];
         const model =
-          route.model.trim() || getDefaultTaskModel(task.key, route.provider);
+          route.model.trim() || getDefaultTaskModel(route.provider);
 
         accumulator[task.key] = {
           provider: route.provider,
@@ -1083,7 +1065,6 @@ export default function IntegrationsScreen() {
                               }
 
                               const nextModel = getPreferredTaskModel(
-                                task.key,
                                 nextProvider,
                                 nextProviderModelsState.options,
                               );
@@ -1245,7 +1226,7 @@ export default function IntegrationsScreen() {
               WhatsApp (Whapi)
             </h2>
             <p className="text-sm text-[var(--panel-text-muted)]">
-              Conecte o canal de WhatsApp para uso em fluxos e conversas.
+              Conecte o canal de WhatsApp para uso nos fluxos de automação.
             </p>
           </div>
           <div className={sectionShellClass}>

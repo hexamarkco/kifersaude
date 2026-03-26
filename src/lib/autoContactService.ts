@@ -2,7 +2,10 @@
 import { Lead, supabase } from './supabase';
 import { BRAZIL_STATES } from './brasilLocations';
 import { formatGreetingTitle, getGreetingForDate } from './greeting';
-import { normalizeChatId, sendWhatsAppMessage } from './whatsappApiService';
+import {
+  normalizeAutoContactChatId,
+  sendAutoContactWhatsAppMessage,
+} from './autoContactWhatsAppService';
 
 export const AUTO_CONTACT_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 
@@ -1236,7 +1239,7 @@ export async function sendAutoContactMessage({
     throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
   }
 
-  const chatId = normalizeChatId(normalizedPhone);
+  const chatId = normalizeAutoContactChatId(normalizedPhone);
 
   console.info('[AutoContact] Enviando automação via Whapi Cloud', {
     leadId: lead.id,
@@ -1246,7 +1249,8 @@ export async function sendAutoContactMessage({
 
   try {
     if (contentType === 'string') {
-      await sendWhatsAppMessage({
+      await sendAutoContactWhatsAppMessage({
+        token: settings.apiKey,
         chatId,
         contentType: 'string',
         content: content as string,
@@ -1255,7 +1259,8 @@ export async function sendAutoContactMessage({
     }
 
     const media = content as { url: string; caption?: string; filename?: string };
-    await sendWhatsAppMessage({
+    await sendAutoContactWhatsAppMessage({
+      token: settings.apiKey,
       chatId,
       contentType,
       content: {

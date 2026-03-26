@@ -1,1 +1,1 @@
-export { default } from "../features/agenda/AgendaScreen";
+export { default } from "../features/reminders/RemindersScreen";

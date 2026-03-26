@@ -10,7 +10,6 @@ export const META_PIXEL_SLUG = "meta_pixel";
 export const GTM_SLUG = "google_tag_manager";
 
 export const OPENAI_DEFAULT_TEXT_MODEL = "gpt-4o-mini";
-export const OPENAI_DEFAULT_TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
 export const GEMINI_DEFAULT_TEXT_MODEL = "gemini-2.0-flash";
 export const CLAUDE_DEFAULT_TEXT_MODEL = "claude-3-5-sonnet-latest";
 
@@ -18,8 +17,7 @@ export type MessageState = { type: "success" | "error"; text: string } | null;
 export type AiProvider = "openai" | "gemini" | "claude";
 export type AiTaskKey =
   | "rewrite_message"
-  | "follow_up_generation"
-  | "whatsapp_audio_transcription";
+  | "follow_up_generation";
 export type ModelOption = { value: string; label: string };
 
 export type AiProviderFormState = {
@@ -83,12 +81,6 @@ export const AI_TASKS: Array<{
     label: "Geracao de follow-up",
     description: "Usado em lembretes para sugerir mensagens de follow-up.",
   },
-  {
-    key: "whatsapp_audio_transcription",
-    label: "Transcricao de audio",
-    description:
-      "Usado para transcrever audios recebidos no WhatsApp e reaproveitar a transcricao no chat.",
-  },
 ];
 
 export const AI_PROVIDER_OPTIONS = AI_PROVIDER_ORDER.map((provider) => ({
@@ -149,15 +141,8 @@ export const createDefaultProviderModelsState = (): Record<
   claude: { loading: false, options: [], error: null },
 });
 
-export const getDefaultTaskModel = (
-  task: AiTaskKey,
-  provider: AiProvider,
-): string => {
+export const getDefaultTaskModel = (provider: AiProvider): string => {
   if (provider === "openai") {
-    if (task === "whatsapp_audio_transcription") {
-      return OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
-    }
-
     return OPENAI_DEFAULT_TEXT_MODEL;
   }
 
@@ -169,11 +154,10 @@ export const getDefaultTaskModel = (
 };
 
 export const getPreferredTaskModel = (
-  task: AiTaskKey,
   provider: AiProvider,
   providerOptions: ModelOption[],
 ): string => {
-  const defaultModel = getDefaultTaskModel(task, provider);
+  const defaultModel = getDefaultTaskModel(provider);
 
   if (providerOptions.some((option) => option.value === defaultModel)) {
     return defaultModel;
@@ -194,17 +178,12 @@ export const createDefaultProviderForms = (): Record<
 export const createDefaultRoutingForm = (): AiRoutingFormState => ({
   rewrite_message: {
     provider: "openai",
-    model: getDefaultTaskModel("rewrite_message", "openai"),
+    model: getDefaultTaskModel("openai"),
     fallbackToOpenAi: true,
   },
   follow_up_generation: {
     provider: "openai",
-    model: getDefaultTaskModel("follow_up_generation", "openai"),
-    fallbackToOpenAi: true,
-  },
-  whatsapp_audio_transcription: {
-    provider: "openai",
-    model: getDefaultTaskModel("whatsapp_audio_transcription", "openai"),
+    model: getDefaultTaskModel("openai"),
     fallbackToOpenAi: true,
   },
 });

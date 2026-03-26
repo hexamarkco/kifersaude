@@ -13,13 +13,13 @@ import FinanceiroAgendaTab from "../finance/FinanceiroAgendaTab";
 import CommissionCalendar from "../finance/CommissionCalendar";
 import FinanceiroComissoesTab from "../finance/FinanceiroComissoesTab";
 import TodoCalendar from "../finance/TodoCalendar";
+import AgendaScreen from "../../features/agenda/AgendaScreen";
 import BlogTabScreen from "../../features/blog/BlogTabScreen";
 import FinanceiroComissoesScreen from "../../features/commissions/FinanceiroComissoesScreen";
 import CommissionCalendarScreen from "../../features/commissions/CommissionCalendarScreen";
 import ContractsManagerScreen from "../../features/contracts/ContractsManagerScreen";
 import LeadsManagerScreen from "../../features/leads/LeadsManagerScreen";
 import RemindersScreen from "../../features/reminders/RemindersScreen";
-import TasksAgendaScreen from "../../features/tasks/TasksAgendaScreen";
 import TodoCalendarScreen from "../../features/tasks/TodoCalendarScreen";
 
 test("domain feature adapters keep legacy exports pointing to feature screens", () => {
@@ -29,6 +29,6 @@ test("domain feature adapters keep legacy exports pointing to feature screens", 
   assert.equal(RemindersManagerEnhanced, RemindersScreen);
   assert.equal(CommissionCalendar, CommissionCalendarScreen);
   assert.equal(FinanceiroComissoesTab, FinanceiroComissoesScreen);
-  assert.equal(FinanceiroAgendaTab, TasksAgendaScreen);
+  assert.equal(FinanceiroAgendaTab, AgendaScreen);
   assert.equal(TodoCalendar, TodoCalendarScreen);
 });

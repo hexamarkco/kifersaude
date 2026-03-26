@@ -1682,36 +1682,28 @@ export default function AgendaScreen() {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
-                      Dia selecionado
-                    </p>
-                    <h3 className="mt-2 text-xl font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
-                      {selectedDateLabel}
-                    </h3>
-                    <p className="mt-1 text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
-                      {selectedDateReminders.length > 0
-                        ? `${selectedDateReminders.length} item(ns) ao todo - ${pendingSelectedReminders.length} pendente(s) e ${completedSelectedReminders.length} concluido(s).`
-                        : "Nenhum item encontrado para este dia com os filtros atuais."}
-                    </p>
-                  </div>
-                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
-                    <Plus className="h-4 w-4" />
-                    Adicionar tarefa
+              <div className="space-y-1 px-1">
+                <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                  Dia selecionado
+                </p>
+                <h3 className="text-xl font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
+                  {selectedDateLabel}
+                </h3>
+                <p className="text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                  {selectedDateReminders.length > 0
+                    ? `${selectedDateReminders.length} item(ns) ao todo - ${pendingSelectedReminders.length} pendente(s) e ${completedSelectedReminders.length} concluido(s).`
+                    : "Nenhum item encontrado para este dia com os filtros atuais."}
+                </p>
+              </div>
+
+              {reschedulingReminderId && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.1rem] border px-4 py-3 text-sm" style={getPanelToneStyle("accent")}>
+                  <span>Selecione um dia no calendario para reagendar o item.</span>
+                  <Button onClick={() => setReschedulingReminderId(null)} variant="ghost" size="sm" className="h-auto px-0 hover:bg-transparent">
+                    Cancelar reagendamento
                   </Button>
                 </div>
-
-                {reschedulingReminderId && (
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[1.1rem] border px-4 py-3 text-sm" style={getPanelToneStyle("accent")}>
-                    <span>Selecione um dia no calendario para reagendar o item.</span>
-                    <Button onClick={() => setReschedulingReminderId(null)} variant="ghost" size="sm" className="h-auto px-0 hover:bg-transparent">
-                      Cancelar reagendamento
-                    </Button>
-                  </div>
-                )}
-              </div>
+              )}
 
               {error && (
                 <div className="flex items-center gap-2 rounded-[1.1rem] border p-3 text-sm" style={getPanelToneStyle("danger")}>

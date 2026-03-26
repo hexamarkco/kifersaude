@@ -601,9 +601,10 @@ export default function WhatsAppInboxScreen() {
   const loadedLeadMatchKeysRef = useRef<Set<string>>(new Set());
   const missingLeadMatchKeysRef = useRef<Map<string, number>>(new Map());
   const leadDirectoryRequestIdRef = useRef(0);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const authenticatedUserId = user?.id ?? null;
   const userRef = useRef(user);
   const isWindowFocusedRef = useRef(true);
   const desktopNotificationsEnabledRef = useRef(true);
@@ -2062,6 +2063,10 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const loadLeadMatchesForChats = useCallback(async (sourceChats: WhatsAppChat[]) => {
+    if (authLoading || !authenticatedUserId) {
+      return;
+    }
+
     const directChatKeys = Array.from(
       new Set(
         sourceChats.flatMap((chat) => getLeadMatchKeysForChat(chat)).filter(Boolean),
@@ -2124,7 +2129,25 @@ export default function WhatsAppInboxScreen() {
     } catch (err) {
       console.error('Error loading lead matches for chats:', err);
     }
-  }, [getLeadMatchKeysForChat, mergeLeadSummaries]);
+  }, [authLoading, authenticatedUserId, getLeadMatchKeysForChat, mergeLeadSummaries]);
+
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!authenticatedUserId) {
+      loadedLeadMatchKeysRef.current.clear();
+      missingLeadMatchKeysRef.current.clear();
+      return;
+    }
+
+    missingLeadMatchKeysRef.current.clear();
+
+    if (chatsRef.current.length > 0) {
+      void loadLeadMatchesForChats(chatsRef.current);
+    }
+  }, [authLoading, authenticatedUserId, loadLeadMatchesForChats]);
 
   const loadLeadDirectorySearch = useCallback(async (query: string) => {
     leadDirectoryRequestIdRef.current += 1;
@@ -5633,7 +5656,7 @@ export default function WhatsAppInboxScreen() {
   }, [leadByPhoneMatchKey, selectedChat]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!selectedChat || !selectedChatIsDirect || selectedLead) {
+    if (authLoading || !authenticatedUserId || !selectedChat || !selectedChatIsDirect || selectedLead) {
       return;
     }
 
@@ -5680,7 +5703,7 @@ export default function WhatsAppInboxScreen() {
     return () => {
       cancelled = true;
     };
-  }, [getLeadMatchKeysForChat, mergeLeadSummaries, selectedChat, selectedChatIsDirect, selectedLead]);
+  }, [authLoading, authenticatedUserId, getLeadMatchKeysForChat, mergeLeadSummaries, selectedChat, selectedChatIsDirect, selectedLead]);
 
   function resolveLeadForChat(chat: Pick<WhatsAppChat, 'id' | 'name' | 'phone_number' | 'lid' | 'is_group'> | null) {
     const matchKeys = getLeadMatchKeysForChat(chat);

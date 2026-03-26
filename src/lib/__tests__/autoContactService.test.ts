@@ -4,6 +4,8 @@ import { test } from 'vitest';
 import type { Lead } from '../supabase';
 import {
   getNextAllowedSendAt,
+  isAutoContactRuntimeEnabled,
+  normalizeAutoContactSettings,
   type AutoContactSchedulingSettings,
 } from '../autoContactService';
 
@@ -44,4 +46,24 @@ test('pula automaticamente feriados estaduais com base no estado do lead', () =>
   );
 
   assert.equal(scheduledAt.toISOString(), '2025-07-10T11:00:00.000Z');
+});
+
+test('mantem canal desativado quando enabled esta false no banco', () => {
+  const settings = normalizeAutoContactSettings({
+    enabled: false,
+    autoSend: true,
+    apiKey: 'token',
+    flows: [],
+    messageTemplates: [],
+  });
+
+  assert.equal(settings.enabled, false);
+  assert.equal(settings.autoSend, true);
+  assert.equal(isAutoContactRuntimeEnabled(settings), false);
+});
+
+test('runtime so fica ativo quando enabled e autoSend estao ligados', () => {
+  assert.equal(isAutoContactRuntimeEnabled({ enabled: true, autoSend: true }), true);
+  assert.equal(isAutoContactRuntimeEnabled({ enabled: true, autoSend: false }), false);
+  assert.equal(isAutoContactRuntimeEnabled({ enabled: false, autoSend: true }), false);
 });

@@ -32,6 +32,7 @@ import {
   DEFAULT_MESSAGE_TEMPLATES,
   DEFAULT_AUTO_CONTACT_FLOWS,
   getTemplateMessages,
+  isAutoContactRuntimeEnabled,
   normalizeAutoContactSettings,
   type AutoContactDelayUnit,
   type AutoContactScheduleAdjustmentReason,
@@ -99,7 +100,7 @@ export default function AutoContactFlowSettingsScreen() {
   const [activeFlowId, setActiveFlowId] = useState<string | null>(null);
   const defaultSettings = useMemo(() => normalizeAutoContactSettings(null), []);
   const [autoSendEnabled, setAutoSendEnabled] = useState(
-    defaultSettings.autoSend,
+    isAutoContactRuntimeEnabled(defaultSettings),
   );
   const [schedulingDraft, setSchedulingDraft] =
     useState<AutoContactSchedulingSettings>(defaultSettings.scheduling);
@@ -169,7 +170,7 @@ export default function AutoContactFlowSettingsScreen() {
 
     setAutoContactIntegration(integration);
     setAutoContactSettings(normalized);
-    setAutoSendEnabled(normalized.autoSend);
+    setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
     setMessageTemplatesDraft(normalized.messageTemplates ?? []);
     const normalizedFlows = normalized.flows ?? [];
     setFlowDrafts(filterDerivedFlows(normalizedFlows));
@@ -180,6 +181,19 @@ export default function AutoContactFlowSettingsScreen() {
 
     setLoadingFlow(false);
   };
+
+  const buildAutomationSettingsPayload = useCallback(
+    (
+      currentSettings: AutoContactSettings,
+      overrides: Partial<AutoContactSettings>,
+    ): AutoContactSettings => ({
+      ...currentSettings,
+      ...overrides,
+      enabled: autoSendEnabled ? true : currentSettings.enabled !== false,
+      autoSend: autoSendEnabled,
+    }),
+    [autoSendEnabled],
+  );
 
   const loadDailyAutomationCount = useCallback(async () => {
     setDailyAutomationLoading(true);
@@ -388,11 +402,9 @@ export default function AutoContactFlowSettingsScreen() {
 
     const currentSettings =
       autoContactSettings || normalizeAutoContactSettings(null);
-    const newSettings = {
-      ...currentSettings,
-      autoSend: autoSendEnabled,
+    const newSettings = buildAutomationSettingsPayload(currentSettings, {
       messageTemplates: normalizedTemplates,
-    };
+    });
 
     const { data, error } = await configService.updateIntegrationSetting(
       autoContactIntegration.id,
@@ -415,7 +427,7 @@ export default function AutoContactFlowSettingsScreen() {
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
       autoSaveSkipRef.current = true;
-      setAutoSendEnabled(normalized.autoSend);
+      setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
       setStatusMessage({
         type: "success",
@@ -469,7 +481,7 @@ export default function AutoContactFlowSettingsScreen() {
       true,
     );
     const fallbackTemplateId = sanitizedTemplates[0]?.id ?? "";
-    const sanitizedFlows = flowDrafts
+    const sanitizedFlows: AutoContactFlow[] = flowDrafts
       .flatMap((flow, flowIndex) => {
         const expandedFlows = flow.flowGraph
           ? expandFlowGraphToFlows(flow)
@@ -581,6 +593,10 @@ export default function AutoContactFlowSettingsScreen() {
             Number.isFinite(rawFlowDailySendLimit) && rawFlowDailySendLimit > 0
               ? Math.floor(rawFlowDailySendLimit)
               : null;
+          const conditionLogic: AutoContactFlow["conditionLogic"] =
+            effectiveFlow.conditionLogic === "any" ? "any" : "all";
+          const exitConditionLogic: AutoContactFlow["exitConditionLogic"] =
+            effectiveFlow.exitConditionLogic === "all" ? "all" : "any";
 
           return {
             id: effectiveFlow.id?.trim() ? effectiveFlow.id : `flow-${flowKey}`,
@@ -602,11 +618,9 @@ export default function AutoContactFlowSettingsScreen() {
             invalidNumberAction: effectiveFlow.invalidNumberAction ?? "none",
             invalidNumberStatus:
               effectiveFlow.invalidNumberStatus?.trim() || "",
-            conditionLogic:
-              effectiveFlow.conditionLogic === "any" ? "any" : "all",
+            conditionLogic,
             conditions,
-            exitConditionLogic:
-              effectiveFlow.exitConditionLogic === "all" ? "all" : "any",
+            exitConditionLogic,
             exitConditions,
             tags,
             scheduling: {
@@ -624,15 +638,13 @@ export default function AutoContactFlowSettingsScreen() {
 
     const currentSettings =
       autoContactSettings || normalizeAutoContactSettings(null);
-    const newSettings = {
-      ...currentSettings,
-      autoSend: autoSendEnabled,
+    const newSettings = buildAutomationSettingsPayload(currentSettings, {
       messageTemplates: sanitizedTemplates,
       flows: sanitizedFlows,
       scheduling: schedulingDraft,
       monitoring: monitoringDraft,
       logging: loggingDraft,
-    };
+    });
 
     const { data, error } = await configService.updateIntegrationSetting(
       autoContactIntegration.id,
@@ -655,7 +667,7 @@ export default function AutoContactFlowSettingsScreen() {
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
       autoSaveSkipRef.current = true;
-      setAutoSendEnabled(normalized.autoSend);
+      setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
       setMessageTemplatesDraft(normalized.messageTemplates ?? []);
       setFlowDrafts(filterDerivedFlows(normalized.flows ?? []));
       setSchedulingDraft(normalized.scheduling);
@@ -1427,13 +1439,11 @@ export default function AutoContactFlowSettingsScreen() {
 
       const currentSettings =
         autoContactSettings || normalizeAutoContactSettings(null);
-      const newSettings = {
-        ...currentSettings,
-        autoSend: autoSendEnabled,
+      const newSettings = buildAutomationSettingsPayload(currentSettings, {
         scheduling: schedulingDraft,
         monitoring: monitoringDraft,
         logging: loggingDraft,
-      };
+      });
 
       const { data, error } = await configService.updateIntegrationSetting(
         autoContactIntegration.id,
@@ -1455,7 +1465,7 @@ export default function AutoContactFlowSettingsScreen() {
         setAutoContactIntegration(updatedIntegration);
         setAutoContactSettings(normalized);
         autoSaveSkipRef.current = true;
-        setAutoSendEnabled(normalized.autoSend);
+        setAutoSendEnabled(isAutoContactRuntimeEnabled(normalized));
         setSchedulingDraft(normalized.scheduling);
         setMonitoringDraft(normalized.monitoring);
         setLoggingDraft(normalized.logging);
@@ -1468,6 +1478,7 @@ export default function AutoContactFlowSettingsScreen() {
       autoContactIntegration,
       autoContactSettings,
       autoSendEnabled,
+      buildAutomationSettingsPayload,
       loggingDraft,
       monitoringDraft,
       schedulingDraft,
@@ -1883,6 +1894,15 @@ export default function AutoContactFlowSettingsScreen() {
                   <Info className="w-4 h-4" />
                 )}
                 <span>{statusMessage.text}</span>
+              </div>
+            )}
+            {autoContactSettings?.enabled === false && (
+              <div className="mt-4 rounded-lg border border-[var(--panel-accent-border)] bg-[color:var(--panel-accent-soft)] p-3 text-sm text-[var(--panel-accent-ink-strong)] flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>
+                  O canal do WhatsApp esta desativado. Ao ligar "Ativar
+                  automacao", o envio volta a ser habilitado para os fluxos.
+                </span>
               </div>
             )}
 

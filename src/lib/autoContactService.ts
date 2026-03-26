@@ -211,6 +211,16 @@ export type AutoContactSettings = {
   logging: AutoContactLoggingSettings;
 };
 
+export const isAutoContactRuntimeEnabled = (
+  settings: Pick<AutoContactSettings, "enabled" | "autoSend"> | null | undefined,
+) => {
+  if (!settings) {
+    return false;
+  }
+
+  return settings.enabled !== false && settings.autoSend !== false;
+};
+
 export type AutoContactScheduleAdjustmentReason = 'outside_window' | 'weekend' | 'holiday';
 
 export type AutoContactSchedulePreviewItem = {

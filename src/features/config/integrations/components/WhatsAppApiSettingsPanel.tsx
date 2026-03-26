@@ -17,6 +17,7 @@ import {
 } from "../../../../lib/autoContactService";
 import type { IntegrationSetting } from "../../../../lib/supabase";
 import Button from "../../../../components/ui/Button";
+import Checkbox from "../../../../components/ui/Checkbox";
 import Input from "../../../../components/ui/Input";
 import { WhatsAppApiSkeleton } from "../../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../../hooks/useAdaptiveLoading";
@@ -216,6 +217,27 @@ export default function WhatsAppApiSettingsPanel() {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-slate-900">
+                    Ativar canal para automações
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Quando desligado, nenhum lead entra nos fluxos mesmo com a
+                    automação marcada como ativa.
+                  </p>
+                </div>
+                <Checkbox
+                  checked={enabled}
+                  onChange={(event) => setEnabled(event.target.checked)}
+                />
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                O disparo automático dos fluxos continua sendo controlado em
+                Configurações &gt; Automações.
+              </p>
+            </div>
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
                 <Key className="w-4 h-4 text-slate-400" />

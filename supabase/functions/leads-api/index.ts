@@ -1362,6 +1362,50 @@ const usesWhatsappValidCondition = (flow: AutoContactFlow): boolean => {
   return [...conditions, ...exitConditions].some((condition) => condition.field === 'whatsapp_valid');
 };
 
+const buildFlowRuntimeContext = (flow: AutoContactFlow, lead: any): Record<string, string> | null => {
+  const runtimeContext: Record<string, string> = {};
+
+  if (usesWhatsappValidCondition(flow)) {
+    const whatsappValid = normalizeBooleanConditionValue(lead?.whatsapp_valid);
+    if (whatsappValid) {
+      runtimeContext.whatsapp_valid = whatsappValid;
+    }
+  }
+
+  return Object.keys(runtimeContext).length > 0 ? runtimeContext : null;
+};
+
+const mergeJobActionPayload = (
+  payload: Record<string, unknown> | null,
+  runtimeContext: Record<string, string> | null,
+): Record<string, unknown> | null => {
+  if (!runtimeContext) {
+    return payload;
+  }
+
+  return {
+    ...(payload ?? {}),
+    runtimeContext,
+  };
+};
+
+const getJobRuntimeContext = (payload: unknown): Record<string, string> => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return {};
+  }
+
+  const runtimeContext = (payload as Record<string, unknown>).runtimeContext;
+  if (!runtimeContext || typeof runtimeContext !== 'object' || Array.isArray(runtimeContext)) {
+    return {};
+  }
+
+  const normalizedWhatsappValid = normalizeBooleanConditionValue(
+    (runtimeContext as Record<string, unknown>).whatsapp_valid,
+  );
+
+  return normalizedWhatsappValid ? { whatsapp_valid: normalizedWhatsappValid } : {};
+};
+
 const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null): Promise<WhapiContactCheckResult> => {
   const digits = toWhapiPhoneNumber(telefone);
   if (!digits || !isValidWhatsappNumber(telefone)) {
@@ -2443,12 +2487,14 @@ async function scheduleFlowJobs({
   lead,
   flow,
   scheduling,
+  runtimeContext,
 }: {
   supabase: ReturnType<typeof createClient>;
   leadId: string;
   lead: any;
   flow: AutoContactFlow;
   scheduling: AutoContactSchedulingSettings;
+  runtimeContext?: Record<string, string> | null;
 }): Promise<void> {
   const now = new Date();
   const effectiveScheduling: AutoContactSchedulingSettings = {
@@ -2493,6 +2539,7 @@ async function scheduleFlowJobs({
           return null;
       }
     })();
+    const finalActionPayload = mergeJobActionPayload(actionPayload, runtimeContext ?? null);
     return {
       lead_id: leadId,
       flow_id: flow.id,
@@ -2503,7 +2550,7 @@ async function scheduleFlowJobs({
       template_id: step.templateId ?? null,
       custom_message: step.customMessage ?? null,
       status_to_set: step.statusToSet ?? null,
-      action_payload: actionPayload,
+      action_payload: finalActionPayload,
       scheduled_at: scheduledAt.toISOString(),
       status: 'pending',
     };
@@ -2656,7 +2703,10 @@ async function processFlowJobs({
         leadWithRelations.status = lookups.statusById.get(lead.status_id) ?? 'Novo';
       }
 
-      if (usesWhatsappValidCondition(flow)) {
+      const jobRuntimeContext = getJobRuntimeContext(job.action_payload);
+      if (jobRuntimeContext.whatsapp_valid) {
+        leadWithRelations.whatsapp_valid = jobRuntimeContext.whatsapp_valid;
+      } else if (usesWhatsappValidCondition(flow)) {
         leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations, settings.apiKey);
       }
 
@@ -3309,6 +3359,7 @@ async function runAutoContactFlowEngine({
       lead,
       flow: matchingFlow,
       scheduling: settings.scheduling,
+      runtimeContext: buildFlowRuntimeContext(matchingFlow, leadWithRelations),
     });
 
     await processFlowJobs({

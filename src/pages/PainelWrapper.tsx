@@ -216,6 +216,7 @@ export default function PainelWrapper() {
         unreadReminders={unreadReminders}
         hasActiveNotification={hasActiveNotification}
         newLeadsCount={newLeadsCount}
+        useFullBleedContent={activeTab === 'whatsapp-inbox'}
       >
         <Outlet context={{ 
           activeTab, 

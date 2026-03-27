@@ -258,9 +258,9 @@ export default function WhatsAppInboxScreen() {
   };
 
   return (
-    <div className="panel-page-shell pb-6">
-      <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <div className="rounded-[28px] border border-stone-200 bg-white shadow-sm">
+    <div className="panel-page-shell h-full overflow-hidden p-3 sm:p-4 lg:p-5">
+      <section className="grid h-full min-h-0 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-stone-200 bg-white shadow-sm">
           <div className="border-b border-stone-200 p-4">
             <div className="flex flex-col gap-3">
               <Input
@@ -276,7 +276,7 @@ export default function WhatsAppInboxScreen() {
             </div>
           </div>
 
-          <div className="max-h-[76vh] overflow-y-auto p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
             {loading ? (
               <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -323,9 +323,9 @@ export default function WhatsAppInboxScreen() {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-stone-200 bg-white shadow-sm">
+        <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-stone-200 bg-white shadow-sm">
           {!selectedChat ? (
-            <div className="flex min-h-[76vh] flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
               <MessageCircle className="h-10 w-10 text-stone-400" />
               <div className="space-y-1">
                 <p className="text-base font-semibold text-[var(--panel-text,#1f2937)]">Selecione uma conversa</p>
@@ -339,7 +339,7 @@ export default function WhatsAppInboxScreen() {
                 <p className="mt-1 text-sm text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</p>
               </div>
 
-              <div ref={messagesContainerRef} className="max-h-[62vh] space-y-3 overflow-y-auto bg-[#fffdf9] px-5 py-5">
+              <div ref={messagesContainerRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#fffdf9] px-5 py-5">
                 {loadingMessages ? (
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

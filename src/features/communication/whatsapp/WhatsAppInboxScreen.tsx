@@ -364,24 +364,14 @@ export default function WhatsAppInboxScreen() {
                 )}
               </div>
 
-              <div className="border-t border-stone-200 p-5">
-                <div className="rounded-[30px] border border-stone-200 bg-stone-50/90 px-4 py-3 shadow-sm">
-                  <textarea
-                    ref={composerTextareaRef}
-                    rows={1}
-                    value={messageDraft}
-                    onChange={(event) => setMessageDraft(event.target.value)}
-                    onKeyDown={handleComposerKeyDown}
-                    placeholder="Digite uma mensagem"
-                    disabled={sending}
-                    className="block w-full resize-none border-none bg-transparent px-0 py-0 text-sm leading-6 text-[var(--panel-text,#1f2937)] placeholder:text-stone-400 focus:outline-none"
-                  />
-                  <div className="mt-3 flex items-end justify-between gap-3">
-                    <div className="flex items-end gap-1">
+              <div className="border-t border-stone-200 bg-[#f7f3ec] p-4 sm:p-5">
+                <div className="rounded-[30px] border border-[#2e3235] bg-[#262928] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_8px_24px_rgba(15,23,42,0.08)]">
+                  <div className="flex items-end gap-1.5 sm:gap-2">
+                    <div className="flex shrink-0 items-end gap-0.5">
                       <button
                         type="button"
                         onClick={() => handleComposerAuxClick('attach')}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-200 hover:text-stone-700"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-200/90 transition hover:bg-white/5 hover:text-white"
                         aria-label="Anexar"
                       >
                         <Plus className="h-5 w-5" />
@@ -389,32 +379,47 @@ export default function WhatsAppInboxScreen() {
                       <button
                         type="button"
                         onClick={() => handleComposerAuxClick('emoji')}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-200 hover:text-stone-700"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-200/90 transition hover:bg-white/5 hover:text-white"
                         aria-label="Emojis"
                       >
                         <Smile className="h-5 w-5" />
                       </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleComposerSubmit}
-                      disabled={sending}
-                      className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition ${
-                        hasTypedMessage
-                          ? 'bg-stone-900 text-white shadow-sm hover:bg-stone-800'
-                          : 'bg-transparent text-stone-500 hover:bg-stone-200 hover:text-stone-700'
-                      } ${sending ? 'cursor-wait opacity-70' : ''}`}
-                      aria-label={hasTypedMessage ? 'Enviar mensagem' : 'Gravar audio'}
-                    >
-                      {sending ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : hasTypedMessage ? (
-                        <SendHorizontal className="h-5 w-5" />
-                      ) : (
-                        <Mic className="h-5 w-5" />
-                      )}
-                    </button>
+                    <div className="min-w-0 flex-1 self-stretch py-2">
+                      <textarea
+                        ref={composerTextareaRef}
+                        rows={1}
+                        value={messageDraft}
+                        onChange={(event) => setMessageDraft(event.target.value)}
+                        onKeyDown={handleComposerKeyDown}
+                        placeholder="Digite uma mensagem"
+                        disabled={sending}
+                        className="block w-full resize-none border-none bg-transparent px-0 py-0 text-[15px] leading-6 text-white placeholder:text-stone-400 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex shrink-0 items-end pb-0.5">
+                      <button
+                        type="button"
+                        onClick={handleComposerSubmit}
+                        disabled={sending}
+                        className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition ${
+                          hasTypedMessage
+                            ? 'bg-white text-[#111827] shadow-[0_6px_18px_rgba(255,255,255,0.18)] hover:bg-stone-100'
+                            : 'bg-transparent text-stone-200/90 hover:bg-white/5 hover:text-white'
+                        } ${sending ? 'cursor-wait opacity-70' : ''}`}
+                        aria-label={hasTypedMessage ? 'Enviar mensagem' : 'Gravar audio'}
+                      >
+                        {sending ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : hasTypedMessage ? (
+                          <SendHorizontal className="h-5 w-5" />
+                        ) : (
+                          <Mic className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

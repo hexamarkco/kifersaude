@@ -6,6 +6,7 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractPhoneFromChatId,
+  extractWhapiMediaMeta,
   fetchWhapiChatName,
   formatPhoneLabel,
   getDirectChatDisplayNameCandidate,
@@ -171,13 +172,15 @@ async function persistMessageFromWebhook(
   const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
   const externalMessageId = toTrimmedString(message.id);
   const deliveryStatus = toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'pending');
+  const mediaMeta = extractWhapiMediaMeta(message);
+  const summaryText = summarizeWhapiMessage(message);
   const result = await persistCommWhatsAppMessage(supabaseAdmin, {
     channelId: channel.id,
     externalChatId,
     phoneNumber: phoneDigits || null,
     displayName,
     pushName: resolvedName || existingChat?.push_name || null,
-    lastMessageText: summarizeWhapiMessage(message),
+    lastMessageText: summaryText,
     lastMessageDirection: direction,
     lastMessageAt: messageAt,
     incrementUnread: direction === 'inbound',
@@ -185,13 +188,20 @@ async function persistMessageFromWebhook(
     direction,
     messageType: toTrimmedString(message.type) || 'text',
     deliveryStatus,
-    textContent: summarizeWhapiMessage(message),
+    textContent: summaryText,
     createdBy: null,
     source: toTrimmedString(message.source) || null,
     senderName: getDirectChatDisplayNameCandidate(message, direction) || null,
     senderPhone: direction === 'outbound' ? channel.phone_number || null : phoneDigits || null,
     statusUpdatedAt: messageAt,
     errorMessage: null,
+    mediaId: mediaMeta.mediaId,
+    mediaUrl: mediaMeta.mediaUrl,
+    mediaMimeType: mediaMeta.mediaMimeType,
+    mediaFileName: mediaMeta.mediaFileName,
+    mediaSizeBytes: mediaMeta.mediaSizeBytes,
+    mediaDurationSeconds: mediaMeta.mediaDurationSeconds,
+    mediaCaption: mediaMeta.mediaCaption,
     metadata: {
       from_me: message.from_me === true,
       chat_id: externalChatId,

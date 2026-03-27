@@ -8,6 +8,7 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractPhoneFromChatId,
+  extractWhapiMediaId,
   extractWhapiMessageId,
   extractWhapiMessageStatus,
   formatPhoneLabel,
@@ -31,7 +32,11 @@ declare const Deno: {
 type SendMessageBody = {
   chatId?: string;
   text?: string;
+  type?: string;
+  caption?: string;
 };
+
+type MediaSendKind = 'image' | 'document' | 'audio';
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
@@ -64,6 +69,30 @@ async function resolveChatForSend(
 
   return (existing ?? null) as { display_name: string | null; push_name: string | null } | null;
 }
+
+const normalizeMediaKind = (value: string, mimeType: string): MediaSendKind => {
+  const requested = value.trim().toLowerCase();
+  if (requested === 'image' || requested === 'document' || requested === 'audio') {
+    return requested;
+  }
+
+  if (mimeType.startsWith('image/')) {
+    return 'image';
+  }
+
+  if (mimeType.startsWith('audio/')) {
+    return 'audio';
+  }
+
+  return 'document';
+};
+
+const buildMediaSummary = (kind: MediaSendKind, caption: string) => {
+  if (caption) return caption;
+  if (kind === 'image') return '[Imagem]';
+  if (kind === 'audio') return '[Audio]';
+  return '[Documento]';
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -98,9 +127,32 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const body = (await req.json().catch(() => ({}))) as SendMessageBody;
-    const chatId = normalizeWhapiChatId(body.chatId);
-    const text = toTrimmedString(body.text);
+    const contentType = req.headers.get('content-type') || '';
+    let chatId = '';
+    let text = '';
+    let mediaKind: MediaSendKind | null = null;
+    let mediaFile: File | null = null;
+
+    if (contentType.includes('multipart/form-data')) {
+      const form = await req.formData();
+      chatId = normalizeWhapiChatId(form.get('chatId'));
+      text = toTrimmedString(form.get('caption'));
+      const uploaded = form.get('file');
+
+      if (!(uploaded instanceof File)) {
+        return new Response(JSON.stringify({ error: 'Arquivo obrigatorio para envio de midia.' }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      mediaFile = uploaded;
+      mediaKind = normalizeMediaKind(toTrimmedString(form.get('type')), uploaded.type);
+    } else {
+      const body = (await req.json().catch(() => ({}))) as SendMessageBody;
+      chatId = normalizeWhapiChatId(body.chatId);
+      text = toTrimmedString(body.text);
+    }
 
     if (!chatId || !isDirectWhapiChatId(chatId)) {
       return new Response(JSON.stringify({ error: 'Conversa invalida para envio.' }), {
@@ -109,7 +161,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!text) {
+    if (!mediaFile && !text) {
       return new Response(JSON.stringify({ error: 'Mensagem obrigatoria.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -127,18 +179,66 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        to: chatId,
-        body: text,
-      }),
-    });
+    let whapiResponse: Response;
+    let uploadedMediaId = '';
+
+    if (mediaFile && mediaKind) {
+      const uploadForm = new FormData();
+      uploadForm.append('media', mediaFile, mediaFile.name);
+
+      const uploadResponse = await fetch(`${WHAPI_BASE_URL}/media`, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: uploadForm,
+      });
+
+      const uploadPayload = await readResponsePayload(uploadResponse);
+      if (!uploadResponse.ok) {
+        const errorMessage = parseWhapiError(uploadPayload);
+        return new Response(JSON.stringify({ error: errorMessage || 'Falha ao enviar arquivo para a Whapi.' }), {
+          status: uploadResponse.status,
+          headers: jsonHeaders,
+        });
+      }
+
+      uploadedMediaId = extractWhapiMediaId(uploadPayload);
+      if (!uploadedMediaId) {
+        return new Response(JSON.stringify({ error: 'A Whapi nao retornou MediaID para o arquivo enviado.' }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          to: chatId,
+          media: uploadedMediaId,
+          caption: text || undefined,
+        }),
+      });
+    } else {
+      whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          to: chatId,
+          body: text,
+        }),
+      });
+    }
 
     const whapiPayload = await readResponsePayload(whapiResponse);
 
@@ -171,6 +271,8 @@ Deno.serve(async (req: Request) => {
     const nowIso = getNowIso();
     const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
     const phoneDigits = extractPhoneFromChatId(chatId);
+    const summaryText = buildMediaSummary(mediaKind ?? 'document', text);
+    const isMediaMessage = Boolean(mediaFile && mediaKind);
 
     await persistCommWhatsAppMessage(supabaseAdmin, {
       channelId: channel.id,
@@ -178,21 +280,28 @@ Deno.serve(async (req: Request) => {
       phoneNumber: phoneDigits || null,
       displayName: existingChat?.display_name || formatPhoneLabel(phoneDigits),
       pushName: existingChat?.push_name || null,
-      lastMessageText: text,
+      lastMessageText: isMediaMessage ? summaryText : text,
       lastMessageDirection: 'outbound',
       lastMessageAt: nowIso,
       incrementUnread: false,
       externalMessageId: externalMessageId || null,
       direction: 'outbound',
-      messageType: 'text',
+      messageType: mediaKind || 'text',
       deliveryStatus,
-      textContent: text,
+      textContent: isMediaMessage ? summaryText : text,
       createdBy: authResult.user.profileId,
       source: 'api',
       senderPhone: channel.phone_number,
       senderName: channel.connected_user_name,
       statusUpdatedAt: nowIso,
       errorMessage: null,
+      mediaId: uploadedMediaId || null,
+      mediaUrl: null,
+      mediaMimeType: mediaFile?.type || null,
+      mediaFileName: mediaFile?.name || null,
+      mediaSizeBytes: mediaFile ? mediaFile.size : null,
+      mediaDurationSeconds: null,
+      mediaCaption: text || null,
       metadata: {
         provider: 'whapi',
       },

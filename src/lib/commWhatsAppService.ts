@@ -1,6 +1,7 @@
 import {
   getSupabaseErrorMessage,
   supabase,
+  supabaseFunctionsUrl,
   type CommWhatsAppChannel,
   type CommWhatsAppChat,
   type CommWhatsAppMessage,
@@ -32,6 +33,10 @@ export type CommWhatsAppMessagesPage = {
   messages: CommWhatsAppMessage[];
   hasMore: boolean;
 };
+
+export type CommWhatsAppMediaSendKind = 'image' | 'document' | 'audio';
+
+const mediaObjectUrlCache = new Map<string, Promise<string>>();
 
 const sanitizeSearch = (value: string) =>
   value
@@ -185,5 +190,112 @@ export const commWhatsAppService = {
       messageId: payload.messageId ?? null,
       status: payload.status ?? 'pending',
     };
+  },
+
+  async sendMediaMessage(params: {
+    chatId: string;
+    kind: CommWhatsAppMediaSendKind;
+    file: File;
+    caption?: string;
+  }): Promise<{ messageId: string | null; status: string }> {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw new Error(getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar o envio de midia.'));
+    }
+
+    if (!session?.access_token) {
+      throw new Error('Sua sessao expirou. Entre novamente para enviar midia.');
+    }
+
+    const form = new FormData();
+    form.append('chatId', params.chatId);
+    form.append('type', params.kind);
+    form.append('caption', params.caption?.trim() || '');
+    form.append('file', params.file, params.file.name);
+
+    const response = await fetch(`${supabaseFunctionsUrl}/comm-whatsapp-send`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: form,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const message =
+        typeof payload?.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : 'Nao foi possivel enviar a midia no WhatsApp.';
+      throw new Error(message);
+    }
+
+    return {
+      messageId: typeof payload?.messageId === 'string' ? payload.messageId : null,
+      status: typeof payload?.status === 'string' ? payload.status : 'pending',
+    };
+  },
+
+  async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {
+    if (params.mediaUrl?.trim()) {
+      return params.mediaUrl.trim();
+    }
+
+    const mediaId = params.mediaId?.trim();
+    if (!mediaId) {
+      return null;
+    }
+
+    if (!mediaObjectUrlCache.has(mediaId)) {
+      mediaObjectUrlCache.set(
+        mediaId,
+        (async () => {
+          const {
+            data: { session },
+            error: sessionError,
+          } = await supabase.auth.getSession();
+
+          if (sessionError) {
+            throw new Error(getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a midia do WhatsApp.'));
+          }
+
+          if (!session?.access_token) {
+            throw new Error('Sua sessao expirou. Entre novamente para carregar a midia.');
+          }
+
+          const response = await fetch(
+            `${supabaseFunctionsUrl}/comm-whatsapp-media?mediaId=${encodeURIComponent(mediaId)}`,
+            {
+              method: 'GET',
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            },
+          );
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(
+              typeof payload?.error === 'string' && payload.error.trim()
+                ? payload.error.trim()
+                : 'Nao foi possivel carregar a midia do WhatsApp.',
+            );
+          }
+
+          const blob = await response.blob();
+          return URL.createObjectURL(blob);
+        })().catch((error) => {
+          mediaObjectUrlCache.delete(mediaId);
+          throw error;
+        }),
+      );
+    }
+
+    return mediaObjectUrlCache.get(mediaId) ?? null;
   },
 };

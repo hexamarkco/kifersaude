@@ -525,6 +525,13 @@ export type CommWhatsAppMessage = {
   sender_phone?: string | null;
   status_updated_at?: string | null;
   error_message?: string | null;
+  media_id?: string | null;
+  media_url?: string | null;
+  media_mime_type?: string | null;
+  media_file_name?: string | null;
+  media_size_bytes?: number | null;
+  media_duration_seconds?: number | null;
+  media_caption?: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
 };

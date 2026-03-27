@@ -58,6 +58,13 @@ export type CommWhatsAppPersistMessageInput = {
   senderPhone: string | null;
   statusUpdatedAt: string | null;
   errorMessage: string | null;
+  mediaId: string | null;
+  mediaUrl: string | null;
+  mediaMimeType: string | null;
+  mediaFileName: string | null;
+  mediaSizeBytes: number | null;
+  mediaDurationSeconds: number | null;
+  mediaCaption: string | null;
   metadata: Record<string, unknown>;
 };
 
@@ -67,6 +74,16 @@ export type CommWhatsAppPersistMessageResult = {
   inserted: boolean;
   unreadCount: number;
   summaryUpdated: boolean;
+};
+
+export type CommWhatsAppMediaMeta = {
+  mediaId: string | null;
+  mediaUrl: string | null;
+  mediaMimeType: string | null;
+  mediaFileName: string | null;
+  mediaSizeBytes: number | null;
+  mediaDurationSeconds: number | null;
+  mediaCaption: string | null;
 };
 
 const getSettingsToken = (settings: Record<string, unknown>): string => {
@@ -191,6 +208,55 @@ const readNestedBody = (container: unknown, key: string): string => {
   const nested = container[key];
   if (!isRecord(nested)) return '';
   return toTrimmedString(nested.body);
+};
+
+const readMediaPayload = (message: unknown): Record<string, unknown> | null => {
+  if (!isRecord(message)) return null;
+
+  const type = toTrimmedString(message.type).toLowerCase();
+  switch (type) {
+    case 'image':
+      return isRecord(message.image) ? message.image : null;
+    case 'document':
+      return isRecord(message.document) ? message.document : null;
+    case 'audio':
+      return isRecord(message.audio) ? message.audio : null;
+    case 'voice':
+      return isRecord(message.voice) ? message.voice : null;
+    default:
+      return null;
+  }
+};
+
+const toNullableNumber = (value: unknown): number | null => {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+export const extractWhapiMediaMeta = (message: unknown): CommWhatsAppMediaMeta => {
+  const payload = readMediaPayload(message);
+
+  if (!payload) {
+    return {
+      mediaId: null,
+      mediaUrl: null,
+      mediaMimeType: null,
+      mediaFileName: null,
+      mediaSizeBytes: null,
+      mediaDurationSeconds: null,
+      mediaCaption: null,
+    };
+  }
+
+  return {
+    mediaId: toTrimmedString(payload.id) || null,
+    mediaUrl: toTrimmedString(payload.link) || null,
+    mediaMimeType: toTrimmedString(payload.mime_type) || null,
+    mediaFileName: toTrimmedString(payload.file_name) || toTrimmedString(payload.filename) || null,
+    mediaSizeBytes: toNullableNumber(payload.file_size),
+    mediaDurationSeconds: toNullableNumber(payload.seconds),
+    mediaCaption: toTrimmedString(payload.caption) || null,
+  };
 };
 
 export const summarizeWhapiMessage = (message: unknown): string => {
@@ -324,6 +390,31 @@ export const extractWhapiMessageId = (payload: unknown): string => {
 export const extractWhapiMessageStatus = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
   return toTrimmedString(payload.status) || toTrimmedString(payload.state);
+};
+
+export const extractWhapiMediaId = (payload: unknown): string => {
+  if (!payload) return '';
+
+  if (isRecord(payload)) {
+    const directId = toTrimmedString(payload.media_id) || toTrimmedString(payload.id);
+    if (directId) return directId;
+
+    if (isRecord(payload.media)) {
+      const nestedId = toTrimmedString(payload.media.id) || toTrimmedString(payload.media.media_id);
+      if (nestedId) return nestedId;
+    }
+
+    if (Array.isArray(payload.data)) {
+      for (const item of payload.data) {
+        if (isRecord(item)) {
+          const itemId = toTrimmedString(item.id) || toTrimmedString(item.media_id);
+          if (itemId) return itemId;
+        }
+      }
+    }
+  }
+
+  return '';
 };
 
 export const extractWhapiChatName = (payload: unknown): string => {
@@ -531,6 +622,13 @@ export async function persistCommWhatsAppMessage(
     p_status_updated_at: input.statusUpdatedAt,
     p_error_message: input.errorMessage,
     p_metadata: input.metadata,
+    p_media_id: input.mediaId,
+    p_media_url: input.mediaUrl,
+    p_media_mime_type: input.mediaMimeType,
+    p_media_file_name: input.mediaFileName,
+    p_media_size_bytes: input.mediaSizeBytes,
+    p_media_duration_seconds: input.mediaDurationSeconds,
+    p_media_caption: input.mediaCaption,
   });
 
   if (error) {

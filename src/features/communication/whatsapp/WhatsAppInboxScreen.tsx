@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { AlertTriangle, ChevronUp, Clock3, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, WifiOff } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { AlertTriangle, ChevronUp, Clock3, FileAudio, FileImage, FileText, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, WifiOff, X } from 'lucide-react';
 
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
+  type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
 } from '../../../lib/commWhatsAppService';
 import { toast } from '../../../lib/toast';
@@ -91,6 +92,165 @@ const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMe
   return Array.from(map.values()).sort(compareMessageChronology);
 };
 
+const isMediaPlaceholder = (message: CommWhatsAppMessage) => {
+  const content = String(message.text_content ?? '').trim();
+  if (!content) return true;
+
+  const placeholders = new Set(['[Imagem]', '[Documento]', '[Audio]', '[Mensagem]']);
+  return placeholders.has(content);
+};
+
+const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
+  if (file.type.startsWith('image/')) {
+    return 'image';
+  }
+
+  if (file.type.startsWith('audio/')) {
+    return 'audio';
+  }
+
+  return 'document';
+};
+
+const formatFileSize = (value?: number | null) => {
+  if (!value || value <= 0) return '';
+
+  if (value >= 1024 * 1024) {
+    return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  if (value >= 1024) {
+    return `${Math.round(value / 1024)} KB`;
+  }
+
+  return `${value} B`;
+};
+
+function useResolvedMediaUrl(message: CommWhatsAppMessage) {
+  const [mediaUrl, setMediaUrl] = useState<string | null>(message.media_url ?? null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    if (message.media_url?.trim()) {
+      setMediaUrl(message.media_url.trim());
+      setLoading(false);
+      setError(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    if (!message.media_id) {
+      setMediaUrl(null);
+      setLoading(false);
+      setError(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    setLoading(true);
+    setError(null);
+
+    void commWhatsAppService
+      .resolveMediaObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
+      .then((resolved) => {
+        if (!active) return;
+        setMediaUrl(resolved);
+      })
+      .catch((resolveError) => {
+        if (!active) return;
+        setError(resolveError instanceof Error ? resolveError.message : 'Nao foi possivel carregar a midia.');
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [message.media_id, message.media_url]);
+
+  return { mediaUrl, loading, error };
+}
+
+function WhatsAppMessageBody({ message }: { message: CommWhatsAppMessage }) {
+  const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
+  const kind = message.message_type;
+  const caption = isMediaPlaceholder(message) ? message.media_caption?.trim() || '' : message.text_content?.trim() || '';
+
+  if (kind === 'image') {
+    return (
+      <div className="space-y-3">
+        {mediaUrl ? (
+          <a href={mediaUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-black/5">
+            <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="max-h-[280px] w-full object-cover" loading="lazy" />
+          </a>
+        ) : (
+          <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
+            {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
+          </div>
+        )}
+        {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+      </div>
+    );
+  }
+
+  if (kind === 'document') {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-current/10 bg-black/5 px-3 py-3">
+          <FileText className="h-5 w-5 shrink-0 opacity-80" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">{message.media_file_name || 'Documento'}</p>
+            <p className="text-xs opacity-75">{formatFileSize(message.media_size_bytes)}</p>
+          </div>
+          {mediaUrl ? (
+            <a href={mediaUrl} target="_blank" rel="noreferrer" className="rounded-full border border-current/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] hover:bg-black/5">
+              Abrir
+            </a>
+          ) : (
+            <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
+          )}
+        </div>
+        {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+      </div>
+    );
+  }
+
+  if (kind === 'audio' || kind === 'voice') {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 rounded-2xl border border-current/10 bg-black/5 px-3 py-3">
+          <FileAudio className="h-5 w-5 shrink-0 opacity-80" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="truncate text-sm font-medium">{message.media_file_name || (kind === 'voice' ? 'Nota de voz' : 'Audio')}</p>
+              <span className="text-xs opacity-75">
+                {message.media_duration_seconds ? `${message.media_duration_seconds}s` : formatFileSize(message.media_size_bytes)}
+              </span>
+            </div>
+            {mediaUrl ? (
+              <audio controls preload="none" className="w-full max-w-[320px]">
+                <source src={mediaUrl} type={message.media_mime_type || undefined} />
+              </audio>
+            ) : (
+              <p className="text-xs opacity-75">{loading ? 'Carregando audio...' : error || 'Audio indisponivel'}</p>
+            )}
+          </div>
+        </div>
+        {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+      </div>
+    );
+  }
+
+  return <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.text_content || '[Mensagem sem texto]'}</p>;
+}
+
 export default function WhatsAppInboxScreen() {
   const [loading, setLoading] = useState(true);
   const [searchDraft, setSearchDraft] = useState('');
@@ -104,6 +264,7 @@ export default function WhatsAppInboxScreen() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState<{ file: File; kind: CommWhatsAppMediaSendKind } | null>(null);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
@@ -112,6 +273,7 @@ export default function WhatsAppInboxScreen() {
   const [isWindowFocused, setIsWindowFocused] = useState(() => (typeof document === 'undefined' ? true : document.hasFocus()));
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
@@ -127,6 +289,7 @@ export default function WhatsAppInboxScreen() {
   const olderMessagesRequestIdRef = useRef(0);
   const operationalStateRequestIdRef = useRef(0);
   const hasTypedMessage = messageDraft.trim().length > 0;
+  const hasSendPayload = hasTypedMessage || pendingAttachment !== null;
   const pollingEnabled = isDocumentVisible && isWindowFocused;
 
   const buildChatsSignature = useCallback(
@@ -483,6 +646,7 @@ export default function WhatsAppInboxScreen() {
       setLoadingMessages(false);
       setLoadingOlderMessages(false);
       setHasOlderMessages(false);
+      setPendingAttachment(null);
       messagesSignatureRef.current = '';
       return;
     }
@@ -492,6 +656,7 @@ export default function WhatsAppInboxScreen() {
     pendingScrollTopRef.current = null;
     pendingScrollHeightRef.current = null;
     isNearBottomRef.current = true;
+    setPendingAttachment(null);
     setLoadingOlderMessages(false);
     setHasOlderMessages(false);
     setMessages([]);
@@ -663,13 +828,33 @@ export default function WhatsAppInboxScreen() {
     textarea.style.height = `${nextHeight}px`;
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
     setIsComposerExpanded(expanded);
-  }, [messageDraft, selectedChatId]);
+  }, [messageDraft, pendingAttachment, selectedChatId]);
+
+  const handleOpenAttachmentPicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAttachmentInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0];
+    if (!nextFile) return;
+
+    setPendingAttachment({
+      file: nextFile,
+      kind: inferAttachmentKind(nextFile),
+    });
+
+    event.target.value = '';
+  };
+
+  const handleClearAttachment = () => {
+    setPendingAttachment(null);
+  };
 
   const handleSendMessage = async () => {
     if (!selectedChat) return;
 
     const text = messageDraft.trim();
-    if (!text) return;
+    if (!text && !pendingAttachment) return;
 
     if (sendDisabledReason) {
       toast.error(sendDisabledReason);
@@ -679,7 +864,18 @@ export default function WhatsAppInboxScreen() {
     setSending(true);
 
     try {
-      await commWhatsAppService.sendTextMessage(selectedChat.external_chat_id, text);
+      if (pendingAttachment) {
+        await commWhatsAppService.sendMediaMessage({
+          chatId: selectedChat.external_chat_id,
+          kind: pendingAttachment.kind,
+          file: pendingAttachment.file,
+          caption: text,
+        });
+        setPendingAttachment(null);
+      } else {
+        await commWhatsAppService.sendTextMessage(selectedChat.external_chat_id, text);
+      }
+
       setMessageDraft('');
       hydratedChatsRef.current.add(selectedChat.external_chat_id);
       await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
@@ -694,7 +890,7 @@ export default function WhatsAppInboxScreen() {
   const handleComposerSubmit = () => {
     if (sending) return;
 
-    if (hasTypedMessage) {
+    if (hasSendPayload) {
       void handleSendMessage();
     }
   };
@@ -704,7 +900,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    if (!hasTypedMessage) {
+    if (!hasSendPayload) {
       return;
     }
 
@@ -850,7 +1046,7 @@ export default function WhatsAppInboxScreen() {
                   messages.map((message) => (
                     <div key={message.id} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
                       <div className={`max-w-[80%] rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
-                        <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.text_content || '[Mensagem sem texto]'}</p>
+                        <WhatsAppMessageBody message={message} />
                         <div className="whatsapp-inbox-message-meta mt-2 flex items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em]">
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && <span>{message.delivery_status}</span>}
@@ -863,11 +1059,43 @@ export default function WhatsAppInboxScreen() {
 
               <div className="whatsapp-inbox-composer-area border-t p-4 sm:p-5">
                 <div className={`whatsapp-inbox-composer rounded-[30px] border px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                    className="hidden"
+                    onChange={handleAttachmentInputChange}
+                  />
+
+                  {pendingAttachment && (
+                    <div className="mb-3 flex items-center gap-3 rounded-2xl border border-current/10 bg-black/5 px-3 py-2">
+                      {pendingAttachment.kind === 'image' ? (
+                        <FileImage className="h-4 w-4 shrink-0 opacity-80" />
+                      ) : pendingAttachment.kind === 'audio' ? (
+                        <FileAudio className="h-4 w-4 shrink-0 opacity-80" />
+                      ) : (
+                        <FileText className="h-4 w-4 shrink-0 opacity-80" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{pendingAttachment.file.name}</p>
+                        <p className="text-xs opacity-75">{formatFileSize(pendingAttachment.file.size)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleClearAttachment}
+                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-full transition"
+                        aria-label="Remover anexo"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
                   <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                     <div className={`flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       <button
                         type="button"
-                        disabled
+                        onClick={handleOpenAttachmentPicker}
                         className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
                         aria-label="Anexar"
                       >
@@ -900,14 +1128,14 @@ export default function WhatsAppInboxScreen() {
                       <button
                         type="button"
                         onClick={handleComposerSubmit}
-                        disabled={sending || Boolean(sendDisabledReason)}
-                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasTypedMessage ? 'is-active' : ''} ${sending ? 'cursor-wait opacity-70' : ''}`}
-                        aria-label={hasTypedMessage ? 'Enviar mensagem' : 'Gravar audio'}
+                        disabled={sending || Boolean(sendDisabledReason) || (!hasSendPayload && !pendingAttachment)}
+                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${sending ? 'cursor-wait opacity-70' : ''}`}
+                        aria-label={hasSendPayload ? 'Enviar mensagem' : 'Gravar audio'}
                         title={sendDisabledReason ?? undefined}
                       >
                         {sending ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : hasTypedMessage ? (
+                        ) : hasSendPayload ? (
                           <SendHorizontal className="h-5 w-5" />
                         ) : (
                           <Mic className="h-5 w-5" />

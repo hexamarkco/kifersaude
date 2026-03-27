@@ -6,6 +6,7 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractPhoneFromChatId,
+  extractWhapiMediaMeta,
   fetchWhapiChatMessages,
   fetchWhapiChatName,
   formatPhoneLabel,
@@ -172,13 +173,15 @@ Deno.serve(async (req: Request) => {
       const direction = message.from_me === true ? 'outbound' : 'inbound';
       const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
       const externalMessageId = toTrimmedString(message.id);
+      const mediaMeta = extractWhapiMediaMeta(message);
+      const summaryText = summarizeWhapiMessage(message);
       await persistCommWhatsAppMessage(supabaseAdmin, {
         channelId: channel.id,
         externalChatId,
         phoneNumber: phoneDigits,
         displayName,
         pushName: whapiName || existingChat?.push_name || null,
-        lastMessageText: summarizeWhapiMessage(message),
+        lastMessageText: summaryText,
         lastMessageDirection: direction,
         lastMessageAt: messageAt,
         incrementUnread: false,
@@ -186,13 +189,20 @@ Deno.serve(async (req: Request) => {
         direction,
         messageType: toTrimmedString(message.type) || 'text',
         deliveryStatus: toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'pending'),
-        textContent: summarizeWhapiMessage(message),
+        textContent: summaryText,
         createdBy: null,
         source: toTrimmedString(message.source) || null,
         senderName: getDirectChatDisplayNameCandidate(message, direction) || (direction === 'outbound' ? displayName : whapiName) || null,
         senderPhone: direction === 'outbound' ? channel.phone_number || null : phoneDigits,
         statusUpdatedAt: messageAt,
         errorMessage: null,
+        mediaId: mediaMeta.mediaId,
+        mediaUrl: mediaMeta.mediaUrl,
+        mediaMimeType: mediaMeta.mediaMimeType,
+        mediaFileName: mediaMeta.mediaFileName,
+        mediaSizeBytes: mediaMeta.mediaSizeBytes,
+        mediaDurationSeconds: mediaMeta.mediaDurationSeconds,
+        mediaCaption: mediaMeta.mediaCaption,
         metadata: {
           from_me: message.from_me === true,
           chat_id: externalChatId,

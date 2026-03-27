@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile } from 'lucide-react';
 
 import Checkbox from '../../../components/ui/Checkbox';
@@ -9,6 +9,9 @@ import type { CommWhatsAppChat, CommWhatsAppMessage } from '../../../lib/supabas
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
+const SCROLL_BOTTOM_THRESHOLD_PX = 96;
+
+type MessageLoadReason = 'initial' | 'poll' | 'send';
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -26,14 +29,14 @@ const formatMessageTime = (value?: string | null) => {
 
 const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) => {
   if (direction === 'outbound') {
-    return 'ml-auto border border-orange-200 bg-orange-50 text-slate-900';
+    return 'message-bubble message-bubble-outbound ml-auto';
   }
 
   if (direction === 'system') {
-    return 'mx-auto border border-slate-200 bg-slate-100 text-slate-700';
+    return 'message-bubble message-bubble-system mx-auto';
   }
 
-  return 'mr-auto border border-stone-200 bg-white text-slate-900';
+  return 'message-bubble message-bubble-inbound mr-auto';
 };
 
 export default function WhatsAppInboxScreen() {
@@ -50,7 +53,44 @@ export default function WhatsAppInboxScreen() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
+  const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
+  const chatsSignatureRef = useRef('');
+  const messagesSignatureRef = useRef('');
+  const pendingScrollModeRef = useRef<'bottom' | null>(null);
+  const isNearBottomRef = useRef(true);
   const hasTypedMessage = messageDraft.trim().length > 0;
+
+  const buildChatsSignature = useCallback(
+    (items: CommWhatsAppChat[]) =>
+      items
+        .map(
+          (chat) =>
+            `${chat.id}:${chat.updated_at}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.display_name}`,
+        )
+        .join('|'),
+    [],
+  );
+
+  const buildMessagesSignature = useCallback(
+    (items: CommWhatsAppMessage[]) =>
+      items
+        .map(
+          (message) =>
+            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.message_at}:${message.text_content ?? ''}`,
+        )
+        .join('|'),
+    [],
+  );
+
+  const getSelectedChatSnapshot = useCallback((chatId: string | null) => {
+    if (!chatId) return null;
+    return latestChatsRef.current.find((chat) => chat.id === chatId) ?? null;
+  }, []);
+
+  const isScrolledNearBottom = useCallback((element: HTMLDivElement) => {
+    const remaining = element.scrollHeight - element.scrollTop - element.clientHeight;
+    return remaining <= SCROLL_BOTTOM_THRESHOLD_PX;
+  }, []);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -65,6 +105,10 @@ export default function WhatsAppInboxScreen() {
     [chats, selectedChatId],
   );
 
+  useEffect(() => {
+    latestChatsRef.current = chats;
+  }, [chats]);
+
   const loadChats = useCallback(async () => {
     try {
       const data = await commWhatsAppService.listChats({
@@ -72,7 +116,13 @@ export default function WhatsAppInboxScreen() {
         onlyUnread,
       });
 
-      setChats(data);
+      const nextSignature = buildChatsSignature(data);
+
+      if (nextSignature !== chatsSignatureRef.current) {
+        chatsSignatureRef.current = nextSignature;
+        setChats(data);
+      }
+
       setSelectedChatId((current) => {
         if (current && data.some((chat) => chat.id === current)) {
           return current;
@@ -84,9 +134,9 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as conversas do WhatsApp.');
     }
-  }, [onlyUnread, search]);
+  }, [buildChatsSignature, onlyUnread, search]);
 
-  const loadMessages = useCallback(async (chat: CommWhatsAppChat | null) => {
+  const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
       setMessages([]);
       return;
@@ -104,6 +154,16 @@ export default function WhatsAppInboxScreen() {
         await loadChats();
       }
 
+      const nextSignature = buildMessagesSignature(data);
+      if (nextSignature === messagesSignatureRef.current) {
+        return;
+      }
+
+      messagesSignatureRef.current = nextSignature;
+      if (reason === 'initial' || reason === 'send' || isNearBottomRef.current) {
+        pendingScrollModeRef.current = 'bottom';
+      }
+
       setMessages(data);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
@@ -111,7 +171,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setLoadingMessages(false);
     }
-  }, [loadChats]);
+  }, [buildMessagesSignature, loadChats]);
 
   useEffect(() => {
     let active = true;
@@ -132,13 +192,19 @@ export default function WhatsAppInboxScreen() {
   }, [loadChats]);
 
   useEffect(() => {
-    if (!selectedChat) {
+    if (!selectedChatId) {
       setMessages([]);
+      messagesSignatureRef.current = '';
       return;
     }
 
-    void loadMessages(selectedChat);
-  }, [loadMessages, selectedChat]);
+    messagesSignatureRef.current = '';
+    pendingScrollModeRef.current = 'bottom';
+    isNearBottomRef.current = true;
+    setMessages([]);
+
+    void loadMessages(getSelectedChatSnapshot(selectedChatId), 'initial');
+  }, [getSelectedChatSnapshot, loadMessages, selectedChatId]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -152,11 +218,11 @@ export default function WhatsAppInboxScreen() {
     if (!selectedChat) return;
 
     const intervalId = window.setInterval(() => {
-      void loadMessages(selectedChat);
+      void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
     }, MESSAGE_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-  }, [loadMessages, selectedChat]);
+  }, [getSelectedChatSnapshot, loadMessages, selectedChat]);
 
   useEffect(() => {
     if (!selectedChat || selectedChat.unread_count <= 0) {
@@ -172,10 +238,23 @@ export default function WhatsAppInboxScreen() {
     });
   }, [selectedChat]);
 
-  useEffect(() => {
-    if (!messagesContainerRef.current) return;
-    messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-  }, [messages]);
+  useLayoutEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    if (pendingScrollModeRef.current === 'bottom') {
+      container.scrollTop = container.scrollHeight;
+      isNearBottomRef.current = true;
+    }
+
+    pendingScrollModeRef.current = null;
+  }, [messages, selectedChatId]);
+
+  const handleMessagesScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    isNearBottomRef.current = isScrolledNearBottom(container);
+  }, [isScrolledNearBottom]);
 
   useEffect(() => {
     const textarea = composerTextareaRef.current;
@@ -224,7 +303,7 @@ export default function WhatsAppInboxScreen() {
       await commWhatsAppService.sendTextMessage(selectedChat.external_chat_id, text);
       setMessageDraft('');
       hydratedChatsRef.current.add(selectedChat.external_chat_id);
-      await Promise.all([loadMessages(selectedChat), loadChats()]);
+      await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem.');
@@ -258,16 +337,17 @@ export default function WhatsAppInboxScreen() {
   };
 
   return (
-    <div className="panel-page-shell h-full overflow-hidden p-3 sm:p-4 lg:p-5">
+    <div className="whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-3 sm:p-4 lg:p-5">
       <section className="grid h-full min-h-0 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-stone-200 bg-white shadow-sm">
-          <div className="border-b border-stone-200 p-4">
+        <div className="whatsapp-inbox-panel whatsapp-inbox-sidebar flex h-full min-h-0 flex-col rounded-[28px] border shadow-sm">
+          <div className="whatsapp-inbox-sidebar-header border-b p-4">
             <div className="flex flex-col gap-3">
               <Input
                 value={searchDraft}
                 onChange={(event) => setSearchDraft(event.target.value)}
                 placeholder="Buscar por nome ou telefone"
                 leftIcon={Search}
+                className="whatsapp-inbox-search-input"
               />
               <label className="inline-flex items-center gap-2 text-sm text-[var(--panel-text-muted,#6b7280)]">
                 <Checkbox checked={onlyUnread} onChange={(event) => setOnlyUnread(event.target.checked)} />
@@ -276,15 +356,15 @@ export default function WhatsAppInboxScreen() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          <div className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-2">
             {loading ? (
               <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Carregando conversas...
               </div>
             ) : chats.length === 0 ? (
-              <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-stone-200 bg-stone-50/60 p-6 text-center">
-                <MessageCircle className="h-8 w-8 text-stone-400" />
+              <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
+                <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-[var(--panel-text,#1f2937)]">Nenhuma conversa ainda</p>
                   <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Assim que o webhook da Whapi receber mensagens, elas aparecerao aqui.</p>
@@ -296,11 +376,7 @@ export default function WhatsAppInboxScreen() {
                   key={chat.id}
                   type="button"
                   onClick={() => setSelectedChatId(chat.id)}
-                  className={`mb-2 flex w-full flex-col rounded-3xl border px-4 py-3 text-left transition ${
-                    chat.id === selectedChatId
-                      ? 'border-orange-300 bg-orange-50/80 shadow-sm'
-                      : 'border-transparent bg-stone-50/70 hover:border-stone-200 hover:bg-white'
-                  }`}
+                  className={`whatsapp-inbox-chat-card mb-2 flex w-full flex-col rounded-3xl border px-4 py-3 text-left transition ${chat.id === selectedChatId ? 'is-active' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -308,9 +384,9 @@ export default function WhatsAppInboxScreen() {
                       <p className="truncate text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span className="text-[11px] uppercase tracking-[0.12em] text-stone-400">{formatMessageTime(chat.last_message_at)}</span>
+                      <span className="whatsapp-inbox-chat-meta text-[11px] uppercase tracking-[0.12em]">{formatMessageTime(chat.last_message_at)}</span>
                       {chat.unread_count > 0 && (
-                        <span className="inline-flex min-w-6 items-center justify-center rounded-full bg-orange-600 px-2 py-0.5 text-[11px] font-semibold text-white">
+                        <span className="whatsapp-inbox-unread-badge inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
                           {chat.unread_count}
                         </span>
                       )}
@@ -323,10 +399,10 @@ export default function WhatsAppInboxScreen() {
           </div>
         </div>
 
-        <div className="flex h-full min-h-0 flex-col rounded-[28px] border border-stone-200 bg-white shadow-sm">
+        <div className="whatsapp-inbox-panel whatsapp-inbox-thread flex h-full min-h-0 flex-col rounded-[28px] border shadow-sm">
           {!selectedChat ? (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-              <MessageCircle className="h-10 w-10 text-stone-400" />
+              <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
               <div className="space-y-1">
                 <p className="text-base font-semibold text-[var(--panel-text,#1f2937)]">Selecione uma conversa</p>
                 <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Abra um chat na coluna da esquerda para acompanhar o historico e responder.</p>
@@ -334,12 +410,16 @@ export default function WhatsAppInboxScreen() {
             </div>
           ) : (
             <>
-              <div className="border-b border-stone-200 p-5">
+              <div className="whatsapp-inbox-thread-header border-b p-5">
                 <p className="text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChat.display_name}</p>
                 <p className="mt-1 text-sm text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</p>
               </div>
 
-              <div ref={messagesContainerRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#fffdf9] px-5 py-5">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleMessagesScroll}
+                className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5"
+              >
                 {loadingMessages ? (
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -351,10 +431,10 @@ export default function WhatsAppInboxScreen() {
                   </div>
                 ) : (
                   messages.map((message) => (
-                    <div key={message.id} className={`flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
+                    <div key={message.id} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
                       <div className={`max-w-[80%] rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
                         <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.text_content || '[Mensagem sem texto]'}</p>
-                        <div className="mt-2 flex items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em] text-stone-400">
+                        <div className="whatsapp-inbox-message-meta mt-2 flex items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em]">
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && <span>{message.delivery_status}</span>}
                         </div>
@@ -364,14 +444,14 @@ export default function WhatsAppInboxScreen() {
                 )}
               </div>
 
-              <div className="border-t border-stone-200 bg-[#f7f3ec] p-4 sm:p-5">
-                <div className="rounded-[30px] border border-[#2e3235] bg-[#262928] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.02),0_8px_24px_rgba(15,23,42,0.08)]">
+              <div className="whatsapp-inbox-composer-area border-t p-4 sm:p-5">
+                <div className="whatsapp-inbox-composer rounded-[30px] border px-3 py-2.5">
                   <div className="flex items-end gap-1.5 sm:gap-2">
                     <div className="flex shrink-0 items-end gap-0.5">
                       <button
                         type="button"
                         onClick={() => handleComposerAuxClick('attach')}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-200/90 transition hover:bg-white/5 hover:text-white"
+                        className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
                         aria-label="Anexar"
                       >
                         <Plus className="h-5 w-5" />
@@ -379,7 +459,7 @@ export default function WhatsAppInboxScreen() {
                       <button
                         type="button"
                         onClick={() => handleComposerAuxClick('emoji')}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-200/90 transition hover:bg-white/5 hover:text-white"
+                        className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
                         aria-label="Emojis"
                       >
                         <Smile className="h-5 w-5" />
@@ -395,7 +475,7 @@ export default function WhatsAppInboxScreen() {
                         onKeyDown={handleComposerKeyDown}
                         placeholder="Digite uma mensagem"
                         disabled={sending}
-                        className="block w-full resize-none border-none bg-transparent px-0 py-0 text-[15px] leading-6 text-white placeholder:text-stone-400 focus:outline-none"
+                        className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-[15px] leading-6 focus:outline-none"
                       />
                     </div>
 
@@ -404,11 +484,7 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={handleComposerSubmit}
                         disabled={sending}
-                        className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition ${
-                          hasTypedMessage
-                            ? 'bg-white text-[#111827] shadow-[0_6px_18px_rgba(255,255,255,0.18)] hover:bg-stone-100'
-                            : 'bg-transparent text-stone-200/90 hover:bg-white/5 hover:text-white'
-                        } ${sending ? 'cursor-wait opacity-70' : ''}`}
+                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasTypedMessage ? 'is-active' : ''} ${sending ? 'cursor-wait opacity-70' : ''}`}
                         aria-label={hasTypedMessage ? 'Enviar mensagem' : 'Gravar audio'}
                       >
                         {sending ? (

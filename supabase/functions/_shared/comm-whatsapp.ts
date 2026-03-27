@@ -8,7 +8,7 @@ export const corsHeaders = {
 };
 
 export const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
-export const COMM_WHATSAPP_INTEGRATION_SLUG = 'comm_whatsapp_inbox';
+export const COMM_WHATSAPP_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 export const COMM_WHATSAPP_CHANNEL_SLUG = 'primary';
 export const COMM_WHATSAPP_MODULE = 'whatsapp-inbox';
 
@@ -35,6 +35,12 @@ export type CommWhatsAppChannelRow = {
 export type CommWhatsAppSettings = {
   enabled: boolean;
   token: string;
+};
+
+const getSettingsToken = (settings: Record<string, unknown>): string => {
+  const directToken = sanitizeWhapiToken(toTrimmedString(settings.token));
+  if (directToken) return directToken;
+  return sanitizeWhapiToken(toTrimmedString(settings.apiKey));
 };
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -340,8 +346,8 @@ export async function ensureCommWhatsAppSettings(
       .from('integration_settings')
       .insert({
         slug: COMM_WHATSAPP_INTEGRATION_SLUG,
-        name: 'Inbox WhatsApp (Whapi)',
-        description: 'Configuracao do canal principal do inbox WhatsApp compartilhado.',
+        name: 'Integração WhatsApp',
+        description: 'Configurações do canal principal de WhatsApp via Whapi.',
         settings: { enabled: false, token: '' },
       })
       .select('settings')
@@ -361,7 +367,7 @@ export async function ensureCommWhatsAppSettings(
 
   return {
     enabled: typeof settings.enabled === 'boolean' ? settings.enabled : false,
-    token: sanitizeWhapiToken(toTrimmedString(settings.token)),
+    token: getSettingsToken(settings),
   };
 }
 

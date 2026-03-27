@@ -143,13 +143,6 @@ Deno.serve(async (req: Request) => {
     const channel = await ensurePrimaryChannel(supabaseAdmin);
     const token = sanitizeWhapiToken(settings.token);
 
-    if (!settings.enabled || !channel.enabled) {
-      return new Response(JSON.stringify({ error: 'Canal WhatsApp desativado.' }), {
-        status: 400,
-        headers: jsonHeaders,
-      });
-    }
-
     if (!token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
         status: 400,

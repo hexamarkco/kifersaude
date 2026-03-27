@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Copy,
   Eye,
   EyeOff,
   Info,
   Key,
+  RefreshCcw,
   Save,
   Settings,
   ShieldCheck,
@@ -15,15 +17,26 @@ import {
   normalizeAutoContactSettings,
   type AutoContactSettings,
 } from "../../../../lib/autoContactService";
-import type { IntegrationSetting } from "../../../../lib/supabase";
+import { supabase, type IntegrationSetting } from "../../../../lib/supabase";
 import Button from "../../../../components/ui/Button";
 import Checkbox from "../../../../components/ui/Checkbox";
 import Input from "../../../../components/ui/Input";
 import { WhatsAppApiSkeleton } from "../../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../../components/ui/panelLoading";
+import { toast } from "../../../../lib/toast";
 
 type MessageState = { type: "success" | "error"; text: string } | null;
+type ChannelAdminState = {
+  channel: {
+    connection_status?: string | null;
+    phone_number?: string | null;
+    last_health_check_at?: string | null;
+  };
+  config: {
+    webhookUrl?: string;
+  };
+};
 
 export default function WhatsAppApiSettingsPanel() {
   const [autoContactIntegration, setAutoContactIntegration] =
@@ -32,21 +45,41 @@ export default function WhatsAppApiSettingsPanel() {
     useState<AutoContactSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshingHealth, setRefreshingHealth] = useState(false);
   const [statusMessage, setStatusMessage] = useState<MessageState>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const loadingUi = useAdaptiveLoading(loading);
 
   const [enabled, setEnabled] = useState(false);
   const [token, setToken] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [channelStatus, setChannelStatus] = useState("unknown");
+  const [channelPhone, setChannelPhone] = useState("");
+
+  const loadChannelState = useCallback(async () => {
+    const { data, error } = await supabase.functions.invoke("comm-whatsapp-admin", {
+      body: { action: "getConfig" },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    const payload = (data ?? {}) as ChannelAdminState;
+    setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
+    setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
+    setChannelPhone(payload.channel?.phone_number?.trim() || "");
+  }, []);
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
     setStatusMessage(null);
 
     try {
-      const integration = await configService.getIntegrationSetting(
-        AUTO_CONTACT_INTEGRATION_SLUG,
-      );
+      const [integration] = await Promise.all([
+        configService.getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG),
+        loadChannelState(),
+      ]);
       const normalized = normalizeAutoContactSettings(integration?.settings);
 
       setAutoContactIntegration(integration);
@@ -63,7 +96,7 @@ export default function WhatsAppApiSettingsPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadChannelState]);
 
   useEffect(() => {
     void loadSettings();
@@ -129,6 +162,7 @@ export default function WhatsAppApiSettingsPanel() {
       setAutoContactSettings(normalized);
       setEnabled(normalized.enabled);
       setToken(normalized.apiKey || "");
+      await loadChannelState();
 
       setStatusMessage({
         type: "success",
@@ -137,6 +171,42 @@ export default function WhatsAppApiSettingsPanel() {
     }
 
     setSaving(false);
+  };
+
+  const handleRefreshHealth = async () => {
+    setRefreshingHealth(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("comm-whatsapp-admin", {
+        body: { action: "refreshHealth" },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const payload = (data ?? {}) as ChannelAdminState;
+      setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
+      setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
+      setChannelPhone(payload.channel?.phone_number?.trim() || "");
+      toast.success("Saúde do canal atualizada.");
+    } catch (error) {
+      console.error("[WhatsAppApiSettings] Error refreshing health:", error);
+      toast.error("Nao foi possivel atualizar a saude do canal.");
+    } finally {
+      setRefreshingHealth(false);
+    }
+  };
+
+  const handleCopyWebhook = async () => {
+    if (!webhookUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      toast.success("Webhook copiado para a area de transferencia.");
+    } catch {
+      toast.error("Nao foi possivel copiar o webhook agora.");
+    }
   };
 
   if (!autoContactIntegration && !loading) {
@@ -216,9 +286,38 @@ export default function WhatsAppApiSettingsPanel() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-start justify-between gap-4">
+            <div className="grid grid-cols-1 gap-4">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-1">
+                    <div className="text-sm font-medium text-slate-900">
+                      Webhook do inbox novo
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Configure este endpoint na Whapi em Body mode com os eventos `messages`, `statuses` e `channel`.
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Status atual: <span className="font-semibold text-slate-700">{channelStatus || "unknown"}</span>
+                      {channelPhone ? ` · ${channelPhone}` : ""}
+                    </p>
+                  </div>
+                  <Button variant="secondary" onClick={handleRefreshHealth} loading={refreshingHealth}>
+                    {!refreshingHealth && <RefreshCcw className="w-4 h-4" />}
+                    Atualizar saude
+                  </Button>
+                </div>
+
+                <div className="mt-3 flex flex-col gap-2 md:flex-row">
+                  <Input readOnly value={webhookUrl} className="font-mono text-xs" />
+                  <Button variant="secondary" onClick={handleCopyWebhook} disabled={!webhookUrl}>
+                    <Copy className="w-4 h-4" />
+                    Copiar webhook
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
                   <div className="text-sm font-medium text-slate-900">
                     Ativar canal para automações

@@ -1,20 +1,9 @@
 import {
   getSupabaseErrorMessage,
   supabase,
-  type CommWhatsAppChannel,
   type CommWhatsAppChat,
   type CommWhatsAppMessage,
 } from './supabase';
-
-export type CommWhatsAppAdminState = {
-  channel: CommWhatsAppChannel;
-  config: {
-    enabled: boolean;
-    token: string;
-    tokenConfigured: boolean;
-    webhookUrl: string;
-  };
-};
 
 type ListChatsParams = {
   search?: string;
@@ -43,17 +32,6 @@ export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
 };
 
 export const commWhatsAppService = {
-  async getPrimaryChannel(): Promise<CommWhatsAppChannel | null> {
-    const { data, error } = await supabase.rpc('comm_whatsapp_get_channel_state');
-
-    if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar o canal do WhatsApp.'));
-    }
-
-    const rows = Array.isArray(data) ? data : [];
-    return (rows[0] as CommWhatsAppChannel | undefined) ?? null;
-  },
-
   async listChats(params: ListChatsParams = {}): Promise<CommWhatsAppChat[]> {
     const limit = Math.min(Math.max(params.limit ?? 80, 1), 200);
     let query = supabase
@@ -128,45 +106,5 @@ export const commWhatsAppService = {
       messageId: payload.messageId ?? null,
       status: payload.status ?? 'pending',
     };
-  },
-
-  async getAdminState(): Promise<CommWhatsAppAdminState> {
-    const { data, error } = await supabase.functions.invoke('comm-whatsapp-admin', {
-      body: { action: 'getConfig' },
-    });
-
-    if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a configuracao do WhatsApp.'));
-    }
-
-    return data as CommWhatsAppAdminState;
-  },
-
-  async saveAdminConfig(payload: { token: string; enabled: boolean }): Promise<CommWhatsAppAdminState> {
-    const { data, error } = await supabase.functions.invoke('comm-whatsapp-admin', {
-      body: {
-        action: 'saveConfig',
-        token: payload.token,
-        enabled: payload.enabled,
-      },
-    });
-
-    if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel salvar a configuracao do WhatsApp.'));
-    }
-
-    return data as CommWhatsAppAdminState;
-  },
-
-  async refreshHealth(): Promise<CommWhatsAppAdminState> {
-    const { data, error } = await supabase.functions.invoke('comm-whatsapp-admin', {
-      body: { action: 'refreshHealth' },
-    });
-
-    if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar a saude do canal.'));
-    }
-
-    return data as CommWhatsAppAdminState;
   },
 };

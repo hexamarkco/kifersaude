@@ -290,18 +290,6 @@ $$;
 REVOKE ALL ON FUNCTION public.comm_whatsapp_mark_chat_read(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.comm_whatsapp_mark_chat_read(uuid) TO authenticated;
 
-INSERT INTO public.integration_settings (slug, name, description, settings)
-VALUES (
-  'comm_whatsapp_inbox',
-  'Inbox WhatsApp (Whapi)',
-  'Configuracao do canal principal do inbox WhatsApp compartilhado.',
-  jsonb_build_object(
-    'enabled', false,
-    'token', ''
-  )
-)
-ON CONFLICT (slug) DO NOTHING;
-
 INSERT INTO public.comm_whatsapp_channels (slug, name, enabled)
 VALUES ('primary', 'WhatsApp principal', false)
 ON CONFLICT (slug) DO NOTHING;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { AlertTriangle, ChevronUp, Clock3, FileAudio, FileImage, FileText, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, WifiOff, X } from 'lucide-react';
+import { AlertTriangle, ChevronUp, Clock3, FileAudio, FileImage, FileText, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, Square, WifiOff, X } from 'lucide-react';
 
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
@@ -21,6 +21,7 @@ const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
+type VoiceRecordingState = 'idle' | 'requesting' | 'recording';
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -124,6 +125,26 @@ const formatFileSize = (value?: number | null) => {
   }
 
   return `${value} B`;
+};
+
+const formatDurationLabel = (seconds: number) => {
+  const mins = Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const secs = Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, '0');
+
+  return `${mins}:${secs}`;
+};
+
+const getSupportedVoiceMimeType = () => {
+  if (typeof MediaRecorder === 'undefined') {
+    return '';
+  }
+
+  const candidates = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/ogg'];
+  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) || '';
 };
 
 function useResolvedMediaUrl(message: CommWhatsAppMessage) {
@@ -264,7 +285,13 @@ export default function WhatsAppInboxScreen() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const [pendingAttachment, setPendingAttachment] = useState<{ file: File; kind: CommWhatsAppMediaSendKind } | null>(null);
+  const [pendingAttachment, setPendingAttachment] = useState<{
+    file: File;
+    kind: CommWhatsAppMediaSendKind;
+    durationSeconds?: number;
+  } | null>(null);
+  const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
+  const [voiceRecordingSeconds, setVoiceRecordingSeconds] = useState(0);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
@@ -274,6 +301,13 @@ export default function WhatsAppInboxScreen() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const voiceRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+  const voiceTimerRef = useRef<number | null>(null);
+  const voiceMimeTypeRef = useRef('');
+  const discardVoiceRecordingRef = useRef(false);
+  const cancelVoiceRecordingRef = useRef<() => void>(() => undefined);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
@@ -647,6 +681,7 @@ export default function WhatsAppInboxScreen() {
       setLoadingOlderMessages(false);
       setHasOlderMessages(false);
       setPendingAttachment(null);
+      cancelVoiceRecordingRef.current();
       messagesSignatureRef.current = '';
       return;
     }
@@ -657,12 +692,20 @@ export default function WhatsAppInboxScreen() {
     pendingScrollHeightRef.current = null;
     isNearBottomRef.current = true;
     setPendingAttachment(null);
+    cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
     setHasOlderMessages(false);
     setMessages([]);
 
     void loadMessages(getSelectedChatSnapshot(selectedChatId), 'initial');
   }, [getSelectedChatSnapshot, loadMessages, selectedChatId]);
+
+  useEffect(
+    () => () => {
+      cancelVoiceRecordingRef.current();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!pollingEnabled) {
@@ -807,6 +850,22 @@ export default function WhatsAppInboxScreen() {
     isNearBottomRef.current = isScrolledNearBottom(container);
   }, [isScrolledNearBottom]);
 
+  const clearVoiceTimer = useCallback(() => {
+    if (voiceTimerRef.current !== null) {
+      window.clearInterval(voiceTimerRef.current);
+      voiceTimerRef.current = null;
+    }
+  }, []);
+
+  const stopVoiceStream = useCallback(() => {
+    if (voiceStreamRef.current) {
+      for (const track of voiceStreamRef.current.getTracks()) {
+        track.stop();
+      }
+      voiceStreamRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     const textarea = composerTextareaRef.current;
     if (!textarea) return;
@@ -831,6 +890,10 @@ export default function WhatsAppInboxScreen() {
   }, [messageDraft, pendingAttachment, selectedChatId]);
 
   const handleOpenAttachmentPicker = () => {
+    if (voiceRecordingState !== 'idle') {
+      return;
+    }
+
     fileInputRef.current?.click();
   };
 
@@ -849,6 +912,136 @@ export default function WhatsAppInboxScreen() {
   const handleClearAttachment = () => {
     setPendingAttachment(null);
   };
+
+  const finalizeVoiceRecording = useCallback(() => {
+    const chunks = [...voiceChunksRef.current];
+    voiceChunksRef.current = [];
+
+    if (discardVoiceRecordingRef.current) {
+      discardVoiceRecordingRef.current = false;
+      setPendingAttachment(null);
+      return;
+    }
+
+    if (chunks.length === 0) {
+      return;
+    }
+
+    const mimeType = voiceMimeTypeRef.current || 'audio/webm';
+    const blob = new Blob(chunks, { type: mimeType });
+    const extension = mimeType.includes('ogg') ? 'ogg' : 'webm';
+    const file = new File([blob], `nota-voz-${Date.now()}.${extension}`, { type: mimeType });
+
+    setPendingAttachment({
+      file,
+      kind: 'voice',
+      durationSeconds: voiceRecordingSeconds,
+    });
+  }, [voiceRecordingSeconds]);
+
+  const handleStopVoiceRecording = useCallback(() => {
+    if (voiceRecordingState !== 'recording') {
+      return;
+    }
+
+    setVoiceRecordingState('idle');
+    clearVoiceTimer();
+    voiceRecorderRef.current?.stop();
+  }, [clearVoiceTimer, voiceRecordingState]);
+
+  const handleCancelVoiceRecording = useCallback(() => {
+    if (voiceRecordingState === 'idle' && !voiceRecorderRef.current) {
+      return;
+    }
+
+    discardVoiceRecordingRef.current = true;
+    setVoiceRecordingState('idle');
+    setVoiceRecordingSeconds(0);
+    clearVoiceTimer();
+
+    if (voiceRecorderRef.current && voiceRecorderRef.current.state !== 'inactive') {
+      voiceRecorderRef.current.stop();
+    } else {
+      voiceChunksRef.current = [];
+      stopVoiceStream();
+    }
+  }, [clearVoiceTimer, stopVoiceStream, voiceRecordingState]);
+
+  const handleStartVoiceRecording = useCallback(async () => {
+    if (voiceRecordingState !== 'idle') {
+      return;
+    }
+
+    if (sendDisabledReason) {
+      toast.error(sendDisabledReason);
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      toast.error('Seu navegador nao suporta gravacao de audio neste inbox.');
+      return;
+    }
+
+    try {
+      setVoiceRecordingState('requesting');
+      setPendingAttachment(null);
+      setVoiceRecordingSeconds(0);
+      discardVoiceRecordingRef.current = false;
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const supportedMimeType = getSupportedVoiceMimeType();
+      const recorder = supportedMimeType
+        ? new MediaRecorder(stream, { mimeType: supportedMimeType })
+        : new MediaRecorder(stream);
+
+      voiceMimeTypeRef.current = supportedMimeType || recorder.mimeType || 'audio/webm';
+      voiceStreamRef.current = stream;
+      voiceRecorderRef.current = recorder;
+      voiceChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          voiceChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        stopVoiceStream();
+        voiceRecorderRef.current = null;
+        clearVoiceTimer();
+        finalizeVoiceRecording();
+      };
+
+      recorder.onerror = () => {
+        stopVoiceStream();
+        voiceRecorderRef.current = null;
+        clearVoiceTimer();
+        setVoiceRecordingState('idle');
+        setVoiceRecordingSeconds(0);
+        discardVoiceRecordingRef.current = true;
+        voiceChunksRef.current = [];
+        toast.error('Nao foi possivel continuar a gravacao de audio.');
+      };
+
+      recorder.start(250);
+      setVoiceRecordingState('recording');
+      voiceTimerRef.current = window.setInterval(() => {
+        setVoiceRecordingSeconds((current) => current + 1);
+      }, 1000);
+    } catch (error) {
+      stopVoiceStream();
+      voiceRecorderRef.current = null;
+      clearVoiceTimer();
+      setVoiceRecordingState('idle');
+      setVoiceRecordingSeconds(0);
+
+      const message =
+        error instanceof DOMException && error.name === 'NotAllowedError'
+          ? 'Permita o microfone no navegador para gravar nota de voz.'
+          : 'Nao foi possivel iniciar a gravacao de audio.';
+      toast.error(message);
+    }
+  }, [clearVoiceTimer, finalizeVoiceRecording, sendDisabledReason, stopVoiceStream, voiceRecordingState]);
 
   const handleSendMessage = async () => {
     if (!selectedChat) return;

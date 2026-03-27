@@ -17,6 +17,7 @@ const ROUTE_TAB_MAP: Record<string, string> = {
   'contratos': 'contracts',
   'comissoes': 'financeiro-comissoes',
   'agenda': 'agenda',
+  'inbox': 'whatsapp-inbox',
   'tarefas': 'agenda',
   'lembretes': 'agenda',
   'blog': 'blog',
@@ -29,6 +30,7 @@ const TAB_ROUTE_MAP: Record<string, string> = {
   'contracts': 'contratos',
   'financeiro-comissoes': 'comissoes',
   'agenda': 'agenda',
+  'whatsapp-inbox': 'inbox',
   'blog': 'blog',
   'config': 'config',
 };
@@ -55,6 +57,7 @@ export default function PainelWrapper() {
       ['contracts', getRoleModulePermission(role, 'contracts').can_view],
       ['financeiro-comissoes', getRoleModulePermission(role, 'financeiro-comissoes').can_view],
       ['agenda', getRoleModulePermission(role, 'agenda').can_view],
+      ['whatsapp-inbox', getRoleModulePermission(role, 'whatsapp-inbox').can_view],
       ['blog', getRoleModulePermission(role, 'blog').can_view],
       [
         'config',

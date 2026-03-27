@@ -12,6 +12,7 @@ export const ACCESS_MODULES: AccessModuleDefinition[] = [
   { id: 'reminders', label: 'Lembretes', description: 'Agenda e lembretes automáticos para acompanhamento.', group: 'workspace' },
   { id: 'financeiro-agenda', label: 'Financeiro - Tarefas', description: 'Acesso às tarefas do módulo financeiro.', group: 'workspace' },
   { id: 'financeiro-comissoes', label: 'Financeiro - Comissões', description: 'Acesso ao acompanhamento de comissões.', group: 'workspace' },
+  { id: 'whatsapp-inbox', label: 'Comunicação - WhatsApp Inbox', description: 'Acesso ao inbox compartilhado do WhatsApp via Whapi.', group: 'workspace' },
   { id: 'blog', label: 'Blog', description: 'Gestão de conteúdo do blog e SEO.', group: 'workspace' },
   { id: 'config-system', label: 'Configurações - Sistema', description: 'Preferências do sistema, operadoras, leads e contratos.', group: 'config' },
   { id: 'config-access', label: 'Configurações - Perfis e Acessos', description: 'Criação de perfis e definição detalhada de acessos.', group: 'config' },

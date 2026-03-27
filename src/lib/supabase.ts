@@ -472,6 +472,63 @@ export type ProfilePermission = {
   updated_at: string;
 };
 
+export type CommWhatsAppChannel = {
+  id: string;
+  slug: string;
+  name: string;
+  enabled: boolean;
+  whapi_channel_id?: string | null;
+  connection_status: string;
+  health_status: string;
+  phone_number?: string | null;
+  connected_user_name?: string | null;
+  last_health_check_at?: string | null;
+  last_webhook_received_at?: string | null;
+  last_error?: string | null;
+  health_snapshot?: Record<string, unknown> | null;
+  limits_snapshot?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CommWhatsAppChat = {
+  id: string;
+  channel_id: string;
+  external_chat_id: string;
+  phone_number: string;
+  phone_digits: string;
+  display_name: string;
+  push_name?: string | null;
+  last_message_text?: string | null;
+  last_message_direction: 'inbound' | 'outbound' | 'system';
+  last_message_at?: string | null;
+  unread_count: number;
+  status: 'open' | 'pending' | 'closed';
+  last_read_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CommWhatsAppMessage = {
+  id: string;
+  chat_id: string;
+  channel_id: string;
+  external_message_id?: string | null;
+  direction: 'inbound' | 'outbound' | 'system';
+  message_type: string;
+  delivery_status: string;
+  text_content?: string | null;
+  message_at: string;
+  created_by?: string | null;
+  source?: string | null;
+  sender_name?: string | null;
+  sender_phone?: string | null;
+  status_updated_at?: string | null;
+  error_message?: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 export type WhatsAppChat = {
   id: string;
   name: string | null;

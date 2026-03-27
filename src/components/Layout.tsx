@@ -141,6 +141,7 @@ export default function Layout({
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
+    { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle },
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));
 

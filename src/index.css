@@ -3858,6 +3858,11 @@
 }
 
 .painel-theme .whatsapp-inbox-composer-input {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  margin: 0;
+  min-height: 1.5rem;
   color: var(--panel-input-text);
 }
 

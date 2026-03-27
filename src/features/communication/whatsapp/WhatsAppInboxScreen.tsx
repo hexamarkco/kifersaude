@@ -50,6 +50,7 @@ export default function WhatsAppInboxScreen() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
@@ -142,7 +143,11 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    setLoadingMessages(true);
+    const shouldShowBlockingLoader = reason === 'initial' && messagesSignatureRef.current === '';
+
+    if (shouldShowBlockingLoader) {
+      setLoadingMessages(true);
+    }
 
     try {
       let data = await commWhatsAppService.listMessages(chat.id);
@@ -169,7 +174,9 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as mensagens da conversa.');
     } finally {
-      setLoadingMessages(false);
+      if (shouldShowBlockingLoader) {
+        setLoadingMessages(false);
+      }
     }
   }, [buildMessagesSignature, loadChats]);
 
@@ -272,9 +279,11 @@ export default function WhatsAppInboxScreen() {
     const minHeight = lineHeight + paddingTop + paddingBottom + borderTop + borderBottom;
     const maxHeight = lineHeight * 5 + paddingTop + paddingBottom + borderTop + borderBottom;
     const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+    const expanded = nextHeight > minHeight + 2;
 
     textarea.style.height = `${nextHeight}px`;
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    setIsComposerExpanded(expanded);
   }, [messageDraft, selectedChatId]);
 
   const handleComposerAuxClick = (feature: 'attach' | 'emoji' | 'audio') => {
@@ -420,7 +429,7 @@ export default function WhatsAppInboxScreen() {
                 onScroll={handleMessagesScroll}
                 className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5"
               >
-                {loadingMessages ? (
+                {loadingMessages && messages.length === 0 ? (
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Carregando mensagens...
@@ -445,9 +454,9 @@ export default function WhatsAppInboxScreen() {
               </div>
 
               <div className="whatsapp-inbox-composer-area border-t p-4 sm:p-5">
-                <div className="whatsapp-inbox-composer rounded-[30px] border px-3 py-2.5">
-                  <div className="flex items-end gap-1.5 sm:gap-2">
-                    <div className="flex shrink-0 items-end gap-0.5">
+                <div className={`whatsapp-inbox-composer rounded-[30px] border px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}>
+                  <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
+                    <div className={`flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       <button
                         type="button"
                         onClick={() => handleComposerAuxClick('attach')}
@@ -466,7 +475,7 @@ export default function WhatsAppInboxScreen() {
                       </button>
                     </div>
 
-                    <div className="min-w-0 flex-1 self-stretch py-2">
+                    <div className={`min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
                       <textarea
                         ref={composerTextareaRef}
                         rows={1}
@@ -479,7 +488,7 @@ export default function WhatsAppInboxScreen() {
                       />
                     </div>
 
-                    <div className="flex shrink-0 items-end pb-0.5">
+                    <div className={`flex shrink-0 ${isComposerExpanded ? 'items-end pb-0.5' : 'items-center'}`}>
                       <button
                         type="button"
                         onClick={handleComposerSubmit}

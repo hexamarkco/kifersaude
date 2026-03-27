@@ -34,6 +34,7 @@ type SendMessageBody = {
   text?: string;
   type?: string;
   caption?: string;
+  durationSeconds?: number;
 };
 
 type MediaSendKind = 'image' | 'document' | 'audio' | 'voice';
@@ -132,6 +133,7 @@ Deno.serve(async (req: Request) => {
     let text = '';
     let mediaKind: MediaSendKind | null = null;
     let mediaFile: File | null = null;
+    let mediaDurationSeconds: number | null = null;
 
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData();
@@ -148,6 +150,8 @@ Deno.serve(async (req: Request) => {
 
       mediaFile = uploaded;
       mediaKind = normalizeMediaKind(toTrimmedString(form.get('type')), uploaded.type);
+      const durationRaw = Number(form.get('durationSeconds'));
+      mediaDurationSeconds = Number.isFinite(durationRaw) ? Math.max(0, Math.round(durationRaw)) : null;
     } else {
       const body = (await req.json().catch(() => ({}))) as SendMessageBody;
       chatId = normalizeWhapiChatId(body.chatId);
@@ -222,7 +226,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           to: chatId,
           media: uploadedMediaId,
-          caption: text || undefined,
+          caption: mediaKind === 'voice' ? undefined : text || undefined,
         }),
       });
     } else {
@@ -300,8 +304,8 @@ Deno.serve(async (req: Request) => {
       mediaMimeType: mediaFile?.type || null,
       mediaFileName: mediaFile?.name || null,
       mediaSizeBytes: mediaFile ? mediaFile.size : null,
-      mediaDurationSeconds: null,
-      mediaCaption: text || null,
+      mediaDurationSeconds: mediaDurationSeconds,
+      mediaCaption: mediaKind === 'voice' ? null : text || null,
       metadata: {
         provider: 'whapi',
       },

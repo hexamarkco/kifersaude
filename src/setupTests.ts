@@ -24,3 +24,28 @@ if (!navigator.mediaDevices) {
 } else if (!navigator.mediaDevices.getUserMedia) {
   navigator.mediaDevices.getUserMedia = vi.fn() as unknown as typeof navigator.mediaDevices.getUserMedia;
 }
+
+if (!(globalThis as typeof globalThis & { MediaRecorder?: unknown }).MediaRecorder) {
+  class MediaRecorderMock {
+    static isTypeSupported = vi.fn(() => true);
+    mimeType = 'audio/webm;codecs=opus';
+    state: 'inactive' | 'recording' | 'paused' = 'inactive';
+    ondataavailable: ((event: BlobEvent) => void) | null = null;
+    onstop: (() => void) | null = null;
+    onerror: ((event: Event) => void) | null = null;
+
+    start() {
+      this.state = 'recording';
+    }
+
+    stop() {
+      this.state = 'inactive';
+      this.onstop?.();
+    }
+  }
+
+  Object.defineProperty(globalThis, 'MediaRecorder', {
+    value: MediaRecorderMock,
+    configurable: true,
+  });
+}

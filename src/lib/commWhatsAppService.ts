@@ -197,6 +197,7 @@ export const commWhatsAppService = {
     kind: CommWhatsAppMediaSendKind;
     file: File;
     caption?: string;
+    durationSeconds?: number;
   }): Promise<{ messageId: string | null; status: string }> {
     const {
       data: { session },
@@ -215,6 +216,9 @@ export const commWhatsAppService = {
     form.append('chatId', params.chatId);
     form.append('type', params.kind);
     form.append('caption', params.caption?.trim() || '');
+    if (typeof params.durationSeconds === 'number' && Number.isFinite(params.durationSeconds)) {
+      form.append('durationSeconds', String(Math.max(0, Math.round(params.durationSeconds))));
+    }
     form.append('file', params.file, params.file.name);
 
     const response = await fetch(`${supabaseFunctionsUrl}/comm-whatsapp-send`, {

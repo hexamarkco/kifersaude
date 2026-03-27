@@ -198,6 +198,7 @@ export const commWhatsAppService = {
     file: File;
     caption?: string;
     durationSeconds?: number;
+    onUploadProgress?: (progress: number | null) => void;
   }): Promise<{ messageId: string | null; status: string }> {
     const {
       data: { session },
@@ -221,28 +222,64 @@ export const commWhatsAppService = {
     }
     form.append('file', params.file, params.file.name);
 
-    const response = await fetch(`${supabaseFunctionsUrl}/comm-whatsapp-send`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: form,
+    return await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${supabaseFunctionsUrl}/comm-whatsapp-send`);
+      xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
+      xhr.responseType = 'text';
+      xhr.timeout = 120000;
+
+      xhr.upload.onprogress = (event) => {
+        if (!params.onUploadProgress) {
+          return;
+        }
+
+        if (event.lengthComputable && event.total > 0) {
+          params.onUploadProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+        } else {
+          params.onUploadProgress(null);
+        }
+      };
+
+      xhr.onload = () => {
+        params.onUploadProgress?.(100);
+
+        let payload: Record<string, unknown> = {};
+        try {
+          payload = xhr.responseText ? (JSON.parse(xhr.responseText) as Record<string, unknown>) : {};
+        } catch {
+          payload = {};
+        }
+
+        if (xhr.status < 200 || xhr.status >= 300) {
+          const message =
+            typeof payload.error === 'string' && payload.error.trim()
+              ? payload.error.trim()
+              : 'Nao foi possivel enviar a midia no WhatsApp.';
+          reject(new Error(message));
+          return;
+        }
+
+        resolve({
+          messageId: typeof payload.messageId === 'string' ? payload.messageId : null,
+          status: typeof payload.status === 'string' ? payload.status : 'pending',
+        });
+      };
+
+      xhr.onerror = () => {
+        reject(new Error('Falha de rede ao enviar a midia no WhatsApp.'));
+      };
+
+      xhr.ontimeout = () => {
+        reject(new Error('Tempo limite excedido ao enviar a midia no WhatsApp.'));
+      };
+
+      xhr.onabort = () => {
+        reject(new Error('Envio de midia cancelado.'));
+      };
+
+      xhr.send(form);
     });
-
-    const payload = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      const message =
-        typeof payload?.error === 'string' && payload.error.trim()
-          ? payload.error.trim()
-          : 'Nao foi possivel enviar a midia no WhatsApp.';
-      throw new Error(message);
-    }
-
-    return {
-      messageId: typeof payload?.messageId === 'string' ? payload.messageId : null,
-      status: typeof payload?.status === 'string' ? payload.status : 'pending',
-    };
   },
 
   async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {

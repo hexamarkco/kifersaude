@@ -22,6 +22,13 @@ const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
 type VoiceRecordingState = 'idle' | 'requesting' | 'recording';
+type PendingAttachment = {
+  file: File;
+  kind: CommWhatsAppMediaSendKind;
+  durationSeconds?: number;
+  previewUrl?: string | null;
+  waveform?: number[];
+};
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -69,6 +76,8 @@ const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) =>
 
   return 'message-bubble message-bubble-inbound mr-auto';
 };
+
+const DEFAULT_WAVEFORM = [0.24, 0.36, 0.52, 0.72, 0.46, 0.62, 0.28, 0.54, 0.4, 0.66, 0.32, 0.58, 0.42, 0.74, 0.38, 0.5, 0.3, 0.64, 0.44, 0.56];
 
 const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage) => {
   const timeDiff = new Date(a.message_at).getTime() - new Date(b.message_at).getTime();
@@ -146,6 +155,49 @@ const getSupportedVoiceMimeType = () => {
   const candidates = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/ogg'];
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) || '';
 };
+
+const buildWaveformBars = (input: Uint8Array, barCount: number = 28) => {
+  if (!input.length) return DEFAULT_WAVEFORM;
+
+  const chunkSize = Math.max(1, Math.floor(input.length / barCount));
+  const bars: number[] = [];
+
+  for (let index = 0; index < barCount; index += 1) {
+    const start = index * chunkSize;
+    const end = Math.min(input.length, start + chunkSize);
+    let peak = 0;
+
+    for (let offset = start; offset < end; offset += 1) {
+      const amplitude = Math.abs(input[offset] - 128) / 128;
+      if (amplitude > peak) {
+        peak = amplitude;
+      }
+    }
+
+    bars.push(Math.max(0.14, Math.min(1, peak * 1.8 + 0.12)));
+  }
+
+  return bars;
+};
+
+function WaveformBars({ bars, active = false }: { bars?: number[]; active?: boolean }) {
+  const resolvedBars = bars && bars.length > 0 ? bars : DEFAULT_WAVEFORM;
+
+  return (
+    <div className={`whatsapp-inbox-waveform ${active ? 'is-active' : ''}`} aria-hidden="true">
+      {resolvedBars.map((bar, index) => (
+        <span
+          key={`${index}-${bar}`}
+          className="whatsapp-inbox-waveform-bar"
+          style={{
+            height: `${Math.max(16, Math.round(bar * 34))}px`,
+            animationDelay: `${index * 24}ms`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 function useResolvedMediaUrl(message: CommWhatsAppMessage) {
   const [mediaUrl, setMediaUrl] = useState<string | null>(message.media_url ?? null);
@@ -285,13 +337,11 @@ export default function WhatsAppInboxScreen() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const [pendingAttachment, setPendingAttachment] = useState<{
-    file: File;
-    kind: CommWhatsAppMediaSendKind;
-    durationSeconds?: number;
-  } | null>(null);
+  const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
   const [voiceRecordingSeconds, setVoiceRecordingSeconds] = useState(0);
+  const [voiceRecordingWaveform, setVoiceRecordingWaveform] = useState<number[]>(DEFAULT_WAVEFORM);
+  const [mediaUploadProgress, setMediaUploadProgress] = useState<number | null>(null);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
@@ -305,9 +355,16 @@ export default function WhatsAppInboxScreen() {
   const voiceChunksRef = useRef<Blob[]>([]);
   const voiceStreamRef = useRef<MediaStream | null>(null);
   const voiceTimerRef = useRef<number | null>(null);
+  const voiceWaveformTimerRef = useRef<number | null>(null);
   const voiceMimeTypeRef = useRef('');
   const discardVoiceRecordingRef = useRef(false);
   const cancelVoiceRecordingRef = useRef<() => void>(() => undefined);
+  const voiceRecordingSecondsRef = useRef(0);
+  const voiceAudioContextRef = useRef<AudioContext | null>(null);
+  const voiceAnalyserRef = useRef<AnalyserNode | null>(null);
+  const voiceSourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const voiceWaveformDataRef = useRef<Uint8Array | null>(null);
+  const voiceWaveformSnapshotRef = useRef<number[]>(DEFAULT_WAVEFORM);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
@@ -486,6 +543,15 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     latestMessagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    const previewUrl = pendingAttachment?.previewUrl;
+    return () => {
+      if (previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [pendingAttachment?.previewUrl]);
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
@@ -857,6 +923,28 @@ export default function WhatsAppInboxScreen() {
     }
   }, []);
 
+  const clearVoiceWaveformTimer = useCallback(() => {
+    if (voiceWaveformTimerRef.current !== null) {
+      window.clearInterval(voiceWaveformTimerRef.current);
+      voiceWaveformTimerRef.current = null;
+    }
+  }, []);
+
+  const teardownVoiceAnalyser = useCallback(() => {
+    clearVoiceWaveformTimer();
+
+    voiceSourceNodeRef.current?.disconnect();
+    voiceSourceNodeRef.current = null;
+    voiceAnalyserRef.current?.disconnect();
+    voiceAnalyserRef.current = null;
+    voiceWaveformDataRef.current = null;
+
+    if (voiceAudioContextRef.current) {
+      void voiceAudioContextRef.current.close().catch(() => undefined);
+      voiceAudioContextRef.current = null;
+    }
+  }, [clearVoiceWaveformTimer]);
+
   const stopVoiceStream = useCallback(() => {
     if (voiceStreamRef.current) {
       for (const track of voiceStreamRef.current.getTracks()) {
@@ -864,7 +952,8 @@ export default function WhatsAppInboxScreen() {
       }
       voiceStreamRef.current = null;
     }
-  }, []);
+    teardownVoiceAnalyser();
+  }, [teardownVoiceAnalyser]);
 
   useEffect(() => {
     const textarea = composerTextareaRef.current;
@@ -909,6 +998,7 @@ export default function WhatsAppInboxScreen() {
     setPendingAttachment({
       file: nextFile,
       kind: inferAttachmentKind(nextFile),
+      previewUrl: nextFile.type.startsWith('image/') ? URL.createObjectURL(nextFile) : null,
     });
 
     event.target.value = '';
@@ -916,6 +1006,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleClearAttachment = () => {
     setPendingAttachment(null);
+    setMediaUploadProgress(null);
   };
 
   const finalizeVoiceRecording = useCallback(() => {
@@ -926,11 +1017,13 @@ export default function WhatsAppInboxScreen() {
       discardVoiceRecordingRef.current = false;
       setPendingAttachment(null);
       setVoiceRecordingSeconds(0);
+      voiceRecordingSecondsRef.current = 0;
       return;
     }
 
     if (chunks.length === 0) {
       setVoiceRecordingSeconds(0);
+      voiceRecordingSecondsRef.current = 0;
       return;
     }
 
@@ -938,15 +1031,20 @@ export default function WhatsAppInboxScreen() {
     const blob = new Blob(chunks, { type: mimeType });
     const extension = mimeType.includes('ogg') ? 'ogg' : 'webm';
     const file = new File([blob], `nota-voz-${Date.now()}.${extension}`, { type: mimeType });
-    const durationSeconds = voiceRecordingSeconds;
+    const durationSeconds = voiceRecordingSecondsRef.current;
+    const previewUrl = URL.createObjectURL(blob);
 
     setPendingAttachment({
       file,
       kind: 'voice',
       durationSeconds,
+      previewUrl,
+      waveform: voiceWaveformSnapshotRef.current,
     });
     setVoiceRecordingSeconds(0);
-  }, [voiceRecordingSeconds]);
+    voiceRecordingSecondsRef.current = 0;
+    setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
+  }, []);
 
   const handleStopVoiceRecording = useCallback(() => {
     if (voiceRecordingState !== 'recording') {
@@ -966,6 +1064,8 @@ export default function WhatsAppInboxScreen() {
     discardVoiceRecordingRef.current = true;
     setVoiceRecordingState('idle');
     setVoiceRecordingSeconds(0);
+    voiceRecordingSecondsRef.current = 0;
+    setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
     clearVoiceTimer();
 
     if (voiceRecorderRef.current && voiceRecorderRef.current.state !== 'inactive') {
@@ -995,6 +1095,9 @@ export default function WhatsAppInboxScreen() {
       setVoiceRecordingState('requesting');
       setPendingAttachment(null);
       setVoiceRecordingSeconds(0);
+      voiceRecordingSecondsRef.current = 0;
+      setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
+      setMediaUploadProgress(null);
       discardVoiceRecordingRef.current = false;
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1010,6 +1113,34 @@ export default function WhatsAppInboxScreen() {
       const recorder = supportedMimeType
         ? new MediaRecorder(stream, { mimeType: supportedMimeType })
         : new MediaRecorder(stream);
+
+      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextCtor) {
+        const audioContext = new AudioContextCtor();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 128;
+        analyser.smoothingTimeConstant = 0.78;
+        const sourceNode = audioContext.createMediaStreamSource(stream);
+        sourceNode.connect(analyser);
+
+        voiceAudioContextRef.current = audioContext;
+        voiceAnalyserRef.current = analyser;
+        voiceSourceNodeRef.current = sourceNode;
+        voiceWaveformDataRef.current = new Uint8Array(analyser.frequencyBinCount);
+        setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
+        voiceWaveformSnapshotRef.current = DEFAULT_WAVEFORM;
+
+        voiceWaveformTimerRef.current = window.setInterval(() => {
+          if (!voiceAnalyserRef.current || !voiceWaveformDataRef.current) {
+            return;
+          }
+
+          voiceAnalyserRef.current.getByteTimeDomainData(voiceWaveformDataRef.current);
+          const nextBars = buildWaveformBars(voiceWaveformDataRef.current);
+          voiceWaveformSnapshotRef.current = nextBars;
+          setVoiceRecordingWaveform(nextBars);
+        }, 120);
+      }
 
       voiceMimeTypeRef.current = supportedMimeType || recorder.mimeType || 'audio/webm';
       voiceStreamRef.current = stream;
@@ -1043,7 +1174,11 @@ export default function WhatsAppInboxScreen() {
       recorder.start(250);
       setVoiceRecordingState('recording');
       voiceTimerRef.current = window.setInterval(() => {
-        setVoiceRecordingSeconds((current) => current + 1);
+        setVoiceRecordingSeconds((current) => {
+          const next = current + 1;
+          voiceRecordingSecondsRef.current = next;
+          return next;
+        });
       }, 1000);
     } catch (error) {
       stopVoiceStream();
@@ -1051,6 +1186,8 @@ export default function WhatsAppInboxScreen() {
       clearVoiceTimer();
       setVoiceRecordingState('idle');
       setVoiceRecordingSeconds(0);
+      voiceRecordingSecondsRef.current = 0;
+      setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
 
       const message =
         error instanceof DOMException && error.name === 'NotAllowedError'
@@ -1079,12 +1216,15 @@ export default function WhatsAppInboxScreen() {
       if (pendingAttachment) {
         const caption = pendingAttachment.kind === 'voice' ? undefined : text;
 
+        setMediaUploadProgress(0);
+
         await commWhatsAppService.sendMediaMessage({
           chatId: selectedChat.external_chat_id,
           kind: pendingAttachment.kind,
           file: pendingAttachment.file,
           caption,
           durationSeconds: pendingAttachment.durationSeconds,
+          onUploadProgress: setMediaUploadProgress,
         });
         setPendingAttachment(null);
       } else {
@@ -1099,6 +1239,7 @@ export default function WhatsAppInboxScreen() {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem.');
     } finally {
       setSending(false);
+      setMediaUploadProgress(null);
     }
   };
 
@@ -1291,7 +1432,8 @@ export default function WhatsAppInboxScreen() {
                   />
 
                   {voiceRecordingState === 'recording' && (
-                    <div className="mb-3 flex items-center gap-3 rounded-2xl border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-rose-100 dark:text-rose-100">
+                    <div className="whatsapp-inbox-recorder-card mb-3 rounded-2xl border px-3 py-3">
+                      <div className="flex items-center gap-3">
                       <span className="relative flex h-3 w-3 shrink-0">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
                         <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-500" />
@@ -1308,34 +1450,82 @@ export default function WhatsAppInboxScreen() {
                       >
                         <X className="h-4 w-4" />
                       </button>
+                      </div>
+                      <div className="mt-3">
+                        <WaveformBars bars={voiceRecordingWaveform} active />
+                      </div>
                     </div>
                   )}
 
                   {pendingAttachment && (
-                    <div className="mb-3 flex items-center gap-3 rounded-2xl border border-current/10 bg-black/5 px-3 py-2">
-                      {pendingAttachment.kind === 'image' ? (
-                        <FileImage className="h-4 w-4 shrink-0 opacity-80" />
-                      ) : pendingAttachment.kind === 'audio' ? (
-                        <FileAudio className="h-4 w-4 shrink-0 opacity-80" />
-                      ) : (
-                        <FileText className="h-4 w-4 shrink-0 opacity-80" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{pendingAttachment.file.name}</p>
-                        <p className="text-xs opacity-75">
-                          {pendingAttachment.kind === 'voice' && pendingAttachment.durationSeconds != null
-                            ? `Nota de voz - ${formatDurationLabel(pendingAttachment.durationSeconds)}`
-                            : formatFileSize(pendingAttachment.file.size)}
-                        </p>
+                    <div className="whatsapp-inbox-attachment-card mb-3 rounded-2xl border px-3 py-3">
+                      <div className="flex items-start gap-3">
+                        {pendingAttachment.kind === 'image' ? (
+                          <FileImage className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                        ) : pendingAttachment.kind === 'audio' || pendingAttachment.kind === 'voice' ? (
+                          <FileAudio className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                        ) : (
+                          <FileText className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                        )}
+                        <div className="min-w-0 flex-1 space-y-3">
+                          <div>
+                            <p className="truncate text-sm font-medium">{pendingAttachment.kind === 'voice' ? 'Nota de voz pronta para envio' : pendingAttachment.file.name}</p>
+                            <p className="text-xs opacity-75">
+                              {pendingAttachment.kind === 'voice' && pendingAttachment.durationSeconds != null
+                                ? `${formatDurationLabel(pendingAttachment.durationSeconds)} • ${formatFileSize(pendingAttachment.file.size)}`
+                                : formatFileSize(pendingAttachment.file.size)}
+                            </p>
+                          </div>
+
+                          {pendingAttachment.kind === 'voice' && pendingAttachment.waveform ? (
+                            <WaveformBars bars={pendingAttachment.waveform} />
+                          ) : null}
+
+                          {pendingAttachment.kind === 'voice' && pendingAttachment.previewUrl ? (
+                            <audio controls preload="metadata" className="w-full max-w-[320px]">
+                              <source src={pendingAttachment.previewUrl} type={pendingAttachment.file.type || undefined} />
+                            </audio>
+                          ) : pendingAttachment.kind === 'image' && pendingAttachment.previewUrl ? (
+                            <img src={pendingAttachment.previewUrl} alt={pendingAttachment.file.name} className="max-h-[180px] rounded-2xl object-cover" />
+                          ) : null}
+
+                          {typeof mediaUploadProgress === 'number' && sending ? (
+                            <div className="space-y-1.5">
+                              <div className="h-1.5 overflow-hidden rounded-full bg-black/10">
+                                <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress}%` }} />
+                              </div>
+                              <p className="text-xs opacity-75">Enviando anexo... {mediaUploadProgress}%</p>
+                            </div>
+                          ) : null}
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            {pendingAttachment.kind === 'voice' ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleClearAttachment();
+                                  void handleStartVoiceRecording();
+                                }}
+                                disabled={sending}
+                                className="whatsapp-inbox-attachment-action inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition"
+                              >
+                                <Mic className="h-3.5 w-3.5" />
+                                Regravar
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={handleClearAttachment}
+                              disabled={sending}
+                              className="whatsapp-inbox-attachment-action inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition"
+                              aria-label="Remover anexo"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Remover
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleClearAttachment}
-                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-full transition"
-                        aria-label="Remover anexo"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
                     </div>
                   )}
 

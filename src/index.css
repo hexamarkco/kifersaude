@@ -3598,6 +3598,104 @@
     0 12px 22px -18px rgba(42, 24, 12, 0.12);
 }
 
+.painel-theme .whatsapp-inbox-status-banner {
+  box-shadow: 0 16px 28px -24px rgba(42, 24, 12, 0.22);
+}
+
+.painel-theme .whatsapp-inbox-status-banner-info {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 62%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 62%, var(--panel-surface) 38%);
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme .whatsapp-inbox-status-banner-warning {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 76%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--panel-accent-soft) 84%, var(--panel-surface) 16%) 0%,
+    color-mix(in srgb, var(--panel-accent-warm) 68%, var(--panel-surface) 32%) 100%
+  );
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme .whatsapp-inbox-status-banner-danger {
+  border-color: color-mix(in srgb, var(--panel-accent-red-border) 82%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--panel-accent-red-bg) 84%, var(--panel-surface) 16%) 0%,
+    color-mix(in srgb, var(--panel-accent-red-bg-strong) 66%, var(--panel-surface) 34%) 100%
+  );
+  color: var(--panel-accent-red-text);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-status-banner {
+  box-shadow: 0 20px 34px -28px rgba(0, 0, 0, 0.52);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-status-banner-info {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 66%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 74%, var(--panel-surface) 26%);
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-status-banner-warning {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 76%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--panel-accent-soft) 80%, var(--panel-surface) 20%) 0%,
+    color-mix(in srgb, var(--panel-accent-warm) 58%, var(--panel-surface-soft) 42%) 100%
+  );
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-status-banner-danger {
+  border-color: color-mix(in srgb, var(--panel-accent-red-border) 76%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--panel-accent-red-bg) 82%, var(--panel-surface) 18%) 0%,
+    color-mix(in srgb, var(--panel-accent-red-bg-strong) 58%, var(--panel-surface-soft) 42%) 100%
+  );
+  color: #ffd5cf;
+}
+
+.painel-theme .whatsapp-inbox-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.painel-theme .whatsapp-inbox-status-pill-success {
+  border-color: color-mix(in srgb, var(--panel-accent-green-border) 82%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-green-bg) 82%, var(--panel-surface) 18%);
+  color: var(--panel-accent-green-text);
+}
+
+.painel-theme .whatsapp-inbox-status-pill-warning {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 72%, var(--panel-surface) 28%);
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-status-pill-success {
+  border-color: color-mix(in srgb, var(--panel-accent-emerald-border) 78%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-emerald-bg) 86%, var(--panel-surface) 14%);
+  color: var(--panel-accent-emerald-text);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-status-pill-warning {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 74%, var(--panel-surface) 26%);
+  color: var(--panel-accent-ink-strong);
+}
+
 .painel-theme.theme-dark .whatsapp-inbox-panel {
   background: linear-gradient(
     180deg,
@@ -3875,10 +3973,20 @@
   color: var(--panel-text-muted);
 }
 
+.painel-theme .whatsapp-inbox-composer-icon:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .painel-theme .whatsapp-inbox-composer-icon:hover,
 .painel-theme .whatsapp-inbox-composer-action:hover {
   background: color-mix(in srgb, var(--panel-accent-soft) 46%, transparent);
   color: var(--panel-text);
+}
+
+.painel-theme .whatsapp-inbox-composer-icon:disabled:hover {
+  background: transparent;
+  color: var(--panel-text-muted);
 }
 
 .painel-theme .whatsapp-inbox-composer-action.is-active {
@@ -3894,6 +4002,11 @@
 
 .painel-theme.theme-dark .whatsapp-inbox-composer-icon,
 .painel-theme.theme-dark .whatsapp-inbox-composer-action {
+  color: var(--panel-text-soft);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-composer-icon:disabled:hover {
+  background: transparent;
   color: var(--panel-text-soft);
 }
 

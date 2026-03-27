@@ -1,9 +1,16 @@
 import {
   getSupabaseErrorMessage,
   supabase,
+  type CommWhatsAppChannel,
   type CommWhatsAppChat,
   type CommWhatsAppMessage,
 } from './supabase';
+
+export type CommWhatsAppOperationalState = {
+  channel: CommWhatsAppChannel | null;
+  configEnabled: boolean;
+  tokenConfigured: boolean;
+};
 
 type ListChatsParams = {
   search?: string;
@@ -32,6 +39,47 @@ export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
 };
 
 export const commWhatsAppService = {
+  async getOperationalState(): Promise<CommWhatsAppOperationalState | null> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_get_operational_state');
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar o status operacional do WhatsApp.'));
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+    const row = (rows[0] ?? null) as (CommWhatsAppChannel & {
+      config_enabled?: boolean | null;
+      token_configured?: boolean | null;
+    }) | null;
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      channel: {
+        id: row.id,
+        slug: row.slug,
+        name: row.name,
+        enabled: row.enabled,
+        whapi_channel_id: row.whapi_channel_id,
+        connection_status: row.connection_status,
+        health_status: row.health_status,
+        phone_number: row.phone_number,
+        connected_user_name: row.connected_user_name,
+        last_health_check_at: row.last_health_check_at,
+        last_webhook_received_at: row.last_webhook_received_at,
+        last_error: row.last_error,
+        health_snapshot: row.health_snapshot,
+        limits_snapshot: row.limits_snapshot,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      },
+      configEnabled: row.config_enabled === true,
+      tokenConfigured: row.token_configured === true,
+    };
+  },
+
   async listChats(params: ListChatsParams = {}): Promise<CommWhatsAppChat[]> {
     const limit = Math.min(Math.max(params.limit ?? 80, 1), 200);
     let query = supabase

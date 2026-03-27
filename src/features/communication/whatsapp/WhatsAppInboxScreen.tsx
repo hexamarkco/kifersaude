@@ -1,17 +1,24 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile } from 'lucide-react';
+import { AlertTriangle, Clock3, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, WifiOff } from 'lucide-react';
 
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
-import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../../../lib/commWhatsAppService';
+import {
+  commWhatsAppService,
+  formatCommWhatsAppPhoneLabel,
+  type CommWhatsAppOperationalState,
+} from '../../../lib/commWhatsAppService';
 import { toast } from '../../../lib/toast';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../../../lib/supabase';
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
+const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
+const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
+type ScrollMode = 'bottom' | 'preserve' | null;
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -25,6 +32,27 @@ const formatMessageTime = (value?: string | null) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+};
+
+const formatConnectionStatusLabel = (value?: string | null) => {
+  const normalized = String(value ?? '').trim().toUpperCase();
+
+  switch (normalized) {
+    case 'AUTH':
+      return 'Conectado';
+    case 'QR':
+      return 'Aguardando QR';
+    case 'LAUNCH':
+      return 'Conectando';
+    case 'INIT':
+      return 'Inicializando';
+    case 'STOP':
+      return 'Parado';
+    case 'DISCONNECTED':
+      return 'Desconectado';
+    default:
+      return normalized || 'Desconhecido';
+  }
 };
 
 const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) => {
@@ -51,15 +79,26 @@ export default function WhatsAppInboxScreen() {
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
+  const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
+  const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
+  const [operationalStateError, setOperationalStateError] = useState<string | null>(null);
+  const [isDocumentVisible, setIsDocumentVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
+  const [isWindowFocused, setIsWindowFocused] = useState(() => (typeof document === 'undefined' ? true : document.hasFocus()));
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const chatsSignatureRef = useRef('');
   const messagesSignatureRef = useRef('');
-  const pendingScrollModeRef = useRef<'bottom' | null>(null);
+  const pendingScrollModeRef = useRef<ScrollMode>(null);
+  const pendingScrollTopRef = useRef<number | null>(null);
   const isNearBottomRef = useRef(true);
+  const selectedChatIdRef = useRef<string | null>(null);
+  const chatsRequestIdRef = useRef(0);
+  const messagesRequestIdRef = useRef(0);
+  const operationalStateRequestIdRef = useRef(0);
   const hasTypedMessage = messageDraft.trim().length > 0;
+  const pollingEnabled = isDocumentVisible && isWindowFocused;
 
   const buildChatsSignature = useCallback(
     (items: CommWhatsAppChat[]) =>
@@ -106,16 +145,185 @@ export default function WhatsAppInboxScreen() {
     [chats, selectedChatId],
   );
 
+  const channelState = operationalState?.channel ?? null;
+  const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
+  const isChannelConnected = connectionStatus === 'AUTH';
+  const hasWebhookEver = Boolean(channelState?.last_webhook_received_at);
+  const webhookAgeMs = channelState?.last_webhook_received_at
+    ? Date.now() - new Date(channelState.last_webhook_received_at).getTime()
+    : null;
+  const isWebhookStale = Boolean(webhookAgeMs && webhookAgeMs > STALE_WEBHOOK_THRESHOLD_MS);
+  const sendDisabledReason = useMemo(() => {
+    if (!operationalStateLoaded) {
+      return null;
+    }
+
+    if (operationalStateError && !operationalState) {
+      return 'Nao foi possivel verificar o canal do WhatsApp agora.';
+    }
+
+    if (!operationalState?.tokenConfigured) {
+      return 'Token da Whapi nao configurado em /painel/config.';
+    }
+
+    if (!operationalState.configEnabled) {
+      return 'Envio do WhatsApp esta desabilitado em /painel/config.';
+    }
+
+    if (!isChannelConnected) {
+      return `Canal WhatsApp ${formatConnectionStatusLabel(connectionStatus).toLowerCase()}.`;
+    }
+
+    return null;
+  }, [connectionStatus, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
+
+  const operationalBanner = useMemo(() => {
+    if (operationalStateError && !operationalState) {
+      return {
+        tone: 'danger' as const,
+        icon: AlertTriangle,
+        title: 'Nao foi possivel verificar o canal do WhatsApp',
+        description: operationalStateError,
+      };
+    }
+
+    if (!operationalStateLoaded || !channelState) {
+      return null;
+    }
+
+    const state = operationalState;
+    if (!state) {
+      return null;
+    }
+
+    if (!state.tokenConfigured) {
+      return {
+        tone: 'danger' as const,
+        icon: AlertTriangle,
+        title: 'Token da Whapi ausente',
+        description: 'Configure o token em /painel/config para liberar envios no inbox.',
+      };
+    }
+
+    if (!state.configEnabled) {
+      return {
+        tone: 'warning' as const,
+        icon: AlertTriangle,
+        title: 'Envio desabilitado',
+        description: 'O canal esta configurado, mas o envio foi desativado em /painel/config.',
+      };
+    }
+
+    if (!isChannelConnected) {
+      return {
+        tone: 'danger' as const,
+        icon: WifiOff,
+        title: `WhatsApp ${formatConnectionStatusLabel(connectionStatus)}`,
+        description: 'Reconecte o canal na Whapi ou valide a sessao antes de atender por aqui.',
+      };
+    }
+
+    if (channelState.last_error) {
+      return {
+        tone: 'warning' as const,
+        icon: AlertTriangle,
+        title: 'Ultimo erro do canal',
+        description: channelState.last_error,
+      };
+    }
+
+    if (!hasWebhookEver) {
+      return {
+        tone: 'info' as const,
+        icon: Clock3,
+        title: 'Webhook ainda sem eventos',
+        description: 'O canal esta conectado, mas ainda nao recebemos nenhum evento do webhook neste inbox.',
+      };
+    }
+
+    if (isWebhookStale) {
+      return {
+        tone: 'info' as const,
+        icon: Clock3,
+        title: 'Webhook sem eventos recentes',
+        description: `Ultimo evento recebido em ${formatMessageTime(channelState.last_webhook_received_at)}. Se isso nao for esperado, valide o webhook na Whapi.`,
+      };
+    }
+
+    return null;
+  }, [channelState, connectionStatus, hasWebhookEver, isChannelConnected, isWebhookStale, operationalState, operationalStateError, operationalStateLoaded]);
+
   useEffect(() => {
     latestChatsRef.current = chats;
   }, [chats]);
 
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
+
+  const loadOperationalState = useCallback(async () => {
+    const requestId = ++operationalStateRequestIdRef.current;
+
+    try {
+      const state = await commWhatsAppService.getOperationalState();
+      if (requestId !== operationalStateRequestIdRef.current) {
+        return;
+      }
+
+      setOperationalState(state);
+      setOperationalStateError(null);
+      setOperationalStateLoaded(true);
+    } catch (error) {
+      if (requestId !== operationalStateRequestIdRef.current) {
+        return;
+      }
+
+      console.error('[WhatsAppInbox] erro ao carregar estado operacional', error);
+      setOperationalStateError(
+        error instanceof Error ? error.message : 'Nao foi possivel carregar o estado operacional do WhatsApp.',
+      );
+      setOperationalStateLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      setIsDocumentVisible(!document.hidden);
+      if (!document.hidden) {
+        setIsWindowFocused(document.hasFocus());
+      }
+    };
+
+    const handleFocus = () => setIsWindowFocused(true);
+    const handleBlur = () => setIsWindowFocused(false);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
   const loadChats = useCallback(async () => {
+    const requestId = ++chatsRequestIdRef.current;
+
     try {
       const data = await commWhatsAppService.listChats({
         search,
         onlyUnread,
       });
+
+      if (requestId !== chatsRequestIdRef.current) {
+        return;
+      }
 
       const nextSignature = buildChatsSignature(data);
 
@@ -132,6 +340,10 @@ export default function WhatsAppInboxScreen() {
         return data[0]?.id ?? null;
       });
     } catch (error) {
+      if (requestId !== chatsRequestIdRef.current) {
+        return;
+      }
+
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as conversas do WhatsApp.');
     }
@@ -142,6 +354,9 @@ export default function WhatsAppInboxScreen() {
       setMessages([]);
       return;
     }
+
+    const targetChatId = chat.id;
+    const requestId = ++messagesRequestIdRef.current;
 
     const shouldShowBlockingLoader = reason === 'initial' && messagesSignatureRef.current === '';
 
@@ -159,6 +374,10 @@ export default function WhatsAppInboxScreen() {
         await loadChats();
       }
 
+      if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
+
       const nextSignature = buildMessagesSignature(data);
       if (nextSignature === messagesSignatureRef.current) {
         return;
@@ -167,14 +386,22 @@ export default function WhatsAppInboxScreen() {
       messagesSignatureRef.current = nextSignature;
       if (reason === 'initial' || reason === 'send' || isNearBottomRef.current) {
         pendingScrollModeRef.current = 'bottom';
+        pendingScrollTopRef.current = null;
+      } else {
+        pendingScrollModeRef.current = 'preserve';
+        pendingScrollTopRef.current = messagesContainerRef.current?.scrollTop ?? 0;
       }
 
       setMessages(data);
     } catch (error) {
+      if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
+
       console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as mensagens da conversa.');
     } finally {
-      if (shouldShowBlockingLoader) {
+      if (shouldShowBlockingLoader && requestId === messagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
         setLoadingMessages(false);
       }
     }
@@ -185,7 +412,7 @@ export default function WhatsAppInboxScreen() {
 
     const bootstrap = async () => {
       setLoading(true);
-      await loadChats();
+      await Promise.all([loadChats(), loadOperationalState()]);
       if (active) {
         setLoading(false);
       }
@@ -196,11 +423,12 @@ export default function WhatsAppInboxScreen() {
     return () => {
       active = false;
     };
-  }, [loadChats]);
+  }, [loadChats, loadOperationalState]);
 
   useEffect(() => {
     if (!selectedChatId) {
       setMessages([]);
+      setLoadingMessages(false);
       messagesSignatureRef.current = '';
       return;
     }
@@ -214,22 +442,51 @@ export default function WhatsAppInboxScreen() {
   }, [getSelectedChatSnapshot, loadMessages, selectedChatId]);
 
   useEffect(() => {
+    if (!pollingEnabled) {
+      return;
+    }
+
     const intervalId = window.setInterval(() => {
       void loadChats();
     }, CHAT_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-  }, [loadChats]);
+  }, [loadChats, pollingEnabled]);
 
   useEffect(() => {
-    if (!selectedChat) return;
+    if (!pollingEnabled) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void loadOperationalState();
+    }, OPERATIONAL_STATE_POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [loadOperationalState, pollingEnabled]);
+
+  useEffect(() => {
+    if (!pollingEnabled || !selectedChat) return;
 
     const intervalId = window.setInterval(() => {
       void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
     }, MESSAGE_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-  }, [getSelectedChatSnapshot, loadMessages, selectedChat]);
+  }, [getSelectedChatSnapshot, loadMessages, pollingEnabled, selectedChat]);
+
+  useEffect(() => {
+    if (!pollingEnabled || loading) {
+      return;
+    }
+
+    void loadChats();
+    void loadOperationalState();
+
+    if (selectedChatIdRef.current) {
+      void loadMessages(getSelectedChatSnapshot(selectedChatIdRef.current), 'poll');
+    }
+  }, [getSelectedChatSnapshot, loadChats, loadMessages, loadOperationalState, loading, pollingEnabled]);
 
   useEffect(() => {
     if (!selectedChat || selectedChat.unread_count <= 0) {
@@ -252,9 +509,12 @@ export default function WhatsAppInboxScreen() {
     if (pendingScrollModeRef.current === 'bottom') {
       container.scrollTop = container.scrollHeight;
       isNearBottomRef.current = true;
+    } else if (pendingScrollModeRef.current === 'preserve' && pendingScrollTopRef.current !== null) {
+      container.scrollTop = pendingScrollTopRef.current;
     }
 
     pendingScrollModeRef.current = null;
+    pendingScrollTopRef.current = null;
   }, [messages, selectedChatId]);
 
   const handleMessagesScroll = useCallback(() => {
@@ -286,25 +546,16 @@ export default function WhatsAppInboxScreen() {
     setIsComposerExpanded(expanded);
   }, [messageDraft, selectedChatId]);
 
-  const handleComposerAuxClick = (feature: 'attach' | 'emoji' | 'audio') => {
-    if (feature === 'audio') {
-      toast.info('Gravacao de audio entra na proxima etapa.');
-      return;
-    }
-
-    if (feature === 'attach') {
-      toast.info('Anexos entram na proxima etapa do inbox.');
-      return;
-    }
-
-    toast.info('Emoji picker entra na proxima etapa do inbox.');
-  };
-
   const handleSendMessage = async () => {
     if (!selectedChat) return;
 
     const text = messageDraft.trim();
     if (!text) return;
+
+    if (sendDisabledReason) {
+      toast.error(sendDisabledReason);
+      return;
+    }
 
     setSending(true);
 
@@ -326,10 +577,7 @@ export default function WhatsAppInboxScreen() {
 
     if (hasTypedMessage) {
       void handleSendMessage();
-      return;
     }
-
-    handleComposerAuxClick('audio');
   };
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -347,7 +595,18 @@ export default function WhatsAppInboxScreen() {
 
   return (
     <div className="whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-3 sm:p-4 lg:p-5">
-      <section className="grid h-full min-h-0 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="flex h-full min-h-0 flex-col gap-4">
+        {operationalBanner && (
+          <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} flex items-start gap-3 rounded-3xl border px-4 py-3.5`}>
+            <operationalBanner.icon className="mt-0.5 h-5 w-5 shrink-0" />
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-semibold">{operationalBanner.title}</p>
+              <p className="text-sm leading-6 opacity-90">{operationalBanner.description}</p>
+            </div>
+          </section>
+        )}
+
+        <section className="grid h-full min-h-0 flex-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <div className="whatsapp-inbox-panel whatsapp-inbox-sidebar flex h-full min-h-0 flex-col rounded-[28px] border shadow-sm">
           <div className="whatsapp-inbox-sidebar-header border-b p-4">
             <div className="flex flex-col gap-3">
@@ -419,9 +678,21 @@ export default function WhatsAppInboxScreen() {
             </div>
           ) : (
             <>
-              <div className="whatsapp-inbox-thread-header border-b p-5">
-                <p className="text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChat.display_name}</p>
-                <p className="mt-1 text-sm text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</p>
+              <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
+                <div>
+                  <p className="text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChat.display_name}</p>
+                  <p className="mt-1 text-sm text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</p>
+                </div>
+                <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+                  <span className={`whatsapp-inbox-status-pill whatsapp-inbox-status-pill-${isChannelConnected ? 'success' : 'warning'}`}>
+                    {formatConnectionStatusLabel(connectionStatus)}
+                  </span>
+                  {channelState?.last_webhook_received_at && (
+                    <span className="text-xs text-[var(--panel-text-muted,#6b7280)]">
+                      Webhook: {formatMessageTime(channelState.last_webhook_received_at)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div
@@ -459,7 +730,7 @@ export default function WhatsAppInboxScreen() {
                     <div className={`flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       <button
                         type="button"
-                        onClick={() => handleComposerAuxClick('attach')}
+                        disabled
                         className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
                         aria-label="Anexar"
                       >
@@ -467,7 +738,7 @@ export default function WhatsAppInboxScreen() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleComposerAuxClick('emoji')}
+                        disabled
                         className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
                         aria-label="Emojis"
                       >
@@ -492,9 +763,10 @@ export default function WhatsAppInboxScreen() {
                       <button
                         type="button"
                         onClick={handleComposerSubmit}
-                        disabled={sending}
+                        disabled={sending || Boolean(sendDisabledReason)}
                         className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasTypedMessage ? 'is-active' : ''} ${sending ? 'cursor-wait opacity-70' : ''}`}
                         aria-label={hasTypedMessage ? 'Enviar mensagem' : 'Gravar audio'}
+                        title={sendDisabledReason ?? undefined}
                       >
                         {sending ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
@@ -511,7 +783,8 @@ export default function WhatsAppInboxScreen() {
             </>
           )}
         </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

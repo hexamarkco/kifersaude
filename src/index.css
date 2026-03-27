@@ -3914,6 +3914,29 @@
   color: color-mix(in srgb, var(--panel-accent-ink) 74%, var(--panel-text-muted) 26%);
 }
 
+.painel-theme .whatsapp-inbox-status-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 700;
+}
+
+.painel-theme .whatsapp-inbox-status-meta-pending,
+.painel-theme .whatsapp-inbox-status-meta-sent,
+.painel-theme .whatsapp-inbox-status-meta-delivered,
+.painel-theme .whatsapp-inbox-status-meta-deleted {
+  color: var(--panel-text-subtle);
+}
+
+.painel-theme .whatsapp-inbox-status-meta-read,
+.painel-theme .whatsapp-inbox-status-meta-played {
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme .whatsapp-inbox-status-meta-failed {
+  color: var(--panel-accent-red-text);
+}
+
 .painel-theme .whatsapp-inbox-thread .message-bubble-inbound .whatsapp-inbox-message-meta,
 .painel-theme .whatsapp-inbox-thread .message-bubble-system .whatsapp-inbox-message-meta {
   color: var(--panel-text-subtle);
@@ -4013,6 +4036,10 @@
 .painel-theme .whatsapp-inbox-upload-progress {
   background: linear-gradient(90deg, var(--panel-accent-strong) 0%, #d27727 100%);
   transition: width 160ms ease;
+}
+
+.painel-theme .whatsapp-inbox-lightbox {
+  animation: whatsapp-lightbox-fade 160ms ease;
 }
 
 .painel-theme .whatsapp-inbox-attachment-action {
@@ -4137,5 +4164,17 @@
   100% {
     opacity: 1;
     transform: translateY(-1px);
+  }
+}
+
+@keyframes whatsapp-lightbox-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }

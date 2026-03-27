@@ -199,6 +199,7 @@ export const commWhatsAppService = {
     caption?: string;
     durationSeconds?: number;
     onUploadProgress?: (progress: number | null) => void;
+    signal?: AbortSignal;
   }): Promise<{ messageId: string | null; status: string }> {
     const {
       data: { session },
@@ -224,6 +225,28 @@ export const commWhatsAppService = {
 
     return await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
+      let settled = false;
+
+      const finalize = (callback: () => void) => {
+        if (settled) return;
+        settled = true;
+        params.signal?.removeEventListener('abort', handleAbort);
+        callback();
+      };
+
+      const handleAbort = () => {
+        if (xhr.readyState !== XMLHttpRequest.DONE) {
+          xhr.abort();
+        }
+      };
+
+      if (params.signal?.aborted) {
+        reject(new Error('Envio de midia cancelado.'));
+        return;
+      }
+
+      params.signal?.addEventListener('abort', handleAbort, { once: true });
+
       xhr.open('POST', `${supabaseFunctionsUrl}/comm-whatsapp-send`);
       xhr.setRequestHeader('Authorization', `Bearer ${session.access_token}`);
       xhr.responseType = 'text';
@@ -256,26 +279,28 @@ export const commWhatsAppService = {
             typeof payload.error === 'string' && payload.error.trim()
               ? payload.error.trim()
               : 'Nao foi possivel enviar a midia no WhatsApp.';
-          reject(new Error(message));
+          finalize(() => reject(new Error(message)));
           return;
         }
 
-        resolve({
-          messageId: typeof payload.messageId === 'string' ? payload.messageId : null,
-          status: typeof payload.status === 'string' ? payload.status : 'pending',
-        });
+        finalize(() =>
+          resolve({
+            messageId: typeof payload.messageId === 'string' ? payload.messageId : null,
+            status: typeof payload.status === 'string' ? payload.status : 'pending',
+          }),
+        );
       };
 
       xhr.onerror = () => {
-        reject(new Error('Falha de rede ao enviar a midia no WhatsApp.'));
+        finalize(() => reject(new Error('Falha de rede ao enviar a midia no WhatsApp.')));
       };
 
       xhr.ontimeout = () => {
-        reject(new Error('Tempo limite excedido ao enviar a midia no WhatsApp.'));
+        finalize(() => reject(new Error('Tempo limite excedido ao enviar a midia no WhatsApp.')));
       };
 
       xhr.onabort = () => {
-        reject(new Error('Envio de midia cancelado.'));
+        finalize(() => reject(new Error('Envio de midia cancelado.')));
       };
 
       xhr.send(form);

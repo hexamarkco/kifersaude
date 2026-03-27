@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { AlertTriangle, ChevronUp, Clock3, FileAudio, FileImage, FileText, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, Square, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, Square, Volume2, WifiOff, X } from 'lucide-react';
 
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
@@ -136,6 +136,33 @@ const formatFileSize = (value?: number | null) => {
   return `${value} B`;
 };
 
+const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => {
+  const status = String(message.delivery_status ?? '').trim().toLowerCase();
+
+  switch (status) {
+    case 'pending':
+      return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
+    case 'sent':
+      return { icon: Check, label: 'Enviado', tone: 'sent' as const };
+    case 'delivered':
+      return { icon: CheckCheck, label: 'Entregue', tone: 'delivered' as const };
+    case 'read':
+      return { icon: CheckCheck, label: 'Vista', tone: 'read' as const };
+    case 'played':
+      return {
+        icon: Volume2,
+        label: message.message_type === 'voice' ? 'Ouvida' : 'Reproduzida',
+        tone: 'played' as const,
+      };
+    case 'failed':
+      return { icon: AlertCircle, label: 'Falhou', tone: 'failed' as const };
+    case 'deleted':
+      return { icon: AlertTriangle, label: 'Apagada', tone: 'deleted' as const };
+    default:
+      return { icon: Clock3, label: status || 'Pendente', tone: 'pending' as const };
+  }
+};
+
 const formatDurationLabel = (seconds: number) => {
   const mins = Math.floor(seconds / 60)
     .toString()
@@ -251,7 +278,25 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
   return { mediaUrl, loading, error };
 }
 
-function WhatsAppMessageBody({ message }: { message: CommWhatsAppMessage }) {
+function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) {
+  const meta = getDeliveryStatusMeta(message);
+  const Icon = meta.icon;
+
+  return (
+    <span className={`whatsapp-inbox-status-meta whatsapp-inbox-status-meta-${meta.tone}`}>
+      <Icon className="h-3.5 w-3.5" />
+      <span>{meta.label}</span>
+    </span>
+  );
+}
+
+function WhatsAppMessageBody({
+  message,
+  onOpenImage,
+}: {
+  message: CommWhatsAppMessage;
+  onOpenImage: (payload: { src: string; name: string }) => void;
+}) {
   const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
   const kind = message.message_type;
   const caption = isMediaPlaceholder(message) ? message.media_caption?.trim() || '' : message.text_content?.trim() || '';
@@ -260,9 +305,13 @@ function WhatsAppMessageBody({ message }: { message: CommWhatsAppMessage }) {
     return (
       <div className="space-y-3">
         {mediaUrl ? (
-          <a href={mediaUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-black/5">
+          <button
+            type="button"
+            onClick={() => onOpenImage({ src: mediaUrl, name: message.media_file_name || 'Imagem enviada' })}
+            className="block w-full overflow-hidden rounded-2xl border border-black/5 text-left"
+          >
             <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="max-h-[280px] w-full object-cover" loading="lazy" />
-          </a>
+          </button>
         ) : (
           <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
             {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
@@ -282,13 +331,25 @@ function WhatsAppMessageBody({ message }: { message: CommWhatsAppMessage }) {
             <p className="truncate text-sm font-medium">{message.media_file_name || 'Documento'}</p>
             <p className="text-xs opacity-75">{formatFileSize(message.media_size_bytes)}</p>
           </div>
-          {mediaUrl ? (
-            <a href={mediaUrl} target="_blank" rel="noreferrer" className="rounded-full border border-current/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] hover:bg-black/5">
-              Abrir
-            </a>
-          ) : (
-            <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
-          )}
+          <div className="flex items-center gap-2">
+            {mediaUrl ? (
+              <>
+                <a href={mediaUrl} target="_blank" rel="noreferrer" className="rounded-full border border-current/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] hover:bg-black/5">
+                  Abrir
+                </a>
+                <a
+                  href={mediaUrl}
+                  download={message.media_file_name || 'documento'}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-current/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] hover:bg-black/5"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Baixar
+                </a>
+              </>
+            ) : (
+              <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
+            )}
+          </div>
         </div>
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
       </div>
@@ -346,6 +407,7 @@ export default function WhatsAppInboxScreen() {
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
   const [operationalStateError, setOperationalStateError] = useState<string | null>(null);
+  const [lightboxMedia, setLightboxMedia] = useState<{ src: string; name: string } | null>(null);
   const [isDocumentVisible, setIsDocumentVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
   const [isWindowFocused, setIsWindowFocused] = useState(() => (typeof document === 'undefined' ? true : document.hasFocus()));
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -365,6 +427,7 @@ export default function WhatsAppInboxScreen() {
   const voiceSourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const voiceWaveformDataRef = useRef<Uint8Array | null>(null);
   const voiceWaveformSnapshotRef = useRef<number[]>(DEFAULT_WAVEFORM);
+  const mediaUploadAbortControllerRef = useRef<AbortController | null>(null);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
@@ -399,7 +462,7 @@ export default function WhatsAppInboxScreen() {
       items
         .map(
           (message) =>
-            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.message_at}:${message.text_content ?? ''}`,
+            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.message_at}:${message.text_content ?? ''}:${message.message_type}:${message.media_id ?? ''}:${message.media_url ?? ''}:${message.media_file_name ?? ''}:${message.media_caption ?? ''}`,
         )
         .join('|'),
     [],
@@ -768,10 +831,26 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(
     () => () => {
+      mediaUploadAbortControllerRef.current?.abort();
       cancelVoiceRecordingRef.current();
     },
     [],
   );
+
+  useEffect(() => {
+    if (!lightboxMedia) {
+      return;
+    }
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setLightboxMedia(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxMedia]);
 
   useEffect(() => {
     if (!pollingEnabled) {
@@ -1217,6 +1296,7 @@ export default function WhatsAppInboxScreen() {
         const caption = pendingAttachment.kind === 'voice' ? undefined : text;
 
         setMediaUploadProgress(0);
+        mediaUploadAbortControllerRef.current = new AbortController();
 
         await commWhatsAppService.sendMediaMessage({
           chatId: selectedChat.external_chat_id,
@@ -1225,6 +1305,7 @@ export default function WhatsAppInboxScreen() {
           caption,
           durationSeconds: pendingAttachment.durationSeconds,
           onUploadProgress: setMediaUploadProgress,
+          signal: mediaUploadAbortControllerRef.current.signal,
         });
         setPendingAttachment(null);
       } else {
@@ -1236,11 +1317,21 @@ export default function WhatsAppInboxScreen() {
       await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem.');
+      const message = error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem.';
+      if (message === 'Envio de midia cancelado.') {
+        toast.info('Upload do anexo cancelado.');
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSending(false);
       setMediaUploadProgress(null);
+      mediaUploadAbortControllerRef.current = null;
     }
+  };
+
+  const handleCancelMediaUpload = () => {
+    mediaUploadAbortControllerRef.current?.abort();
   };
 
   const handleComposerSubmit = () => {
@@ -1410,10 +1501,10 @@ export default function WhatsAppInboxScreen() {
                   messages.map((message) => (
                     <div key={message.id} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
                       <div className={`max-w-[80%] rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
-                        <WhatsAppMessageBody message={message} />
+                        <WhatsAppMessageBody message={message} onOpenImage={setLightboxMedia} />
                         <div className="whatsapp-inbox-message-meta mt-2 flex items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em]">
                           <span>{formatMessageTime(message.message_at)}</span>
-                          {message.direction === 'outbound' && <span>{message.delivery_status}</span>}
+                          {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
                         </div>
                       </div>
                     </div>
@@ -1499,6 +1590,16 @@ export default function WhatsAppInboxScreen() {
                           ) : null}
 
                           <div className="flex flex-wrap items-center gap-2">
+                            {sending ? (
+                              <button
+                                type="button"
+                                onClick={handleCancelMediaUpload}
+                                className="whatsapp-inbox-attachment-action inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Cancelar upload
+                              </button>
+                            ) : null}
                             {pendingAttachment.kind === 'voice' ? (
                               <button
                                 type="button"
@@ -1592,6 +1693,41 @@ export default function WhatsAppInboxScreen() {
           )}
         </div>
         </section>
+
+        {lightboxMedia && (
+          <div className="whatsapp-inbox-lightbox fixed inset-0 z-[120] flex items-center justify-center p-6" role="dialog" aria-modal="true">
+            <button
+              type="button"
+              className="absolute inset-0 h-full w-full bg-black/70 backdrop-blur-sm"
+              aria-label="Fechar visualizacao"
+              onClick={() => setLightboxMedia(null)}
+            />
+            <div className="relative z-[1] flex max-h-full max-w-5xl flex-col gap-4">
+              <div className="flex items-center justify-between gap-4 rounded-2xl bg-black/65 px-4 py-3 text-white">
+                <p className="truncate text-sm font-medium">{lightboxMedia.name}</p>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={lightboxMedia.src}
+                    download={lightboxMedia.name}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] hover:bg-white/10"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Baixar
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setLightboxMedia(null)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 hover:bg-white/10"
+                    aria-label="Fechar"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <img src={lightboxMedia.src} alt={lightboxMedia.name} className="max-h-[80vh] max-w-full rounded-3xl object-contain shadow-2xl" />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

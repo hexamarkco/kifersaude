@@ -290,6 +290,26 @@ function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) 
   );
 }
 
+function RetryMediaButton({
+  loading,
+  onRetry,
+}: {
+  loading: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onRetry}
+      disabled={loading}
+      className="whatsapp-inbox-retry-button inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] transition"
+    >
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SendHorizontal className="h-3.5 w-3.5" />}
+      Reenviar
+    </button>
+  );
+}
+
 function WhatsAppMessageBody({
   message,
   onOpenImage,
@@ -308,9 +328,13 @@ function WhatsAppMessageBody({
           <button
             type="button"
             onClick={() => onOpenImage({ src: mediaUrl, name: message.media_file_name || 'Imagem enviada' })}
-            className="block w-full overflow-hidden rounded-2xl border border-black/5 text-left"
+            className="whatsapp-inbox-image-card block w-full overflow-hidden rounded-2xl border text-left"
           >
             <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="max-h-[280px] w-full object-cover" loading="lazy" />
+            <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
+              <span className="truncate font-medium">{message.media_file_name || 'Imagem'}</span>
+              <span className="shrink-0 opacity-80">Toque para ampliar</span>
+            </div>
           </button>
         ) : (
           <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
@@ -323,13 +347,17 @@ function WhatsAppMessageBody({
   }
 
   if (kind === 'document') {
+    const extension = message.media_file_name?.split('.').pop()?.toUpperCase() || 'DOC';
+
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-current/10 bg-black/5 px-3 py-3">
-          <FileText className="h-5 w-5 shrink-0 opacity-80" />
+        <div className="whatsapp-inbox-document-card flex items-center gap-3 rounded-2xl border px-3 py-3">
+          <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xs font-black tracking-[0.08em]">
+            {extension.slice(0, 4)}
+          </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{message.media_file_name || 'Documento'}</p>
-            <p className="text-xs opacity-75">{formatFileSize(message.media_size_bytes)}</p>
+            <p className="text-xs opacity-75">{formatFileSize(message.media_size_bytes) || 'Documento anexo'}</p>
           </div>
           <div className="flex items-center gap-2">
             {mediaUrl ? (
@@ -398,6 +426,7 @@ export default function WhatsAppInboxScreen() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
   const [voiceRecordingSeconds, setVoiceRecordingSeconds] = useState(0);
@@ -1334,6 +1363,23 @@ export default function WhatsAppInboxScreen() {
     mediaUploadAbortControllerRef.current?.abort();
   };
 
+  const handleRetryMediaMessage = async (message: CommWhatsAppMessage) => {
+    setRetryingMessageId(message.id);
+
+    try {
+      await commWhatsAppService.retryMediaMessage(message.id);
+      if (selectedChat) {
+        await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
+      }
+      toast.success('Midia reenviada com sucesso.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao reenviar midia', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel reenviar a midia.');
+    } finally {
+      setRetryingMessageId(null);
+    }
+  };
+
   const handleComposerSubmit = () => {
     if (sending) return;
 
@@ -1502,9 +1548,12 @@ export default function WhatsAppInboxScreen() {
                     <div key={message.id} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
                       <div className={`max-w-[80%] rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
                         <WhatsAppMessageBody message={message} onOpenImage={setLightboxMedia} />
-                        <div className="whatsapp-inbox-message-meta mt-2 flex items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em]">
+                        <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em]">
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
+                          {message.direction === 'outbound' && ['image', 'document', 'audio', 'voice'].includes(message.message_type) && message.delivery_status === 'failed' && message.media_id ? (
+                            <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
+                          ) : null}
                         </div>
                       </div>
                     </div>

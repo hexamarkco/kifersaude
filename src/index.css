@@ -3914,11 +3914,66 @@
   color: color-mix(in srgb, var(--panel-accent-ink) 74%, var(--panel-text-muted) 26%);
 }
 
+.painel-theme .whatsapp-inbox-image-card {
+  border-color: color-mix(in srgb, var(--panel-border) 56%, transparent);
+  background: color-mix(in srgb, var(--panel-surface) 92%, rgba(255, 255, 255, 0.08) 8%);
+}
+
+.painel-theme .whatsapp-inbox-image-card-footer {
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.02) 0%, rgba(17, 24, 39, 0.08) 100%);
+  color: var(--panel-text-soft);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-image-card {
+  border-color: color-mix(in srgb, var(--panel-border) 66%, transparent);
+  background: color-mix(in srgb, var(--panel-surface-soft) 82%, rgba(255, 255, 255, 0.04) 18%);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-image-card-footer {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.06) 100%);
+}
+
+.painel-theme .whatsapp-inbox-document-card {
+  border-color: color-mix(in srgb, var(--panel-border) 66%, transparent);
+  background: color-mix(in srgb, var(--panel-surface) 88%, rgba(255, 255, 255, 0.1) 12%);
+}
+
+.painel-theme .whatsapp-inbox-document-thumb {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 62%, var(--panel-surface) 38%);
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-document-card {
+  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-surface-soft) 84%, rgba(255, 255, 255, 0.04) 16%);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-document-thumb {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 70%, var(--panel-surface) 30%);
+}
+
 .painel-theme .whatsapp-inbox-status-meta {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
   font-weight: 700;
+}
+
+.painel-theme .whatsapp-inbox-retry-button {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 58%, var(--panel-surface) 42%);
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme .whatsapp-inbox-retry-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--panel-accent-soft) 74%, var(--panel-surface) 26%);
+}
+
+.painel-theme .whatsapp-inbox-retry-button:disabled {
+  opacity: 0.66;
+  cursor: wait;
 }
 
 .painel-theme .whatsapp-inbox-status-meta-pending,

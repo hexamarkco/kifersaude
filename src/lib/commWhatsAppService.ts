@@ -192,6 +192,22 @@ export const commWhatsAppService = {
     };
   },
 
+  async retryMediaMessage(messageId: string): Promise<{ messageId: string | null; status: string }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-retry-message', {
+      body: { messageId },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel reenviar a midia no WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { messageId?: string | null; status?: string };
+    return {
+      messageId: payload.messageId ?? null,
+      status: payload.status ?? 'pending',
+    };
+  },
+
   async sendMediaMessage(params: {
     chatId: string;
     kind: CommWhatsAppMediaSendKind;

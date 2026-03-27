@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, MessageCircle, Search, Send } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile } from 'lucide-react';
 
-import Button from '../../../components/ui/Button';
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
-import Textarea from '../../../components/ui/Textarea';
 import { commWhatsAppService, formatCommWhatsAppPhoneLabel } from '../../../lib/commWhatsAppService';
 import { toast } from '../../../lib/toast';
 import type { CommWhatsAppChat, CommWhatsAppMessage } from '../../../lib/supabase';
@@ -50,7 +48,9 @@ export default function WhatsAppInboxScreen() {
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
+  const hasTypedMessage = messageDraft.trim().length > 0;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -177,6 +177,41 @@ export default function WhatsAppInboxScreen() {
     messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
   }, [messages]);
 
+  useEffect(() => {
+    const textarea = composerTextareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = '0px';
+
+    const styles = window.getComputedStyle(textarea);
+    const lineHeight = Number.parseFloat(styles.lineHeight) || 24;
+    const paddingTop = Number.parseFloat(styles.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(styles.paddingBottom) || 0;
+    const borderTop = Number.parseFloat(styles.borderTopWidth) || 0;
+    const borderBottom = Number.parseFloat(styles.borderBottomWidth) || 0;
+
+    const minHeight = lineHeight + paddingTop + paddingBottom + borderTop + borderBottom;
+    const maxHeight = lineHeight * 5 + paddingTop + paddingBottom + borderTop + borderBottom;
+    const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }, [messageDraft, selectedChatId]);
+
+  const handleComposerAuxClick = (feature: 'attach' | 'emoji' | 'audio') => {
+    if (feature === 'audio') {
+      toast.info('Gravacao de audio entra na proxima etapa.');
+      return;
+    }
+
+    if (feature === 'attach') {
+      toast.info('Anexos entram na proxima etapa do inbox.');
+      return;
+    }
+
+    toast.info('Emoji picker entra na proxima etapa do inbox.');
+  };
+
   const handleSendMessage = async () => {
     if (!selectedChat) return;
 
@@ -196,6 +231,30 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleComposerSubmit = () => {
+    if (sending) return;
+
+    if (hasTypedMessage) {
+      void handleSendMessage();
+      return;
+    }
+
+    handleComposerAuxClick('audio');
+  };
+
+  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || event.shiftKey) {
+      return;
+    }
+
+    if (!hasTypedMessage) {
+      return;
+    }
+
+    event.preventDefault();
+    void handleSendMessage();
   };
 
   return (
@@ -306,19 +365,56 @@ export default function WhatsAppInboxScreen() {
               </div>
 
               <div className="border-t border-stone-200 p-5">
-                <div className="space-y-3 rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
-                  <Textarea
+                <div className="rounded-[30px] border border-stone-200 bg-stone-50/90 px-4 py-3 shadow-sm">
+                  <textarea
+                    ref={composerTextareaRef}
+                    rows={1}
                     value={messageDraft}
                     onChange={(event) => setMessageDraft(event.target.value)}
-                    placeholder="Digite sua resposta..."
-                    className="min-h-[120px] resize-none border-none bg-transparent px-0 shadow-none focus:border-none"
+                    onKeyDown={handleComposerKeyDown}
+                    placeholder="Digite uma mensagem"
                     disabled={sending}
+                    className="block w-full resize-none border-none bg-transparent px-0 py-0 text-sm leading-6 text-[var(--panel-text,#1f2937)] placeholder:text-stone-400 focus:outline-none"
                   />
-                  <div className="flex items-center justify-end">
-                    <Button onClick={handleSendMessage} loading={sending} disabled={!messageDraft.trim()}>
-                      {!sending && <Send className="h-4 w-4" />}
-                      Enviar mensagem
-                    </Button>
+                  <div className="mt-3 flex items-end justify-between gap-3">
+                    <div className="flex items-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleComposerAuxClick('attach')}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-200 hover:text-stone-700"
+                        aria-label="Anexar"
+                      >
+                        <Plus className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleComposerAuxClick('emoji')}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full text-stone-500 transition hover:bg-stone-200 hover:text-stone-700"
+                        aria-label="Emojis"
+                      >
+                        <Smile className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleComposerSubmit}
+                      disabled={sending}
+                      className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition ${
+                        hasTypedMessage
+                          ? 'bg-stone-900 text-white shadow-sm hover:bg-stone-800'
+                          : 'bg-transparent text-stone-500 hover:bg-stone-200 hover:text-stone-700'
+                      } ${sending ? 'cursor-wait opacity-70' : ''}`}
+                      aria-label={hasTypedMessage ? 'Enviar mensagem' : 'Gravar audio'}
+                    >
+                      {sending ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : hasTypedMessage ? (
+                        <SendHorizontal className="h-5 w-5" />
+                      ) : (
+                        <Mic className="h-5 w-5" />
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>

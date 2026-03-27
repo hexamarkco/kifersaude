@@ -33,6 +33,10 @@ type SendMessageBody = {
   text?: string;
 };
 
+type StoredMessageRow = {
+  id: string;
+};
+
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
 const createAdminClient = () => {
@@ -86,6 +90,41 @@ async function ensureChatExists(
   }
 
   return created as { id: string; display_name: string };
+}
+
+async function saveMessageRecord(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  payload: Record<string, unknown>,
+  externalMessageId: string,
+) {
+  const { data: existing, error: lookupError } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .select('id')
+    .eq('channel_id', payload.channel_id as string)
+    .eq('external_message_id', externalMessageId)
+    .maybeSingle();
+
+  if (lookupError) {
+    throw new Error(`Erro ao verificar mensagem existente: ${lookupError.message}`);
+  }
+
+  if (existing) {
+    const { error: updateError } = await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .update(payload)
+      .eq('id', (existing as StoredMessageRow).id);
+
+    if (updateError) {
+      throw new Error(`Erro ao atualizar mensagem enviada: ${updateError.message}`);
+    }
+
+    return;
+  }
+
+  const { error: insertError } = await supabaseAdmin.from('comm_whatsapp_messages').insert(payload);
+  if (insertError) {
+    throw new Error(`Erro ao registrar mensagem enviada: ${insertError.message}`);
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -228,13 +267,7 @@ Deno.serve(async (req: Request) => {
     };
 
     if (externalMessageId) {
-      const { error: messageError } = await supabaseAdmin
-        .from('comm_whatsapp_messages')
-        .upsert(messagePayload, { onConflict: 'channel_id,external_message_id' });
-
-      if (messageError) {
-        throw new Error(`Erro ao salvar mensagem enviada: ${messageError.message}`);
-      }
+      await saveMessageRecord(supabaseAdmin, messagePayload, externalMessageId);
     } else {
       const { error: messageError } = await supabaseAdmin.from('comm_whatsapp_messages').insert(messagePayload);
       if (messageError) {

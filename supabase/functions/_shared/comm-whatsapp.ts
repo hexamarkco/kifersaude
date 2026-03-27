@@ -94,9 +94,7 @@ export const extractPhoneFromChatId = (value: unknown): string => {
   return chatId.replace(/@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
 };
 
-export const formatPhoneLabel = (value: unknown): string => {
-  const digits = normalizeCommWhatsAppPhone(value);
-
+export const formatPhoneFromDigits = (digits: string): string => {
   if (digits.length === 13 && digits.startsWith('55')) {
     return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
   }
@@ -106,6 +104,11 @@ export const formatPhoneLabel = (value: unknown): string => {
   }
 
   return digits || 'Numero desconhecido';
+};
+
+export const formatPhoneLabel = (value: unknown): string => {
+  const digits = normalizeCommWhatsAppPhone(value);
+  return formatPhoneFromDigits(digits);
 };
 
 export const unixTimestampToIso = (value: unknown): string | null => {
@@ -128,6 +131,28 @@ export const stringTimestampToIso = (value: unknown): string | null => {
 };
 
 export const getNowIso = (): string => new Date().toISOString();
+
+export const getDirectChatDisplayNameCandidate = (
+  message: Record<string, unknown>,
+  direction: 'inbound' | 'outbound' | 'system',
+): string => {
+  const chatName = toTrimmedString(message.chat_name);
+  const fromName = toTrimmedString(message.from_name);
+
+  if (direction === 'outbound') {
+    return chatName;
+  }
+
+  return chatName || fromName;
+};
+
+export const isPhoneLabelLikeDisplayName = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+
+  const withoutSymbols = trimmed.replace(/[\s()+-]/g, '');
+  return /^\+?\d+$/.test(withoutSymbols);
+};
 
 const readNestedBody = (container: unknown, key: string): string => {
   if (!isRecord(container)) return '';
@@ -269,6 +294,43 @@ export const extractWhapiMessageStatus = (payload: unknown): string => {
   return toTrimmedString(payload.status) || toTrimmedString(payload.state);
 };
 
+export const extractWhapiChatName = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+
+  const directName = toTrimmedString(payload.name) || toTrimmedString(payload.chat_name);
+  if (directName) return directName;
+
+  if (isRecord(payload.contact)) {
+    const contactName = toTrimmedString(payload.contact.name) || toTrimmedString(payload.contact.pushname);
+    if (contactName) return contactName;
+  }
+
+  if (isRecord(payload.last_message)) {
+    const lastMessageName = toTrimmedString(payload.last_message.chat_name) || toTrimmedString(payload.last_message.from_name);
+    if (lastMessageName) return lastMessageName;
+  }
+
+  return '';
+};
+
+export const extractWhapiMessages = (payload: unknown): Array<Record<string, unknown>> => {
+  if (Array.isArray(payload)) {
+    return payload.filter(isRecord);
+  }
+
+  if (isRecord(payload)) {
+    if (Array.isArray(payload.messages)) {
+      return payload.messages.filter(isRecord);
+    }
+
+    if (Array.isArray(payload.data)) {
+      return payload.data.filter(isRecord);
+    }
+  }
+
+  return [];
+};
+
 export const getHealthStatusText = (payload: unknown): string => {
   if (!isRecord(payload)) return 'unknown';
 
@@ -293,6 +355,46 @@ export const buildWebhookUrl = (supabaseUrl: string, secret: string): string => 
   });
   return `${normalizedUrl}/functions/v1/comm-whatsapp-webhook?${query.toString()}`;
 };
+
+export async function fetchWhapiChatName(params: {
+  token: string;
+  chatId: string;
+}): Promise<string> {
+  const response = await fetch(`${WHAPI_BASE_URL}/chats/${encodeURIComponent(params.chatId)}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  });
+
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    return '';
+  }
+
+  return extractWhapiChatName(payload);
+}
+
+export async function fetchWhapiChatMessages(params: {
+  token: string;
+  chatId: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(params.chatId)}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  });
+
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    throw new Error(parseWhapiError(payload) || 'Falha ao consultar mensagens do chat na Whapi.');
+  }
+
+  return extractWhapiMessages(payload);
+}
 
 export async function ensurePrimaryChannel(
   supabaseAdmin: SupabaseClient,

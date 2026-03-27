@@ -82,6 +82,16 @@ export const commWhatsAppService = {
     return ((data ?? []) as CommWhatsAppMessage[]).reverse();
   },
 
+  async syncChatHistory(chatId: string): Promise<void> {
+    const { error } = await supabase.functions.invoke('comm-whatsapp-sync-chat', {
+      body: { chatId },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar o historico da conversa.'));
+    }
+  },
+
   async markChatRead(chatId: string): Promise<void> {
     const { error } = await supabase.rpc('comm_whatsapp_mark_chat_read', {
       p_chat_id: chatId,

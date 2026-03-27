@@ -50,6 +50,7 @@ export default function WhatsAppInboxScreen() {
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const hydratedChatsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -85,8 +86,8 @@ export default function WhatsAppInboxScreen() {
     }
   }, [onlyUnread, search]);
 
-  const loadMessages = useCallback(async (chatId: string | null) => {
-    if (!chatId) {
+  const loadMessages = useCallback(async (chat: CommWhatsAppChat | null) => {
+    if (!chat) {
       setMessages([]);
       return;
     }
@@ -94,7 +95,15 @@ export default function WhatsAppInboxScreen() {
     setLoadingMessages(true);
 
     try {
-      const data = await commWhatsAppService.listMessages(chatId);
+      let data = await commWhatsAppService.listMessages(chat.id);
+
+      if (data.length === 0 && !hydratedChatsRef.current.has(chat.external_chat_id)) {
+        hydratedChatsRef.current.add(chat.external_chat_id);
+        await commWhatsAppService.syncChatHistory(chat.external_chat_id);
+        data = await commWhatsAppService.listMessages(chat.id);
+        await loadChats();
+      }
+
       setMessages(data);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
@@ -102,7 +111,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setLoadingMessages(false);
     }
-  }, []);
+  }, [loadChats]);
 
   useEffect(() => {
     let active = true;
@@ -123,13 +132,13 @@ export default function WhatsAppInboxScreen() {
   }, [loadChats]);
 
   useEffect(() => {
-    if (!selectedChatId) {
+    if (!selectedChat) {
       setMessages([]);
       return;
     }
 
-    void loadMessages(selectedChatId);
-  }, [loadMessages, selectedChatId]);
+    void loadMessages(selectedChat);
+  }, [loadMessages, selectedChat]);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -140,14 +149,14 @@ export default function WhatsAppInboxScreen() {
   }, [loadChats]);
 
   useEffect(() => {
-    if (!selectedChatId) return;
+    if (!selectedChat) return;
 
     const intervalId = window.setInterval(() => {
-      void loadMessages(selectedChatId);
+      void loadMessages(selectedChat);
     }, MESSAGE_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-  }, [loadMessages, selectedChatId]);
+  }, [loadMessages, selectedChat]);
 
   useEffect(() => {
     if (!selectedChat || selectedChat.unread_count <= 0) {
@@ -179,7 +188,8 @@ export default function WhatsAppInboxScreen() {
     try {
       await commWhatsAppService.sendTextMessage(selectedChat.external_chat_id, text);
       setMessageDraft('');
-      await Promise.all([loadMessages(selectedChat.id), loadChats()]);
+      hydratedChatsRef.current.add(selectedChat.external_chat_id);
+      await Promise.all([loadMessages(selectedChat), loadChats()]);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem.');

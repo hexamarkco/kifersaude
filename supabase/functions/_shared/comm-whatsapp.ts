@@ -37,6 +37,38 @@ export type CommWhatsAppSettings = {
   token: string;
 };
 
+export type CommWhatsAppPersistMessageInput = {
+  channelId: string;
+  externalChatId: string;
+  phoneNumber: string | null;
+  displayName: string | null;
+  pushName: string | null;
+  lastMessageText: string | null;
+  lastMessageDirection: 'inbound' | 'outbound' | 'system';
+  lastMessageAt: string;
+  incrementUnread: boolean;
+  externalMessageId: string | null;
+  direction: 'inbound' | 'outbound' | 'system';
+  messageType: string;
+  deliveryStatus: string;
+  textContent: string | null;
+  createdBy: string | null;
+  source: string | null;
+  senderName: string | null;
+  senderPhone: string | null;
+  statusUpdatedAt: string | null;
+  errorMessage: string | null;
+  metadata: Record<string, unknown>;
+};
+
+export type CommWhatsAppPersistMessageResult = {
+  chatId: string;
+  messageId: string;
+  inserted: boolean;
+  unreadCount: number;
+  summaryUpdated: boolean;
+};
+
 const getSettingsToken = (settings: Record<string, unknown>): string => {
   const directToken = sanitizeWhapiToken(toTrimmedString(settings.token));
   if (directToken) return directToken;
@@ -471,6 +503,77 @@ export async function ensureCommWhatsAppSettings(
     enabled: typeof settings.enabled === 'boolean' ? settings.enabled : false,
     token: getSettingsToken(settings),
   };
+}
+
+export async function persistCommWhatsAppMessage(
+  supabaseAdmin: SupabaseClient,
+  input: CommWhatsAppPersistMessageInput,
+): Promise<CommWhatsAppPersistMessageResult> {
+  const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_persist_message', {
+    p_channel_id: input.channelId,
+    p_external_chat_id: input.externalChatId,
+    p_phone_number: input.phoneNumber,
+    p_display_name: input.displayName,
+    p_push_name: input.pushName,
+    p_last_message_text: input.lastMessageText,
+    p_last_message_direction: input.lastMessageDirection,
+    p_last_message_at: input.lastMessageAt,
+    p_increment_unread: input.incrementUnread,
+    p_external_message_id: input.externalMessageId,
+    p_direction: input.direction,
+    p_message_type: input.messageType,
+    p_delivery_status: input.deliveryStatus,
+    p_text_content: input.textContent,
+    p_created_by: input.createdBy,
+    p_source: input.source,
+    p_sender_name: input.senderName,
+    p_sender_phone: input.senderPhone,
+    p_status_updated_at: input.statusUpdatedAt,
+    p_error_message: input.errorMessage,
+    p_metadata: input.metadata,
+  });
+
+  if (error) {
+    throw new Error(`Erro ao persistir mensagem do WhatsApp: ${error.message}`);
+  }
+
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) {
+    throw new Error('Persistencia da mensagem nao retornou resultado.');
+  }
+
+  return {
+    chatId: toTrimmedString(row.chat_id),
+    messageId: toTrimmedString(row.message_id),
+    inserted: row.inserted === true,
+    unreadCount: typeof row.unread_count === 'number' ? row.unread_count : 0,
+    summaryUpdated: row.summary_updated === true,
+  };
+}
+
+export async function updateCommWhatsAppMessageStatus(
+  supabaseAdmin: SupabaseClient,
+  input: {
+    channelId: string;
+    externalMessageId: string;
+    deliveryStatus: string;
+    statusUpdatedAt: string | null;
+    errorMessage?: string | null;
+  },
+): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_update_message_status', {
+    p_channel_id: input.channelId,
+    p_external_message_id: input.externalMessageId,
+    p_delivery_status: input.deliveryStatus,
+    p_status_updated_at: input.statusUpdatedAt,
+    p_error_message: input.errorMessage ?? null,
+  });
+
+  if (error) {
+    throw new Error(`Erro ao atualizar status da mensagem do WhatsApp: ${error.message}`);
+  }
+
+  return data === true;
 }
 
 export const sanitizeChannelForClient = (channel: CommWhatsAppChannelRow) => ({

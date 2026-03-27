@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { AlertTriangle, Clock3, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, WifiOff } from 'lucide-react';
+import { AlertTriangle, ChevronUp, Clock3, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, WifiOff } from 'lucide-react';
 
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
@@ -14,11 +14,12 @@ import type { CommWhatsAppChat, CommWhatsAppMessage } from '../../../lib/supabas
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
 const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
+const MESSAGE_PAGE_SIZE = 50;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
-type ScrollMode = 'bottom' | 'preserve' | null;
+type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -67,6 +68,29 @@ const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) =>
   return 'message-bubble message-bubble-inbound mr-auto';
 };
 
+const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage) => {
+  const timeDiff = new Date(a.message_at).getTime() - new Date(b.message_at).getTime();
+  if (timeDiff !== 0) {
+    return timeDiff;
+  }
+
+  return a.id.localeCompare(b.id);
+};
+
+const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMessage[]) => {
+  const map = new Map<string, CommWhatsAppMessage>();
+
+  for (const message of existing) {
+    map.set(message.id, message);
+  }
+
+  for (const message of incoming) {
+    map.set(message.id, message);
+  }
+
+  return Array.from(map.values()).sort(compareMessageChronology);
+};
+
 export default function WhatsAppInboxScreen() {
   const [loading, setLoading] = useState(true);
   const [searchDraft, setSearchDraft] = useState('');
@@ -76,6 +100,8 @@ export default function WhatsAppInboxScreen() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommWhatsAppMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
@@ -88,14 +114,17 @@ export default function WhatsAppInboxScreen() {
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
+  const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const chatsSignatureRef = useRef('');
   const messagesSignatureRef = useRef('');
   const pendingScrollModeRef = useRef<ScrollMode>(null);
   const pendingScrollTopRef = useRef<number | null>(null);
+  const pendingScrollHeightRef = useRef<number | null>(null);
   const isNearBottomRef = useRef(true);
   const selectedChatIdRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
   const messagesRequestIdRef = useRef(0);
+  const olderMessagesRequestIdRef = useRef(0);
   const operationalStateRequestIdRef = useRef(0);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const pollingEnabled = isDocumentVisible && isWindowFocused;
@@ -258,6 +287,10 @@ export default function WhatsAppInboxScreen() {
   }, [chats]);
 
   useEffect(() => {
+    latestMessagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
   }, [selectedChatId]);
 
@@ -365,12 +398,21 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      let data = await commWhatsAppService.listMessages(chat.id);
+      let page = await commWhatsAppService.listMessagesPage(chat.id, {
+        limit: MESSAGE_PAGE_SIZE,
+      });
+
+      let data = page.messages;
+      let hasMore = page.hasMore;
 
       if (data.length === 0 && !hydratedChatsRef.current.has(chat.external_chat_id)) {
         hydratedChatsRef.current.add(chat.external_chat_id);
         await commWhatsAppService.syncChatHistory(chat.external_chat_id);
-        data = await commWhatsAppService.listMessages(chat.id);
+        page = await commWhatsAppService.listMessagesPage(chat.id, {
+          limit: MESSAGE_PAGE_SIZE,
+        });
+        data = page.messages;
+        hasMore = page.hasMore;
         await loadChats();
       }
 
@@ -378,21 +420,31 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const nextSignature = buildMessagesSignature(data);
+      const nextMessages = reason === 'initial' ? data : mergeMessages(latestMessagesRef.current, data);
+      const nextSignature = buildMessagesSignature(nextMessages);
       if (nextSignature === messagesSignatureRef.current) {
+        if (reason === 'initial') {
+          setHasOlderMessages(hasMore);
+        }
         return;
       }
 
       messagesSignatureRef.current = nextSignature;
+      if (reason === 'initial') {
+        setHasOlderMessages(hasMore);
+      }
+
       if (reason === 'initial' || reason === 'send' || isNearBottomRef.current) {
         pendingScrollModeRef.current = 'bottom';
         pendingScrollTopRef.current = null;
+        pendingScrollHeightRef.current = null;
       } else {
         pendingScrollModeRef.current = 'preserve';
         pendingScrollTopRef.current = messagesContainerRef.current?.scrollTop ?? 0;
+        pendingScrollHeightRef.current = null;
       }
 
-      setMessages(data);
+      setMessages(nextMessages);
     } catch (error) {
       if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -402,7 +454,7 @@ export default function WhatsAppInboxScreen() {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as mensagens da conversa.');
     } finally {
       if (shouldShowBlockingLoader && requestId === messagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
-        setLoadingMessages(false);
+      setLoadingMessages(false);
       }
     }
   }, [buildMessagesSignature, loadChats]);
@@ -429,13 +481,19 @@ export default function WhatsAppInboxScreen() {
     if (!selectedChatId) {
       setMessages([]);
       setLoadingMessages(false);
+      setLoadingOlderMessages(false);
+      setHasOlderMessages(false);
       messagesSignatureRef.current = '';
       return;
     }
 
     messagesSignatureRef.current = '';
     pendingScrollModeRef.current = 'bottom';
+    pendingScrollTopRef.current = null;
+    pendingScrollHeightRef.current = null;
     isNearBottomRef.current = true;
+    setLoadingOlderMessages(false);
+    setHasOlderMessages(false);
     setMessages([]);
 
     void loadMessages(getSelectedChatSnapshot(selectedChatId), 'initial');
@@ -466,14 +524,14 @@ export default function WhatsAppInboxScreen() {
   }, [loadOperationalState, pollingEnabled]);
 
   useEffect(() => {
-    if (!pollingEnabled || !selectedChat) return;
+    if (!pollingEnabled || !selectedChat || loadingOlderMessages) return;
 
     const intervalId = window.setInterval(() => {
       void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
     }, MESSAGE_POLL_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-  }, [getSelectedChatSnapshot, loadMessages, pollingEnabled, selectedChat]);
+  }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, pollingEnabled, selectedChat]);
 
   useEffect(() => {
     if (!pollingEnabled || loading) {
@@ -483,10 +541,10 @@ export default function WhatsAppInboxScreen() {
     void loadChats();
     void loadOperationalState();
 
-    if (selectedChatIdRef.current) {
+    if (selectedChatIdRef.current && !loadingOlderMessages) {
       void loadMessages(getSelectedChatSnapshot(selectedChatIdRef.current), 'poll');
     }
-  }, [getSelectedChatSnapshot, loadChats, loadMessages, loadOperationalState, loading, pollingEnabled]);
+  }, [getSelectedChatSnapshot, loadChats, loadMessages, loadOperationalState, loading, loadingOlderMessages, pollingEnabled]);
 
   useEffect(() => {
     if (!selectedChat || selectedChat.unread_count <= 0) {
@@ -511,11 +569,72 @@ export default function WhatsAppInboxScreen() {
       isNearBottomRef.current = true;
     } else if (pendingScrollModeRef.current === 'preserve' && pendingScrollTopRef.current !== null) {
       container.scrollTop = pendingScrollTopRef.current;
+    } else if (
+      pendingScrollModeRef.current === 'prepend' &&
+      pendingScrollTopRef.current !== null &&
+      pendingScrollHeightRef.current !== null
+    ) {
+      const delta = container.scrollHeight - pendingScrollHeightRef.current;
+      container.scrollTop = pendingScrollTopRef.current + Math.max(delta, 0);
     }
 
     pendingScrollModeRef.current = null;
     pendingScrollTopRef.current = null;
+    pendingScrollHeightRef.current = null;
   }, [messages, selectedChatId]);
+
+  const handleLoadOlderMessages = useCallback(async () => {
+    if (!selectedChat || loadingOlderMessages || !hasOlderMessages || latestMessagesRef.current.length === 0) {
+      return;
+    }
+
+    const targetChatId = selectedChat.id;
+    const requestId = ++olderMessagesRequestIdRef.current;
+    const oldestMessage = latestMessagesRef.current[0];
+    const container = messagesContainerRef.current;
+
+    setLoadingOlderMessages(true);
+
+    try {
+      const page = await commWhatsAppService.listMessagesPage(selectedChat.id, {
+        limit: MESSAGE_PAGE_SIZE,
+        before: {
+          messageAt: oldestMessage.message_at,
+          id: oldestMessage.id,
+        },
+      });
+
+      if (requestId !== olderMessagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
+
+      const nextMessages = mergeMessages(page.messages, latestMessagesRef.current);
+      const nextSignature = buildMessagesSignature(nextMessages);
+
+      setHasOlderMessages(page.hasMore);
+
+      if (nextSignature === messagesSignatureRef.current) {
+        return;
+      }
+
+      messagesSignatureRef.current = nextSignature;
+      pendingScrollModeRef.current = 'prepend';
+      pendingScrollTopRef.current = container?.scrollTop ?? 0;
+      pendingScrollHeightRef.current = container?.scrollHeight ?? 0;
+      setMessages(nextMessages);
+    } catch (error) {
+      if (requestId !== olderMessagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
+
+      console.error('[WhatsAppInbox] erro ao carregar mensagens antigas', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar mensagens mais antigas.');
+    } finally {
+      if (requestId === olderMessagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
+        setLoadingOlderMessages(false);
+      }
+    }
+  }, [buildMessagesSignature, hasOlderMessages, loadingOlderMessages, selectedChat]);
 
   const handleMessagesScroll = useCallback(() => {
     const container = messagesContainerRef.current;
@@ -700,6 +819,24 @@ export default function WhatsAppInboxScreen() {
                 onScroll={handleMessagesScroll}
                 className="whatsapp-inbox-messages min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-5"
               >
+                {(hasOlderMessages || loadingOlderMessages) && (
+                  <div className="sticky top-0 z-[1] flex justify-center pb-3">
+                    <button
+                      type="button"
+                      onClick={() => void handleLoadOlderMessages()}
+                      disabled={loadingOlderMessages}
+                      className="whatsapp-inbox-load-older inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition"
+                    >
+                      {loadingOlderMessages ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      )}
+                      {loadingOlderMessages ? 'Carregando...' : 'Carregar mais'}
+                    </button>
+                  </div>
+                )}
+
                 {loadingMessages && messages.length === 0 ? (
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

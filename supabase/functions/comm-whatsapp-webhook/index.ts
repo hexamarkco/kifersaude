@@ -16,10 +16,12 @@ import {
   isRecord,
   normalizeCommWhatsAppPhone,
   normalizeWhapiChatId,
+  persistCommWhatsAppMessage,
   stringTimestampToIso,
   summarizeWhapiMessage,
   toTrimmedString,
   unixTimestampToIso,
+  updateCommWhatsAppMessageStatus,
 } from '../_shared/comm-whatsapp.ts';
 
 type ChannelRow = {
@@ -37,10 +39,6 @@ type ChatRow = {
   unread_count: number;
   display_name: string;
   push_name: string | null;
-};
-
-type StoredMessageRow = {
-  id: string;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
@@ -137,7 +135,7 @@ async function findExistingChat(
   return (data ?? null) as ChatRow | null;
 }
 
-async function upsertChatFromMessage(
+async function persistMessageFromWebhook(
   supabaseAdmin: SupabaseClient,
   channel: ChannelRow,
   message: Record<string, unknown>,
@@ -170,95 +168,30 @@ async function upsertChatFromMessage(
   const displayName =
     resolvedName ||
     (!existingLooksLikeOwnName && existingChat?.display_name ? existingChat.display_name : fallbackDisplayName);
-  const unreadCount = direction === 'inbound' ? (existingChat?.unread_count ?? 0) + 1 : (existingChat?.unread_count ?? 0);
   const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
-
-  const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .upsert(
-      {
-        channel_id: channel.id,
-        external_chat_id: externalChatId,
-        phone_number: phoneDigits,
-        phone_digits: phoneDigits,
-        display_name: displayName,
-        push_name: resolvedName || existingChat?.push_name || null,
-        last_message_text: summarizeWhapiMessage(message),
-        last_message_direction: direction,
-        last_message_at: messageAt,
-        unread_count: unreadCount,
-      },
-      { onConflict: 'channel_id,external_chat_id' },
-    )
-    .select('*')
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message || 'Nao foi possivel atualizar a conversa.');
-  }
-
-  return data as { id: string };
-}
-
-async function saveMessageRecord(
-  supabaseAdmin: SupabaseClient,
-  payload: Record<string, unknown>,
-  externalMessageId: string,
-) {
-  const { data: existing, error: lookupError } = await supabaseAdmin
-    .from('comm_whatsapp_messages')
-    .select('id')
-    .eq('channel_id', payload.channel_id as string)
-    .eq('external_message_id', externalMessageId)
-    .maybeSingle();
-
-  if (lookupError) {
-    throw new Error(`Erro ao verificar mensagem existente: ${lookupError.message}`);
-  }
-
-  if (existing) {
-    const { error: updateError } = await supabaseAdmin
-      .from('comm_whatsapp_messages')
-      .update(payload)
-      .eq('id', (existing as StoredMessageRow).id);
-
-    if (updateError) {
-      throw new Error(`Erro ao atualizar mensagem existente: ${updateError.message}`);
-    }
-
-    return;
-  }
-
-  const { error: insertError } = await supabaseAdmin.from('comm_whatsapp_messages').insert(payload);
-  if (insertError) {
-    throw new Error(`Erro ao inserir mensagem: ${insertError.message}`);
-  }
-}
-
-async function upsertMessageFromWebhook(
-  supabaseAdmin: SupabaseClient,
-  channel: ChannelRow,
-  chatId: string,
-  message: Record<string, unknown>,
-) {
   const externalMessageId = toTrimmedString(message.id);
-  const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
-  const direction = message.from_me === true ? 'outbound' : 'inbound';
-  const externalChatId = normalizeWhapiChatId(message.chat_id);
   const deliveryStatus = toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'pending');
-  const payload = {
-    chat_id: chatId,
-    channel_id: channel.id,
-    external_message_id: externalMessageId || null,
+  const result = await persistCommWhatsAppMessage(supabaseAdmin, {
+    channelId: channel.id,
+    externalChatId,
+    phoneNumber: phoneDigits || null,
+    displayName,
+    pushName: resolvedName || existingChat?.push_name || null,
+    lastMessageText: summarizeWhapiMessage(message),
+    lastMessageDirection: direction,
+    lastMessageAt: messageAt,
+    incrementUnread: direction === 'inbound',
+    externalMessageId: externalMessageId || null,
     direction,
-    message_type: toTrimmedString(message.type) || 'text',
-    delivery_status: deliveryStatus,
-    text_content: summarizeWhapiMessage(message),
-    message_at: messageAt,
+    messageType: toTrimmedString(message.type) || 'text',
+    deliveryStatus,
+    textContent: summarizeWhapiMessage(message),
+    createdBy: null,
     source: toTrimmedString(message.source) || null,
-    sender_name: getDirectChatDisplayNameCandidate(message, direction) || null,
-    sender_phone: direction === 'outbound' ? channel.phone_number || null : extractPhoneFromChatId(externalChatId) || null,
-    status_updated_at: messageAt,
+    senderName: getDirectChatDisplayNameCandidate(message, direction) || null,
+    senderPhone: direction === 'outbound' ? channel.phone_number || null : phoneDigits || null,
+    statusUpdatedAt: messageAt,
+    errorMessage: null,
     metadata: {
       from_me: message.from_me === true,
       chat_id: externalChatId,
@@ -266,17 +199,9 @@ async function upsertMessageFromWebhook(
       from_name: toTrimmedString(message.from_name) || null,
       chat_name: toTrimmedString(message.chat_name) || null,
     },
-  };
+  });
 
-  if (externalMessageId) {
-    await saveMessageRecord(supabaseAdmin, payload, externalMessageId);
-    return;
-  }
-
-  const { error } = await supabaseAdmin.from('comm_whatsapp_messages').insert(payload);
-  if (error) {
-    throw new Error(`Erro ao inserir mensagem do webhook: ${error.message}`);
-  }
+  return { id: result.chatId };
 }
 
 async function applyMessageStatus(
@@ -290,18 +215,13 @@ async function applyMessageStatus(
   const deliveryStatus = toTrimmedString(statusItem.status) || 'pending';
   const statusUpdatedAt = stringTimestampToIso(statusItem.timestamp) || getNowIso();
 
-  const { error } = await supabaseAdmin
-    .from('comm_whatsapp_messages')
-    .update({
-      delivery_status: deliveryStatus,
-      status_updated_at: statusUpdatedAt,
-    })
-    .eq('channel_id', channelId)
-    .eq('external_message_id', externalMessageId);
-
-  if (error) {
-    throw new Error(`Erro ao atualizar status da mensagem: ${error.message}`);
-  }
+  await updateCommWhatsAppMessageStatus(supabaseAdmin, {
+    channelId,
+    externalMessageId,
+    deliveryStatus,
+    statusUpdatedAt,
+    errorMessage: toTrimmedString(statusItem.error) || toTrimmedString(statusItem.details) || null,
+  });
 }
 
 async function syncChannelHealth(
@@ -436,9 +356,8 @@ Deno.serve(async (req: Request) => {
 
         if (!accepted) continue;
 
-        const chat = await upsertChatFromMessage(supabaseAdmin, channel, item, whapiToken);
+        const chat = await persistMessageFromWebhook(supabaseAdmin, channel, item, whapiToken);
         if (!chat) continue;
-        await upsertMessageFromWebhook(supabaseAdmin, channel, chat.id, item);
       }
     }
 

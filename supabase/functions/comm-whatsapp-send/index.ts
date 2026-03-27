@@ -13,9 +13,9 @@ import {
   formatPhoneLabel,
   getNowIso,
   isDirectWhapiChatId,
-  normalizeCommWhatsAppPhone,
   normalizeWhapiChatId,
   parseWhapiError,
+  persistCommWhatsAppMessage,
   readResponsePayload,
   sanitizeWhapiToken,
   toTrimmedString,
@@ -33,10 +33,6 @@ type SendMessageBody = {
   text?: string;
 };
 
-type StoredMessageRow = {
-  id: string;
-};
-
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
 const createAdminClient = () => {
@@ -50,14 +46,14 @@ const createAdminClient = () => {
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
-async function ensureChatExists(
+async function resolveChatForSend(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   channelId: string,
   externalChatId: string,
 ) {
   const { data: existing, error } = await supabaseAdmin
     .from('comm_whatsapp_chats')
-    .select('id, display_name')
+    .select('display_name, push_name')
     .eq('channel_id', channelId)
     .eq('external_chat_id', externalChatId)
     .maybeSingle();
@@ -66,65 +62,7 @@ async function ensureChatExists(
     throw new Error(`Erro ao localizar conversa: ${error.message}`);
   }
 
-  if (existing) {
-    return existing as { id: string; display_name: string };
-  }
-
-  const phoneDigits = normalizeCommWhatsAppPhone(extractPhoneFromChatId(externalChatId));
-  const { data: created, error: createError } = await supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .insert({
-      channel_id: channelId,
-      external_chat_id: externalChatId,
-      phone_number: phoneDigits,
-      phone_digits: phoneDigits,
-      display_name: formatPhoneLabel(phoneDigits),
-      unread_count: 0,
-      last_message_direction: 'system',
-    })
-    .select('id, display_name')
-    .single();
-
-  if (createError || !created) {
-    throw new Error(createError?.message || 'Nao foi possivel preparar a conversa para envio.');
-  }
-
-  return created as { id: string; display_name: string };
-}
-
-async function saveMessageRecord(
-  supabaseAdmin: ReturnType<typeof createAdminClient>,
-  payload: Record<string, unknown>,
-  externalMessageId: string,
-) {
-  const { data: existing, error: lookupError } = await supabaseAdmin
-    .from('comm_whatsapp_messages')
-    .select('id')
-    .eq('channel_id', payload.channel_id as string)
-    .eq('external_message_id', externalMessageId)
-    .maybeSingle();
-
-  if (lookupError) {
-    throw new Error(`Erro ao verificar mensagem existente: ${lookupError.message}`);
-  }
-
-  if (existing) {
-    const { error: updateError } = await supabaseAdmin
-      .from('comm_whatsapp_messages')
-      .update(payload)
-      .eq('id', (existing as StoredMessageRow).id);
-
-    if (updateError) {
-      throw new Error(`Erro ao atualizar mensagem enviada: ${updateError.message}`);
-    }
-
-    return;
-  }
-
-  const { error: insertError } = await supabaseAdmin.from('comm_whatsapp_messages').insert(payload);
-  if (insertError) {
-    throw new Error(`Erro ao registrar mensagem enviada: ${insertError.message}`);
-  }
+  return (existing ?? null) as { display_name: string | null; push_name: string | null } | null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -231,49 +169,34 @@ Deno.serve(async (req: Request) => {
     const externalMessageId = extractWhapiMessageId(whapiPayload);
     const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
     const nowIso = getNowIso();
-    const chat = await ensureChatExists(supabaseAdmin, channel.id, chatId);
+    const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
+    const phoneDigits = extractPhoneFromChatId(chatId);
 
-    const { error: chatError } = await supabaseAdmin
-      .from('comm_whatsapp_chats')
-      .update({
-        last_message_text: text,
-        last_message_direction: 'outbound',
-        last_message_at: nowIso,
-        updated_at: nowIso,
-      })
-      .eq('id', chat.id);
-
-    if (chatError) {
-      throw new Error(`Erro ao atualizar resumo da conversa: ${chatError.message}`);
-    }
-
-    const messagePayload = {
-      chat_id: chat.id,
-      channel_id: channel.id,
-      external_message_id: externalMessageId || null,
+    await persistCommWhatsAppMessage(supabaseAdmin, {
+      channelId: channel.id,
+      externalChatId: chatId,
+      phoneNumber: phoneDigits || null,
+      displayName: existingChat?.display_name || formatPhoneLabel(phoneDigits),
+      pushName: existingChat?.push_name || null,
+      lastMessageText: text,
+      lastMessageDirection: 'outbound',
+      lastMessageAt: nowIso,
+      incrementUnread: false,
+      externalMessageId: externalMessageId || null,
       direction: 'outbound',
-      message_type: 'text',
-      delivery_status: deliveryStatus,
-      text_content: text,
-      message_at: nowIso,
-      created_by: authResult.user.profileId,
+      messageType: 'text',
+      deliveryStatus,
+      textContent: text,
+      createdBy: authResult.user.profileId,
       source: 'api',
-      sender_phone: channel.phone_number,
-      sender_name: channel.connected_user_name,
-      status_updated_at: nowIso,
+      senderPhone: channel.phone_number,
+      senderName: channel.connected_user_name,
+      statusUpdatedAt: nowIso,
+      errorMessage: null,
       metadata: {
         provider: 'whapi',
       },
-    };
-
-    if (externalMessageId) {
-      await saveMessageRecord(supabaseAdmin, messagePayload, externalMessageId);
-    } else {
-      const { error: messageError } = await supabaseAdmin.from('comm_whatsapp_messages').insert(messagePayload);
-      if (messageError) {
-        throw new Error(`Erro ao registrar mensagem enviada: ${messageError.message}`);
-      }
-    }
+    });
 
     await supabaseAdmin
       .from('comm_whatsapp_channels')

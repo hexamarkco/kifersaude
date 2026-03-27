@@ -18,6 +18,21 @@ type ListChatsParams = {
   limit?: number;
 };
 
+type MessageCursor = {
+  messageAt: string;
+  id: string;
+};
+
+type ListMessagesPageParams = {
+  limit?: number;
+  before?: MessageCursor | null;
+};
+
+export type CommWhatsAppMessagesPage = {
+  messages: CommWhatsAppMessage[];
+  hasMore: boolean;
+};
+
 const sanitizeSearch = (value: string) =>
   value
     .trim()
@@ -113,21 +128,27 @@ export const commWhatsAppService = {
     return (data ?? []) as CommWhatsAppChat[];
   },
 
-  async listMessages(chatId: string, limit: number = 80): Promise<CommWhatsAppMessage[]> {
-    const safeLimit = Math.min(Math.max(limit, 1), 200);
-    const { data, error } = await supabase
-      .from('comm_whatsapp_messages')
-      .select('*')
-      .eq('chat_id', chatId)
-      .order('message_at', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(safeLimit);
+  async listMessagesPage(chatId: string, params: ListMessagesPageParams = {}): Promise<CommWhatsAppMessagesPage> {
+    const safeLimit = Math.min(Math.max(params.limit ?? 50, 1), 200);
+    const { data, error } = await supabase.rpc('comm_whatsapp_list_messages_page', {
+      p_chat_id: chatId,
+      p_before_message_at: params.before?.messageAt ?? null,
+      p_before_id: params.before?.id ?? null,
+      p_limit: safeLimit + 1,
+    });
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as mensagens do WhatsApp.'));
     }
 
-    return ((data ?? []) as CommWhatsAppMessage[]).reverse();
+    const rows = (data ?? []) as CommWhatsAppMessage[];
+    const hasMore = rows.length > safeLimit;
+    const page = rows.slice(0, safeLimit).reverse();
+
+    return {
+      messages: page,
+      hasMore,
+    };
   },
 
   async syncChatHistory(chatId: string): Promise<void> {

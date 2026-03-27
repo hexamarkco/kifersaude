@@ -3919,6 +3919,38 @@
   color: var(--panel-text-subtle);
 }
 
+.painel-theme .whatsapp-inbox-load-older {
+  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-surface) 82%, rgba(255, 255, 255, 0.4) 18%);
+  color: var(--panel-text-soft);
+  box-shadow: 0 12px 24px -22px rgba(42, 24, 12, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.painel-theme .whatsapp-inbox-load-older:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 76%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 58%, var(--panel-surface) 42%);
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme .whatsapp-inbox-load-older:disabled {
+  opacity: 0.74;
+  cursor: wait;
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-load-older {
+  border-color: color-mix(in srgb, var(--panel-border) 76%, transparent);
+  background: color-mix(in srgb, var(--panel-surface-soft) 76%, rgba(0, 0, 0, 0.18) 24%);
+  color: var(--panel-text-soft);
+  box-shadow: 0 14px 28px -24px rgba(0, 0, 0, 0.42);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-load-older:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--panel-accent-border) 76%, transparent);
+  background: color-mix(in srgb, var(--panel-accent-soft) 62%, var(--panel-surface) 38%);
+  color: var(--panel-accent-ink-strong);
+}
+
 .painel-theme .whatsapp-inbox-composer-area {
   background: linear-gradient(
     180deg,

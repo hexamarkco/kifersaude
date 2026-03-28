@@ -28,6 +28,7 @@ type PendingAttachment = {
   durationSeconds?: number;
   previewUrl?: string | null;
   waveform?: number[];
+  waveformPayload?: string | null;
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 
@@ -210,6 +211,37 @@ const buildWaveformBars = (input: Uint8Array, barCount: number = 28) => {
   }
 
   return bars;
+};
+
+const buildVoiceWaveformPayload = (input: Uint8Array, barCount: number = 64) => {
+  if (!input.length) {
+    return '';
+  }
+
+  const chunkSize = Math.max(1, Math.floor(input.length / barCount));
+  const samples = new Uint8Array(barCount);
+
+  for (let index = 0; index < barCount; index += 1) {
+    const start = index * chunkSize;
+    const end = Math.min(input.length, start + chunkSize);
+    let total = 0;
+    let count = 0;
+
+    for (let offset = start; offset < end; offset += 1) {
+      total += Math.abs(input[offset] - 128) / 128;
+      count += 1;
+    }
+
+    const average = count > 0 ? total / count : 0;
+    samples[index] = Math.max(0, Math.min(127, Math.round(average * 127)));
+  }
+
+  let binary = '';
+  samples.forEach((value) => {
+    binary += String.fromCharCode(value);
+  });
+
+  return btoa(binary);
 };
 
 function WaveformBars({ bars, active = false }: { bars?: number[]; active?: boolean }) {
@@ -496,6 +528,7 @@ export default function WhatsAppInboxScreen() {
   const voiceSourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const voiceWaveformDataRef = useRef<Uint8Array | null>(null);
   const voiceWaveformSnapshotRef = useRef<number[]>(DEFAULT_WAVEFORM);
+  const voiceWaveformPayloadRef = useRef('');
   const mediaUploadAbortControllerRef = useRef<AbortController | null>(null);
   const autoSendVoiceRef = useRef(false);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
@@ -515,6 +548,7 @@ export default function WhatsAppInboxScreen() {
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachment !== null;
   const pollingEnabled = isDocumentVisible && isWindowFocused;
+  const isVoiceComposerMode = voiceRecordingState === 'recording' || pendingAttachment?.kind === 'voice';
 
   const buildChatsSignature = useCallback(
     (items: CommWhatsAppChat[]) =>
@@ -1242,12 +1276,14 @@ export default function WhatsAppInboxScreen() {
       setPendingAttachment(null);
       setVoiceRecordingSeconds(0);
       voiceRecordingSecondsRef.current = 0;
+      voiceWaveformPayloadRef.current = '';
       return;
     }
 
     if (chunks.length === 0) {
       setVoiceRecordingSeconds(0);
       voiceRecordingSecondsRef.current = 0;
+      voiceWaveformPayloadRef.current = '';
       return;
     }
 
@@ -1264,10 +1300,12 @@ export default function WhatsAppInboxScreen() {
       durationSeconds,
       previewUrl,
       waveform: voiceWaveformSnapshotRef.current,
+      waveformPayload: voiceWaveformPayloadRef.current || null,
     });
     setVoiceRecordingSeconds(0);
     voiceRecordingSecondsRef.current = 0;
     setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
+    voiceWaveformPayloadRef.current = '';
   }, []);
 
   const handleStopVoiceRecording = useCallback((autoSend: boolean = false) => {
@@ -1292,6 +1330,7 @@ export default function WhatsAppInboxScreen() {
     setVoiceRecordingSeconds(0);
     voiceRecordingSecondsRef.current = 0;
     setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
+    voiceWaveformPayloadRef.current = '';
     clearVoiceTimer();
 
     if (voiceRecorderRef.current && voiceRecorderRef.current.state !== 'inactive') {
@@ -1328,6 +1367,7 @@ export default function WhatsAppInboxScreen() {
       setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
       setMediaUploadProgress(null);
       discardVoiceRecordingRef.current = false;
+      voiceWaveformPayloadRef.current = '';
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       if (discardVoiceRecordingRef.current) {
@@ -1366,7 +1406,9 @@ export default function WhatsAppInboxScreen() {
 
           voiceAnalyserRef.current.getByteTimeDomainData(voiceWaveformDataRef.current);
           const nextBars = buildWaveformBars(voiceWaveformDataRef.current);
+          const nextWaveformPayload = buildVoiceWaveformPayload(voiceWaveformDataRef.current);
           voiceWaveformSnapshotRef.current = nextBars;
+          voiceWaveformPayloadRef.current = nextWaveformPayload;
           setVoiceRecordingWaveform(nextBars);
         }, 120);
       }
@@ -1417,6 +1459,7 @@ export default function WhatsAppInboxScreen() {
       setVoiceRecordingSeconds(0);
       voiceRecordingSecondsRef.current = 0;
       setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
+      voiceWaveformPayloadRef.current = '';
 
       const message =
         error instanceof DOMException && error.name === 'NotAllowedError'
@@ -1484,6 +1527,7 @@ export default function WhatsAppInboxScreen() {
           file: pendingAttachment.file,
           caption,
           durationSeconds: pendingAttachment.durationSeconds,
+          waveform: pendingAttachment.kind === 'voice' ? pendingAttachment.waveformPayload || undefined : undefined,
           onUploadProgress: setMediaUploadProgress,
           signal: mediaUploadAbortControllerRef.current.signal,
         });
@@ -1733,7 +1777,7 @@ export default function WhatsAppInboxScreen() {
               </div>
 
               <div className="whatsapp-inbox-composer-area border-t p-4 sm:p-5">
-                <div className={`whatsapp-inbox-composer rounded-[30px] border px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}>
+                <div className={`whatsapp-inbox-composer rounded-[30px] border ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
                   <input
                     ref={fileInputRef}
                     type="file"

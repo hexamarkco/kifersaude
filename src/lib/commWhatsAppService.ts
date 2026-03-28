@@ -214,6 +214,7 @@ export const commWhatsAppService = {
     file: File;
     caption?: string;
     durationSeconds?: number;
+    waveform?: string;
     onUploadProgress?: (progress: number | null) => void;
     signal?: AbortSignal;
   }): Promise<{ messageId: string | null; status: string }> {
@@ -236,6 +237,9 @@ export const commWhatsAppService = {
     form.append('caption', params.caption?.trim() || '');
     if (typeof params.durationSeconds === 'number' && Number.isFinite(params.durationSeconds)) {
       form.append('durationSeconds', String(Math.max(0, Math.round(params.durationSeconds))));
+    }
+    if (params.waveform?.trim()) {
+      form.append('waveform', params.waveform.trim());
     }
     form.append('file', params.file, params.file.name);
 

@@ -35,6 +35,7 @@ type SendMessageBody = {
   type?: string;
   caption?: string;
   durationSeconds?: number;
+  waveform?: string;
 };
 
 type MediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
@@ -139,6 +140,7 @@ Deno.serve(async (req: Request) => {
     let mediaKind: MediaSendKind | null = null;
     let mediaFile: File | null = null;
     let mediaDurationSeconds: number | null = null;
+    let mediaWaveform = '';
 
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData();
@@ -157,6 +159,7 @@ Deno.serve(async (req: Request) => {
       mediaKind = normalizeMediaKind(toTrimmedString(form.get('type')), uploaded.type);
       const durationRaw = Number(form.get('durationSeconds'));
       mediaDurationSeconds = Number.isFinite(durationRaw) ? Math.max(0, Math.round(durationRaw)) : null;
+      mediaWaveform = toTrimmedString(form.get('waveform'));
     } else {
       const body = (await req.json().catch(() => ({}))) as SendMessageBody;
       chatId = normalizeWhapiChatId(body.chatId);
@@ -192,21 +195,54 @@ Deno.serve(async (req: Request) => {
     let uploadedMediaId = '';
 
     if (mediaFile && mediaKind) {
-      const messageForm = new FormData();
-      messageForm.append('to', chatId);
-      if (mediaKind !== 'voice' && text) {
-        messageForm.append('caption', text);
-      }
-      messageForm.append('media', mediaFile, mediaFile.name);
+      if (mediaKind === 'audio' || mediaKind === 'voice') {
+        const fileBytes = new Uint8Array(await mediaFile.arrayBuffer());
+        let binary = '';
+        for (let index = 0; index < fileBytes.length; index += 1) {
+          binary += String.fromCharCode(fileBytes[index]);
+        }
+        const mediaBase64 = btoa(binary);
+        const mediaDataUrl = `data:${mediaFile.type || 'application/octet-stream'};name=${encodeURIComponent(mediaFile.name)};base64,${mediaBase64}`;
 
-      whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: messageForm,
-      });
+        const payload: Record<string, unknown> = {
+          to: chatId,
+          media: mediaDataUrl,
+        };
+
+        if (mediaKind !== 'voice' && text) {
+          payload.caption = text;
+        }
+
+        if (mediaKind === 'voice' && mediaWaveform) {
+          payload.waveform = mediaWaveform;
+        }
+
+        whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        const messageForm = new FormData();
+        messageForm.append('to', chatId);
+        if (text) {
+          messageForm.append('caption', text);
+        }
+        messageForm.append('media', mediaFile, mediaFile.name);
+
+        whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: messageForm,
+        });
+      }
     } else {
       whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
         method: 'POST',

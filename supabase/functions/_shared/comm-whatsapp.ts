@@ -217,6 +217,8 @@ const readMediaPayload = (message: unknown): Record<string, unknown> | null => {
   switch (type) {
     case 'image':
       return isRecord(message.image) ? message.image : null;
+    case 'video':
+      return isRecord(message.video) ? message.video : null;
     case 'document':
       return isRecord(message.document) ? message.document : null;
     case 'audio':

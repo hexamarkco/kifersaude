@@ -34,7 +34,7 @@ export type CommWhatsAppMessagesPage = {
   hasMore: boolean;
 };
 
-export type CommWhatsAppMediaSendKind = 'image' | 'document' | 'audio' | 'voice';
+export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const mediaObjectUrlCache = new Map<string, Promise<string>>();
 

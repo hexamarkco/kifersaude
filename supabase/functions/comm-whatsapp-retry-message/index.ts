@@ -171,7 +171,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!['image', 'document', 'audio', 'voice'].includes(retryTarget.message_type)) {
+    if (!['image', 'video', 'document', 'audio', 'voice'].includes(retryTarget.message_type)) {
       return new Response(JSON.stringify({ error: 'Retry disponivel apenas para midias outbound.' }), {
         status: 400,
         headers: jsonHeaders,

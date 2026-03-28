@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Loader2, MessageCircle, Mic, Plus, Search, SendHorizontal, Smile, Square, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Images, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, Smile, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
@@ -29,6 +29,7 @@ type PendingAttachment = {
   previewUrl?: string | null;
   waveform?: number[];
 };
+type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -113,6 +114,10 @@ const isMediaPlaceholder = (message: CommWhatsAppMessage) => {
 const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
   if (file.type.startsWith('image/')) {
     return 'image';
+  }
+
+  if (file.type.startsWith('video/')) {
+    return 'video';
   }
 
   if (file.type.startsWith('audio/')) {
@@ -346,6 +351,29 @@ function WhatsAppMessageBody({
     );
   }
 
+  if (kind === 'video') {
+    return (
+      <div className="space-y-3">
+        <div className="whatsapp-inbox-image-card overflow-hidden rounded-2xl border">
+          {mediaUrl ? (
+            <video controls preload="metadata" className="max-h-[320px] w-full bg-black object-contain">
+              <source src={mediaUrl} type={message.media_mime_type || undefined} />
+            </video>
+          ) : (
+            <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
+              {loading ? 'Carregando video...' : error || 'Video indisponivel'}
+            </div>
+          )}
+          <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
+            <span className="truncate font-medium">{message.media_file_name || 'Video'}</span>
+            <span className="shrink-0 opacity-80">{formatFileSize(message.media_size_bytes) || 'Midia'}</span>
+          </div>
+        </div>
+        {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+      </div>
+    );
+  }
+
   if (kind === 'document') {
     const extension = message.media_file_name?.split('.').pop()?.toUpperCase() || 'DOC';
 
@@ -418,6 +446,8 @@ export default function WhatsAppInboxScreen() {
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [onlyUnread, setOnlyUnread] = useState(false);
+  const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
+  const [attachmentInputAccept, setAttachmentInputAccept] = useState('image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,audio/*');
   const [chats, setChats] = useState<CommWhatsAppChat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommWhatsAppMessage[]>([]);
@@ -432,6 +462,9 @@ export default function WhatsAppInboxScreen() {
   const [voiceRecordingSeconds, setVoiceRecordingSeconds] = useState(0);
   const [voiceRecordingWaveform, setVoiceRecordingWaveform] = useState<number[]>(DEFAULT_WAVEFORM);
   const [mediaUploadProgress, setMediaUploadProgress] = useState<number | null>(null);
+  const [voicePreviewPlaying, setVoicePreviewPlaying] = useState(false);
+  const [voicePreviewDuration, setVoicePreviewDuration] = useState<number | null>(null);
+  const [voicePreviewCurrentTime, setVoicePreviewCurrentTime] = useState(0);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
@@ -442,6 +475,8 @@ export default function WhatsAppInboxScreen() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
+  const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
   const voiceStreamRef = useRef<MediaStream | null>(null);
@@ -457,6 +492,7 @@ export default function WhatsAppInboxScreen() {
   const voiceWaveformDataRef = useRef<Uint8Array | null>(null);
   const voiceWaveformSnapshotRef = useRef<number[]>(DEFAULT_WAVEFORM);
   const mediaUploadAbortControllerRef = useRef<AbortController | null>(null);
+  const autoSendVoiceRef = useRef(false);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
@@ -644,6 +680,61 @@ export default function WhatsAppInboxScreen() {
       }
     };
   }, [pendingAttachment?.previewUrl]);
+
+  useEffect(() => {
+    if (!attachmentMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (attachmentMenuRef.current && target && !attachmentMenuRef.current.contains(target)) {
+        setAttachmentMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    return () => window.removeEventListener('mousedown', handlePointerDown);
+  }, [attachmentMenuOpen]);
+
+  useEffect(() => {
+    const audio = voicePreviewAudioRef.current;
+    if (!audio || pendingAttachment?.kind !== 'voice') {
+      setVoicePreviewPlaying(false);
+      setVoicePreviewCurrentTime(0);
+      setVoicePreviewDuration(pendingAttachment?.durationSeconds ?? null);
+      return;
+    }
+
+    const handleTimeUpdate = () => {
+      setVoicePreviewCurrentTime(audio.currentTime || 0);
+    };
+
+    const handleLoadedMetadata = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setVoicePreviewDuration(audio.duration);
+      } else {
+        setVoicePreviewDuration(pendingAttachment.durationSeconds ?? null);
+      }
+    };
+
+    const handleEnded = () => {
+      setVoicePreviewPlaying(false);
+      setVoicePreviewCurrentTime(0);
+      audio.currentTime = 0;
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [pendingAttachment]);
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
@@ -1086,11 +1177,25 @@ export default function WhatsAppInboxScreen() {
     setIsComposerExpanded(expanded);
   }, [messageDraft, pendingAttachment, selectedChatId]);
 
-  const handleOpenAttachmentPicker = () => {
+  const handleAttachmentMenuAction = (action: AttachmentMenuAction) => {
     if (voiceRecordingState !== 'idle') {
       return;
     }
 
+    if (action === 'contact') {
+      setAttachmentMenuOpen(false);
+      return;
+    }
+
+    if (action === 'document') {
+      setAttachmentInputAccept('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv');
+    } else if (action === 'audio') {
+      setAttachmentInputAccept('audio/*');
+    } else {
+      setAttachmentInputAccept('image/*,video/*');
+    }
+
+    setAttachmentMenuOpen(false);
     fileInputRef.current?.click();
   };
 
@@ -1106,13 +1211,19 @@ export default function WhatsAppInboxScreen() {
     setPendingAttachment({
       file: nextFile,
       kind: inferAttachmentKind(nextFile),
-      previewUrl: nextFile.type.startsWith('image/') ? URL.createObjectURL(nextFile) : null,
+      previewUrl: nextFile.type.startsWith('image/') || nextFile.type.startsWith('video/') ? URL.createObjectURL(nextFile) : null,
     });
 
     event.target.value = '';
   };
 
   const handleClearAttachment = () => {
+    voicePreviewAudioRef.current?.pause();
+    if (voicePreviewAudioRef.current) {
+      voicePreviewAudioRef.current.currentTime = 0;
+    }
+    setVoicePreviewPlaying(false);
+    setVoicePreviewCurrentTime(0);
     setPendingAttachment(null);
     setMediaUploadProgress(null);
   };
@@ -1154,11 +1265,12 @@ export default function WhatsAppInboxScreen() {
     setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
   }, []);
 
-  const handleStopVoiceRecording = useCallback(() => {
+  const handleStopVoiceRecording = useCallback((autoSend: boolean = false) => {
     if (voiceRecordingState !== 'recording') {
       return;
     }
 
+    autoSendVoiceRef.current = autoSend;
     setVoiceRecordingState('idle');
     clearVoiceTimer();
     voiceRecorderRef.current?.stop();
@@ -1170,6 +1282,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     discardVoiceRecordingRef.current = true;
+    autoSendVoiceRef.current = false;
     setVoiceRecordingState('idle');
     setVoiceRecordingSeconds(0);
     voiceRecordingSecondsRef.current = 0;
@@ -1202,6 +1315,9 @@ export default function WhatsAppInboxScreen() {
     try {
       setVoiceRecordingState('requesting');
       setPendingAttachment(null);
+      setVoicePreviewPlaying(false);
+      setVoicePreviewCurrentTime(0);
+      setVoicePreviewDuration(null);
       setVoiceRecordingSeconds(0);
       voiceRecordingSecondsRef.current = 0;
       setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
@@ -1307,6 +1423,36 @@ export default function WhatsAppInboxScreen() {
 
   cancelVoiceRecordingRef.current = handleCancelVoiceRecording;
 
+  const handleToggleVoicePreviewPlayback = useCallback(() => {
+    const audio = voicePreviewAudioRef.current;
+    if (!audio || pendingAttachment?.kind !== 'voice') {
+      return;
+    }
+
+    if (voicePreviewPlaying) {
+      audio.pause();
+      setVoicePreviewPlaying(false);
+      return;
+    }
+
+    void audio.play().then(() => {
+      setVoicePreviewPlaying(true);
+    }).catch(() => {
+      toast.error('Nao foi possivel reproduzir a nota de voz agora.');
+    });
+  }, [pendingAttachment?.kind, voicePreviewPlaying]);
+
+  const handleSendCurrentVoiceRecording = useCallback(() => {
+    if (voiceRecordingState === 'recording') {
+      handleStopVoiceRecording(true);
+      return;
+    }
+
+    if (pendingAttachment?.kind === 'voice') {
+      void handleSendMessage();
+    }
+  }, [handleStopVoiceRecording, pendingAttachment?.kind, voiceRecordingState]);
+
   const handleSendMessage = async () => {
     if (!selectedChat) return;
 
@@ -1336,6 +1482,12 @@ export default function WhatsAppInboxScreen() {
           onUploadProgress: setMediaUploadProgress,
           signal: mediaUploadAbortControllerRef.current.signal,
         });
+        voicePreviewAudioRef.current?.pause();
+        if (voicePreviewAudioRef.current) {
+          voicePreviewAudioRef.current.currentTime = 0;
+        }
+        setVoicePreviewPlaying(false);
+        setVoicePreviewCurrentTime(0);
         setPendingAttachment(null);
       } else {
         await commWhatsAppService.sendTextMessage(selectedChat.external_chat_id, text);
@@ -1358,6 +1510,20 @@ export default function WhatsAppInboxScreen() {
       mediaUploadAbortControllerRef.current = null;
     }
   };
+
+  useEffect(() => {
+    if (!pendingAttachment || pendingAttachment.kind !== 'voice') {
+      autoSendVoiceRef.current = false;
+      return;
+    }
+
+    if (!autoSendVoiceRef.current) {
+      return;
+    }
+
+    autoSendVoiceRef.current = false;
+    void handleSendMessage();
+  }, [handleSendMessage, pendingAttachment]);
 
   const handleCancelMediaUpload = () => {
     mediaUploadAbortControllerRef.current?.abort();
@@ -1551,7 +1717,7 @@ export default function WhatsAppInboxScreen() {
                         <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em]">
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
-                          {message.direction === 'outbound' && ['image', 'document', 'audio', 'voice'].includes(message.message_type) && message.delivery_status === 'failed' && message.media_id ? (
+                          {message.direction === 'outbound' && ['image', 'video', 'document', 'audio', 'voice'].includes(message.message_type) && message.delivery_status === 'failed' && message.media_id ? (
                             <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
                           ) : null}
                         </div>
@@ -1566,67 +1732,142 @@ export default function WhatsAppInboxScreen() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                    accept={attachmentInputAccept}
                     className="hidden"
                     onChange={handleAttachmentInputChange}
                   />
 
-                  {voiceRecordingState === 'recording' && (
-                    <div className="whatsapp-inbox-recorder-card mb-3 rounded-2xl border px-3 py-3">
-                      <div className="flex items-center gap-3">
-                      <span className="relative flex h-3 w-3 shrink-0">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-75" />
-                        <span className="relative inline-flex h-3 w-3 rounded-full bg-rose-500" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-[var(--panel-text,#1f2937)]">Gravando nota de voz</p>
-                        <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">{formatDurationLabel(voiceRecordingSeconds)}</p>
+                  {pendingAttachment?.kind === 'voice' ? (
+                    <>
+                      <audio ref={voicePreviewAudioRef} src={pendingAttachment.previewUrl ?? undefined} preload="metadata" className="hidden" />
+                      <div className="whatsapp-inbox-voice-composer flex items-center gap-3 rounded-[26px] px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={handleClearAttachment}
+                          disabled={sending}
+                          className="whatsapp-inbox-voice-side-action inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                          aria-label="Descartar nota de voz"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleToggleVoicePreviewPlayback}
+                          disabled={sending}
+                          className="whatsapp-inbox-voice-play inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                          aria-label={voicePreviewPlaying ? 'Pausar nota de voz' : 'Ouvir nota de voz'}
+                        >
+                          {voicePreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+                        </button>
+
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <span className="h-3 w-3 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(34,197,94,0.14)]" />
+                          <div className="min-w-0 flex-1">
+                            <WaveformBars bars={pendingAttachment.waveform} active={voicePreviewPlaying} />
+                          </div>
+                          <span className="whatsapp-inbox-voice-time shrink-0 text-sm font-semibold tabular-nums">
+                            {formatDurationLabel(
+                              Math.max(
+                                0,
+                                Math.round(voicePreviewPlaying ? voicePreviewCurrentTime : (voicePreviewDuration ?? pendingAttachment.durationSeconds ?? 0)),
+                              ),
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleClearAttachment();
+                              void handleStartVoiceRecording();
+                            }}
+                            disabled={sending}
+                            className="whatsapp-inbox-voice-side-action is-accent inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                            aria-label="Regravar nota de voz"
+                          >
+                            <Mic className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleSendCurrentVoiceRecording}
+                          disabled={sending || Boolean(sendDisabledReason)}
+                          className={`whatsapp-inbox-voice-send inline-flex h-12 w-12 items-center justify-center rounded-full transition ${sending ? 'opacity-70' : ''}`}
+                          aria-label="Enviar nota de voz"
+                        >
+                          {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
+                        </button>
                       </div>
+                    </>
+                  ) : voiceRecordingState === 'recording' ? (
+                    <div className="whatsapp-inbox-voice-composer is-recording flex items-center gap-3 rounded-[26px] px-3 py-2.5">
                       <button
                         type="button"
                         onClick={handleCancelVoiceRecording}
-                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-full transition"
-                        aria-label="Cancelar gravacao"
+                        className="whatsapp-inbox-voice-side-action inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                        aria-label="Descartar gravacao"
                       >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-5 w-5" />
                       </button>
-                      </div>
-                      <div className="mt-3">
-                        <WaveformBars bars={voiceRecordingWaveform} active />
-                      </div>
-                    </div>
-                  )}
 
-                  {pendingAttachment && (
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className="flex shrink-0 items-center gap-2 text-rose-400">
+                          <span className="h-3 w-3 rounded-full bg-current shadow-[0_0_0_4px_rgba(251,113,133,0.16)]" />
+                          <span className="whatsapp-inbox-voice-time text-sm font-semibold tabular-nums text-[var(--panel-text,#1f2937)]">
+                            {formatDurationLabel(voiceRecordingSeconds)}
+                          </span>
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <WaveformBars bars={voiceRecordingWaveform} active />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleStopVoiceRecording()}
+                          className="whatsapp-inbox-voice-side-action inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                          aria-label="Parar gravacao"
+                        >
+                          <Pause className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleSendCurrentVoiceRecording}
+                        disabled={Boolean(sendDisabledReason)}
+                        className="whatsapp-inbox-voice-send inline-flex h-12 w-12 items-center justify-center rounded-full transition"
+                        aria-label="Parar e enviar nota de voz"
+                      >
+                        <SendHorizontal className="h-5 w-5" />
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {pendingAttachment && pendingAttachment.kind !== 'voice' && (
                     <div className="whatsapp-inbox-attachment-card mb-3 rounded-2xl border px-3 py-3">
                       <div className="flex items-start gap-3">
                         {pendingAttachment.kind === 'image' ? (
                           <FileImage className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                        ) : pendingAttachment.kind === 'audio' || pendingAttachment.kind === 'voice' ? (
+                        ) : pendingAttachment.kind === 'video' ? (
+                          <Images className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                        ) : pendingAttachment.kind === 'audio' ? (
                           <FileAudio className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
                         ) : (
                           <FileText className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
                         )}
                         <div className="min-w-0 flex-1 space-y-3">
                           <div>
-                            <p className="truncate text-sm font-medium">{pendingAttachment.kind === 'voice' ? 'Nota de voz pronta para envio' : pendingAttachment.file.name}</p>
-                            <p className="text-xs opacity-75">
-                              {pendingAttachment.kind === 'voice' && pendingAttachment.durationSeconds != null
-                                ? `${formatDurationLabel(pendingAttachment.durationSeconds)} • ${formatFileSize(pendingAttachment.file.size)}`
-                                : formatFileSize(pendingAttachment.file.size)}
-                            </p>
+                            <p className="truncate text-sm font-medium">{pendingAttachment.file.name}</p>
+                            <p className="text-xs opacity-75">{formatFileSize(pendingAttachment.file.size)}</p>
                           </div>
 
-                          {pendingAttachment.kind === 'voice' && pendingAttachment.waveform ? (
-                            <WaveformBars bars={pendingAttachment.waveform} />
-                          ) : null}
-
-                          {pendingAttachment.kind === 'voice' && pendingAttachment.previewUrl ? (
-                            <audio controls preload="metadata" className="w-full max-w-[320px]">
-                              <source src={pendingAttachment.previewUrl} type={pendingAttachment.file.type || undefined} />
-                            </audio>
-                          ) : pendingAttachment.kind === 'image' && pendingAttachment.previewUrl ? (
+                          {pendingAttachment.kind === 'image' && pendingAttachment.previewUrl ? (
                             <img src={pendingAttachment.previewUrl} alt={pendingAttachment.file.name} className="max-h-[180px] rounded-2xl object-cover" />
+                          ) : pendingAttachment.kind === 'video' && pendingAttachment.previewUrl ? (
+                            <video controls preload="metadata" className="max-h-[220px] rounded-2xl bg-black">
+                              <source src={pendingAttachment.previewUrl} type={pendingAttachment.file.type || undefined} />
+                            </video>
                           ) : null}
 
                           {typeof mediaUploadProgress === 'number' && sending ? (
@@ -1649,20 +1890,6 @@ export default function WhatsAppInboxScreen() {
                                 Cancelar upload
                               </button>
                             ) : null}
-                            {pendingAttachment.kind === 'voice' ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  handleClearAttachment();
-                                  void handleStartVoiceRecording();
-                                }}
-                                disabled={sending}
-                                className="whatsapp-inbox-attachment-action inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition"
-                              >
-                                <Mic className="h-3.5 w-3.5" />
-                                Regravar
-                              </button>
-                            ) : null}
                             <button
                               type="button"
                               onClick={handleClearAttachment}
@@ -1679,16 +1906,56 @@ export default function WhatsAppInboxScreen() {
                     </div>
                   )}
 
+                  {voiceRecordingState === 'recording' || pendingAttachment?.kind === 'voice' ? null : (
                   <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
-                    <div className={`flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
+                    <div ref={attachmentMenuRef} className={`relative flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
+                      {attachmentMenuOpen && (
+                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-3 min-w-[240px] overflow-hidden rounded-[24px] border py-2 shadow-2xl">
+                          <button
+                            type="button"
+                            onClick={() => handleAttachmentMenuAction('document')}
+                            className="whatsapp-inbox-attach-menu-item is-primary flex w-full items-center gap-3 px-4 py-3 text-left"
+                          >
+                            <FileText className="h-5 w-5 text-violet-500" />
+                            <span>Documento</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAttachmentMenuAction('media')}
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-4 py-3 text-left"
+                          >
+                            <Images className="h-5 w-5 text-sky-500" />
+                            <span>Fotos e videos</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAttachmentMenuAction('audio')}
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-4 py-3 text-left"
+                          >
+                            <FileAudio className="h-5 w-5 text-orange-500" />
+                            <span>Audio</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled
+                            className="whatsapp-inbox-attach-menu-item is-disabled flex w-full items-center gap-3 px-4 py-3 text-left"
+                          >
+                            <UserRound className="h-5 w-5 text-cyan-500" />
+                            <span>Contato</span>
+                            <span className="ml-auto text-[10px] font-semibold uppercase tracking-[0.12em] opacity-60">Em breve</span>
+                          </button>
+                        </div>
+                      )}
+
                       <button
                         type="button"
-                        onClick={handleOpenAttachmentPicker}
+                        onClick={() => setAttachmentMenuOpen((current) => !current)}
                         disabled={voiceRecordingState !== 'idle'}
                         className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
                         aria-label="Anexar"
+                        aria-expanded={attachmentMenuOpen}
                       >
-                        <Plus className="h-5 w-5" />
+                        <Plus className={`h-5 w-5 transition ${attachmentMenuOpen ? 'rotate-45' : ''}`} />
                       </button>
                       <button
                         type="button"
@@ -1707,8 +1974,8 @@ export default function WhatsAppInboxScreen() {
                         value={messageDraft}
                         onChange={(event) => setMessageDraft(event.target.value)}
                         onKeyDown={handleComposerKeyDown}
-                        placeholder={voiceRecordingState === 'recording' ? 'Gravando nota de voz...' : pendingAttachment?.kind === 'voice' ? 'Nota de voz pronta para enviar' : 'Digite uma mensagem'}
-                        disabled={sending || voiceRecordingState === 'recording' || pendingAttachment?.kind === 'voice'}
+                        placeholder="Digite uma mensagem"
+                        disabled={sending}
                         className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-[15px] leading-6 focus:outline-none"
                       />
                     </div>
@@ -1718,16 +1985,14 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={handleComposerSubmit}
                         disabled={sending || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
-                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasSendPayload || voiceRecordingState === 'recording' ? 'is-active' : ''} ${sending || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
-                        aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : voiceRecordingState === 'recording' ? 'Parar gravacao' : hasSendPayload ? 'Enviar mensagem' : 'Gravar audio'}
+                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${sending || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
+                        aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar audio'}
                         title={sendDisabledReason ?? undefined}
                       >
                         {sending ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
                         ) : voiceRecordingState === 'requesting' ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : voiceRecordingState === 'recording' ? (
-                          <Square className="h-5 w-5" />
                         ) : hasSendPayload ? (
                           <SendHorizontal className="h-5 w-5" />
                         ) : (
@@ -1736,6 +2001,7 @@ export default function WhatsAppInboxScreen() {
                       </button>
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             </>

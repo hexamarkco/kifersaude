@@ -37,7 +37,7 @@ type SendMessageBody = {
   durationSeconds?: number;
 };
 
-type MediaSendKind = 'image' | 'document' | 'audio' | 'voice';
+type MediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
@@ -73,12 +73,16 @@ async function resolveChatForSend(
 
 const normalizeMediaKind = (value: string, mimeType: string): MediaSendKind => {
   const requested = value.trim().toLowerCase();
-  if (requested === 'image' || requested === 'document' || requested === 'audio' || requested === 'voice') {
+  if (requested === 'image' || requested === 'video' || requested === 'document' || requested === 'audio' || requested === 'voice') {
     return requested;
   }
 
   if (mimeType.startsWith('image/')) {
     return 'image';
+  }
+
+  if (mimeType.startsWith('video/')) {
+    return 'video';
   }
 
   if (mimeType.startsWith('audio/')) {
@@ -91,6 +95,7 @@ const normalizeMediaKind = (value: string, mimeType: string): MediaSendKind => {
 const buildMediaSummary = (kind: MediaSendKind, caption: string) => {
   if (caption) return caption;
   if (kind === 'image') return '[Imagem]';
+  if (kind === 'video') return '[Video]';
   if (kind === 'audio' || kind === 'voice') return '[Audio]';
   return '[Documento]';
 };

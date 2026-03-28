@@ -192,47 +192,20 @@ Deno.serve(async (req: Request) => {
     let uploadedMediaId = '';
 
     if (mediaFile && mediaKind) {
-      const uploadForm = new FormData();
-      uploadForm.append('media', mediaFile, mediaFile.name);
-
-      const uploadResponse = await fetch(`${WHAPI_BASE_URL}/media`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: uploadForm,
-      });
-
-      const uploadPayload = await readResponsePayload(uploadResponse);
-      if (!uploadResponse.ok) {
-        const errorMessage = parseWhapiError(uploadPayload);
-        return new Response(JSON.stringify({ error: errorMessage || 'Falha ao enviar arquivo para a Whapi.' }), {
-          status: uploadResponse.status,
-          headers: jsonHeaders,
-        });
+      const messageForm = new FormData();
+      messageForm.append('to', chatId);
+      if (mediaKind !== 'voice' && text) {
+        messageForm.append('caption', text);
       }
-
-      uploadedMediaId = extractWhapiMediaId(uploadPayload);
-      if (!uploadedMediaId) {
-        return new Response(JSON.stringify({ error: 'A Whapi nao retornou MediaID para o arquivo enviado.' }), {
-          status: 400,
-          headers: jsonHeaders,
-        });
-      }
+      messageForm.append('media', mediaFile, mediaFile.name);
 
       whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Accept: 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          to: chatId,
-          media: uploadedMediaId,
-          caption: mediaKind === 'voice' ? undefined : text || undefined,
-        }),
+        body: messageForm,
       });
     } else {
       whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
@@ -277,6 +250,7 @@ Deno.serve(async (req: Request) => {
 
     const externalMessageId = extractWhapiMessageId(whapiPayload);
     const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
+    uploadedMediaId = extractWhapiMediaId(whapiPayload);
     const nowIso = getNowIso();
     const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
     const phoneDigits = extractPhoneFromChatId(chatId);

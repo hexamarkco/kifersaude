@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Images, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, Smile, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Headphones, Images, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, Smile, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
@@ -413,16 +413,21 @@ function WhatsAppMessageBody({
   }
 
   if (kind === 'audio' || kind === 'voice') {
+    const durationLabel = message.media_duration_seconds ? `${message.media_duration_seconds}s` : formatFileSize(message.media_size_bytes);
+
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-3 rounded-2xl border border-current/10 bg-black/5 px-3 py-3">
-          <FileAudio className="h-5 w-5 shrink-0 opacity-80" />
+        <div className={`whatsapp-inbox-audio-card flex items-center gap-3 rounded-2xl border px-3 py-3 ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+          <div className={`whatsapp-inbox-audio-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+            {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
+          </div>
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <p className="truncate text-sm font-medium">{message.media_file_name || (kind === 'voice' ? 'Nota de voz' : 'Audio')}</p>
-              <span className="text-xs opacity-75">
-                {message.media_duration_seconds ? `${message.media_duration_seconds}s` : formatFileSize(message.media_size_bytes)}
-              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{kind === 'voice' ? 'Nota de voz' : message.media_file_name || 'Audio'}</p>
+                <p className="text-[11px] uppercase tracking-[0.08em] opacity-70">{kind === 'voice' ? 'Gravado no chat' : 'Arquivo de audio'}</p>
+              </div>
+              <span className="text-xs opacity-75">{durationLabel}</span>
             </div>
             {mediaUrl ? (
               <audio controls preload="none" className="w-full max-w-[320px]">
@@ -1740,12 +1745,12 @@ export default function WhatsAppInboxScreen() {
                   {pendingAttachment?.kind === 'voice' ? (
                     <>
                       <audio ref={voicePreviewAudioRef} src={pendingAttachment.previewUrl ?? undefined} preload="metadata" className="hidden" />
-                      <div className="whatsapp-inbox-voice-composer flex items-center gap-3 rounded-[26px] px-3 py-2.5">
+                      <div className="whatsapp-inbox-voice-composer flex items-center gap-2.5 rounded-[24px] px-2.5 py-1.5">
                         <button
                           type="button"
                           onClick={handleClearAttachment}
                           disabled={sending}
-                          className="whatsapp-inbox-voice-side-action inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                          className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
                           aria-label="Descartar nota de voz"
                         >
                           <Trash2 className="h-5 w-5" />
@@ -1755,7 +1760,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={handleToggleVoicePreviewPlayback}
                           disabled={sending}
-                          className="whatsapp-inbox-voice-play inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                          className="whatsapp-inbox-voice-play inline-flex items-center justify-center rounded-full transition"
                           aria-label={voicePreviewPlaying ? 'Pausar nota de voz' : 'Ouvir nota de voz'}
                         >
                           {voicePreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
@@ -1781,7 +1786,7 @@ export default function WhatsAppInboxScreen() {
                               void handleStartVoiceRecording();
                             }}
                             disabled={sending}
-                            className="whatsapp-inbox-voice-side-action is-accent inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                            className="whatsapp-inbox-voice-side-action is-accent inline-flex items-center justify-center rounded-full transition"
                             aria-label="Regravar nota de voz"
                           >
                             <Mic className="h-4 w-4" />
@@ -1792,7 +1797,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={handleSendCurrentVoiceRecording}
                           disabled={sending || Boolean(sendDisabledReason)}
-                          className={`whatsapp-inbox-voice-send inline-flex h-12 w-12 items-center justify-center rounded-full transition ${sending ? 'opacity-70' : ''}`}
+                          className={`whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition ${sending ? 'opacity-70' : ''}`}
                           aria-label="Enviar nota de voz"
                         >
                           {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
@@ -1800,11 +1805,11 @@ export default function WhatsAppInboxScreen() {
                       </div>
                     </>
                   ) : voiceRecordingState === 'recording' ? (
-                    <div className="whatsapp-inbox-voice-composer is-recording flex items-center gap-3 rounded-[26px] px-3 py-2.5">
+                    <div className="whatsapp-inbox-voice-composer is-recording flex items-center gap-2.5 rounded-[24px] px-2.5 py-1.5">
                       <button
                         type="button"
                         onClick={handleCancelVoiceRecording}
-                        className="whatsapp-inbox-voice-side-action inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                        className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
                         aria-label="Descartar gravacao"
                       >
                         <Trash2 className="h-5 w-5" />
@@ -1825,7 +1830,7 @@ export default function WhatsAppInboxScreen() {
                         <button
                           type="button"
                           onClick={() => handleStopVoiceRecording()}
-                          className="whatsapp-inbox-voice-side-action inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                          className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
                           aria-label="Parar gravacao"
                         >
                           <Pause className="h-4 w-4" />
@@ -1836,7 +1841,7 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={handleSendCurrentVoiceRecording}
                         disabled={Boolean(sendDisabledReason)}
-                        className="whatsapp-inbox-voice-send inline-flex h-12 w-12 items-center justify-center rounded-full transition"
+                        className="whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition"
                         aria-label="Parar e enviar nota de voz"
                       >
                         <SendHorizontal className="h-5 w-5" />

@@ -183,13 +183,12 @@ AS $$
     l.telefone,
     l.status AS status_nome,
     l.status AS status_value,
-    COALESCE(ro.label, l.responsavel) AS responsavel_label,
+    ro.label AS responsavel_label,
     COALESCE(ro.value, '') AS responsavel_value
   FROM public.leads l
   CROSS JOIN normalized_query nq
-  LEFT JOIN public.config_options ro
+  LEFT JOIN public.lead_responsaveis ro
     ON ro.id = l.responsavel_id
-   AND ro.category = 'lead_responsavel'
   WHERE public.current_user_can_view_comm_whatsapp()
     AND COALESCE(l.arquivado, false) = false
     AND (
@@ -240,13 +239,12 @@ AS $$
     l.observacoes,
     l.status AS status_nome,
     l.status AS status_value,
-    COALESCE(ro.label, l.responsavel) AS responsavel_label,
+    ro.label AS responsavel_label,
     COALESCE(ro.value, '') AS responsavel_value
   FROM public.comm_whatsapp_chats c
   JOIN public.leads l ON l.id = c.lead_id
-  LEFT JOIN public.config_options ro
+  LEFT JOIN public.lead_responsaveis ro
     ON ro.id = l.responsavel_id
-   AND ro.category = 'lead_responsavel'
   WHERE c.id = p_chat_id
     AND public.current_user_can_view_comm_whatsapp();
 $$;
@@ -353,6 +351,7 @@ DECLARE
   v_new_status text := NULLIF(btrim(COALESCE(p_new_status, '')), '');
   v_timestamp timestamptz := now();
   v_status_id uuid;
+  v_responsavel_label text;
 BEGIN
   IF auth.uid() IS NULL OR NOT public.current_user_can_edit_comm_whatsapp() THEN
     RAISE EXCEPTION 'Permissao insuficiente para atualizar status do lead.';
@@ -387,12 +386,18 @@ BEGIN
     updated_at = v_timestamp
   WHERE id = v_lead.id;
 
+  SELECT lr.label
+  INTO v_responsavel_label
+  FROM public.lead_responsaveis lr
+  WHERE lr.id = v_lead.responsavel_id
+  LIMIT 1;
+
   INSERT INTO public.interactions (lead_id, tipo, descricao, responsavel)
   VALUES (
     v_lead.id,
     'Observação',
     'Status alterado de "' || COALESCE(v_lead.status, 'Sem status') || '" para "' || v_new_status || '" via WhatsApp',
-    COALESCE(v_lead.responsavel, 'WhatsApp Inbox')
+    COALESCE(v_responsavel_label, 'WhatsApp Inbox')
   );
 
   INSERT INTO public.lead_status_history (lead_id, status_anterior, status_novo, responsavel)
@@ -400,7 +405,7 @@ BEGIN
     v_lead.id,
     COALESCE(v_lead.status, 'Sem status'),
     v_new_status,
-    COALESCE(v_lead.responsavel, 'WhatsApp Inbox')
+    COALESCE(v_responsavel_label, 'WhatsApp Inbox')
   );
 
   RETURN QUERY
@@ -425,7 +430,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_lead public.leads%ROWTYPE;
-  v_option public.config_options%ROWTYPE;
+  v_option public.lead_responsaveis%ROWTYPE;
   v_value text := NULLIF(btrim(COALESCE(p_new_responsavel_value, '')), '');
 BEGIN
   IF auth.uid() IS NULL OR NOT public.current_user_can_edit_comm_whatsapp() THEN
@@ -449,9 +454,8 @@ BEGIN
 
   SELECT *
   INTO v_option
-  FROM public.config_options
-  WHERE category = 'lead_responsavel'
-    AND value = v_value
+  FROM public.lead_responsaveis
+  WHERE value = v_value
   LIMIT 1;
 
   IF NOT FOUND THEN
@@ -460,13 +464,12 @@ BEGIN
 
   UPDATE public.leads
   SET
-    responsavel = v_option.label,
     responsavel_id = v_option.id,
     updated_at = now()
   WHERE id = v_lead.id;
 
   RETURN QUERY
-  SELECT l.id, l.responsavel, l.responsavel_id
+  SELECT l.id, v_option.label, l.responsavel_id
   FROM public.leads l
   WHERE l.id = v_lead.id;
 END;

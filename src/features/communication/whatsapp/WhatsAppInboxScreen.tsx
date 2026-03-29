@@ -673,15 +673,6 @@ export default function WhatsAppInboxScreen() {
       };
     }
 
-    if (channelState.last_error) {
-      return {
-        tone: 'warning' as const,
-        icon: AlertTriangle,
-        title: 'Ultimo erro do canal',
-        description: channelState.last_error,
-      };
-    }
-
     if (!hasWebhookEver) {
       return {
         tone: 'info' as const,

@@ -208,8 +208,6 @@ Deno.serve(async (req: Request) => {
 
     if (!response.ok) {
       const errorMessage = parseWhapiError(whapiPayload);
-      await supabaseAdmin.from('comm_whatsapp_channels').update({ last_error: errorMessage }).eq('id', channel.id);
-
       return new Response(JSON.stringify({ error: errorMessage || 'Nao foi possivel reenviar a midia.' }), {
         status: response.status,
         headers: jsonHeaders,
@@ -254,8 +252,6 @@ Deno.serve(async (req: Request) => {
         retry_of: retryTarget.id,
       },
     });
-
-    await supabaseAdmin.from('comm_whatsapp_channels').update({ last_error: null }).eq('id', channel.id);
 
     return new Response(
       JSON.stringify({

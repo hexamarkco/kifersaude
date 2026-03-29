@@ -101,6 +101,173 @@ const buildMediaSummary = (kind: MediaSendKind, caption: string) => {
   return '[Documento]';
 };
 
+const stripMimeParameters = (value: string) => value.split(';')[0]?.trim() || 'application/octet-stream';
+
+const sanitizeFileName = (value: string, fallback: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  return trimmed.replace(/\s+/g, '_');
+};
+
+const deriveVoiceFileName = (mimeType: string, originalName: string) => {
+  const safeName = sanitizeFileName(originalName, 'voice-note');
+  if (/\.(ogg|opus|oga|webm)$/i.test(safeName)) {
+    return safeName;
+  }
+
+  if (mimeType === 'audio/ogg') {
+    return `${safeName}.ogg`;
+  }
+
+  return `${safeName}.webm`;
+};
+
+const fileBytesToDataUrl = (bytes: Uint8Array, mimeType: string, fileName: string) => {
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+
+  return `data:${mimeType};name=${fileName};base64,${btoa(binary)}`;
+};
+
+async function sendAudioLikeWhapi(params: {
+  token: string;
+  kind: 'audio' | 'voice';
+  chatId: string;
+  caption: string;
+  waveform: string;
+  file: File;
+}): Promise<{ response: Response; payload: unknown; mediaId: string }> {
+  const cleanMimeType = stripMimeParameters(params.file.type || 'audio/webm');
+  const bytes = new Uint8Array(await params.file.arrayBuffer());
+  const normalizedFileName =
+    params.kind === 'voice'
+      ? deriveVoiceFileName(cleanMimeType, params.file.name || 'voice-note')
+      : sanitizeFileName(params.file.name || 'audio-file', 'audio-file');
+
+  const jsonPayload: Record<string, unknown> = {
+    to: params.chatId,
+    media: fileBytesToDataUrl(bytes, cleanMimeType, normalizedFileName),
+  };
+
+  if (params.kind !== 'voice' && params.caption) {
+    jsonPayload.caption = params.caption;
+  }
+
+  if (params.kind === 'voice' && params.waveform) {
+    jsonPayload.waveform = params.waveform;
+  }
+
+  let response = await fetch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: JSON.stringify(jsonPayload),
+  });
+  let payload = await readResponsePayload(response);
+
+  if (response.ok) {
+    return {
+      response,
+      payload,
+      mediaId: extractWhapiMediaId(payload),
+    };
+  }
+
+  const freshFile = new File([bytes], normalizedFileName, { type: cleanMimeType });
+  const messageForm = new FormData();
+  messageForm.append('to', params.chatId);
+  if (params.kind !== 'voice' && params.caption) {
+    messageForm.append('caption', params.caption);
+  }
+  if (params.kind === 'voice' && params.waveform) {
+    messageForm.append('waveform', params.waveform);
+  }
+  messageForm.append('media', freshFile, freshFile.name);
+
+  response = await fetch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: messageForm,
+  });
+  payload = await readResponsePayload(response);
+
+  if (response.ok) {
+    return {
+      response,
+      payload,
+      mediaId: extractWhapiMediaId(payload),
+    };
+  }
+
+  const uploadForm = new FormData();
+  uploadForm.append('media', freshFile, freshFile.name);
+
+  const uploadResponse = await fetch(`${WHAPI_BASE_URL}/media`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: uploadForm,
+  });
+  const uploadPayload = await readResponsePayload(uploadResponse);
+
+  if (!uploadResponse.ok) {
+    return {
+      response: uploadResponse,
+      payload: uploadPayload,
+      mediaId: '',
+    };
+  }
+
+  const uploadedMediaId = extractWhapiMediaId(uploadPayload);
+  if (!uploadedMediaId) {
+    return {
+      response: uploadResponse,
+      payload: uploadPayload,
+      mediaId: '',
+    };
+  }
+
+  const mediaIdPayload: Record<string, unknown> = {
+    to: params.chatId,
+    media: uploadedMediaId,
+  };
+
+  if (params.kind !== 'voice' && params.caption) {
+    mediaIdPayload.caption = params.caption;
+  }
+
+  if (params.kind === 'voice' && params.waveform) {
+    mediaIdPayload.waveform = params.waveform;
+  }
+
+  response = await fetch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: JSON.stringify(mediaIdPayload),
+  });
+  payload = await readResponsePayload(response);
+
+  return {
+    response,
+    payload,
+    mediaId: uploadedMediaId,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -196,36 +363,79 @@ Deno.serve(async (req: Request) => {
 
     if (mediaFile && mediaKind) {
       if (mediaKind === 'audio' || mediaKind === 'voice') {
-        const fileBytes = new Uint8Array(await mediaFile.arrayBuffer());
-        let binary = '';
-        for (let index = 0; index < fileBytes.length; index += 1) {
-          binary += String.fromCharCode(fileBytes[index]);
-        }
-        const mediaBase64 = btoa(binary);
-        const mediaDataUrl = `data:${mediaFile.type || 'application/octet-stream'};name=${encodeURIComponent(mediaFile.name)};base64,${mediaBase64}`;
-
-        const payload: Record<string, unknown> = {
-          to: chatId,
-          media: mediaDataUrl,
-        };
-
-        if (mediaKind !== 'voice' && text) {
-          payload.caption = text;
-        }
-
-        if (mediaKind === 'voice' && mediaWaveform) {
-          payload.waveform = mediaWaveform;
-        }
-
-        whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
+        const audioLikeResult = await sendAudioLikeWhapi({
+          token,
+          kind: mediaKind,
+          chatId,
+          caption: text,
+          waveform: mediaWaveform,
+          file: mediaFile,
         });
+
+        whapiResponse = audioLikeResult.response;
+        uploadedMediaId = audioLikeResult.mediaId;
+        const whapiPayload = audioLikeResult.payload;
+
+        if (!whapiResponse.ok) {
+          const errorMessage = parseWhapiError(whapiPayload);
+
+          return new Response(JSON.stringify({ error: errorMessage || 'Falha ao enviar mensagem na Whapi.' }), {
+            status: whapiResponse.status,
+            headers: jsonHeaders,
+          });
+        }
+
+        const externalMessageId = extractWhapiMessageId(whapiPayload);
+        const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
+        const nowIso = getNowIso();
+        const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
+        const phoneDigits = extractPhoneFromChatId(chatId);
+        const summaryText = buildMediaSummary(mediaKind, text);
+
+        await persistCommWhatsAppMessage(supabaseAdmin, {
+          channelId: channel.id,
+          externalChatId: chatId,
+          phoneNumber: phoneDigits || null,
+          displayName: existingChat?.display_name || formatPhoneLabel(phoneDigits),
+          pushName: existingChat?.push_name || null,
+          lastMessageText: summaryText,
+          lastMessageDirection: 'outbound',
+          lastMessageAt: nowIso,
+          incrementUnread: false,
+          externalMessageId: externalMessageId || null,
+          direction: 'outbound',
+          messageType: mediaKind,
+          deliveryStatus,
+          textContent: summaryText,
+          createdBy: authResult.user.profileId,
+          source: 'api',
+          senderPhone: channel.phone_number,
+          senderName: channel.connected_user_name,
+          statusUpdatedAt: nowIso,
+          errorMessage: null,
+          mediaId: uploadedMediaId || null,
+          mediaUrl: null,
+          mediaMimeType: stripMimeParameters(mediaFile.type || 'application/octet-stream'),
+          mediaFileName: mediaFile?.name || null,
+          mediaSizeBytes: mediaFile ? mediaFile.size : null,
+          mediaDurationSeconds: mediaDurationSeconds,
+          mediaCaption: mediaKind === 'voice' ? null : text || null,
+          metadata: {
+            provider: 'whapi',
+          },
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            messageId: externalMessageId || null,
+            status: deliveryStatus,
+          }),
+          {
+            status: 200,
+            headers: jsonHeaders,
+          },
+        );
       } else {
         const messageForm = new FormData();
         messageForm.append('to', chatId);
@@ -262,11 +472,6 @@ Deno.serve(async (req: Request) => {
 
     if (!whapiResponse.ok) {
       const errorMessage = parseWhapiError(whapiPayload);
-
-      await supabaseAdmin
-        .from('comm_whatsapp_channels')
-        .update({ last_error: errorMessage })
-        .eq('id', channel.id);
 
       return new Response(JSON.stringify({ error: errorMessage || 'Falha ao enviar mensagem na Whapi.' }), {
         status: whapiResponse.status,
@@ -325,11 +530,6 @@ Deno.serve(async (req: Request) => {
         provider: 'whapi',
       },
     });
-
-    await supabaseAdmin
-      .from('comm_whatsapp_channels')
-      .update({ last_error: null })
-      .eq('id', channel.id);
 
     return new Response(
       JSON.stringify({

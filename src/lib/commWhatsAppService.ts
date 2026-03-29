@@ -5,6 +5,8 @@ import {
   type CommWhatsAppChannel,
   type CommWhatsAppChat,
   type CommWhatsAppMessage,
+  type CommWhatsAppPhoneContact,
+  type Contract,
 } from './supabase';
 
 export type CommWhatsAppOperationalState = {
@@ -32,6 +34,36 @@ type ListMessagesPageParams = {
 export type CommWhatsAppMessagesPage = {
   messages: CommWhatsAppMessage[];
   hasMore: boolean;
+};
+
+export type CommWhatsAppLeadSearchResult = {
+  id: string;
+  nome_completo: string;
+  telefone: string;
+  status_nome?: string | null;
+  status_value?: string | null;
+  responsavel_label?: string | null;
+  responsavel_value?: string | null;
+};
+
+export type CommWhatsAppLeadPanel = {
+  id: string;
+  nome_completo: string;
+  telefone: string;
+  observacoes?: string | null;
+  status_nome?: string | null;
+  status_value?: string | null;
+  responsavel_label?: string | null;
+  responsavel_value?: string | null;
+};
+
+export type CommWhatsAppLeadContractSummary = Pick<
+  Contract,
+  'id' | 'codigo_contrato' | 'status' | 'modalidade' | 'operadora' | 'produto_plano' | 'mensalidade_total'
+>;
+
+export type CommWhatsAppStartChatResult = {
+  chat: CommWhatsAppChat;
 };
 
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
@@ -131,6 +163,143 @@ export const commWhatsAppService = {
     }
 
     return (data ?? []) as CommWhatsAppChat[];
+  },
+
+  async searchCrmLeads(params: { query?: string; phoneNumbers?: string[]; limit?: number } = {}): Promise<CommWhatsAppLeadSearchResult[]> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_search_crm_leads', {
+      p_query: params.query?.trim() || null,
+      p_phone_numbers: params.phoneNumbers && params.phoneNumbers.length > 0 ? params.phoneNumbers : null,
+      p_limit: params.limit ?? 20,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel buscar leads do CRM.'));
+    }
+
+    return (Array.isArray(data) ? data : []) as CommWhatsAppLeadSearchResult[];
+  },
+
+  async getChatLeadPanel(chatId: string): Promise<CommWhatsAppLeadPanel | null> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_get_chat_lead_panel', {
+      p_chat_id: chatId,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar o lead vinculado ao chat.'));
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+    return (rows[0] as CommWhatsAppLeadPanel | undefined) ?? null;
+  },
+
+  async listLeadContracts(leadId: string): Promise<CommWhatsAppLeadContractSummary[]> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_list_lead_contracts', {
+      p_lead_id: leadId,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contratos do lead.'));
+    }
+
+    return (Array.isArray(data) ? data : []) as CommWhatsAppLeadContractSummary[];
+  },
+
+  async linkChatLead(chatId: string, leadId: string): Promise<CommWhatsAppChat> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_link_chat_lead', {
+      p_chat_id: chatId,
+      p_lead_id: leadId,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel vincular o lead ao chat.'));
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+    const row = rows[0] as CommWhatsAppChat | undefined;
+    if (!row) {
+      throw new Error('O vinculo do lead nao retornou a conversa atualizada.');
+    }
+
+    return row;
+  },
+
+  async unlinkChatLead(chatId: string): Promise<CommWhatsAppChat> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_unlink_chat_lead', {
+      p_chat_id: chatId,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel desvincular o lead do chat.'));
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+    const row = rows[0] as CommWhatsAppChat | undefined;
+    if (!row) {
+      throw new Error('A conversa atualizada nao foi retornada apos desvincular o lead.');
+    }
+
+    return row;
+  },
+
+  async updateLinkedLeadStatus(chatId: string, newStatus: string): Promise<void> {
+    const { error } = await supabase.rpc('comm_whatsapp_update_linked_lead_status', {
+      p_chat_id: chatId,
+      p_new_status: newStatus,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o status do lead.'));
+    }
+  },
+
+  async updateLinkedLeadResponsavel(chatId: string, responsavelValue: string): Promise<void> {
+    const { error } = await supabase.rpc('comm_whatsapp_update_linked_lead_responsavel', {
+      p_chat_id: chatId,
+      p_new_responsavel_value: responsavelValue,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o responsavel do lead.'));
+    }
+  },
+
+  async listSavedContacts(params: { query?: string; forceSync?: boolean } = {}): Promise<CommWhatsAppPhoneContact[]> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-contacts', {
+      body: {
+        action: 'listContacts',
+        query: params.query?.trim() || '',
+        forceSync: params.forceSync === true,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos salvos do WhatsApp.'));
+    }
+
+    return ((data as { contacts?: CommWhatsAppPhoneContact[] })?.contacts ?? []) as CommWhatsAppPhoneContact[];
+  },
+
+  async startChat(params:
+    | { source: 'saved_contact'; phoneNumber: string; displayName?: string | null; contactId?: string | null }
+    | { source: 'crm'; leadId: string }
+    | { source: 'manual'; phoneNumber: string }): Promise<CommWhatsAppStartChatResult> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-contacts', {
+      body: {
+        action: 'startChat',
+        ...params,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel iniciar a conversa no WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { chat?: CommWhatsAppChat };
+    if (!payload.chat) {
+      throw new Error('A conversa iniciada nao retornou dados suficientes.');
+    }
+
+    return { chat: payload.chat };
   },
 
   async listMessagesPage(chatId: string, params: ListMessagesPageParams = {}): Promise<CommWhatsAppMessagesPage> {

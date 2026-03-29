@@ -498,13 +498,28 @@ export type CommWhatsAppChat = {
   phone_number: string;
   phone_digits: string;
   display_name: string;
+  saved_contact_name?: string | null;
   push_name?: string | null;
+  lead_id?: string | null;
   last_message_text?: string | null;
   last_message_direction: 'inbound' | 'outbound' | 'system';
   last_message_at?: string | null;
   unread_count: number;
   status: 'open' | 'pending' | 'closed';
   last_read_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CommWhatsAppPhoneContact = {
+  id: string;
+  channel_id: string;
+  contact_id: string;
+  phone_number: string;
+  phone_digits: string;
+  display_name: string;
+  short_name?: string | null;
+  last_synced_at: string;
   created_at: string;
   updated_at: string;
 };

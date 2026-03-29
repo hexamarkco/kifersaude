@@ -76,6 +76,13 @@ export type CommWhatsAppPersistMessageResult = {
   summaryUpdated: boolean;
 };
 
+export type CommWhatsAppSavedContact = {
+  contactId: string;
+  phoneNumber: string;
+  displayName: string;
+  shortName: string | null;
+};
+
 export type CommWhatsAppMediaMeta = {
   mediaId: string | null;
   mediaUrl: string | null;
@@ -131,6 +138,11 @@ export const normalizeWhapiChatId = (value: unknown): string => {
 
   const phone = normalizeCommWhatsAppPhone(raw);
   return phone ? `${phone}@s.whatsapp.net` : raw;
+};
+
+export const buildWhapiDirectChatId = (value: unknown): string => {
+  const phone = normalizeCommWhatsAppPhone(value);
+  return phone ? `${phone}@s.whatsapp.net` : '';
 };
 
 export const isDirectWhapiChatId = (value: unknown): boolean => {
@@ -456,6 +468,65 @@ export const extractWhapiMessages = (payload: unknown): Array<Record<string, unk
   return [];
 };
 
+export const extractWhapiContacts = (payload: unknown): Array<Record<string, unknown>> => {
+  if (Array.isArray(payload)) {
+    return payload.filter(isRecord);
+  }
+
+  if (isRecord(payload)) {
+    if (Array.isArray(payload.contacts)) {
+      return payload.contacts.filter(isRecord);
+    }
+
+    if (Array.isArray(payload.data)) {
+      return payload.data.filter(isRecord);
+    }
+  }
+
+  return [];
+};
+
+export const extractWhapiContactPhone = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+
+  const candidates = [payload.wa_id, payload.id, payload.phone, payload.contact_id, payload.user, payload.value];
+  for (const candidate of candidates) {
+    const normalized = normalizeCommWhatsAppPhone(candidate);
+    if (normalized) return normalized;
+  }
+
+  return '';
+};
+
+export const extractWhapiContactName = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+
+  const candidates = [payload.name, payload.short, payload.short_name, payload.pushname, payload.full_name];
+  for (const candidate of candidates) {
+    const normalized = toTrimmedString(candidate);
+    if (normalized) return normalized;
+  }
+
+  return '';
+};
+
+export const extractWhapiContactShortName = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+  return toTrimmedString(payload.short) || toTrimmedString(payload.short_name) || '';
+};
+
+export const extractWhapiContactId = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+
+  const candidates = [payload.id, payload.wa_id, payload.phone, payload.contact_id];
+  for (const candidate of candidates) {
+    const normalized = toTrimmedString(candidate) || normalizeCommWhatsAppPhone(candidate);
+    if (normalized) return normalized;
+  }
+
+  return '';
+};
+
 export const getHealthStatusText = (payload: unknown): string => {
   if (!isRecord(payload)) return 'unknown';
 
@@ -519,6 +590,57 @@ export async function fetchWhapiChatMessages(params: {
   }
 
   return extractWhapiMessages(payload);
+}
+
+export async function fetchWhapiContacts(params: {
+  token: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  });
+
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    throw new Error(parseWhapiError(payload) || 'Falha ao consultar contatos na Whapi.');
+  }
+
+  return extractWhapiContacts(payload);
+}
+
+export async function checkWhapiContactExists(params: {
+  token: string;
+  contactId: string;
+}): Promise<boolean> {
+  const digits = normalizeCommWhatsAppPhone(params.contactId);
+  if (!digits) {
+    return false;
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: JSON.stringify({
+      contacts: [digits],
+      force_check: true,
+    }),
+  });
+
+  if (!response.ok) {
+    return false;
+  }
+
+  const payload = await readResponsePayload(response);
+  const contacts = extractWhapiContacts(payload);
+  const first = contacts[0] ?? null;
+  return toTrimmedString(first?.status).toLowerCase() === 'valid';
 }
 
 export async function ensurePrimaryChannel(

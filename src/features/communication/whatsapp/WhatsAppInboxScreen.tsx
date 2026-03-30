@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -683,6 +684,7 @@ export default function WhatsAppInboxScreen() {
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
   const [chatLeadFilter, setChatLeadFilter] = useState<ChatLeadFilter>('all');
   const [chatSavedFilter, setChatSavedFilter] = useState<ChatSavedFilter>('all');
@@ -741,6 +743,7 @@ export default function WhatsAppInboxScreen() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
+  const advancedFiltersTriggerRef = useRef<HTMLButtonElement | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
@@ -1100,13 +1103,50 @@ export default function WhatsAppInboxScreen() {
 
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node | null;
-      if (advancedFiltersRef.current && target && !advancedFiltersRef.current.contains(target)) {
+      const clickedInsidePopover = advancedFiltersRef.current && target && advancedFiltersRef.current.contains(target);
+      const clickedTrigger = advancedFiltersTriggerRef.current && target && advancedFiltersTriggerRef.current.contains(target);
+
+      if (!clickedInsidePopover && !clickedTrigger) {
         setAdvancedFiltersOpen(false);
       }
     };
 
     window.addEventListener('mousedown', handlePointerDown);
     return () => window.removeEventListener('mousedown', handlePointerDown);
+  }, [advancedFiltersOpen]);
+
+  useLayoutEffect(() => {
+    if (!advancedFiltersOpen || !advancedFiltersTriggerRef.current || typeof window === 'undefined') {
+      return;
+    }
+
+    const syncPosition = () => {
+      const triggerRect = advancedFiltersTriggerRef.current?.getBoundingClientRect();
+      if (!triggerRect) {
+        return;
+      }
+
+      const panelWidth = 300;
+      const viewportPadding = 16;
+      const nextLeft = Math.min(
+        Math.max(viewportPadding, triggerRect.right - panelWidth),
+        window.innerWidth - panelWidth - viewportPadding,
+      );
+
+      setAdvancedFiltersPosition({
+        top: triggerRect.bottom + 8,
+        left: nextLeft,
+      });
+    };
+
+    syncPosition();
+    window.addEventListener('resize', syncPosition);
+    window.addEventListener('scroll', syncPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', syncPosition);
+      window.removeEventListener('scroll', syncPosition, true);
+    };
   }, [advancedFiltersOpen]);
 
   useEffect(() => {
@@ -2316,9 +2356,10 @@ export default function WhatsAppInboxScreen() {
                   }}
                 />
 
-                <div ref={advancedFiltersRef} className="relative shrink-0">
+                <div className="relative shrink-0">
                   <button
                     type="button"
+                    ref={advancedFiltersTriggerRef}
                     onClick={() => setAdvancedFiltersOpen((current) => !current)}
                     className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
                       advancedFiltersOpen || activeChatFiltersCount > 0
@@ -2329,72 +2370,6 @@ export default function WhatsAppInboxScreen() {
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
                   </button>
-
-                  {advancedFiltersOpen && (
-                    <div className="absolute right-0 top-full z-[30] mt-2 w-[300px] rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-3 shadow-2xl">
-                      <div className="space-y-3">
-                        <InboxFilterGroup
-                          label="Atividade"
-                          value={chatActivityFilter}
-                          onChange={setChatActivityFilter}
-                          options={[
-                            { value: 'all', label: 'Todas' },
-                            { value: 'unread', label: 'Nao lidas' },
-                          ]}
-                        />
-
-                        <InboxFilterGroup
-                          label="CRM"
-                          value={chatLeadFilter}
-                          onChange={setChatLeadFilter}
-                          options={[
-                            { value: 'all', label: 'Todos' },
-                            { value: 'with_lead', label: 'Com lead' },
-                            { value: 'without_lead', label: 'Sem lead' },
-                          ]}
-                        />
-
-                        <InboxFilterGroup
-                          label="Agenda"
-                          value={chatSavedFilter}
-                          onChange={setChatSavedFilter}
-                          options={[
-                            { value: 'all', label: 'Todos' },
-                            { value: 'saved', label: 'Salvos' },
-                            { value: 'unsaved', label: 'Nao salvos' },
-                          ]}
-                        />
-
-                        <InboxFilterGroup
-                          label="Status do chat"
-                          value={chatStatusFilter}
-                          onChange={setChatStatusFilter}
-                          options={[
-                            { value: 'all', label: 'Todos' },
-                            { value: 'open', label: 'Abertas' },
-                            { value: 'pending', label: 'Pendentes' },
-                            { value: 'closed', label: 'Fechadas' },
-                          ]}
-                        />
-
-                        {hasActiveChatFilters ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setChatActivityFilter('all');
-                              setChatLeadFilter('all');
-                              setChatSavedFilter('all');
-                              setChatStatusFilter('all');
-                              setAdvancedFiltersOpen(false);
-                            }}
-                            className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"
-                          >
-                            Limpar filtros
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -2922,6 +2897,79 @@ export default function WhatsAppInboxScreen() {
           onStartFromManual={() => void handleStartChatFromManual()}
           startingKey={startingChatKey}
         />
+
+        {advancedFiltersOpen && advancedFiltersPosition && typeof document !== 'undefined'
+          ? createPortal(
+              <div
+                ref={advancedFiltersRef}
+                className="fixed z-[120] w-[300px] rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-3 shadow-2xl"
+                style={{ top: advancedFiltersPosition.top, left: advancedFiltersPosition.left }}
+              >
+                <div className="space-y-3">
+                  <InboxFilterGroup
+                    label="Atividade"
+                    value={chatActivityFilter}
+                    onChange={setChatActivityFilter}
+                    options={[
+                      { value: 'all', label: 'Todas' },
+                      { value: 'unread', label: 'Nao lidas' },
+                    ]}
+                  />
+
+                  <InboxFilterGroup
+                    label="CRM"
+                    value={chatLeadFilter}
+                    onChange={setChatLeadFilter}
+                    options={[
+                      { value: 'all', label: 'Todos' },
+                      { value: 'with_lead', label: 'Com lead' },
+                      { value: 'without_lead', label: 'Sem lead' },
+                    ]}
+                  />
+
+                  <InboxFilterGroup
+                    label="Agenda"
+                    value={chatSavedFilter}
+                    onChange={setChatSavedFilter}
+                    options={[
+                      { value: 'all', label: 'Todos' },
+                      { value: 'saved', label: 'Salvos' },
+                      { value: 'unsaved', label: 'Nao salvos' },
+                    ]}
+                  />
+
+                  <InboxFilterGroup
+                    label="Status do chat"
+                    value={chatStatusFilter}
+                    onChange={setChatStatusFilter}
+                    options={[
+                      { value: 'all', label: 'Todos' },
+                      { value: 'open', label: 'Abertas' },
+                      { value: 'pending', label: 'Pendentes' },
+                      { value: 'closed', label: 'Fechadas' },
+                    ]}
+                  />
+
+                  {hasActiveChatFilters ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChatActivityFilter('all');
+                        setChatLeadFilter('all');
+                        setChatSavedFilter('all');
+                        setChatStatusFilter('all');
+                        setAdvancedFiltersOpen(false);
+                      }}
+                      className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"
+                    >
+                      Limpar filtros
+                    </button>
+                  ) : null}
+                </div>
+              </div>,
+              document.body,
+            )
+          : null}
       </div>
     </div>
   );

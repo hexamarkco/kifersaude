@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, Smile, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import StatusDropdown from '../../../components/StatusDropdown';
@@ -40,6 +39,10 @@ type PendingAttachment = {
   waveformPayload?: string | null;
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
+type ChatActivityFilter = 'all' | 'unread';
+type ChatLeadFilter = 'all' | 'with_lead' | 'without_lead';
+type ChatSavedFilter = 'all' | 'saved' | 'unsaved';
+type ChatStatusFilter = 'all' | 'open' | 'pending' | 'closed';
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -508,6 +511,53 @@ function RetryMediaButton({
   );
 }
 
+function InboxFilterChip({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
+        active
+          ? 'border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/50 text-[var(--panel-accent-ink,#8b4d12)]'
+          : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)] hover:text-[var(--panel-text,#1c1917)]'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function InboxFilterGroup<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => (
+          <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function WhatsAppMessageBody({
   message,
   onOpenImage,
@@ -632,7 +682,10 @@ export default function WhatsAppInboxScreen() {
   const [loading, setLoading] = useState(true);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
-  const [onlyUnread, setOnlyUnread] = useState(false);
+  const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
+  const [chatLeadFilter, setChatLeadFilter] = useState<ChatLeadFilter>('all');
+  const [chatSavedFilter, setChatSavedFilter] = useState<ChatSavedFilter>('all');
+  const [chatStatusFilter, setChatStatusFilter] = useState<ChatStatusFilter>('all');
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [attachmentInputAccept, setAttachmentInputAccept] = useState('image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,audio/*');
   const [chats, setChats] = useState<CommWhatsAppChat[]>([]);
@@ -771,6 +824,8 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+  const hasActiveChatFilters =
+    chatActivityFilter !== 'all' || chatLeadFilter !== 'all' || chatSavedFilter !== 'all' || chatStatusFilter !== 'all';
 
   const upsertChatLocally = useCallback((nextChat: CommWhatsAppChat) => {
     setChats((current) => {
@@ -1181,7 +1236,10 @@ export default function WhatsAppInboxScreen() {
     try {
       const data = await commWhatsAppService.listChats({
         search,
-        onlyUnread,
+        activityFilter: chatActivityFilter,
+        leadFilter: chatLeadFilter,
+        savedFilter: chatSavedFilter,
+        chatStatusFilter: chatStatusFilter,
       });
 
       if (requestId !== chatsRequestIdRef.current) {
@@ -1210,7 +1268,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as conversas do WhatsApp.');
     }
-  }, [buildChatsSignature, onlyUnread, search]);
+  }, [buildChatsSignature, chatActivityFilter, chatLeadFilter, chatSavedFilter, chatStatusFilter, search]);
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
@@ -2221,10 +2279,67 @@ export default function WhatsAppInboxScreen() {
                 leftIcon={Search}
                 className="whatsapp-inbox-search-input"
               />
-              <label className="inline-flex items-center gap-2 text-sm text-[var(--panel-text-muted,#6b7280)]">
-                <Checkbox checked={onlyUnread} onChange={(event) => setOnlyUnread(event.target.checked)} />
-                Mostrar apenas nao lidas
-              </label>
+
+              <div className="space-y-3">
+                <InboxFilterGroup
+                  label="Atividade"
+                  value={chatActivityFilter}
+                  onChange={setChatActivityFilter}
+                  options={[
+                    { value: 'all', label: 'Todas' },
+                    { value: 'unread', label: 'Nao lidas' },
+                  ]}
+                />
+
+                <InboxFilterGroup
+                  label="CRM"
+                  value={chatLeadFilter}
+                  onChange={setChatLeadFilter}
+                  options={[
+                    { value: 'all', label: 'Todos' },
+                    { value: 'with_lead', label: 'Com lead' },
+                    { value: 'without_lead', label: 'Sem lead' },
+                  ]}
+                />
+
+                <InboxFilterGroup
+                  label="Agenda"
+                  value={chatSavedFilter}
+                  onChange={setChatSavedFilter}
+                  options={[
+                    { value: 'all', label: 'Todos' },
+                    { value: 'saved', label: 'Salvos' },
+                    { value: 'unsaved', label: 'Nao salvos' },
+                  ]}
+                />
+
+                <InboxFilterGroup
+                  label="Status do chat"
+                  value={chatStatusFilter}
+                  onChange={setChatStatusFilter}
+                  options={[
+                    { value: 'all', label: 'Todos' },
+                    { value: 'open', label: 'Abertas' },
+                    { value: 'pending', label: 'Pendentes' },
+                    { value: 'closed', label: 'Fechadas' },
+                  ]}
+                />
+
+                {hasActiveChatFilters ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setChatActivityFilter('all');
+                      setChatLeadFilter('all');
+                      setChatSavedFilter('all');
+                      setChatStatusFilter('all');
+                    }}
+                    className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"
+                  >
+                    Limpar filtros
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
 

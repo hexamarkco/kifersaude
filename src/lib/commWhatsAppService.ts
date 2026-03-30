@@ -17,6 +17,10 @@ export type CommWhatsAppOperationalState = {
 
 type ListChatsParams = {
   search?: string;
+  activityFilter?: 'all' | 'unread';
+  leadFilter?: 'all' | 'with_lead' | 'without_lead';
+  savedFilter?: 'all' | 'saved' | 'unsaved';
+  chatStatusFilter?: 'all' | 'open' | 'pending' | 'closed';
   onlyUnread?: boolean;
   limit?: number;
 };
@@ -151,6 +155,11 @@ export const commWhatsAppService = {
 
   async listChats(params: ListChatsParams = {}): Promise<CommWhatsAppChat[]> {
     const limit = Math.min(Math.max(params.limit ?? 80, 1), 200);
+    const activityFilter = params.activityFilter ?? (params.onlyUnread ? 'unread' : 'all');
+    const leadFilter = params.leadFilter ?? 'all';
+    const savedFilter = params.savedFilter ?? 'all';
+    const chatStatusFilter = params.chatStatusFilter ?? 'all';
+
     let query = supabase
       .from('comm_whatsapp_chats')
       .select('*')
@@ -158,8 +167,24 @@ export const commWhatsAppService = {
       .order('updated_at', { ascending: false })
       .limit(limit);
 
-    if (params.onlyUnread) {
+    if (activityFilter === 'unread') {
       query = query.gt('unread_count', 0);
+    }
+
+    if (leadFilter === 'with_lead') {
+      query = query.not('lead_id', 'is', null);
+    } else if (leadFilter === 'without_lead') {
+      query = query.is('lead_id', null);
+    }
+
+    if (savedFilter === 'saved') {
+      query = query.not('saved_contact_name', 'is', null);
+    } else if (savedFilter === 'unsaved') {
+      query = query.is('saved_contact_name', null);
+    }
+
+    if (chatStatusFilter !== 'all') {
+      query = query.eq('status', chatStatusFilter);
     }
 
     const search = sanitizeSearch(params.search ?? '');

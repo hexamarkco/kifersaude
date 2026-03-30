@@ -2315,23 +2315,8 @@ export default function WhatsAppInboxScreen() {
                     setAdvancedFiltersOpen(false);
                   }}
                 />
-                <InboxFilterChip
-                  active={chatActivityFilter === 'unread'}
-                  label="Nao lidas"
-                  onClick={() => setChatActivityFilter((current) => (current === 'unread' ? 'all' : 'unread'))}
-                />
-                <InboxFilterChip
-                  active={chatLeadFilter === 'with_lead'}
-                  label="Com lead"
-                  onClick={() => setChatLeadFilter((current) => (current === 'with_lead' ? 'all' : 'with_lead'))}
-                />
-                <InboxFilterChip
-                  active={chatSavedFilter === 'saved'}
-                  label="Salvos"
-                  onClick={() => setChatSavedFilter((current) => (current === 'saved' ? 'all' : 'saved'))}
-                />
 
-                <div ref={advancedFiltersRef} className="relative ml-auto shrink-0">
+                <div ref={advancedFiltersRef} className="relative shrink-0">
                   <button
                     type="button"
                     onClick={() => setAdvancedFiltersOpen((current) => !current)}
@@ -2348,6 +2333,16 @@ export default function WhatsAppInboxScreen() {
                   {advancedFiltersOpen && (
                     <div className="absolute right-0 top-full z-[30] mt-2 w-[300px] rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-3 shadow-2xl">
                       <div className="space-y-3">
+                        <InboxFilterGroup
+                          label="Atividade"
+                          value={chatActivityFilter}
+                          onChange={setChatActivityFilter}
+                          options={[
+                            { value: 'all', label: 'Todas' },
+                            { value: 'unread', label: 'Nao lidas' },
+                          ]}
+                        />
+
                         <InboxFilterGroup
                           label="CRM"
                           value={chatLeadFilter}

@@ -411,7 +411,11 @@ function WhatsAppAudioPlayerCard({
   };
 
   const duration = Math.max(resolvedDuration || 0, durationSeconds || 0);
-  const progress = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const waveformBars =
+    kind === 'voice'
+      ? DEFAULT_WAVEFORM
+      : DEFAULT_WAVEFORM.map((value, index) => (index % 3 === 0 ? value * 0.62 : value * 0.92));
+  const playedBars = duration > 0 ? Math.min(waveformBars.length, Math.ceil((currentTime / duration) * waveformBars.length)) : 0;
 
   if (!mediaUrl) {
     return (
@@ -454,8 +458,13 @@ function WhatsAppAudioPlayerCard({
               <span className="text-[11px] uppercase tracking-[0.08em] opacity-70">{kind === 'voice' ? 'Gravado no chat' : 'Audio enviado'}</span>
             </div>
             <div className="whatsapp-inbox-audio-native-waveform">
-              <div className="whatsapp-inbox-audio-native-waveform-progress" style={{ width: `${progress}%` }} />
-              <WaveformBars bars={kind === 'voice' ? DEFAULT_WAVEFORM : DEFAULT_WAVEFORM.map((value, index) => (index % 3 === 0 ? value * 0.6 : value * 0.9))} active={isPlaying} />
+              {waveformBars.map((bar, index) => (
+                <span
+                  key={`${kind}-${index}-${bar}`}
+                  className={`whatsapp-inbox-audio-native-waveform-bar ${index < playedBars ? 'is-played' : ''} ${isPlaying ? 'is-active' : ''}`}
+                  style={{ height: `${Math.max(10, Math.round(bar * 22))}px` }}
+                />
+              ))}
             </div>
             <div className="flex items-center justify-between gap-3 text-xs opacity-80">
               <span>{formatDurationLabel(Math.round(currentTime))}</span>

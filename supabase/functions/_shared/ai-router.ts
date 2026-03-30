@@ -456,9 +456,11 @@ const callOpenAiTranscription = async (
   const endpoint = `${endpointBase}/audio/transcriptions`;
   const formData = new FormData();
 
-  const mimeType = params.mimeType?.trim() || params.audioBlob.type || 'audio/ogg';
-  const fileName = params.fileName?.trim() || `whatsapp-audio.${mimeType.includes('mpeg') ? 'mp3' : 'ogg'}`;
-  const normalizedBlob = params.audioBlob.type ? params.audioBlob : params.audioBlob.slice(0, params.audioBlob.size, mimeType);
+  const rawMimeType = params.mimeType?.trim() || params.audioBlob.type || 'audio/ogg';
+  const mimeType = rawMimeType.toLowerCase() === 'audio/oga' ? 'audio/ogg' : rawMimeType;
+  const rawFileName = params.fileName?.trim() || `whatsapp-audio.${mimeType.includes('mpeg') ? 'mp3' : mimeType.includes('webm') ? 'webm' : 'ogg'}`;
+  const fileName = /\.oga$/i.test(rawFileName) ? rawFileName.replace(/\.oga$/i, '.ogg') : rawFileName;
+  const normalizedBlob = params.audioBlob.slice(0, params.audioBlob.size, mimeType);
 
   formData.append('file', normalizedBlob, fileName);
   formData.append('model', params.model);

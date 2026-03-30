@@ -69,6 +69,7 @@ if not defined SUPABASE_BIN if "%SUPABASE_USE_NPX%"=="0" (
   echo O pacote nao suporta instalacao global via npm.
   echo Abra o terminal e valide: npx supabase --version
   echo Se funcionar no terminal, rode este .bat pelo terminal para herdar o PATH.
+  set "EXIT_CODE=1"
   goto :end
 )
 
@@ -76,13 +77,16 @@ echo Usando CLI: %SUPABASE_LABEL%
 
 if not exist "supabase\functions" (
   echo [ERRO] Pasta supabase\functions nao encontrada.
+  set "EXIT_CODE=1"
   goto :end
 )
 
 set /a TOTAL=0
 set /a SUCCESS=0
 set /a FAIL=0
-set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook comm-whatsapp-webhook create-initial-admin whatsapp-broadcast"
+set "EXIT_CODE=0"
+rem Sempre adicione aqui toda Edge Function que precisa de --no-verify-jwt.
+set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook comm-whatsapp-webhook comm-whatsapp-media comm-whatsapp-transcribe create-initial-admin whatsapp-broadcast"
 
 for /d %%D in ("supabase\functions\*") do (
   if exist "%%~fD\index.ts" (
@@ -125,6 +129,9 @@ if !TOTAL! EQU 0 (
   echo Resumo: !SUCCESS! sucesso(s), !FAIL! falha(s), !TOTAL! total.
 )
 
+set "EXIT_CODE=0"
+if !FAIL! GTR 0 set "EXIT_CODE=1"
+
 :end
 echo.
 echo Finalizado.
@@ -134,4 +141,4 @@ echo.
 pause
 
 :finish
-endlocal
+endlocal & exit /b %EXIT_CODE%

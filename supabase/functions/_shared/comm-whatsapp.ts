@@ -737,13 +737,16 @@ export async function fetchWhapiMediaBlob(params: {
     }
 
     const blob = await response.blob();
-    const mimeType = response.headers.get('content-type')?.trim() || params.fallbackMimeType?.trim() || blob.type || 'audio/ogg';
+    const rawMimeType = response.headers.get('content-type')?.trim() || params.fallbackMimeType?.trim() || blob.type || 'audio/ogg';
     const contentDisposition = response.headers.get('content-disposition')?.trim() || '';
     const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
-    const fileName =
+    const rawFileName =
       decodeURIComponent(fileNameMatch?.[1] || '').trim() ||
       params.fallbackFileName?.trim() ||
-      `whatsapp-audio.${mimeType.includes('mpeg') ? 'mp3' : mimeType.includes('webm') ? 'webm' : 'ogg'}`;
+      `whatsapp-audio.${rawMimeType.includes('mpeg') ? 'mp3' : rawMimeType.includes('webm') ? 'webm' : 'ogg'}`;
+
+    const mimeType = rawMimeType.toLowerCase() === 'audio/oga' ? 'audio/ogg' : rawMimeType;
+    const fileName = /\.oga$/i.test(rawFileName) ? rawFileName.replace(/\.oga$/i, '.ogg') : rawFileName;
 
     return { blob, mimeType, fileName };
   };

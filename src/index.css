@@ -4181,31 +4181,61 @@
 }
 
 .painel-theme .whatsapp-inbox-attach-menu {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: #171717;
-  color: #f5efe5;
-  box-shadow: 0 28px 42px -28px rgba(0, 0, 0, 0.68);
+  border-color: color-mix(in srgb, var(--panel-border) 74%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel-surface) 92%, white 8%) 0%,
+    color-mix(in srgb, var(--panel-surface-soft) 72%, var(--panel-surface) 28%) 100%
+  );
+  color: var(--panel-text);
+  box-shadow:
+    0 22px 38px -26px rgba(42, 24, 12, 0.28),
+    0 10px 18px -16px rgba(42, 24, 12, 0.16);
+  backdrop-filter: blur(10px);
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-item {
   color: inherit;
-  transition: background-color 140ms ease, color 140ms ease;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-item:hover:not(:disabled),
 .painel-theme .whatsapp-inbox-attach-menu-item.is-primary {
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--panel-accent-soft) 52%, var(--panel-surface) 48%);
+  color: var(--panel-accent-ink-strong);
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-item.is-disabled {
-  opacity: 0.54;
+  color: var(--panel-text-muted);
   cursor: not-allowed;
+  opacity: 0.78;
+}
+
+.painel-theme .whatsapp-inbox-attach-menu-badge {
+  color: var(--panel-text-subtle);
+  opacity: 0.88;
 }
 
 .painel-theme.theme-dark .whatsapp-inbox-attach-menu {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: #171717;
-  color: #f5efe5;
+  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--panel-surface-soft) 82%, #120d0a 18%) 0%,
+    color-mix(in srgb, var(--panel-surface) 88%, #0e0907 12%) 100%
+  );
+  color: var(--panel-text);
+  box-shadow:
+    0 24px 40px -28px rgba(0, 0, 0, 0.56),
+    0 10px 18px -18px rgba(0, 0, 0, 0.28);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-attach-menu-item:hover:not(:disabled),
+.painel-theme.theme-dark .whatsapp-inbox-attach-menu-item.is-primary {
+  background: color-mix(in srgb, var(--panel-accent-soft) 38%, var(--panel-surface) 62%);
+  color: var(--panel-text);
 }
 
 .painel-theme .whatsapp-inbox-voice-composer {

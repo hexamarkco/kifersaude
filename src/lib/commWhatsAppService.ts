@@ -66,6 +66,12 @@ export type CommWhatsAppStartChatResult = {
   chat: CommWhatsAppChat;
 };
 
+export type CommWhatsAppSavedContactsPage = {
+  contacts: CommWhatsAppPhoneContact[];
+  total: number;
+  hasMore: boolean;
+};
+
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const mediaObjectUrlCache = new Map<string, Promise<string>>();
@@ -263,12 +269,14 @@ export const commWhatsAppService = {
     }
   },
 
-  async listSavedContacts(params: { query?: string; forceSync?: boolean } = {}): Promise<CommWhatsAppPhoneContact[]> {
+  async listSavedContacts(params: { query?: string; forceSync?: boolean; page?: number; pageSize?: number } = {}): Promise<CommWhatsAppSavedContactsPage> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-contacts', {
       body: {
         action: 'listContacts',
         query: params.query?.trim() || '',
         forceSync: params.forceSync === true,
+        page: params.page ?? 1,
+        pageSize: params.pageSize ?? 50,
       },
     });
 
@@ -276,7 +284,13 @@ export const commWhatsAppService = {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos salvos do WhatsApp.'));
     }
 
-    return ((data as { contacts?: CommWhatsAppPhoneContact[] })?.contacts ?? []) as CommWhatsAppPhoneContact[];
+    const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[]; total?: number; hasMore?: boolean };
+
+    return {
+      contacts: (payload.contacts ?? []) as CommWhatsAppPhoneContact[],
+      total: typeof payload.total === 'number' ? payload.total : 0,
+      hasMore: payload.hasMore === true,
+    };
   },
 
   async startChat(params:

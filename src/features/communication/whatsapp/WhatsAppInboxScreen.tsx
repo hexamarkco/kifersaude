@@ -532,6 +532,10 @@ export default function WhatsAppInboxScreen() {
   const [startChatQuery, setStartChatQuery] = useState('');
   const [savedContacts, setSavedContacts] = useState<CommWhatsAppPhoneContact[]>([]);
   const [savedContactsLoading, setSavedContactsLoading] = useState(false);
+  const [savedContactsLoadingMore, setSavedContactsLoadingMore] = useState(false);
+  const [savedContactsTotal, setSavedContactsTotal] = useState(0);
+  const [savedContactsHasMore, setSavedContactsHasMore] = useState(false);
+  const [savedContactsPage, setSavedContactsPage] = useState(1);
   const [crmStartResults, setCrmStartResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
   const [crmStartLoading, setCrmStartLoading] = useState(false);
   const [manualStartPhone, setManualStartPhone] = useState('');
@@ -701,25 +705,43 @@ export default function WhatsAppInboxScreen() {
     }
   }, []);
 
-  const refreshStartChatSources = useCallback(async (query: string) => {
-    setSavedContactsLoading(true);
-    setCrmStartLoading(true);
+  const refreshStartChatSources = useCallback(async (query: string, page: number = 1, appendSavedContacts: boolean = false) => {
+    if (appendSavedContacts) {
+      setSavedContactsLoadingMore(true);
+    } else {
+      setSavedContactsLoading(true);
+      setCrmStartLoading(true);
+    }
+
     try {
-      const [contacts, leads] = await Promise.all([
-        commWhatsAppService.listSavedContacts({ query }),
-        commWhatsAppService.searchCrmLeads({ query, limit: 20 }),
-      ]);
-      setSavedContacts(contacts);
+      const contactsPagePromise = commWhatsAppService.listSavedContacts({ query, page, pageSize: 50 });
+      const leadsPromise = appendSavedContacts
+        ? Promise.resolve(crmStartResults)
+        : commWhatsAppService.searchCrmLeads({ query, limit: 20 });
+
+      const [contactsPage, leads] = await Promise.all([contactsPagePromise, leadsPromise]);
+      setSavedContacts((current) => (appendSavedContacts ? [...current, ...contactsPage.contacts] : contactsPage.contacts));
+      setSavedContactsTotal(contactsPage.total);
+      setSavedContactsHasMore(contactsPage.hasMore);
+      setSavedContactsPage(page);
       setCrmStartResults(leads);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao carregar fontes para novo chat', error);
-      setSavedContacts([]);
-      setCrmStartResults([]);
+      if (!appendSavedContacts) {
+        setSavedContacts([]);
+        setSavedContactsTotal(0);
+        setSavedContactsHasMore(false);
+        setCrmStartResults([]);
+      }
     } finally {
-      setSavedContactsLoading(false);
-      setCrmStartLoading(false);
+      if (appendSavedContacts) {
+        setSavedContactsLoadingMore(false);
+      } else {
+        setSavedContactsLoading(false);
+        setCrmStartLoading(false);
+      }
     }
-  }, []);
+  }, [crmStartResults]);
 
   const channelState = operationalState?.channel ?? null;
   const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
@@ -926,7 +948,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    setLeadSearchQuery(selectedChat?.phone_number || '');
+    setLeadSearchQuery('');
     void loadLeadPanel(selectedChat);
   }, [leadDrawerOpen, loadLeadPanel, selectedChat]);
 
@@ -948,11 +970,19 @@ export default function WhatsAppInboxScreen() {
     }
 
     const timeoutId = window.setTimeout(() => {
-      void refreshStartChatSources(startChatQuery);
+      void refreshStartChatSources(startChatQuery, 1, false);
     }, 250);
 
     return () => window.clearTimeout(timeoutId);
   }, [refreshStartChatSources, startChatModalOpen, startChatQuery]);
+
+  const handleLoadMoreSavedContacts = useCallback(() => {
+    if (!savedContactsHasMore || savedContactsLoadingMore || savedContactsLoading) {
+      return;
+    }
+
+    void refreshStartChatSources(startChatQuery, savedContactsPage + 1, true);
+  }, [refreshStartChatSources, savedContactsHasMore, savedContactsLoading, savedContactsLoadingMore, savedContactsPage, startChatQuery]);
 
   useEffect(() => {
     if (typeof document === 'undefined' || typeof window === 'undefined') {
@@ -2435,7 +2465,11 @@ export default function WhatsAppInboxScreen() {
           query={startChatQuery}
           onQueryChange={setStartChatQuery}
           contacts={savedContacts}
+          contactsTotal={savedContactsTotal}
+          contactsHasMore={savedContactsHasMore}
           contactsLoading={savedContactsLoading}
+          contactsLoadingMore={savedContactsLoadingMore}
+          onLoadMoreContacts={handleLoadMoreSavedContacts}
           crmLeads={crmStartResults}
           crmLoading={crmStartLoading}
           onStartFromSavedContact={(contact) => void handleStartChatFromSavedContact(contact)}

@@ -519,6 +519,7 @@ export type CommWhatsAppPhoneContact = {
   phone_digits: string;
   display_name: string;
   short_name?: string | null;
+  saved: boolean;
   last_synced_at: string;
   created_at: string;
   updated_at: string;

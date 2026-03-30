@@ -15,7 +15,11 @@ type WhatsAppStartChatModalProps = {
   query: string;
   onQueryChange: (value: string) => void;
   contacts: CommWhatsAppPhoneContact[];
+  contactsTotal: number;
+  contactsHasMore: boolean;
   contactsLoading: boolean;
+  contactsLoadingMore: boolean;
+  onLoadMoreContacts: () => void;
   crmLeads: CommWhatsAppLeadSearchResult[];
   crmLoading: boolean;
   onStartFromSavedContact: (contact: CommWhatsAppPhoneContact) => void;
@@ -32,7 +36,11 @@ export default function WhatsAppStartChatModal({
   query,
   onQueryChange,
   contacts,
+  contactsTotal,
+  contactsHasMore,
   contactsLoading,
+  contactsLoadingMore,
+  onLoadMoreContacts,
   crmLeads,
   crmLoading,
   onStartFromSavedContact,
@@ -107,6 +115,11 @@ export default function WhatsAppStartChatModal({
           <div className="space-y-4">
             <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} />
             <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
+              {source === 'saved' && (
+                <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                  {contactsTotal} contatos salvos
+                </div>
+              )}
               {(source === 'saved' ? contactsLoading : crmLoading) ? (
                 <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -133,6 +146,14 @@ export default function WhatsAppStartChatModal({
                         {startingKey === `saved:${contact.phone_digits}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4 text-[var(--panel-accent-strong,#c86f1d)]" />}
                       </button>
                     ))}
+
+                    {contactsHasMore && (
+                      <div className="pt-2">
+                        <Button variant="secondary" className="w-full" onClick={onLoadMoreContacts} loading={contactsLoadingMore}>
+                          Carregar mais contatos
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )
               ) : crmLeads.length === 0 ? (

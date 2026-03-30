@@ -81,6 +81,7 @@ export type CommWhatsAppSavedContact = {
   phoneNumber: string;
   displayName: string;
   shortName: string | null;
+  saved: boolean;
 };
 
 export type CommWhatsAppMediaMeta = {
@@ -510,6 +511,23 @@ export const extractWhapiContactName = (payload: unknown): string => {
   return '';
 };
 
+export const extractWhapiContactSaved = (payload: unknown): boolean => {
+  if (!isRecord(payload)) return false;
+  return payload.saved === true;
+};
+
+export const extractWhapiSavedContactName = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+
+  const candidates = [payload.name, payload.pushname, payload.short, payload.short_name, payload.full_name];
+  for (const candidate of candidates) {
+    const normalized = toTrimmedString(candidate);
+    if (normalized) return normalized;
+  }
+
+  return '';
+};
+
 export const extractWhapiContactShortName = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
   return toTrimmedString(payload.short) || toTrimmedString(payload.short_name) || '';
@@ -592,10 +610,20 @@ export async function fetchWhapiChatMessages(params: {
   return extractWhapiMessages(payload);
 }
 
-export async function fetchWhapiContacts(params: {
+export async function fetchWhapiContactsPage(params: {
   token: string;
-}): Promise<Array<Record<string, unknown>>> {
-  const response = await fetch(`${WHAPI_BASE_URL}/contacts`, {
+  count?: number;
+  offset?: number;
+}): Promise<{ contacts: Array<Record<string, unknown>>; total: number | null; count: number }> {
+  const query = new URLSearchParams();
+  if (typeof params.count === 'number' && Number.isFinite(params.count)) {
+    query.set('count', String(Math.max(1, Math.min(500, Math.floor(params.count)))));
+  }
+  if (typeof params.offset === 'number' && Number.isFinite(params.offset) && params.offset > 0) {
+    query.set('offset', String(Math.max(0, Math.floor(params.offset))));
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts${query.size ? `?${query.toString()}` : ''}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -608,7 +636,60 @@ export async function fetchWhapiContacts(params: {
     throw new Error(parseWhapiError(payload) || 'Falha ao consultar contatos na Whapi.');
   }
 
-  return extractWhapiContacts(payload);
+  return {
+    contacts: extractWhapiContacts(payload),
+    total: isRecord(payload) && typeof payload.total === 'number' ? payload.total : null,
+    count: isRecord(payload) && typeof payload.count === 'number' ? payload.count : 0,
+  };
+}
+
+export async function fetchWhapiContacts(params: {
+  token: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const seen = new Set<string>();
+  const merged: Array<Record<string, unknown>> = [];
+  const pageSize = 100;
+  let offset = 0;
+  let total: number | null = null;
+
+  for (let page = 0; page < 50; page += 1) {
+    const result = await fetchWhapiContactsPage({
+      token: params.token,
+      count: pageSize,
+      offset,
+    });
+
+    if (total === null) {
+      total = result.total;
+    }
+
+    let addedInPage = 0;
+    for (const contact of result.contacts) {
+      const contactId = extractWhapiContactId(contact) || `${offset}:${addedInPage}`;
+      if (seen.has(contactId)) {
+        continue;
+      }
+      seen.add(contactId);
+      merged.push(contact);
+      addedInPage += 1;
+    }
+
+    if (result.contacts.length === 0 || addedInPage === 0) {
+      break;
+    }
+
+    offset += result.contacts.length;
+
+    if (total !== null && merged.length >= total) {
+      break;
+    }
+
+    if (result.contacts.length < pageSize) {
+      break;
+    }
+  }
+
+  return merged;
 }
 
 export async function checkWhapiContactExists(params: {

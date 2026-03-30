@@ -11,8 +11,10 @@ import {
   extractWhapiContactId,
   extractWhapiContactName,
   extractWhapiContactPhone,
+  extractWhapiContactSaved,
   extractWhapiContactShortName,
   fetchWhapiContacts,
+  extractWhapiSavedContactName,
   getNowIso,
   normalizeCommWhatsAppPhone,
   toTrimmedString,
@@ -31,6 +33,8 @@ type ContactsRequestBody = {
   action?: ContactsAction;
   query?: string;
   forceSync?: boolean;
+  page?: number;
+  pageSize?: number;
   source?: 'saved_contact' | 'crm' | 'manual';
   phoneNumber?: string;
   displayName?: string;
@@ -46,6 +50,7 @@ type SavedContactRow = {
   phone_digits: string;
   display_name: string;
   short_name: string | null;
+  saved: boolean;
   last_synced_at: string;
   created_at: string;
   updated_at: string;
@@ -96,11 +101,12 @@ async function syncContactsToCache(params: {
 
   const rows = fetchedContacts
     .map((contact) => {
+      const saved = extractWhapiContactSaved(contact);
       const phoneNumber = extractWhapiContactPhone(contact);
       const contactId = extractWhapiContactId(contact);
-      const displayName = extractWhapiContactName(contact);
+      const displayName = saved ? extractWhapiSavedContactName(contact) : '';
 
-      if (!phoneNumber || !contactId || !displayName) {
+      if (!saved || !phoneNumber || !contactId || !displayName) {
         return null;
       }
 
@@ -111,6 +117,7 @@ async function syncContactsToCache(params: {
         phone_digits: phoneNumber,
         display_name: displayName,
         short_name: extractWhapiContactShortName(contact) || null,
+        saved: true,
         last_synced_at: nowIso,
         updated_at: nowIso,
       };
@@ -127,6 +134,21 @@ async function syncContactsToCache(params: {
     }
   }
 
+  const syncedContactIds = rows.map((row) => row.contact_id);
+  let cleanupQuery = params.supabaseAdmin
+    .from('comm_whatsapp_phone_contacts_cache')
+    .delete()
+    .eq('channel_id', params.channelId);
+
+  if (syncedContactIds.length > 0) {
+    cleanupQuery = cleanupQuery.not('contact_id', 'in', `(${syncedContactIds.map((id) => `"${id}"`).join(',')})`);
+  }
+
+  const { error: cleanupError } = await cleanupQuery;
+  if (cleanupError) {
+    throw new Error(`Erro ao limpar cache obsoleto de contatos do WhatsApp: ${cleanupError.message}`);
+  }
+
   await params.supabaseAdmin.rpc('comm_whatsapp_refresh_channel_chat_identities', {
     p_channel_id: params.channelId,
   });
@@ -136,13 +158,18 @@ async function listCachedContacts(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   channelId: string;
   query: string;
+  page: number;
+  pageSize: number;
 }) {
+  const from = Math.max(0, (params.page - 1) * params.pageSize);
+  const to = from + params.pageSize - 1;
   let query = params.supabaseAdmin
     .from('comm_whatsapp_phone_contacts_cache')
-    .select('*')
+    .select('*', { count: 'exact' })
     .eq('channel_id', params.channelId)
+    .eq('saved', true)
     .order('display_name', { ascending: true })
-    .limit(50);
+    .range(from, to);
 
   const trimmedQuery = params.query.trim();
   if (trimmedQuery) {
@@ -155,13 +182,16 @@ async function listCachedContacts(params: {
     query = query.or(filters.join(','));
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     throw new Error(`Erro ao listar contatos salvos do WhatsApp: ${error.message}`);
   }
 
-  return (data ?? []) as SavedContactRow[];
+  return {
+    contacts: (data ?? []) as SavedContactRow[],
+    total: count ?? 0,
+  };
 }
 
 async function findCachedContactByPhone(params: {
@@ -265,9 +295,13 @@ Deno.serve(async (req: Request) => {
         supabaseAdmin,
         channelId: channel.id,
         query: toTrimmedString(body.query),
+        page: Math.max(1, Number(body.page) || 1),
+        pageSize: Math.min(100, Math.max(1, Number(body.pageSize) || 50)),
       });
 
-      return new Response(JSON.stringify({ success: true, contacts }), {
+      const hasMore = contacts.total > Math.max(1, Number(body.page) || 1) * Math.min(100, Math.max(1, Number(body.pageSize) || 50));
+
+      return new Response(JSON.stringify({ success: true, contacts: contacts.contacts, total: contacts.total, hasMore }), {
         status: 200,
         headers: jsonHeaders,
       });

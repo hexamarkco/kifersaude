@@ -41,7 +41,8 @@ type MessageState = { type: "success" | "error"; text: string } | null;
 type AiProvider = "openai" | "gemini" | "claude";
 type AiTaskKey =
   | "rewrite_message"
-  | "follow_up_generation";
+  | "follow_up_generation"
+  | "whatsapp_audio_transcription";
 type ModelOption = { value: string; label: string };
 
 type AiProviderFormState = {
@@ -102,6 +103,11 @@ const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string }> =
       key: "follow_up_generation",
       label: "Geração de follow-up",
       description: "Usado em lembretes para sugerir mensagens de follow-up.",
+    },
+    {
+      key: "whatsapp_audio_transcription",
+      label: "Transcrição de áudio do WhatsApp",
+      description: "Usado no inbox para transcrever notas de voz e áudios sob demanda.",
     },
   ];
 
@@ -226,6 +232,11 @@ const createDefaultRoutingForm = (): AiRoutingFormState => ({
     fallbackToOpenAi: true,
   },
   follow_up_generation: {
+    provider: "openai",
+    model: getDefaultTaskModel("openai"),
+    fallbackToOpenAi: true,
+  },
+  whatsapp_audio_transcription: {
     provider: "openai",
     model: getDefaultTaskModel("openai"),
     fallbackToOpenAi: true,

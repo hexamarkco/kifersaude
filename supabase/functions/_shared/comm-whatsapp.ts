@@ -718,6 +718,62 @@ export async function fetchWhapiContacts(params: {
   return merged;
 }
 
+export async function fetchWhapiMediaBlob(params: {
+  token: string;
+  mediaId?: string | null;
+  mediaUrl?: string | null;
+  fallbackFileName?: string | null;
+  fallbackMimeType?: string | null;
+}): Promise<{ blob: Blob; mimeType: string; fileName: string }> {
+  const headers = {
+    Accept: '*/*',
+    Authorization: `Bearer ${params.token}`,
+  };
+
+  const buildResult = async (response: Response) => {
+    if (!response.ok) {
+      const payload = await readResponsePayload(response);
+      throw new Error(parseWhapiError(payload) || 'Falha ao obter midia na Whapi.');
+    }
+
+    const blob = await response.blob();
+    const mimeType = response.headers.get('content-type')?.trim() || params.fallbackMimeType?.trim() || blob.type || 'audio/ogg';
+    const contentDisposition = response.headers.get('content-disposition')?.trim() || '';
+    const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+    const fileName =
+      decodeURIComponent(fileNameMatch?.[1] || '').trim() ||
+      params.fallbackFileName?.trim() ||
+      `whatsapp-audio.${mimeType.includes('mpeg') ? 'mp3' : mimeType.includes('webm') ? 'webm' : 'ogg'}`;
+
+    return { blob, mimeType, fileName };
+  };
+
+  if (params.mediaUrl?.trim()) {
+    try {
+      const response = await fetch(params.mediaUrl.trim(), {
+        method: 'GET',
+        headers,
+      });
+
+      return await buildResult(response);
+    } catch {
+      // Fall through to mediaId resolution below.
+    }
+  }
+
+  const mediaId = toTrimmedString(params.mediaId);
+  if (!mediaId) {
+    throw new Error('A mensagem nao possui MediaID nem URL valida para transcricao.');
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
+    method: 'GET',
+    headers,
+  });
+
+  return await buildResult(response);
+}
+
 export async function checkWhapiContactExists(params: {
   token: string;
   contactId: string;

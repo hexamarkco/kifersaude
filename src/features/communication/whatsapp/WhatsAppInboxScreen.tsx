@@ -562,9 +562,13 @@ function InboxFilterGroup<T extends string>({
 function WhatsAppMessageBody({
   message,
   onOpenImage,
+  onTranscribe,
+  transcribing,
 }: {
   message: CommWhatsAppMessage;
   onOpenImage: (payload: { src: string; name: string }) => void;
+  onTranscribe: (message: CommWhatsAppMessage) => void;
+  transcribing: boolean;
 }) {
   const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
   const kind = message.message_type;
@@ -657,6 +661,9 @@ function WhatsAppMessageBody({
   }
 
   if (kind === 'audio' || kind === 'voice') {
+    const transcriptionStatus = message.transcription_status || 'idle';
+    const canTranscribe = Boolean(message.media_id || message.media_url);
+
     return (
       <div className="space-y-3">
         <WhatsAppAudioPlayerCard
@@ -668,6 +675,44 @@ function WhatsAppMessageBody({
           loading={loading}
           error={error}
         />
+        <div className="space-y-2">
+          {transcriptionStatus === 'completed' && message.transcription_text?.trim() ? (
+            <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-3 py-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Transcricao</p>
+                {message.transcription_provider ? (
+                  <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--panel-text-subtle,#9a8573)]">
+                    {message.transcription_provider}
+                  </span>
+                ) : null}
+              </div>
+              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]">
+                {message.transcription_text}
+              </p>
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {transcriptionStatus === 'processing' || transcribing ? (
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--panel-text-soft,#5b4635)]">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Transcrevendo...
+              </span>
+            ) : canTranscribe ? (
+              <button
+                type="button"
+                onClick={() => onTranscribe(message)}
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--panel-text-soft,#5b4635)] transition hover:border-[var(--panel-accent-border,#d2ab85)] hover:text-[var(--panel-text,#1c1917)]"
+              >
+                {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
+              </button>
+            ) : null}
+
+            {transcriptionStatus === 'failed' && message.transcription_error ? (
+              <span className="text-xs text-[var(--panel-accent-red-text,#d9776b)]">{message.transcription_error}</span>
+            ) : null}
+          </div>
+        </div>
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
       </div>
     );
@@ -699,6 +744,7 @@ export default function WhatsAppInboxScreen() {
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
   const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
@@ -801,7 +847,7 @@ export default function WhatsAppInboxScreen() {
       items
         .map(
           (message) =>
-            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.message_at}:${message.text_content ?? ''}:${message.message_type}:${message.media_id ?? ''}:${message.media_url ?? ''}:${message.media_file_name ?? ''}:${message.media_caption ?? ''}`,
+            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.message_at}:${message.text_content ?? ''}:${message.message_type}:${message.media_id ?? ''}:${message.media_url ?? ''}:${message.media_file_name ?? ''}:${message.media_caption ?? ''}:${message.transcription_text ?? ''}:${message.transcription_status ?? ''}:${message.transcription_error ?? ''}`,
         )
         .join('|'),
     [],
@@ -850,6 +896,10 @@ export default function WhatsAppInboxScreen() {
         return bTime - aTime;
       });
     });
+  }, []);
+
+  const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
+    setMessages((current) => current.map((message) => (message.id === messageId ? { ...message, ...patch } : message)));
   }, []);
 
   const loadLeadContracts = useCallback(async (leadId: string | null) => {
@@ -2068,6 +2118,39 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
+  const handleTranscribeMessage = async (message: CommWhatsAppMessage) => {
+    setTranscribingMessageId(message.id);
+    patchMessageLocally(message.id, {
+      transcription_status: 'processing',
+      transcription_error: null,
+    });
+
+    try {
+      const result = await commWhatsAppService.transcribeMessage(message.id, {
+        force: message.transcription_status === 'failed' || Boolean(message.transcription_text?.trim()),
+      });
+
+      patchMessageLocally(message.id, {
+        transcription_text: result.transcription_text,
+        transcription_status: result.transcription_status,
+        transcription_provider: result.transcription_provider ?? null,
+        transcription_model: result.transcription_model ?? null,
+        transcription_error: null,
+        transcription_updated_at: new Date().toISOString(),
+      });
+      toast.success('Transcricao concluida.');
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'Nao foi possivel transcrever este audio.';
+      patchMessageLocally(message.id, {
+        transcription_status: 'failed',
+        transcription_error: messageText,
+      });
+      toast.error(messageText);
+    } finally {
+      setTranscribingMessageId(null);
+    }
+  };
+
   const handleRefreshLeadContracts = useCallback(() => {
     void loadLeadContracts(leadPanel?.id ?? null);
   }, [leadPanel?.id, loadLeadContracts]);
@@ -2512,7 +2595,12 @@ export default function WhatsAppInboxScreen() {
                   messages.map((message) => (
                     <div key={message.id} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
                       <div className={`max-w-[80%] rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
-                        <WhatsAppMessageBody message={message} onOpenImage={setLightboxMedia} />
+                        <WhatsAppMessageBody
+                          message={message}
+                          onOpenImage={setLightboxMedia}
+                          onTranscribe={(target) => void handleTranscribeMessage(target)}
+                          transcribing={transcribingMessageId === message.id}
+                        />
                         <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em]">
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}

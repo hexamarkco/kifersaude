@@ -548,6 +548,12 @@ export type CommWhatsAppMessage = {
   media_size_bytes?: number | null;
   media_duration_seconds?: number | null;
   media_caption?: string | null;
+  transcription_text?: string | null;
+  transcription_status?: 'idle' | 'pending' | 'processing' | 'completed' | 'failed' | null;
+  transcription_provider?: string | null;
+  transcription_model?: string | null;
+  transcription_error?: string | null;
+  transcription_updated_at?: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
 };

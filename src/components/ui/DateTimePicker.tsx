@@ -240,8 +240,8 @@ export default function DateTimePicker({
     setPosition(
       calculateFloatingPanelPosition({
         triggerRect: triggerRef.current.getBoundingClientRect(),
-        panelWidth: type === 'month' ? 336 : 384,
-        panelHeight: type === 'datetime-local' ? 440 : 400,
+        panelWidth: type === 'month' ? 336 : 392,
+        panelHeight: type === 'datetime-local' ? 540 : 420,
       }),
     );
   };
@@ -641,7 +641,7 @@ export default function DateTimePicker({
             <div className={themeScopeClassName}>
               <div
                 ref={panelRef}
-                className="panel-glass-panel fixed z-[130] rounded-xl border p-3 shadow-xl"
+                className="panel-glass-panel fixed z-[130] flex flex-col overflow-hidden rounded-2xl border shadow-xl"
                 style={{
                   top: position.top,
                   left: position.left,
@@ -655,6 +655,7 @@ export default function DateTimePicker({
                 role="dialog"
                 aria-label="Selecionar data"
               >
+                <div className="flex min-h-0 flex-col p-3">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <Button
                     variant="ghost"
@@ -737,8 +738,10 @@ export default function DateTimePicker({
                     maxLength={4}
                     placeholder="Ano"
                     aria-label="Ano"
-                  />
+                    />
                 </div>
+
+                <div className="min-h-0 overflow-y-auto pr-1">
 
                 {type === 'month' ? (
                   <div className="grid grid-cols-3 gap-2">
@@ -834,12 +837,14 @@ export default function DateTimePicker({
                   </div>
                 ) : null}
 
-                <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-3">
                   <Button variant="ghost" size="sm" onClick={() => applyDate(null)} disabled={!value} className="px-2">
                     Limpar
                   </Button>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                     <Button
                       variant="secondary"
                       size="sm"
@@ -859,6 +864,7 @@ export default function DateTimePicker({
                       Concluído
                     </Button>
                   </div>
+                </div>
                 </div>
               </div>
             </div>,

@@ -76,6 +76,14 @@ export type CommWhatsAppSavedContactsPage = {
   hasMore: boolean;
 };
 
+export type CommWhatsAppTranscriptionResult = {
+  transcription_text: string;
+  transcription_status: 'completed';
+  transcription_provider?: string | null;
+  transcription_model?: string | null;
+  fallback_used?: boolean;
+};
+
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const mediaObjectUrlCache = new Map<string, Promise<string>>();
@@ -409,6 +417,26 @@ export const commWhatsAppService = {
       messageId: payload.messageId ?? null,
       status: payload.status ?? 'pending',
     };
+  },
+
+  async transcribeMessage(messageId: string, options: { force?: boolean } = {}): Promise<CommWhatsAppTranscriptionResult> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-transcribe', {
+      body: {
+        messageId,
+        force: options.force === true,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel transcrever o audio do WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as CommWhatsAppTranscriptionResult;
+    if (!payload.transcription_text?.trim()) {
+      throw new Error('A transcricao nao retornou texto.');
+    }
+
+    return payload;
   },
 
   async retryMediaMessage(messageId: string): Promise<{ messageId: string | null; status: string }> {

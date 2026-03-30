@@ -198,14 +198,20 @@ export const getDirectChatDisplayNameCandidate = (
   message: Record<string, unknown>,
   direction: 'inbound' | 'outbound' | 'system',
 ): string => {
-  const chatName = toTrimmedString(message.chat_name);
-  const fromName = toTrimmedString(message.from_name);
-  const pushName = toTrimmedString(message.pushname) || toTrimmedString(message.push_name);
-  const notifyName = toTrimmedString(message.notify_name) || toTrimmedString(message.sender_name);
-  const candidate = chatName || fromName || pushName || notifyName;
+  const candidate = pickHumanName(
+    message.chat_name,
+    message.from_name,
+    message.pushname,
+    message.push_name,
+    message.notify_name,
+    message.sender_name,
+    isRecord(message.chat) ? message.chat.name : null,
+    isRecord(message.business) ? message.business.name : null,
+    isRecord(message.profile) ? message.profile.name : null,
+  );
 
   if (direction === 'outbound') {
-    return chatName || pushName || notifyName;
+    return candidate;
   }
 
   return candidate;
@@ -217,6 +223,17 @@ export const isPhoneLabelLikeDisplayName = (value: string): boolean => {
 
   const withoutSymbols = trimmed.replace(/[\s()+-]/g, '');
   return /^\+?\d+$/.test(withoutSymbols);
+};
+
+const pickHumanName = (...candidates: unknown[]): string => {
+  for (const candidate of candidates) {
+    const normalized = toTrimmedString(candidate);
+    if (!normalized) continue;
+    if (isPhoneLabelLikeDisplayName(normalized)) continue;
+    return normalized;
+  }
+
+  return '';
 };
 
 const readNestedBody = (container: unknown, key: string): string => {
@@ -253,18 +270,72 @@ const collectButtonLikeTexts = (value: unknown): string[] => {
   return collected;
 };
 
+const collectTextFragments = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (typeof value === 'string') {
+    const normalized = value.trim();
+    return normalized ? [normalized] : [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => collectTextFragments(entry));
+  }
+
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const fragments: string[] = [];
+  const directFields = ['body', 'text', 'title', 'caption', 'description', 'header', 'footer', 'subtitle'];
+  for (const key of directFields) {
+    const normalized = toTrimmedString(value[key]);
+    if (normalized) {
+      fragments.push(normalized);
+    }
+  }
+
+  fragments.push(...collectButtonLikeTexts(value.buttons));
+  fragments.push(...collectButtonLikeTexts(value.options));
+
+  if (Array.isArray(value.cards)) {
+    for (const card of value.cards) {
+      if (!isRecord(card)) continue;
+      fragments.push(...collectTextFragments(card));
+      fragments.push(...collectButtonLikeTexts(card.buttons));
+    }
+  }
+
+  if (isRecord(value.action)) {
+    fragments.push(...collectTextFragments(value.action));
+    fragments.push(...collectButtonLikeTexts(value.action.buttons));
+  }
+
+  return fragments.filter(Boolean);
+};
+
+const pickBestSummary = (candidates: string[]): string => {
+  const cleaned = candidates
+    .map((candidate) => candidate.trim())
+    .filter(Boolean)
+    .filter((candidate) => !isPhoneLabelLikeDisplayName(candidate));
+
+  if (cleaned.length === 0) return '';
+
+  return [...cleaned].sort((a, b) => b.length - a.length)[0] || '';
+};
+
 const summarizeInteractiveLikeMessage = (message: Record<string, unknown>): string => {
   const directCandidates = [
-    readNestedText(message, 'interactive'),
-    readNestedBody(message, 'interactive'),
-    readNestedText(message, 'hsm'),
-    readNestedBody(message, 'hsm'),
-    readNestedText(message, 'carousel'),
-    readNestedBody(message, 'carousel'),
+    ...collectTextFragments(message.interactive),
+    ...collectTextFragments(message.hsm),
+    ...collectTextFragments(message.carousel),
+    ...collectTextFragments(message.reply),
   ].filter(Boolean);
 
-  if (directCandidates.length > 0) {
-    return directCandidates[0]!;
+  const bestDirectCandidate = pickBestSummary(directCandidates);
+  if (bestDirectCandidate) {
+    return bestDirectCandidate;
   }
 
   const interactive = isRecord(message.interactive) ? message.interactive : null;
@@ -286,10 +357,7 @@ const summarizeInteractiveLikeMessage = (message: Record<string, unknown>): stri
     ? message.context.quoted_content
     : null;
 
-  const quotedText =
-    toTrimmedString(quotedContent?.body) ||
-    toTrimmedString(quotedContent?.header) ||
-    toTrimmedString(quotedContent?.footer);
+  const quotedText = pickBestSummary(collectTextFragments(quotedContent));
 
   if (quotedText) {
     return quotedText;
@@ -556,16 +624,55 @@ export const extractWhapiUploadMediaId = (payload: unknown): string => {
 export const extractWhapiChatName = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
 
-  const directName = toTrimmedString(payload.name) || toTrimmedString(payload.chat_name);
+  const directName = pickHumanName(
+    payload.name,
+    payload.chat_name,
+    payload.pushname,
+    payload.push_name,
+    payload.notify_name,
+    payload.from_name,
+  );
   if (directName) return directName;
 
   if (isRecord(payload.contact)) {
-    const contactName = toTrimmedString(payload.contact.name) || toTrimmedString(payload.contact.pushname);
+    const contactName = pickHumanName(
+      payload.contact.name,
+      payload.contact.pushname,
+      payload.contact.push_name,
+      payload.contact.short_name,
+      payload.contact.notify_name,
+    );
     if (contactName) return contactName;
   }
 
+  if (isRecord(payload.chat)) {
+    const chatName = pickHumanName(payload.chat.name, payload.chat.pushname, payload.chat.short_name);
+    if (chatName) return chatName;
+  }
+
+  if (isRecord(payload.business)) {
+    const businessName = pickHumanName(payload.business.name, payload.business.display_name);
+    if (businessName) return businessName;
+  }
+
+  if (isRecord(payload.profile)) {
+    const profileName = pickHumanName(payload.profile.name, payload.profile.display_name);
+    if (profileName) return profileName;
+  }
+
+  if (isRecord(payload.user)) {
+    const userName = pickHumanName(payload.user.name, payload.user.pushname, payload.user.short_name);
+    if (userName) return userName;
+  }
+
   if (isRecord(payload.last_message)) {
-    const lastMessageName = toTrimmedString(payload.last_message.chat_name) || toTrimmedString(payload.last_message.from_name);
+    const lastMessageName = pickHumanName(
+      payload.last_message.chat_name,
+      payload.last_message.from_name,
+      payload.last_message.pushname,
+      payload.last_message.push_name,
+      payload.last_message.notify_name,
+    );
     if (lastMessageName) return lastMessageName;
   }
 

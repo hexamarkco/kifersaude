@@ -75,6 +75,7 @@ export type CommWhatsAppSavedContactsPage = {
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const mediaObjectUrlCache = new Map<string, Promise<string>>();
+const localMediaPreviewByMessageId = new Map<string, string>();
 
 const sanitizeSearch = (value: string) =>
   value
@@ -97,6 +98,16 @@ export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
 };
 
 export const commWhatsAppService = {
+  rememberLocalMediaPreview(messageId: string, objectUrl: string) {
+    if (!messageId || !objectUrl) return;
+    localMediaPreviewByMessageId.set(messageId, objectUrl);
+  },
+
+  getRememberedLocalMediaPreview(messageId?: string | null) {
+    if (!messageId) return null;
+    return localMediaPreviewByMessageId.get(messageId) ?? null;
+  },
+
   async getOperationalState(): Promise<CommWhatsAppOperationalState | null> {
     const { data, error } = await supabase.rpc('comm_whatsapp_get_operational_state');
 

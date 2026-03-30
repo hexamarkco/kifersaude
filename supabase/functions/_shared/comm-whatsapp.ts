@@ -411,7 +411,7 @@ export const extractWhapiMediaId = (payload: unknown): string => {
   if (!payload) return '';
 
   if (isRecord(payload)) {
-    const directId = toTrimmedString(payload.media_id) || toTrimmedString(payload.id);
+    const directId = toTrimmedString(payload.media_id);
     if (directId) return directId;
 
     if (isRecord(payload.media)) {
@@ -426,6 +426,22 @@ export const extractWhapiMediaId = (payload: unknown): string => {
           if (itemId) return itemId;
         }
       }
+    }
+  }
+
+  return '';
+};
+
+export const extractWhapiUploadMediaId = (payload: unknown): string => {
+  if (!payload) return '';
+
+  if (isRecord(payload)) {
+    const directId = toTrimmedString(payload.id) || toTrimmedString(payload.media_id);
+    if (directId) return directId;
+
+    if (isRecord(payload.media)) {
+      const nestedId = toTrimmedString(payload.media.id) || toTrimmedString(payload.media.media_id);
+      if (nestedId) return nestedId;
     }
   }
 

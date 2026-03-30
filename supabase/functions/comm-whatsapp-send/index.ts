@@ -11,6 +11,7 @@ import {
   extractWhapiMediaId,
   extractWhapiMessageId,
   extractWhapiMessageStatus,
+  extractWhapiUploadMediaId,
   formatPhoneLabel,
   getNowIso,
   isDirectWhapiChatId,
@@ -228,7 +229,7 @@ async function sendAudioLikeWhapi(params: {
     };
   }
 
-  const uploadedMediaId = extractWhapiMediaId(uploadPayload);
+  const uploadedMediaId = extractWhapiUploadMediaId(uploadPayload);
   if (!uploadedMediaId) {
     return {
       response: uploadResponse,
@@ -491,7 +492,7 @@ Deno.serve(async (req: Request) => {
 
     const externalMessageId = extractWhapiMessageId(whapiPayload);
     const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
-    uploadedMediaId = extractWhapiMediaId(whapiPayload);
+    uploadedMediaId = uploadedMediaId || extractWhapiMediaId(whapiPayload);
     const nowIso = getNowIso();
     const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
     const phoneDigits = extractPhoneFromChatId(chatId);

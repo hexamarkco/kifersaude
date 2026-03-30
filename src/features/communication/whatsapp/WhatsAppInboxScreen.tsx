@@ -194,7 +194,7 @@ const getSupportedVoiceMimeType = () => {
     return '';
   }
 
-  const candidates = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/ogg'];
+  const candidates = ['audio/ogg;codecs=opus', 'audio/ogg', 'audio/webm;codecs=opus', 'audio/webm'];
   return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) || '';
 };
 
@@ -273,7 +273,7 @@ function WaveformBars({ bars, active = false }: { bars?: number[]; active?: bool
 }
 
 function useResolvedMediaUrl(message: CommWhatsAppMessage) {
-  const [mediaUrl, setMediaUrl] = useState<string | null>(message.media_url ?? null);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(message.media_url ?? commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id) ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -282,6 +282,16 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
 
     if (message.media_url?.trim()) {
       setMediaUrl(message.media_url.trim());
+      setLoading(false);
+      setError(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    const rememberedPreview = commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id);
+    if (rememberedPreview) {
+      setMediaUrl(rememberedPreview);
       setLoading(false);
       setError(null);
       return () => {
@@ -309,7 +319,8 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
       })
       .catch((resolveError) => {
         if (!active) return;
-        setError(resolveError instanceof Error ? resolveError.message : 'Nao foi possivel carregar a midia.');
+        const resolvedMessage = resolveError instanceof Error ? resolveError.message : 'Nao foi possivel carregar a midia.';
+        setError(resolvedMessage.includes('specified media not found') ? 'Arquivo indisponivel no momento.' : resolvedMessage);
       })
       .finally(() => {
         if (!active) return;
@@ -319,7 +330,7 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
     return () => {
       active = false;
     };
-  }, [message.media_id, message.media_url]);
+  }, [message.external_message_id, message.media_id, message.media_url]);
 
   return { mediaUrl, loading, error };
 }
@@ -333,6 +344,127 @@ function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) 
       <Icon className="h-3.5 w-3.5" />
       <span>{meta.label}</span>
     </span>
+  );
+}
+
+function WhatsAppAudioPlayerCard({
+  kind,
+  mediaUrl,
+  mediaMimeType,
+  fileName,
+  durationSeconds,
+  loading,
+  error,
+}: {
+  kind: 'audio' | 'voice';
+  mediaUrl: string | null;
+  mediaMimeType?: string | null;
+  fileName?: string | null;
+  durationSeconds?: number | null;
+  loading: boolean;
+  error: string | null;
+}) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [resolvedDuration, setResolvedDuration] = useState(durationSeconds ?? 0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+    const handleLoadedMetadata = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setResolvedDuration(audio.duration);
+      }
+    };
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      audio.currentTime = 0;
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [mediaUrl]);
+
+  const handleTogglePlayback = () => {
+    const audio = audioRef.current;
+    if (!audio || !mediaUrl) return;
+
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    void audio.play().then(() => setIsPlaying(true)).catch(() => undefined);
+  };
+
+  const duration = Math.max(resolvedDuration || 0, durationSeconds || 0);
+  const progress = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+
+  if (!mediaUrl) {
+    return (
+      <div className={`whatsapp-inbox-audio-card flex items-center gap-3 rounded-2xl border px-3 py-3 ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+        <div className={`whatsapp-inbox-audio-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+          {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{kind === 'voice' ? 'Nota de voz' : fileName || 'Audio'}</p>
+          <p className="text-xs opacity-75">{loading ? 'Carregando audio...' : error || 'Audio indisponivel'}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+      <audio ref={audioRef} preload="metadata">
+        <source src={mediaUrl} type={mediaMimeType || undefined} />
+      </audio>
+
+      <div className={`whatsapp-inbox-audio-native-badge ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+        {kind === 'voice' ? <Mic className="h-4 w-4" /> : <Headphones className="h-4 w-4" />}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleTogglePlayback}
+            className="whatsapp-inbox-audio-native-play"
+            aria-label={isPlaying ? 'Pausar audio' : 'Reproduzir audio'}
+          >
+            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+          </button>
+
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="truncate text-sm font-semibold">{kind === 'voice' ? 'Nota de voz' : fileName || 'Arquivo de audio'}</p>
+              <span className="text-[11px] uppercase tracking-[0.08em] opacity-70">{kind === 'voice' ? 'Gravado no chat' : 'Audio enviado'}</span>
+            </div>
+            <div className="whatsapp-inbox-audio-native-waveform">
+              <div className="whatsapp-inbox-audio-native-waveform-progress" style={{ width: `${progress}%` }} />
+              <WaveformBars bars={kind === 'voice' ? DEFAULT_WAVEFORM : DEFAULT_WAVEFORM.map((value, index) => (index % 3 === 0 ? value * 0.6 : value * 0.9))} active={isPlaying} />
+            </div>
+            <div className="flex items-center justify-between gap-3 text-xs opacity-80">
+              <span>{formatDurationLabel(Math.round(currentTime))}</span>
+              <span>{formatDurationLabel(Math.round(duration))}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -454,31 +586,17 @@ function WhatsAppMessageBody({
   }
 
   if (kind === 'audio' || kind === 'voice') {
-    const durationLabel = message.media_duration_seconds ? `${message.media_duration_seconds}s` : formatFileSize(message.media_size_bytes);
-
     return (
       <div className="space-y-3">
-        <div className={`whatsapp-inbox-audio-card flex items-center gap-3 rounded-2xl border px-3 py-3 ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-          <div className={`whatsapp-inbox-audio-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-            {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
-          </div>
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{kind === 'voice' ? 'Nota de voz' : message.media_file_name || 'Audio'}</p>
-                <p className="text-[11px] uppercase tracking-[0.08em] opacity-70">{kind === 'voice' ? 'Gravado no chat' : 'Arquivo de audio'}</p>
-              </div>
-              <span className="text-xs opacity-75">{durationLabel}</span>
-            </div>
-            {mediaUrl ? (
-              <audio controls preload="none" className="w-full max-w-[320px]">
-                <source src={mediaUrl} type={message.media_mime_type || undefined} />
-              </audio>
-            ) : (
-              <p className="text-xs opacity-75">{loading ? 'Carregando audio...' : error || 'Audio indisponivel'}</p>
-            )}
-          </div>
-        </div>
+        <WhatsAppAudioPlayerCard
+          kind={kind}
+          mediaUrl={mediaUrl}
+          mediaMimeType={message.media_mime_type}
+          fileName={message.media_file_name}
+          durationSeconds={message.media_duration_seconds}
+          loading={loading}
+          error={error}
+        />
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
       </div>
     );
@@ -1457,7 +1575,7 @@ export default function WhatsAppInboxScreen() {
     setPendingAttachment({
       file: nextFile,
       kind: inferAttachmentKind(nextFile),
-      previewUrl: nextFile.type.startsWith('image/') || nextFile.type.startsWith('video/') ? URL.createObjectURL(nextFile) : null,
+      previewUrl: URL.createObjectURL(nextFile),
     });
 
     event.target.value = '';
@@ -1724,11 +1842,12 @@ export default function WhatsAppInboxScreen() {
     try {
       if (pendingAttachment) {
         const caption = pendingAttachment.kind === 'voice' ? undefined : text;
+        const previewUrlForSentMessage = URL.createObjectURL(pendingAttachment.file);
 
         setMediaUploadProgress(0);
         mediaUploadAbortControllerRef.current = new AbortController();
 
-        await commWhatsAppService.sendMediaMessage({
+        const sendResult = await commWhatsAppService.sendMediaMessage({
           chatId: selectedChat.external_chat_id,
           kind: pendingAttachment.kind,
           file: pendingAttachment.file,
@@ -1738,6 +1857,12 @@ export default function WhatsAppInboxScreen() {
           onUploadProgress: setMediaUploadProgress,
           signal: mediaUploadAbortControllerRef.current.signal,
         });
+
+        if (sendResult.messageId && previewUrlForSentMessage) {
+          commWhatsAppService.rememberLocalMediaPreview(sendResult.messageId, previewUrlForSentMessage);
+        }
+
+        await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
         voicePreviewAudioRef.current?.pause();
         if (voicePreviewAudioRef.current) {
           voicePreviewAudioRef.current.currentTime = 0;
@@ -2058,9 +2183,14 @@ export default function WhatsAppInboxScreen() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#8a735f)]">Conversas</p>
-                <Button size="sm" onClick={() => setStartChatModalOpen(true)}>
+                <Button
+                  size="sm"
+                  onClick={() => setStartChatModalOpen(true)}
+                  className="h-9 w-9 px-0"
+                  aria-label="Novo chat"
+                  title="Novo chat"
+                >
                   <Plus className="h-4 w-4" />
-                  Novo chat
                 </Button>
               </div>
 
@@ -2360,8 +2490,8 @@ export default function WhatsAppInboxScreen() {
                         )}
                         <div className="min-w-0 flex-1 space-y-3">
                           <div>
-                            <p className="truncate text-sm font-medium">{pendingAttachment.file.name}</p>
-                            <p className="text-xs opacity-75">{formatFileSize(pendingAttachment.file.size)}</p>
+                            <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{pendingAttachment.file.name}</p>
+                            <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">{formatFileSize(pendingAttachment.file.size)}</p>
                           </div>
 
                           {pendingAttachment.kind === 'image' && pendingAttachment.previewUrl ? (
@@ -2377,7 +2507,7 @@ export default function WhatsAppInboxScreen() {
                               <div className="h-1.5 overflow-hidden rounded-full bg-black/10">
                                 <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress}%` }} />
                               </div>
-                              <p className="text-xs opacity-75">Enviando anexo... {mediaUploadProgress}%</p>
+                              <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">Enviando anexo... {mediaUploadProgress}%</p>
                             </div>
                           ) : null}
 

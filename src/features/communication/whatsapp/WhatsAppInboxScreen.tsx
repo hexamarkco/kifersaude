@@ -571,6 +571,7 @@ export default function WhatsAppInboxScreen() {
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
+  const latestCrmStartResultsRef = useRef<CommWhatsAppLeadSearchResult[]>([]);
   const chatsSignatureRef = useRef('');
   const messagesSignatureRef = useRef('');
   const pendingScrollModeRef = useRef<ScrollMode>(null);
@@ -721,7 +722,7 @@ export default function WhatsAppInboxScreen() {
     try {
       const contactsPagePromise = commWhatsAppService.listSavedContacts({ query, page, pageSize: 50 });
       const leadsPromise = appendSavedContacts
-        ? Promise.resolve(crmStartResults)
+        ? Promise.resolve(latestCrmStartResultsRef.current)
         : commWhatsAppService.searchCrmLeads({ query, limit: 20 });
 
       const [contactsPage, leads] = await Promise.all([contactsPagePromise, leadsPromise]);
@@ -746,7 +747,7 @@ export default function WhatsAppInboxScreen() {
         setCrmStartLoading(false);
       }
     }
-  }, [crmStartResults]);
+  }, []);
 
   const channelState = operationalState?.channel ?? null;
   const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
@@ -862,6 +863,10 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     latestMessagesRef.current = messages;
   }, [messages]);
+
+  useEffect(() => {
+    latestCrmStartResultsRef.current = crmStartResults;
+  }, [crmStartResults]);
 
   useEffect(() => {
     const previewUrl = pendingAttachment?.previewUrl;

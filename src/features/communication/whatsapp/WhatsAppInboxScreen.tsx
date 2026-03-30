@@ -2303,7 +2303,7 @@ export default function WhatsAppInboxScreen() {
                 className="whatsapp-inbox-search-input"
               />
 
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <div className="flex items-center gap-2 overflow-visible pb-1">
                 <InboxFilterChip
                   active={!hasActiveChatFilters}
                   label="Todas"

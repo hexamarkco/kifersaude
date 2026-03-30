@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Checkbox from '../../../components/ui/Checkbox';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
+import StatusDropdown from '../../../components/StatusDropdown';
 import { useConfig } from '../../../contexts/ConfigContext';
 import {
   commWhatsAppService,
@@ -564,6 +565,8 @@ export default function WhatsAppInboxScreen() {
   const voiceWaveformPayloadRef = useRef('');
   const mediaUploadAbortControllerRef = useRef<AbortController | null>(null);
   const autoSendVoiceRef = useRef(false);
+  const autoLinkedLeadKeyRef = useRef<string | null>(null);
+  const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
@@ -578,6 +581,7 @@ export default function WhatsAppInboxScreen() {
   const messagesRequestIdRef = useRef(0);
   const olderMessagesRequestIdRef = useRef(0);
   const operationalStateRequestIdRef = useRef(0);
+  const autoLinkLookupRequestIdRef = useRef(0);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachment !== null;
   const pollingEnabled = isDocumentVisible && isWindowFocused;
@@ -745,6 +749,13 @@ export default function WhatsAppInboxScreen() {
 
   const channelState = operationalState?.channel ?? null;
   const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
+  const suggestedLead = useMemo(() => {
+    if (!leadDrawerOpen || selectedChat?.lead_id || leadSearchQuery.trim() !== '') {
+      return null;
+    }
+
+    return leadSearchResults.length === 1 ? leadSearchResults[0] : null;
+  }, [leadDrawerOpen, leadSearchQuery, leadSearchResults, selectedChat?.lead_id]);
   const isChannelConnected = connectionStatus === 'AUTH';
   const hasWebhookEver = Boolean(channelState?.last_webhook_received_at);
   const webhookAgeMs = channelState?.last_webhook_received_at
@@ -951,6 +962,15 @@ export default function WhatsAppInboxScreen() {
     setLeadSearchQuery('');
     void loadLeadPanel(selectedChat);
   }, [leadDrawerOpen, loadLeadPanel, selectedChat]);
+
+  useEffect(() => {
+    if (!selectedChat?.lead_id) {
+      setLeadPanel(null);
+      return;
+    }
+
+    void loadLeadPanel(selectedChat);
+  }, [loadLeadPanel, selectedChat]);
 
   useEffect(() => {
     if (!leadDrawerOpen || !selectedChat || selectedChat.lead_id) {
@@ -1787,7 +1807,7 @@ export default function WhatsAppInboxScreen() {
     setLeadDrawerOpen(false);
   };
 
-  const handleLinkLead = async (leadId: string) => {
+  const handleLinkLead = useCallback(async (leadId: string, options: { silent?: boolean } = {}) => {
     if (!selectedChat) {
       return;
     }
@@ -1795,17 +1815,24 @@ export default function WhatsAppInboxScreen() {
     setLinkLoadingLeadId(leadId);
     try {
       const updatedChat = await commWhatsAppService.linkChatLead(selectedChat.id, leadId);
+      autoLinkSuppressedChatIdRef.current = null;
+      autoLinkedLeadKeyRef.current = `${updatedChat.id}:${leadId}`;
       upsertChatLocally(updatedChat);
       setSelectedChatId(updatedChat.id);
       await Promise.all([loadLeadPanel(updatedChat), loadChats()]);
-      toast.success('Lead vinculado a conversa.');
+      if (!options.silent) {
+        toast.success('Lead vinculado a conversa.');
+      }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao vincular lead', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel vincular o lead ao chat.');
+      autoLinkedLeadKeyRef.current = null;
+      if (!options.silent) {
+        toast.error(error instanceof Error ? error.message : 'Nao foi possivel vincular o lead ao chat.');
+      }
     } finally {
       setLinkLoadingLeadId(null);
     }
-  };
+  }, [loadChats, loadLeadPanel, selectedChat, upsertChatLocally]);
 
   const handleUnlinkLead = async () => {
     if (!selectedChat) {
@@ -1813,12 +1840,13 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
+      autoLinkSuppressedChatIdRef.current = selectedChat.id;
       const updatedChat = await commWhatsAppService.unlinkChatLead(selectedChat.id);
       upsertChatLocally(updatedChat);
       setLeadPanel(null);
       setLeadContracts([]);
       setLeadContractsError(null);
-      setLeadSearchQuery(selectedChat.phone_number || '');
+      setLeadSearchQuery('');
       toast.success('Lead desvinculado da conversa.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao desvincular lead', error);
@@ -1848,6 +1876,41 @@ export default function WhatsAppInboxScreen() {
   const handleViewLeadInCrm = () => {
     navigate('/painel/leads');
   };
+
+  useEffect(() => {
+    if (!selectedChat || selectedChat.lead_id || autoLinkSuppressedChatIdRef.current === selectedChat.id) {
+      return;
+    }
+
+    const requestId = ++autoLinkLookupRequestIdRef.current;
+
+    void commWhatsAppService
+      .searchCrmLeads({
+        phoneNumbers: [selectedChat.phone_number, selectedChat.phone_digits],
+        limit: 2,
+      })
+      .then((results) => {
+        if (requestId !== autoLinkLookupRequestIdRef.current || selectedChatIdRef.current !== selectedChat.id) {
+          return;
+        }
+
+        if (results.length !== 1) {
+          return;
+        }
+
+        const onlyLead = results[0];
+        const autoLinkKey = `${selectedChat.id}:${onlyLead.id}`;
+        if (autoLinkedLeadKeyRef.current === autoLinkKey) {
+          return;
+        }
+
+        autoLinkedLeadKeyRef.current = autoLinkKey;
+        void handleLinkLead(onlyLead.id, { silent: true });
+      })
+      .catch((error) => {
+        console.error('[WhatsAppInbox] erro ao sugerir vinculo automatico de lead', error);
+      });
+  }, [handleLinkLead, selectedChat]);
 
   const handleStartChatFromSavedContact = async (contact: CommWhatsAppPhoneContact) => {
     setStartingChatKey(`saved:${contact.phone_digits}`);
@@ -2042,7 +2105,18 @@ export default function WhatsAppInboxScreen() {
             <>
               <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
                 <div>
-                  <p className="text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChat.display_name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChat.display_name}</p>
+                    {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
+                      <StatusDropdown
+                        currentStatus={leadPanel.status_nome}
+                        leadId={leadPanel.id}
+                        onStatusChange={handleLeadStatusChange}
+                        statusOptions={leadStatuses}
+                        disabled={leadPanelLoading}
+                      />
+                    ) : null}
+                  </div>
                   <p className="mt-1 text-sm text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</p>
                 </div>
                 <div className="flex shrink-0 items-start gap-3">
@@ -2454,6 +2528,7 @@ export default function WhatsAppInboxScreen() {
           searchQuery={leadSearchQuery}
           onSearchQueryChange={setLeadSearchQuery}
           searchResults={leadSearchResults}
+          suggestedLead={suggestedLead}
           searchLoading={leadSearchLoading}
           onLinkLead={(leadId) => void handleLinkLead(leadId)}
           linkLoadingLeadId={linkLoadingLeadId}

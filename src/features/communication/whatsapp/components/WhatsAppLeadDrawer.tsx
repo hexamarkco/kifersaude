@@ -31,6 +31,7 @@ type WhatsAppLeadDrawerProps = {
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   searchResults: CommWhatsAppLeadSearchResult[];
+  suggestedLead: CommWhatsAppLeadSearchResult | null;
   searchLoading: boolean;
   onLinkLead: (leadId: string) => void;
   linkLoadingLeadId: string | null;
@@ -55,6 +56,7 @@ export default function WhatsAppLeadDrawer({
   searchQuery,
   onSearchQueryChange,
   searchResults,
+  suggestedLead,
   searchLoading,
   onLinkLead,
   linkLoadingLeadId,
@@ -136,6 +138,35 @@ export default function WhatsAppLeadDrawer({
                   placeholder="Buscar lead por nome ou telefone"
                 />
 
+                {suggestedLead && (
+                  <div className="rounded-2xl border border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/45 px-4 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#8b4d12)]">
+                          Sugestao para esta conversa
+                        </p>
+                        <p className="mt-2 truncate text-sm font-semibold text-[var(--panel-text,#1c1917)]">
+                          {suggestedLead.nome_completo || 'Lead sem nome'}
+                        </p>
+                        <p className="truncate text-xs text-[var(--panel-text-muted,#8a735f)]">{suggestedLead.telefone}</p>
+                        <p className="mt-1 truncate text-xs text-[var(--panel-text-muted,#8a735f)]">
+                          {suggestedLead.status_nome || 'Sem status'}
+                          {suggestedLead.responsavel_label ? ` • ${suggestedLead.responsavel_label}` : ''}
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onLinkLead(suggestedLead.id)}
+                        loading={linkLoadingLeadId === suggestedLead.id}
+                      >
+                        {linkLoadingLeadId !== suggestedLead.id && <Link2 className="h-4 w-4" />}
+                        Vincular
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {searchLoading ? (
                   <div className="flex items-center justify-center rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] px-4 py-6 text-sm text-[var(--panel-text-muted,#6b7280)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -147,7 +178,9 @@ export default function WhatsAppLeadDrawer({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {searchResults.map((lead) => (
+                    {searchResults
+                      .filter((lead) => lead.id !== suggestedLead?.id)
+                      .map((lead) => (
                       <div
                         key={lead.id}
                         className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-4 py-3"

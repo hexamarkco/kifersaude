@@ -431,12 +431,12 @@ function WhatsAppAudioPlayerCard({
 
   if (!mediaUrl) {
     return (
-      <div className={`whatsapp-inbox-audio-card flex items-center gap-3 rounded-2xl border px-3 py-3 ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-        <div className={`whatsapp-inbox-audio-badge flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+      <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
+        <div className={`whatsapp-inbox-audio-native-badge ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
           {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{kind === 'voice' ? 'Nota de voz' : fileName || 'Audio'}</p>
+        <div className="min-w-0 flex-1 space-y-1">
+          {kind !== 'voice' ? <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de audio'}</p> : null}
           <p className="text-xs opacity-75">{loading ? 'Carregando audio...' : error || 'Audio indisponivel'}</p>
         </div>
       </div>

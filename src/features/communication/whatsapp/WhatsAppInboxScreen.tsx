@@ -2681,9 +2681,11 @@ export default function WhatsAppInboxScreen() {
                           <button
                             type="button"
                             onClick={() => handleAttachmentMenuAction('document')}
-                            className="whatsapp-inbox-attach-menu-item is-primary flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <FileText className="h-5 w-5 text-violet-500" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-violet-500">
+                              <FileText className="h-4.5 w-4.5" />
+                            </span>
                             <span>Documento</span>
                           </button>
                           <button
@@ -2691,7 +2693,9 @@ export default function WhatsAppInboxScreen() {
                             onClick={() => handleAttachmentMenuAction('media')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <Images className="h-5 w-5 text-sky-500" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-sky-500">
+                              <Images className="h-4.5 w-4.5" />
+                            </span>
                             <span>Fotos e videos</span>
                           </button>
                           <button
@@ -2699,7 +2703,9 @@ export default function WhatsAppInboxScreen() {
                             onClick={() => handleAttachmentMenuAction('audio')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <FileAudio className="h-5 w-5 text-orange-500" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-orange-500">
+                              <FileAudio className="h-4.5 w-4.5" />
+                            </span>
                             <span>Audio</span>
                           </button>
                           <button
@@ -2707,7 +2713,9 @@ export default function WhatsAppInboxScreen() {
                             disabled
                             className="whatsapp-inbox-attach-menu-item is-disabled mt-1 flex w-full items-center gap-3 border-t border-[var(--panel-border-subtle,#e7dac8)]/60 px-3 pt-3 pb-2.5 text-left"
                           >
-                            <UserRound className="h-5 w-5 text-cyan-500" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-cyan-500">
+                              <UserRound className="h-4.5 w-4.5" />
+                            </span>
                             <span>Contato</span>
                             <span className="whatsapp-inbox-attach-menu-badge ml-auto text-[10px] font-semibold uppercase tracking-[0.12em]">Em breve</span>
                           </button>
@@ -2718,7 +2726,7 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={() => setAttachmentMenuOpen((current) => !current)}
                         disabled={voiceRecordingState !== 'idle'}
-                        className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                        className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${attachmentMenuOpen ? 'is-open' : ''}`}
                         aria-label="Anexar"
                         aria-expanded={attachmentMenuOpen}
                       >

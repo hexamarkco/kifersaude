@@ -200,12 +200,15 @@ export const getDirectChatDisplayNameCandidate = (
 ): string => {
   const chatName = toTrimmedString(message.chat_name);
   const fromName = toTrimmedString(message.from_name);
+  const pushName = toTrimmedString(message.pushname) || toTrimmedString(message.push_name);
+  const notifyName = toTrimmedString(message.notify_name) || toTrimmedString(message.sender_name);
+  const candidate = chatName || fromName || pushName || notifyName;
 
   if (direction === 'outbound') {
-    return chatName;
+    return chatName || pushName || notifyName;
   }
 
-  return chatName || fromName;
+  return candidate;
 };
 
 export const isPhoneLabelLikeDisplayName = (value: string): boolean => {
@@ -221,6 +224,83 @@ const readNestedBody = (container: unknown, key: string): string => {
   const nested = container[key];
   if (!isRecord(nested)) return '';
   return toTrimmedString(nested.body);
+};
+
+const readNestedText = (container: unknown, key: string): string => {
+  if (!isRecord(container)) return '';
+  const nested = container[key];
+  if (!isRecord(nested)) return '';
+
+  return (
+    toTrimmedString(nested.text) ||
+    toTrimmedString(nested.title) ||
+    toTrimmedString(nested.caption) ||
+    toTrimmedString(nested.description) ||
+    ''
+  );
+};
+
+const collectButtonLikeTexts = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+
+  const collected = value
+    .map((entry) => {
+      if (!isRecord(entry)) return '';
+      return toTrimmedString(entry.text) || toTrimmedString(entry.title) || toTrimmedString(entry.name);
+    })
+    .filter(Boolean);
+
+  return collected;
+};
+
+const summarizeInteractiveLikeMessage = (message: Record<string, unknown>): string => {
+  const directCandidates = [
+    readNestedText(message, 'interactive'),
+    readNestedBody(message, 'interactive'),
+    readNestedText(message, 'hsm'),
+    readNestedBody(message, 'hsm'),
+    readNestedText(message, 'carousel'),
+    readNestedBody(message, 'carousel'),
+  ].filter(Boolean);
+
+  if (directCandidates.length > 0) {
+    return directCandidates[0]!;
+  }
+
+  const interactive = isRecord(message.interactive) ? message.interactive : null;
+  const hsm = isRecord(message.hsm) ? message.hsm : null;
+  const carousel = isRecord(message.carousel) ? message.carousel : null;
+
+  const buttonTexts = [
+    ...collectButtonLikeTexts(interactive?.buttons),
+    ...collectButtonLikeTexts((interactive?.action as Record<string, unknown> | undefined)?.buttons),
+    ...collectButtonLikeTexts(hsm?.buttons),
+    ...collectButtonLikeTexts(carousel?.cards),
+  ];
+
+  if (buttonTexts.length > 0) {
+    return buttonTexts.slice(0, 3).join(' • ');
+  }
+
+  const quotedContent = isRecord(message.context) && isRecord(message.context.quoted_content)
+    ? message.context.quoted_content
+    : null;
+
+  const quotedText =
+    toTrimmedString(quotedContent?.body) ||
+    toTrimmedString(quotedContent?.header) ||
+    toTrimmedString(quotedContent?.footer);
+
+  if (quotedText) {
+    return quotedText;
+  }
+
+  const quotedButtons = collectButtonLikeTexts(quotedContent?.buttons);
+  if (quotedButtons.length > 0) {
+    return quotedButtons.slice(0, 3).join(' • ');
+  }
+
+  return '';
 };
 
 const readMediaPayload = (message: unknown): Record<string, unknown> | null => {
@@ -301,6 +381,9 @@ export const summarizeWhapiMessage = (message: unknown): string => {
     if (replyTitle) return replyTitle;
   }
 
+  const interactiveSummary = summarizeInteractiveLikeMessage(message);
+  if (interactiveSummary) return interactiveSummary;
+
   switch (type) {
     case 'image':
       return '[Imagem]';
@@ -327,6 +410,18 @@ export const summarizeWhapiMessage = (message: unknown): string => {
       return '[Pedido]';
     case 'reply':
       return '[Resposta interativa]';
+    case 'interactive':
+    case 'hsm':
+    case 'carousel':
+      return '[Mensagem interativa]';
+    case 'action': {
+      const action = isRecord(message.action) ? message.action : null;
+      const actionType = toTrimmedString(action?.type).toLowerCase();
+      if (actionType === 'reaction') return '[Reação]';
+      if (actionType === 'vote') return '[Voto em enquete]';
+      if (actionType === 'media_notify') return '[Atualização de mídia]';
+      return '[Ação]';
+    }
     default:
       return '[Mensagem]';
   }

@@ -138,6 +138,9 @@ Deno.serve(async (req: Request) => {
     ) {
       whapiName = '';
     }
+    if (whapiName && isPhoneLabelLikeDisplayName(whapiName)) {
+      whapiName = '';
+    }
     const existingLooksLikeOwnName = Boolean(
       existingChat?.display_name &&
         channel.connected_user_name &&

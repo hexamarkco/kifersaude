@@ -160,11 +160,15 @@ async function persistMessageFromWebhook(
     resolvedName = '';
   }
 
+  if (resolvedName && isPhoneLabelLikeDisplayName(resolvedName)) {
+    resolvedName = '';
+  }
+
   if (!resolvedName && existingChat?.push_name) {
     resolvedName = existingChat.push_name;
   }
 
-  if (!resolvedName && direction === 'outbound' && whapiToken) {
+  if (!resolvedName && whapiToken) {
     resolvedName = await fetchWhapiChatName({ token: whapiToken, chatId: externalChatId }).catch(() => '');
   }
 

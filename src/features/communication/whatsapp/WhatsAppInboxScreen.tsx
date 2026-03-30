@@ -299,6 +299,15 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
       };
     }
 
+    if (message.media_id && message.external_message_id && message.media_id === message.external_message_id) {
+      setMediaUrl(null);
+      setLoading(false);
+      setError(null);
+      return () => {
+        active = false;
+      };
+    }
+
     if (!message.media_id) {
       setMediaUrl(null);
       setLoading(false);
@@ -452,11 +461,13 @@ function WhatsAppAudioPlayerCard({
             {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
           </button>
 
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <p className="truncate text-sm font-semibold">{kind === 'voice' ? 'Nota de voz' : fileName || 'Arquivo de audio'}</p>
-              <span className="text-[11px] uppercase tracking-[0.08em] opacity-70">{kind === 'voice' ? 'Gravado no chat' : 'Audio enviado'}</span>
-            </div>
+          <div className={`min-w-0 flex-1 ${kind === 'voice' ? 'space-y-1.5' : 'space-y-2'}`}>
+            {kind !== 'voice' ? (
+              <div className="flex items-center justify-between gap-3">
+                <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de audio'}</p>
+                <span className="text-[11px] uppercase tracking-[0.08em] opacity-70">Audio enviado</span>
+              </div>
+            ) : null}
             <div className="whatsapp-inbox-audio-native-waveform">
               {waveformBars.map((bar, index) => (
                 <span

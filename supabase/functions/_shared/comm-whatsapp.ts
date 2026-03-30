@@ -334,7 +334,17 @@ export const summarizeWhapiMessage = (message: unknown): string => {
 
 export const parseWhapiError = (payload: unknown): string => {
   if (typeof payload === 'string' && payload.trim()) {
-    return payload.trim();
+    const raw = payload.trim();
+
+    if ((raw.startsWith('{') && raw.endsWith('}')) || (raw.startsWith('[') && raw.endsWith(']'))) {
+      try {
+        return parseWhapiError(JSON.parse(raw));
+      } catch {
+        return raw;
+      }
+    }
+
+    return raw;
   }
 
   if (isRecord(payload)) {

@@ -87,6 +87,7 @@ BEGIN
   FROM public.comm_whatsapp_phone_contacts_cache c
   WHERE c.channel_id = v_chat.channel_id
     AND c.phone_digits = v_chat.phone_digits
+    AND c.saved = true
   ORDER BY c.updated_at DESC, c.last_synced_at DESC, c.id DESC
   LIMIT 1;
 

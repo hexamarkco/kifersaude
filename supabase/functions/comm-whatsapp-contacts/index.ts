@@ -203,6 +203,7 @@ async function findCachedContactByPhone(params: {
     .from('comm_whatsapp_phone_contacts_cache')
     .select('*')
     .eq('channel_id', params.channelId)
+    .eq('saved', true)
     .eq('phone_digits', params.phoneNumber)
     .order('updated_at', { ascending: false })
     .limit(1)

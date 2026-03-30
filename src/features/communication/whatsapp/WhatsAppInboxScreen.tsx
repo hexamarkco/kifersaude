@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, Smile, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -682,6 +682,7 @@ export default function WhatsAppInboxScreen() {
   const [loading, setLoading] = useState(true);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
   const [chatLeadFilter, setChatLeadFilter] = useState<ChatLeadFilter>('all');
   const [chatSavedFilter, setChatSavedFilter] = useState<ChatSavedFilter>('all');
@@ -739,6 +740,7 @@ export default function WhatsAppInboxScreen() {
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
+  const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
@@ -826,6 +828,11 @@ export default function WhatsAppInboxScreen() {
   );
   const hasActiveChatFilters =
     chatActivityFilter !== 'all' || chatLeadFilter !== 'all' || chatSavedFilter !== 'all' || chatStatusFilter !== 'all';
+  const activeChatFiltersCount =
+    (chatActivityFilter !== 'all' ? 1 : 0) +
+    (chatLeadFilter !== 'all' ? 1 : 0) +
+    (chatSavedFilter !== 'all' ? 1 : 0) +
+    (chatStatusFilter !== 'all' ? 1 : 0);
 
   const upsertChatLocally = useCallback((nextChat: CommWhatsAppChat) => {
     setChats((current) => {
@@ -1085,6 +1092,22 @@ export default function WhatsAppInboxScreen() {
     window.addEventListener('mousedown', handlePointerDown);
     return () => window.removeEventListener('mousedown', handlePointerDown);
   }, [attachmentMenuOpen]);
+
+  useEffect(() => {
+    if (!advancedFiltersOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (advancedFiltersRef.current && target && !advancedFiltersRef.current.contains(target)) {
+        setAdvancedFiltersOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    return () => window.removeEventListener('mousedown', handlePointerDown);
+  }, [advancedFiltersOpen]);
 
   useEffect(() => {
     const audio = voicePreviewAudioRef.current;
@@ -2243,10 +2266,10 @@ export default function WhatsAppInboxScreen() {
   };
 
   return (
-    <div className="whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-3 sm:p-4 lg:p-5">
-      <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0">
+      <div className="flex h-full min-h-0 flex-col gap-0">
         {operationalBanner && (
-          <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} flex items-start gap-3 rounded-3xl border px-4 py-3.5`}>
+          <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-4 mb-0 flex items-start gap-3 rounded-3xl border px-4 py-3.5`}>
             <operationalBanner.icon className="mt-0.5 h-5 w-5 shrink-0" />
             <div className="min-w-0 space-y-1">
               <p className="text-sm font-semibold">{operationalBanner.title}</p>
@@ -2255,8 +2278,8 @@ export default function WhatsAppInboxScreen() {
           </section>
         )}
 
-        <section className="grid h-full min-h-0 flex-1 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <div className="whatsapp-inbox-panel whatsapp-inbox-sidebar flex h-full min-h-0 flex-col rounded-[28px] border shadow-sm">
+        <section className="grid h-full min-h-0 flex-1 gap-0 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="whatsapp-inbox-panel whatsapp-inbox-sidebar flex h-full min-h-0 flex-col border shadow-sm xl:rounded-r-none xl:border-r">
           <div className="whatsapp-inbox-sidebar-header border-b p-4">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
@@ -2280,70 +2303,109 @@ export default function WhatsAppInboxScreen() {
                 className="whatsapp-inbox-search-input"
               />
 
-              <div className="space-y-3">
-                <InboxFilterGroup
-                  label="Atividade"
-                  value={chatActivityFilter}
-                  onChange={setChatActivityFilter}
-                  options={[
-                    { value: 'all', label: 'Todas' },
-                    { value: 'unread', label: 'Nao lidas' },
-                  ]}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <InboxFilterChip
+                  active={!hasActiveChatFilters}
+                  label="Todas"
+                  onClick={() => {
+                    setChatActivityFilter('all');
+                    setChatLeadFilter('all');
+                    setChatSavedFilter('all');
+                    setChatStatusFilter('all');
+                    setAdvancedFiltersOpen(false);
+                  }}
+                />
+                <InboxFilterChip
+                  active={chatActivityFilter === 'unread'}
+                  label="Nao lidas"
+                  onClick={() => setChatActivityFilter((current) => (current === 'unread' ? 'all' : 'unread'))}
+                />
+                <InboxFilterChip
+                  active={chatLeadFilter === 'with_lead'}
+                  label="Com lead"
+                  onClick={() => setChatLeadFilter((current) => (current === 'with_lead' ? 'all' : 'with_lead'))}
+                />
+                <InboxFilterChip
+                  active={chatSavedFilter === 'saved'}
+                  label="Salvos"
+                  onClick={() => setChatSavedFilter((current) => (current === 'saved' ? 'all' : 'saved'))}
                 />
 
-                <InboxFilterGroup
-                  label="CRM"
-                  value={chatLeadFilter}
-                  onChange={setChatLeadFilter}
-                  options={[
-                    { value: 'all', label: 'Todos' },
-                    { value: 'with_lead', label: 'Com lead' },
-                    { value: 'without_lead', label: 'Sem lead' },
-                  ]}
-                />
-
-                <InboxFilterGroup
-                  label="Agenda"
-                  value={chatSavedFilter}
-                  onChange={setChatSavedFilter}
-                  options={[
-                    { value: 'all', label: 'Todos' },
-                    { value: 'saved', label: 'Salvos' },
-                    { value: 'unsaved', label: 'Nao salvos' },
-                  ]}
-                />
-
-                <InboxFilterGroup
-                  label="Status do chat"
-                  value={chatStatusFilter}
-                  onChange={setChatStatusFilter}
-                  options={[
-                    { value: 'all', label: 'Todos' },
-                    { value: 'open', label: 'Abertas' },
-                    { value: 'pending', label: 'Pendentes' },
-                    { value: 'closed', label: 'Fechadas' },
-                  ]}
-                />
-
-                {hasActiveChatFilters ? (
+                <div ref={advancedFiltersRef} className="relative ml-auto shrink-0">
                   <button
                     type="button"
-                    onClick={() => {
-                      setChatActivityFilter('all');
-                      setChatLeadFilter('all');
-                      setChatSavedFilter('all');
-                      setChatStatusFilter('all');
-                    }}
-                    className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"
+                    onClick={() => setAdvancedFiltersOpen((current) => !current)}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
+                      advancedFiltersOpen || activeChatFiltersCount > 0
+                        ? 'border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/50 text-[var(--panel-accent-ink,#8b4d12)]'
+                        : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)] hover:text-[var(--panel-text,#1c1917)]'
+                    }`}
                   >
-                    Limpar filtros
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
                   </button>
-                ) : null}
+
+                  {advancedFiltersOpen && (
+                    <div className="absolute right-0 top-full z-[30] mt-2 w-[300px] rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-3 shadow-2xl">
+                      <div className="space-y-3">
+                        <InboxFilterGroup
+                          label="CRM"
+                          value={chatLeadFilter}
+                          onChange={setChatLeadFilter}
+                          options={[
+                            { value: 'all', label: 'Todos' },
+                            { value: 'with_lead', label: 'Com lead' },
+                            { value: 'without_lead', label: 'Sem lead' },
+                          ]}
+                        />
+
+                        <InboxFilterGroup
+                          label="Agenda"
+                          value={chatSavedFilter}
+                          onChange={setChatSavedFilter}
+                          options={[
+                            { value: 'all', label: 'Todos' },
+                            { value: 'saved', label: 'Salvos' },
+                            { value: 'unsaved', label: 'Nao salvos' },
+                          ]}
+                        />
+
+                        <InboxFilterGroup
+                          label="Status do chat"
+                          value={chatStatusFilter}
+                          onChange={setChatStatusFilter}
+                          options={[
+                            { value: 'all', label: 'Todos' },
+                            { value: 'open', label: 'Abertas' },
+                            { value: 'pending', label: 'Pendentes' },
+                            { value: 'closed', label: 'Fechadas' },
+                          ]}
+                        />
+
+                        {hasActiveChatFilters ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setChatActivityFilter('all');
+                              setChatLeadFilter('all');
+                              setChatSavedFilter('all');
+                              setChatStatusFilter('all');
+                              setAdvancedFiltersOpen(false);
+                            }}
+                            className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"
+                          >
+                            Limpar filtros
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-2">
+          <div className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-0">
             {loading ? (
               <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -2363,7 +2425,7 @@ export default function WhatsAppInboxScreen() {
                   key={chat.id}
                   type="button"
                   onClick={() => setSelectedChatId(chat.id)}
-                  className={`whatsapp-inbox-chat-card mb-2 flex w-full flex-col rounded-3xl border px-4 py-3 text-left transition ${chat.id === selectedChatId ? 'is-active' : ''}`}
+                  className={`whatsapp-inbox-chat-card flex w-full flex-col border-b px-4 py-3 text-left transition ${chat.id === selectedChatId ? 'is-active' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -2386,7 +2448,7 @@ export default function WhatsAppInboxScreen() {
           </div>
         </div>
 
-        <div className="whatsapp-inbox-panel whatsapp-inbox-thread flex h-full min-h-0 flex-col rounded-[28px] border shadow-sm">
+        <div className="whatsapp-inbox-panel whatsapp-inbox-thread flex h-full min-h-0 flex-col border shadow-sm xl:rounded-l-none xl:border-l-0">
           {!selectedChat ? (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
               <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />

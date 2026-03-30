@@ -519,6 +519,7 @@ export default function WhatsAppInboxScreen() {
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
   const [operationalStateError, setOperationalStateError] = useState<string | null>(null);
   const [lightboxMedia, setLightboxMedia] = useState<{ src: string; name: string } | null>(null);
+  const [autoLinkedChatIds, setAutoLinkedChatIds] = useState<Record<string, true>>({});
   const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
   const [leadPanel, setLeadPanel] = useState<CommWhatsAppLeadPanel | null>(null);
   const [leadPanelLoading, setLeadPanelLoading] = useState(false);
@@ -756,6 +757,7 @@ export default function WhatsAppInboxScreen() {
 
     return leadSearchResults.length === 1 ? leadSearchResults[0] : null;
   }, [leadDrawerOpen, leadSearchQuery, leadSearchResults, selectedChat?.lead_id]);
+  const selectedChatWasAutoLinked = Boolean(selectedChat?.id && autoLinkedChatIds[selectedChat.id]);
   const isChannelConnected = connectionStatus === 'AUTH';
   const hasWebhookEver = Boolean(channelState?.last_webhook_received_at);
   const webhookAgeMs = channelState?.last_webhook_received_at
@@ -1807,7 +1809,7 @@ export default function WhatsAppInboxScreen() {
     setLeadDrawerOpen(false);
   };
 
-  const handleLinkLead = useCallback(async (leadId: string, options: { silent?: boolean } = {}) => {
+  const handleLinkLead = useCallback(async (leadId: string, options: { silent?: boolean; autoLinked?: boolean } = {}) => {
     if (!selectedChat) {
       return;
     }
@@ -1817,6 +1819,19 @@ export default function WhatsAppInboxScreen() {
       const updatedChat = await commWhatsAppService.linkChatLead(selectedChat.id, leadId);
       autoLinkSuppressedChatIdRef.current = null;
       autoLinkedLeadKeyRef.current = `${updatedChat.id}:${leadId}`;
+      setAutoLinkedChatIds((current) => {
+        if (options.autoLinked) {
+          return { ...current, [updatedChat.id]: true };
+        }
+
+        if (!current[updatedChat.id]) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[updatedChat.id];
+        return next;
+      });
       upsertChatLocally(updatedChat);
       setSelectedChatId(updatedChat.id);
       await Promise.all([loadLeadPanel(updatedChat), loadChats()]);
@@ -1842,6 +1857,15 @@ export default function WhatsAppInboxScreen() {
     try {
       autoLinkSuppressedChatIdRef.current = selectedChat.id;
       const updatedChat = await commWhatsAppService.unlinkChatLead(selectedChat.id);
+      setAutoLinkedChatIds((current) => {
+        if (!current[selectedChat.id]) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[selectedChat.id];
+        return next;
+      });
       upsertChatLocally(updatedChat);
       setLeadPanel(null);
       setLeadContracts([]);
@@ -1905,7 +1929,7 @@ export default function WhatsAppInboxScreen() {
         }
 
         autoLinkedLeadKeyRef.current = autoLinkKey;
-        void handleLinkLead(onlyLead.id, { silent: true });
+        void handleLinkLead(onlyLead.id, { silent: true, autoLinked: true });
       })
       .catch((error) => {
         console.error('[WhatsAppInbox] erro ao sugerir vinculo automatico de lead', error);
@@ -2116,8 +2140,16 @@ export default function WhatsAppInboxScreen() {
                         disabled={leadPanelLoading}
                       />
                     ) : null}
+                    {selectedChatWasAutoLinked ? (
+                      <span className="inline-flex items-center rounded-full border border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                        Auto
+                      </span>
+                    ) : null}
                   </div>
-                  <p className="mt-1 text-sm text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                    <span>{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
+                    {leadPanel?.responsavel_label ? <span>Responsavel: {leadPanel.responsavel_label}</span> : null}
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-start gap-3">
                   <div className="flex shrink-0 flex-col items-end gap-1 text-right">
@@ -2514,6 +2546,7 @@ export default function WhatsAppInboxScreen() {
           onClose={handleCloseLeadDrawer}
           chatDisplayName={selectedChat?.display_name || 'Conversa'}
           linkedLead={leadPanel}
+          autoLinked={selectedChatWasAutoLinked}
           loading={leadPanelLoading}
           contracts={leadContracts}
           contractsLoading={leadContractsLoading}

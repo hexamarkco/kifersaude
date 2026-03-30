@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { Info, Link2, Loader2, Unlink, X } from 'lucide-react';
+import { Info, Link2, Loader2, Sparkles, Unlink, X } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
@@ -17,6 +17,7 @@ type WhatsAppLeadDrawerProps = {
   onClose: () => void;
   chatDisplayName: string;
   linkedLead: CommWhatsAppLeadPanel | null;
+  autoLinked: boolean;
   loading: boolean;
   contracts: CommWhatsAppLeadContractSummary[];
   contractsLoading: boolean;
@@ -42,6 +43,7 @@ export default function WhatsAppLeadDrawer({
   onClose,
   chatDisplayName,
   linkedLead,
+  autoLinked,
   loading,
   contracts,
   contractsLoading,
@@ -95,6 +97,12 @@ export default function WhatsAppLeadDrawer({
           ) : linkedLead ? (
             <div className="space-y-4">
               <div className="flex items-center justify-end gap-2">
+                {autoLinked && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Vinculado automaticamente
+                  </span>
+                )}
                 {onUnlinkLead && (
                   <Button variant="secondary" size="sm" onClick={onUnlinkLead}>
                     <Unlink className="h-4 w-4" />

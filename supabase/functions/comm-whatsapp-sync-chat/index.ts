@@ -130,7 +130,14 @@ Deno.serve(async (req: Request) => {
     const channel = await ensurePrimaryChannel(supabaseAdmin);
     const phoneDigits = extractPhoneFromChatId(externalChatId);
     const existingChat = await findExistingChat(supabaseAdmin, channel.id, externalChatId);
-    const whapiName = await fetchWhapiChatName({ token: settings.token, chatId: externalChatId }).catch(() => '');
+    let whapiName = await fetchWhapiChatName({ token: settings.token, chatId: externalChatId }).catch(() => '');
+    if (
+      whapiName &&
+      channel.connected_user_name &&
+      whapiName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase()
+    ) {
+      whapiName = '';
+    }
     const existingLooksLikeOwnName = Boolean(
       existingChat?.display_name &&
         channel.connected_user_name &&

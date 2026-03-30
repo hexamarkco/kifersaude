@@ -152,6 +152,14 @@ async function persistMessageFromWebhook(
   const phoneDigits = extractPhoneFromChatId(externalChatId);
   let resolvedName = getDirectChatDisplayNameCandidate(message, direction);
 
+  if (
+    resolvedName &&
+    channel.connected_user_name &&
+    resolvedName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase()
+  ) {
+    resolvedName = '';
+  }
+
   if (!resolvedName && existingChat?.push_name) {
     resolvedName = existingChat.push_name;
   }

@@ -936,6 +936,12 @@ export default function WhatsAppInboxScreen() {
     try {
       const lead = await commWhatsAppService.getChatLeadPanel(chat.id);
       setLeadPanel(lead);
+      if (lead?.nome_completo && !chat.saved_contact_name && chat.display_name !== lead.nome_completo) {
+        upsertChatLocally({
+          ...chat,
+          display_name: lead.nome_completo,
+        });
+      }
       await loadLeadContracts(lead?.id ?? null);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao carregar painel do lead', error);
@@ -945,7 +951,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setLeadPanelLoading(false);
     }
-  }, [loadLeadContracts]);
+  }, [loadLeadContracts, upsertChatLocally]);
 
   const refreshDrawerSearch = useCallback(async (query: string, phoneNumber?: string | null) => {
     setLeadSearchLoading(true);

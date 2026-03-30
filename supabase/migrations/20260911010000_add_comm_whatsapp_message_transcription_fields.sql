@@ -17,7 +17,7 @@ ALTER TABLE public.comm_whatsapp_messages
   CHECK (transcription_status IN ('idle', 'pending', 'processing', 'completed', 'failed'));
 
 CREATE INDEX IF NOT EXISTS idx_comm_whatsapp_messages_transcription_status
-  ON public.comm_whatsapp_messages (transcription_status, message_type, updated_at);
+  ON public.comm_whatsapp_messages (transcription_status, message_type, transcription_updated_at DESC, created_at DESC);
 
 COMMENT ON COLUMN public.comm_whatsapp_messages.transcription_text IS
   'Transcricao sob demanda de mensagens de audio/voice do inbox WhatsApp.';

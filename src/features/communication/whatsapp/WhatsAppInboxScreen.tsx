@@ -3195,7 +3195,7 @@ export default function WhatsAppInboxScreen() {
               </div>
 
               <div className="whatsapp-inbox-composer-area border-t p-4 sm:p-5">
-                <div className={`whatsapp-inbox-composer rounded-[30px] border ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
+                <div className={`whatsapp-inbox-composer rounded-xl border ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -3207,7 +3207,7 @@ export default function WhatsAppInboxScreen() {
                   {pendingAttachment?.kind === 'voice' ? (
                     <>
                       <audio ref={voicePreviewAudioRef} src={pendingAttachment.previewUrl ?? undefined} preload="metadata" className="hidden" />
-                      <div className="whatsapp-inbox-voice-composer flex items-center gap-2.5 rounded-[24px] px-2.5 py-1.5">
+                      <div className="whatsapp-inbox-voice-composer flex items-center gap-2.5 rounded-xl px-2.5 py-1.5">
                         <button
                           type="button"
                           onClick={handleClearAttachment}
@@ -3267,7 +3267,7 @@ export default function WhatsAppInboxScreen() {
                       </div>
                     </>
                   ) : voiceRecordingState === 'recording' ? (
-                    <div className="whatsapp-inbox-voice-composer is-recording flex items-center gap-2.5 rounded-[24px] px-2.5 py-1.5">
+                    <div className="whatsapp-inbox-voice-composer is-recording flex items-center gap-2.5 rounded-xl px-2.5 py-1.5">
                       <button
                         type="button"
                         onClick={handleCancelVoiceRecording}

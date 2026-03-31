@@ -5,6 +5,7 @@ import {
   COMM_WHATSAPP_MODULE,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  extractWhapiReactionEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
   fetchWhapiChatMessages,
@@ -190,6 +191,71 @@ Deno.serve(async (req: Request) => {
     });
 
     for (const message of orderedMessages) {
+      const reactionEvent = extractWhapiReactionEvent(message, 'messages');
+      if (reactionEvent?.targetExternalMessageId) {
+        const { data: targetMessage, error: targetMessageError } = await supabaseAdmin
+          .from('comm_whatsapp_messages')
+          .select('id, metadata')
+          .eq('channel_id', channel.id)
+          .eq('external_message_id', reactionEvent.targetExternalMessageId)
+          .maybeSingle();
+
+        if (targetMessageError) {
+          throw new Error(`Erro ao localizar mensagem reagida na sincronização: ${targetMessageError.message}`);
+        }
+
+        if (targetMessage) {
+          const metadata = targetMessage.metadata && typeof targetMessage.metadata === 'object' && !Array.isArray(targetMessage.metadata)
+            ? targetMessage.metadata as Record<string, unknown>
+            : {};
+          const reactions = Array.isArray(metadata.reactions)
+            ? metadata.reactions.filter((item): item is Record<string, unknown> => item && typeof item === 'object' && !Array.isArray(item))
+            : [];
+          const withoutActorReaction = reactions.filter((item) => toTrimmedString(item.actor_key) !== reactionEvent.actorKey);
+          const nextReactions = reactionEvent.emoji
+            ? [
+                ...withoutActorReaction,
+                {
+                  actor_key: reactionEvent.actorKey,
+                  emoji: reactionEvent.emoji,
+                  from_me: reactionEvent.fromMe,
+                  from: reactionEvent.from,
+                  from_name: reactionEvent.fromName,
+                  reacted_at: reactionEvent.reactedAt,
+                  target_external_message_id: reactionEvent.targetExternalMessageId,
+                },
+              ]
+            : withoutActorReaction;
+
+          const { error: updateReactionError } = await supabaseAdmin
+            .from('comm_whatsapp_messages')
+            .update({
+              metadata: {
+                ...metadata,
+                reactions: nextReactions,
+                last_reaction_at: reactionEvent.reactedAt,
+              },
+              status_updated_at: reactionEvent.reactedAt,
+            })
+            .eq('id', targetMessage.id);
+
+          if (updateReactionError) {
+            throw new Error(`Erro ao sincronizar reações da mensagem: ${updateReactionError.message}`);
+          }
+
+          if (reactionEvent.eventExternalMessageId) {
+            await supabaseAdmin
+              .from('comm_whatsapp_messages')
+              .delete()
+              .eq('channel_id', channel.id)
+              .eq('external_message_id', reactionEvent.eventExternalMessageId)
+              .eq('message_type', 'action');
+          }
+
+          continue;
+        }
+      }
+
       const direction = message.from_me === true ? 'outbound' : 'inbound';
       const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
       const externalMessageId = toTrimmedString(message.id);

@@ -567,6 +567,39 @@ const getEditedMessageInfo = (message: CommWhatsAppMessage) => {
   };
 };
 
+const getMessageReactions = (message: CommWhatsAppMessage) => {
+  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+    ? message.metadata as Record<string, unknown>
+    : {};
+  const rawReactions = Array.isArray(metadata.reactions) ? metadata.reactions : [];
+
+  const normalized = rawReactions
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
+    .map((item) => ({
+      emoji: String(item.emoji ?? '').trim(),
+      fromMe: item.from_me === true,
+      reactedAt: String(item.reacted_at ?? '').trim(),
+    }))
+    .filter((item) => Boolean(item.emoji));
+
+  const grouped = new Map<string, { emoji: string; count: number; fromMe: boolean }>();
+  for (const reaction of normalized) {
+    const current = grouped.get(reaction.emoji);
+    if (current) {
+      current.count += 1;
+      current.fromMe = current.fromMe || reaction.fromMe;
+    } else {
+      grouped.set(reaction.emoji, {
+        emoji: reaction.emoji,
+        count: 1,
+        fromMe: reaction.fromMe,
+      });
+    }
+  }
+
+  return Array.from(grouped.values()).sort((left, right) => right.count - left.count || left.emoji.localeCompare(right.emoji, 'pt-BR'));
+};
+
 const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName?: string | null) => {
   if (!chat) {
     return 'Conversa';
@@ -1377,6 +1410,7 @@ export default function WhatsAppInboxScreen() {
   const operationalStateRequestIdRef = useRef(0);
   const autoLinkLookupRequestIdRef = useRef(0);
   const chatIdentityLookupRequestIdRef = useRef(0);
+  const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
   const voiceAttachment = useMemo(
     () => pendingAttachments.find((attachment) => attachment.kind === 'voice') ?? null,
     [pendingAttachments],
@@ -1820,12 +1854,18 @@ export default function WhatsAppInboxScreen() {
 
   const loadChatAgendaSummary = useCallback(async (leadId: string | null, contractIds: string[] = []) => {
     if (!leadId) {
+      chatAgendaSummaryLeadIdRef.current = null;
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
       setChatAgendaSummaryLoading(false);
       return;
     }
 
-    setChatAgendaSummaryLoading(true);
+    const shouldShowLoading = chatAgendaSummaryLeadIdRef.current !== leadId;
+    chatAgendaSummaryLeadIdRef.current = leadId;
+
+    if (shouldShowLoading) {
+      setChatAgendaSummaryLoading(true);
+    }
 
     try {
       const [leadReminders, contractReminders] = await Promise.all([
@@ -1866,7 +1906,9 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar resumo da agenda do chat', error);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
     } finally {
-      setChatAgendaSummaryLoading(false);
+      if (shouldShowLoading) {
+        setChatAgendaSummaryLoading(false);
+      }
     }
   }, []);
 
@@ -2086,7 +2128,7 @@ export default function WhatsAppInboxScreen() {
     return null;
   }, [channelState, connectionStatus, hasWebhookEver, isChannelConnected, isWebhookStale, operationalState, operationalStateError, operationalStateLoaded]);
   const nextChatReminderSummary = useMemo(() => {
-    if (chatAgendaSummaryLoading) {
+    if (chatAgendaSummaryLoading && chatAgendaSummary.pendingCount === 0 && !chatAgendaSummary.nextReminder) {
       return 'Agenda: carregando lembretes...';
     }
 
@@ -2370,8 +2412,11 @@ export default function WhatsAppInboxScreen() {
     }
 
     setLeadSearchQuery('');
-    void loadLeadPanel(selectedChat);
-  }, [leadDrawerOpen, loadLeadPanel, selectedChat]);
+    const currentSelectedChat = selectedChatId
+      ? latestChatsRef.current.find((chat) => chat.id === selectedChatId) ?? null
+      : null;
+    void loadLeadPanel(currentSelectedChat);
+  }, [leadDrawerOpen, loadLeadPanel, selectedChat?.lead_id, selectedChatId]);
 
   useEffect(() => {
     if (!selectedChat?.lead_id) {
@@ -2381,8 +2426,11 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    void loadLeadPanel(selectedChat);
-  }, [loadLeadPanel, selectedChat]);
+    const currentSelectedChat = selectedChatId
+      ? latestChatsRef.current.find((chat) => chat.id === selectedChatId) ?? null
+      : null;
+    void loadLeadPanel(currentSelectedChat);
+  }, [loadLeadPanel, selectedChat?.lead_id, selectedChatId]);
 
   useEffect(() => {
     void loadChatAgendaSummary(
@@ -4424,7 +4472,6 @@ export default function WhatsAppInboxScreen() {
                         leadId={leadPanel.id}
                         onStatusChange={handleLeadStatusChange}
                         statusOptions={leadStatuses}
-                        disabled={leadPanelLoading}
                       />
                     ) : null}
                     {selectedChatWasAutoLinked ? (
@@ -4558,23 +4605,41 @@ export default function WhatsAppInboxScreen() {
                     }
 
                     const { message } = item;
+                    const reactions = getMessageReactions(message);
 
                     return (
                       <div key={item.key} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
-                        <div className={`max-w-[80%] rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
-                          <WhatsAppMessageBody
-                            message={message}
-                            onOpenImage={setLightboxMedia}
-                            onTranscribe={(target) => void handleTranscribeMessage(target)}
-                            transcribing={transcribingMessageId === message.id}
-                          />
-                          <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium">
-                            <span>{formatMessageTime(message.message_at)}</span>
-                            {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
-                            {message.direction === 'outbound' && message.delivery_status === 'failed' && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
-                              <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
-                            ) : null}
+                        <div className="max-w-[80%]">
+                          <div className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
+                            <WhatsAppMessageBody
+                              message={message}
+                              onOpenImage={setLightboxMedia}
+                              onTranscribe={(target) => void handleTranscribeMessage(target)}
+                              transcribing={transcribingMessageId === message.id}
+                            />
+                            <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium">
+                              <span>{formatMessageTime(message.message_at)}</span>
+                              {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
+                              {message.direction === 'outbound' && message.delivery_status === 'failed' && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
+                                <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
+                              ) : null}
+                            </div>
                           </div>
+
+                          {reactions.length > 0 ? (
+                            <div className={`mt-1 flex flex-wrap gap-1 ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                              {reactions.map((reaction) => (
+                                <span
+                                  key={`${message.id}:${reaction.emoji}`}
+                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold shadow-sm ${reaction.fromMe ? 'bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)]' : 'bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]'}`}
+                                  style={{ borderColor: 'rgba(212, 192, 167, 0.56)' }}
+                                >
+                                  <span className="text-sm leading-none">{reaction.emoji}</span>
+                                  {reaction.count > 1 ? <span>{reaction.count}</span> : null}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     );

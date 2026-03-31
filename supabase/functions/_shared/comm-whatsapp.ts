@@ -102,6 +102,17 @@ export type CommWhatsAppEditedMessageEvent = {
   actionType: string | null;
 };
 
+export type CommWhatsAppReactionEvent = {
+  eventExternalMessageId: string | null;
+  targetExternalMessageId: string | null;
+  emoji: string | null;
+  fromMe: boolean;
+  from: string | null;
+  fromName: string | null;
+  actorKey: string;
+  reactedAt: string;
+};
+
 const getSettingsToken = (settings: Record<string, unknown>): string => {
   const directToken = sanitizeWhapiToken(toTrimmedString(settings.token));
   if (directToken) return directToken;
@@ -663,6 +674,58 @@ export const extractWhapiEditedMessageEvent = (
     originalText,
     editedAt,
     actionType: normalizedActionType || null,
+  };
+};
+
+export const extractWhapiReactionEvent = (
+  message: unknown,
+  eventAction: string,
+): CommWhatsAppReactionEvent | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const action = isRecord(message.action) ? message.action : null;
+  const context = isRecord(message.context) ? message.context : null;
+  const normalizedActionType = firstNonEmpty(
+    action?.type,
+    action?.event,
+    action?.action,
+    eventAction,
+  ).toLowerCase();
+
+  if (normalizedActionType !== 'reaction') {
+    return null;
+  }
+
+  const fromMe = message.from_me === true;
+  const fromPhone = normalizeCommWhatsAppPhone(message.from);
+  const actorKey = fromMe ? 'self' : fromPhone || toTrimmedString(message.from_name) || 'contact';
+  const targetExternalMessageId = firstNonEmpty(
+    action?.target,
+    action?.target_message_id,
+    action?.targetMessageId,
+    context?.quoted_id,
+    context?.stanza_id,
+    context?.message_id,
+    context?.messageId,
+  ) || null;
+  const emoji = firstNonEmpty(action?.emoji, isRecord(action?.reaction) ? action.reaction.emoji : null) || null;
+  const reactedAt = unixTimestampToIso(message.timestamp) || stringTimestampToIso(message.timestamp) || getNowIso();
+
+  if (!targetExternalMessageId) {
+    return null;
+  }
+
+  return {
+    eventExternalMessageId: toTrimmedString(message.id) || null,
+    targetExternalMessageId,
+    emoji,
+    fromMe,
+    from: fromPhone || null,
+    fromName: toTrimmedString(message.from_name) || null,
+    actorKey,
+    reactedAt,
   };
 };
 

@@ -2951,7 +2951,7 @@ export default function WhatsAppInboxScreen() {
           <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-4 mb-0 flex items-start gap-3 rounded-3xl border px-4 py-3.5`}>
             <operationalBanner.icon className="mt-0.5 h-5 w-5 shrink-0" />
             <div className="min-w-0 space-y-1">
-              <p className="text-sm font-semibold">{operationalBanner.title}</p>
+              <p className="whatsapp-inbox-heading text-sm font-semibold">{operationalBanner.title}</p>
               <p className="text-sm leading-6 opacity-90">{operationalBanner.description}</p>
             </div>
           </section>
@@ -3032,7 +3032,7 @@ export default function WhatsAppInboxScreen() {
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
                 <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-[var(--panel-text,#1f2937)]">Nenhuma conversa ainda</p>
+                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--panel-text,#1f2937)]">Nenhuma conversa ainda</p>
                   <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.</p>
                 </div>
               </div>
@@ -3046,7 +3046,7 @@ export default function WhatsAppInboxScreen() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">{chat.display_name}</p>
+                      <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">{chat.display_name}</p>
                       <p className="truncate text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
@@ -3081,7 +3081,7 @@ export default function WhatsAppInboxScreen() {
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
                 <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
-                  <p className="text-base font-semibold text-[var(--panel-text,#1f2937)]">Selecione uma conversa</p>
+                  <p className="whatsapp-inbox-heading text-base font-semibold text-[var(--panel-text,#1f2937)]">Selecione uma conversa</p>
                   <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</p>
                 </div>
               </div>
@@ -3090,7 +3090,7 @@ export default function WhatsAppInboxScreen() {
               <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChat.display_name}</p>
+                    <p className="whatsapp-inbox-heading text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChat.display_name}</p>
                     {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
                       <StatusDropdown
                         currentStatus={leadPanel.status_nome}

@@ -3575,9 +3575,19 @@
 }
 
 .painel-theme .whatsapp-inbox-shell {
+  font-family: var(--ks-font-body);
   background:
     radial-gradient(circle at top left, rgba(200, 111, 29, 0.08), transparent 26%),
     radial-gradient(circle at bottom right, rgba(122, 62, 22, 0.06), transparent 28%);
+}
+
+.painel-theme .whatsapp-inbox-shell :is(button, input, textarea, select, option) {
+  font-family: inherit;
+}
+
+.painel-theme .whatsapp-inbox-shell .whatsapp-inbox-heading {
+  font-family: var(--ks-font-heading);
+  letter-spacing: -0.02em;
 }
 
 .painel-theme.theme-dark .whatsapp-inbox-shell {

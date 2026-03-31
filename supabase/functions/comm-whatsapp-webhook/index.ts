@@ -5,6 +5,7 @@ import {
   corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  extractWhapiEditedMessageEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
   fetchWhapiChatName,
@@ -142,10 +143,79 @@ async function persistMessageFromWebhook(
   channel: ChannelRow,
   message: Record<string, unknown>,
   whapiToken: string,
+  eventAction: string,
 ) {
   const externalChatId = normalizeWhapiChatId(message.chat_id);
   if (!externalChatId || !isDirectWhapiChatId(externalChatId)) {
     return null;
+  }
+
+  const editedEvent = extractWhapiEditedMessageEvent(message, eventAction);
+  if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
+    const { data: existingMessage, error: existingMessageError } = await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .select('id, chat_id, text_content, message_type, media_caption, message_at, metadata')
+      .eq('channel_id', channel.id)
+      .eq('external_message_id', editedEvent.targetExternalMessageId)
+      .maybeSingle();
+
+    if (existingMessageError) {
+      throw new Error(`Erro ao localizar mensagem editada: ${existingMessageError.message}`);
+    }
+
+    if (existingMessage) {
+      const existingMetadata = isRecord(existingMessage.metadata) ? existingMessage.metadata : {};
+      const existingHistory = Array.isArray(existingMetadata.edit_history) ? existingMetadata.edit_history : [];
+      const originalText =
+        toTrimmedString(existingMetadata.original_text_content) ||
+        editedEvent.originalText ||
+        toTrimmedString(existingMessage.text_content) ||
+        toTrimmedString(existingMessage.media_caption);
+      const nextMetadata = {
+        ...existingMetadata,
+        edited: true,
+        edited_at: editedEvent.editedAt,
+        original_text_content: originalText || null,
+        edit_action_type: editedEvent.actionType,
+        edit_history: [
+          ...existingHistory,
+          {
+            at: editedEvent.editedAt,
+            previous_text: toTrimmedString(existingMessage.text_content) || toTrimmedString(existingMessage.media_caption) || null,
+            next_text: editedEvent.editedText,
+            action_type: editedEvent.actionType,
+          },
+        ].slice(-10),
+      };
+      const isMediaMessage = ['image', 'video', 'document', 'audio', 'voice', 'sticker'].includes(
+        toTrimmedString(existingMessage.message_type).toLowerCase(),
+      );
+
+      const { error: updateMessageError } = await supabaseAdmin
+        .from('comm_whatsapp_messages')
+        .update({
+          text_content: editedEvent.editedText,
+          media_caption: isMediaMessage ? editedEvent.editedText : existingMessage.media_caption,
+          status_updated_at: editedEvent.editedAt,
+          metadata: nextMetadata,
+        })
+        .eq('id', existingMessage.id);
+
+      if (updateMessageError) {
+        throw new Error(`Erro ao atualizar mensagem editada: ${updateMessageError.message}`);
+      }
+
+      await supabaseAdmin
+        .from('comm_whatsapp_chats')
+        .update({
+          last_message_text: editedEvent.editedText,
+          updated_at: getNowIso(),
+        })
+        .eq('id', existingMessage.chat_id)
+        .eq('last_message_at', existingMessage.message_at);
+
+      return { id: existingMessage.chat_id };
+    }
   }
 
   const existingChat = await findExistingChat(supabaseAdmin, channel.id, externalChatId);
@@ -225,6 +295,10 @@ async function persistMessageFromWebhook(
       from: toTrimmedString(message.from) || null,
       from_name: toTrimmedString(message.from_name) || null,
       chat_name: toTrimmedString(message.chat_name) || null,
+      edited: editedEvent ? true : false,
+      edited_at: editedEvent?.editedAt ?? null,
+      original_text_content: editedEvent?.originalText ?? null,
+      edit_action_type: editedEvent?.actionType ?? null,
     },
   });
 
@@ -383,7 +457,7 @@ Deno.serve(async (req: Request) => {
 
         if (!accepted) continue;
 
-        const chat = await persistMessageFromWebhook(supabaseAdmin, channel, item, whapiToken);
+        const chat = await persistMessageFromWebhook(supabaseAdmin, channel, item, whapiToken, eventAction);
         if (!chat) continue;
       }
     }

@@ -94,6 +94,14 @@ export type CommWhatsAppMediaMeta = {
   mediaCaption: string | null;
 };
 
+export type CommWhatsAppEditedMessageEvent = {
+  targetExternalMessageId: string | null;
+  editedText: string | null;
+  originalText: string | null;
+  editedAt: string | null;
+  actionType: string | null;
+};
+
 const getSettingsToken = (settings: Record<string, unknown>): string => {
   const directToken = sanitizeWhapiToken(toTrimmedString(settings.token));
   if (directToken) return directToken;
@@ -527,6 +535,11 @@ export const summarizeWhapiMessage = (message: unknown): string => {
     case 'action': {
       const action = isRecord(message.action) ? message.action : null;
       const actionType = toTrimmedString(action?.type).toLowerCase();
+      const actionSummary = pickBestSummary([
+        ...collectTextFragments(action),
+        ...collectTextFragments(isRecord(message.context) ? message.context.quoted_content : null),
+      ]);
+      if (actionSummary) return actionSummary;
       if (actionType === 'reaction') return '[Reação]';
       if (actionType === 'vote') return '[Voto em enquete]';
       if (actionType === 'media_notify') return '[Atualização de mídia]';
@@ -535,6 +548,117 @@ export const summarizeWhapiMessage = (message: unknown): string => {
     default:
       return '[Mensagem]';
   }
+};
+
+const firstNonEmpty = (...candidates: unknown[]) => {
+  for (const candidate of candidates) {
+    const normalized = toTrimmedString(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return '';
+};
+
+const summarizeMessageLikeValue = (value: unknown) => {
+  if (!value) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (!isRecord(value)) {
+    return '';
+  }
+
+  const summary = summarizeWhapiMessage(value);
+  if (summary && !/^\[[^\]]+\]$/.test(summary)) {
+    return summary;
+  }
+
+  return pickBestSummary(collectTextFragments(value));
+};
+
+export const extractWhapiEditedMessageEvent = (
+  message: unknown,
+  eventAction: string,
+): CommWhatsAppEditedMessageEvent | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const action = isRecord(message.action) ? message.action : null;
+  const context = isRecord(message.context) ? message.context : null;
+  const quotedContent = isRecord(context?.quoted_content) ? context.quoted_content : null;
+  const normalizedActionType = firstNonEmpty(
+    action?.type,
+    action?.event,
+    action?.action,
+    message.edit_type,
+    eventAction,
+  ).toLowerCase();
+
+  const likelyEditEvent = normalizedActionType.includes('edit') || normalizedActionType.includes('edited');
+  if (!likelyEditEvent) {
+    return null;
+  }
+
+  const actionMessage = isRecord(action?.message) ? action.message : null;
+  const actionEditedMessage = isRecord(action?.edited_message) ? action.edited_message : null;
+  const nestedEditedMessage = isRecord(message.edited_message) ? message.edited_message : null;
+  const targetExternalMessageId = firstNonEmpty(
+    action?.target_message_id,
+    action?.targetMessageId,
+    action?.message_id,
+    action?.messageId,
+    message.edited_message_id,
+    context?.stanza_id,
+    context?.message_id,
+    context?.messageId,
+    context?.quoted_message_id,
+    context?.id,
+    actionMessage?.id,
+    actionMessage?.message_id,
+    actionEditedMessage?.id,
+    actionEditedMessage?.message_id,
+    quotedContent?.id,
+    quotedContent?.message_id,
+  ) || null;
+
+  const editedText = firstNonEmpty(
+    summarizeMessageLikeValue(nestedEditedMessage),
+    summarizeMessageLikeValue(actionEditedMessage),
+    summarizeMessageLikeValue(actionMessage),
+    summarizeMessageLikeValue(isRecord(message.text) ? { type: 'text', text: message.text } : null),
+    summarizeMessageLikeValue(isRecord(action?.text) ? { type: 'text', text: action.text } : null),
+    summarizeMessageLikeValue(action),
+  ) || null;
+
+  const originalText = firstNonEmpty(
+    summarizeMessageLikeValue(quotedContent),
+    summarizeMessageLikeValue(isRecord(action?.previous_message) ? action.previous_message : null),
+    summarizeMessageLikeValue(isRecord(action?.old_message) ? action.old_message : null),
+    action?.previous_text,
+    action?.previous_body,
+    action?.old_text,
+  ) || null;
+
+  const editedAt = unixTimestampToIso(message.timestamp) || stringTimestampToIso(message.timestamp) || getNowIso();
+
+  if (!targetExternalMessageId && !editedText) {
+    return null;
+  }
+
+  return {
+    targetExternalMessageId,
+    editedText,
+    originalText,
+    editedAt,
+    actionType: normalizedActionType || null,
+  };
 };
 
 export const parseWhapiError = (payload: unknown): string => {

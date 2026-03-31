@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ArrowUpRight, Bell, Check, Clock, RefreshCw } from 'lucide-react';
 import type { Reminder } from '../lib/supabase';
 import { formatDateTimeForInput, formatDateTimeFullBR } from '../lib/dateUtils';
@@ -11,6 +11,8 @@ const EMPTY_STATE_COPY = {
 };
 
 type LeadRemindersPanelProps = {
+  title?: string;
+  subtitle?: string;
   leadName?: string | null;
   reminders: Reminder[];
   loading: boolean;
@@ -18,9 +20,13 @@ type LeadRemindersPanelProps = {
   onReload: () => void;
   onToggleRead: (reminderId: string, currentStatus: boolean) => Promise<void>;
   onReschedule: (reminderId: string, newDate: string) => Promise<void>;
+  readOnly?: boolean;
+  actionSlot?: ReactNode;
 };
 
 export default function LeadRemindersPanel({
+  title = 'Lembretes do lead',
+  subtitle,
   leadName,
   reminders,
   loading,
@@ -28,6 +34,8 @@ export default function LeadRemindersPanel({
   onReload,
   onToggleRead,
   onReschedule,
+  readOnly = false,
+  actionSlot,
 }: LeadRemindersPanelProps) {
   const [rescheduleTargetId, setRescheduleTargetId] = useState<string | null>(null);
   const [rescheduleValue, setRescheduleValue] = useState('');
@@ -176,7 +184,7 @@ export default function LeadRemindersPanel({
                     <button
                       type="button"
                       onClick={() => handleToggleRead(reminder)}
-                      disabled={isToggling}
+                      disabled={isToggling || readOnly}
                       className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <Check className="h-4 w-4" aria-hidden="true" />
@@ -185,7 +193,7 @@ export default function LeadRemindersPanel({
                     <button
                       type="button"
                       onClick={() => openRescheduleForm(reminder)}
-                      disabled={isRescheduling}
+                      disabled={isRescheduling || readOnly}
                       className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
@@ -194,7 +202,7 @@ export default function LeadRemindersPanel({
                   </div>
                 </div>
 
-                {isOpen ? (
+                {isOpen && !readOnly ? (
                   <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
                     <label className="block text-xs font-semibold text-slate-700">Nova data e hora</label>
                     <DateTimePicker
@@ -239,19 +247,22 @@ export default function LeadRemindersPanel({
     <section className="border-b border-slate-200 bg-slate-50 px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900">Lembretes do lead</p>
+          <p className="text-sm font-semibold text-slate-900">{title}</p>
           <p className="text-xs text-slate-600">
-            {leadName ? `Atividades vinculadas a ${leadName}` : 'Veja e atualize os lembretes deste contato.'}
+            {subtitle ?? (leadName ? `Atividades vinculadas a ${leadName}` : 'Veja e atualize os lembretes deste contato.')}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onReload}
-          className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-        >
-          <RefreshCw className="h-4 w-4" aria-hidden="true" />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          {actionSlot}
+          <button
+            type="button"
+            onClick={onReload}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            Atualizar
+          </button>
+        </div>
       </div>
       {renderContent()}
     </section>

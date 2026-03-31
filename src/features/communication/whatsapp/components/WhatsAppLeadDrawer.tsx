@@ -1,10 +1,15 @@
-import { Info, Link2, Loader2, Sparkles, Unlink } from 'lucide-react';
-import type { ChangeEvent } from 'react';
+import { CalendarDays, CalendarPlus, Info, Link2, Loader2, Sparkles, Unlink } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
+import LeadRemindersPanel from '../../../../components/LeadRemindersPanel';
+import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import Button from '../../../../components/ui/Button';
 import DrawerShell from '../../../../components/ui/DrawerShell';
 import Input from '../../../../components/ui/Input';
+import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
+import { supabase, fetchAllPages, type Reminder } from '../../../../lib/supabase';
+import { toast } from '../../../../lib/toast';
 import type {
   CommWhatsAppLeadContractSummary,
   CommWhatsAppLeadPanel,
@@ -36,6 +41,9 @@ type WhatsAppLeadDrawerProps = {
   searchLoading: boolean;
   onLinkLead: (leadId: string) => void;
   linkLoadingLeadId: string | null;
+  canViewAgenda: boolean;
+  canEditAgenda: boolean;
+  onOpenAgenda: (() => void) | undefined;
 };
 
 export default function WhatsAppLeadDrawer({
@@ -62,20 +70,149 @@ export default function WhatsAppLeadDrawer({
   searchLoading,
   onLinkLead,
   linkLoadingLeadId,
+  canViewAgenda,
+  canEditAgenda,
+  onOpenAgenda,
 }: WhatsAppLeadDrawerProps) {
+  const [agendaReminders, setAgendaReminders] = useState<Reminder[]>([]);
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [agendaError, setAgendaError] = useState<string | null>(null);
+  const [schedulerOpen, setSchedulerOpen] = useState(false);
+
+  const agendaLead = useMemo(() => {
+    if (!linkedLead) {
+      return null;
+    }
+
+    return {
+      id: linkedLead.id,
+      nome_completo: linkedLead.nome_completo,
+      telefone: linkedLead.telefone,
+      responsavel: linkedLead.responsavel_value ?? linkedLead.responsavel_label ?? '',
+    };
+  }, [linkedLead]);
+
+  const loadAgendaReminders = useCallback(async () => {
+    if (!linkedLead || !canViewAgenda) {
+      setAgendaReminders([]);
+      setAgendaError(null);
+      return;
+    }
+
+    setAgendaLoading(true);
+    setAgendaError(null);
+
+    try {
+      const contractIds = contracts.map((contract) => contract.id).filter(Boolean);
+      const [leadReminders, contractReminders] = await Promise.all([
+        fetchAllPages<Reminder>(
+          (from, to) =>
+            supabase
+              .from('reminders')
+              .select('*')
+              .eq('lead_id', linkedLead.id)
+              .order('data_lembrete', { ascending: true })
+              .order('id', { ascending: true })
+              .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
+        ),
+        contractIds.length > 0
+          ? fetchAllPages<Reminder>(
+              (from, to) =>
+                supabase
+                  .from('reminders')
+                  .select('*')
+                  .in('contract_id', contractIds)
+                  .order('data_lembrete', { ascending: true })
+                  .order('id', { ascending: true })
+                  .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
+            )
+          : Promise.resolve([] as Reminder[]),
+      ]);
+
+      const next = new Map<string, Reminder>();
+      [...leadReminders, ...contractReminders].forEach((reminder) => {
+        next.set(reminder.id, reminder);
+      });
+      setAgendaReminders(Array.from(next.values()));
+    } catch (error) {
+      console.error('[WhatsAppLeadDrawer] erro ao carregar agenda do chat', error);
+      setAgendaError('Não foi possível carregar a agenda deste chat agora.');
+    } finally {
+      setAgendaLoading(false);
+    }
+  }, [canViewAgenda, contracts, linkedLead]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    void loadAgendaReminders();
+  }, [isOpen, loadAgendaReminders]);
+
+  const handleAgendaToggleRead = useCallback(async (reminderId: string, currentStatus: boolean) => {
+    try {
+      const completionDate = !currentStatus ? new Date().toISOString() : null;
+      const { error } = await supabase
+        .from('reminders')
+        .update({
+          lido: !currentStatus,
+          concluido_em: completionDate,
+        })
+        .eq('id', reminderId);
+
+      if (error) {
+        throw error;
+      }
+
+      if (linkedLead?.id) {
+        await syncLeadNextReturnFromUpcomingReminder(linkedLead.id);
+      }
+
+      await loadAgendaReminders();
+    } catch (error) {
+      console.error('[WhatsAppLeadDrawer] erro ao atualizar lembrete do chat', error);
+      throw error;
+    }
+  }, [linkedLead?.id, loadAgendaReminders]);
+
+  const handleAgendaReschedule = useCallback(async (reminderId: string, newDate: string) => {
+    try {
+      const nextDateIso = new Date(newDate).toISOString();
+      const { error } = await supabase
+        .from('reminders')
+        .update({ data_lembrete: nextDateIso })
+        .eq('id', reminderId);
+
+      if (error) {
+        throw error;
+      }
+
+      if (linkedLead?.id) {
+        await syncLeadNextReturnFromUpcomingReminder(linkedLead.id);
+      }
+
+      await loadAgendaReminders();
+    } catch (error) {
+      console.error('[WhatsAppLeadDrawer] erro ao reagendar lembrete do chat', error);
+      throw error;
+    }
+  }, [linkedLead?.id, loadAgendaReminders]);
+
   if (!isOpen || typeof document === 'undefined') {
     return null;
   }
 
   return (
-    <DrawerShell
-      isOpen={isOpen}
-      onClose={onClose}
-      eyebrow="CRM do chat"
-      title={chatDisplayName}
-      closeButtonLabel="Fechar painel do lead"
-      panelClassName="max-w-[440px]"
-    >
+    <>
+      <DrawerShell
+        isOpen={isOpen}
+        onClose={onClose}
+        eyebrow="CRM do chat"
+        title={chatDisplayName}
+        closeButtonLabel="Fechar painel do lead"
+        panelClassName="max-w-[440px]"
+      >
           {loading ? (
             <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -111,6 +248,39 @@ export default function WhatsAppLeadDrawer({
                 onRefreshContracts={onRefreshContracts}
                 onViewLead={onViewLead}
               />
+
+              {canViewAgenda ? (
+                <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] overflow-hidden">
+                  <LeadRemindersPanel
+                    title="Agenda deste chat"
+                    subtitle="Lembretes do lead e dos contratos vinculados à conversa atual."
+                    leadName={linkedLead.nome_completo}
+                    reminders={agendaReminders}
+                    loading={agendaLoading}
+                    error={agendaError}
+                    onReload={() => void loadAgendaReminders()}
+                    onToggleRead={handleAgendaToggleRead}
+                    onReschedule={handleAgendaReschedule}
+                    readOnly={!canEditAgenda}
+                    actionSlot={(
+                      <div className="flex items-center gap-2">
+                        {agendaLead && canEditAgenda ? (
+                          <Button variant="secondary" size="sm" onClick={() => setSchedulerOpen(true)}>
+                            <CalendarPlus className="h-4 w-4" />
+                            Agendar
+                          </Button>
+                        ) : null}
+                        {onOpenAgenda ? (
+                          <Button variant="soft" size="sm" onClick={onOpenAgenda}>
+                            <CalendarDays className="h-4 w-4" />
+                            Agenda completa
+                          </Button>
+                        ) : null}
+                      </div>
+                    )}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="space-y-4">
@@ -204,6 +374,22 @@ export default function WhatsAppLeadDrawer({
               </div>
             </div>
           )}
-    </DrawerShell>
+      </DrawerShell>
+
+      {schedulerOpen && agendaLead ? (
+        <ReminderSchedulerModal
+          lead={agendaLead}
+          onClose={() => setSchedulerOpen(false)}
+          onScheduled={() => {
+            setSchedulerOpen(false);
+            void syncLeadNextReturnFromUpcomingReminder(agendaLead!.id);
+            void loadAgendaReminders();
+            toast.success('Lembrete criado na agenda do chat.');
+          }}
+          promptMessage="Agende o próximo lembrete deste chat sem sair do inbox."
+          defaultType="Follow-up"
+        />
+      ) : null}
+    </>
   );
 }

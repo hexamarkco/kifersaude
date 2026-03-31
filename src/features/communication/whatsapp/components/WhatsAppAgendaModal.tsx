@@ -29,7 +29,6 @@ import FilterSingleSelect from '../../../../components/FilterSingleSelect';
 import Button from '../../../../components/ui/Button';
 import Input from '../../../../components/ui/Input';
 import ModalShell from '../../../../components/ui/ModalShell';
-import Tabs from '../../../../components/ui/Tabs';
 import Textarea from '../../../../components/ui/Textarea';
 import {
   PANEL_EMPTY_STATE_STYLE,
@@ -50,8 +49,6 @@ import { supabase, type CommWhatsAppChat, type Contract, type Lead, type Reminde
 import { toast } from '../../../../lib/toast';
 
 type AgendaStatusFilter = 'nao-lidos' | 'todos' | 'lidos';
-type AgendaScopeFilter = 'current' | 'all';
-
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -174,7 +171,6 @@ export default function WhatsAppAgendaModal({
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [statusFilter, setStatusFilter] = useState<AgendaStatusFilter>('nao-lidos');
-  const [scopeFilter, setScopeFilter] = useState<AgendaScopeFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -202,14 +198,6 @@ export default function WhatsAppAgendaModal({
   const currentLeadContractIds = useMemo(
     () => new Set(currentLeadContracts.map((contract) => contract.id)),
     [currentLeadContracts],
-  );
-  const hasCurrentLeadContext = Boolean(currentLeadId);
-  const scopeTabs = useMemo(
-    () => [
-      { id: 'current', label: 'Este chat/lead', disabled: !hasCurrentLeadContext },
-      { id: 'all', label: 'Toda a agenda' },
-    ] as const,
-    [hasCurrentLeadContext],
   );
 
   const getLeadIdForReminder = useCallback(
@@ -293,7 +281,6 @@ export default function WhatsAppAgendaModal({
       return;
     }
 
-    setScopeFilter(hasCurrentLeadContext ? 'current' : 'all');
     setCurrentMonth(getDefaultMonth());
     setSelectedDate(getDefaultSelectedDate());
     setReschedulingReminderId(null);
@@ -326,7 +313,7 @@ export default function WhatsAppAgendaModal({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [hasCurrentLeadContext, isOpen, loadReminders]);
+  }, [isOpen, loadReminders]);
 
   const fetchLeadInfo = useCallback(
     async (leadId: string) => {
@@ -826,16 +813,8 @@ export default function WhatsAppAgendaModal({
     return Boolean(reminder.contract_id && currentLeadContractIds.has(reminder.contract_id));
   }, [currentLeadContractIds, currentLeadId]);
 
-  const scopeFilteredReminders = useMemo(() => {
-    if (scopeFilter === 'all') {
-      return reminders;
-    }
-
-    return reminders.filter((reminder) => currentLeadMatchesReminder(reminder));
-  }, [currentLeadMatchesReminder, reminders, scopeFilter]);
-
   const typeOptions = useMemo(() => {
-    const types = Array.from(new Set(scopeFilteredReminders.map((item) => item.tipo).filter(Boolean))).sort((left, right) =>
+    const types = Array.from(new Set(reminders.map((item) => item.tipo).filter(Boolean))).sort((left, right) =>
       left.localeCompare(right, 'pt-BR', { sensitivity: 'base' }),
     );
 
@@ -843,12 +822,12 @@ export default function WhatsAppAgendaModal({
       { value: 'all', label: 'Todos os tipos' },
       ...types.map((type) => ({ value: type, label: type })),
     ];
-  }, [scopeFilteredReminders]);
+  }, [reminders]);
 
   const filteredReminders = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    return scopeFilteredReminders
+    return reminders
       .filter((reminder) => {
         if (statusFilter === 'nao-lidos' && reminder.lido) {
           return false;
@@ -879,7 +858,7 @@ export default function WhatsAppAgendaModal({
           .some((value) => value!.toLowerCase().includes(normalizedQuery));
       })
       .sort(compareRemindersByDueAtThenAlphabetical);
-  }, [compareRemindersByDueAtThenAlphabetical, contractsMap, getLeadIdForReminder, leadsMap, priorityFilter, scopeFilteredReminders, searchQuery, statusFilter, typeFilter]);
+  }, [compareRemindersByDueAtThenAlphabetical, contractsMap, getLeadIdForReminder, leadsMap, priorityFilter, reminders, searchQuery, statusFilter, typeFilter]);
 
   const handleMarkAllFilteredAsRead = useCallback(async () => {
     const unreadFiltered = filteredReminders.filter((item) => !item.lido);
@@ -983,13 +962,7 @@ export default function WhatsAppAgendaModal({
   const completedFilteredCount = filteredReminders.filter((item) => item.lido).length;
   const overdueFilteredCount = filteredReminders.filter((item) => isOverdue(item.data_lembrete) && !item.lido).length;
   const taskFilteredCount = filteredReminders.filter((item) => item.tipo === 'Tarefa').length;
-  const hasActiveFilters = [
-    scopeFilter !== (hasCurrentLeadContext ? 'current' : 'all'),
-    statusFilter !== 'todos',
-    typeFilter !== 'all',
-    priorityFilter !== 'all',
-    searchQuery.trim() !== '',
-  ].filter(Boolean).length;
+  const hasActiveFilters = [statusFilter !== 'todos', typeFilter !== 'all', priorityFilter !== 'all', searchQuery.trim() !== ''].filter(Boolean).length;
 
   const lastUpdatedLabel = lastUpdated
     ? `Atualizado em ${lastUpdated.toLocaleDateString('pt-BR')} às ${lastUpdated.toLocaleTimeString('pt-BR', {
@@ -1024,7 +997,6 @@ export default function WhatsAppAgendaModal({
     setTypeFilter('all');
     setPriorityFilter('all');
     setStatusFilter('todos');
-    setScopeFilter(hasCurrentLeadContext ? 'current' : 'all');
   };
 
   const getReminderPriorityStyle = (priority: string) => {
@@ -1406,9 +1378,7 @@ export default function WhatsAppAgendaModal({
     );
   };
 
-  const emptyStateMessage = scopeFilter === 'current' && !hasCurrentLeadContext
-    ? 'Vincule um lead ao chat para consultar a agenda contextual desta conversa.'
-    : 'Nenhum item encontrado com os filtros atuais.';
+  const emptyStateMessage = 'Nenhum item encontrado com os filtros atuais.';
 
   return (
     <>
@@ -1465,15 +1435,7 @@ export default function WhatsAppAgendaModal({
 
               <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                 <div className="min-w-0 flex-1 space-y-3">
-                  <Tabs
-                    items={scopeTabs}
-                    value={scopeFilter}
-                    onChange={(next) => setScopeFilter(next)}
-                    variant="panel"
-                    listClassName="max-w-max"
-                  />
-
-                  {hasCurrentLeadContext ? (
+                  {currentLead ? (
                     <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
                       <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={getPanelToneStyle('accent')}>
                         {currentLead?.nome_completo}
@@ -1486,7 +1448,7 @@ export default function WhatsAppAgendaModal({
                     </div>
                   ) : (
                     <div className="rounded-[1.1rem] border px-4 py-3 text-sm" style={PANEL_MUTED_INSET_STYLE}>
-                      Vincule um lead ao chat atual para habilitar a visao contextual desta conversa.
+                      A agenda global do WhatsApp continua disponível aqui. Se houver lead vinculado no chat atual, ele aparece destacado nos itens relacionados.
                     </div>
                   )}
                 </div>

@@ -425,6 +425,22 @@ const formatFileSize = (value?: number | null) => {
   return `${value} B`;
 };
 
+const getEditedMessageInfo = (message: CommWhatsAppMessage) => {
+  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+    ? message.metadata as Record<string, unknown>
+    : {};
+  const currentText = String(message.text_content ?? message.media_caption ?? '').trim();
+  const originalText = String(metadata.original_text_content ?? '').trim();
+  const editedAt = String(metadata.edited_at ?? '').trim() || null;
+  const edited = metadata.edited === true || Boolean(originalText && originalText !== currentText);
+
+  return {
+    edited,
+    originalText: originalText && originalText !== currentText ? originalText : null,
+    editedAt,
+  };
+};
+
 const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => {
   const status = String(message.delivery_status ?? '').trim().toLowerCase();
 
@@ -888,8 +904,41 @@ function WhatsAppMessageBody({
   transcribing: boolean;
 }) {
   const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
+  const [showOriginalText, setShowOriginalText] = useState(false);
   const kind = message.message_type;
   const caption = isMediaPlaceholder(message) ? message.media_caption?.trim() || '' : message.text_content?.trim() || '';
+  const editInfo = useMemo(() => getEditedMessageInfo(message), [message]);
+
+  useEffect(() => {
+    setShowOriginalText(false);
+  }, [message.id, editInfo.originalText, message.text_content, message.media_caption]);
+
+  const editInfoNode = editInfo.edited ? (
+    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+        <span>Editada</span>
+        {editInfo.originalText ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowOriginalText((current) => !current)}
+            className="h-7 rounded-xl px-2.5 text-[11px] normal-case tracking-normal"
+          >
+            {showOriginalText ? 'Ocultar original' : 'Ver original'}
+          </Button>
+        ) : null}
+      </div>
+      {showOriginalText && editInfo.originalText ? (
+        <div className="mt-2 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Original</p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]">
+            {editInfo.originalText}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  ) : null;
 
   if (kind === 'image') {
     return (
@@ -912,6 +961,7 @@ function WhatsAppMessageBody({
           </div>
         )}
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+        {editInfoNode}
       </div>
     );
   }
@@ -935,6 +985,7 @@ function WhatsAppMessageBody({
           </div>
         </div>
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+        {editInfoNode}
       </div>
     );
   }
@@ -973,6 +1024,7 @@ function WhatsAppMessageBody({
           </div>
         </div>
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+        {editInfoNode}
       </div>
     );
   }
@@ -1033,11 +1085,17 @@ function WhatsAppMessageBody({
           </div>
         </div>
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+        {editInfoNode}
       </div>
     );
   }
 
-  return <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.text_content || '[Mensagem sem texto]'}</p>;
+  return (
+    <div className="space-y-3">
+      <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.text_content || '[Mensagem sem texto]'}</p>
+      {editInfoNode}
+    </div>
+  );
 }
 
 export default function WhatsAppInboxScreen() {
@@ -3208,6 +3266,11 @@ export default function WhatsAppInboxScreen() {
     setLeadDrawerOpen(true);
   };
 
+  const handleOpenAgendaModal = useCallback(() => {
+    setLeadDrawerOpen(false);
+    setWhatsAppAgendaOpen(true);
+  }, []);
+
   const handleCloseLeadDrawer = () => {
     setLeadDrawerOpen(false);
   };
@@ -4639,6 +4702,9 @@ export default function WhatsAppInboxScreen() {
           searchLoading={leadSearchLoading}
           onLinkLead={(leadId) => void handleLinkLead(leadId)}
           linkLoadingLeadId={linkLoadingLeadId}
+          canViewAgenda={canViewAgenda}
+          canEditAgenda={canEditAgenda}
+          onOpenAgenda={handleOpenAgendaModal}
         />
 
         <WhatsAppStartChatModal

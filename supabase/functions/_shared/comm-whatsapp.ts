@@ -262,7 +262,18 @@ export const getDirectChatDisplayNameCandidate = (
   message: Record<string, unknown>,
   direction: 'inbound' | 'outbound' | 'system',
 ): string => {
-  const candidate = pickHumanName(
+  if (direction === 'outbound') {
+    return pickHumanName(
+      message.chat_name,
+      message.pushname,
+      message.push_name,
+      isRecord(message.chat) ? message.chat.name : null,
+      isRecord(message.business) ? message.business.name : null,
+      isRecord(message.profile) ? message.profile.name : null,
+    );
+  }
+
+  return pickHumanName(
     message.chat_name,
     message.from_name,
     message.pushname,
@@ -273,12 +284,6 @@ export const getDirectChatDisplayNameCandidate = (
     isRecord(message.business) ? message.business.name : null,
     isRecord(message.profile) ? message.profile.name : null,
   );
-
-  if (direction === 'outbound') {
-    return candidate;
-  }
-
-  return candidate;
 };
 
 export const isPhoneLabelLikeDisplayName = (value: string): boolean => {
@@ -832,12 +837,13 @@ export const extractWhapiChatName = (payload: unknown): string => {
   }
 
   if (isRecord(payload.last_message)) {
+    const lastMessageFromMe = payload.last_message.from_me === true;
     const lastMessageName = pickHumanName(
       payload.last_message.chat_name,
-      payload.last_message.from_name,
       payload.last_message.pushname,
       payload.last_message.push_name,
       payload.last_message.notify_name,
+      lastMessageFromMe ? null : payload.last_message.from_name,
     );
     if (lastMessageName) return lastMessageName;
   }

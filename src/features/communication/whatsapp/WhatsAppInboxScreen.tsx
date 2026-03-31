@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { AlertCircle, AlertTriangle, CalendarDays, Check, CheckCheck, ChevronUp, Clock3, Cog, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CalendarDays, Check, CheckCheck, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -20,6 +20,7 @@ import {
   type CommWhatsAppOperationalState,
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
+import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import {
@@ -31,7 +32,7 @@ import {
   sanitizeWhatsAppQuickReplyShortcut,
   type WhatsAppQuickReply,
 } from '../../../lib/whatsAppQuickReplies';
-import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, IntegrationSetting, Lead } from '../../../lib/supabase';
+import { fetchAllPages, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
@@ -47,6 +48,8 @@ const MESSAGE_PAGE_SIZE = 50;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 const CHAT_IDENTITY_LOOKUP_BATCH_SIZE = 25;
+const DEFAULT_TRANSCRIPT_TIME_ZONE = 'America/Sao_Paulo';
+const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -78,6 +81,10 @@ type QuickReplyOption = {
   text: string;
   preview: string;
   searchValue: string;
+};
+type ChatAgendaSummary = {
+  pendingCount: number;
+  nextReminder: Reminder | null;
 };
 type LocalOutgoingRetryPayload =
   | { kind: 'text'; text: string }
@@ -260,6 +267,123 @@ const formatMessageTime = (value?: string | null) => {
   }).format(date);
 };
 
+const normalizeSystemTimeZone = (value: unknown) => {
+  const candidate = String(value ?? '').trim();
+  if (!candidate) {
+    return DEFAULT_TRANSCRIPT_TIME_ZONE;
+  }
+
+  try {
+    new Intl.DateTimeFormat('pt-BR', { timeZone: candidate }).format(new Date());
+    return candidate;
+  } catch {
+    return DEFAULT_TRANSCRIPT_TIME_ZONE;
+  }
+};
+
+const getTranscriptDateTimeParts = (date: Date, timeZone: string) => {
+  const formatter = new Intl.DateTimeFormat('pt-BR', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(date);
+  const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+
+  return {
+    day: read('day'),
+    month: read('month'),
+    year: read('year'),
+    hour: read('hour'),
+    minute: read('minute'),
+  };
+};
+
+const formatTranscriptTimestamp = (value: string, timeZone: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '[--:--, --/--/----]';
+  }
+
+  const parts = getTranscriptDateTimeParts(date, timeZone);
+  return `[${parts.hour}:${parts.minute}, ${parts.day}/${parts.month}/${parts.year}]`;
+};
+
+const normalizeTranscriptText = (value?: string | null) => String(value ?? '').replace(/\s+/g, ' ').trim();
+
+const getUnknownMessageMarker = (messageType: string) => {
+  const normalized = messageType.trim().toLowerCase();
+  if (!normalized) {
+    return '[Mensagem sem conteudo]';
+  }
+
+  return `[${normalized}]`;
+};
+
+const buildTranscriptContent = (message: CommWhatsAppMessage) => {
+  if (message.direction === 'system') {
+    return '';
+  }
+
+  if (message.direction === 'outbound' && message.delivery_status.trim().toLowerCase() === 'failed') {
+    return '';
+  }
+
+  const text = normalizeTranscriptText(message.text_content);
+  const caption = normalizeTranscriptText(message.media_caption);
+  const transcription = normalizeTranscriptText(message.transcription_text);
+  const kind = message.message_type.trim().toLowerCase();
+
+  if (kind === 'text') {
+    return text;
+  }
+
+  if (kind === 'image') {
+    return caption ? `[Imagem] ${caption}` : '[Imagem]';
+  }
+
+  if (kind === 'video') {
+    return caption ? `[Video] ${caption}` : '[Video]';
+  }
+
+  if (kind === 'document') {
+    return caption ? `[Documento] ${caption}` : '[Documento]';
+  }
+
+  if (kind === 'audio' || kind === 'voice') {
+    return transcription || AUDIO_WITHOUT_TRANSCRIPTION_MARKER;
+  }
+
+  if (caption) {
+    return caption;
+  }
+
+  if (text) {
+    return text;
+  }
+
+  if (transcription) {
+    return transcription;
+  }
+
+  return getUnknownMessageMarker(kind);
+};
+
+const buildTranscriptLine = (message: CommWhatsAppMessage, leadLabel: string, timeZone: string) => {
+  const content = buildTranscriptContent(message);
+  if (!content) {
+    return null;
+  }
+
+  const author = message.direction === 'outbound' ? 'Eu' : leadLabel;
+  return `${formatTranscriptTimestamp(message.message_at, timeZone)} ${author}: ${content}`;
+};
+
 const getMessageDayKey = (value?: string | null) => {
   if (!value) return '';
 
@@ -439,6 +563,22 @@ const getEditedMessageInfo = (message: CommWhatsAppMessage) => {
     originalText: originalText && originalText !== currentText ? originalText : null,
     editedAt,
   };
+};
+
+const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName?: string | null) => {
+  if (!chat) {
+    return 'Conversa';
+  }
+
+  const displayName = String(chat.display_name ?? '').trim();
+  const ownName = String(connectedUserName ?? '').trim().toLowerCase();
+  const isOwnNameLeak = !chat.saved_contact_name && !chat.lead_id && displayName && ownName && displayName.toLowerCase() === ownName;
+
+  if (isOwnNameLeak) {
+    return formatCommWhatsAppPhoneLabel(chat.phone_number);
+  }
+
+  return displayName || formatCommWhatsAppPhoneLabel(chat.phone_number);
 };
 
 const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => {
@@ -1132,6 +1272,7 @@ export default function WhatsAppInboxScreen() {
   const [followUpDraft, setFollowUpDraft] = useState('');
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
+  const [copyingTranscript, setCopyingTranscript] = useState(false);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
   const [mediaDrawerPosition, setMediaDrawerPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [sendingDrawerMedia, setSendingDrawerMedia] = useState(false);
@@ -1163,6 +1304,8 @@ export default function WhatsAppInboxScreen() {
   const [leadContracts, setLeadContracts] = useState<CommWhatsAppLeadContractSummary[]>([]);
   const [leadContractsLoading, setLeadContractsLoading] = useState(false);
   const [leadContractsError, setLeadContractsError] = useState<string | null>(null);
+  const [chatAgendaSummaryLoading, setChatAgendaSummaryLoading] = useState(false);
+  const [chatAgendaSummary, setChatAgendaSummary] = useState<ChatAgendaSummary>({ pendingCount: 0, nextReminder: null });
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
   const [leadSearchResults, setLeadSearchResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
   const [leadSearchLoading, setLeadSearchLoading] = useState(false);
@@ -1286,6 +1429,20 @@ export default function WhatsAppInboxScreen() {
   const selectedChat = useMemo(
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
+  );
+  const selectedChatTranscriptLabel = useMemo(
+    () => {
+      if (!selectedChat) {
+        return 'Contato';
+      }
+
+      if (selectedChat.lead_id) {
+        return leadPanel?.nome_completo?.trim() || selectedChat.saved_contact_name?.trim() || selectedChat.display_name?.trim() || selectedChat.push_name?.trim() || selectedChat.phone_number?.trim() || 'Contato';
+      }
+
+      return selectedChat.saved_contact_name?.trim() || selectedChat.display_name?.trim() || selectedChat.push_name?.trim() || selectedChat.phone_number?.trim() || 'Contato';
+    },
+    [leadPanel?.nome_completo, selectedChat],
   );
   const quickReplyLead = useMemo<Lead | null>(() => {
     if (!selectedChat) {
@@ -1657,6 +1814,58 @@ export default function WhatsAppInboxScreen() {
     }
   }, [loadLeadContracts, upsertChatLocally]);
 
+  const loadChatAgendaSummary = useCallback(async (leadId: string | null, contractIds: string[] = []) => {
+    if (!leadId) {
+      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryLoading(false);
+      return;
+    }
+
+    setChatAgendaSummaryLoading(true);
+
+    try {
+      const [leadReminders, contractReminders] = await Promise.all([
+        fetchAllPages<Reminder>(
+          (from, to) =>
+            supabase
+              .from('reminders')
+              .select('*')
+              .eq('lead_id', leadId)
+              .order('data_lembrete', { ascending: true })
+              .order('id', { ascending: true })
+              .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
+        ),
+        contractIds.length > 0
+          ? fetchAllPages<Reminder>(
+              (from, to) =>
+                supabase
+                  .from('reminders')
+                  .select('*')
+                  .in('contract_id', contractIds)
+                  .order('data_lembrete', { ascending: true })
+                  .order('id', { ascending: true })
+                  .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
+            )
+          : Promise.resolve([] as Reminder[]),
+      ]);
+
+      const merged = Array.from(new Map([...leadReminders, ...contractReminders].map((reminder) => [reminder.id, reminder])).values());
+      const pendingReminders = merged
+        .filter((reminder) => !reminder.lido)
+        .sort((left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime());
+
+      setChatAgendaSummary({
+        pendingCount: pendingReminders.length,
+        nextReminder: pendingReminders[0] ?? null,
+      });
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao carregar resumo da agenda do chat', error);
+      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+    } finally {
+      setChatAgendaSummaryLoading(false);
+    }
+  }, []);
+
   const refreshDrawerSearch = useCallback(async (query: string, phoneNumber?: string | null) => {
     setLeadSearchLoading(true);
     try {
@@ -1722,6 +1931,10 @@ export default function WhatsAppInboxScreen() {
     return leadSearchResults.length === 1 ? leadSearchResults[0] : null;
   }, [leadDrawerOpen, leadSearchQuery, leadSearchResults, selectedChat?.lead_id]);
   const selectedChatWasAutoLinked = Boolean(selectedChat?.id && autoLinkedChatIds[selectedChat.id]);
+  const selectedChatDisplayName = useMemo(
+    () => getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null),
+    [channelState?.connected_user_name, selectedChat],
+  );
   const isChannelConnected = connectionStatus === 'AUTH';
   const hasWebhookEver = Boolean(channelState?.last_webhook_received_at);
   const webhookAgeMs = channelState?.last_webhook_received_at
@@ -1868,6 +2081,23 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [channelState, connectionStatus, hasWebhookEver, isChannelConnected, isWebhookStale, operationalState, operationalStateError, operationalStateLoaded]);
+  const nextChatReminderSummary = useMemo(() => {
+    if (chatAgendaSummaryLoading) {
+      return 'Agenda: carregando lembretes...';
+    }
+
+    if (!leadPanel?.id) {
+      return null;
+    }
+
+    if (!chatAgendaSummary.nextReminder) {
+      return chatAgendaSummary.pendingCount > 0 ? `Agenda: ${chatAgendaSummary.pendingCount} pendente(s).` : 'Agenda em dia';
+    }
+
+    const reminder = chatAgendaSummary.nextReminder;
+    const prefix = isOverdue(reminder.data_lembrete) ? 'Próximo lembrete atrasado' : 'Próximo lembrete';
+    return `${prefix}: ${reminder.titulo} · ${formatDateTimeFullBR(reminder.data_lembrete)}`;
+  }, [chatAgendaSummary, chatAgendaSummaryLoading, leadPanel?.id]);
 
   useEffect(() => {
     latestChatsRef.current = chats;
@@ -2142,11 +2372,48 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     if (!selectedChat?.lead_id) {
       setLeadPanel(null);
+      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryLoading(false);
       return;
     }
 
     void loadLeadPanel(selectedChat);
   }, [loadLeadPanel, selectedChat]);
+
+  useEffect(() => {
+    void loadChatAgendaSummary(
+      leadPanel?.id ?? null,
+      leadContracts.map((contract) => contract.id),
+    );
+  }, [leadContracts, leadPanel?.id, loadChatAgendaSummary]);
+
+  useEffect(() => {
+    if (!leadPanel?.id) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`whatsapp-chat-agenda-summary-${leadPanel.id}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reminders',
+        },
+        () => {
+          void loadChatAgendaSummary(
+            leadPanel.id,
+            leadContracts.map((contract) => contract.id),
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [leadContracts, leadPanel?.id, loadChatAgendaSummary]);
 
   useEffect(() => {
     if (!leadDrawerOpen || !selectedChat || selectedChat.lead_id) {
@@ -3735,6 +4002,40 @@ export default function WhatsAppInboxScreen() {
     void handleGenerateFollowUp('');
   }, [followUpGenerationDisabledReason, handleGenerateFollowUp]);
 
+  const handleCopyChatTranscript = useCallback(async () => {
+    if (!selectedChat || copyingTranscript) {
+      return;
+    }
+
+    setCopyingTranscript(true);
+
+    try {
+      const [allMessages, systemSettings] = await Promise.all([
+        commWhatsAppService.listAllMessages(selectedChat.id),
+        configService.getSystemSettings(),
+      ]);
+
+      const timeZone = normalizeSystemTimeZone(systemSettings?.timezone);
+      const transcript = allMessages
+        .map((message) => buildTranscriptLine(message, selectedChatTranscriptLabel, timeZone))
+        .filter((line): line is string => Boolean(line))
+        .join('\n');
+
+      if (!transcript) {
+        toast.error('Não há histórico útil suficiente para copiar.');
+        return;
+      }
+
+      await navigator.clipboard.writeText(transcript);
+      toast.success('Conversa copiada no formato do follow-up.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao copiar conversa formatada', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível copiar a conversa.');
+    } finally {
+      setCopyingTranscript(false);
+    }
+  }, [copyingTranscript, selectedChat, selectedChatTranscriptLabel]);
+
   const handleToggleMediaDrawer = useCallback(() => {
     setAttachmentMenuOpen(false);
     setMediaDrawerOpen((current) => !current);
@@ -4089,6 +4390,24 @@ export default function WhatsAppInboxScreen() {
                     <span>{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
                     {leadPanel?.responsavel_label ? <span>Responsável: {leadPanel.responsavel_label}</span> : null}
                   </div>
+                  {nextChatReminderSummary ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--panel-text-muted,#8a735f)]">
+                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1" style={chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete)
+                        ? {
+                            borderColor: 'rgba(215, 154, 143, 0.75)',
+                            background: 'rgba(122, 33, 24, 0.08)',
+                            color: 'var(--panel-accent-red-text,#b4534a)',
+                          }
+                        : {
+                            borderColor: 'rgba(212, 192, 167, 0.56)',
+                            background: 'rgba(255, 248, 240, 0.06)',
+                            color: 'var(--panel-text-muted,#8a735f)',
+                          }}>
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        <span className="max-w-[34rem] truncate">{nextChatReminderSummary}</span>
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 items-start gap-3">
                   <div className="flex shrink-0 flex-col items-end gap-1 text-right">
@@ -4102,17 +4421,42 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     )}
                   </div>
-                  <Button
-                    type="button"
-                    onClick={handleOpenLeadDrawer}
-                    variant="soft"
-                    size="icon"
-                    className="rounded-xl"
-                    aria-label="Abrir informações do lead"
-                    title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
-                  >
-                    <Info className="h-4 w-4" />
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => void handleCopyChatTranscript()}
+                      variant="soft"
+                      size="icon"
+                      className="rounded-xl"
+                      aria-label="Copiar conversa formatada"
+                      title="Copiar conversa formatada"
+                      disabled={copyingTranscript}
+                    >
+                      {copyingTranscript ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleOpenLeadDrawer}
+                      variant="soft"
+                      size="icon"
+                      className="rounded-xl"
+                      aria-label="Abrir informações do lead"
+                      title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
+                    >
+                      <span className="relative inline-flex">
+                        <Info className="h-4 w-4" />
+                        {chatAgendaSummary.pendingCount > 0 ? (
+                          <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
+                            borderColor: 'rgba(212, 192, 167, 0.56)',
+                            background: 'var(--panel-accent-strong,#c86f1d)',
+                            color: '#fff8f0',
+                          }}>
+                            {chatAgendaSummary.pendingCount > 99 ? '99+' : chatAgendaSummary.pendingCount}
+                          </span>
+                        ) : null}
+                      </span>
+                    </Button>
+                  </div>
                 </div>
               </div>
 

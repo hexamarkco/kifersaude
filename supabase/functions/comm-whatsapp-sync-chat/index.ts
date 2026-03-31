@@ -40,6 +40,12 @@ type ChatRow = {
   push_name: string | null;
 };
 
+const isOwnChannelName = (value: string | null | undefined, connectedUserName: string | null | undefined) => {
+  const normalizedValue = toTrimmedString(value).toLowerCase();
+  const normalizedChannelUser = toTrimmedString(connectedUserName).toLowerCase();
+  return Boolean(normalizedValue && normalizedChannelUser && normalizedValue === normalizedChannelUser);
+};
+
 const jsonHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -165,7 +171,7 @@ Deno.serve(async (req: Request) => {
           phone_number: phoneDigits,
           phone_digits: phoneDigits,
           display_name: displayName,
-          push_name: whapiName || existingChat?.push_name || null,
+          push_name: whapiName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
         },
         { onConflict: 'channel_id,external_chat_id' },
       )
@@ -194,7 +200,7 @@ Deno.serve(async (req: Request) => {
         externalChatId,
         phoneNumber: phoneDigits,
         displayName,
-        pushName: whapiName || existingChat?.push_name || null,
+        pushName: whapiName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
         lastMessageText: summaryText,
         lastMessageDirection: direction,
         lastMessageAt: messageAt,

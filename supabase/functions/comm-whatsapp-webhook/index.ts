@@ -44,6 +44,12 @@ type ChatRow = {
   push_name: string | null;
 };
 
+const isOwnChannelName = (value: string | null | undefined, connectedUserName: string | null | undefined) => {
+  const normalizedValue = toTrimmedString(value).toLowerCase();
+  const normalizedChannelUser = toTrimmedString(connectedUserName).toLowerCase();
+  return Boolean(normalizedValue && normalizedChannelUser && normalizedValue === normalizedChannelUser);
+};
+
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
 declare const Deno: {
@@ -235,7 +241,7 @@ async function persistMessageFromWebhook(
     resolvedName = '';
   }
 
-  if (!resolvedName && existingChat?.push_name) {
+  if (!resolvedName && existingChat?.push_name && !isOwnChannelName(existingChat.push_name, channel.connected_user_name)) {
     resolvedName = existingChat.push_name;
   }
 
@@ -265,8 +271,8 @@ async function persistMessageFromWebhook(
     channelId: channel.id,
     externalChatId,
     phoneNumber: phoneDigits || null,
-    displayName,
-    pushName: resolvedName || existingChat?.push_name || null,
+      displayName,
+      pushName: resolvedName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
     lastMessageText: summaryText,
     lastMessageDirection: direction,
     lastMessageAt: messageAt,

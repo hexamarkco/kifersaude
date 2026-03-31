@@ -419,6 +419,38 @@ export const commWhatsAppService = {
     };
   },
 
+  async listAllMessages(chatId: string): Promise<CommWhatsAppMessage[]> {
+    const messages: CommWhatsAppMessage[] = [];
+    let before: MessageCursor | null = null;
+
+    while (true) {
+      const page = await this.listMessagesPage(chatId, {
+        limit: 200,
+        before,
+      });
+
+      if (page.messages.length === 0) {
+        break;
+      }
+
+      messages.unshift(...page.messages);
+
+      if (!page.hasMore) {
+        break;
+      }
+
+      const oldestMessage = page.messages[0];
+      before = oldestMessage
+        ? {
+            messageAt: oldestMessage.message_at,
+            id: oldestMessage.id,
+          }
+        : null;
+    }
+
+    return messages;
+  },
+
   async syncChatHistory(chatId: string): Promise<void> {
     const { error } = await supabase.functions.invoke('comm-whatsapp-sync-chat', {
       body: { chatId },

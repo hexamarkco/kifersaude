@@ -13,6 +13,7 @@ declare const Deno: {
 
 type GenerateFollowUpBody = {
   chatId?: string;
+  customInstructions?: string;
 };
 
 type ChatRow = {
@@ -33,6 +34,12 @@ type LeadRow = {
   origem: string | null;
   status: string | null;
   responsavel: string | null;
+};
+
+type LookupLabelRow = {
+  nome?: string | null;
+  label?: string | null;
+  value?: string | null;
 };
 
 type MessageRow = {
@@ -273,6 +280,76 @@ const loadAllMessagesForChat = async (
   return messages;
 };
 
+const loadLeadContext = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  leadId: string | null,
+): Promise<LeadRow | null> => {
+  if (!leadId) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('leads')
+    .select('*')
+    .eq('id', leadId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Erro ao carregar lead vinculado: ${error.message}`);
+  }
+
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  const statusId = toTrimmedString(data.status_id);
+  const origemId = toTrimmedString(data.origem_id);
+  const responsavelId = toTrimmedString(data.responsavel_id);
+
+  const [statusLookup, origemLookup, responsavelLookup] = await Promise.all([
+    !toTrimmedString(data.status) && statusId
+      ? supabaseAdmin.from('lead_status_config').select('nome').eq('id', statusId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    !toTrimmedString(data.origem) && origemId
+      ? supabaseAdmin.from('lead_origens').select('nome').eq('id', origemId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    !toTrimmedString(data.responsavel) && responsavelId
+      ? supabaseAdmin.from('lead_responsaveis').select('label, value').eq('id', responsavelId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  if (statusLookup.error) {
+    throw new Error(`Erro ao carregar label de status do lead: ${statusLookup.error.message}`);
+  }
+
+  if (origemLookup.error) {
+    throw new Error(`Erro ao carregar label de origem do lead: ${origemLookup.error.message}`);
+  }
+
+  if (responsavelLookup.error) {
+    throw new Error(`Erro ao carregar label de responsavel do lead: ${responsavelLookup.error.message}`);
+  }
+
+  const statusData = (statusLookup.data ?? null) as LookupLabelRow | null;
+  const origemData = (origemLookup.data ?? null) as LookupLabelRow | null;
+  const responsavelData = (responsavelLookup.data ?? null) as LookupLabelRow | null;
+
+  return {
+    id: toTrimmedString(data.id) || leadId,
+    nome_completo: toTrimmedString(data.nome_completo),
+    telefone: toTrimmedString(data.telefone) || null,
+    email: toTrimmedString(data.email) || null,
+    cidade: toTrimmedString(data.cidade) || null,
+    origem: toTrimmedString(data.origem) || toTrimmedString(origemData?.nome) || null,
+    status: toTrimmedString(data.status) || toTrimmedString(statusData?.nome) || null,
+    responsavel:
+      toTrimmedString(data.responsavel) ||
+      toTrimmedString(responsavelData?.label) ||
+      toTrimmedString(responsavelData?.value) ||
+      null,
+  };
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -308,6 +385,7 @@ Deno.serve(async (req: Request) => {
 
     const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
     const chatId = toTrimmedString(body.chatId);
+    const customInstructions = toTrimmedString(body.customInstructions);
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -335,22 +413,12 @@ Deno.serve(async (req: Request) => {
 
     const chat = chatData as ChatRow;
 
-    const [messages, leadResult, systemSettingsResult, promptResult] = await Promise.all([
+    const [messages, lead, systemSettingsResult, promptResult] = await Promise.all([
       loadAllMessagesForChat(supabaseAdmin, chat.id),
-      chat.lead_id
-        ? supabaseAdmin
-            .from('leads')
-            .select('id, nome_completo, telefone, email, cidade, origem, status, responsavel')
-            .eq('id', chat.lead_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
+      loadLeadContext(supabaseAdmin, chat.lead_id),
       supabaseAdmin.from('system_settings').select('company_name, timezone').limit(1).maybeSingle(),
       supabaseAdmin.from('integration_settings').select('settings').eq('slug', AI_FOLLOW_UP_PROMPT_SLUG).maybeSingle(),
     ]);
-
-    if (leadResult.error) {
-      throw new Error(`Erro ao carregar lead vinculado: ${leadResult.error.message}`);
-    }
 
     if (systemSettingsResult.error) {
       throw new Error(`Erro ao carregar configuracoes do sistema: ${systemSettingsResult.error.message}`);
@@ -359,8 +427,6 @@ Deno.serve(async (req: Request) => {
     if (promptResult.error) {
       throw new Error(`Erro ao carregar prompt de follow-up: ${promptResult.error.message}`);
     }
-
-    const lead = (leadResult.data ?? null) as LeadRow | null;
     const systemSettings = (systemSettingsResult.data ?? null) as SystemSettingsRow | null;
     const promptIntegration = (promptResult.data ?? null) as IntegrationSettingRow | null;
     const systemTimeZone = normalizeSystemTimeZone(systemSettings?.timezone);
@@ -392,6 +458,7 @@ Deno.serve(async (req: Request) => {
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.',
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
+      customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
     ]
       .filter(Boolean)
       .join('\n\n');

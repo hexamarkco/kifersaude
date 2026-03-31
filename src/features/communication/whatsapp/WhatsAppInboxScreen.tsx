@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Cog, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -19,6 +19,7 @@ import {
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
 import { toast } from '../../../lib/toast';
+import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import {
   WHATSAPP_QUICK_REPLIES_INTEGRATION_DESCRIPTION,
   WHATSAPP_QUICK_REPLIES_INTEGRATION_NAME,
@@ -29,6 +30,8 @@ import {
   type WhatsAppQuickReply,
 } from '../../../lib/whatsAppQuickReplies';
 import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, IntegrationSetting, Lead } from '../../../lib/supabase';
+import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
+import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
@@ -890,6 +893,10 @@ export default function WhatsAppInboxScreen() {
   const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>(DEFAULT_QUICK_REPLIES);
   const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
   const [savingQuickReplies, setSavingQuickReplies] = useState(false);
+  const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
+  const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
+  const [followUpDraft, setFollowUpDraft] = useState('');
+  const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [composerSelection, setComposerSelection] = useState<ComposerSelection>({ start: 0, end: 0 });
   const [composerFocused, setComposerFocused] = useState(false);
@@ -2349,6 +2356,7 @@ export default function WhatsAppInboxScreen() {
     if (!selectedChat) return;
 
     const text = messageDraft.trim();
+    const textSegments = splitWhatsAppMessageSegments(messageDraft);
     if (!text && !pendingAttachment) return;
 
     if (sendDisabledReason) {
@@ -2390,7 +2398,13 @@ export default function WhatsAppInboxScreen() {
         setVoicePreviewCurrentTime(0);
         setPendingAttachment(null);
       } else {
-        await commWhatsAppService.sendTextMessage(selectedChat.external_chat_id, text);
+        if (textSegments.length === 0) {
+          return;
+        }
+
+        for (const segment of textSegments) {
+          await commWhatsAppService.sendTextMessage(selectedChat.external_chat_id, segment);
+        }
       }
 
       setMessageDraft('');
@@ -2784,53 +2798,82 @@ export default function WhatsAppInboxScreen() {
     }
   }, [quickReplyIntegration]);
 
-  const handleGenerateFollowUp = useCallback(async () => {
+  const handleCloseFollowUpModal = useCallback(() => {
+    setFollowUpModalOpen(false);
+    setFollowUpDraft('');
+    setFollowUpCustomInstructions('');
+  }, []);
+
+  const handleGenerateFollowUp = useCallback(async (customInstructions: string) => {
     if (!selectedChat) {
       return;
     }
 
     if (followUpGenerationDisabledReason) {
-      toast.error(followUpGenerationDisabledReason);
       return;
-    }
-
-    if (messageDraft.trim()) {
-      const confirmed = window.confirm('O texto atual do composer sera substituido pela sugestao da IA. Deseja continuar?');
-      if (!confirmed) {
-        return;
-      }
     }
 
     setGeneratingFollowUp(true);
 
     try {
-      const result = await commWhatsAppService.generateFollowUp(selectedChat.id);
-      const nextValue = result.text.trim();
-      const nextCursor = nextValue.length;
-
-      setMessageDraft(nextValue);
-      setComposerSelection({ start: nextCursor, end: nextCursor });
-      setDismissedQuickReplyKey(null);
-      setQuickReplyActiveIndex(0);
-
-      requestAnimationFrame(() => {
-        const target = composerTextareaRef.current;
-        if (!target) {
-          return;
-        }
-
-        target.focus();
-        target.setSelectionRange(nextCursor, nextCursor);
+      const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
+        customInstructions,
       });
-
-      toast.success('Follow-up gerado com sucesso.');
+      setFollowUpDraft(result.text.trim());
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao gerar follow-up', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel gerar o follow-up com IA.');
     } finally {
       setGeneratingFollowUp(false);
     }
-  }, [followUpGenerationDisabledReason, messageDraft, selectedChat]);
+  }, [followUpGenerationDisabledReason, selectedChat]);
+
+  const handleOpenFollowUpModal = useCallback(() => {
+    if (followUpGenerationDisabledReason) {
+      toast.error(followUpGenerationDisabledReason);
+      return;
+    }
+
+    setFollowUpCustomInstructions('');
+    setFollowUpDraft('');
+    setFollowUpModalOpen(true);
+    void handleGenerateFollowUp('');
+  }, [followUpGenerationDisabledReason, handleGenerateFollowUp]);
+
+  const handleRegenerateFollowUp = useCallback(() => {
+    void handleGenerateFollowUp(followUpCustomInstructions);
+  }, [followUpCustomInstructions, handleGenerateFollowUp]);
+
+  const handleApplyFollowUpDraft = useCallback(() => {
+    const nextValue = followUpDraft.trim();
+    if (!nextValue) {
+      return;
+    }
+
+    if (messageDraft.trim() && messageDraft.trim() !== nextValue) {
+      const confirmed = window.confirm('O texto atual do composer sera substituido pela sugestao do follow-up. Deseja continuar?');
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    const nextCursor = nextValue.length;
+    setMessageDraft(nextValue);
+    setComposerSelection({ start: nextCursor, end: nextCursor });
+    setDismissedQuickReplyKey(null);
+    setQuickReplyActiveIndex(0);
+    handleCloseFollowUpModal();
+
+    requestAnimationFrame(() => {
+      const target = composerTextareaRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [followUpDraft, handleCloseFollowUpModal, messageDraft]);
 
   const handleComposerSubmit = () => {
     if (sending || generatingFollowUp) return;
@@ -2910,15 +2953,27 @@ export default function WhatsAppInboxScreen() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#8a735f)]">Conversas</p>
-                <Button
-                  size="sm"
-                  onClick={() => setStartChatModalOpen(true)}
-                  className="h-9 w-9 px-0"
-                  aria-label="Novo chat"
-                  title="Novo chat"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setWhatsAppDashboardOpen(true)}
+                    className="h-9 w-9 px-0"
+                    aria-label="Painel WhatsApp"
+                    title="Painel WhatsApp"
+                  >
+                    <Cog className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setStartChatModalOpen(true)}
+                    className="h-9 w-9 px-0"
+                    aria-label="Novo chat"
+                    title="Novo chat"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               <Input
@@ -3366,6 +3421,20 @@ export default function WhatsAppInboxScreen() {
                       </button>
                         <button
                           type="button"
+                          onClick={handleOpenFollowUpModal}
+                          disabled={Boolean(followUpGenerationDisabledReason)}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${generatingFollowUp ? 'cursor-wait opacity-70' : ''}`}
+                          aria-label="Gerar follow-up com IA"
+                          title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
+                        >
+                          {generatingFollowUp ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-5 w-5" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
                           disabled
                           className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
                         aria-label="Emojis"
@@ -3456,20 +3525,6 @@ export default function WhatsAppInboxScreen() {
                     <div className={`flex shrink-0 ${isComposerExpanded ? 'items-end pb-0.5' : 'items-center'}`}>
                       <button
                         type="button"
-                        onClick={() => void handleGenerateFollowUp()}
-                        disabled={Boolean(followUpGenerationDisabledReason)}
-                        className={`whatsapp-inbox-composer-icon mr-2 inline-flex h-10 w-10 items-center justify-center rounded-full transition ${generatingFollowUp ? 'cursor-wait opacity-70' : ''}`}
-                        aria-label="Gerar follow-up com IA"
-                        title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
-                      >
-                        {generatingFollowUp ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-5 w-5" />
-                        )}
-                      </button>
-                      <button
-                        type="button"
                         onClick={handleComposerSubmit}
                         disabled={sending || generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
                         className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${sending || generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
@@ -3537,6 +3592,23 @@ export default function WhatsAppInboxScreen() {
           saving={savingQuickReplies}
           onClose={() => setQuickRepliesModalOpen(false)}
           onSave={handleSaveQuickReplies}
+        />
+
+        <WhatsAppDashboardModal
+          isOpen={whatsAppDashboardOpen}
+          onClose={() => setWhatsAppDashboardOpen(false)}
+        />
+
+        <WhatsAppFollowUpModal
+          isOpen={followUpModalOpen}
+          generating={generatingFollowUp}
+          value={followUpDraft}
+          customInstructions={followUpCustomInstructions}
+          onClose={handleCloseFollowUpModal}
+          onChangeValue={setFollowUpDraft}
+          onChangeCustomInstructions={setFollowUpCustomInstructions}
+          onGenerate={handleRegenerateFollowUp}
+          onApply={handleApplyFollowUpDraft}
         />
 
         <WhatsAppLeadDrawer

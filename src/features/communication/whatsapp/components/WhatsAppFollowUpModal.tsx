@@ -11,25 +11,27 @@ import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '
 type WhatsAppFollowUpModalProps = {
   isOpen: boolean;
   generating: boolean;
+  submitting: boolean;
   value: string;
   customInstructions: string;
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
   onGenerate: () => void;
-  onApply: () => void;
+  onSend: () => void;
 };
 
 export default function WhatsAppFollowUpModal({
   isOpen,
   generating,
+  submitting,
   value,
   customInstructions,
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
   onGenerate,
-  onApply,
+  onSend,
 }: WhatsAppFollowUpModalProps) {
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
 
@@ -44,18 +46,18 @@ export default function WhatsAppFollowUpModal({
       footer={(
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-            Separador de mensagens: <code>{WHATSAPP_MESSAGE_BREAK_DELIMITER}</code> em uma linha isolada. O envio no composer respeita cada bloco como uma mensagem separada.
+            Separador de mensagens: <code>{WHATSAPP_MESSAGE_BREAK_DELIMITER}</code> em uma linha isolada. O envio respeita cada bloco como uma mensagem separada.
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose} disabled={generating}>
+            <Button variant="secondary" onClick={onClose} disabled={generating || submitting}>
               Fechar
             </Button>
-            <Button variant="secondary" onClick={onGenerate} loading={generating}>
+            <Button variant="secondary" onClick={onGenerate} loading={generating} disabled={submitting}>
               {!generating && <Sparkles className="h-4 w-4" />}
               <span>{value.trim() ? 'Gerar novamente' : 'Gerar agora'}</span>
             </Button>
-            <Button onClick={onApply} disabled={generating || !value.trim()}>
-              Aplicar ao composer
+            <Button onClick={onSend} loading={submitting} disabled={generating || submitting || !value.trim()}>
+              Enviar mensagens
             </Button>
           </div>
         </div>
@@ -82,7 +84,7 @@ export default function WhatsAppFollowUpModal({
                 '- Não insista demais.\n' +
                 '- Termine com uma pergunta objetiva.'
               }
-              disabled={generating}
+              disabled={generating || submitting}
             />
           </div>
 
@@ -91,7 +93,7 @@ export default function WhatsAppFollowUpModal({
               <div>
                 <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Mensagem sugerida</h3>
                 <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-                  Edite livremente antes de aplicar ao composer.
+                  Edite livremente antes de enviar.
                 </p>
               </div>
               <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
@@ -104,7 +106,7 @@ export default function WhatsAppFollowUpModal({
               rows={15}
               className="min-h-[320px] text-sm leading-6"
               placeholder="A sugestao de follow-up vai aparecer aqui."
-              disabled={generating}
+              disabled={generating || submitting}
             />
           </div>
         </div>
@@ -116,7 +118,7 @@ export default function WhatsAppFollowUpModal({
               Preview do envio
             </div>
             <p className="mt-2 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-              Cada bloco abaixo vira uma mensagem independente quando você aplicar ao composer e enviar.
+              Cada bloco abaixo vira uma mensagem independente quando você enviar.
             </p>
 
             <div className="mt-4 space-y-3">

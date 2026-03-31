@@ -3335,6 +3335,52 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
+  const sendTextSegments = useCallback(async (chat: CommWhatsAppChat, textSegments: string[]) => {
+    if (textSegments.length === 0) {
+      return;
+    }
+
+    let hadSuccessfulSend = false;
+
+    for (const segment of textSegments) {
+      const optimisticMessage = buildOptimisticOutgoingMessage({
+        chat,
+        messageType: 'text',
+        textContent: segment,
+      });
+
+      appendLocalOutgoingMessage(optimisticMessage, {
+        kind: 'text',
+        text: segment,
+      });
+      applyOptimisticChatSummary(chat, segment, optimisticMessage.message_at);
+
+      try {
+        const sendResult = await commWhatsAppService.sendTextMessage(chat.external_chat_id, segment);
+        hadSuccessfulSend = true;
+        patchLocalOutgoingMessage(optimisticMessage.id, {
+          external_message_id: sendResult.messageId,
+          delivery_status: sendResult.status,
+          status_updated_at: new Date().toISOString(),
+          error_message: null,
+        });
+        localOutgoingRetryPayloadRef.current.delete(optimisticMessage.id);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
+        patchLocalOutgoingMessage(optimisticMessage.id, {
+          delivery_status: 'failed',
+          status_updated_at: new Date().toISOString(),
+          error_message: message,
+        });
+      }
+    }
+
+    if (hadSuccessfulSend) {
+      hydratedChatsRef.current.add(chat.external_chat_id);
+      await Promise.all([loadMessages(chat, 'send'), loadChats()]);
+    }
+  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, loadChats, loadMessages, patchLocalOutgoingMessage]);
+
   const handleSendMessage = useCallback(async () => {
     if (!selectedChat) return;
 
@@ -3466,49 +3512,7 @@ export default function WhatsAppInboxScreen() {
           }
         }
       } else {
-        if (textSegments.length === 0) {
-          return;
-        }
-
-        let hadSuccessfulSend = false;
-
-        for (const segment of textSegments) {
-          const optimisticMessage = buildOptimisticOutgoingMessage({
-            chat: selectedChat,
-            messageType: 'text',
-            textContent: segment,
-          });
-
-          appendLocalOutgoingMessage(optimisticMessage, {
-            kind: 'text',
-            text: segment,
-          });
-          applyOptimisticChatSummary(selectedChat, segment, optimisticMessage.message_at);
-
-          try {
-            const sendResult = await commWhatsAppService.sendTextMessage(selectedChat.external_chat_id, segment);
-            hadSuccessfulSend = true;
-            patchLocalOutgoingMessage(optimisticMessage.id, {
-              external_message_id: sendResult.messageId,
-              delivery_status: sendResult.status,
-              status_updated_at: new Date().toISOString(),
-              error_message: null,
-            });
-            localOutgoingRetryPayloadRef.current.delete(optimisticMessage.id);
-          } catch (error) {
-            const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
-            patchLocalOutgoingMessage(optimisticMessage.id, {
-              delivery_status: 'failed',
-              status_updated_at: new Date().toISOString(),
-              error_message: message,
-            });
-          }
-        }
-
-        if (hadSuccessfulSend) {
-          hydratedChatsRef.current.add(selectedChat.external_chat_id);
-          await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
-        }
+        await sendTextSegments(selectedChat, textSegments);
       }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
@@ -3521,7 +3525,7 @@ export default function WhatsAppInboxScreen() {
       setMediaUploadProgress(null);
       mediaUploadAbortControllerRef.current = null;
     }
-  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, resetComposerAfterQueue, selectedChat, sendDisabledReason]);
+  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, messageDraft, patchLocalOutgoingMessage, pendingAttachments, resetComposerAfterQueue, selectedChat, sendDisabledReason, sendTextSegments]);
 
   useEffect(() => {
     if (!voiceAttachment) {
@@ -4339,36 +4343,33 @@ export default function WhatsAppInboxScreen() {
     void handleGenerateFollowUp(followUpCustomInstructions);
   }, [followUpCustomInstructions, handleGenerateFollowUp]);
 
-  const handleApplyFollowUpDraft = useCallback(() => {
-    const nextValue = followUpDraft.trim();
-    if (!nextValue) {
+  const handleSendFollowUpDraft = useCallback(async () => {
+    if (!selectedChat) {
       return;
     }
 
-    if (messageDraft.trim() && messageDraft.trim() !== nextValue) {
-      const confirmed = window.confirm('O texto atual do composer será substituído pela sugestão do follow-up. Deseja continuar?');
-      if (!confirmed) {
-        return;
-      }
+    const textSegments = splitWhatsAppMessageSegments(followUpDraft);
+    if (textSegments.length === 0) {
+      return;
     }
 
-    const nextCursor = nextValue.length;
-    setMessageDraft(nextValue);
-    setComposerSelection({ start: nextCursor, end: nextCursor });
-    setDismissedQuickReplyKey(null);
-    setQuickReplyActiveIndex(0);
-    handleCloseFollowUpModal();
+    if (sendDisabledReason) {
+      toast.error(sendDisabledReason);
+      return;
+    }
 
-    requestAnimationFrame(() => {
-      const target = composerTextareaRef.current;
-      if (!target) {
-        return;
-      }
+    setSending(true);
 
-      target.focus();
-      target.setSelectionRange(nextCursor, nextCursor);
-    });
-  }, [followUpDraft, handleCloseFollowUpModal, messageDraft]);
+    try {
+      await sendTextSegments(selectedChat, textSegments);
+      handleCloseFollowUpModal();
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao enviar follow-up', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o follow-up.');
+    } finally {
+      setSending(false);
+    }
+  }, [followUpDraft, handleCloseFollowUpModal, selectedChat, sendDisabledReason, sendTextSegments]);
 
   const handleComposerSubmit = () => {
     if (sending || generatingFollowUp) return;
@@ -5291,13 +5292,14 @@ export default function WhatsAppInboxScreen() {
         <WhatsAppFollowUpModal
           isOpen={followUpModalOpen}
           generating={generatingFollowUp}
+          submitting={sending}
           value={followUpDraft}
           customInstructions={followUpCustomInstructions}
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}
           onGenerate={handleRegenerateFollowUp}
-          onApply={handleApplyFollowUpDraft}
+          onSend={handleSendFollowUpDraft}
         />
 
         {statusReminderLead ? (

@@ -172,6 +172,45 @@ const formatMessageTime = (value?: string | null) => {
   }).format(date);
 };
 
+const getMessageDayKey = (value?: string | null) => {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
+const formatMessageDaySeparatorLabel = (value?: string | null) => {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const targetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diffDays = Math.round((todayStart.getTime() - targetDay.getTime()) / (24 * 60 * 60 * 1000));
+
+  if (diffDays === 0) {
+    return 'Hoje';
+  }
+
+  if (diffDays === 1) {
+    return 'Ontem';
+  }
+
+  if (diffDays > 1 && diffDays < 7) {
+    return new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(date);
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+};
+
 const formatConnectionStatusLabel = (value?: string | null) => {
   const normalized = String(value ?? '').trim().toUpperCase();
 
@@ -1150,6 +1189,33 @@ export default function WhatsAppInboxScreen() {
   const activeQuickReplyKey = activeQuickReplyMatch
     ? `${activeQuickReplyMatch.start}:${activeQuickReplyMatch.query}`
     : null;
+  const messageTimelineItems = useMemo(() => {
+    const items: Array<
+      | { type: 'day'; key: string; label: string }
+      | { type: 'message'; key: string; message: CommWhatsAppMessage }
+    > = [];
+    let previousDayKey = '';
+
+    for (const message of messages) {
+      const dayKey = getMessageDayKey(message.message_at);
+      if (dayKey && dayKey !== previousDayKey) {
+        items.push({
+          type: 'day',
+          key: `day:${dayKey}`,
+          label: formatMessageDaySeparatorLabel(message.message_at),
+        });
+        previousDayKey = dayKey;
+      }
+
+      items.push({
+        type: 'message',
+        key: `message:${message.id}`,
+        message,
+      });
+    }
+
+    return items;
+  }, [messages]);
   const filteredQuickReplyOptions = useMemo(() => {
     if (!activeQuickReplyMatch) {
       return [];
@@ -3353,25 +3419,43 @@ export default function WhatsAppInboxScreen() {
                     Nenhuma mensagem carregada para esta conversa.
                   </div>
                 ) : (
-                  messages.map((message) => (
-                    <div key={message.id} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
-                        <WhatsAppMessageBody
-                          message={message}
-                          onOpenImage={setLightboxMedia}
-                          onTranscribe={(target) => void handleTranscribeMessage(target)}
-                          transcribing={transcribingMessageId === message.id}
-                        />
-                        <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium">
-                          <span>{formatMessageTime(message.message_at)}</span>
-                          {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
-                          {message.direction === 'outbound' && ['image', 'video', 'document', 'audio', 'voice'].includes(message.message_type) && message.delivery_status === 'failed' && message.media_id ? (
-                            <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
-                          ) : null}
+                  messageTimelineItems.map((item) => {
+                    if (item.type === 'day') {
+                      return (
+                        <div key={item.key} className="flex w-full justify-center py-1">
+                          <div className="rounded-full border px-3 py-1 text-[12px] font-semibold shadow-sm" style={{
+                            borderColor: 'rgba(212, 192, 167, 0.56)',
+                            background: 'color-mix(in srgb, var(--panel-surface,#fffdfa) 82%, rgba(26,18,13,0.18) 18%)',
+                            color: 'var(--panel-text-soft,#5b4635)',
+                          }}>
+                            {item.label}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const { message } = item;
+
+                    return (
+                      <div key={item.key} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
+                        <div className={`max-w-[80%] rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
+                          <WhatsAppMessageBody
+                            message={message}
+                            onOpenImage={setLightboxMedia}
+                            onTranscribe={(target) => void handleTranscribeMessage(target)}
+                            transcribing={transcribingMessageId === message.id}
+                          />
+                          <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium">
+                            <span>{formatMessageTime(message.message_at)}</span>
+                            {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
+                            {message.direction === 'outbound' && ['image', 'video', 'document', 'audio', 'voice'].includes(message.message_type) && message.delivery_status === 'failed' && message.media_id ? (
+                              <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
+                            ) : null}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 

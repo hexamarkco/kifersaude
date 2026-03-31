@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import {
   AlertCircle,
   ArrowUpRight,
@@ -10,10 +10,10 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Circle,
   Clock3,
   ExternalLink,
   Loader2,
+  MessageCircle,
   Plus,
   RefreshCw,
   Search,
@@ -48,7 +48,6 @@ import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadRemi
 import { supabase, type CommWhatsAppChat, type Contract, type Lead, type Reminder, fetchAllPages } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
 
-type AgendaStatusFilter = 'nao-lidos' | 'todos' | 'lidos';
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -58,16 +57,19 @@ type WhatsAppAgendaModalProps = {
   canEdit: boolean;
   onOpenLeadInCrm?: () => void;
   onGenerateFollowUp?: () => void;
+  onOpenLeadChat?: (lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone'>) => Promise<void> | void;
+};
+
+type SchedulerDraft = {
+  lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
+  promptMessage: string;
+  defaultTitle?: string;
+  defaultDescription?: string;
+  defaultType?: 'Retorno' | 'Follow-up' | 'Outro';
+  defaultPriority?: 'normal' | 'alta' | 'baixa';
 };
 
 const RELATED_ENTITY_BATCH_SIZE = 80;
-
-const PRIORITY_OPTIONS = [
-  { value: 'all', label: 'Todas prioridades' },
-  { value: 'alta', label: 'Alta' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'baixa', label: 'Baixa' },
-] as const;
 
 const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
   if (items.length === 0 || batchSize <= 0) {
@@ -128,17 +130,28 @@ const fetchLeadsByIds = async (ids: Array<string | undefined>) => {
   return results.flat();
 };
 
-const getDefaultMonth = () => {
-  const date = new Date();
-  date.setDate(1);
-  date.setHours(0, 0, 0, 0);
-  return date;
-};
-
 const getDefaultSelectedDate = () => {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
   return date;
+};
+
+const formatDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateInputValue = (value: string) => {
+  const [year, month, day] = value.split('-').map((item) => Number(item));
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day);
+  date.setHours(0, 0, 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
 };
 
 const buildContextualLead = (
@@ -165,16 +178,14 @@ export default function WhatsAppAgendaModal({
   canEdit,
   onOpenLeadInCrm,
   onGenerateFollowUp,
+  onOpenLeadChat,
 }: WhatsAppAgendaModalProps) {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [statusFilter, setStatusFilter] = useState<AgendaStatusFilter>('nao-lidos');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [currentMonth, setCurrentMonth] = useState(getDefaultMonth);
   const [selectedDate, setSelectedDate] = useState(getDefaultSelectedDate);
   const [leadsMap, setLeadsMap] = useState<Map<string, Lead>>(new Map());
   const [contractsMap, setContractsMap] = useState<Map<string, Contract>>(new Map());
@@ -184,12 +195,14 @@ export default function WhatsAppAgendaModal({
     reminderId: string;
     daysAhead: 1 | 2;
   } | null>(null);
-  const [reschedulingReminderId, setReschedulingReminderId] = useState<string | null>(null);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [savingTask, setSavingTask] = useState(false);
-  const [directSchedulerOpen, setDirectSchedulerOpen] = useState(false);
+  const [schedulerDraft, setSchedulerDraft] = useState<SchedulerDraft | null>(null);
+  const [openingLeadChatId, setOpeningLeadChatId] = useState<string | null>(null);
+  const [onlyCurrentLead, setOnlyCurrentLead] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
@@ -281,9 +294,9 @@ export default function WhatsAppAgendaModal({
       return;
     }
 
-    setCurrentMonth(getDefaultMonth());
     setSelectedDate(getDefaultSelectedDate());
-    setReschedulingReminderId(null);
+    setOnlyCurrentLead(false);
+    setShowCompleted(false);
     void loadReminders({ showLoading: true });
 
     const channel = supabase
@@ -314,6 +327,14 @@ export default function WhatsAppAgendaModal({
       supabase.removeChannel(channel);
     };
   }, [isOpen, loadReminders]);
+
+  useEffect(() => {
+    if (currentLead) {
+      return;
+    }
+
+    setOnlyCurrentLead(false);
+  }, [currentLead]);
 
   const fetchLeadInfo = useCallback(
     async (leadId: string) => {
@@ -691,60 +712,82 @@ export default function WhatsAppAgendaModal({
     }
   }, [getLeadIdForReminder, requestConfirmation, updateLeadNextReturnDate]);
 
-  const handleRescheduleReminder = useCallback(async (reminderId: string, newDate: Date) => {
-    try {
-      const reminder = reminders.find((item) => item.id === reminderId);
-      if (!reminder) {
-        return;
-      }
-
-      const reminderDateTime = new Date(reminder.data_lembrete);
-      const newDateTime = new Date(newDate);
-      newDateTime.setHours(reminderDateTime.getHours(), reminderDateTime.getMinutes(), 0, 0);
-      const newDateIso = newDateTime.toISOString();
-
-      pendingRefreshIdsRef.current.add(reminderId);
-      const { error: updateError } = await supabase
-        .from('reminders')
-        .update({ data_lembrete: newDateIso })
-        .eq('id', reminderId);
-
-      if (updateError) {
-        pendingRefreshIdsRef.current.delete(reminderId);
-        throw updateError;
-      }
-
-      const leadId = getLeadIdForReminder(reminder);
-      if (leadId) {
-        await updateLeadNextReturnDate(leadId);
-      }
-
-      setReminders((current) =>
-        current.map((item) =>
-          item.id === reminderId
-            ? {
-                ...item,
-                data_lembrete: newDateIso,
-              }
-            : item,
-        ),
-      );
-      setReschedulingReminderId(null);
-      toast.success('Item reagendado com sucesso.');
-    } catch (rescheduleError) {
-      console.error('[WhatsAppAgendaModal] erro ao reagendar:', rescheduleError);
-      toast.error('Nao foi possivel reagendar o item.');
-    }
-  }, [getLeadIdForReminder, reminders, updateLeadNextReturnDate]);
-
-  const handleDayClick = useCallback(async (date: Date) => {
-    if (reschedulingReminderId) {
-      await handleRescheduleReminder(reschedulingReminderId, date);
+  const handleOpenReminderChat = useCallback(async (reminder: Reminder) => {
+    if (!onOpenLeadChat) {
       return;
     }
 
-    setSelectedDate(date);
-  }, [handleRescheduleReminder, reschedulingReminderId]);
+    const leadId = getLeadIdForReminder(reminder);
+    if (!leadId) {
+      toast.error('Este item nao tem lead vinculado para abrir o chat.');
+      return;
+    }
+
+    const cachedLead = leadsMap.get(leadId);
+    const leadInfo = cachedLead ?? (await fetchLeadInfo(leadId));
+    if (!leadInfo) {
+      toast.error('Nao foi possivel localizar os dados do lead deste item.');
+      return;
+    }
+
+    setOpeningLeadChatId(leadId);
+
+    try {
+      await onOpenLeadChat({
+        id: leadInfo.id,
+        nome_completo: leadInfo.nome_completo,
+        telefone: leadInfo.telefone,
+      });
+      onClose();
+    } catch (openError) {
+      console.error('[WhatsAppAgendaModal] erro ao abrir chat do lead:', openError);
+      toast.error('Nao foi possivel abrir o chat deste lead.');
+    } finally {
+      setOpeningLeadChatId(null);
+    }
+  }, [fetchLeadInfo, getLeadIdForReminder, leadsMap, onClose, onOpenLeadChat]);
+
+  const handleOpenScheduler = useCallback(async (reminder?: Reminder) => {
+    if (reminder) {
+      const leadId = getLeadIdForReminder(reminder);
+      if (!leadId) {
+        toast.error('Este item nao possui lead para receber um novo lembrete.');
+        return;
+      }
+
+      const cachedLead = leadsMap.get(leadId);
+      const leadInfo = cachedLead ?? (await fetchLeadInfo(leadId));
+      if (!leadInfo) {
+        toast.error('Nao foi possivel carregar o lead deste item.');
+        return;
+      }
+
+      setSchedulerDraft({
+        lead: {
+          id: leadInfo.id,
+          nome_completo: leadInfo.nome_completo,
+          telefone: leadInfo.telefone,
+          responsavel: leadInfo.responsavel,
+        },
+        promptMessage: 'Agende o proximo lembrete deste lead sem sair do inbox.',
+        defaultTitle: reminder.titulo,
+        defaultDescription: reminder.descricao ?? undefined,
+        defaultType: 'Follow-up',
+        defaultPriority: isReminderPriority(reminder.prioridade) ? reminder.prioridade : 'normal',
+      });
+      return;
+    }
+
+    if (!contextualLead) {
+      return;
+    }
+
+    setSchedulerDraft({
+      lead: contextualLead,
+      promptMessage: 'Agende o proximo lembrete do lead vinculado a esta conversa.',
+      defaultType: 'Follow-up',
+    });
+  }, [contextualLead, fetchLeadInfo, getLeadIdForReminder, leadsMap]);
 
   const closeAddTaskModal = useCallback(() => {
     setIsAddTaskModalOpen(false);
@@ -752,7 +795,7 @@ export default function WhatsAppAgendaModal({
     setNewTaskDescription('');
   }, []);
 
-  const handleAddTask = useCallback(async (event: React.FormEvent) => {
+  const handleAddTask = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!newTaskTitle.trim()) {
@@ -829,19 +872,11 @@ export default function WhatsAppAgendaModal({
 
     return reminders
       .filter((reminder) => {
-        if (statusFilter === 'nao-lidos' && reminder.lido) {
-          return false;
-        }
-
-        if (statusFilter === 'lidos' && !reminder.lido) {
+        if (onlyCurrentLead && !currentLeadMatchesReminder(reminder)) {
           return false;
         }
 
         if (typeFilter !== 'all' && reminder.tipo !== typeFilter) {
-          return false;
-        }
-
-        if (priorityFilter !== 'all' && reminder.prioridade !== priorityFilter) {
           return false;
         }
 
@@ -858,98 +893,7 @@ export default function WhatsAppAgendaModal({
           .some((value) => value!.toLowerCase().includes(normalizedQuery));
       })
       .sort(compareRemindersByDueAtThenAlphabetical);
-  }, [compareRemindersByDueAtThenAlphabetical, contractsMap, getLeadIdForReminder, leadsMap, priorityFilter, reminders, searchQuery, statusFilter, typeFilter]);
-
-  const handleMarkAllFilteredAsRead = useCallback(async () => {
-    const unreadFiltered = filteredReminders.filter((item) => !item.lido);
-
-    if (unreadFiltered.length === 0) {
-      return;
-    }
-
-    const confirmed = await requestConfirmation({
-      title: 'Marcar filtros como lidos',
-      description: `Deseja marcar ${unreadFiltered.length} item(ns) filtrado(s) como lido(s)?`,
-      confirmLabel: 'Marcar como lidos',
-      cancelLabel: 'Cancelar',
-    });
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const completionDate = new Date().toISOString();
-      unreadFiltered.forEach((item) => pendingRefreshIdsRef.current.add(item.id));
-
-      const { error: updateError } = await supabase
-        .from('reminders')
-        .update({
-          lido: true,
-          concluido_em: completionDate,
-        })
-        .in('id', unreadFiltered.map((item) => item.id));
-
-      if (updateError) {
-        unreadFiltered.forEach((item) => pendingRefreshIdsRef.current.delete(item.id));
-        throw updateError;
-      }
-
-      const leadIds = Array.from(
-        new Set(
-          unreadFiltered
-            .map((item) => getLeadIdForReminder(item))
-            .filter((leadId): leadId is string => Boolean(leadId)),
-        ),
-      );
-
-      await Promise.all(leadIds.map((leadId) => updateLeadNextReturnDate(leadId)));
-
-      setReminders((current) =>
-        current.map((item) =>
-          unreadFiltered.some((candidate) => candidate.id === item.id)
-            ? {
-                ...item,
-                lido: true,
-                concluido_em: completionDate,
-              }
-            : item,
-        ),
-      );
-
-      toast.success('Itens filtrados marcados como lidos.');
-    } catch (updateError) {
-      console.error('[WhatsAppAgendaModal] erro ao marcar filtros como lidos:', updateError);
-      toast.error('Nao foi possivel atualizar os itens filtrados.');
-    }
-  }, [filteredReminders, getLeadIdForReminder, requestConfirmation, updateLeadNextReturnDate]);
-
-  const filteredMonthReminders = useMemo(() => {
-    const currentMonthKey = `${currentMonth.getFullYear()}-${currentMonth.getMonth()}`;
-
-    return filteredReminders.filter((reminder) => {
-      const reminderDate = new Date(reminder.data_lembrete);
-      if (Number.isNaN(reminderDate.getTime())) {
-        return false;
-      }
-
-      return `${reminderDate.getFullYear()}-${reminderDate.getMonth()}` === currentMonthKey;
-    });
-  }, [currentMonth, filteredReminders]);
-
-  const remindersByDay = useMemo(() => {
-    const map = new Map<string, Reminder[]>();
-
-    filteredMonthReminders.forEach((reminder) => {
-      const dateKey = getDateKey(reminder.data_lembrete);
-      const items = map.get(dateKey) ?? [];
-      items.push(reminder);
-      items.sort(compareRemindersByDueAtThenAlphabetical);
-      map.set(dateKey, items);
-    });
-
-    return map;
-  }, [compareRemindersByDueAtThenAlphabetical, filteredMonthReminders]);
+  }, [compareRemindersByDueAtThenAlphabetical, contractsMap, currentLeadMatchesReminder, getLeadIdForReminder, leadsMap, onlyCurrentLead, reminders, searchQuery, typeFilter]);
 
   const selectedDateKey = getDateKey(selectedDate);
   const selectedDateReminders = useMemo(
@@ -958,11 +902,18 @@ export default function WhatsAppAgendaModal({
   );
   const pendingSelectedReminders = selectedDateReminders.filter((item) => !item.lido);
   const completedSelectedReminders = selectedDateReminders.filter((item) => item.lido);
-  const pendingFilteredCount = filteredReminders.filter((item) => !item.lido).length;
-  const completedFilteredCount = filteredReminders.filter((item) => item.lido).length;
-  const overdueFilteredCount = filteredReminders.filter((item) => isOverdue(item.data_lembrete) && !item.lido).length;
-  const taskFilteredCount = filteredReminders.filter((item) => item.tipo === 'Tarefa').length;
-  const hasActiveFilters = [statusFilter !== 'todos', typeFilter !== 'all', priorityFilter !== 'all', searchQuery.trim() !== ''].filter(Boolean).length;
+  const overdueReminders = useMemo(
+    () => filteredReminders.filter((item) => !item.lido && isOverdue(item.data_lembrete) && getDateKey(item.data_lembrete) !== selectedDateKey),
+    [filteredReminders, selectedDateKey],
+  );
+  const visiblePendingReminders = useMemo(() => {
+    const next = new Map<string, Reminder>();
+    [...overdueReminders, ...pendingSelectedReminders].forEach((reminder) => {
+      next.set(reminder.id, reminder);
+    });
+    return Array.from(next.values());
+  }, [overdueReminders, pendingSelectedReminders]);
+  const hasActiveFilters = [typeFilter !== 'all', searchQuery.trim() !== '', onlyCurrentLead].filter(Boolean).length;
 
   const lastUpdatedLabel = lastUpdated
     ? `Atualizado em ${lastUpdated.toLocaleDateString('pt-BR')} às ${lastUpdated.toLocaleTimeString('pt-BR', {
@@ -976,28 +927,107 @@ export default function WhatsAppAgendaModal({
     month: 'long',
     year: 'numeric',
   });
+  const selectedDateInputValue = formatDateInputValue(selectedDate);
+  const isSelectedDateToday = selectedDateKey === getDateKey(getDefaultSelectedDate());
 
   const goToToday = () => {
-    const today = getDefaultSelectedDate();
-    setSelectedDate(today);
-    setCurrentMonth(getDefaultMonth());
-    setReschedulingReminderId(null);
+    setSelectedDate(getDefaultSelectedDate());
   };
 
-  const goToPreviousMonth = () => {
-    setCurrentMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+  const goToPreviousDay = () => {
+    setSelectedDate((current) => {
+      const next = new Date(current);
+      next.setDate(next.getDate() - 1);
+      next.setHours(0, 0, 0, 0);
+      return next;
+    });
   };
 
-  const goToNextMonth = () => {
-    setCurrentMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+  const goToNextDay = () => {
+    setSelectedDate((current) => {
+      const next = new Date(current);
+      next.setDate(next.getDate() + 1);
+      next.setHours(0, 0, 0, 0);
+      return next;
+    });
+  };
+
+  const handleSelectedDateChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const parsedDate = parseDateInputValue(event.target.value);
+    if (!parsedDate) {
+      return;
+    }
+
+    setSelectedDate(parsedDate);
   };
 
   const clearFilters = () => {
     setSearchQuery('');
     setTypeFilter('all');
-    setPriorityFilter('all');
-    setStatusFilter('todos');
+    setOnlyCurrentLead(false);
   };
+
+  const handleMarkVisiblePendingAsRead = useCallback(async () => {
+    if (visiblePendingReminders.length === 0) {
+      return;
+    }
+
+    const confirmed = await requestConfirmation({
+      title: 'Marcar itens visiveis como lidos',
+      description: `Deseja concluir ${visiblePendingReminders.length} item(ns) mostrado(s) na rotina atual?`,
+      confirmLabel: 'Concluir itens',
+      cancelLabel: 'Cancelar',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const completionDate = new Date().toISOString();
+      visiblePendingReminders.forEach((item) => pendingRefreshIdsRef.current.add(item.id));
+
+      const { error: updateError } = await supabase
+        .from('reminders')
+        .update({
+          lido: true,
+          concluido_em: completionDate,
+        })
+        .in('id', visiblePendingReminders.map((item) => item.id));
+
+      if (updateError) {
+        visiblePendingReminders.forEach((item) => pendingRefreshIdsRef.current.delete(item.id));
+        throw updateError;
+      }
+
+      const leadIds = Array.from(
+        new Set(
+          visiblePendingReminders
+            .map((item) => getLeadIdForReminder(item))
+            .filter((leadId): leadId is string => Boolean(leadId)),
+        ),
+      );
+
+      await Promise.all(leadIds.map((leadId) => updateLeadNextReturnDate(leadId)));
+
+      setReminders((current) =>
+        current.map((item) =>
+          visiblePendingReminders.some((candidate) => candidate.id === item.id)
+            ? {
+                ...item,
+                lido: true,
+                concluido_em: completionDate,
+              }
+            : item,
+        ),
+      );
+
+      toast.success('Itens visiveis marcados como lidos.');
+    } catch (updateError) {
+      console.error('[WhatsAppAgendaModal] erro ao concluir itens visiveis:', updateError);
+      toast.error('Nao foi possivel atualizar os itens visiveis.');
+    }
+  }, [getLeadIdForReminder, requestConfirmation, updateLeadNextReturnDate, visiblePendingReminders]);
 
   const getReminderPriorityStyle = (priority: string) => {
     const tones = {
@@ -1065,98 +1095,15 @@ export default function WhatsAppAgendaModal({
     return PANEL_INSET_STYLE;
   };
 
-  const renderCalendar = () => {
-    const cells = [];
-    const firstWeekday = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
-    const totalDays = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-    const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
-
-    for (let index = 0; index < firstWeekday; index += 1) {
-      cells.push(<div key={`empty-${index}`} className="aspect-square" />);
-    }
-
-    for (let day = 1; day <= totalDays; day += 1) {
-      const cellDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-      const dayKey = getDateKey(cellDate);
-      const dayReminders = remindersByDay.get(dayKey) ?? [];
-      const pendingCount = dayReminders.filter((item) => !item.lido).length;
-      const doneCount = dayReminders.filter((item) => item.lido).length;
-      const totalCount = dayReminders.length;
-      const isToday = getDateKey(new Date()) === dayKey;
-      const isSelected = selectedDateKey === dayKey;
-
-      cells.push(
-        <button
-          key={day}
-          type="button"
-          onClick={() => {
-            void handleDayClick(cellDate);
-          }}
-          className="aspect-square rounded-[1.1rem] border p-2 text-left transition-all focus:outline-none focus:ring-2 focus:ring-offset-2"
-          style={{
-            ...(isSelected
-              ? { ...PANEL_INSET_STYLE, ...getPanelToneStyle('accent') }
-              : isToday
-                ? { ...PANEL_INSET_STYLE, ...getPanelToneStyle('neutral') }
-                : totalCount > 0
-                  ? PANEL_INSET_STYLE
-                  : PANEL_MUTED_INSET_STYLE),
-            outlineColor: 'var(--panel-focus,#c86f1d)',
-          }}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-semibold">{day}</span>
-            {totalCount > 0 && (
-              <span
-                className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
-                style={isSelected ? getPanelToneStyle('neutral') : getPanelToneStyle('accent')}
-              >
-                {totalCount}
-              </span>
-            )}
-          </div>
-          <div className="mt-auto space-y-1 text-[10px] font-semibold">
-            {pendingCount > 0 && (
-              <div className="flex items-center gap-1" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }}>
-                <Circle className="h-3 w-3" />
-                <span>{pendingCount}</span>
-              </div>
-            )}
-            {doneCount > 0 && (
-              <div className="flex items-center gap-1" style={{ color: 'var(--panel-accent-green-text,#275c39)' }}>
-                <CheckCircle2 className="h-3 w-3" />
-                <span>{doneCount}</span>
-              </div>
-            )}
-          </div>
-        </button>,
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-7 gap-2">
-        {weekDays.map((day) => (
-          <div
-            key={day}
-            className="text-center text-xs font-semibold uppercase tracking-wide"
-            style={{ color: 'var(--panel-text-muted,#876f5c)' }}
-          >
-            {day}
-          </div>
-        ))}
-        {cells}
-      </div>
-    );
-  };
-
   const renderReminderCard = (reminder: Reminder) => {
     const leadId = getLeadIdForReminder(reminder);
     const contract = reminder.contract_id ? contractsMap.get(reminder.contract_id) : undefined;
     const leadInfo = leadId ? leadsMap.get(leadId) : undefined;
     const hasLeadPhone = Boolean(leadInfo?.telefone);
-    const overdue = isOverdue(reminder.data_lembrete);
+    const overdue = isOverdue(reminder.data_lembrete) && !reminder.lido;
     const isQuickSchedulingCurrentReminder = quickSchedulingAction?.reminderId === reminder.id;
     const matchesCurrentLead = currentLeadMatchesReminder(reminder);
+    const isOpeningChat = leadId ? openingLeadChatId === leadId : false;
 
     return (
       <article
@@ -1164,214 +1111,179 @@ export default function WhatsAppAgendaModal({
         className="panel-glass-lite rounded-[1.35rem] border p-4 shadow-sm transition-all"
         style={getReminderCardStyle(reminder)}
       >
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="rounded-[1rem] border p-3" style={reminder.lido ? getPanelToneStyle('success') : getReminderTypeStyle(reminder.tipo)}>
-            {getReminderIcon(reminder.tipo)}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="rounded-[1rem] border p-3" style={reminder.lido ? getPanelToneStyle('success') : getReminderTypeStyle(reminder.tipo)}>
+                {getReminderIcon(reminder.tipo)}
+              </div>
+
+              <div className="min-w-0 flex-1 space-y-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                      {reminder.titulo}
+                    </h3>
+                    {overdue ? (
+                      <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('danger')}>
+                        Atrasado
+                      </span>
+                    ) : null}
+                    {matchesCurrentLead ? (
+                      <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('accent')}>
+                        Chat atual
+                      </span>
+                    ) : null}
+                    {reminder.lido ? (
+                      <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('success')}>
+                        Concluido
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {leadInfo?.nome_completo ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle('neutral')}>
+                        {leadInfo.nome_completo}
+                      </span>
+                    ) : null}
+                    {contract?.codigo_contrato ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle('info')}>
+                        Contrato {contract.codigo_contrato}
+                      </span>
+                    ) : null}
+                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getReminderTypeStyle(reminder.tipo)}>
+                      {reminder.tipo}
+                    </span>
+                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getReminderPriorityStyle(reminder.prioridade)}>
+                      {reminder.prioridade}
+                    </span>
+                    {reminder.tempo_estimado_minutos ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('info')}>
+                        <Timer className="h-3 w-3" />
+                        <span>{formatEstimatedTime(reminder.tempo_estimado_minutos)}</span>
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {reminder.descricao ? (
+                    <p className="mt-2 text-sm leading-6" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                      {reminder.descricao}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
+                  </div>
+                  {hasLeadPhone ? (
+                    <div className="flex items-center gap-1">
+                      <MessageCircle className="h-4 w-4" />
+                      <span>{formatCommWhatsAppPhoneLabel(leadInfo?.telefone ?? '')}</span>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="min-w-0 flex-1 space-y-3">
-            <div>
-              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3">
-                <h3 className="text-base font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                  {reminder.titulo}
-                </h3>
-                {leadInfo?.nome_completo ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle('neutral')}>
-                    {leadInfo.nome_completo}
-                  </span>
-                ) : null}
-                {contract?.codigo_contrato ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle('info')}>
-                    Contrato {contract.codigo_contrato}
-                  </span>
-                ) : null}
-              </div>
-              {reminder.descricao ? (
-                <p className="mt-1 text-sm" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
-                  {reminder.descricao}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getReminderPriorityStyle(reminder.prioridade)}>
-                {reminder.prioridade}
-              </span>
-              <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getReminderTypeStyle(reminder.tipo)}>
-                {reminder.tipo}
-              </span>
-              {reminder.tempo_estimado_minutos ? (
-                <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('info')}>
-                  <Timer className="h-3 w-3" />
-                  <span>{formatEstimatedTime(reminder.tempo_estimado_minutos)}</span>
-                </span>
-              ) : null}
-              {overdue && !reminder.lido ? (
-                <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('danger')}>
-                  Atrasado
-                </span>
-              ) : null}
-              {matchesCurrentLead ? (
-                <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold" style={getPanelToneStyle('accent')}>
-                  Chat atual
-                </span>
-              ) : null}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
-              </div>
-            </div>
-
-            <div className="flex w-full flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 lg:max-w-[340px] lg:justify-end">
+            {onOpenLeadChat && leadId ? (
               <Button
-                onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)}
-                disabled={!hasLeadPhone}
-                variant="soft"
-                size="icon"
-                className="h-9 w-9"
-                title={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone nao disponivel'}
-                aria-label={hasLeadPhone ? 'Abrir WhatsApp oficial' : 'Telefone nao disponivel'}
+                onClick={() => void handleOpenReminderChat(reminder)}
+                variant={matchesCurrentLead ? 'primary' : 'secondary'}
+                size="sm"
+                loading={isOpeningChat}
+                disabled={isOpeningChat}
               >
-                <ExternalLink className="h-4 w-4" />
+                {!isOpeningChat && <MessageCircle className="h-4 w-4" />}
+                {matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
               </Button>
+            ) : null}
 
-              {onOpenLeadInCrm && leadId ? (
+            {canEdit ? (
+              <Button
+                onClick={() => void handleMarkAsRead(reminder.id, reminder.lido)}
+                variant={reminder.lido ? 'secondary' : 'soft'}
+                size="sm"
+              >
+                <Check className="h-4 w-4" />
+                {reminder.lido ? 'Reabrir' : 'Concluir'}
+              </Button>
+            ) : null}
+
+            {canEdit && leadId ? (
+              <Button onClick={() => void handleOpenScheduler(reminder)} variant="secondary" size="sm">
+                <CalendarPlus className="h-4 w-4" />
+                Novo lembrete
+              </Button>
+            ) : null}
+
+            {!reminder.lido && canEdit ? (
+              <>
                 <Button
-                  onClick={onOpenLeadInCrm}
-                  variant="secondary"
-                  size="icon"
-                  className="h-9 w-9"
-                  title="Abrir CRM"
-                  aria-label="Abrir CRM"
+                  onClick={() => void handleQuickSchedule(reminder, 1)}
+                  disabled={isQuickSchedulingCurrentReminder}
+                  variant="ghost"
+                  size="sm"
                 >
-                  <ArrowUpRight className="h-4 w-4" />
+                  {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? <Loader2 className="h-4 w-4 animate-spin" /> : '+1'}
+                  dia util
                 </Button>
-              ) : null}
-
-              {matchesCurrentLead && onGenerateFollowUp ? (
                 <Button
-                  onClick={() => {
-                    onClose();
-                    onGenerateFollowUp();
-                  }}
-                  variant="warning"
-                  size="icon"
-                  className="h-9 w-9"
-                  title="Gerar follow-up no chat atual"
-                  aria-label="Gerar follow-up no chat atual"
+                  onClick={() => void handleQuickSchedule(reminder, 2)}
+                  disabled={isQuickSchedulingCurrentReminder}
+                  variant="ghost"
+                  size="sm"
                 >
-                  <Sparkles className="h-4 w-4" />
+                  {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? <Loader2 className="h-4 w-4 animate-spin" /> : '+2'}
+                  dias uteis
                 </Button>
-              ) : null}
+              </>
+            ) : null}
 
-              {!reminder.lido && canEdit ? (
-                <>
-                  <Button
-                    onClick={() => void handleQuickSchedule(reminder, 1)}
-                    disabled={isQuickSchedulingCurrentReminder}
-                    variant="primary"
-                    size="icon"
-                    className="h-9 w-9"
-                    title="Agendar +1 dia util e marcar atual como lido"
-                    aria-label="Agendar +1 dia util e marcar atual como lido"
-                  >
-                    {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <span className="relative inline-flex">
-                        <CalendarPlus className="h-4 w-4" />
-                        <span
-                          className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border px-0.5 text-[9px] font-bold leading-none"
-                          style={getPanelToneStyle('neutral')}
-                        >
-                          1
-                        </span>
-                      </span>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={() => void handleQuickSchedule(reminder, 2)}
-                    disabled={isQuickSchedulingCurrentReminder}
-                    variant="primary"
-                    size="icon"
-                    className="h-9 w-9"
-                    title="Agendar +2 dias uteis e marcar atual como lido"
-                    aria-label="Agendar +2 dias uteis e marcar atual como lido"
-                  >
-                    {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <span className="relative inline-flex">
-                        <CalendarPlus className="h-4 w-4" />
-                        <span
-                          className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border px-0.5 text-[9px] font-bold leading-none"
-                          style={getPanelToneStyle('neutral')}
-                        >
-                          2
-                        </span>
-                      </span>
-                    )}
-                  </Button>
-                </>
-              ) : null}
+            {matchesCurrentLead && onGenerateFollowUp ? (
+              <Button
+                onClick={() => {
+                  onClose();
+                  onGenerateFollowUp();
+                }}
+                variant="ghost"
+                size="sm"
+              >
+                <Sparkles className="h-4 w-4" />
+                Follow-up
+              </Button>
+            ) : null}
 
-              {canEdit ? (
-                <Button
-                  onClick={() => void handleMarkAsRead(reminder.id, reminder.lido)}
-                  variant={reminder.lido ? 'secondary' : 'soft'}
-                  size="icon"
-                  className="h-9 w-9"
-                  title={reminder.lido ? 'Marcar como nao lido' : 'Marcar como lido'}
-                  aria-label={reminder.lido ? 'Marcar como nao lido' : 'Marcar como lido'}
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-              ) : null}
+            {!onOpenLeadChat && hasLeadPhone ? (
+              <Button onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)} variant="ghost" size="sm">
+                <ExternalLink className="h-4 w-4" />
+                WhatsApp
+              </Button>
+            ) : null}
 
-              {!reminder.lido && canEdit ? (
-                <Button
-                  onClick={() => setReschedulingReminderId(reminder.id)}
-                  variant="secondary"
-                  size="icon"
-                  className="h-9 w-9"
-                  title="Reagendar item"
-                  aria-label="Reagendar item"
-                >
-                  <Calendar className="h-4 w-4" />
-                </Button>
-              ) : null}
+            {leadId && canEdit ? (
+              <Button
+                onClick={() => void handleMarkLeadAsLost(reminder)}
+                variant="ghost"
+                size="sm"
+                disabled={markingLostLeadId === leadId}
+                loading={markingLostLeadId === leadId}
+              >
+                {markingLostLeadId !== leadId && <X className="h-4 w-4" />}
+                Perdido
+              </Button>
+            ) : null}
 
-              {leadId && canEdit ? (
-                <Button
-                  onClick={() => void handleMarkLeadAsLost(reminder)}
-                  variant="danger"
-                  size="icon"
-                  className="h-9 w-9"
-                  title="Marcar lead como perdido e limpar lembretes"
-                  aria-label="Marcar lead como perdido e limpar lembretes"
-                  disabled={markingLostLeadId === leadId}
-                  loading={markingLostLeadId === leadId}
-                >
-                  {markingLostLeadId !== leadId && <X className="h-4 w-4" />}
-                </Button>
-              ) : null}
-
-              {canEdit ? (
-                <Button
-                  onClick={() => void handleDeleteReminder(reminder)}
-                  variant="danger"
-                  size="icon"
-                  className="h-9 w-9"
-                  title="Excluir item"
-                  aria-label="Excluir item"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              ) : null}
-            </div>
+            {canEdit ? (
+              <Button onClick={() => void handleDeleteReminder(reminder)} variant="ghost" size="sm">
+                <Trash2 className="h-4 w-4" />
+                Excluir
+              </Button>
+            ) : null}
           </div>
         </div>
       </article>
@@ -1410,16 +1322,40 @@ export default function WhatsAppAgendaModal({
           <div className="space-y-5">
             <section className="panel-glass-panel space-y-5 rounded-[1.8rem] border p-5" style={PANEL_SECTION_STYLE}>
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                    Rotina operacional no inbox
-                  </p>
-                  <h2 className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                    Agenda sincronizada
-                  </h2>
-                  <p className="mt-1 max-w-3xl text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                    Consulte e manipule a mesma agenda do painel sem sair do WhatsApp. Os reminders daqui e de /painel/agenda sao exatamente os mesmos.
-                  </p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                      Rotina operacional no inbox
+                    </p>
+                    <h2 className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                      Agenda do dia
+                    </h2>
+                    <p className="mt-1 max-w-3xl text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                      Consulte o que precisa ser tratado agora, abra o chat certo e já conclua ou agende o próximo passo sem sair do inbox.
+                    </p>
+                  </div>
+
+                  {currentLead ? (
+                    <div className="rounded-[1.2rem] border px-4 py-3" style={PANEL_INSET_STYLE}>
+                      <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={getPanelToneStyle('accent')}>
+                          {currentLead.nome_completo}
+                        </span>
+                        {currentChat?.phone_number ? (
+                          <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={PANEL_PILL_STYLE}>
+                            {formatCommWhatsAppPhoneLabel(currentChat.phone_number)}
+                          </span>
+                        ) : null}
+                        <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={getPanelToneStyle('neutral')}>
+                          {selectedDateReminders.filter(currentLeadMatchesReminder).length} item(ns) no dia em foco
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.1rem] border px-4 py-3 text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                      A visão continua global, mas o foco agora é operacional: tarefas do dia, atrasados e ações rápidas por item.
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -1430,76 +1366,83 @@ export default function WhatsAppAgendaModal({
                   <Button variant="secondary" size="icon" onClick={() => void loadReminders({ showLoading: true })} aria-label="Atualizar agenda" title="Atualizar agenda">
                     <RefreshCw className="h-4 w-4" />
                   </Button>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div className="min-w-0 flex-1 space-y-3">
-                  {currentLead ? (
-                    <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                      <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={getPanelToneStyle('accent')}>
-                        {currentLead?.nome_completo}
-                      </span>
-                      {currentChat?.phone_number ? (
-                        <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={PANEL_PILL_STYLE}>
-                          {formatCommWhatsAppPhoneLabel(currentChat.phone_number)}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <div className="rounded-[1.1rem] border px-4 py-3 text-sm" style={PANEL_MUTED_INSET_STYLE}>
-                      A agenda global do WhatsApp continua disponível aqui. Se houver lead vinculado no chat atual, ele aparece destacado nos itens relacionados.
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button onClick={goToToday} variant="secondary" size="md">
-                    Hoje
-                  </Button>
-                  {contextualLead ? (
-                    <Button onClick={() => setDirectSchedulerOpen(true)} variant="primary" size="md" disabled={!canEdit}>
+                  {contextualLead && canEdit ? (
+                    <Button onClick={() => void handleOpenScheduler()} variant="primary" size="md">
                       <Bell className="h-4 w-4" />
                       Agendar lead atual
+                    </Button>
+                  ) : null}
+                  {currentLead && onOpenLeadInCrm ? (
+                    <Button onClick={onOpenLeadInCrm} variant="secondary" size="md">
+                      <ArrowUpRight className="h-4 w-4" />
+                      Abrir CRM
+                    </Button>
+                  ) : null}
+                  {currentLead && onGenerateFollowUp ? (
+                    <Button
+                      onClick={() => {
+                        onClose();
+                        onGenerateFollowUp();
+                      }}
+                      variant="ghost"
+                      size="md"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Gerar follow-up
                     </Button>
                   ) : null}
                   <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" disabled={!canEdit}>
                     <Plus className="h-4 w-4" />
                     Nova tarefa
                   </Button>
-                  {filteredReminders.some((item) => !item.lido) ? (
-                    <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="secondary" size="md" disabled={!canEdit}>
-                      Marcar filtrados como lidos
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                    Dia em foco
+                  </p>
+                  <h3 className="mt-2 text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                    {selectedDateLabel}
+                  </h3>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                    {visiblePendingReminders.length > 0
+                      ? `${visiblePendingReminders.length} pendencia(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
+                      : `Sem pendencias abertas para ${selectedDateLabel.toLowerCase()}.`}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button onClick={goToPreviousDay} variant="secondary" size="icon" aria-label="Dia anterior">
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <div className="w-[176px]">
+                    <Input type="date" value={selectedDateInputValue} onChange={handleSelectedDateChange} />
+                  </div>
+                  <Button onClick={goToNextDay} variant="secondary" size="icon" aria-label="Próximo dia">
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
+                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md">
+                    Hoje
+                  </Button>
+                  {visiblePendingReminders.length > 0 ? (
+                    <Button onClick={() => void handleMarkVisiblePendingAsRead()} variant="secondary" size="md" disabled={!canEdit}>
+                      Marcar visiveis como lidos
                     </Button>
                   ) : null}
                 </div>
               </div>
             </section>
 
-            <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-              {[
-                { label: 'Pendentes', value: pendingFilteredCount, tone: 'accent' as const },
-                { label: 'Concluidos', value: completedFilteredCount, tone: 'success' as const },
-                { label: 'Atrasados', value: overdueFilteredCount, tone: 'danger' as const },
-                { label: 'Tarefas', value: taskFilteredCount, tone: 'neutral' as const },
-              ].map((item) => (
-                <div key={item.label} className="rounded-[1.35rem] border p-4" style={PANEL_INSET_STYLE}>
-                  <div className="text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                    {item.label}
-                  </div>
-                  <div className="mt-2 text-3xl font-bold" style={{ color: getPanelToneStyle(item.tone).color }}>
-                    {item.value}
-                  </div>
-                </div>
-              ))}
-            </section>
-
             <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div className="relative flex-1">
+              <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px_auto_auto]">
+                <div className="relative">
                   <Input
                     type="text"
-                    placeholder="Buscar por titulo, descricao, tipo, lead ou contrato..."
+                    placeholder="Buscar por titulo, descricao, lead ou contrato..."
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     leftIcon={Search}
@@ -1518,36 +1461,21 @@ export default function WhatsAppAgendaModal({
                   ) : null}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_220px]">
-                  <FilterSingleSelect
-                    icon={Tag}
-                    value={typeFilter}
-                    onChange={setTypeFilter}
-                    placeholder="Todos os tipos"
-                    includePlaceholderOption={false}
-                    options={typeOptions}
-                  />
-                  <FilterSingleSelect
-                    icon={AlertCircle}
-                    value={priorityFilter}
-                    onChange={setPriorityFilter}
-                    placeholder="Todas prioridades"
-                    includePlaceholderOption={false}
-                    options={[...PRIORITY_OPTIONS]}
-                  />
-                </div>
-              </div>
+                <FilterSingleSelect
+                  icon={Tag}
+                  value={typeFilter}
+                  onChange={setTypeFilter}
+                  placeholder="Todos os tipos"
+                  includePlaceholderOption={false}
+                  options={typeOptions}
+                />
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <Button onClick={() => setStatusFilter('nao-lidos')} variant={statusFilter === 'nao-lidos' ? 'primary' : 'secondary'} size="md">
-                  Pendentes
-                </Button>
-                <Button onClick={() => setStatusFilter('todos')} variant={statusFilter === 'todos' ? 'primary' : 'secondary'} size="md">
-                  Todos
-                </Button>
-                <Button onClick={() => setStatusFilter('lidos')} variant={statusFilter === 'lidos' ? 'primary' : 'secondary'} size="md">
-                  Concluidos
-                </Button>
+                {currentLead ? (
+                  <Button onClick={() => setOnlyCurrentLead((current) => !current)} variant={onlyCurrentLead ? 'primary' : 'secondary'} size="md">
+                    {onlyCurrentLead ? 'So chat atual' : 'Filtrar chat atual'}
+                  </Button>
+                ) : null}
+
                 {hasActiveFilters > 0 ? (
                   <Button onClick={clearFilters} variant="ghost" size="md">
                     Limpar filtros ({hasActiveFilters})
@@ -1563,86 +1491,6 @@ export default function WhatsAppAgendaModal({
               </div>
             ) : null}
 
-            {reschedulingReminderId ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.1rem] border px-4 py-3 text-sm" style={getPanelToneStyle('accent')}>
-                <span>Selecione um dia no calendario para reagendar o item.</span>
-                <Button onClick={() => setReschedulingReminderId(null)} variant="ghost" size="sm" className="h-auto px-0 hover:bg-transparent">
-                  Cancelar reagendamento
-                </Button>
-              </div>
-            ) : null}
-
-            <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
-              <div className="overflow-hidden rounded-[1.7rem] border" style={PANEL_INSET_STYLE}>
-                <div className="flex items-center justify-between gap-2 px-4 py-3" style={PANEL_MUTED_INSET_STYLE}>
-                  <Button onClick={goToPreviousMonth} variant="icon" size="icon" aria-label="Mes anterior">
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                  <h3 className="text-lg font-semibold capitalize" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                    {currentMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                  </h3>
-                  <Button onClick={goToNextMonth} variant="icon" size="icon" aria-label="Proximo mes">
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="p-4">{renderCalendar()}</div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-1 px-1">
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                    Dia selecionado
-                  </p>
-                  <h3 className="text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                    {selectedDateLabel}
-                  </h3>
-                  <p className="text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                    {selectedDateReminders.length > 0
-                      ? `${selectedDateReminders.length} item(ns) ao todo - ${pendingSelectedReminders.length} pendente(s) e ${completedSelectedReminders.length} concluido(s).`
-                      : emptyStateMessage}
-                  </p>
-                </div>
-
-                <div className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
-                      Pendentes
-                    </h4>
-                    <span className="text-xs font-semibold" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }}>
-                      {pendingSelectedReminders.length}
-                    </span>
-                  </div>
-
-                  {pendingSelectedReminders.length > 0 ? (
-                    <div className="max-h-[54vh] space-y-3 overflow-y-auto pr-1">{pendingSelectedReminders.map(renderReminderCard)}</div>
-                  ) : (
-                    <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
-                      Nenhum item pendente neste dia.
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
-                      Concluidos
-                    </h4>
-                    <span className="text-xs font-semibold" style={{ color: 'var(--panel-accent-green-text,#275c39)' }}>
-                      {completedSelectedReminders.length}
-                    </span>
-                  </div>
-
-                  {completedSelectedReminders.length > 0 ? (
-                    <div className="max-h-[36vh] space-y-3 overflow-y-auto pr-1">{completedSelectedReminders.map(renderReminderCard)}</div>
-                  ) : (
-                    <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
-                      Nenhum item concluido neste dia.
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-
             {filteredReminders.length === 0 ? (
               <div className="rounded-[1.7rem] border py-12 text-center" style={PANEL_EMPTY_STATE_STYLE}>
                 <Bell className="mx-auto mb-4 h-14 w-14" style={{ color: 'var(--panel-text-muted,#876f5c)' }} />
@@ -1653,7 +1501,87 @@ export default function WhatsAppAgendaModal({
                   {emptyStateMessage}
                 </p>
               </div>
-            ) : null}
+            ) : (
+              <div className="space-y-4">
+                {overdueReminders.length > 0 ? (
+                  <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--panel-accent-red-text,#b4534a)' }}>
+                          Atrasados
+                        </p>
+                        <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                          Pendencias de dias anteriores
+                        </h4>
+                      </div>
+                      <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={getPanelToneStyle('danger')}>
+                        {overdueReminders.length}
+                      </span>
+                    </div>
+                    <div className="space-y-3">{overdueReminders.map(renderReminderCard)}</div>
+                  </section>
+                ) : null}
+
+                <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        Rotina do dia
+                      </p>
+                      <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                        {selectedDateLabel}
+                      </h4>
+                    </div>
+                    <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={getPanelToneStyle('accent')}>
+                      {pendingSelectedReminders.length} pendente(s)
+                    </span>
+                  </div>
+
+                  {pendingSelectedReminders.length > 0 ? (
+                    <div className="space-y-3">{pendingSelectedReminders.map(renderReminderCard)}</div>
+                  ) : (
+                    <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                      Nenhum item pendente neste dia.
+                    </div>
+                  )}
+                </section>
+
+                <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        Concluidos no dia
+                      </p>
+                      <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                        {completedSelectedReminders.length > 0 ? 'Historico do dia em foco' : 'Nada concluido ainda'}
+                      </h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full border px-3 py-1 text-xs font-semibold" style={getPanelToneStyle('success')}>
+                        {completedSelectedReminders.length}
+                      </span>
+                      <Button onClick={() => setShowCompleted((current) => !current)} variant="ghost" size="sm">
+                        {showCompleted ? 'Ocultar' : 'Mostrar'}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {showCompleted ? (
+                    completedSelectedReminders.length > 0 ? (
+                      <div className="space-y-3">{completedSelectedReminders.map(renderReminderCard)}</div>
+                    ) : (
+                      <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                        Nenhum item concluido neste dia.
+                      </div>
+                    )
+                  ) : (
+                    <div className="rounded-[1.3rem] border py-5 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                      Expanda quando quiser revisar o que ja foi concluido neste dia.
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
           </div>
         )}
       </ModalShell>
@@ -1710,16 +1638,19 @@ export default function WhatsAppAgendaModal({
         </ModalShell>
       ) : null}
 
-      {directSchedulerOpen && contextualLead ? (
+      {schedulerDraft ? (
         <ReminderSchedulerModal
-          lead={contextualLead}
-          onClose={() => setDirectSchedulerOpen(false)}
+          lead={schedulerDraft.lead}
+          onClose={() => setSchedulerDraft(null)}
           onScheduled={() => {
-            void updateLeadNextReturnDate(contextualLead.id);
+            void updateLeadNextReturnDate(schedulerDraft.lead.id);
             void loadReminders();
           }}
-          promptMessage="Agende o proximo lembrete do lead vinculado a esta conversa."
-          defaultType="Follow-up"
+          promptMessage={schedulerDraft.promptMessage}
+          defaultTitle={schedulerDraft.defaultTitle}
+          defaultDescription={schedulerDraft.defaultDescription}
+          defaultType={schedulerDraft.defaultType}
+          defaultPriority={schedulerDraft.defaultPriority}
         />
       ) : null}
 

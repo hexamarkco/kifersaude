@@ -4037,6 +4037,57 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
+  const handleOpenAgendaLeadChat = useCallback(async (lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone'>) => {
+    const phoneKeys = collectPhoneLookupKeys(lead.telefone);
+    const existingChat = latestChatsRef.current.find((chat) => {
+      if (lead.id && chat.lead_id === lead.id) {
+        return true;
+      }
+
+      if (phoneKeys.length === 0) {
+        return false;
+      }
+
+      const chatPhoneKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
+      return chatPhoneKeys.some((key) => phoneKeys.includes(key));
+    }) ?? null;
+
+    if (existingChat) {
+      setSelectedChatId(existingChat.id);
+      return;
+    }
+
+    if (!lead.id && !lead.telefone?.trim()) {
+      toast.error('Nao foi possivel abrir uma conversa para este lead.');
+      return;
+    }
+
+    const openingKey = `agenda:${lead.id || lead.telefone || 'lead'}`;
+    setStartingChatKey(openingKey);
+
+    try {
+      const result = lead.id
+        ? await commWhatsAppService.startChat({
+            source: 'crm',
+            leadId: lead.id,
+          })
+        : await commWhatsAppService.startChat({
+            source: 'manual',
+            phoneNumber: lead.telefone ?? '',
+          });
+
+      setSearchDraft('');
+      setSearch('');
+      upsertChatLocally(result.chat);
+      setSelectedChatId(result.chat.id);
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao abrir chat a partir da agenda', error);
+      throw error;
+    } finally {
+      setStartingChatKey((current) => (current === openingKey ? null : current));
+    }
+  }, [upsertChatLocally]);
+
   const handleStartChatFromManual = async () => {
     setStartingChatKey('manual');
     try {
@@ -5270,6 +5321,7 @@ export default function WhatsAppInboxScreen() {
           canEdit={canEditAgenda}
           onOpenLeadInCrm={leadPanel ? handleViewLeadInCrm : undefined}
           onGenerateFollowUp={selectedChat ? handleOpenFollowUpModal : undefined}
+          onOpenLeadChat={handleOpenAgendaLeadChat}
         />
 
         <WhatsAppDashboardModal

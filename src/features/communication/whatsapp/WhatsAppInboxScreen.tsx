@@ -537,10 +537,12 @@ function InboxFilterChip({
   active,
   label,
   onClick,
+  compact = false,
 }: {
   active: boolean;
   label: string;
   onClick: () => void;
+  compact?: boolean;
 }) {
   return (
     <button
@@ -550,7 +552,7 @@ function InboxFilterChip({
         active
           ? 'border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/50 text-[var(--panel-accent-ink,#8b4d12)]'
           : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)] hover:text-[var(--panel-text,#1c1917)]'
-      }`}
+      } ${compact ? 'px-2.5 py-1 text-[11px]' : ''}`}
     >
       {label}
     </button>
@@ -562,18 +564,20 @@ function InboxFilterGroup<T extends string>({
   value,
   options,
   onChange,
+  compact = false,
 }: {
   label: string;
   value: T;
   options: Array<{ value: T; label: string }>;
   onChange: (value: T) => void;
+  compact?: boolean;
 }) {
   return (
-    <div className="space-y-2">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
-      <div className="flex flex-wrap gap-2">
+    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+      <p className={`font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)] ${compact ? 'text-[10px]' : 'text-[11px]'}`}>{label}</p>
+      <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         {options.map((option) => (
-          <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} />
+          <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} compact={compact} />
         ))}
       </div>
     </div>
@@ -585,11 +589,13 @@ function InboxMultiFilterGroup({
   values,
   options,
   onChange,
+  compact = false,
 }: {
   label: string;
   values: string[];
   options: Array<{ value: string; label: string }>;
   onChange: (value: string[]) => void;
+  compact?: boolean;
 }) {
   const normalizedValues = values.map((value) => value.toLowerCase());
 
@@ -602,16 +608,17 @@ function InboxMultiFilterGroup({
   };
 
   return (
-    <div className="space-y-2">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
-      <div className="flex flex-wrap gap-2">
-        <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} />
+    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+      <p className={`font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)] ${compact ? 'text-[10px]' : 'text-[11px]'}`}>{label}</p>
+      <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
+        <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} compact={compact} />
         {options.map((option) => (
           <InboxFilterChip
             key={option.value}
             active={normalizedValues.includes(option.value.toLowerCase())}
             label={option.label}
             onClick={() => toggleValue(option.value)}
+            compact={compact}
           />
         ))}
       </div>
@@ -1236,10 +1243,10 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const panelWidth = 300;
+      const panelWidth = 272;
       const viewportPadding = 16;
       const nextLeft = Math.min(
-        Math.max(viewportPadding, triggerRect.right - panelWidth),
+        Math.max(viewportPadding, triggerRect.left),
         window.innerWidth - panelWidth - viewportPadding,
       );
 
@@ -3056,44 +3063,50 @@ export default function WhatsAppInboxScreen() {
         {advancedFiltersOpen && advancedFiltersPosition && typeof document !== 'undefined'
           ? createPortal(
               <div
-                ref={advancedFiltersRef}
-                className="fixed z-[120] w-[300px] rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-3 shadow-2xl"
-                style={{ top: advancedFiltersPosition.top, left: advancedFiltersPosition.left }}
+                className={`modal-theme-host painel-theme kifer-ds ${document.querySelector('.painel-theme')?.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light'}`}
               >
-                <div className="space-y-3">
-                  <InboxFilterGroup
-                    label="Atividade"
-                    value={chatActivityFilter}
-                    onChange={setChatActivityFilter}
-                    options={[
-                      { value: 'all', label: 'Todas' },
-                      { value: 'unread', label: 'Nao lidas' },
-                    ]}
-                  />
+                <div
+                  ref={advancedFiltersRef}
+                  className="fixed z-[120] w-[272px] rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2.5 shadow-2xl"
+                  style={{ top: advancedFiltersPosition.top, left: advancedFiltersPosition.left }}
+                >
+                  <div className="space-y-2.5">
+                    <InboxFilterGroup
+                      label="Atividade"
+                      value={chatActivityFilter}
+                      onChange={setChatActivityFilter}
+                      compact
+                      options={[
+                        { value: 'all', label: 'Todas' },
+                        { value: 'unread', label: 'Nao lidas' },
+                      ]}
+                    />
 
-                  <InboxMultiFilterGroup
-                    label="Status do lead"
-                    values={leadStatusFilters}
-                    onChange={setLeadStatusFilters}
-                    options={leadStatuses.map((status) => ({
-                      value: status.nome,
-                      label: status.nome,
-                    }))}
-                  />
+                    <InboxMultiFilterGroup
+                      label="Status do lead"
+                      values={leadStatusFilters}
+                      onChange={setLeadStatusFilters}
+                      compact
+                      options={leadStatuses.map((status) => ({
+                        value: status.nome,
+                        label: status.nome,
+                      }))}
+                    />
 
-                  {hasActiveChatFilters ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setChatActivityFilter('all');
-                        setLeadStatusFilters([]);
-                        setAdvancedFiltersOpen(false);
-                      }}
-                      className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"
-                    >
-                      Limpar filtros
-                    </button>
-                  ) : null}
+                    {hasActiveChatFilters ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setChatActivityFilter('all');
+                          setLeadStatusFilters([]);
+                          setAdvancedFiltersOpen(false);
+                        }}
+                        className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"
+                      >
+                        Limpar filtros
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               </div>,
               document.body,

@@ -20,7 +20,7 @@ type ListChatsParams = {
   activityFilter?: 'all' | 'unread';
   leadFilter?: 'all' | 'with_lead' | 'without_lead';
   savedFilter?: 'all' | 'saved' | 'unsaved';
-  chatStatusFilter?: 'all' | 'open' | 'pending' | 'closed';
+  leadStatusFilters?: string[];
   onlyUnread?: boolean;
   limit?: number;
 };
@@ -166,7 +166,7 @@ export const commWhatsAppService = {
     const activityFilter = params.activityFilter ?? (params.onlyUnread ? 'unread' : 'all');
     const leadFilter = params.leadFilter ?? 'all';
     const savedFilter = params.savedFilter ?? 'all';
-    const chatStatusFilter = params.chatStatusFilter ?? 'all';
+    const leadStatusFilters = (params.leadStatusFilters ?? []).map((value) => value.trim()).filter(Boolean);
 
     let query = supabase
       .from('comm_whatsapp_chats')
@@ -191,10 +191,6 @@ export const commWhatsAppService = {
       query = query.is('saved_contact_name', null);
     }
 
-    if (chatStatusFilter !== 'all') {
-      query = query.eq('status', chatStatusFilter);
-    }
-
     const search = sanitizeSearch(params.search ?? '');
     if (search) {
       query = query.or(
@@ -212,7 +208,40 @@ export const commWhatsAppService = {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as conversas do WhatsApp.'));
     }
 
-    return (data ?? []) as CommWhatsAppChat[];
+    let chats = (data ?? []) as CommWhatsAppChat[];
+
+    const leadIds = chats.map((chat) => chat.lead_id).filter((leadId): leadId is string => Boolean(leadId));
+    if (leadIds.length > 0) {
+      const uniqueLeadIds = Array.from(new Set(leadIds));
+      const { data: leads, error: leadsError } = await supabase
+        .from('leads')
+        .select('id, status')
+        .in('id', uniqueLeadIds);
+
+      if (leadsError) {
+        throw new Error(getSupabaseErrorMessage(leadsError, 'Nao foi possivel carregar os status dos leads vinculados.'));
+      }
+
+      const leadStatusById = new Map<string, string | null>();
+      for (const lead of leads ?? []) {
+        leadStatusById.set(String(lead.id), typeof lead.status === 'string' ? lead.status : null);
+      }
+
+      chats = chats.map((chat) => ({
+        ...chat,
+        lead_status: chat.lead_id ? (leadStatusById.get(chat.lead_id) ?? null) : null,
+      }));
+    }
+
+    if (leadStatusFilters.length > 0) {
+      const allowedStatuses = new Set(leadStatusFilters.map((status) => status.toLowerCase()));
+      chats = chats.filter((chat) => {
+        const status = chat.lead_status?.trim().toLowerCase();
+        return status ? allowedStatuses.has(status) : false;
+      });
+    }
+
+    return chats;
   },
 
   async searchCrmLeads(params: { query?: string; phoneNumbers?: string[]; limit?: number } = {}): Promise<CommWhatsAppLeadSearchResult[]> {

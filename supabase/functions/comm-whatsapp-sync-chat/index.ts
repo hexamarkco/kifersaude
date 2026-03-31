@@ -9,6 +9,7 @@ import {
   extractWhapiMediaMeta,
   fetchWhapiChatMessages,
   fetchWhapiChatName,
+  fetchWhapiContactName,
   formatPhoneLabel,
   getDirectChatDisplayNameCandidate,
   getNowIso,
@@ -140,6 +141,9 @@ Deno.serve(async (req: Request) => {
     }
     if (whapiName && isPhoneLabelLikeDisplayName(whapiName)) {
       whapiName = '';
+    }
+    if (!whapiName) {
+      whapiName = await fetchWhapiContactName({ token: settings.token, contactId: phoneDigits }).catch(() => '');
     }
     const existingLooksLikeOwnName = Boolean(
       existingChat?.display_name &&

@@ -8,6 +8,7 @@ import {
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
   fetchWhapiChatName,
+  fetchWhapiContactName,
   formatPhoneLabel,
   getDirectChatDisplayNameCandidate,
   getHealthStatusText,
@@ -170,6 +171,10 @@ async function persistMessageFromWebhook(
 
   if (!resolvedName && whapiToken) {
     resolvedName = await fetchWhapiChatName({ token: whapiToken, chatId: externalChatId }).catch(() => '');
+  }
+
+  if (!resolvedName && whapiToken) {
+    resolvedName = await fetchWhapiContactName({ token: whapiToken, contactId: phoneDigits }).catch(() => '');
   }
 
   const fallbackDisplayName = formatPhoneLabel(phoneDigits);

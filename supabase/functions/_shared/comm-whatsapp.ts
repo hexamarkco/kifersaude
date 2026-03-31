@@ -818,6 +818,26 @@ export async function fetchWhapiChatName(params: {
   return extractWhapiChatName(payload);
 }
 
+export async function fetchWhapiContactName(params: {
+  token: string;
+  contactId: string;
+}): Promise<string> {
+  const response = await fetch(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(params.contactId)}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  });
+
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    return '';
+  }
+
+  return extractWhapiChatName(payload) || extractWhapiContactName(payload) || '';
+}
+
 export async function fetchWhapiChatMessages(params: {
   token: string;
   chatId: string;

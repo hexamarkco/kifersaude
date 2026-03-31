@@ -41,9 +41,6 @@ type PendingAttachment = {
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 type ChatActivityFilter = 'all' | 'unread';
-type ChatLeadFilter = 'all' | 'with_lead' | 'without_lead';
-type ChatSavedFilter = 'all' | 'saved' | 'unsaved';
-type ChatStatusFilter = 'all' | 'open' | 'pending' | 'closed';
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -101,6 +98,30 @@ const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage
   }
 
   return a.id.localeCompare(b.id);
+};
+
+const getChatPreviewPrefix = (direction: CommWhatsAppChat['last_message_direction']) => {
+  switch (direction) {
+    case 'outbound':
+      return 'Você:';
+    case 'inbound':
+      return 'Contato:';
+    case 'system':
+      return 'Sistema:';
+    default:
+      return '';
+  }
+};
+
+const getChatPreviewPrefixClassName = (direction: CommWhatsAppChat['last_message_direction']) => {
+  switch (direction) {
+    case 'outbound':
+      return 'text-[var(--panel-accent-ink,#8b4d12)]';
+    case 'system':
+      return 'text-[var(--panel-text-subtle,#9a8573)]';
+    default:
+      return 'text-[var(--panel-text-soft,#5b4635)]';
+  }
 };
 
 const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMessage[]) => {
@@ -559,6 +580,45 @@ function InboxFilterGroup<T extends string>({
   );
 }
 
+function InboxMultiFilterGroup({
+  label,
+  values,
+  options,
+  onChange,
+}: {
+  label: string;
+  values: string[];
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string[]) => void;
+}) {
+  const normalizedValues = values.map((value) => value.toLowerCase());
+
+  const toggleValue = (value: string) => {
+    const normalized = value.toLowerCase();
+    const next = normalizedValues.includes(normalized)
+      ? values.filter((item) => item.toLowerCase() !== normalized)
+      : [...values, value];
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
+      <div className="flex flex-wrap gap-2">
+        <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} />
+        {options.map((option) => (
+          <InboxFilterChip
+            key={option.value}
+            active={normalizedValues.includes(option.value.toLowerCase())}
+            label={option.label}
+            onClick={() => toggleValue(option.value)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function WhatsAppMessageBody({
   message,
   onOpenImage,
@@ -731,9 +791,7 @@ export default function WhatsAppInboxScreen() {
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
-  const [chatLeadFilter, setChatLeadFilter] = useState<ChatLeadFilter>('all');
-  const [chatSavedFilter, setChatSavedFilter] = useState<ChatSavedFilter>('all');
-  const [chatStatusFilter, setChatStatusFilter] = useState<ChatStatusFilter>('all');
+  const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [attachmentInputAccept, setAttachmentInputAccept] = useState('image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,audio/*');
   const [chats, setChats] = useState<CommWhatsAppChat[]>([]);
@@ -876,12 +934,8 @@ export default function WhatsAppInboxScreen() {
     [chats, selectedChatId],
   );
   const hasActiveChatFilters =
-    chatActivityFilter !== 'all' || chatLeadFilter !== 'all' || chatSavedFilter !== 'all' || chatStatusFilter !== 'all';
-  const activeChatFiltersCount =
-    (chatActivityFilter !== 'all' ? 1 : 0) +
-    (chatLeadFilter !== 'all' ? 1 : 0) +
-    (chatSavedFilter !== 'all' ? 1 : 0) +
-    (chatStatusFilter !== 'all' ? 1 : 0);
+    chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
+  const activeChatFiltersCount = (chatActivityFilter !== 'all' ? 1 : 0) + leadStatusFilters.length;
 
   const upsertChatLocally = useCallback((nextChat: CommWhatsAppChat) => {
     setChats((current) => {
@@ -1356,9 +1410,7 @@ export default function WhatsAppInboxScreen() {
       const data = await commWhatsAppService.listChats({
         search,
         activityFilter: chatActivityFilter,
-        leadFilter: chatLeadFilter,
-        savedFilter: chatSavedFilter,
-        chatStatusFilter: chatStatusFilter,
+        leadStatusFilters,
       });
 
       if (requestId !== chatsRequestIdRef.current) {
@@ -1387,7 +1439,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as conversas do WhatsApp.');
     }
-  }, [buildChatsSignature, chatActivityFilter, chatLeadFilter, chatSavedFilter, chatStatusFilter, search]);
+  }, [buildChatsSignature, chatActivityFilter, leadStatusFilters, search]);
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
@@ -2438,9 +2490,7 @@ export default function WhatsAppInboxScreen() {
                   label="Todas"
                   onClick={() => {
                     setChatActivityFilter('all');
-                    setChatLeadFilter('all');
-                    setChatSavedFilter('all');
-                    setChatStatusFilter('all');
+                    setLeadStatusFilters([]);
                     setAdvancedFiltersOpen(false);
                   }}
                 />
@@ -2500,7 +2550,18 @@ export default function WhatsAppInboxScreen() {
                       )}
                     </div>
                   </div>
-                  <p className="mt-3 truncate text-sm text-[var(--panel-text-muted,#6b7280)]">{chat.last_message_text || 'Sem mensagens ainda'}</p>
+                  <p className="mt-3 truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
+                    {chat.last_message_text ? (
+                      <>
+                        <span className={`mr-1 font-semibold ${getChatPreviewPrefixClassName(chat.last_message_direction)}`}>
+                          {getChatPreviewPrefix(chat.last_message_direction)}
+                        </span>
+                        <span>{chat.last_message_text}</span>
+                      </>
+                    ) : (
+                      'Sem mensagens ainda'
+                    )}
+                  </p>
                 </button>
               ))
             )}
@@ -3010,38 +3071,14 @@ export default function WhatsAppInboxScreen() {
                     ]}
                   />
 
-                  <InboxFilterGroup
-                    label="CRM"
-                    value={chatLeadFilter}
-                    onChange={setChatLeadFilter}
-                    options={[
-                      { value: 'all', label: 'Todos' },
-                      { value: 'with_lead', label: 'Com lead' },
-                      { value: 'without_lead', label: 'Sem lead' },
-                    ]}
-                  />
-
-                  <InboxFilterGroup
-                    label="Agenda"
-                    value={chatSavedFilter}
-                    onChange={setChatSavedFilter}
-                    options={[
-                      { value: 'all', label: 'Todos' },
-                      { value: 'saved', label: 'Salvos' },
-                      { value: 'unsaved', label: 'Nao salvos' },
-                    ]}
-                  />
-
-                  <InboxFilterGroup
-                    label="Status do chat"
-                    value={chatStatusFilter}
-                    onChange={setChatStatusFilter}
-                    options={[
-                      { value: 'all', label: 'Todos' },
-                      { value: 'open', label: 'Abertas' },
-                      { value: 'pending', label: 'Pendentes' },
-                      { value: 'closed', label: 'Fechadas' },
-                    ]}
+                  <InboxMultiFilterGroup
+                    label="Status do lead"
+                    values={leadStatusFilters}
+                    onChange={setLeadStatusFilters}
+                    options={leadStatuses.map((status) => ({
+                      value: status.nome,
+                      label: status.nome,
+                    }))}
                   />
 
                   {hasActiveChatFilters ? (
@@ -3049,9 +3086,7 @@ export default function WhatsAppInboxScreen() {
                       type="button"
                       onClick={() => {
                         setChatActivityFilter('all');
-                        setChatLeadFilter('all');
-                        setChatSavedFilter('all');
-                        setChatStatusFilter('all');
+                        setLeadStatusFilters([]);
                         setAdvancedFiltersOpen(false);
                       }}
                       className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"

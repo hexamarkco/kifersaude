@@ -501,6 +501,7 @@ export type CommWhatsAppChat = {
   saved_contact_name?: string | null;
   push_name?: string | null;
   lead_id?: string | null;
+  lead_status?: string | null;
   last_message_text?: string | null;
   last_message_direction: 'inbound' | 'outbound' | 'system';
   last_message_at?: string | null;

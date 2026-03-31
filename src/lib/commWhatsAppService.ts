@@ -697,6 +697,20 @@ export const commWhatsAppService = {
     };
   },
 
+  async reactToMessage(params: { chatId: string; messageId: string; emoji?: string | null }): Promise<void> {
+    const { error } = await supabase.functions.invoke('comm-whatsapp-react', {
+      body: {
+        chatId: params.chatId,
+        messageId: params.messageId,
+        emoji: params.emoji?.trim() || '',
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Não foi possível reagir à mensagem no WhatsApp.'));
+    }
+  },
+
   async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {
     if (params.mediaUrl?.trim()) {
       return params.mediaUrl.trim();

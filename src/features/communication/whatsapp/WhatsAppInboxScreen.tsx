@@ -52,6 +52,7 @@ const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 const CHAT_IDENTITY_LOOKUP_BATCH_SIZE = 25;
 const DEFAULT_TRANSCRIPT_TIME_ZONE = 'America/Sao_Paulo';
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
+const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -621,6 +622,19 @@ const getReactionTooltipText = (message: CommWhatsAppMessage) => {
   return reactions
     .map((reaction) => `${reaction.emoji} ${reaction.actors.join(', ')}`)
     .join('\n');
+};
+
+const getOwnReactionEmoji = (message: CommWhatsAppMessage) => {
+  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+    ? message.metadata as Record<string, unknown>
+    : {};
+  const rawReactions = Array.isArray(metadata.reactions) ? metadata.reactions : [];
+
+  const ownReaction = rawReactions
+    .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
+    .find((item) => String(item.actor_key ?? '').trim() === 'self');
+
+  return ownReaction ? String(ownReaction.emoji ?? '').trim() || null : null;
 };
 
 const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName?: string | null) => {
@@ -1341,6 +1355,8 @@ export default function WhatsAppInboxScreen() {
   const [sending, setSending] = useState(false);
   const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
+  const [reactingMessageId, setReactingMessageId] = useState<string | null>(null);
+  const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<string | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
@@ -1392,6 +1408,7 @@ export default function WhatsAppInboxScreen() {
   const advancedFiltersTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const reactionPickerRef = useRef<HTMLDivElement | null>(null);
   const voiceRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
   const voiceStreamRef = useRef<MediaStream | null>(null);
@@ -1823,6 +1840,38 @@ export default function WhatsAppInboxScreen() {
   const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
     setMessages((current) => current.map((message) => (message.id === messageId ? { ...message, ...patch } : message)));
   }, []);
+
+  const patchMessageReactionLocally = useCallback((message: CommWhatsAppMessage, emoji: string | null) => {
+    const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+      ? message.metadata as Record<string, unknown>
+      : {};
+    const reactions = Array.isArray(metadata.reactions)
+      ? metadata.reactions.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
+      : [];
+    const withoutOwnReaction = reactions.filter((item) => String(item.actor_key ?? '').trim() !== 'self');
+    const nextReactions = emoji
+      ? [
+          ...withoutOwnReaction,
+          {
+            actor_key: 'self',
+            emoji,
+            from_me: true,
+            from: null,
+            from_name: 'Você',
+            reacted_at: new Date().toISOString(),
+            target_external_message_id: message.external_message_id ?? null,
+          },
+        ]
+      : withoutOwnReaction;
+
+    patchMessageLocally(message.id, {
+      metadata: {
+        ...metadata,
+        reactions: nextReactions,
+        last_reaction_at: new Date().toISOString(),
+      },
+    });
+  }, [patchMessageLocally]);
 
   const loadLeadContracts = useCallback(async (leadId: string | null) => {
     if (!leadId) {
@@ -2269,6 +2318,22 @@ export default function WhatsAppInboxScreen() {
     window.addEventListener('mousedown', handlePointerDown);
     return () => window.removeEventListener('mousedown', handlePointerDown);
   }, [attachmentMenuOpen]);
+
+  useEffect(() => {
+    if (!openReactionPickerMessageId) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (reactionPickerRef.current && target && !reactionPickerRef.current.contains(target)) {
+        setOpenReactionPickerMessageId(null);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    return () => window.removeEventListener('mousedown', handlePointerDown);
+  }, [openReactionPickerMessageId]);
 
   useEffect(() => {
     if (!advancedFiltersOpen) {
@@ -3567,6 +3632,43 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
+  const handleToggleReactionPicker = useCallback((messageId: string) => {
+    setOpenReactionPickerMessageId((current) => (current === messageId ? null : messageId));
+  }, []);
+
+  const handleReactToMessage = useCallback(async (message: CommWhatsAppMessage, emoji: string) => {
+    if (!message.external_message_id) {
+      return;
+    }
+
+    const chatId = String(message.metadata?.chat_id ?? selectedChat?.external_chat_id ?? '').trim();
+    if (!chatId) {
+      toast.error('Não foi possível identificar a conversa desta mensagem.');
+      return;
+    }
+
+    const currentOwnReaction = getOwnReactionEmoji(message);
+    const nextEmoji = currentOwnReaction === emoji ? null : emoji;
+
+    setReactingMessageId(message.id);
+    setOpenReactionPickerMessageId(null);
+    patchMessageReactionLocally(message, nextEmoji);
+
+    try {
+      await commWhatsAppService.reactToMessage({
+        chatId,
+        messageId: message.external_message_id,
+        emoji: nextEmoji,
+      });
+    } catch (error) {
+      patchMessageReactionLocally(message, currentOwnReaction);
+      console.error('[WhatsAppInbox] erro ao reagir à mensagem', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível reagir à mensagem.');
+    } finally {
+      setReactingMessageId(null);
+    }
+  }, [patchMessageReactionLocally, selectedChat?.external_chat_id]);
+
   const handleTranscribeMessage = async (message: CommWhatsAppMessage) => {
     setTranscribingMessageId(message.id);
     patchMessageLocally(message.id, {
@@ -4632,8 +4734,45 @@ export default function WhatsAppInboxScreen() {
                     const reactionTooltipText = getReactionTooltipText(message);
 
                     return (
-                      <div key={item.key} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
+                      <div key={item.key} className={`message-bubble-row group/message flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
                         <div className="relative max-w-[80%] pb-5">
+                          {message.direction !== 'system' && message.external_message_id ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleReactionPicker(message.id)}
+                                className={`absolute top-2 z-[3] inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100`}
+                                aria-label="Reagir à mensagem"
+                                title="Reagir"
+                              >
+                                <Smile className="h-4 w-4" />
+                              </button>
+
+                              {openReactionPickerMessageId === message.id ? (
+                                <div
+                                  ref={reactionPickerRef}
+                                  className={`absolute -top-12 z-[5] flex items-center gap-1 rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] px-2 py-1 shadow-xl ${message.direction === 'outbound' ? 'left-0' : 'right-0'}`}
+                                >
+                                  {REACTION_OPTIONS.map((emoji) => {
+                                    const selected = getOwnReactionEmoji(message) === emoji;
+                                    return (
+                                      <button
+                                        key={`${message.id}:${emoji}`}
+                                        type="button"
+                                        onClick={() => void handleReactToMessage(message, emoji)}
+                                        disabled={reactingMessageId === message.id}
+                                        className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition hover:bg-[var(--panel-surface-soft,#f8f2e9)] ${selected ? 'bg-[var(--panel-accent-soft,#f4e2cc)]' : ''}`}
+                                        aria-label={`Reagir com ${emoji}`}
+                                      >
+                                        {emoji}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
+                            </>
+                          ) : null}
+
                           <div className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
                             <WhatsAppMessageBody
                               message={message}

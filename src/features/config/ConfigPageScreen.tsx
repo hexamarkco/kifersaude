@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import Card from "../../components/ui/Card";
 import Tabs, { type TabItem } from "../../components/ui/Tabs";
@@ -11,10 +11,13 @@ import IntegrationsScreen from "./integrations/IntegrationsScreen";
 import { getAllowedConfigTabs, type ConfigTabType } from "./shared/configTabs";
 import UsersScreen from "./users/UsersScreen";
 
+const isConfigTabType = (value: string | null): value is ConfigTabType =>
+  value === "system" || value === "users" || value === "integrations" || value === "automation";
+
 export default function ConfigPageScreen() {
   const { role } = useAuth();
   const { getRoleModulePermission } = useConfig();
-  const [activeTab, setActiveTab] = useState<ConfigTabType>("system");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const allowedTabs = getAllowedConfigTabs(
     role,
@@ -40,9 +43,23 @@ export default function ConfigPageScreen() {
     );
   }
 
-  const activeAllowedTab = allowedTabs.some((tab) => tab.id === activeTab)
-    ? activeTab
-    : allowedTabs[0].id;
+  const requestedTab = searchParams.get("tab");
+  const activeAllowedTab =
+    isConfigTabType(requestedTab) && allowedTabs.some((tab) => tab.id === requestedTab)
+      ? requestedTab
+      : allowedTabs[0].id;
+
+  const handleTabChange = (nextTab: ConfigTabType) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+
+    if (nextTab === allowedTabs[0].id) {
+      nextSearchParams.delete("tab");
+    } else {
+      nextSearchParams.set("tab", nextTab);
+    }
+
+    setSearchParams(nextSearchParams, { replace: true });
+  };
 
   return (
     <div className="config-transparent-buttons panel-page-shell w-full">
@@ -59,7 +76,7 @@ export default function ConfigPageScreen() {
         <Tabs
           items={allowedTabs}
           value={activeAllowedTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           variant="panel"
           listClassName="rounded-none border-x-0 border-t-0"
         />

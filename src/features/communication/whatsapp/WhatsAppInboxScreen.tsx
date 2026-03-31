@@ -1119,11 +1119,14 @@ export default function WhatsAppInboxScreen() {
       })
       .map((item) => item.option);
   }, [activeQuickReplyMatch, quickReplyOptions]);
+  const quickReplyMenuHasResults = filteredQuickReplyOptions.length > 0;
   const quickReplyMenuOpen =
     composerFocused
     && activeQuickReplyMatch !== null
-    && activeQuickReplyKey !== dismissedQuickReplyKey
-    && filteredQuickReplyOptions.length > 0;
+    && activeQuickReplyKey !== dismissedQuickReplyKey;
+  const quickReplyEmptyStateMessage = quickReplyOptions.length === 0
+    ? 'Nenhuma mensagem rapida cadastrada ainda.'
+    : 'Nenhum atalho encontrado para esse termo.';
   const hasActiveChatFilters =
     chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
   const activeChatFiltersCount = (chatActivityFilter !== 'all' ? 1 : 0) + leadStatusFilters.length;
@@ -1398,13 +1401,13 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   useEffect(() => {
-    if (!quickReplyMenuOpen) {
+    if (!quickReplyMenuOpen || !quickReplyMenuHasResults) {
       setQuickReplyActiveIndex(0);
       return;
     }
 
     setQuickReplyActiveIndex((current) => Math.min(current, filteredQuickReplyOptions.length - 1));
-  }, [filteredQuickReplyOptions.length, quickReplyMenuOpen]);
+  }, [filteredQuickReplyOptions.length, quickReplyMenuHasResults, quickReplyMenuOpen]);
 
   useEffect(() => {
     if (!activeQuickReplyKey) {
@@ -2710,6 +2713,10 @@ export default function WhatsAppInboxScreen() {
     });
   }, [activeQuickReplyMatch, composerSelection, messageDraft]);
 
+  const handleOpenQuickReplySettings = useCallback(() => {
+    navigate('/painel/config?tab=automation');
+  }, [navigate]);
+
   const handleComposerSubmit = () => {
     if (sending) return;
 
@@ -2727,7 +2734,7 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (quickReplyMenuOpen) {
+    if (quickReplyMenuOpen && quickReplyMenuHasResults) {
       if (event.key === 'ArrowDown') {
         event.preventDefault();
         setQuickReplyActiveIndex((current) => (current + 1) % filteredQuickReplyOptions.length);
@@ -3255,37 +3262,58 @@ export default function WhatsAppInboxScreen() {
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
                       {quickReplyMenuOpen && (
                         <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-[22px] border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
-                          <div className="border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
-                            Mensagens rapidas por atalho
+                          <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                              Mensagens rapidas por atalho
+                            </span>
+                            <button
+                              type="button"
+                              className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:bg-[var(--panel-surface-soft,#f8f2e9)]"
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                handleOpenQuickReplySettings();
+                              }}
+                            >
+                              Gerenciar
+                            </button>
                           </div>
                           <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rapidas">
-                            {filteredQuickReplyOptions.map((option, index) => {
-                              const isActive = index === quickReplyActiveIndex;
+                            {quickReplyMenuHasResults ? (
+                              filteredQuickReplyOptions.map((option, index) => {
+                                const isActive = index === quickReplyActiveIndex;
 
-                              return (
-                                <button
-                                  key={option.id}
-                                  type="button"
-                                  className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--panel-accent-soft,#f4e2cc)]/70 text-[var(--panel-text,#1f2937)]' : 'text-[var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f8f2e9)]'}`}
-                                  onMouseDown={(event) => {
-                                    event.preventDefault();
-                                    handleInsertQuickReply(option);
-                                  }}
-                                >
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="truncate text-sm font-semibold">{option.name}</span>
-                                      <code className="shrink-0 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2 py-0.5 text-[11px] font-semibold text-[var(--panel-accent-ink,#8b4d12)]">
-                                        /{option.shortcut}
-                                      </code>
+                                return (
+                                  <button
+                                    key={option.id}
+                                    type="button"
+                                    className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--panel-accent-soft,#f4e2cc)]/70 text-[var(--panel-text,#1f2937)]' : 'text-[var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f8f2e9)]'}`}
+                                    onMouseDown={(event) => {
+                                      event.preventDefault();
+                                      handleInsertQuickReply(option);
+                                    }}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="truncate text-sm font-semibold">{option.name}</span>
+                                        <code className="shrink-0 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2 py-0.5 text-[11px] font-semibold text-[var(--panel-accent-ink,#8b4d12)]">
+                                          /{option.shortcut}
+                                        </code>
+                                      </div>
+                                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
+                                        {option.preview}
+                                      </p>
                                     </div>
-                                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
-                                      {option.preview}
-                                    </p>
-                                  </div>
-                                </button>
-                              );
-                            })}
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <div className="px-4 py-4 text-sm text-[var(--panel-text-soft,#5b4635)]">
+                                <p className="font-medium">{quickReplyEmptyStateMessage}</p>
+                                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
+                                  Cadastre em <code>/painel/config?tab=automation</code>, na secao <strong>Biblioteca de templates</strong>.
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}

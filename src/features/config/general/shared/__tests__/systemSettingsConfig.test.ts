@@ -31,6 +31,7 @@ test("areSystemPreferencesEqual compares relevant preference fields", () => {
     notification_interval_seconds: 30,
     session_timeout_minutes: 480,
     date_format: "DD/MM/YYYY",
+    timezone: "America/Sao_Paulo",
     created_at: "2026-03-12T00:00:00.000Z",
     updated_at: "2026-03-12T00:00:00.000Z",
   };

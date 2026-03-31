@@ -84,6 +84,13 @@ export type CommWhatsAppTranscriptionResult = {
   fallback_used?: boolean;
 };
 
+export type CommWhatsAppFollowUpSuggestion = {
+  text: string;
+  provider?: string | null;
+  model?: string | null;
+  fallback_used?: boolean;
+};
+
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const mediaObjectUrlCache = new Map<string, Promise<string>>();
@@ -466,6 +473,28 @@ export const commWhatsAppService = {
     }
 
     return payload;
+  },
+
+  async generateFollowUp(chatId: string): Promise<CommWhatsAppFollowUpSuggestion> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-generate-follow-up', {
+      body: { chatId },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel gerar o follow-up com IA.'));
+    }
+
+    const payload = (data ?? {}) as CommWhatsAppFollowUpSuggestion;
+    if (!payload.text?.trim()) {
+      throw new Error('A IA nao retornou uma sugestao de follow-up.');
+    }
+
+    return {
+      text: payload.text.trim(),
+      provider: payload.provider ?? null,
+      model: payload.model ?? null,
+      fallback_used: payload.fallback_used === true,
+    };
   },
 
   async retryMediaMessage(messageId: string): Promise<{ messageId: string | null; status: string }> {

@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import StatusDropdown from '../../../components/StatusDropdown';
 import { useConfig } from '../../../contexts/ConfigContext';
-import {
-  AUTO_CONTACT_INTEGRATION_SLUG,
-  applyTemplateVariables,
-  getTemplateMessage,
-  normalizeAutoContactSettings,
-  type AutoContactTemplate,
-} from '../../../lib/autoContactService';
+import { applyTemplateVariables } from '../../../lib/autoContactService';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
@@ -25,8 +19,18 @@ import {
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
 import { toast } from '../../../lib/toast';
-import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, Lead } from '../../../lib/supabase';
+import {
+  WHATSAPP_QUICK_REPLIES_INTEGRATION_DESCRIPTION,
+  WHATSAPP_QUICK_REPLIES_INTEGRATION_NAME,
+  WHATSAPP_QUICK_REPLIES_INTEGRATION_SLUG,
+  buildWhatsAppQuickRepliesSettings,
+  normalizeWhatsAppQuickRepliesSettings,
+  sanitizeWhatsAppQuickReplyShortcut,
+  type WhatsAppQuickReply,
+} from '../../../lib/whatsAppQuickReplies';
+import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, IntegrationSetting, Lead } from '../../../lib/supabase';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
+import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
 
 const CHAT_POLL_INTERVAL_MS = 8000;
@@ -60,7 +64,7 @@ type QuickReplyOption = {
   searchValue: string;
 };
 
-const DEFAULT_QUICK_REPLY_TEMPLATES = normalizeAutoContactSettings(null).messageTemplates;
+const DEFAULT_QUICK_REPLIES = normalizeWhatsAppQuickRepliesSettings(null).quickReplies;
 
 const normalizeQuickReplyLookup = (value: string) =>
   value
@@ -70,9 +74,7 @@ const normalizeQuickReplyLookup = (value: string) =>
     .trim();
 
 const buildQuickReplyShortcut = (value: string, index: number) => {
-  const normalized = normalizeQuickReplyLookup(value)
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  const normalized = sanitizeWhatsAppQuickReplyShortcut(value);
 
   return normalized || `msg-${index + 1}`;
 };
@@ -884,7 +886,11 @@ export default function WhatsAppInboxScreen() {
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
-  const [quickReplyTemplates, setQuickReplyTemplates] = useState<AutoContactTemplate[]>(DEFAULT_QUICK_REPLY_TEMPLATES);
+  const [quickReplyIntegration, setQuickReplyIntegration] = useState<IntegrationSetting | null>(null);
+  const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>(DEFAULT_QUICK_REPLIES);
+  const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
+  const [savingQuickReplies, setSavingQuickReplies] = useState(false);
+  const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [composerSelection, setComposerSelection] = useState<ComposerSelection>({ start: 0, end: 0 });
   const [composerFocused, setComposerFocused] = useState(false);
   const [quickReplyActiveIndex, setQuickReplyActiveIndex] = useState(0);
@@ -1045,10 +1051,10 @@ export default function WhatsAppInboxScreen() {
   const quickReplyOptions = useMemo(() => {
     const usedShortcuts = new Set<string>();
 
-    return quickReplyTemplates
-      .map((template, index) => {
-        const name = template.name?.trim() || `Mensagem rapida ${index + 1}`;
-        const rawText = getTemplateMessage(template).trim();
+    return quickReplies
+      .map((quickReply, index) => {
+        const name = quickReply.name?.trim() || `Mensagem rapida ${index + 1}`;
+        const rawText = quickReply.text.trim();
         const resolvedText = quickReplyLead ? applyTemplateVariables(rawText, quickReplyLead) : rawText;
         const text = resolvedText.trim();
 
@@ -1068,7 +1074,7 @@ export default function WhatsAppInboxScreen() {
         usedShortcuts.add(shortcut);
 
         return {
-          id: template.id,
+          id: quickReply.id,
           name,
           shortcut,
           text,
@@ -1077,7 +1083,7 @@ export default function WhatsAppInboxScreen() {
         } as QuickReplyOption;
       })
       .filter((option): option is QuickReplyOption => option !== null);
-  }, [quickReplyLead, quickReplyTemplates]);
+  }, [quickReplies, quickReplyLead]);
   const activeQuickReplyMatch = useMemo(
     () => getActiveQuickReplyMatch(messageDraft, composerSelection),
     [composerSelection, messageDraft],
@@ -1295,6 +1301,29 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [connectionStatus, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
+  const followUpGenerationDisabledReason = useMemo(() => {
+    if (!selectedChat) {
+      return 'Selecione uma conversa para gerar o follow-up.';
+    }
+
+    if (generatingFollowUp) {
+      return 'Gerando follow-up com IA...';
+    }
+
+    if (sending) {
+      return 'Aguarde o envio atual terminar para gerar um follow-up.';
+    }
+
+    if (voiceRecordingState !== 'idle') {
+      return 'Finalize a gravacao de audio antes de gerar um follow-up.';
+    }
+
+    if (pendingAttachment) {
+      return 'Remova o anexo atual antes de gerar um follow-up.';
+    }
+
+    return null;
+  }, [generatingFollowUp, pendingAttachment, selectedChat, sending, voiceRecordingState]);
 
   const operationalBanner = useMemo(() => {
     if (operationalStateError && !operationalState) {
@@ -1379,19 +1408,21 @@ export default function WhatsAppInboxScreen() {
     let active = true;
 
     void configService
-      .getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG)
+      .getIntegrationSetting(WHATSAPP_QUICK_REPLIES_INTEGRATION_SLUG)
       .then((integration) => {
         if (!active) {
           return;
         }
 
-        const normalized = normalizeAutoContactSettings(integration?.settings);
-        setQuickReplyTemplates(normalized.messageTemplates);
+        const normalized = normalizeWhatsAppQuickRepliesSettings(integration?.settings);
+        setQuickReplyIntegration(integration);
+        setQuickReplies(normalized.quickReplies);
       })
       .catch((error) => {
         console.error('[WhatsAppInbox] erro ao carregar mensagens rapidas', error);
         if (active) {
-          setQuickReplyTemplates(DEFAULT_QUICK_REPLY_TEMPLATES);
+          setQuickReplyIntegration(null);
+          setQuickReplies(DEFAULT_QUICK_REPLIES);
         }
       });
 
@@ -2714,11 +2745,95 @@ export default function WhatsAppInboxScreen() {
   }, [activeQuickReplyMatch, composerSelection, messageDraft]);
 
   const handleOpenQuickReplySettings = useCallback(() => {
-    navigate('/painel/config?tab=automation');
-  }, [navigate]);
+    setQuickRepliesModalOpen(true);
+  }, []);
+
+  const handleSaveQuickReplies = useCallback(async (nextQuickReplies: WhatsAppQuickReply[]) => {
+    setSavingQuickReplies(true);
+
+    try {
+      const settingsPayload = buildWhatsAppQuickRepliesSettings(nextQuickReplies);
+      const result = quickReplyIntegration?.id
+        ? await configService.updateIntegrationSetting(quickReplyIntegration.id, {
+            settings: settingsPayload,
+          })
+        : await configService.createIntegrationSetting({
+            slug: WHATSAPP_QUICK_REPLIES_INTEGRATION_SLUG,
+            name: WHATSAPP_QUICK_REPLIES_INTEGRATION_NAME,
+            description: WHATSAPP_QUICK_REPLIES_INTEGRATION_DESCRIPTION,
+            settings: settingsPayload,
+          });
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      const savedIntegration = result.data ?? quickReplyIntegration;
+      const normalized = normalizeWhatsAppQuickRepliesSettings(savedIntegration?.settings ?? settingsPayload);
+
+      setQuickReplyIntegration(savedIntegration);
+      setQuickReplies(normalized.quickReplies);
+      setQuickRepliesModalOpen(false);
+      setDismissedQuickReplyKey(null);
+      toast.success('Mensagens rapidas salvas com sucesso.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao salvar mensagens rapidas', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar as mensagens rapidas.');
+    } finally {
+      setSavingQuickReplies(false);
+    }
+  }, [quickReplyIntegration]);
+
+  const handleGenerateFollowUp = useCallback(async () => {
+    if (!selectedChat) {
+      return;
+    }
+
+    if (followUpGenerationDisabledReason) {
+      toast.error(followUpGenerationDisabledReason);
+      return;
+    }
+
+    if (messageDraft.trim()) {
+      const confirmed = window.confirm('O texto atual do composer sera substituido pela sugestao da IA. Deseja continuar?');
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setGeneratingFollowUp(true);
+
+    try {
+      const result = await commWhatsAppService.generateFollowUp(selectedChat.id);
+      const nextValue = result.text.trim();
+      const nextCursor = nextValue.length;
+
+      setMessageDraft(nextValue);
+      setComposerSelection({ start: nextCursor, end: nextCursor });
+      setDismissedQuickReplyKey(null);
+      setQuickReplyActiveIndex(0);
+
+      requestAnimationFrame(() => {
+        const target = composerTextareaRef.current;
+        if (!target) {
+          return;
+        }
+
+        target.focus();
+        target.setSelectionRange(nextCursor, nextCursor);
+      });
+
+      toast.success('Follow-up gerado com sucesso.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao gerar follow-up', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel gerar o follow-up com IA.');
+    } finally {
+      setGeneratingFollowUp(false);
+    }
+  }, [followUpGenerationDisabledReason, messageDraft, selectedChat]);
 
   const handleComposerSubmit = () => {
-    if (sending) return;
+    if (sending || generatingFollowUp) return;
 
     if (voiceRecordingState === 'recording') {
       handleStopVoiceRecording();
@@ -3239,20 +3354,20 @@ export default function WhatsAppInboxScreen() {
                         </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => setAttachmentMenuOpen((current) => !current)}
-                        disabled={voiceRecordingState !== 'idle'}
-                        className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${attachmentMenuOpen ? 'is-open' : ''}`}
-                        aria-label="Anexar"
-                        aria-expanded={attachmentMenuOpen}
+                        <button
+                          type="button"
+                          onClick={() => setAttachmentMenuOpen((current) => !current)}
+                          disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${attachmentMenuOpen ? 'is-open' : ''}`}
+                          aria-label="Anexar"
+                          aria-expanded={attachmentMenuOpen}
                       >
                         <Plus className={`h-5 w-5 transition ${attachmentMenuOpen ? 'rotate-45' : ''}`} />
                       </button>
-                      <button
-                        type="button"
-                        disabled
-                        className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                        <button
+                          type="button"
+                          disabled
+                          className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
                         aria-label="Emojis"
                       >
                         <Smile className="h-5 w-5" />
@@ -3310,7 +3425,7 @@ export default function WhatsAppInboxScreen() {
                               <div className="px-4 py-4 text-sm text-[var(--panel-text-soft,#5b4635)]">
                                 <p className="font-medium">{quickReplyEmptyStateMessage}</p>
                                 <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
-                                  Cadastre em <code>/painel/config?tab=automation</code>, na secao <strong>Biblioteca de templates</strong>.
+                                  Use o botao <strong>Gerenciar</strong> para criar e editar suas mensagens rapidas sem sair do inbox.
                                 </p>
                               </div>
                             )}
@@ -3333,7 +3448,7 @@ export default function WhatsAppInboxScreen() {
                         }}
                         onBlur={() => setComposerFocused(false)}
                         placeholder="Digite uma mensagem"
-                        disabled={sending}
+                        disabled={sending || generatingFollowUp}
                         className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-[15px] leading-6 focus:outline-none"
                       />
                     </div>
@@ -3341,9 +3456,23 @@ export default function WhatsAppInboxScreen() {
                     <div className={`flex shrink-0 ${isComposerExpanded ? 'items-end pb-0.5' : 'items-center'}`}>
                       <button
                         type="button"
+                        onClick={() => void handleGenerateFollowUp()}
+                        disabled={Boolean(followUpGenerationDisabledReason)}
+                        className={`whatsapp-inbox-composer-icon mr-2 inline-flex h-10 w-10 items-center justify-center rounded-full transition ${generatingFollowUp ? 'cursor-wait opacity-70' : ''}`}
+                        aria-label="Gerar follow-up com IA"
+                        title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
+                      >
+                        {generatingFollowUp ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-5 w-5" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
                         onClick={handleComposerSubmit}
-                        disabled={sending || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
-                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${sending || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
+                        disabled={sending || generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
+                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${sending || generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
                         aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar audio'}
                         title={sendDisabledReason ?? undefined}
                       >
@@ -3401,6 +3530,14 @@ export default function WhatsAppInboxScreen() {
             </div>
           </div>
         )}
+
+        <WhatsAppQuickRepliesModal
+          isOpen={quickRepliesModalOpen}
+          quickReplies={quickReplies}
+          saving={savingQuickReplies}
+          onClose={() => setQuickRepliesModalOpen(false)}
+          onSave={handleSaveQuickReplies}
+        />
 
         <WhatsAppLeadDrawer
           isOpen={leadDrawerOpen}

@@ -67,6 +67,16 @@ export default function SystemSettingsScreen() {
   });
   const { loading: configLoading, getRoleModulePermission } = useConfig();
   const loadingUi = useAdaptiveLoading(loading);
+  const timezoneOptions = useMemo(
+    () => [
+      { value: "America/Sao_Paulo", label: "São Paulo (UTC-3)" },
+      { value: "America/Manaus", label: "Manaus (UTC-4)" },
+      { value: "America/Cuiaba", label: "Cuiabá (UTC-4)" },
+      { value: "America/Rio_Branco", label: "Rio Branco (UTC-5)" },
+      { value: "UTC", label: "UTC (padrão global)" },
+    ],
+    [],
+  );
 
   useEffect(() => {
     void loadSettings();
@@ -399,7 +409,7 @@ export default function SystemSettingsScreen() {
                     Preferências do sistema
                   </h3>
                   <p className="text-sm text-[color:var(--panel-text-soft)]">
-                    Notificações, formato de data e tempo de sessão.
+                    Notificações, formato de data, fuso horário e tempo de sessão.
                   </p>
                 </div>
               </div>
@@ -476,6 +486,25 @@ export default function SystemSettingsScreen() {
                     />
                     <p className="mt-1 text-xs text-slate-500">
                       Padrão recomendado: 480 minutos (8 horas).
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                      Fuso horário do sistema
+                    </label>
+                    <FilterSingleSelect
+                      icon={Clock}
+                      value={settings.timezone}
+                      onChange={(value) =>
+                        setSettings({ ...settings, timezone: value || "America/Sao_Paulo" })
+                      }
+                      placeholder="Selecione um fuso"
+                      includePlaceholderOption={false}
+                      options={timezoneOptions}
+                    />
+                    <p className="mt-1 text-xs text-slate-500">
+                      Usado como referência para prompts de follow-up com IA e demais rotinas que dependem do horário local.
                     </p>
                   </div>
 

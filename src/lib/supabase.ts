@@ -388,6 +388,7 @@ export type SystemSettings = {
   notification_interval_seconds: number;
   session_timeout_minutes: number;
   date_format: string;
+  timezone: string;
   created_at: string;
   updated_at: string;
 };

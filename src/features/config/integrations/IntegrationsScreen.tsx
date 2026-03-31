@@ -1195,7 +1195,7 @@ export default function IntegrationsScreen() {
                       "Exemplo:\n" +
                       "- Fale como consultora de planos de saúde.\n" +
                       "- Seja objetiva e acolhedora.\n" +
-                      "- Considere que agora em Brasília são {{hora_agora}} do dia {{data_hoje}}.\n" +
+                      "- Considere que agora no fuso do sistema são {{hora_agora}} do dia {{data_hoje}}.\n" +
                       "- Evite texto longo.\n" +
                       "- Quando fizer sentido, termine com uma CTA simples."
                     }
@@ -1204,12 +1204,13 @@ export default function IntegrationsScreen() {
                     Use este campo para orientar tom, abordagem comercial,
                     limites e preferências da sua operação. Variáveis
                     disponíveis: {"{{nome}}"}, {"{{primeiro_nome}}"},{" "}
-                    {"{{data_hoje}}"}, {"{{hora_agora}}"} e{" "}
-                    {"{{data_hora_atual_brasilia}}"}.
+                    {"{{data_hoje}}"}, {"{{hora_agora}}"}, {"{{data_hora_atual_sistema}}"}
+                    {" "}e {"{{data_hora_atual_brasilia}}"}.
                   </p>
                   <p className="text-xs text-[var(--panel-text-muted)]">
-                    As datas e horas são resolvidas no fuso de Brasília. Não
-                    precisa repetir regras básicas do sistema.
+                    As datas e horas são resolvidas no fuso configurado em
+                    Preferências do sistema. O alias legado
+                    {" "}{"{{data_hora_atual_brasilia}}"} continua válido.
                   </p>
                 </div>
               </div>

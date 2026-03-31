@@ -37,6 +37,7 @@ export type SectionOverview = {
 
 export const DEFAULT_GENERAL_PREFERENCES = {
   date_format: "DD/MM/YYYY",
+  timezone: "America/Sao_Paulo",
   notification_sound_enabled: true,
   notification_volume: 0.7,
   notification_interval_seconds: 30,
@@ -106,7 +107,7 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     description: "Sessao, formato de data e notificacoes.",
     icon: Settings,
     accentClassName: "bg-amber-50 text-amber-700 ring-amber-100",
-    searchTerms: ["preferencias", "sistema", "notificacao", "sessao", "data"],
+    searchTerms: ["preferencias", "sistema", "notificacao", "sessao", "data", "fuso", "timezone"],
   },
   {
     id: "operadoras",
@@ -178,6 +179,7 @@ export const areSystemPreferencesEqual = (
 
   return (
     a.date_format === b.date_format &&
+    a.timezone === b.timezone &&
     a.notification_sound_enabled === b.notification_sound_enabled &&
     a.notification_volume === b.notification_volume &&
     a.notification_interval_seconds === b.notification_interval_seconds &&

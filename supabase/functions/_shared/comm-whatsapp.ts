@@ -121,6 +121,62 @@ export const normalizeCommWhatsAppPhone = (value: unknown): string => {
   return digits;
 };
 
+export const getCommWhatsAppPhoneLookupKeys = (value: unknown): string[] => {
+  const digits = normalizePhoneDigits(value);
+  if (!digits) return [];
+
+  const keys = new Set<string>();
+
+  const appendKey = (candidate: string) => {
+    const normalized = normalizePhoneDigits(candidate);
+    if (!normalized) return;
+    keys.add(normalized);
+  };
+
+  const appendBrazilMobileVariants = (candidate: string) => {
+    if (candidate.length === 10) {
+      const mobilePrefix = candidate[2] ?? '';
+      if (/[6-9]/.test(mobilePrefix)) {
+        appendKey(`${candidate.slice(0, 2)}9${candidate.slice(2)}`);
+      }
+      return;
+    }
+
+    if (candidate.length === 11) {
+      const ninthDigit = candidate[2] ?? '';
+      const mobilePrefix = candidate[3] ?? '';
+      if (ninthDigit === '9' && /[6-9]/.test(mobilePrefix)) {
+        appendKey(`${candidate.slice(0, 2)}${candidate.slice(3)}`);
+      }
+    }
+  };
+
+  appendKey(digits);
+
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    const nationalDigits = digits.slice(2);
+    appendKey(nationalDigits);
+    appendBrazilMobileVariants(nationalDigits);
+    for (const variant of Array.from(keys)) {
+      if (!variant.startsWith('55') && (variant.length === 10 || variant.length === 11)) {
+        appendKey(`55${variant}`);
+      }
+    }
+  }
+
+  if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
+    appendKey(`55${digits}`);
+    appendBrazilMobileVariants(digits);
+    for (const variant of Array.from(keys)) {
+      if (!variant.startsWith('55') && (variant.length === 10 || variant.length === 11)) {
+        appendKey(`55${variant}`);
+      }
+    }
+  }
+
+  return Array.from(keys);
+};
+
 export const normalizeWhapiChatId = (value: unknown): string => {
   const raw = toTrimmedString(value);
   if (!raw) return '';

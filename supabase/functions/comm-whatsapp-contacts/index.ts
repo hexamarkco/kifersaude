@@ -13,6 +13,7 @@ import {
   extractWhapiContactSaved,
   extractWhapiContactShortName,
   fetchWhapiContacts,
+  getCommWhatsAppPhoneLookupKeys,
   extractWhapiSavedContactName,
   getNowIso,
   normalizeCommWhatsAppPhone,
@@ -198,12 +199,17 @@ async function findCachedContactByPhone(params: {
   channelId: string;
   phoneNumber: string;
 }) {
+  const phoneLookupKeys = getCommWhatsAppPhoneLookupKeys(params.phoneNumber);
+  if (phoneLookupKeys.length === 0) {
+    return null;
+  }
+
   const { data, error } = await params.supabaseAdmin
     .from('comm_whatsapp_phone_contacts_cache')
     .select('*')
     .eq('channel_id', params.channelId)
     .eq('saved', true)
-    .eq('phone_digits', params.phoneNumber)
+    .in('phone_digits', phoneLookupKeys)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -4326,7 +4326,7 @@ export default function WhatsAppInboxScreen() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">{chat.display_name}</p>
+                      <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">{getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}</p>
                       <p className="truncate text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
@@ -4370,7 +4370,7 @@ export default function WhatsAppInboxScreen() {
               <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="whatsapp-inbox-heading text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChat.display_name}</p>
+                    <p className="whatsapp-inbox-heading text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChatDisplayName}</p>
                     {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
                       <StatusDropdown
                         currentStatus={leadPanel.status_nome}
@@ -5025,7 +5025,7 @@ export default function WhatsAppInboxScreen() {
         <WhatsAppLeadDrawer
           isOpen={leadDrawerOpen}
           onClose={handleCloseLeadDrawer}
-          chatDisplayName={selectedChat?.display_name || 'Conversa'}
+          chatDisplayName={selectedChatDisplayName}
           linkedLead={leadPanel}
           autoLinked={selectedChatWasAutoLinked}
           loading={leadPanelLoading}

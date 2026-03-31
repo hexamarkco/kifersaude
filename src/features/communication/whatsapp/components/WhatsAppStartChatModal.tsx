@@ -4,10 +4,17 @@ import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } fro
 import ModalShell from '../../../../components/ui/ModalShell';
 import Button from '../../../../components/ui/Button';
 import Input from '../../../../components/ui/Input';
+import Tabs, { type TabItem } from '../../../../components/ui/Tabs';
 import type { CommWhatsAppLeadSearchResult } from '../../../../lib/commWhatsAppService';
 import type { CommWhatsAppPhoneContact } from '../../../../lib/supabase';
 
 type StartChatSource = 'saved' | 'crm' | 'manual';
+
+const SOURCE_TABS: TabItem<StartChatSource>[] = [
+  { id: 'saved', label: 'Contatos salvos' },
+  { id: 'crm', label: 'CRM' },
+  { id: 'manual', label: 'Número' },
+];
 
 type WhatsAppStartChatModalProps = {
   isOpen: boolean;
@@ -57,7 +64,7 @@ export default function WhatsAppStartChatModal({
       case 'crm':
         return 'Leads do CRM';
       case 'manual':
-        return 'Numero manual';
+        return 'Número manual';
       default:
         return 'Contatos salvos';
     }
@@ -68,40 +75,25 @@ export default function WhatsAppStartChatModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Novo chat"
-      description="Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um numero manualmente."
+      description="Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um número manualmente."
       size="lg"
       panelClassName="max-w-3xl"
     >
       <div className="space-y-5">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setSource('saved')}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${source === 'saved' ? 'bg-[var(--panel-accent-strong,#c86f1d)] text-white' : 'bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-text-soft,#5b4635)]'}`}
-          >
-            Contatos salvos
-          </button>
-          <button
-            type="button"
-            onClick={() => setSource('crm')}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${source === 'crm' ? 'bg-[var(--panel-accent-strong,#c86f1d)] text-white' : 'bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-text-soft,#5b4635)]'}`}
-          >
-            CRM
-          </button>
-          <button
-            type="button"
-            onClick={() => setSource('manual')}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${source === 'manual' ? 'bg-[var(--panel-accent-strong,#c86f1d)] text-white' : 'bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-text-soft,#5b4635)]'}`}
-          >
-            Numero
-          </button>
-        </div>
+        <Tabs
+          items={SOURCE_TABS}
+          value={source}
+          onChange={setSource}
+          variant="panel"
+          listClassName="w-full sm:w-auto"
+          triggerClassName="flex-1 sm:flex-initial"
+        />
 
         {source === 'manual' ? (
           <div className="space-y-4 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
             <div>
-              <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">Iniciar por numero</p>
-              <p className="mt-1 text-sm text-[var(--panel-text-muted,#8a735f)]">Digite um numero com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
+              <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">Iniciar por número</p>
+              <p className="mt-1 text-sm text-[var(--panel-text-muted,#8a735f)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} />

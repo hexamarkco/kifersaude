@@ -107,7 +107,7 @@ export default function WhatsAppQuickRepliesModal({
 
     const invalidQuickReply = populatedQuickReplies.find((quickReply) => !quickReply.name.trim() || !quickReply.text.trim());
     if (invalidQuickReply) {
-      setValidationError('Preencha nome e mensagem em todas as mensagens rapidas antes de salvar.');
+      setValidationError('Preencha nome e mensagem em todas as mensagens rápidas antes de salvar.');
       setSelectedQuickReplyId(invalidQuickReply.id);
       return;
     }
@@ -117,27 +117,27 @@ export default function WhatsAppQuickRepliesModal({
   };
 
   return (
-    <ModalShell
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Mensagens rapidas"
-      description="Cadastre atalhos independentes do inbox. Use {{ para inserir variaveis dinamicas na mensagem."
-      size="xl"
-      panelClassName="config-transparent-buttons max-w-6xl"
-      footer={(
-        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <div className="text-xs text-[var(--panel-text-muted,#876f5c)]">
-            Digite <code>&#123;&#123;</code> no corpo da mensagem para abrir as variaveis disponiveis.
+      <ModalShell
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Mensagens rápidas"
+        description="Cadastre atalhos independentes do inbox. Use {{ para inserir variáveis dinâmicas na mensagem."
+        size="xl"
+        panelClassName="config-transparent-buttons max-w-6xl"
+        footer={(
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+            <div className="text-xs text-[var(--panel-text-muted,#876f5c)]">
+              Digite <code>&#123;&#123;</code> no corpo da mensagem para abrir as variáveis disponíveis.
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={onClose} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button onClick={() => void handleSave()} loading={saving}>
+                {!saving && 'Salvar mensagens rápidas'}
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button onClick={() => void handleSave()} loading={saving}>
-              {!saving && 'Salvar mensagens rapidas'}
-            </Button>
-          </div>
-        </div>
       )}
     >
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
@@ -158,7 +158,7 @@ export default function WhatsAppQuickRepliesModal({
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
             {draftQuickReplies.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-4 text-sm text-[var(--panel-text-muted,#876f5c)]">
-                Nenhuma mensagem rapida cadastrada.
+                Nenhuma mensagem rápida cadastrada.
               </div>
             ) : draftQuickReplies.map((quickReply) => {
               const isSelected = quickReply.id === selectedQuickReplyId;
@@ -173,7 +173,7 @@ export default function WhatsAppQuickRepliesModal({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm font-semibold text-[var(--panel-text,#1a120d)]">
-                      {quickReply.name.trim() || 'Nova mensagem rapida'}
+                      {quickReply.name.trim() || 'Nova mensagem rápida'}
                     </span>
                     <code className="shrink-0 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2 py-0.5 text-[11px] font-semibold text-[var(--panel-accent-ink,#8b4d12)]">
                       /{shortcutPreview}
@@ -195,10 +195,10 @@ export default function WhatsAppQuickRepliesModal({
                 <div>
                   <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text,#1a120d)]">
                     <MessageCircle className="h-4 w-4" />
-                    Editor da mensagem rapida
+                    Editor da mensagem rápida
                   </h3>
                   <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
-                    O atalho e a mensagem ficam disponiveis imediatamente no composer do inbox.
+                    O atalho e a mensagem ficam disponíveis imediatamente no composer do inbox.
                   </p>
                 </div>
                 <Button
@@ -243,7 +243,7 @@ export default function WhatsAppQuickRepliesModal({
                     rightSlot={<span className="text-[11px] font-semibold">/{sanitizeWhatsAppQuickReplyShortcut(selectedQuickReply.shortcut || selectedQuickReply.name) || 'atalho'}</span>}
                   />
                   <p className="mt-1 text-[11px] text-[var(--panel-text-muted,#876f5c)]">
-                    Use letras, numeros e hifens. Se ficar vazio, o sistema gera a partir do nome.
+                    Use letras, números e hífens. Se ficar vazio, o sistema gera a partir do nome.
                   </p>
                 </div>
               </div>
@@ -258,13 +258,13 @@ export default function WhatsAppQuickRepliesModal({
                   suggestions={AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS}
                   rows={10}
                   size="compact"
-                  placeholder="Digite a mensagem. Para inserir variaveis, digite {{"
+                  placeholder="Digite a mensagem. Para inserir variáveis, digite {{"
                 />
               </div>
             </>
           ) : (
             <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-6 text-center text-sm text-[var(--panel-text-muted,#876f5c)]">
-              Selecione ou crie uma mensagem rapida para editar.
+              Selecione ou crie uma mensagem rápida para editar.
             </div>
           )}
         </div>

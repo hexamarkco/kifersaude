@@ -38,7 +38,7 @@ export default function WhatsAppFollowUpModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Gerador de follow-up"
-      description="Gere uma sugestao com IA, refine com instrucoes extras e use --- em uma linha isolada para separar mensagens no envio."
+      description="Gere uma sugestão com IA, refine com instruções extras e use --- em uma linha isolada para separar mensagens no envio."
       size="xl"
       panelClassName="config-transparent-buttons max-w-6xl"
       footer={(
@@ -65,9 +65,9 @@ export default function WhatsAppFollowUpModal({
         <div className="space-y-4">
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
             <div className="mb-2">
-              <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Instrucoes personalizadas</h3>
+              <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Instruções personalizadas</h3>
               <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-                Essas instrucoes valem so para esta geracao. Digite <code>{'{{'}</code> para usar variaveis do prompt.
+                Essas instruções valem só para esta geração. Digite <code>{'{{'}</code> para usar variáveis do prompt.
               </p>
             </div>
             <VariableAutocompleteTextarea
@@ -79,7 +79,7 @@ export default function WhatsAppFollowUpModal({
               placeholder={
                 'Ex.:\n' +
                 '- Fale mais curto.\n' +
-                '- Nao insista demais.\n' +
+                '- Não insista demais.\n' +
                 '- Termine com uma pergunta objetiva.'
               }
               disabled={generating}
@@ -116,7 +116,7 @@ export default function WhatsAppFollowUpModal({
               Preview do envio
             </div>
             <p className="mt-2 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-              Cada bloco abaixo vira uma mensagem independente quando voce aplicar ao composer e enviar.
+              Cada bloco abaixo vira uma mensagem independente quando você aplicar ao composer e enviar.
             </p>
 
             <div className="mt-4 space-y-3">
@@ -136,7 +136,7 @@ export default function WhatsAppFollowUpModal({
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-6 text-sm text-[var(--panel-text-muted,#876f5c)]">
-                  Gere ou escreva uma sugestao para visualizar como ela sera enviada.
+                  Gere ou escreva uma sugestão para visualizar como ela será enviada.
                 </div>
               )}
             </div>

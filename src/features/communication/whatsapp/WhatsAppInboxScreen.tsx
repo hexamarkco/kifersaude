@@ -434,8 +434,8 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
       })
       .catch((resolveError) => {
         if (!active) return;
-        const resolvedMessage = resolveError instanceof Error ? resolveError.message : 'Nao foi possivel carregar a midia.';
-        setError(resolvedMessage.includes('specified media not found') ? 'Arquivo indisponivel no momento.' : resolvedMessage);
+        const resolvedMessage = resolveError instanceof Error ? resolveError.message : 'Não foi possível carregar a mídia.';
+        setError(resolvedMessage.includes('specified media not found') ? 'Arquivo indisponível no momento.' : resolvedMessage);
       })
       .finally(() => {
         if (!active) return;
@@ -539,8 +539,8 @@ function WhatsAppAudioPlayerCard({
           {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
         </div>
         <div className="min-w-0 flex-1 space-y-1">
-          {kind !== 'voice' ? <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de audio'}</p> : null}
-          <p className="text-xs opacity-75">{loading ? 'Carregando audio...' : error || 'Audio indisponivel'}</p>
+          {kind !== 'voice' ? <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p> : null}
+          <p className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</p>
         </div>
       </div>
     );
@@ -562,7 +562,7 @@ function WhatsAppAudioPlayerCard({
             type="button"
             onClick={handleTogglePlayback}
             className="whatsapp-inbox-audio-native-play"
-            aria-label={isPlaying ? 'Pausar audio' : 'Reproduzir audio'}
+            aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
           >
             {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
           </button>
@@ -570,8 +570,8 @@ function WhatsAppAudioPlayerCard({
           <div className={`min-w-0 flex-1 ${kind === 'voice' ? 'space-y-1.5' : 'space-y-2'}`}>
             {kind !== 'voice' ? (
               <div className="flex items-center justify-between gap-3">
-                <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de audio'}</p>
-                <span className="text-[11px] uppercase tracking-[0.08em] opacity-70">Audio enviado</span>
+                <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p>
+                <span className="text-[11px] uppercase tracking-[0.08em] opacity-70">Áudio enviado</span>
               </div>
             ) : null}
             <div className="whatsapp-inbox-audio-native-waveform">
@@ -602,15 +602,17 @@ function RetryMediaButton({
   onRetry: () => void;
 }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onRetry}
       disabled={loading}
-      className="whatsapp-inbox-retry-button inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] transition"
+      variant="soft"
+      size="sm"
+      className="whatsapp-inbox-retry-button h-auto rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.1em]"
     >
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SendHorizontal className="h-3.5 w-3.5" />}
       Reenviar
-    </button>
+    </Button>
   );
 }
 
@@ -629,6 +631,7 @@ function InboxFilterChip({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
         active
           ? 'border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/50 text-[var(--panel-accent-ink,#8b4d12)]'
@@ -655,7 +658,7 @@ function InboxFilterGroup<T extends string>({
 }) {
   return (
     <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className={`font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)] ${compact ? 'text-[10px]' : 'text-[11px]'}`}>{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
       <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         {options.map((option) => (
           <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} compact={compact} />
@@ -690,7 +693,7 @@ function InboxMultiFilterGroup({
 
   return (
     <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className={`font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)] ${compact ? 'text-[10px]' : 'text-[11px]'}`}>{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
       <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} compact={compact} />
         {options.map((option) => (
@@ -739,7 +742,7 @@ function WhatsAppMessageBody({
           </button>
         ) : (
           <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
-            {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
+            {loading ? 'Carregando imagem...' : error || 'Imagem indisponível'}
           </div>
         )}
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
@@ -757,12 +760,12 @@ function WhatsAppMessageBody({
             </video>
           ) : (
             <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
-              {loading ? 'Carregando video...' : error || 'Video indisponivel'}
+              {loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}
             </div>
           )}
           <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
-            <span className="truncate font-medium">{message.media_file_name || 'Video'}</span>
-            <span className="shrink-0 opacity-80">{formatFileSize(message.media_size_bytes) || 'Midia'}</span>
+            <span className="truncate font-medium">{message.media_file_name || 'Vídeo'}</span>
+            <span className="shrink-0 opacity-80">{formatFileSize(message.media_size_bytes) || 'Mídia'}</span>
           </div>
         </div>
         {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
@@ -776,7 +779,7 @@ function WhatsAppMessageBody({
     return (
       <div className="space-y-3">
         <div className="whatsapp-inbox-document-card flex items-center gap-3 rounded-2xl border px-3 py-3">
-          <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xs font-black tracking-[0.08em]">
+          <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xs font-semibold tracking-[0.08em]">
             {extension.slice(0, 4)}
           </div>
           <div className="min-w-0 flex-1">
@@ -827,9 +830,9 @@ function WhatsAppMessageBody({
           {transcriptionStatus === 'completed' && message.transcription_text?.trim() ? (
             <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-3 py-3">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Transcricao</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Transcrição</p>
                 {message.transcription_provider ? (
-                  <span className="text-[10px] uppercase tracking-[0.08em] text-[var(--panel-text-subtle,#9a8573)]">
+                  <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--panel-text-subtle,#9a8573)]">
                     {message.transcription_provider}
                   </span>
                 ) : null}
@@ -847,13 +850,15 @@ function WhatsAppMessageBody({
                 Transcrevendo...
               </span>
             ) : canTranscribe ? (
-              <button
+              <Button
                 type="button"
+                variant="secondary"
+                size="sm"
                 onClick={() => onTranscribe(message)}
-                className="inline-flex items-center gap-2 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--panel-text-soft,#5b4635)] transition hover:border-[var(--panel-accent-border,#d2ab85)] hover:text-[var(--panel-text,#1c1917)]"
+                className="h-auto rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.08em]"
               >
                 {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
-              </button>
+              </Button>
             ) : null}
 
             {transcriptionStatus === 'failed' && message.transcription_error ? (
@@ -1178,7 +1183,7 @@ export default function WhatsAppInboxScreen() {
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao carregar contratos do lead', error);
       setLeadContracts([]);
-      setLeadContractsError(error instanceof Error ? error.message : 'Nao foi possivel carregar os contratos do lead.');
+      setLeadContractsError(error instanceof Error ? error.message : 'Não foi possível carregar os contratos do lead.');
     } finally {
       setLeadContractsLoading(false);
     }
@@ -1291,15 +1296,15 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (operationalStateError && !operationalState) {
-      return 'Nao foi possivel verificar o canal do WhatsApp agora.';
+      return 'Não foi possível verificar o canal do WhatsApp agora.';
     }
 
     if (!operationalState?.tokenConfigured) {
-      return 'Token da Whapi nao configurado em /painel/config.';
+      return 'Token da Whapi não configurado em /painel/config.';
     }
 
     if (!operationalState.configEnabled) {
-      return 'Envio do WhatsApp esta desabilitado em /painel/config.';
+      return 'Envio do WhatsApp está desabilitado em /painel/config.';
     }
 
     if (!isChannelConnected) {
@@ -1322,7 +1327,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (voiceRecordingState !== 'idle') {
-      return 'Finalize a gravacao de audio antes de gerar um follow-up.';
+      return 'Finalize a gravação de áudio antes de gerar um follow-up.';
     }
 
     if (pendingAttachment) {
@@ -1337,7 +1342,7 @@ export default function WhatsAppInboxScreen() {
       return {
         tone: 'danger' as const,
         icon: AlertTriangle,
-        title: 'Nao foi possivel verificar o canal do WhatsApp',
+        title: 'Não foi possível verificar o canal do WhatsApp',
         description: operationalStateError,
       };
     }
@@ -1365,7 +1370,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'warning' as const,
         icon: AlertTriangle,
         title: 'Envio desabilitado',
-        description: 'O canal esta configurado, mas o envio foi desativado em /painel/config.',
+        description: 'O canal está configurado, mas o envio foi desativado em /painel/config.',
       };
     }
 
@@ -1374,7 +1379,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'danger' as const,
         icon: WifiOff,
         title: `WhatsApp ${formatConnectionStatusLabel(connectionStatus)}`,
-        description: 'Reconecte o canal na Whapi ou valide a sessao antes de atender por aqui.',
+        description: 'Reconecte o canal na Whapi ou valide a sessão antes de atender por aqui.',
       };
     }
 
@@ -1383,7 +1388,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'info' as const,
         icon: Clock3,
         title: 'Webhook ainda sem eventos',
-        description: 'O canal esta conectado, mas ainda nao recebemos nenhum evento do webhook neste inbox.',
+        description: 'O canal está conectado, mas ainda não recebemos nenhum evento do webhook neste inbox.',
       };
     }
 
@@ -1392,7 +1397,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'info' as const,
         icon: Clock3,
         title: 'Webhook sem eventos recentes',
-        description: `Ultimo evento recebido em ${formatMessageTime(channelState.last_webhook_received_at)}. Se isso nao for esperado, valide o webhook na Whapi.`,
+        description: `Último evento recebido em ${formatMessageTime(channelState.last_webhook_received_at)}. Se isso não for esperado, valide o webhook na Whapi.`,
       };
     }
 
@@ -1426,7 +1431,7 @@ export default function WhatsAppInboxScreen() {
         setQuickReplies(normalized.quickReplies);
       })
       .catch((error) => {
-        console.error('[WhatsAppInbox] erro ao carregar mensagens rapidas', error);
+        console.error('[WhatsAppInbox] erro ao carregar mensagens rápidas', error);
         if (active) {
           setQuickReplyIntegration(null);
           setQuickReplies(DEFAULT_QUICK_REPLIES);
@@ -1598,7 +1603,7 @@ export default function WhatsAppInboxScreen() {
 
       console.error('[WhatsAppInbox] erro ao carregar estado operacional', error);
       setOperationalStateError(
-        error instanceof Error ? error.message : 'Nao foi possivel carregar o estado operacional do WhatsApp.',
+        error instanceof Error ? error.message : 'Não foi possível carregar o estado operacional do WhatsApp.',
       );
       setOperationalStateLoaded(true);
     }
@@ -1714,7 +1719,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as conversas do WhatsApp.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
     }
   }, [buildChatsSignature, chatActivityFilter, leadStatusFilters, search]);
 
@@ -1787,7 +1792,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar as mensagens da conversa.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as mensagens da conversa.');
     } finally {
       if (shouldShowBlockingLoader && requestId === messagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
       setLoadingMessages(false);
@@ -1991,7 +1996,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       console.error('[WhatsAppInbox] erro ao carregar mensagens antigas', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar mensagens mais antigas.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mensagens mais antigas.');
     } finally {
       if (requestId === olderMessagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
         setLoadingOlderMessages(false);
@@ -2203,7 +2208,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      toast.error('Seu navegador nao suporta gravacao de audio neste inbox.');
+      toast.error('Seu navegador não suporta gravação de áudio neste inbox.');
       return;
     }
 
@@ -2290,7 +2295,7 @@ export default function WhatsAppInboxScreen() {
         setVoiceRecordingSeconds(0);
         discardVoiceRecordingRef.current = true;
         voiceChunksRef.current = [];
-        toast.error('Nao foi possivel continuar a gravacao de audio.');
+        toast.error('Não foi possível continuar a gravação de áudio.');
       };
 
       recorder.start(250);
@@ -2315,7 +2320,7 @@ export default function WhatsAppInboxScreen() {
       const message =
         error instanceof DOMException && error.name === 'NotAllowedError'
           ? 'Permita o microfone no navegador para gravar nota de voz.'
-          : 'Nao foi possivel iniciar a gravacao de audio.';
+          : 'Não foi possível iniciar a gravação de áudio.';
       toast.error(message);
     }
   }, [clearVoiceTimer, finalizeVoiceRecording, sendDisabledReason, stopVoiceStream, voiceRecordingState]);
@@ -2337,7 +2342,7 @@ export default function WhatsAppInboxScreen() {
     void audio.play().then(() => {
       setVoicePreviewPlaying(true);
     }).catch(() => {
-      toast.error('Nao foi possivel reproduzir a nota de voz agora.');
+      toast.error('Não foi possível reproduzir a nota de voz agora.');
     });
   }, [pendingAttachment?.kind, voicePreviewPlaying]);
 
@@ -2412,8 +2417,8 @@ export default function WhatsAppInboxScreen() {
       await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
-      const message = error instanceof Error ? error.message : 'Nao foi possivel enviar a mensagem.';
-      if (message === 'Envio de midia cancelado.') {
+      const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
+      if (message === 'Envio de mídia cancelado.') {
         toast.info('Upload do anexo cancelado.');
       } else {
         toast.error(message);
@@ -2451,10 +2456,10 @@ export default function WhatsAppInboxScreen() {
       if (selectedChat) {
         await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
       }
-      toast.success('Midia reenviada com sucesso.');
+      toast.success('Mídia reenviada com sucesso.');
     } catch (error) {
-      console.error('[WhatsAppInbox] erro ao reenviar midia', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel reenviar a midia.');
+      console.error('[WhatsAppInbox] erro ao reenviar mídia', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível reenviar a mídia.');
     } finally {
       setRetryingMessageId(null);
     }
@@ -2480,9 +2485,9 @@ export default function WhatsAppInboxScreen() {
         transcription_error: null,
         transcription_updated_at: new Date().toISOString(),
       });
-      toast.success('Transcricao concluida.');
+      toast.success('Transcrição concluída.');
     } catch (error) {
-      const messageText = error instanceof Error ? error.message : 'Nao foi possivel transcrever este audio.';
+      const messageText = error instanceof Error ? error.message : 'Não foi possível transcrever este áudio.';
       patchMessageLocally(message.id, {
         transcription_status: 'failed',
         transcription_error: messageText,
@@ -2538,7 +2543,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao vincular lead', error);
       autoLinkedLeadKeyRef.current = null;
       if (!options.silent) {
-        toast.error(error instanceof Error ? error.message : 'Nao foi possivel vincular o lead ao chat.');
+        toast.error(error instanceof Error ? error.message : 'Não foi possível vincular o lead ao chat.');
       }
     } finally {
       setLinkLoadingLeadId(null);
@@ -2570,7 +2575,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Lead desvinculado da conversa.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao desvincular lead', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel desvincular o lead do chat.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível desvincular o lead do chat.');
     }
   };
 
@@ -2650,7 +2655,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Conversa pronta para atendimento.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao iniciar chat por contato salvo', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel iniciar a conversa a partir do contato salvo.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa a partir do contato salvo.');
     } finally {
       setStartingChatKey(null);
     }
@@ -2672,7 +2677,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Conversa do lead aberta no inbox.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao iniciar chat por lead do CRM', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel iniciar a conversa a partir do lead do CRM.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa a partir do lead do CRM.');
     } finally {
       setStartingChatKey(null);
     }
@@ -2692,10 +2697,10 @@ export default function WhatsAppInboxScreen() {
       setSelectedChatId(result.chat.id);
       setStartChatModalOpen(false);
       setManualStartPhone('');
-      toast.success('Conversa aberta pelo numero informado.');
+      toast.success('Conversa aberta pelo número informado.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao iniciar chat manual', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel iniciar a conversa pelo numero informado.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa pelo número informado.');
     } finally {
       setStartingChatKey(null);
     }
@@ -2789,10 +2794,10 @@ export default function WhatsAppInboxScreen() {
       setQuickReplies(normalized.quickReplies);
       setQuickRepliesModalOpen(false);
       setDismissedQuickReplyKey(null);
-      toast.success('Mensagens rapidas salvas com sucesso.');
+      toast.success('Mensagens rápidas salvas com sucesso.');
     } catch (error) {
-      console.error('[WhatsAppInbox] erro ao salvar mensagens rapidas', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar as mensagens rapidas.');
+      console.error('[WhatsAppInbox] erro ao salvar mensagens rápidas', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar as mensagens rápidas.');
     } finally {
       setSavingQuickReplies(false);
     }
@@ -2822,7 +2827,7 @@ export default function WhatsAppInboxScreen() {
       setFollowUpDraft(result.text.trim());
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao gerar follow-up', error);
-      toast.error(error instanceof Error ? error.message : 'Nao foi possivel gerar o follow-up com IA.');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar o follow-up com IA.');
     } finally {
       setGeneratingFollowUp(false);
     }
@@ -2851,7 +2856,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (messageDraft.trim() && messageDraft.trim() !== nextValue) {
-      const confirmed = window.confirm('O texto atual do composer sera substituido pela sugestao do follow-up. Deseja continuar?');
+      const confirmed = window.confirm('O texto atual do composer será substituído pela sugestão do follow-up. Deseja continuar?');
       if (!confirmed) {
         return;
       }
@@ -2996,19 +3001,17 @@ export default function WhatsAppInboxScreen() {
                 />
 
                 <div className="relative shrink-0">
-                  <button
+                  <Button
                     type="button"
                     ref={advancedFiltersTriggerRef}
                     onClick={() => setAdvancedFiltersOpen((current) => !current)}
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
-                      advancedFiltersOpen || activeChatFiltersCount > 0
-                        ? 'border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/50 text-[var(--panel-accent-ink,#8b4d12)]'
-                        : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)] hover:text-[var(--panel-text,#1c1917)]'
-                    }`}
+                    variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
+                    size="sm"
+                    className="h-auto rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.08em]"
                   >
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -3025,7 +3028,7 @@ export default function WhatsAppInboxScreen() {
                 <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-[var(--panel-text,#1f2937)]">Nenhuma conversa ainda</p>
-                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Assim que o webhook da Whapi receber mensagens, elas aparecerao aqui.</p>
+                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.</p>
                 </div>
               </div>
             ) : (
@@ -3070,13 +3073,13 @@ export default function WhatsAppInboxScreen() {
 
         <div className="whatsapp-inbox-panel whatsapp-inbox-thread flex h-full min-h-0 flex-col border shadow-sm xl:rounded-l-none xl:border-l-0">
           {!selectedChat ? (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-              <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
-              <div className="space-y-1">
-                <p className="text-base font-semibold text-[var(--panel-text,#1f2937)]">Selecione uma conversa</p>
-                <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Abra um chat na coluna da esquerda para acompanhar o historico e responder.</p>
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+                <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
+                <div className="space-y-1">
+                  <p className="text-base font-semibold text-[var(--panel-text,#1f2937)]">Selecione uma conversa</p>
+                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</p>
+                </div>
               </div>
-            </div>
           ) : (
             <>
               <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
@@ -3093,14 +3096,14 @@ export default function WhatsAppInboxScreen() {
                       />
                     ) : null}
                     {selectedChatWasAutoLinked ? (
-                      <span className="inline-flex items-center rounded-full border border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                      <span className="inline-flex items-center rounded-full border border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/40 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
                         Auto
                       </span>
                     ) : null}
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--panel-text-muted,#6b7280)]">
                     <span>{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
-                    {leadPanel?.responsavel_label ? <span>Responsavel: {leadPanel.responsavel_label}</span> : null}
+                    {leadPanel?.responsavel_label ? <span>Responsável: {leadPanel.responsavel_label}</span> : null}
                   </div>
                 </div>
                 <div className="flex shrink-0 items-start gap-3">
@@ -3114,15 +3117,17 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     )}
                   </div>
-                  <button
+                  <Button
                     type="button"
                     onClick={handleOpenLeadDrawer}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] transition hover:border-[var(--panel-accent-border,#d2ab85)] hover:text-[var(--panel-text,#1c1917)]"
+                    variant="soft"
+                    size="icon"
+                    className="rounded-full"
                     aria-label="Abrir informações do lead"
                     title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
                   >
                     <Info className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -3133,11 +3138,13 @@ export default function WhatsAppInboxScreen() {
               >
                 {(hasOlderMessages || loadingOlderMessages) && (
                   <div className="sticky top-0 z-[1] flex justify-center pb-3">
-                    <button
+                    <Button
                       type="button"
                       onClick={() => void handleLoadOlderMessages()}
                       disabled={loadingOlderMessages}
-                      className="whatsapp-inbox-load-older inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition"
+                      variant="secondary"
+                      size="sm"
+                      className="whatsapp-inbox-load-older h-auto rounded-full px-3.5 py-2 text-xs uppercase tracking-[0.12em]"
                     >
                       {loadingOlderMessages ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -3145,7 +3152,7 @@ export default function WhatsAppInboxScreen() {
                         <ChevronUp className="h-3.5 w-3.5" />
                       )}
                       {loadingOlderMessages ? 'Carregando...' : 'Carregar mais'}
-                    </button>
+                    </Button>
                   </div>
                 )}
 
@@ -3205,15 +3212,15 @@ export default function WhatsAppInboxScreen() {
                           <Trash2 className="h-5 w-5" />
                         </button>
 
-                        <button
-                          type="button"
-                          onClick={handleToggleVoicePreviewPlayback}
-                          disabled={sending}
-                          className="whatsapp-inbox-voice-play inline-flex items-center justify-center rounded-full transition"
-                          aria-label={voicePreviewPlaying ? 'Pausar nota de voz' : 'Ouvir nota de voz'}
-                        >
-                          {voicePreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={handleToggleVoicePreviewPlayback}
+                            disabled={sending}
+                            className="whatsapp-inbox-voice-play inline-flex items-center justify-center rounded-full transition"
+                            aria-label={voicePreviewPlaying ? 'Pausar nota de voz' : 'Ouvir nota de voz'}
+                          >
+                            {voicePreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+                          </button>
 
                         <div className="flex min-w-0 flex-1 items-center gap-3">
                           <span className="h-3 w-3 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(34,197,94,0.14)]" />
@@ -3242,15 +3249,15 @@ export default function WhatsAppInboxScreen() {
                           </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={handleSendCurrentVoiceRecording}
-                          disabled={sending || Boolean(sendDisabledReason)}
-                          className={`whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition ${sending ? 'opacity-70' : ''}`}
-                          aria-label="Enviar nota de voz"
-                        >
-                          {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={handleSendCurrentVoiceRecording}
+                            disabled={sending || Boolean(sendDisabledReason)}
+                            className={`whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition ${sending ? 'opacity-70' : ''}`}
+                            aria-label="Enviar nota de voz"
+                          >
+                            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
+                          </button>
                       </div>
                     </>
                   ) : voiceRecordingState === 'recording' ? (
@@ -3259,7 +3266,7 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={handleCancelVoiceRecording}
                         className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
-                        aria-label="Descartar gravacao"
+                        aria-label="Descartar gravação"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -3280,7 +3287,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={() => handleStopVoiceRecording()}
                           className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
-                          aria-label="Parar gravacao"
+                          aria-label="Parar gravação"
                         >
                           <Pause className="h-4 w-4" />
                         </button>
@@ -3335,25 +3342,29 @@ export default function WhatsAppInboxScreen() {
 
                           <div className="flex flex-wrap items-center gap-2">
                             {sending ? (
-                              <button
+                              <Button
                                 type="button"
+                                variant="secondary"
+                                size="sm"
                                 onClick={handleCancelMediaUpload}
-                                className="whatsapp-inbox-attachment-action inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition"
+                                className="whatsapp-inbox-attachment-action h-auto rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.08em]"
                               >
                                 <X className="h-3.5 w-3.5" />
                                 Cancelar upload
-                              </button>
+                              </Button>
                             ) : null}
-                            <button
+                            <Button
                               type="button"
+                              variant="secondary"
+                              size="sm"
                               onClick={handleClearAttachment}
                               disabled={sending}
-                              className="whatsapp-inbox-attachment-action inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition"
+                              className="whatsapp-inbox-attachment-action h-auto rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.08em]"
                               aria-label="Remover anexo"
                             >
                               <X className="h-3.5 w-3.5" />
                               Remover
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -3370,8 +3381,8 @@ export default function WhatsAppInboxScreen() {
                             onClick={() => handleAttachmentMenuAction('document')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-violet-500">
-                              <FileText className="h-4.5 w-4.5" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-text-soft,#5b4635)]">
+                              <FileText className="h-4 w-4" />
                             </span>
                             <span>Documento</span>
                           </button>
@@ -3380,31 +3391,31 @@ export default function WhatsAppInboxScreen() {
                             onClick={() => handleAttachmentMenuAction('media')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-sky-500">
-                              <Images className="h-4.5 w-4.5" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
+                              <Images className="h-4 w-4" />
                             </span>
-                            <span>Fotos e videos</span>
+                            <span>Fotos e vídeos</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleAttachmentMenuAction('audio')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-orange-500">
-                              <FileAudio className="h-4.5 w-4.5" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-ink,#8b4d12)]">
+                              <FileAudio className="h-4 w-4" />
                             </span>
-                            <span>Audio</span>
+                            <span>Áudio</span>
                           </button>
                           <button
                             type="button"
                             disabled
                             className="whatsapp-inbox-attach-menu-item is-disabled mt-1 flex w-full items-center gap-3 border-t border-[var(--panel-border-subtle,#e7dac8)]/60 px-3 pt-3 pb-2.5 text-left"
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-cyan-500">
-                              <UserRound className="h-4.5 w-4.5" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-text-muted,#8a735f)]">
+                              <UserRound className="h-4 w-4" />
                             </span>
                             <span>Contato</span>
-                            <span className="whatsapp-inbox-attach-menu-badge ml-auto text-[10px] font-semibold uppercase tracking-[0.12em]">Em breve</span>
+                            <span className="whatsapp-inbox-attach-menu-badge ml-auto text-[11px] font-semibold uppercase tracking-[0.12em]">Em breve</span>
                           </button>
                         </div>
                       )}
@@ -3448,11 +3459,11 @@ export default function WhatsAppInboxScreen() {
                         <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-[22px] border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
                           <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
                             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
-                              Mensagens rapidas por atalho
+                              Mensagens rápidas por atalho
                             </span>
                             <button
                               type="button"
-                              className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:bg-[var(--panel-surface-soft,#f8f2e9)]"
+                              className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:bg-[var(--panel-surface-soft,#f8f2e9)]"
                               onMouseDown={(event) => {
                                 event.preventDefault();
                                 handleOpenQuickReplySettings();
@@ -3461,7 +3472,7 @@ export default function WhatsAppInboxScreen() {
                               Gerenciar
                             </button>
                           </div>
-                          <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rapidas">
+                          <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rápidas">
                             {quickReplyMenuHasResults ? (
                               filteredQuickReplyOptions.map((option, index) => {
                                 const isActive = index === quickReplyActiveIndex;
@@ -3494,7 +3505,7 @@ export default function WhatsAppInboxScreen() {
                               <div className="px-4 py-4 text-sm text-[var(--panel-text-soft,#5b4635)]">
                                 <p className="font-medium">{quickReplyEmptyStateMessage}</p>
                                 <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
-                                  Use o botao <strong>Gerenciar</strong> para criar e editar suas mensagens rapidas sem sair do inbox.
+                                  Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair do inbox.
                                 </p>
                               </div>
                             )}
@@ -3518,7 +3529,7 @@ export default function WhatsAppInboxScreen() {
                         onBlur={() => setComposerFocused(false)}
                         placeholder="Digite uma mensagem"
                         disabled={sending || generatingFollowUp}
-                        className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-[15px] leading-6 focus:outline-none"
+                        className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-sm leading-6 focus:outline-none"
                       />
                     </div>
 
@@ -3528,7 +3539,7 @@ export default function WhatsAppInboxScreen() {
                         onClick={handleComposerSubmit}
                         disabled={sending || generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
                         className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${sending || generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
-                        aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar audio'}
+                        aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar áudio'}
                         title={sendDisabledReason ?? undefined}
                       >
                         {sending ? (
@@ -3556,7 +3567,7 @@ export default function WhatsAppInboxScreen() {
             <button
               type="button"
               className="absolute inset-0 h-full w-full bg-black/70 backdrop-blur-sm"
-              aria-label="Fechar visualizacao"
+              aria-label="Fechar visualização"
               onClick={() => setLightboxMedia(null)}
             />
             <div className="relative z-[1] flex max-h-full max-w-5xl flex-col gap-4">
@@ -3676,7 +3687,7 @@ export default function WhatsAppInboxScreen() {
                       compact
                       options={[
                         { value: 'all', label: 'Todas' },
-                        { value: 'unread', label: 'Nao lidas' },
+                        { value: 'unread', label: 'Não lidas' },
                       ]}
                     />
 

@@ -35,7 +35,6 @@ import {
   PANEL_INSET_STYLE,
   PANEL_MUTED_INSET_STYLE,
   PANEL_PILL_STYLE,
-  PANEL_SECTION_STYLE,
   getPanelToneStyle,
 } from '../../../../components/ui/panelStyles';
 import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
@@ -1189,101 +1188,114 @@ export default function WhatsAppAgendaModal({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 lg:max-w-[340px] lg:justify-end">
-            {onOpenLeadChat && leadId ? (
-              <Button
-                onClick={() => void handleOpenReminderChat(reminder)}
-                variant={matchesCurrentLead ? 'primary' : 'secondary'}
-                size="sm"
-                loading={isOpeningChat}
-                disabled={isOpeningChat}
-              >
-                {!isOpeningChat && <MessageCircle className="h-4 w-4" />}
-                {matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
-              </Button>
-            ) : null}
-
-            {canEdit ? (
-              <Button
-                onClick={() => void handleMarkAsRead(reminder.id, reminder.lido)}
-                variant={reminder.lido ? 'secondary' : 'soft'}
-                size="sm"
-              >
-                <Check className="h-4 w-4" />
-                {reminder.lido ? 'Reabrir' : 'Concluir'}
-              </Button>
-            ) : null}
-
-            {canEdit && leadId ? (
-              <Button onClick={() => void handleOpenScheduler(reminder)} variant="secondary" size="sm">
-                <CalendarPlus className="h-4 w-4" />
-                Novo lembrete
-              </Button>
-            ) : null}
-
-            {!reminder.lido && canEdit ? (
-              <>
+          <div className="flex w-full flex-col gap-2 lg:max-w-[360px] lg:items-end">
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              {onOpenLeadChat && leadId ? (
                 <Button
-                  onClick={() => void handleQuickSchedule(reminder, 1)}
-                  disabled={isQuickSchedulingCurrentReminder}
-                  variant="ghost"
+                  onClick={() => void handleOpenReminderChat(reminder)}
+                  variant={matchesCurrentLead ? 'primary' : 'secondary'}
+                  size="sm"
+                  loading={isOpeningChat}
+                  disabled={isOpeningChat}
+                >
+                  {!isOpeningChat && <MessageCircle className="h-4 w-4" />}
+                  {matchesCurrentLead ? 'Ir para chat' : 'Abrir chat'}
+                </Button>
+              ) : null}
+
+              {canEdit ? (
+                <Button
+                  onClick={() => void handleMarkAsRead(reminder.id, reminder.lido)}
+                  variant={reminder.lido ? 'secondary' : 'soft'}
                   size="sm"
                 >
-                  {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? <Loader2 className="h-4 w-4 animate-spin" /> : '+1'}
-                  dia util
+                  <Check className="h-4 w-4" />
+                  {reminder.lido ? 'Reabrir' : 'Concluir'}
                 </Button>
+              ) : null}
+
+              {canEdit && leadId ? (
+                <Button onClick={() => void handleOpenScheduler(reminder)} variant="secondary" size="sm">
+                  <CalendarPlus className="h-4 w-4" />
+                  Novo lembrete
+                </Button>
+              ) : null}
+            </div>
+
+            <div className="flex w-full flex-wrap items-center gap-2 border-t border-[var(--panel-border-subtle,#e7dac8)] pt-2 lg:justify-end">
+              {!reminder.lido && canEdit ? (
+                <>
+                  <Button
+                    onClick={() => void handleQuickSchedule(reminder, 1)}
+                    disabled={isQuickSchedulingCurrentReminder}
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full px-3"
+                  >
+                    {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? <Loader2 className="h-4 w-4 animate-spin" /> : '+1'}
+                    dia util
+                  </Button>
+                  <Button
+                    onClick={() => void handleQuickSchedule(reminder, 2)}
+                    disabled={isQuickSchedulingCurrentReminder}
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full px-3"
+                  >
+                    {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? <Loader2 className="h-4 w-4 animate-spin" /> : '+2'}
+                    dias uteis
+                  </Button>
+                </>
+              ) : null}
+
+              {matchesCurrentLead && onGenerateFollowUp ? (
                 <Button
-                  onClick={() => void handleQuickSchedule(reminder, 2)}
-                  disabled={isQuickSchedulingCurrentReminder}
+                  onClick={() => {
+                    onClose();
+                    onGenerateFollowUp();
+                  }}
                   variant="ghost"
                   size="sm"
+                  className="rounded-full px-3"
                 >
-                  {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? <Loader2 className="h-4 w-4 animate-spin" /> : '+2'}
-                  dias uteis
+                  <Sparkles className="h-4 w-4" />
+                  Follow-up
                 </Button>
-              </>
-            ) : null}
+              ) : null}
 
-            {matchesCurrentLead && onGenerateFollowUp ? (
-              <Button
-                onClick={() => {
-                  onClose();
-                  onGenerateFollowUp();
-                }}
-                variant="ghost"
-                size="sm"
-              >
-                <Sparkles className="h-4 w-4" />
-                Follow-up
-              </Button>
-            ) : null}
+              {!onOpenLeadChat && hasLeadPhone ? (
+                <Button onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)} variant="ghost" size="sm" className="rounded-full px-3">
+                  <ExternalLink className="h-4 w-4" />
+                  WhatsApp
+                </Button>
+              ) : null}
 
-            {!onOpenLeadChat && hasLeadPhone ? (
-              <Button onClick={() => openLeadInOfficialWhatsApp(leadInfo ?? null)} variant="ghost" size="sm">
-                <ExternalLink className="h-4 w-4" />
-                WhatsApp
-              </Button>
-            ) : null}
+              {leadId && canEdit ? (
+                <Button
+                  onClick={() => void handleMarkLeadAsLost(reminder)}
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full px-3 text-[var(--panel-accent-red-text,#b4534a)] hover:text-[var(--panel-accent-red-text,#b4534a)]"
+                  disabled={markingLostLeadId === leadId}
+                  loading={markingLostLeadId === leadId}
+                >
+                  {markingLostLeadId !== leadId && <X className="h-4 w-4" />}
+                  Perdido
+                </Button>
+              ) : null}
 
-            {leadId && canEdit ? (
-              <Button
-                onClick={() => void handleMarkLeadAsLost(reminder)}
-                variant="ghost"
-                size="sm"
-                disabled={markingLostLeadId === leadId}
-                loading={markingLostLeadId === leadId}
-              >
-                {markingLostLeadId !== leadId && <X className="h-4 w-4" />}
-                Perdido
-              </Button>
-            ) : null}
-
-            {canEdit ? (
-              <Button onClick={() => void handleDeleteReminder(reminder)} variant="ghost" size="sm">
-                <Trash2 className="h-4 w-4" />
-                Excluir
-              </Button>
-            ) : null}
+              {canEdit ? (
+                <Button
+                  onClick={() => void handleDeleteReminder(reminder)}
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full px-3 text-[var(--panel-accent-red-text,#b4534a)] hover:text-[var(--panel-accent-red-text,#b4534a)]"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Excluir
+                </Button>
+              ) : null}
+            </div>
           </div>
         </div>
       </article>
@@ -1320,85 +1332,6 @@ export default function WhatsAppAgendaModal({
           </div>
         ) : (
           <div className="space-y-5">
-            <section className="panel-glass-panel space-y-5 rounded-[1.8rem] border p-5" style={PANEL_SECTION_STYLE}>
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                      Rotina operacional no inbox
-                    </p>
-                    <h2 className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                      Agenda do dia
-                    </h2>
-                    <p className="mt-1 max-w-3xl text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                      Consulte o que precisa ser tratado agora, abra o chat certo e já conclua ou agende o próximo passo sem sair do inbox.
-                    </p>
-                  </div>
-
-                  {currentLead ? (
-                    <div className="rounded-[1.2rem] border px-4 py-3" style={PANEL_INSET_STYLE}>
-                      <div className="flex flex-wrap items-center gap-2 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                        <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={getPanelToneStyle('accent')}>
-                          {currentLead.nome_completo}
-                        </span>
-                        {currentChat?.phone_number ? (
-                          <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={PANEL_PILL_STYLE}>
-                            {formatCommWhatsAppPhoneLabel(currentChat.phone_number)}
-                          </span>
-                        ) : null}
-                        <span className="inline-flex items-center rounded-full border px-3 py-1.5 font-semibold" style={getPanelToneStyle('neutral')}>
-                          {selectedDateReminders.filter(currentLeadMatchesReminder).length} item(ns) no dia em foco
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-[1.1rem] border px-4 py-3 text-sm" style={PANEL_MUTED_INSET_STYLE}>
-                      A visão continua global, mas o foco agora é operacional: tarefas do dia, atrasados e ações rápidas por item.
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-                  <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold" style={PANEL_PILL_STYLE}>
-                    <Clock3 className="h-3.5 w-3.5" />
-                    <span>{lastUpdatedLabel}</span>
-                  </span>
-                  <Button variant="secondary" size="icon" onClick={() => void loadReminders({ showLoading: true })} aria-label="Atualizar agenda" title="Atualizar agenda">
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                  {contextualLead && canEdit ? (
-                    <Button onClick={() => void handleOpenScheduler()} variant="primary" size="md">
-                      <Bell className="h-4 w-4" />
-                      Agendar lead atual
-                    </Button>
-                  ) : null}
-                  {currentLead && onOpenLeadInCrm ? (
-                    <Button onClick={onOpenLeadInCrm} variant="secondary" size="md">
-                      <ArrowUpRight className="h-4 w-4" />
-                      Abrir CRM
-                    </Button>
-                  ) : null}
-                  {currentLead && onGenerateFollowUp ? (
-                    <Button
-                      onClick={() => {
-                        onClose();
-                        onGenerateFollowUp();
-                      }}
-                      variant="ghost"
-                      size="md"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Gerar follow-up
-                    </Button>
-                  ) : null}
-                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" disabled={!canEdit}>
-                    <Plus className="h-4 w-4" />
-                    Nova tarefa
-                  </Button>
-                </div>
-              </div>
-            </section>
-
             <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
@@ -1413,23 +1346,74 @@ export default function WhatsAppAgendaModal({
                       ? `${visiblePendingReminders.length} pendencia(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
                       : `Sem pendencias abertas para ${selectedDateLabel.toLowerCase()}.`}
                   </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold" style={PANEL_PILL_STYLE}>
+                      <Clock3 className="h-3.5 w-3.5" />
+                      <span>{lastUpdatedLabel}</span>
+                    </span>
+                    {currentLead ? (
+                      <>
+                        <span className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold" style={getPanelToneStyle('accent')}>
+                          {currentLead.nome_completo}
+                        </span>
+                        {currentChat?.phone_number ? (
+                          <span className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold" style={PANEL_PILL_STYLE}>
+                            {formatCommWhatsAppPhoneLabel(currentChat.phone_number)}
+                          </span>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button onClick={goToPreviousDay} variant="secondary" size="icon" aria-label="Dia anterior">
+                  {contextualLead && canEdit ? (
+                    <Button onClick={() => void handleOpenScheduler()} variant="primary" size="md" className="h-11">
+                      <Bell className="h-4 w-4" />
+                      Agendar lead atual
+                    </Button>
+                  ) : null}
+                  {currentLead && onOpenLeadInCrm ? (
+                    <Button onClick={onOpenLeadInCrm} variant="secondary" size="md" className="h-11">
+                      <ArrowUpRight className="h-4 w-4" />
+                      Abrir CRM
+                    </Button>
+                  ) : null}
+                  {currentLead && onGenerateFollowUp ? (
+                    <Button
+                      onClick={() => {
+                        onClose();
+                        onGenerateFollowUp();
+                      }}
+                      variant="ghost"
+                      size="md"
+                      className="h-11"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Gerar follow-up
+                    </Button>
+                  ) : null}
+                  <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => void loadReminders({ showLoading: true })} aria-label="Atualizar agenda" title="Atualizar agenda">
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                  <Button onClick={goToPreviousDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Dia anterior">
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
                   <div className="w-[176px]">
                     <Input type="date" value={selectedDateInputValue} onChange={handleSelectedDateChange} />
                   </div>
-                  <Button onClick={goToNextDay} variant="secondary" size="icon" aria-label="Próximo dia">
+                  <Button onClick={goToNextDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Próximo dia">
                     <ChevronRight className="h-5 w-5" />
                   </Button>
-                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md">
+                  <Button onClick={goToToday} variant={isSelectedDateToday ? 'primary' : 'secondary'} size="md" className="h-11">
                     Hoje
                   </Button>
+                  <Button onClick={() => setIsAddTaskModalOpen(true)} variant="soft" size="md" className="h-11" disabled={!canEdit}>
+                    <Plus className="h-4 w-4" />
+                    Nova tarefa
+                  </Button>
                   {visiblePendingReminders.length > 0 ? (
-                    <Button onClick={() => void handleMarkVisiblePendingAsRead()} variant="secondary" size="md" disabled={!canEdit}>
+                    <Button onClick={() => void handleMarkVisiblePendingAsRead()} variant="secondary" size="md" className="h-11" disabled={!canEdit}>
                       Marcar visiveis como lidos
                     </Button>
                   ) : null}
@@ -1446,7 +1430,7 @@ export default function WhatsAppAgendaModal({
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     leftIcon={Search}
-                    className="pr-10"
+                    className="h-11 pr-10"
                   />
                   {searchQuery ? (
                     <Button
@@ -1471,13 +1455,13 @@ export default function WhatsAppAgendaModal({
                 />
 
                 {currentLead ? (
-                  <Button onClick={() => setOnlyCurrentLead((current) => !current)} variant={onlyCurrentLead ? 'primary' : 'secondary'} size="md">
+                  <Button onClick={() => setOnlyCurrentLead((current) => !current)} variant={onlyCurrentLead ? 'primary' : 'secondary'} size="md" className="h-11">
                     {onlyCurrentLead ? 'So chat atual' : 'Filtrar chat atual'}
                   </Button>
                 ) : null}
 
                 {hasActiveFilters > 0 ? (
-                  <Button onClick={clearFilters} variant="ghost" size="md">
+                  <Button onClick={clearFilters} variant="ghost" size="md" className="h-11">
                     Limpar filtros ({hasActiveFilters})
                   </Button>
                 ) : null}

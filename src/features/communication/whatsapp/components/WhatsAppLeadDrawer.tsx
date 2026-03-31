@@ -1,9 +1,9 @@
-import { createPortal } from 'react-dom';
-import { Info, Link2, Loader2, Sparkles, Unlink, X } from 'lucide-react';
+import { Info, Link2, Loader2, Sparkles, Unlink } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import Button from '../../../../components/ui/Button';
+import DrawerShell from '../../../../components/ui/DrawerShell';
 import Input from '../../../../components/ui/Input';
 import type {
   CommWhatsAppLeadContractSummary,
@@ -67,28 +67,15 @@ export default function WhatsAppLeadDrawer({
     return null;
   }
 
-  const isDarkThemeActive = document.querySelector('.painel-theme')?.classList.contains('theme-dark');
-
-  return createPortal(
-    <div className={`modal-theme-host painel-theme kifer-ds ${isDarkThemeActive ? 'theme-dark' : 'theme-light'}`}>
-      <div className="fixed inset-0 z-[95] bg-stone-950/50 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
-      <aside className="fixed inset-y-0 right-0 z-[100] flex w-full max-w-[440px] flex-col border-l border-[var(--panel-border-subtle,#d7c7b2)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] px-5 py-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#8a735f)]">CRM do chat</p>
-            <h2 className="mt-1 text-lg font-semibold text-[var(--panel-text,#1c1917)]">{chatDisplayName}</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-[var(--panel-text-muted,#8a735f)] transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1c1917)]"
-            aria-label="Fechar painel do lead"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+  return (
+    <DrawerShell
+      isOpen={isOpen}
+      onClose={onClose}
+      eyebrow="CRM do chat"
+      title={chatDisplayName}
+      closeButtonLabel="Fechar painel do lead"
+      panelClassName="max-w-[440px]"
+    >
           {loading ? (
             <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -217,9 +204,6 @@ export default function WhatsAppLeadDrawer({
               </div>
             </div>
           )}
-        </div>
-      </aside>
-    </div>,
-    document.body,
+    </DrawerShell>
   );
 }

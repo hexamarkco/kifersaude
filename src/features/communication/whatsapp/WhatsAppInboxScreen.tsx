@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { createPortal } from 'react-dom';
 import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Cog, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
+import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import StatusDropdown from '../../../components/StatusDropdown';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
@@ -3669,58 +3669,54 @@ export default function WhatsAppInboxScreen() {
           startingKey={startingChatKey}
         />
 
-        {advancedFiltersOpen && advancedFiltersPosition && typeof document !== 'undefined'
-          ? createPortal(
-              <div
-                className={`modal-theme-host painel-theme kifer-ds ${document.querySelector('.painel-theme')?.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light'}`}
+        <PanelPopoverShell
+          ref={advancedFiltersRef}
+          isOpen={advancedFiltersOpen}
+          position={advancedFiltersPosition}
+          onClose={() => setAdvancedFiltersOpen(false)}
+          ariaLabel="Filtros avançados do inbox"
+          className="w-[272px] border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2.5 shadow-2xl"
+        >
+          <div className="space-y-2.5">
+            <InboxFilterGroup
+              label="Atividade"
+              value={chatActivityFilter}
+              onChange={setChatActivityFilter}
+              compact
+              options={[
+                { value: 'all', label: 'Todas' },
+                { value: 'unread', label: 'Não lidas' },
+              ]}
+            />
+
+            <InboxMultiFilterGroup
+              label="Status do lead"
+              values={leadStatusFilters}
+              onChange={setLeadStatusFilters}
+              compact
+              options={leadStatuses.map((status) => ({
+                value: status.nome,
+                label: status.nome,
+              }))}
+            />
+
+            {hasActiveChatFilters ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setChatActivityFilter('all');
+                  setLeadStatusFilters([]);
+                  setAdvancedFiltersOpen(false);
+                }}
+                className="h-auto px-0 py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] hover:bg-transparent hover:text-[var(--panel-accent-ink-strong,#6f3f16)]"
               >
-                <div
-                  ref={advancedFiltersRef}
-                  className="fixed z-[120] w-[272px] rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2.5 shadow-2xl"
-                  style={{ top: advancedFiltersPosition.top, left: advancedFiltersPosition.left }}
-                >
-                  <div className="space-y-2.5">
-                    <InboxFilterGroup
-                      label="Atividade"
-                      value={chatActivityFilter}
-                      onChange={setChatActivityFilter}
-                      compact
-                      options={[
-                        { value: 'all', label: 'Todas' },
-                        { value: 'unread', label: 'Não lidas' },
-                      ]}
-                    />
-
-                    <InboxMultiFilterGroup
-                      label="Status do lead"
-                      values={leadStatusFilters}
-                      onChange={setLeadStatusFilters}
-                      compact
-                      options={leadStatuses.map((status) => ({
-                        value: status.nome,
-                        label: status.nome,
-                      }))}
-                    />
-
-                    {hasActiveChatFilters ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setChatActivityFilter('all');
-                          setLeadStatusFilters([]);
-                          setAdvancedFiltersOpen(false);
-                        }}
-                        className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:opacity-80"
-                      >
-                        Limpar filtros
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              </div>,
-              document.body,
-            )
-          : null}
+                Limpar filtros
+              </Button>
+            ) : null}
+          </div>
+        </PanelPopoverShell>
       </div>
     </div>
   );

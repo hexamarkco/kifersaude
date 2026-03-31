@@ -21,6 +21,7 @@ type ModalShellProps = {
   showCloseButton?: boolean;
   panelClassName?: string;
   bodyClassName?: string;
+  bodyScrollable?: boolean;
 };
 
 const sizeClasses: Record<ModalShellSize, string> = {
@@ -43,6 +44,7 @@ export default function ModalShell({
   showCloseButton = true,
   panelClassName,
   bodyClassName,
+  bodyScrollable = true,
 }: ModalShellProps) {
   const titleId = useId();
   const descriptionId = useId();
@@ -147,7 +149,8 @@ export default function ModalShell({
 
           <div
             className={cx(
-              'modal-panel-content min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5',
+              'modal-panel-content min-h-0 flex-1 px-5 py-4 sm:px-6 sm:py-5',
+              bodyScrollable ? 'overflow-y-auto' : 'overflow-hidden',
               bodyClassName,
             )}
           >

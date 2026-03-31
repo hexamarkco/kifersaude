@@ -78,8 +78,10 @@ export default function WhatsAppStartChatModal({
       description="Inicie uma conversa a partir dos contatos salvos do celular, do CRM ou digitando um número manualmente."
       size="lg"
       panelClassName="max-w-3xl"
+      bodyScrollable={false}
+      bodyClassName="flex min-h-0 flex-col"
     >
-      <div className="space-y-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-5">
         <Tabs
           items={SOURCE_TABS}
           value={source}
@@ -104,9 +106,9 @@ export default function WhatsAppStartChatModal({
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-4">
             <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} />
-            <div className="max-h-[420px] overflow-y-auto rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
               {source === 'saved' && (
                 <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
                   {contactsTotal} contatos salvos

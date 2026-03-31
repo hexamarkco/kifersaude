@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { AlertCircle, AlertTriangle, Check, CheckCheck, ChevronUp, Clock3, Cog, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CalendarDays, Check, CheckCheck, ChevronUp, Clock3, Cog, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -7,6 +7,7 @@ import Button from '../../../components/ui/Button';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
 import StatusDropdown from '../../../components/StatusDropdown';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
 import {
@@ -31,6 +32,7 @@ import {
   type WhatsAppQuickReply,
 } from '../../../lib/whatsAppQuickReplies';
 import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, IntegrationSetting, Lead } from '../../../lib/supabase';
+import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
@@ -881,8 +883,12 @@ function WhatsAppMessageBody({
 
 export default function WhatsAppInboxScreen() {
   const navigate = useNavigate();
-  const { leadStatuses, options } = useConfig();
+  const { role } = useAuth();
+  const { leadStatuses, options, getRoleModulePermission } = useConfig();
   const responsavelOptions = options.lead_responsavel;
+  const agendaPermission = getRoleModulePermission(role, 'agenda');
+  const canViewAgenda = agendaPermission.can_view;
+  const canEditAgenda = agendaPermission.can_edit;
   const [loading, setLoading] = useState(true);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
@@ -903,6 +909,7 @@ export default function WhatsAppInboxScreen() {
   const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>(DEFAULT_QUICK_REPLIES);
   const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
   const [savingQuickReplies, setSavingQuickReplies] = useState(false);
+  const [whatsAppAgendaOpen, setWhatsAppAgendaOpen] = useState(false);
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
@@ -2967,6 +2974,17 @@ export default function WhatsAppInboxScreen() {
                   <Button
                     size="icon"
                     variant="secondary"
+                    onClick={() => setWhatsAppAgendaOpen(true)}
+                    className="rounded-xl"
+                    aria-label="Agenda do WhatsApp"
+                    title={canViewAgenda ? 'Agenda do WhatsApp' : 'Sem permissao para acessar a agenda'}
+                    disabled={!canViewAgenda}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="secondary"
                     onClick={() => setWhatsAppDashboardOpen(true)}
                     className="rounded-xl"
                     aria-label="Painel WhatsApp"
@@ -3611,6 +3629,17 @@ export default function WhatsAppInboxScreen() {
           saving={savingQuickReplies}
           onClose={() => setQuickRepliesModalOpen(false)}
           onSave={handleSaveQuickReplies}
+        />
+
+        <WhatsAppAgendaModal
+          isOpen={whatsAppAgendaOpen}
+          onClose={() => setWhatsAppAgendaOpen(false)}
+          currentChat={selectedChat}
+          currentLead={leadPanel}
+          currentLeadContracts={leadContracts}
+          canEdit={canEditAgenda}
+          onOpenLeadInCrm={leadPanel ? handleViewLeadInCrm : undefined}
+          onGenerateFollowUp={selectedChat ? handleOpenFollowUpModal : undefined}
         />
 
         <WhatsAppDashboardModal

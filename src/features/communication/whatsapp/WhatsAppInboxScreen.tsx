@@ -5315,11 +5315,9 @@ export default function WhatsAppInboxScreen() {
         <WhatsAppAgendaModal
           isOpen={whatsAppAgendaOpen}
           onClose={() => setWhatsAppAgendaOpen(false)}
-          currentChat={selectedChat}
           currentLead={leadPanel}
           currentLeadContracts={leadContracts}
           canEdit={canEditAgenda}
-          onOpenLeadInCrm={leadPanel ? handleViewLeadInCrm : undefined}
           onGenerateFollowUp={selectedChat ? handleOpenFollowUpModal : undefined}
           onOpenLeadChat={handleOpenAgendaLeadChat}
         />

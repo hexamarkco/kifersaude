@@ -37,6 +37,9 @@ type SendMessageBody = {
   caption?: string;
   durationSeconds?: number;
   waveform?: string;
+  remoteUrl?: string;
+  fileName?: string;
+  mimeType?: string;
 };
 
 type MediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
@@ -108,6 +111,62 @@ const sanitizeFileName = (value: string, fallback: string) => {
   const trimmed = value.trim();
   if (!trimmed) return fallback;
   return trimmed.replace(/\s+/g, '_');
+};
+
+const inferRemoteFileName = (remoteUrl: string, fallback: string) => {
+  try {
+    const url = new URL(remoteUrl);
+    const pathname = url.pathname.split('/').filter(Boolean).pop() || '';
+    return sanitizeFileName(pathname, fallback);
+  } catch {
+    return sanitizeFileName('', fallback);
+  }
+};
+
+const isAllowedRemoteMediaUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && ['media.tenor.com', 'media1.tenor.com'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
+const fetchRemoteMediaFile = async (params: {
+  remoteUrl: string;
+  mimeType?: string;
+  fileName?: string;
+}) => {
+  if (!isAllowedRemoteMediaUrl(params.remoteUrl)) {
+    throw new Error('Origem de mídia remota não permitida.');
+  }
+
+  const response = await fetch(params.remoteUrl, {
+    method: 'GET',
+    headers: {
+      Accept: '*/*',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Não foi possível baixar a mídia selecionada.');
+  }
+
+  const contentType = stripMimeParameters(params.mimeType || response.headers.get('content-type') || 'application/octet-stream');
+  const extension = contentType === 'video/mp4'
+    ? 'mp4'
+    : contentType === 'image/webp'
+      ? 'webp'
+      : contentType === 'image/gif'
+        ? 'gif'
+        : contentType.startsWith('image/')
+          ? 'png'
+          : 'bin';
+  const fallbackName = `remote-media.${extension}`;
+  const fileName = sanitizeFileName(params.fileName || inferRemoteFileName(params.remoteUrl, fallbackName), fallbackName);
+  const bytes = await response.arrayBuffer();
+
+  return new File([bytes], fileName, { type: contentType });
 };
 
 const deriveVoiceFileName = (mimeType: string, originalName: string) => {
@@ -309,6 +368,7 @@ Deno.serve(async (req: Request) => {
     let mediaFile: File | null = null;
     let mediaDurationSeconds: number | null = null;
     let mediaWaveform = '';
+    let remoteUrl = '';
 
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData();
@@ -331,7 +391,16 @@ Deno.serve(async (req: Request) => {
     } else {
       const body = (await req.json().catch(() => ({}))) as SendMessageBody;
       chatId = normalizeWhapiChatId(body.chatId);
-      text = toTrimmedString(body.text);
+      text = toTrimmedString(body.text) || toTrimmedString(body.caption);
+      remoteUrl = toTrimmedString(body.remoteUrl);
+      if (remoteUrl) {
+        mediaFile = await fetchRemoteMediaFile({
+          remoteUrl,
+          mimeType: toTrimmedString(body.mimeType) || undefined,
+          fileName: toTrimmedString(body.fileName) || undefined,
+        });
+        mediaKind = normalizeMediaKind(toTrimmedString(body.type), mediaFile.type);
+      }
     }
 
     if (!chatId || !isDirectWhapiChatId(chatId)) {

@@ -635,6 +635,36 @@ export const commWhatsAppService = {
     });
   },
 
+  async sendRemoteMediaMessage(params: {
+    chatId: string;
+    kind: 'image' | 'video' | 'document';
+    remoteUrl: string;
+    fileName?: string;
+    mimeType?: string;
+    caption?: string;
+  }): Promise<{ messageId: string | null; status: string }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-send', {
+      body: {
+        chatId: params.chatId,
+        type: params.kind,
+        caption: params.caption?.trim() || '',
+        remoteUrl: params.remoteUrl,
+        fileName: params.fileName?.trim() || '',
+        mimeType: params.mimeType?.trim() || '',
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a midia remota no WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { messageId?: string | null; status?: string };
+    return {
+      messageId: payload.messageId ?? null,
+      status: typeof payload.status === 'string' ? payload.status : 'pending',
+    };
+  },
+
   async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {
     if (params.mediaUrl?.trim()) {
       return params.mediaUrl.trim();

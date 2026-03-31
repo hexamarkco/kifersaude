@@ -35,6 +35,7 @@ import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, I
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
+import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
@@ -51,12 +52,20 @@ type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
 type VoiceRecordingState = 'idle' | 'requesting' | 'recording';
 type PendingAttachment = {
+  id: string;
   file: File;
   kind: CommWhatsAppMediaSendKind;
   durationSeconds?: number;
   previewUrl?: string | null;
   waveform?: number[];
   waveformPayload?: string | null;
+};
+type MediaUploadProgress = {
+  attachmentId: string;
+  currentIndex: number;
+  total: number;
+  progress: number | null;
+  fileName: string;
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 type ChatActivityFilter = 'all' | 'unread';
@@ -94,6 +103,8 @@ const summarizeQuickReplyPreview = (value: string) => {
 
   return `${normalized.slice(0, 117).trimEnd()}...`;
 };
+
+const createPendingAttachmentId = () => `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
   if (items.length === 0 || batchSize <= 0) {
@@ -1029,6 +1040,9 @@ export default function WhatsAppInboxScreen() {
   const [followUpDraft, setFollowUpDraft] = useState('');
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
+  const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
+  const [mediaDrawerPosition, setMediaDrawerPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
+  const [sendingDrawerMedia, setSendingDrawerMedia] = useState(false);
   const [composerSelection, setComposerSelection] = useState<ComposerSelection>({ start: 0, end: 0 });
   const [composerFocused, setComposerFocused] = useState(false);
   const [quickReplyActiveIndex, setQuickReplyActiveIndex] = useState(0);
@@ -1036,11 +1050,11 @@ export default function WhatsAppInboxScreen() {
   const [sending, setSending] = useState(false);
   const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
-  const [pendingAttachment, setPendingAttachment] = useState<PendingAttachment | null>(null);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
   const [voiceRecordingSeconds, setVoiceRecordingSeconds] = useState(0);
   const [voiceRecordingWaveform, setVoiceRecordingWaveform] = useState<number[]>(DEFAULT_WAVEFORM);
-  const [mediaUploadProgress, setMediaUploadProgress] = useState<number | null>(null);
+  const [mediaUploadProgress, setMediaUploadProgress] = useState<MediaUploadProgress | null>(null);
   const [voicePreviewPlaying, setVoicePreviewPlaying] = useState(false);
   const [voicePreviewDuration, setVoicePreviewDuration] = useState<number | null>(null);
   const [voicePreviewCurrentTime, setVoicePreviewCurrentTime] = useState(0);
@@ -1080,6 +1094,7 @@ export default function WhatsAppInboxScreen() {
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const voiceRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
@@ -1097,6 +1112,7 @@ export default function WhatsAppInboxScreen() {
   const voiceWaveformSnapshotRef = useRef<number[]>(DEFAULT_WAVEFORM);
   const voiceWaveformPayloadRef = useRef('');
   const mediaUploadAbortControllerRef = useRef<AbortController | null>(null);
+  const attachmentPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const autoSendVoiceRef = useRef(false);
   const autoLinkedLeadKeyRef = useRef<string | null>(null);
   const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
@@ -1119,10 +1135,18 @@ export default function WhatsAppInboxScreen() {
   const operationalStateRequestIdRef = useRef(0);
   const autoLinkLookupRequestIdRef = useRef(0);
   const chatIdentityLookupRequestIdRef = useRef(0);
+  const voiceAttachment = useMemo(
+    () => pendingAttachments.find((attachment) => attachment.kind === 'voice') ?? null,
+    [pendingAttachments],
+  );
+  const nonVoiceAttachments = useMemo(
+    () => pendingAttachments.filter((attachment) => attachment.kind !== 'voice'),
+    [pendingAttachments],
+  );
   const hasTypedMessage = messageDraft.trim().length > 0;
-  const hasSendPayload = hasTypedMessage || pendingAttachment !== null;
+  const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
   const pollingEnabled = isDocumentVisible && isWindowFocused;
-  const isVoiceComposerMode = voiceRecordingState === 'recording' || pendingAttachment?.kind === 'voice';
+  const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
 
   const buildChatsSignature = useCallback(
     (items: CommWhatsAppChat[]) =>
@@ -1514,12 +1538,39 @@ export default function WhatsAppInboxScreen() {
       return 'Finalize a gravação de áudio antes de gerar um follow-up.';
     }
 
-    if (pendingAttachment) {
+    if (pendingAttachments.length > 0) {
       return 'Remova o anexo atual antes de gerar um follow-up.';
     }
 
     return null;
-  }, [generatingFollowUp, pendingAttachment, selectedChat, sending, voiceRecordingState]);
+  }, [generatingFollowUp, pendingAttachments.length, selectedChat, sending, voiceRecordingState]);
+  const mediaDrawerSendDisabledReason = useMemo(() => {
+    if (!selectedChat) {
+      return 'Selecione uma conversa para enviar GIFs e figurinhas.';
+    }
+
+    if (sending || sendingDrawerMedia) {
+      return 'Aguarde o envio atual terminar.';
+    }
+
+    if (generatingFollowUp) {
+      return 'Aguarde a geração do follow-up terminar.';
+    }
+
+    if (voiceRecordingState !== 'idle') {
+      return 'Finalize a gravação de áudio antes de enviar mídia da gaveta.';
+    }
+
+    if (pendingAttachments.length > 0) {
+      return 'Conclua ou remova os anexos atuais antes de usar GIFs e figurinhas.';
+    }
+
+    if (sendDisabledReason) {
+      return sendDisabledReason;
+    }
+
+    return null;
+  }, [generatingFollowUp, pendingAttachments.length, selectedChat, sendDisabledReason, sending, sendingDrawerMedia, voiceRecordingState]);
 
   const operationalBanner = useMemo(() => {
     if (operationalStateError && !operationalState) {
@@ -1648,13 +1699,31 @@ export default function WhatsAppInboxScreen() {
   }, [activeQuickReplyKey, dismissedQuickReplyKey]);
 
   useEffect(() => {
-    const previewUrl = pendingAttachment?.previewUrl;
-    return () => {
-      if (previewUrl?.startsWith('blob:')) {
+    const nextPreviewUrls = new Map<string, string>();
+
+    for (const attachment of pendingAttachments) {
+      if (attachment.previewUrl?.startsWith('blob:')) {
+        nextPreviewUrls.set(attachment.id, attachment.previewUrl);
+      }
+    }
+
+    for (const [attachmentId, previewUrl] of attachmentPreviewUrlsRef.current.entries()) {
+      if (!nextPreviewUrls.has(attachmentId) && previewUrl.startsWith('blob:')) {
         URL.revokeObjectURL(previewUrl);
       }
-    };
-  }, [pendingAttachment?.previewUrl]);
+    }
+
+    attachmentPreviewUrlsRef.current = nextPreviewUrls;
+  }, [pendingAttachments]);
+
+  useEffect(() => () => {
+    for (const previewUrl of attachmentPreviewUrlsRef.current.values()) {
+      if (previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    }
+    attachmentPreviewUrlsRef.current.clear();
+  }, []);
 
   useEffect(() => {
     if (!attachmentMenuOpen) {
@@ -1725,12 +1794,50 @@ export default function WhatsAppInboxScreen() {
     };
   }, [advancedFiltersOpen]);
 
+  useLayoutEffect(() => {
+    if (!mediaDrawerOpen || !mediaDrawerTriggerRef.current || typeof window === 'undefined') {
+      return;
+    }
+
+    const syncPosition = () => {
+      const triggerRect = mediaDrawerTriggerRef.current?.getBoundingClientRect();
+      if (!triggerRect) {
+        return;
+      }
+
+      const viewportPadding = 12;
+      const panelWidth = Math.min(496, window.innerWidth - viewportPadding * 2);
+      const panelHeight = Math.min(620, window.innerHeight - viewportPadding * 2);
+      const left = Math.min(
+        Math.max(viewportPadding, triggerRect.right - panelWidth + 72),
+        window.innerWidth - panelWidth - viewportPadding,
+      );
+      const top = Math.max(viewportPadding, triggerRect.top - panelHeight - 12);
+
+      setMediaDrawerPosition({
+        top,
+        left,
+        width: panelWidth,
+        maxHeight: panelHeight,
+      });
+    };
+
+    syncPosition();
+    window.addEventListener('resize', syncPosition);
+    window.addEventListener('scroll', syncPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', syncPosition);
+      window.removeEventListener('scroll', syncPosition, true);
+    };
+  }, [mediaDrawerOpen]);
+
   useEffect(() => {
     const audio = voicePreviewAudioRef.current;
-    if (!audio || pendingAttachment?.kind !== 'voice') {
+    if (!audio || !voiceAttachment) {
       setVoicePreviewPlaying(false);
       setVoicePreviewCurrentTime(0);
-      setVoicePreviewDuration(pendingAttachment?.durationSeconds ?? null);
+      setVoicePreviewDuration(voiceAttachment?.durationSeconds ?? null);
       return;
     }
 
@@ -1742,7 +1849,7 @@ export default function WhatsAppInboxScreen() {
       if (Number.isFinite(audio.duration) && audio.duration > 0) {
         setVoicePreviewDuration(audio.duration);
       } else {
-        setVoicePreviewDuration(pendingAttachment.durationSeconds ?? null);
+        setVoicePreviewDuration(voiceAttachment.durationSeconds ?? null);
       }
     };
 
@@ -1762,7 +1869,7 @@ export default function WhatsAppInboxScreen() {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [pendingAttachment]);
+  }, [voiceAttachment]);
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
@@ -2010,7 +2117,7 @@ export default function WhatsAppInboxScreen() {
       setLoadingMessages(false);
       setLoadingOlderMessages(false);
       setHasOlderMessages(false);
-      setPendingAttachment(null);
+      setPendingAttachments([]);
       cancelVoiceRecordingRef.current();
       messagesSignatureRef.current = '';
       return;
@@ -2021,7 +2128,7 @@ export default function WhatsAppInboxScreen() {
     pendingScrollTopRef.current = null;
     pendingScrollHeightRef.current = null;
     isNearBottomRef.current = true;
-    setPendingAttachment(null);
+    setPendingAttachments([]);
     cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
     setHasOlderMessages(false);
@@ -2256,10 +2363,10 @@ export default function WhatsAppInboxScreen() {
     textarea.style.height = `${nextHeight}px`;
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
     setIsComposerExpanded(expanded);
-  }, [messageDraft, pendingAttachment, selectedChatId]);
+  }, [messageDraft, pendingAttachments.length, voiceAttachment?.id, selectedChatId]);
 
   const handleAttachmentMenuAction = (action: AttachmentMenuAction) => {
-    if (voiceRecordingState !== 'idle') {
+    if (voiceRecordingState !== 'idle' || sending) {
       return;
     }
 
@@ -2281,31 +2388,50 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleAttachmentInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (voiceRecordingState !== 'idle') {
+    if (voiceRecordingState !== 'idle' || sending) {
       event.target.value = '';
       return;
     }
 
-    const nextFile = event.target.files?.[0];
-    if (!nextFile) return;
+    const nextFiles = Array.from(event.target.files ?? []);
+    if (nextFiles.length === 0) {
+      event.target.value = '';
+      return;
+    }
 
-    setPendingAttachment({
-      file: nextFile,
-      kind: inferAttachmentKind(nextFile),
-      previewUrl: URL.createObjectURL(nextFile),
+    const nextAttachments = nextFiles.map((file) => {
+      const kind = inferAttachmentKind(file);
+      return {
+        id: createPendingAttachmentId(),
+        file,
+        kind,
+        previewUrl: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
+      } satisfies PendingAttachment;
+    });
+
+    setPendingAttachments((current) => {
+      const preserved = current.filter((attachment) => attachment.kind !== 'voice');
+      return [...preserved, ...nextAttachments];
     });
 
     event.target.value = '';
   };
 
-  const handleClearAttachment = () => {
+  const handleClearAttachment = (attachmentId?: string) => {
     voicePreviewAudioRef.current?.pause();
     if (voicePreviewAudioRef.current) {
       voicePreviewAudioRef.current.currentTime = 0;
     }
     setVoicePreviewPlaying(false);
     setVoicePreviewCurrentTime(0);
-    setPendingAttachment(null);
+    setVoicePreviewDuration(null);
+    setPendingAttachments((current) => {
+      if (!attachmentId) {
+        return [];
+      }
+
+      return current.filter((attachment) => attachment.id !== attachmentId);
+    });
     setMediaUploadProgress(null);
   };
 
@@ -2315,7 +2441,7 @@ export default function WhatsAppInboxScreen() {
 
     if (discardVoiceRecordingRef.current) {
       discardVoiceRecordingRef.current = false;
-      setPendingAttachment(null);
+      setPendingAttachments([]);
       setVoiceRecordingSeconds(0);
       voiceRecordingSecondsRef.current = 0;
       voiceWaveformPayloadRef.current = '';
@@ -2336,14 +2462,15 @@ export default function WhatsAppInboxScreen() {
     const durationSeconds = voiceRecordingSecondsRef.current;
     const previewUrl = URL.createObjectURL(blob);
 
-    setPendingAttachment({
+    setPendingAttachments([{
+      id: createPendingAttachmentId(),
       file,
       kind: 'voice',
       durationSeconds,
       previewUrl,
       waveform: voiceWaveformSnapshotRef.current,
       waveformPayload: voiceWaveformPayloadRef.current || null,
-    });
+    }]);
     setVoiceRecordingSeconds(0);
     voiceRecordingSecondsRef.current = 0;
     setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
@@ -2400,7 +2527,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       setVoiceRecordingState('requesting');
-      setPendingAttachment(null);
+      setPendingAttachments([]);
       setVoicePreviewPlaying(false);
       setVoicePreviewCurrentTime(0);
       setVoicePreviewDuration(null);
@@ -2515,7 +2642,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleToggleVoicePreviewPlayback = useCallback(() => {
     const audio = voicePreviewAudioRef.current;
-    if (!audio || pendingAttachment?.kind !== 'voice') {
+    if (!audio || !voiceAttachment) {
       return;
     }
 
@@ -2530,7 +2657,7 @@ export default function WhatsAppInboxScreen() {
     }).catch(() => {
       toast.error('Não foi possível reproduzir a nota de voz agora.');
     });
-  }, [pendingAttachment?.kind, voicePreviewPlaying]);
+  }, [voiceAttachment, voicePreviewPlaying]);
 
   const handleSendCurrentVoiceRecording = () => {
     if (voiceRecordingState === 'recording') {
@@ -2538,7 +2665,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    if (pendingAttachment?.kind === 'voice') {
+    if (voiceAttachment) {
       void handleSendMessage();
     }
   };
@@ -2548,7 +2675,7 @@ export default function WhatsAppInboxScreen() {
 
     const text = messageDraft.trim();
     const textSegments = splitWhatsAppMessageSegments(messageDraft);
-    if (!text && !pendingAttachment) return;
+    if (!text && pendingAttachments.length === 0) return;
 
     if (sendDisabledReason) {
       toast.error(sendDisabledReason);
@@ -2558,26 +2685,49 @@ export default function WhatsAppInboxScreen() {
     setSending(true);
 
     try {
-      if (pendingAttachment) {
-        const caption = pendingAttachment.kind === 'voice' ? undefined : text;
-        const previewUrlForSentMessage = URL.createObjectURL(pendingAttachment.file);
+      if (pendingAttachments.length > 0) {
+        const attachmentsToSend = [...pendingAttachments];
+        let captionConsumed = false;
 
-        setMediaUploadProgress(0);
-        mediaUploadAbortControllerRef.current = new AbortController();
+        for (let index = 0; index < attachmentsToSend.length; index += 1) {
+          const attachment = attachmentsToSend[index];
+          const caption = !captionConsumed && attachment.kind !== 'voice' ? text || undefined : undefined;
+          const previewUrlForSentMessage = URL.createObjectURL(attachment.file);
 
-        const sendResult = await commWhatsAppService.sendMediaMessage({
-          chatId: selectedChat.external_chat_id,
-          kind: pendingAttachment.kind,
-          file: pendingAttachment.file,
-          caption,
-          durationSeconds: pendingAttachment.durationSeconds,
-          waveform: pendingAttachment.kind === 'voice' ? pendingAttachment.waveformPayload || undefined : undefined,
-          onUploadProgress: setMediaUploadProgress,
-          signal: mediaUploadAbortControllerRef.current.signal,
-        });
+          setMediaUploadProgress({
+            attachmentId: attachment.id,
+            currentIndex: index + 1,
+            total: attachmentsToSend.length,
+            progress: 0,
+            fileName: attachment.file.name,
+          });
+          mediaUploadAbortControllerRef.current = new AbortController();
 
-        if (sendResult.messageId && previewUrlForSentMessage) {
-          commWhatsAppService.rememberLocalMediaPreview(sendResult.messageId, previewUrlForSentMessage);
+          const sendResult = await commWhatsAppService.sendMediaMessage({
+            chatId: selectedChat.external_chat_id,
+            kind: attachment.kind,
+            file: attachment.file,
+            caption,
+            durationSeconds: attachment.durationSeconds,
+            waveform: attachment.kind === 'voice' ? attachment.waveformPayload || undefined : undefined,
+            onUploadProgress: (progress) => {
+              setMediaUploadProgress((current) => current && current.currentIndex === index + 1
+                ? { ...current, progress }
+                : current);
+            },
+            signal: mediaUploadAbortControllerRef.current.signal,
+          });
+
+          if (sendResult.messageId && previewUrlForSentMessage) {
+            commWhatsAppService.rememberLocalMediaPreview(sendResult.messageId, previewUrlForSentMessage);
+          }
+
+          setPendingAttachments((current) => current.filter((candidate) => candidate.id !== attachment.id));
+
+          if (!captionConsumed && caption) {
+            captionConsumed = true;
+            setMessageDraft('');
+          }
         }
 
         await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
@@ -2587,7 +2737,8 @@ export default function WhatsAppInboxScreen() {
         }
         setVoicePreviewPlaying(false);
         setVoicePreviewCurrentTime(0);
-        setPendingAttachment(null);
+        setVoicePreviewDuration(null);
+        setPendingAttachments([]);
       } else {
         if (textSegments.length === 0) {
           return;
@@ -2614,10 +2765,10 @@ export default function WhatsAppInboxScreen() {
       setMediaUploadProgress(null);
       mediaUploadAbortControllerRef.current = null;
     }
-  }, [loadChats, loadMessages, messageDraft, pendingAttachment, selectedChat, sendDisabledReason]);
+  }, [loadChats, loadMessages, messageDraft, pendingAttachments, selectedChat, sendDisabledReason]);
 
   useEffect(() => {
-    if (!pendingAttachment || pendingAttachment.kind !== 'voice') {
+    if (!voiceAttachment) {
       autoSendVoiceRef.current = false;
       return;
     }
@@ -2628,7 +2779,7 @@ export default function WhatsAppInboxScreen() {
 
     autoSendVoiceRef.current = false;
     void handleSendMessage();
-  }, [handleSendMessage, pendingAttachment]);
+  }, [handleSendMessage, voiceAttachment]);
 
   const handleCancelMediaUpload = () => {
     mediaUploadAbortControllerRef.current?.abort();
@@ -3047,6 +3198,33 @@ export default function WhatsAppInboxScreen() {
     });
   }, [activeQuickReplyMatch, composerSelection, messageDraft]);
 
+  const handleInsertEmoji = useCallback((emoji: string) => {
+    const textarea = composerTextareaRef.current;
+    const nextSelection = textarea
+      ? {
+          start: textarea.selectionStart ?? composerSelection.start,
+          end: textarea.selectionEnd ?? composerSelection.end,
+        }
+      : composerSelection;
+
+    const nextValue = `${messageDraft.slice(0, nextSelection.start)}${emoji}${messageDraft.slice(nextSelection.end)}`;
+    const nextCursor = nextSelection.start + emoji.length;
+
+    setMessageDraft(nextValue);
+    setComposerSelection({ start: nextCursor, end: nextCursor });
+    setComposerFocused(true);
+
+    requestAnimationFrame(() => {
+      const target = composerTextareaRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [composerSelection, messageDraft]);
+
   const handleOpenQuickReplySettings = useCallback(() => {
     setQuickRepliesModalOpen(true);
   }, []);
@@ -3129,6 +3307,51 @@ export default function WhatsAppInboxScreen() {
     void handleGenerateFollowUp('');
   }, [followUpGenerationDisabledReason, handleGenerateFollowUp]);
 
+  const handleToggleMediaDrawer = useCallback(() => {
+    setAttachmentMenuOpen(false);
+    setMediaDrawerOpen((current) => !current);
+  }, []);
+
+  const handleSendDrawerMedia = useCallback(async (item: {
+    sendKind: 'image' | 'video';
+    sendUrl: string;
+    title: string;
+    mimeType: string;
+  }) => {
+    if (!selectedChat) {
+      return;
+    }
+
+    if (mediaDrawerSendDisabledReason) {
+      toast.error(mediaDrawerSendDisabledReason);
+      throw new Error(mediaDrawerSendDisabledReason);
+    }
+
+    setSendingDrawerMedia(true);
+
+    try {
+      await commWhatsAppService.sendRemoteMediaMessage({
+        chatId: selectedChat.external_chat_id,
+        kind: item.sendKind,
+        remoteUrl: item.sendUrl,
+        fileName: item.title,
+        mimeType: item.mimeType,
+      });
+
+      await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
+      hydratedChatsRef.current.add(selectedChat.external_chat_id);
+      await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
+      toast.success(item.sendKind === 'video' ? 'GIF enviado com sucesso.' : 'Figurinha enviada com sucesso.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao enviar mídia da gaveta', error);
+      const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia agora.';
+      toast.error(message);
+      throw error instanceof Error ? error : new Error(message);
+    } finally {
+      setSendingDrawerMedia(false);
+    }
+  }, [loadChats, loadMessages, mediaDrawerSendDisabledReason, selectedChat]);
+
   const handleRegenerateFollowUp = useCallback(() => {
     void handleGenerateFollowUp(followUpCustomInstructions);
   }, [followUpCustomInstructions, handleGenerateFollowUp]);
@@ -3180,6 +3403,10 @@ export default function WhatsAppInboxScreen() {
     void handleStartVoiceRecording();
   };
 
+  useEffect(() => {
+    setMediaDrawerOpen(false);
+  }, [selectedChatId]);
+
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (quickReplyMenuOpen && quickReplyMenuHasResults) {
       if (event.key === 'ArrowDown') {
@@ -3215,7 +3442,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    if (!hasSendPayload || pendingAttachment?.kind === 'voice' || voiceRecordingState === 'recording') {
+    if (!hasSendPayload || voiceAttachment || voiceRecordingState === 'recording') {
       return;
     }
 
@@ -3507,18 +3734,19 @@ export default function WhatsAppInboxScreen() {
                   <input
                     ref={fileInputRef}
                     type="file"
+                    multiple
                     accept={attachmentInputAccept}
                     className="hidden"
                     onChange={handleAttachmentInputChange}
                   />
 
-                  {pendingAttachment?.kind === 'voice' ? (
+                  {voiceAttachment ? (
                     <>
-                      <audio ref={voicePreviewAudioRef} src={pendingAttachment.previewUrl ?? undefined} preload="metadata" className="hidden" />
+                      <audio ref={voicePreviewAudioRef} src={voiceAttachment.previewUrl ?? undefined} preload="metadata" className="hidden" />
                       <div className="whatsapp-inbox-voice-composer flex items-center gap-2.5 rounded-xl px-2.5 py-1.5">
                         <button
                           type="button"
-                          onClick={handleClearAttachment}
+                          onClick={() => handleClearAttachment()}
                           disabled={sending}
                           className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
                           aria-label="Descartar nota de voz"
@@ -3539,13 +3767,13 @@ export default function WhatsAppInboxScreen() {
                         <div className="flex min-w-0 flex-1 items-center gap-3">
                           <span className="h-3 w-3 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(34,197,94,0.14)]" />
                           <div className="min-w-0 flex-1">
-                            <WaveformBars bars={pendingAttachment.waveform} active={voicePreviewPlaying} />
+                            <WaveformBars bars={voiceAttachment.waveform} active={voicePreviewPlaying} />
                           </div>
                           <span className="whatsapp-inbox-voice-time shrink-0 text-sm font-semibold tabular-nums">
                             {formatDurationLabel(
                               Math.max(
                                 0,
-                                Math.round(voicePreviewPlaying ? voicePreviewCurrentTime : (voicePreviewDuration ?? pendingAttachment.durationSeconds ?? 0)),
+                                Math.round(voicePreviewPlaying ? voicePreviewCurrentTime : (voicePreviewDuration ?? voiceAttachment.durationSeconds ?? 0)),
                               ),
                             )}
                           </span>
@@ -3619,73 +3847,96 @@ export default function WhatsAppInboxScreen() {
                     </div>
                   ) : null}
 
-                  {pendingAttachment && pendingAttachment.kind !== 'voice' && (
-                    <div className="whatsapp-inbox-attachment-card mb-3 rounded-2xl border px-3 py-3">
-                      <div className="flex items-start gap-3">
-                        {pendingAttachment.kind === 'image' ? (
-                          <FileImage className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                        ) : pendingAttachment.kind === 'video' ? (
-                          <Images className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                        ) : pendingAttachment.kind === 'audio' ? (
-                          <FileAudio className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                        ) : (
-                          <FileText className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                        )}
-                        <div className="min-w-0 flex-1 space-y-3">
-                          <div>
-                            <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{pendingAttachment.file.name}</p>
-                            <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">{formatFileSize(pendingAttachment.file.size)}</p>
-                          </div>
-
-                          {pendingAttachment.kind === 'image' && pendingAttachment.previewUrl ? (
-                            <img src={pendingAttachment.previewUrl} alt={pendingAttachment.file.name} className="max-h-[180px] rounded-2xl object-cover" />
-                          ) : pendingAttachment.kind === 'video' && pendingAttachment.previewUrl ? (
-                            <video controls preload="metadata" className="max-h-[220px] rounded-2xl bg-black">
-                              <source src={pendingAttachment.previewUrl} type={pendingAttachment.file.type || undefined} />
-                            </video>
-                          ) : null}
-
-                          {typeof mediaUploadProgress === 'number' && sending ? (
-                            <div className="space-y-1.5">
-                              <div className="h-1.5 overflow-hidden rounded-full bg-black/10">
-                                <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress}%` }} />
-                              </div>
-                              <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">Enviando anexo... {mediaUploadProgress}%</p>
-                            </div>
-                          ) : null}
-
-                          <div className="flex flex-wrap items-center gap-2">
-                            {sending ? (
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={handleCancelMediaUpload}
-                                className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                                Cancelar upload
-                              </Button>
-                            ) : null}
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="sm"
-                              onClick={handleClearAttachment}
-                              disabled={sending}
-                              className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
-                              aria-label="Remover anexo"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                              Remover
-                            </Button>
-                          </div>
+                  {nonVoiceAttachments.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {nonVoiceAttachments.length > 1 ? (
+                        <div className="flex items-center justify-between rounded-2xl border px-3 py-2 text-xs font-semibold text-[var(--panel-text-soft,#5b4635)]">
+                          <span>{nonVoiceAttachments.length} anexos prontos para envio</span>
+                          <span className="text-[var(--panel-text-muted,#6b7280)]">Serão enviados em sequência</span>
                         </div>
-                      </div>
+                      ) : null}
+                      {nonVoiceAttachments.map((attachment) => {
+                        const isUploadingThisAttachment = sending && mediaUploadProgress?.attachmentId === attachment.id;
+
+                        return (
+                          <div key={attachment.id} className="whatsapp-inbox-attachment-card rounded-2xl border px-3 py-3">
+                            <div className="flex items-start gap-3">
+                              {attachment.kind === 'image' ? (
+                                <FileImage className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                              ) : attachment.kind === 'video' ? (
+                                <Images className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                              ) : attachment.kind === 'audio' ? (
+                                <FileAudio className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                              ) : (
+                                <FileText className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
+                              )}
+                              <div className="min-w-0 flex-1 space-y-3">
+                                <div>
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{attachment.file.name}</p>
+                                      <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">{formatFileSize(attachment.file.size)}</p>
+                                    </div>
+                                    <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-soft,#5b4635)]">
+                                      {attachment.kind === 'image' ? 'Imagem' : attachment.kind === 'video' ? 'Vídeo' : attachment.kind === 'audio' ? 'Áudio' : 'Documento'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {attachment.kind === 'image' && attachment.previewUrl ? (
+                                  <img src={attachment.previewUrl} alt={attachment.file.name} className="max-h-[180px] rounded-2xl object-cover" />
+                                ) : attachment.kind === 'video' && attachment.previewUrl ? (
+                                  <video controls preload="metadata" className="max-h-[220px] rounded-2xl bg-black">
+                                    <source src={attachment.previewUrl} type={attachment.file.type || undefined} />
+                                  </video>
+                                ) : null}
+
+                                {isUploadingThisAttachment ? (
+                                  <div className="space-y-1.5">
+                                    <div className="h-1.5 overflow-hidden rounded-full bg-black/10">
+                                      <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress?.progress ?? 0}%` }} />
+                                    </div>
+                                    <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">
+                                      Enviando anexo {mediaUploadProgress?.currentIndex} de {mediaUploadProgress?.total}... {mediaUploadProgress?.progress ?? 0}%
+                                    </p>
+                                  </div>
+                                ) : null}
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {isUploadingThisAttachment ? (
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      onClick={handleCancelMediaUpload}
+                                      className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                      Cancelar upload
+                                    </Button>
+                                  ) : null}
+                                  <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleClearAttachment(attachment.id)}
+                                    disabled={sending}
+                                    className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
+                                    aria-label="Remover anexo"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                    Remover
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 
-                  {voiceRecordingState === 'recording' || pendingAttachment?.kind === 'voice' ? null : (
+                  {voiceRecordingState === 'recording' || voiceAttachment ? null : (
                   <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                     <div ref={attachmentMenuRef} className={`relative flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       {attachmentMenuOpen && (
@@ -3737,7 +3988,7 @@ export default function WhatsAppInboxScreen() {
                         <button
                           type="button"
                           onClick={() => setAttachmentMenuOpen((current) => !current)}
-                          disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
+                          disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
                           className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${attachmentMenuOpen ? 'is-open' : ''}`}
                           aria-label="Anexar"
                           aria-expanded={attachmentMenuOpen}
@@ -3760,9 +4011,13 @@ export default function WhatsAppInboxScreen() {
                         </button>
                         <button
                           type="button"
-                          disabled
-                          className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition"
+                          ref={mediaDrawerTriggerRef}
+                          onClick={handleToggleMediaDrawer}
+                          disabled={!selectedChat}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${mediaDrawerOpen ? 'is-open' : ''}`}
                         aria-label="Emojis"
+                          aria-expanded={mediaDrawerOpen}
+                          title="Emoji, GIF e figurinha"
                       >
                         <Smile className="h-5 w-5" />
                       </button>
@@ -3935,6 +4190,18 @@ export default function WhatsAppInboxScreen() {
         <WhatsAppDashboardModal
           isOpen={whatsAppDashboardOpen}
           onClose={() => setWhatsAppDashboardOpen(false)}
+        />
+
+        <WhatsAppMediaDrawer
+          isOpen={mediaDrawerOpen}
+          position={mediaDrawerPosition}
+          triggerRef={mediaDrawerTriggerRef}
+          canSendMedia={!mediaDrawerSendDisabledReason}
+          mediaDisabledReason={mediaDrawerSendDisabledReason}
+          sendingMedia={sendingDrawerMedia}
+          onClose={() => setMediaDrawerOpen(false)}
+          onSelectEmoji={handleInsertEmoji}
+          onSendMedia={handleSendDrawerMedia}
         />
 
         <WhatsAppFollowUpModal

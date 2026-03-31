@@ -23,5 +23,8 @@ dist-ssr
 *.sw?
 .env
 supabase.local.ini
+.deploy-cache/
+deploy-functions.bat
+deploy.bat
 supabase/.temp/
 supabase/supabase/.temp/

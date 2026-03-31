@@ -55,7 +55,7 @@ Os scripts `.bat` executam o Supabase CLI dentro do WSL (Ubuntu).
 Scripts disponiveis:
 
 - `run-migrations.bat`: aplica migrations (`supabase db push`).
-- `deploy-functions.bat`: faz deploy de todas as functions em `supabase/functions`.
+- `deploy-functions.bat`: faz deploy apenas das functions alteradas em `supabase/functions` desde a ultima execucao, usando cache local em `.deploy-cache/`.
 - `npm run migrations:report`: audita o diretorio `supabase/migrations` (duplicidades, wrappers e distribuicao por mes).
 - `npm run migrations:report:write`: atualiza `supabase/migrations/INDEX.md`.
 - `npm run migrations:baseline:write`: grava baseline atual da auditoria.

@@ -8,6 +8,13 @@ import Button from '../../../components/ui/Button';
 import StatusDropdown from '../../../components/StatusDropdown';
 import { useConfig } from '../../../contexts/ConfigContext';
 import {
+  AUTO_CONTACT_INTEGRATION_SLUG,
+  applyTemplateVariables,
+  getTemplateMessage,
+  normalizeAutoContactSettings,
+  type AutoContactTemplate,
+} from '../../../lib/autoContactService';
+import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
   type CommWhatsAppLeadContractSummary,
@@ -16,8 +23,9 @@ import {
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
 } from '../../../lib/commWhatsAppService';
+import { configService } from '../../../lib/configService';
 import { toast } from '../../../lib/toast';
-import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact } from '../../../lib/supabase';
+import type { CommWhatsAppChat, CommWhatsAppMessage, CommWhatsAppPhoneContact, Lead } from '../../../lib/supabase';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
 
@@ -41,6 +49,74 @@ type PendingAttachment = {
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 type ChatActivityFilter = 'all' | 'unread';
+type ComposerSelection = { start: number; end: number };
+type QuickReplyCommandMatch = { query: string; start: number; end: number };
+type QuickReplyOption = {
+  id: string;
+  name: string;
+  shortcut: string;
+  text: string;
+  preview: string;
+  searchValue: string;
+};
+
+const DEFAULT_QUICK_REPLY_TEMPLATES = normalizeAutoContactSettings(null).messageTemplates;
+
+const normalizeQuickReplyLookup = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const buildQuickReplyShortcut = (value: string, index: number) => {
+  const normalized = normalizeQuickReplyLookup(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return normalized || `msg-${index + 1}`;
+};
+
+const summarizeQuickReplyPreview = (value: string) => {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= 120) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, 117).trimEnd()}...`;
+};
+
+const getActiveQuickReplyMatch = (value: string, selection: ComposerSelection): QuickReplyCommandMatch | null => {
+  if (selection.start !== selection.end) {
+    return null;
+  }
+
+  const cursor = Math.max(0, Math.min(selection.start, value.length));
+  const textBeforeCursor = value.slice(0, cursor);
+  const slashIndex = textBeforeCursor.lastIndexOf('/');
+
+  if (slashIndex < 0) {
+    return null;
+  }
+
+  const query = textBeforeCursor.slice(slashIndex + 1);
+  if (/\s/.test(query)) {
+    return null;
+  }
+
+  if (slashIndex > 0) {
+    const previousCharacter = textBeforeCursor[slashIndex - 1] ?? '';
+    if (!/\s/.test(previousCharacter)) {
+      return null;
+    }
+  }
+
+  return {
+    query,
+    start: slashIndex,
+    end: cursor,
+  };
+};
 
 const formatMessageTime = (value?: string | null) => {
   if (!value) return '';
@@ -808,6 +884,11 @@ export default function WhatsAppInboxScreen() {
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [messageDraft, setMessageDraft] = useState('');
+  const [quickReplyTemplates, setQuickReplyTemplates] = useState<AutoContactTemplate[]>(DEFAULT_QUICK_REPLY_TEMPLATES);
+  const [composerSelection, setComposerSelection] = useState<ComposerSelection>({ start: 0, end: 0 });
+  const [composerFocused, setComposerFocused] = useState(false);
+  const [quickReplyActiveIndex, setQuickReplyActiveIndex] = useState(0);
+  const [dismissedQuickReplyKey, setDismissedQuickReplyKey] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
@@ -940,6 +1021,109 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+  const quickReplyLead = useMemo<Lead | null>(() => {
+    if (!selectedChat) {
+      return null;
+    }
+
+    const timestamp = new Date().toISOString();
+    return {
+      id: leadPanel?.id ?? selectedChat.lead_id ?? selectedChat.id,
+      nome_completo: leadPanel?.nome_completo || selectedChat.saved_contact_name || selectedChat.display_name || '',
+      telefone: leadPanel?.telefone || selectedChat.phone_number || '',
+      email: '',
+      cidade: '',
+      origem: null,
+      status: leadPanel?.status_value ?? selectedChat.lead_status ?? null,
+      responsavel: leadPanel?.responsavel_value ?? null,
+      data_criacao: timestamp,
+      arquivado: false,
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+  }, [leadPanel, selectedChat]);
+  const quickReplyOptions = useMemo(() => {
+    const usedShortcuts = new Set<string>();
+
+    return quickReplyTemplates
+      .map((template, index) => {
+        const name = template.name?.trim() || `Mensagem rapida ${index + 1}`;
+        const rawText = getTemplateMessage(template).trim();
+        const resolvedText = quickReplyLead ? applyTemplateVariables(rawText, quickReplyLead) : rawText;
+        const text = resolvedText.trim();
+
+        if (!text) {
+          return null;
+        }
+
+        const baseShortcut = buildQuickReplyShortcut(name, index);
+        let shortcut = baseShortcut;
+        let duplicateIndex = 2;
+
+        while (usedShortcuts.has(shortcut)) {
+          shortcut = `${baseShortcut}-${duplicateIndex}`;
+          duplicateIndex += 1;
+        }
+
+        usedShortcuts.add(shortcut);
+
+        return {
+          id: template.id,
+          name,
+          shortcut,
+          text,
+          preview: summarizeQuickReplyPreview(text),
+          searchValue: normalizeQuickReplyLookup(`${shortcut} ${name} ${text}`),
+        } as QuickReplyOption;
+      })
+      .filter((option): option is QuickReplyOption => option !== null);
+  }, [quickReplyLead, quickReplyTemplates]);
+  const activeQuickReplyMatch = useMemo(
+    () => getActiveQuickReplyMatch(messageDraft, composerSelection),
+    [composerSelection, messageDraft],
+  );
+  const activeQuickReplyKey = activeQuickReplyMatch
+    ? `${activeQuickReplyMatch.start}:${activeQuickReplyMatch.query}`
+    : null;
+  const filteredQuickReplyOptions = useMemo(() => {
+    if (!activeQuickReplyMatch) {
+      return [];
+    }
+
+    const query = normalizeQuickReplyLookup(activeQuickReplyMatch.query);
+
+    return quickReplyOptions
+      .map((option, index) => {
+        if (query && !option.searchValue.includes(query)) {
+          return null;
+        }
+
+        const normalizedName = normalizeQuickReplyLookup(option.name);
+        const rank = query.length === 0
+          ? 0
+          : option.shortcut.startsWith(query)
+            ? 0
+            : normalizedName.startsWith(query)
+              ? 1
+              : 2;
+
+        return { option, rank, index };
+      })
+      .filter((item): item is { option: QuickReplyOption; rank: number; index: number } => item !== null)
+      .sort((a, b) => {
+        if (a.rank !== b.rank) {
+          return a.rank - b.rank;
+        }
+
+        return a.index - b.index;
+      })
+      .map((item) => item.option);
+  }, [activeQuickReplyMatch, quickReplyOptions]);
+  const quickReplyMenuOpen =
+    composerFocused
+    && activeQuickReplyMatch !== null
+    && activeQuickReplyKey !== dismissedQuickReplyKey
+    && filteredQuickReplyOptions.length > 0;
   const hasActiveChatFilters =
     chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
   const activeChatFiltersCount = (chatActivityFilter !== 'all' ? 1 : 0) + leadStatusFilters.length;
@@ -1187,6 +1371,51 @@ export default function WhatsAppInboxScreen() {
   useEffect(() => {
     latestCrmStartResultsRef.current = crmStartResults;
   }, [crmStartResults]);
+
+  useEffect(() => {
+    let active = true;
+
+    void configService
+      .getIntegrationSetting(AUTO_CONTACT_INTEGRATION_SLUG)
+      .then((integration) => {
+        if (!active) {
+          return;
+        }
+
+        const normalized = normalizeAutoContactSettings(integration?.settings);
+        setQuickReplyTemplates(normalized.messageTemplates);
+      })
+      .catch((error) => {
+        console.error('[WhatsAppInbox] erro ao carregar mensagens rapidas', error);
+        if (active) {
+          setQuickReplyTemplates(DEFAULT_QUICK_REPLY_TEMPLATES);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!quickReplyMenuOpen) {
+      setQuickReplyActiveIndex(0);
+      return;
+    }
+
+    setQuickReplyActiveIndex((current) => Math.min(current, filteredQuickReplyOptions.length - 1));
+  }, [filteredQuickReplyOptions.length, quickReplyMenuOpen]);
+
+  useEffect(() => {
+    if (!activeQuickReplyKey) {
+      setDismissedQuickReplyKey(null);
+      return;
+    }
+
+    if (dismissedQuickReplyKey && dismissedQuickReplyKey !== activeQuickReplyKey) {
+      setDismissedQuickReplyKey(null);
+    }
+  }, [activeQuickReplyKey, dismissedQuickReplyKey]);
 
   useEffect(() => {
     const previewUrl = pendingAttachment?.previewUrl;
@@ -2071,7 +2300,7 @@ export default function WhatsAppInboxScreen() {
     });
   }, [pendingAttachment?.kind, voicePreviewPlaying]);
 
-  const handleSendCurrentVoiceRecording = useCallback(() => {
+  const handleSendCurrentVoiceRecording = () => {
     if (voiceRecordingState === 'recording') {
       handleStopVoiceRecording(true);
       return;
@@ -2080,9 +2309,9 @@ export default function WhatsAppInboxScreen() {
     if (pendingAttachment?.kind === 'voice') {
       void handleSendMessage();
     }
-  }, [handleStopVoiceRecording, pendingAttachment?.kind, voiceRecordingState]);
+  };
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!selectedChat) return;
 
     const text = messageDraft.trim();
@@ -2146,7 +2375,7 @@ export default function WhatsAppInboxScreen() {
       setMediaUploadProgress(null);
       mediaUploadAbortControllerRef.current = null;
     }
-  };
+  }, [loadChats, loadMessages, messageDraft, pendingAttachment, selectedChat, sendDisabledReason]);
 
   useEffect(() => {
     if (!pendingAttachment || pendingAttachment.kind !== 'voice') {
@@ -2424,6 +2653,63 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
+  const syncComposerSelection = useCallback((target: HTMLTextAreaElement | null) => {
+    if (!target) {
+      return;
+    }
+
+    const nextSelection = {
+      start: target.selectionStart ?? target.value.length,
+      end: target.selectionEnd ?? target.value.length,
+    };
+
+    setComposerSelection((current) => {
+      if (current.start === nextSelection.start && current.end === nextSelection.end) {
+        return current;
+      }
+
+      return nextSelection;
+    });
+  }, []);
+
+  const handleComposerChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setMessageDraft(event.target.value);
+    syncComposerSelection(event.target);
+  };
+
+  const handleInsertQuickReply = useCallback((option: QuickReplyOption) => {
+    const textarea = composerTextareaRef.current;
+    const nextSelection = textarea
+      ? {
+          start: textarea.selectionStart ?? composerSelection.start,
+          end: textarea.selectionEnd ?? composerSelection.end,
+        }
+      : composerSelection;
+    const match = getActiveQuickReplyMatch(messageDraft, nextSelection) ?? activeQuickReplyMatch;
+
+    if (!match) {
+      return;
+    }
+
+    const nextValue = `${messageDraft.slice(0, match.start)}${option.text}${messageDraft.slice(match.end)}`;
+    const nextCursor = match.start + option.text.length;
+
+    setMessageDraft(nextValue);
+    setComposerSelection({ start: nextCursor, end: nextCursor });
+    setDismissedQuickReplyKey(null);
+    setQuickReplyActiveIndex(0);
+
+    requestAnimationFrame(() => {
+      const target = composerTextareaRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [activeQuickReplyMatch, composerSelection, messageDraft]);
+
   const handleComposerSubmit = () => {
     if (sending) return;
 
@@ -2441,6 +2727,36 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (quickReplyMenuOpen) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setQuickReplyActiveIndex((current) => (current + 1) % filteredQuickReplyOptions.length);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setQuickReplyActiveIndex((current) => (current === 0 ? filteredQuickReplyOptions.length - 1 : current - 1));
+        return;
+      }
+
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        const selectedQuickReply = filteredQuickReplyOptions[quickReplyActiveIndex];
+        if (selectedQuickReply) {
+          event.preventDefault();
+          handleInsertQuickReply(selectedQuickReply);
+          return;
+        }
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setDismissedQuickReplyKey(activeQuickReplyKey);
+        setQuickReplyActiveIndex(0);
+        return;
+      }
+    }
+
     if (event.key !== 'Enter' || event.shiftKey) {
       return;
     }
@@ -2936,13 +3252,58 @@ export default function WhatsAppInboxScreen() {
                       </button>
                     </div>
 
-                    <div className={`min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
+                    <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
+                      {quickReplyMenuOpen && (
+                        <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-[22px] border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
+                          <div className="border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                            Mensagens rapidas por atalho
+                          </div>
+                          <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rapidas">
+                            {filteredQuickReplyOptions.map((option, index) => {
+                              const isActive = index === quickReplyActiveIndex;
+
+                              return (
+                                <button
+                                  key={option.id}
+                                  type="button"
+                                  className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--panel-accent-soft,#f4e2cc)]/70 text-[var(--panel-text,#1f2937)]' : 'text-[var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f8f2e9)]'}`}
+                                  onMouseDown={(event) => {
+                                    event.preventDefault();
+                                    handleInsertQuickReply(option);
+                                  }}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="truncate text-sm font-semibold">{option.name}</span>
+                                      <code className="shrink-0 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2 py-0.5 text-[11px] font-semibold text-[var(--panel-accent-ink,#8b4d12)]">
+                                        /{option.shortcut}
+                                      </code>
+                                    </div>
+                                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
+                                      {option.preview}
+                                    </p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       <textarea
                         ref={composerTextareaRef}
                         rows={1}
                         value={messageDraft}
-                        onChange={(event) => setMessageDraft(event.target.value)}
+                        onChange={handleComposerChange}
                         onKeyDown={handleComposerKeyDown}
+                        onClick={(event) => syncComposerSelection(event.currentTarget)}
+                        onKeyUp={(event) => syncComposerSelection(event.currentTarget)}
+                        onSelect={(event) => syncComposerSelection(event.currentTarget)}
+                        onFocus={(event) => {
+                          setComposerFocused(true);
+                          syncComposerSelection(event.currentTarget);
+                        }}
+                        onBlur={() => setComposerFocused(false)}
                         placeholder="Digite uma mensagem"
                         disabled={sending}
                         className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-[15px] leading-6 focus:outline-none"

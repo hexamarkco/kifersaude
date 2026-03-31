@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Eye,
   EyeOff,
@@ -377,16 +377,7 @@ export default function IntegrationsScreen() {
 
   const loadingUi = useAdaptiveLoading(loadingAi);
 
-  useEffect(() => {
-    void loadAiIntegrations();
-    void loadMetaPixel();
-    void loadGtm();
-  }, []);
-
-  void loadingMetaPixel;
-  void loadingGtm;
-
-  const loadProviderModels = async (provider: AiProvider, apiKey: string) => {
+  const loadProviderModels = useCallback(async (provider: AiProvider, apiKey: string) => {
     const normalizedApiKey = apiKey.trim();
 
     if (!normalizedApiKey) {
@@ -450,9 +441,9 @@ export default function IntegrationsScreen() {
         },
       }));
     }
-  };
+  }, []);
 
-  const loadAiIntegrations = async () => {
+  const loadAiIntegrations = useCallback(async () => {
     setLoadingAi(true);
     setAiMessage(null);
 
@@ -517,7 +508,32 @@ export default function IntegrationsScreen() {
     } finally {
       setLoadingAi(false);
     }
-  };
+  }, [loadProviderModels]);
+
+  const loadMetaPixel = useCallback(async () => {
+    setLoadingMetaPixel(true);
+    const data = await configService.getIntegrationSetting(META_PIXEL_SLUG);
+    setMetaPixelIntegration(data);
+    setMetaPixelId(toTrimmedString(data?.settings?.pixelId));
+    setLoadingMetaPixel(false);
+  }, []);
+
+  const loadGtm = useCallback(async () => {
+    setLoadingGtm(true);
+    const data = await configService.getIntegrationSetting(GTM_SLUG);
+    setGtmIntegration(data);
+    setGtmId(toTrimmedString(data?.settings?.gtmId));
+    setLoadingGtm(false);
+  }, []);
+
+  useEffect(() => {
+    void loadAiIntegrations();
+    void loadMetaPixel();
+    void loadGtm();
+  }, [loadAiIntegrations, loadGtm, loadMetaPixel]);
+
+  void loadingMetaPixel;
+  void loadingGtm;
 
   const handleSaveProvider = async (provider: AiProvider) => {
     const currentForm = aiProviderForms[provider];
@@ -695,22 +711,6 @@ export default function IntegrationsScreen() {
     }
 
     setSavingAiFollowUpPrompt(false);
-  };
-
-  const loadMetaPixel = async () => {
-    setLoadingMetaPixel(true);
-    const data = await configService.getIntegrationSetting(META_PIXEL_SLUG);
-    setMetaPixelIntegration(data);
-    setMetaPixelId(toTrimmedString(data?.settings?.pixelId));
-    setLoadingMetaPixel(false);
-  };
-
-  const loadGtm = async () => {
-    setLoadingGtm(true);
-    const data = await configService.getIntegrationSetting(GTM_SLUG);
-    setGtmIntegration(data);
-    setGtmId(toTrimmedString(data?.settings?.gtmId));
-    setLoadingGtm(false);
   };
 
   const handleSaveMetaPixel = async () => {

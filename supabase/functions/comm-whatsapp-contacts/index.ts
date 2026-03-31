@@ -1,4 +1,4 @@
-// @ts-ignore Deno npm import
+// @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
@@ -9,7 +9,6 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiContactId,
-  extractWhapiContactName,
   extractWhapiContactPhone,
   extractWhapiContactSaved,
   extractWhapiContactShortName,
@@ -311,7 +310,7 @@ Deno.serve(async (req: Request) => {
     if (action === 'startChat') {
       let phoneNumber = '';
       let savedContactName = '';
-      let pushName = '';
+      const pushName = '';
       let leadId: string | null = null;
 
       if (body.source === 'saved_contact') {

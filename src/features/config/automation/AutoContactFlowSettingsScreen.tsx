@@ -1477,7 +1477,6 @@ export default function AutoContactFlowSettingsScreen() {
     [
       autoContactIntegration,
       autoContactSettings,
-      autoSendEnabled,
       buildAutomationSettingsPayload,
       loggingDraft,
       monitoringDraft,

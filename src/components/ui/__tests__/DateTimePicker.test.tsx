@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { act, useState } from 'react';
 import { render } from '@testing-library/react';
 import { test } from 'vitest';
-import DateTimePicker, { normalizeYearInput, parseCommittedYearInput } from '../DateTimePicker';
+import DateTimePicker from '../DateTimePicker';
+import { normalizeYearInput, parseCommittedYearInput } from '../dateTimePickerUtils';
 
 const renderControlledPicker = (initialValue: string, type: 'date' | 'month' | 'datetime-local' = 'date') => {
   const state = { current: initialValue };

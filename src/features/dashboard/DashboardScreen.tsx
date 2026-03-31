@@ -1182,7 +1182,7 @@ export default function DashboardScreen({
           parseDashboardDateValue(lead.data_criacao || lead.created_at),
         ),
       ),
-    [addVariationToSeries, filteredLeads], // eslint-disable-line react-hooks/exhaustive-deps
+    [addVariationToSeries, filteredLeads],
   );
 
   const monthlyContractSeries = useMemo(
@@ -1196,7 +1196,7 @@ export default function DashboardScreen({
           ),
         ),
       ),
-    [addVariationToSeries, filteredContracts], // eslint-disable-line react-hooks/exhaustive-deps
+    [addVariationToSeries, filteredContracts],
   );
 
   const monthlyCommissionSeries = useMemo(
@@ -1213,7 +1213,7 @@ export default function DashboardScreen({
           (contract) => contract.comissao_prevista || 0,
         ),
       ),
-    [addVariationToSeries, filteredContracts], // eslint-disable-line react-hooks/exhaustive-deps
+    [addVariationToSeries, filteredContracts],
   );
 
   const selectedMonthlySeries = useMemo(() => {

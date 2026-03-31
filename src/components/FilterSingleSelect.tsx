@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Check, ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -48,8 +48,16 @@ export default function FilterSingleSelect({
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const isCompact = size === 'compact';
 
-  const calcPos = () => {
+  const optionsWithDefault = useMemo(() => {
+    if (!includePlaceholderOption) return options;
+    const hasDefault = options.some((option) => option.value === '');
+    if (hasDefault) return options;
+    return [{ value: '', label: placeholder }, ...options];
+  }, [includePlaceholderOption, options, placeholder]);
+
+  const calcPos = useCallback(() => {
     if (!buttonRef.current) return;
 
     const r = buttonRef.current.getBoundingClientRect();
@@ -72,7 +80,7 @@ export default function FilterSingleSelect({
       : Math.min(window.innerHeight - maxHeight - viewportPadding, r.bottom + gap);
 
     setPos({ top, left, width, maxHeight });
-  };
+  }, [isCompact, optionsWithDefault.length]);
 
   const openDropdown = () => {
     if (disabled) return;
@@ -107,18 +115,11 @@ export default function FilterSingleSelect({
       window.removeEventListener('scroll', handleSync, true);
       window.removeEventListener('resize', handleSync);
     };
-  }, [isOpen, listboxId]);
+  }, [calcPos, isOpen]);
 
   useEffect(() => {
     if (disabled && isOpen) setIsOpen(false);
   }, [disabled, isOpen]);
-
-  const optionsWithDefault = useMemo(() => {
-    if (!includePlaceholderOption) return options;
-    const hasDefault = options.some((option) => option.value === '');
-    if (hasDefault) return options;
-    return [{ value: '', label: placeholder }, ...options];
-  }, [includePlaceholderOption, options, placeholder]);
 
   const selectedOption = useMemo(
     () => optionsWithDefault.find((option) => option.value === value) ?? null,
@@ -196,7 +197,6 @@ export default function FilterSingleSelect({
     }
   };
 
-  const isCompact = size === 'compact';
   const iconSizeClass = isCompact ? 'h-4 w-4' : 'h-5 w-5';
   const iconOffsetClass = isCompact ? 'left-2' : 'left-3';
   const chevronSizeClass = isCompact ? 'h-3 w-3' : 'h-4 w-4';

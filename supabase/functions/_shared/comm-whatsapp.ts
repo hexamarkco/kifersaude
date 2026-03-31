@@ -1,4 +1,4 @@
-// @ts-ignore Deno npm import
+// @ts-expect-error Deno npm import
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 export const corsHeaders = {
@@ -241,20 +241,6 @@ const readNestedBody = (container: unknown, key: string): string => {
   const nested = container[key];
   if (!isRecord(nested)) return '';
   return toTrimmedString(nested.body);
-};
-
-const readNestedText = (container: unknown, key: string): string => {
-  if (!isRecord(container)) return '';
-  const nested = container[key];
-  if (!isRecord(nested)) return '';
-
-  return (
-    toTrimmedString(nested.text) ||
-    toTrimmedString(nested.title) ||
-    toTrimmedString(nested.caption) ||
-    toTrimmedString(nested.description) ||
-    ''
-  );
 };
 
 const collectButtonLikeTexts = (value: unknown): string[] => {

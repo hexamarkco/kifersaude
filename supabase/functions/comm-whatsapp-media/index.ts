@@ -1,4 +1,4 @@
-// @ts-ignore Deno npm import
+// @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { COMM_WHATSAPP_MODULE, ensureCommWhatsAppSettings, parseWhapiError, WHAPI_BASE_URL } from '../_shared/comm-whatsapp.ts';

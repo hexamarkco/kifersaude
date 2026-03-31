@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
+import { getPanelButtonClass } from '../../../components/ui/standards';
 import StatusDropdown from '../../../components/StatusDropdown';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
@@ -171,6 +172,12 @@ const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) =>
 };
 
 const DEFAULT_WAVEFORM = [0.24, 0.36, 0.52, 0.72, 0.46, 0.62, 0.28, 0.54, 0.4, 0.66, 0.32, 0.58, 0.42, 0.74, 0.38, 0.5, 0.3, 0.64, 0.44, 0.56];
+
+const inboxInlineActionClassName = getPanelButtonClass({
+  variant: 'soft',
+  size: 'sm',
+  className: 'h-8 rounded-xl px-3 text-[11px] font-semibold',
+});
 
 const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage) => {
   const timeDiff = new Date(a.message_at).getTime() - new Date(b.message_at).getTime();
@@ -571,7 +578,7 @@ function WhatsAppAudioPlayerCard({
             {kind !== 'voice' ? (
               <div className="flex items-center justify-between gap-3">
                 <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p>
-                <span className="text-[11px] uppercase tracking-[0.08em] opacity-70">Áudio enviado</span>
+                <span className="text-[11px] font-medium opacity-70">Áudio enviado</span>
               </div>
             ) : null}
             <div className="whatsapp-inbox-audio-native-waveform">
@@ -608,7 +615,7 @@ function RetryMediaButton({
       disabled={loading}
       variant="soft"
       size="sm"
-      className="whatsapp-inbox-retry-button h-auto rounded-full px-2.5 py-1 text-[11px] uppercase tracking-[0.1em]"
+      className="whatsapp-inbox-retry-button h-8 rounded-xl px-3 text-[11px]"
     >
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SendHorizontal className="h-3.5 w-3.5" />}
       Reenviar
@@ -628,18 +635,16 @@ function InboxFilterChip({
   compact?: boolean;
 }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] transition ${
-        active
-          ? 'border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/50 text-[var(--panel-accent-ink,#8b4d12)]'
-          : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)] hover:text-[var(--panel-text,#1c1917)]'
-      } ${compact ? 'px-2.5 py-1 text-[11px]' : ''}`}
+      variant={active ? 'soft' : 'secondary'}
+      size="sm"
+      className={compact ? 'h-8 rounded-xl px-3 text-[11px]' : 'h-9 rounded-xl px-3.5 text-xs'}
     >
       {label}
-    </button>
+    </Button>
   );
 }
 
@@ -789,13 +794,13 @@ function WhatsAppMessageBody({
           <div className="flex items-center gap-2">
             {mediaUrl ? (
               <>
-                <a href={mediaUrl} target="_blank" rel="noreferrer" className="rounded-full border border-current/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] hover:bg-black/5">
+                <a href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
                   Abrir
                 </a>
                 <a
                   href={mediaUrl}
                   download={message.media_file_name || 'documento'}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-current/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] hover:bg-black/5"
+                  className={inboxInlineActionClassName}
                 >
                   <Download className="h-3.5 w-3.5" />
                   Baixar
@@ -845,17 +850,17 @@ function WhatsAppMessageBody({
 
           <div className="flex flex-wrap items-center gap-2">
             {transcriptionStatus === 'processing' || transcribing ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--panel-text-soft,#5b4635)]">
+              <span className="inline-flex items-center gap-2 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1.5 text-[11px] font-semibold text-[var(--panel-text-soft,#5b4635)]">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Transcrevendo...
               </span>
             ) : canTranscribe ? (
               <Button
                 type="button"
-                variant="secondary"
+                variant="soft"
                 size="sm"
                 onClick={() => onTranscribe(message)}
-                className="h-auto rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.08em]"
+                className="h-8 rounded-xl px-3 text-[11px]"
               >
                 {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
               </Button>
@@ -2960,19 +2965,19 @@ export default function WhatsAppInboxScreen() {
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#8a735f)]">Conversas</p>
                 <div className="flex items-center gap-2">
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="secondary"
                     onClick={() => setWhatsAppDashboardOpen(true)}
-                    className="h-9 w-9 px-0"
+                    className="rounded-xl"
                     aria-label="Painel WhatsApp"
                     title="Painel WhatsApp"
                   >
                     <Cog className="h-4 w-4" />
                   </Button>
                   <Button
-                    size="sm"
+                    size="icon"
                     onClick={() => setStartChatModalOpen(true)}
-                    className="h-9 w-9 px-0"
+                    className="rounded-xl"
                     aria-label="Novo chat"
                     title="Novo chat"
                   >
@@ -3007,7 +3012,7 @@ export default function WhatsAppInboxScreen() {
                     onClick={() => setAdvancedFiltersOpen((current) => !current)}
                     variant={advancedFiltersOpen || activeChatFiltersCount > 0 ? 'soft' : 'secondary'}
                     size="sm"
-                    className="h-auto rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.08em]"
+                    className="h-9 rounded-xl px-3.5 text-xs"
                   >
                     <SlidersHorizontal className="h-3.5 w-3.5" />
                     Filtros{activeChatFiltersCount > 0 ? ` (${activeChatFiltersCount})` : ''}
@@ -3045,7 +3050,7 @@ export default function WhatsAppInboxScreen() {
                       <p className="truncate text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span className="whatsapp-inbox-chat-meta text-[11px] uppercase tracking-[0.12em]">{formatMessageTime(chat.last_message_at)}</span>
+                      <span className="whatsapp-inbox-chat-meta text-[11px] font-medium">{formatMessageTime(chat.last_message_at)}</span>
                       {chat.unread_count > 0 && (
                         <span className="whatsapp-inbox-unread-badge inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
                           {chat.unread_count}
@@ -3109,6 +3114,7 @@ export default function WhatsAppInboxScreen() {
                 <div className="flex shrink-0 items-start gap-3">
                   <div className="flex shrink-0 flex-col items-end gap-1 text-right">
                     <span className={`whatsapp-inbox-status-pill whatsapp-inbox-status-pill-${isChannelConnected ? 'success' : 'warning'}`}>
+                      <span className="whatsapp-inbox-status-pill-dot" aria-hidden="true" />
                       {formatConnectionStatusLabel(connectionStatus)}
                     </span>
                     {channelState?.last_webhook_received_at && (
@@ -3122,7 +3128,7 @@ export default function WhatsAppInboxScreen() {
                     onClick={handleOpenLeadDrawer}
                     variant="soft"
                     size="icon"
-                    className="rounded-full"
+                    className="rounded-xl"
                     aria-label="Abrir informações do lead"
                     title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
                   >
@@ -3144,7 +3150,7 @@ export default function WhatsAppInboxScreen() {
                       disabled={loadingOlderMessages}
                       variant="secondary"
                       size="sm"
-                      className="whatsapp-inbox-load-older h-auto rounded-full px-3.5 py-2 text-xs uppercase tracking-[0.12em]"
+                      className="whatsapp-inbox-load-older h-8 rounded-xl px-3.5 text-[11px]"
                     >
                       {loadingOlderMessages ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -3175,7 +3181,7 @@ export default function WhatsAppInboxScreen() {
                           onTranscribe={(target) => void handleTranscribeMessage(target)}
                           transcribing={transcribingMessageId === message.id}
                         />
-                        <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] uppercase tracking-[0.08em]">
+                        <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium">
                           <span>{formatMessageTime(message.message_at)}</span>
                           {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
                           {message.direction === 'outbound' && ['image', 'video', 'document', 'audio', 'voice'].includes(message.message_type) && message.delivery_status === 'failed' && message.media_id ? (
@@ -3347,7 +3353,7 @@ export default function WhatsAppInboxScreen() {
                                 variant="secondary"
                                 size="sm"
                                 onClick={handleCancelMediaUpload}
-                                className="whatsapp-inbox-attachment-action h-auto rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.08em]"
+                                className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
                               >
                                 <X className="h-3.5 w-3.5" />
                                 Cancelar upload
@@ -3359,7 +3365,7 @@ export default function WhatsAppInboxScreen() {
                               size="sm"
                               onClick={handleClearAttachment}
                               disabled={sending}
-                              className="whatsapp-inbox-attachment-action h-auto rounded-full px-3 py-1.5 text-xs uppercase tracking-[0.08em]"
+                              className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
                               aria-label="Remover anexo"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -3375,7 +3381,7 @@ export default function WhatsAppInboxScreen() {
                   <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                     <div ref={attachmentMenuRef} className={`relative flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       {attachmentMenuOpen && (
-                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-3 min-w-[228px] overflow-hidden rounded-[22px] border p-2 shadow-2xl">
+                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-3 min-w-[228px] overflow-hidden rounded-2xl border p-2 shadow-2xl">
                           <button
                             type="button"
                             onClick={() => handleAttachmentMenuAction('document')}
@@ -3409,13 +3415,13 @@ export default function WhatsAppInboxScreen() {
                           <button
                             type="button"
                             disabled
-                            className="whatsapp-inbox-attach-menu-item is-disabled mt-1 flex w-full items-center gap-3 border-t border-[var(--panel-border-subtle,#e7dac8)]/60 px-3 pt-3 pb-2.5 text-left"
+                            className="whatsapp-inbox-attach-menu-item is-disabled flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-text-muted,#8a735f)]">
                               <UserRound className="h-4 w-4" />
                             </span>
                             <span>Contato</span>
-                            <span className="whatsapp-inbox-attach-menu-badge ml-auto text-[11px] font-semibold uppercase tracking-[0.12em]">Em breve</span>
+                            <span className="whatsapp-inbox-attach-menu-badge ml-auto text-[10px] font-medium">Em breve</span>
                           </button>
                         </div>
                       )}
@@ -3424,7 +3430,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={() => setAttachmentMenuOpen((current) => !current)}
                           disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${attachmentMenuOpen ? 'is-open' : ''}`}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${attachmentMenuOpen ? 'is-open' : ''}`}
                           aria-label="Anexar"
                           aria-expanded={attachmentMenuOpen}
                       >
@@ -3434,7 +3440,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={handleOpenFollowUpModal}
                           disabled={Boolean(followUpGenerationDisabledReason)}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition ${generatingFollowUp ? 'cursor-wait opacity-70' : ''}`}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${generatingFollowUp ? 'cursor-wait opacity-70' : ''}`}
                           aria-label="Gerar follow-up com IA"
                           title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
                         >
@@ -3447,7 +3453,7 @@ export default function WhatsAppInboxScreen() {
                         <button
                           type="button"
                           disabled
-                          className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-full transition"
+                          className="whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition"
                         aria-label="Emojis"
                       >
                         <Smile className="h-5 w-5" />
@@ -3456,21 +3462,23 @@ export default function WhatsAppInboxScreen() {
 
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
                       {quickReplyMenuOpen && (
-                        <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-[22px] border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
+                        <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
                           <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
                             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
                               Mensagens rápidas por atalho
                             </span>
-                            <button
+                            <Button
                               type="button"
-                              className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] transition hover:bg-[var(--panel-surface-soft,#f8f2e9)]"
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 rounded-xl px-3 text-[11px]"
                               onMouseDown={(event) => {
                                 event.preventDefault();
                                 handleOpenQuickReplySettings();
                               }}
                             >
                               Gerenciar
-                            </button>
+                            </Button>
                           </div>
                           <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rápidas">
                             {quickReplyMenuHasResults ? (
@@ -3538,7 +3546,7 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={handleComposerSubmit}
                         disabled={sending || generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
-                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-full transition ${hasSendPayload ? 'is-active' : ''} ${sending || generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
+                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-xl transition ${hasSendPayload ? 'is-active' : ''} ${sending || generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
                         aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar áudio'}
                         title={sendDisabledReason ?? undefined}
                       >

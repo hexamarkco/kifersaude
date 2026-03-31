@@ -579,25 +579,48 @@ const getMessageReactions = (message: CommWhatsAppMessage) => {
       emoji: String(item.emoji ?? '').trim(),
       fromMe: item.from_me === true,
       reactedAt: String(item.reacted_at ?? '').trim(),
+      actorLabel: item.from_me === true
+        ? 'Você'
+        : String(item.from_name ?? item.from ?? '').trim() || 'Contato',
     }))
     .filter((item) => Boolean(item.emoji));
 
-  const grouped = new Map<string, { emoji: string; count: number; fromMe: boolean }>();
+  const grouped = new Map<string, { emoji: string; count: number; fromMe: boolean; actors: string[] }>();
   for (const reaction of normalized) {
     const current = grouped.get(reaction.emoji);
     if (current) {
       current.count += 1;
       current.fromMe = current.fromMe || reaction.fromMe;
+      if (!current.actors.includes(reaction.actorLabel)) {
+        current.actors.push(reaction.actorLabel);
+      }
     } else {
       grouped.set(reaction.emoji, {
         emoji: reaction.emoji,
         count: 1,
         fromMe: reaction.fromMe,
+        actors: [reaction.actorLabel],
       });
     }
   }
 
   return Array.from(grouped.values()).sort((left, right) => right.count - left.count || left.emoji.localeCompare(right.emoji, 'pt-BR'));
+};
+
+const getReactionTooltipText = (message: CommWhatsAppMessage) => {
+  const chatId = String(message.metadata?.chat_id ?? '').trim().toLowerCase();
+  if (!chatId.endsWith('@g.us')) {
+    return '';
+  }
+
+  const reactions = getMessageReactions(message);
+  if (reactions.length === 0) {
+    return '';
+  }
+
+  return reactions
+    .map((reaction) => `${reaction.emoji} ${reaction.actors.join(', ')}`)
+    .join('\n');
 };
 
 const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName?: string | null) => {
@@ -4606,10 +4629,11 @@ export default function WhatsAppInboxScreen() {
 
                     const { message } = item;
                     const reactions = getMessageReactions(message);
+                    const reactionTooltipText = getReactionTooltipText(message);
 
                     return (
                       <div key={item.key} className={`message-bubble-row flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
-                        <div className="max-w-[80%]">
+                        <div className="relative max-w-[80%] pb-5">
                           <div className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
                             <WhatsAppMessageBody
                               message={message}
@@ -4627,11 +4651,14 @@ export default function WhatsAppInboxScreen() {
                           </div>
 
                           {reactions.length > 0 ? (
-                            <div className={`mt-1 flex flex-wrap gap-1 ${message.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                            <div
+                              className={`absolute -bottom-1 z-[2] flex max-w-[90%] flex-wrap gap-1 ${message.direction === 'outbound' ? 'right-3 justify-end' : 'left-3 justify-start'}`}
+                              title={reactionTooltipText || undefined}
+                            >
                               {reactions.map((reaction) => (
                                 <span
                                   key={`${message.id}:${reaction.emoji}`}
-                                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold shadow-sm ${reaction.fromMe ? 'bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)]' : 'bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]'}`}
+                                  className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)]' : 'bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]'}`}
                                   style={{ borderColor: 'rgba(212, 192, 167, 0.56)' }}
                                 >
                                   <span className="text-sm leading-none">{reaction.emoji}</span>

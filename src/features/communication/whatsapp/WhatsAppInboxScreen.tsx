@@ -45,6 +45,7 @@ const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
 const MESSAGE_PAGE_SIZE = 50;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
+const CHAT_IDENTITY_LOOKUP_BATCH_SIZE = 25;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -92,6 +93,37 @@ const summarizeQuickReplyPreview = (value: string) => {
   }
 
   return `${normalized.slice(0, 117).trimEnd()}...`;
+};
+
+const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
+  if (items.length === 0 || batchSize <= 0) {
+    return [];
+  }
+
+  const batches: T[][] = [];
+  for (let index = 0; index < items.length; index += batchSize) {
+    batches.push(items.slice(index, index + batchSize));
+  }
+
+  return batches;
+};
+
+const collectPhoneLookupKeys = (value?: string | null) => {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (!digits) {
+    return [] as string[];
+  }
+
+  const keys = new Set<string>([digits]);
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    keys.add(digits.slice(2));
+  }
+
+  if (!digits.startsWith('55') && (digits.length === 10 || digits.length === 11)) {
+    keys.add(`55${digits}`);
+  }
+
+  return Array.from(keys);
 };
 
 const getActiveQuickReplyMatch = (value: string, selection: ComposerSelection): QuickReplyCommandMatch | null => {
@@ -986,6 +1018,8 @@ export default function WhatsAppInboxScreen() {
   const autoSendVoiceRef = useRef(false);
   const autoLinkedLeadKeyRef = useRef<string | null>(null);
   const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
+  const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
+  const resolvedIdentityPhoneKeysRef = useRef<Set<string>>(new Set());
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
@@ -1002,6 +1036,7 @@ export default function WhatsAppInboxScreen() {
   const olderMessagesRequestIdRef = useRef(0);
   const operationalStateRequestIdRef = useRef(0);
   const autoLinkLookupRequestIdRef = useRef(0);
+  const chatIdentityLookupRequestIdRef = useRef(0);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachment !== null;
   const pollingEnabled = isDocumentVisible && isWindowFocused;
@@ -1173,6 +1208,34 @@ export default function WhatsAppInboxScreen() {
         const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return bTime - aTime;
       });
+    });
+  }, []);
+
+  const applyPrefetchedLeadNames = useCallback((items: CommWhatsAppChat[]) => {
+    return items.map((chat) => {
+      if (chat.lead_id || chat.saved_contact_name?.trim()) {
+        return chat;
+      }
+
+      const fallbackPhoneLabel = formatCommWhatsAppPhoneLabel(chat.phone_number);
+      const currentLabel = chat.display_name?.trim() || '';
+      const usingPhoneFallback = !currentLabel || currentLabel === fallbackPhoneLabel || currentLabel === chat.phone_number.trim();
+      if (!usingPhoneFallback) {
+        return chat;
+      }
+
+      const matchedLeadName = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number)
+        .map((key) => prefetchedLeadNameByPhoneRef.current.get(key) ?? null)
+        .find((value): value is string => Boolean(value?.trim()));
+
+      if (!matchedLeadName) {
+        return chat;
+      }
+
+      return {
+        ...chat,
+        display_name: matchedLeadName,
+      };
     });
   }, []);
 
@@ -1711,19 +1774,21 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const nextSignature = buildChatsSignature(data);
+      const hydratedData = applyPrefetchedLeadNames(data);
+
+      const nextSignature = buildChatsSignature(hydratedData);
 
       if (nextSignature !== chatsSignatureRef.current) {
         chatsSignatureRef.current = nextSignature;
-        setChats(data);
+        setChats(hydratedData);
       }
 
       setSelectedChatId((current) => {
-        if (current && data.some((chat) => chat.id === current)) {
+        if (current && hydratedData.some((chat) => chat.id === current)) {
           return current;
         }
 
-        return data[0]?.id ?? null;
+        return hydratedData[0]?.id ?? null;
       });
     } catch (error) {
       if (requestId !== chatsRequestIdRef.current) {
@@ -1733,7 +1798,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
     }
-  }, [buildChatsSignature, chatActivityFilter, leadStatusFilters, search]);
+  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters, search]);
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
@@ -2648,6 +2713,104 @@ export default function WhatsAppInboxScreen() {
         console.error('[WhatsAppInbox] erro ao sugerir vinculo automatico de lead', error);
       });
   }, [handleLinkLead, selectedChat]);
+
+  useEffect(() => {
+    const unresolvedChats = chats.filter((chat) => {
+      if (chat.lead_id || chat.saved_contact_name?.trim()) {
+        return false;
+      }
+
+      const fallbackPhoneLabel = formatCommWhatsAppPhoneLabel(chat.phone_number);
+      const currentLabel = chat.display_name?.trim() || '';
+      const usingPhoneFallback = !currentLabel || currentLabel === fallbackPhoneLabel || currentLabel === chat.phone_number.trim();
+      if (!usingPhoneFallback) {
+        return false;
+      }
+
+      const lookupKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
+      if (lookupKeys.length === 0) {
+        return false;
+      }
+
+      return !lookupKeys.every((key) => resolvedIdentityPhoneKeysRef.current.has(key));
+    });
+
+    if (unresolvedChats.length === 0) {
+      return;
+    }
+
+    const requestId = ++chatIdentityLookupRequestIdRef.current;
+    const batches = splitIntoBatches(unresolvedChats, CHAT_IDENTITY_LOOKUP_BATCH_SIZE);
+
+    void (async () => {
+      try {
+        for (const batch of batches) {
+          if (requestId !== chatIdentityLookupRequestIdRef.current) {
+            return;
+          }
+
+          const batchPhoneNumbers = Array.from(
+            new Set(batch.flatMap((chat) => [chat.phone_number, chat.phone_digits].filter(Boolean))),
+          );
+
+          if (batchPhoneNumbers.length === 0) {
+            continue;
+          }
+
+          const results = await commWhatsAppService.searchCrmLeads({
+            phoneNumbers: batchPhoneNumbers,
+            limit: 50,
+          });
+
+          if (requestId !== chatIdentityLookupRequestIdRef.current) {
+            return;
+          }
+
+          const leadsByKey = new Map<string, CommWhatsAppLeadSearchResult[]>();
+          for (const lead of results) {
+            for (const key of collectPhoneLookupKeys(lead.telefone)) {
+              const current = leadsByKey.get(key) ?? [];
+              current.push(lead);
+              leadsByKey.set(key, current);
+            }
+          }
+
+          let changed = false;
+          for (const chat of batch) {
+            const lookupKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
+            const matchedLeadMap = new Map<string, CommWhatsAppLeadSearchResult>();
+            for (const key of lookupKeys) {
+              for (const lead of leadsByKey.get(key) ?? []) {
+                matchedLeadMap.set(lead.id, lead);
+              }
+            }
+
+            lookupKeys.forEach((key) => resolvedIdentityPhoneKeysRef.current.add(key));
+
+            if (matchedLeadMap.size !== 1) {
+              continue;
+            }
+
+            const matchedLeadName = Array.from(matchedLeadMap.values())[0]?.nome_completo ?? '';
+            if (!matchedLeadName.trim()) {
+              continue;
+            }
+
+            for (const key of lookupKeys) {
+              prefetchedLeadNameByPhoneRef.current.set(key, matchedLeadName);
+            }
+            changed = true;
+          }
+
+          if (changed) {
+            setChats((current) => applyPrefetchedLeadNames(current));
+          }
+        }
+      } catch (error) {
+        console.error('[WhatsAppInbox] erro ao pré-carregar nomes do CRM para chats', error);
+      }
+    })();
+  }, [applyPrefetchedLeadNames, chats]);
 
   const handleStartChatFromSavedContact = async (contact: CommWhatsAppPhoneContact) => {
     setStartingChatKey(`saved:${contact.phone_digits}`);

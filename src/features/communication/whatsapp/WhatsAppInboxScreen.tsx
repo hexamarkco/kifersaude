@@ -6,6 +6,7 @@ import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
+import ReminderSchedulerModal from '../../../components/ReminderSchedulerModal';
 import StatusDropdown from '../../../components/StatusDropdown';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
@@ -21,6 +22,7 @@ import {
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
 import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
+import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import {
@@ -1304,6 +1306,8 @@ export default function WhatsAppInboxScreen() {
   const [leadContracts, setLeadContracts] = useState<CommWhatsAppLeadContractSummary[]>([]);
   const [leadContractsLoading, setLeadContractsLoading] = useState(false);
   const [leadContractsError, setLeadContractsError] = useState<string | null>(null);
+  const [statusReminderLead, setStatusReminderLead] = useState<Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'> | null>(null);
+  const [statusReminderPromptMessage, setStatusReminderPromptMessage] = useState<string | null>(null);
   const [chatAgendaSummaryLoading, setChatAgendaSummaryLoading] = useState(false);
   const [chatAgendaSummary, setChatAgendaSummary] = useState<ChatAgendaSummary>({ pendingCount: 0, nextReminder: null });
   const [leadSearchQuery, setLeadSearchQuery] = useState('');
@@ -3612,13 +3616,56 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleLeadStatusChange = async (_leadId: string, newStatus: string) => {
-    if (!selectedChat) {
+    if (!selectedChat || !leadPanel) {
       return;
     }
 
-    await commWhatsAppService.updateLinkedLeadStatus(selectedChat.id, newStatus);
-    await loadLeadPanel(selectedChat);
-    await loadChats();
+    const normalizedStatus = normalizeLeadStatusLabel(newStatus);
+    const statusReminderLeadSnapshot = {
+      id: leadPanel.id,
+      nome_completo: leadPanel.nome_completo,
+      telefone: leadPanel.telefone,
+      responsavel: leadPanel.responsavel_value ?? leadPanel.responsavel_label ?? '',
+    } satisfies Pick<Lead, 'id' | 'nome_completo' | 'telefone' | 'responsavel'>;
+
+    try {
+      await commWhatsAppService.updateLinkedLeadStatus(selectedChat.id, newStatus);
+
+      if (shouldPromptFirstReminderAfterQuote(newStatus)) {
+        setStatusReminderLead(statusReminderLeadSnapshot);
+        setStatusReminderPromptMessage('Deseja agendar o primeiro lembrete após a proposta enviada?');
+      } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
+        const { error: deleteRemindersError } = await supabase
+          .from('reminders')
+          .delete()
+          .eq('lead_id', leadPanel.id);
+
+        if (deleteRemindersError) {
+          throw deleteRemindersError;
+        }
+
+        const { error: clearNextReturnError } = await supabase
+          .from('leads')
+          .update({ proximo_retorno: null })
+          .eq('id', leadPanel.id);
+
+        if (clearNextReturnError) {
+          throw clearNextReturnError;
+        }
+
+        setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      }
+
+      await Promise.all([
+        loadLeadPanel(selectedChat),
+        loadChats(),
+        loadChatAgendaSummary(leadPanel.id, leadContracts.map((contract) => contract.id)),
+      ]);
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao atualizar status do lead', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o status do lead.');
+      throw error;
+    }
   };
 
   const handleLeadResponsavelChange = async (_leadId: string, responsavelValue: string) => {
@@ -5021,6 +5068,29 @@ export default function WhatsAppInboxScreen() {
           onGenerate={handleRegenerateFollowUp}
           onApply={handleApplyFollowUpDraft}
         />
+
+        {statusReminderLead ? (
+          <ReminderSchedulerModal
+            lead={statusReminderLead}
+            onClose={() => {
+              setStatusReminderLead(null);
+              setStatusReminderPromptMessage(null);
+            }}
+            onScheduled={async () => {
+              if (selectedChat && leadPanel?.id) {
+                await Promise.all([
+                  loadLeadPanel(selectedChat),
+                  loadChatAgendaSummary(leadPanel.id, leadContracts.map((contract) => contract.id)),
+                ]);
+              }
+
+              setStatusReminderLead(null);
+              setStatusReminderPromptMessage(null);
+            }}
+            promptMessage={statusReminderPromptMessage ?? 'Deseja agendar o primeiro lembrete após a proposta enviada?'}
+            defaultType="Follow-up"
+          />
+        ) : null}
 
         <WhatsAppLeadDrawer
           isOpen={leadDrawerOpen}

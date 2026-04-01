@@ -451,14 +451,19 @@ export const commWhatsAppService = {
     return messages;
   },
 
-  async syncChatHistory(chatId: string): Promise<void> {
-    const { error } = await supabase.functions.invoke('comm-whatsapp-sync-chat', {
+  async syncChatHistory(chatId: string): Promise<{ imported: number }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-sync-chat', {
       body: { chatId },
     });
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar o historico da conversa.'));
     }
+
+    const payload = (data ?? {}) as { imported?: number };
+    return {
+      imported: typeof payload.imported === 'number' ? payload.imported : 0,
+    };
   },
 
   async markChatRead(chatId: string): Promise<void> {

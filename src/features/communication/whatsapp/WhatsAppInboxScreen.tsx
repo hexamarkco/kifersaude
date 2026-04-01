@@ -1347,6 +1347,7 @@ export default function WhatsAppInboxScreen() {
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [copyingTranscript, setCopyingTranscript] = useState(false);
+  const [syncingHistoryChatId, setSyncingHistoryChatId] = useState<string | null>(null);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
   const [mediaDrawerPosition, setMediaDrawerPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [sendingDrawerMedia, setSendingDrawerMedia] = useState(false);
@@ -2118,6 +2119,21 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [generatingFollowUp, pendingAttachments.length, selectedChat, sending, voiceRecordingState]);
+  const historyRecoveryDisabledReason = useMemo(() => {
+    if (!selectedChat) {
+      return 'Selecione uma conversa para recuperar mensagens antigas.';
+    }
+
+    if (!selectedChat.external_chat_id?.trim()) {
+      return 'Conversa sem identificador externo para consultar na Whapi.';
+    }
+
+    if (syncingHistoryChatId === selectedChat.id) {
+      return 'Recuperando mensagens antigas pela Whapi...';
+    }
+
+    return sendDisabledReason;
+  }, [selectedChat, sendDisabledReason, syncingHistoryChatId]);
   const mediaDrawerSendDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para enviar GIFs e figurinhas.';
@@ -4388,6 +4404,37 @@ export default function WhatsAppInboxScreen() {
     }
   }, [copyingTranscript, selectedChat, selectedChatTranscriptLabel]);
 
+  const handleRecoverChatHistory = useCallback(async () => {
+    if (!selectedChat) {
+      return;
+    }
+
+    if (historyRecoveryDisabledReason) {
+      toast.error(historyRecoveryDisabledReason);
+      return;
+    }
+
+    const targetChat = selectedChat;
+    setSyncingHistoryChatId(targetChat.id);
+
+    try {
+      const result = await commWhatsAppService.syncChatHistory(targetChat.external_chat_id);
+      hydratedChatsRef.current.add(targetChat.external_chat_id);
+      await Promise.all([loadMessages(targetChat, 'initial'), loadChats()]);
+
+      if (result.imported > 0) {
+        toast.success(`Historico consultado na Whapi (${result.imported} mensagens retornadas). Use "Carregar mais" para navegar nas mais antigas.`);
+      } else {
+        toast.info('A Whapi nao retornou mensagens adicionais para esta conversa agora.');
+      }
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao recuperar historico do chat', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel recuperar mais mensagens deste chat.');
+    } finally {
+      setSyncingHistoryChatId((current) => (current === targetChat.id ? null : current));
+    }
+  }, [historyRecoveryDisabledReason, loadChats, loadMessages, selectedChat]);
+
   const handleToggleMediaDrawer = useCallback(() => {
     setAttachmentMenuOpen(false);
     setMediaDrawerOpen((current) => !current);
@@ -4781,6 +4828,18 @@ export default function WhatsAppInboxScreen() {
                       disabled={copyingTranscript}
                     >
                       {copyingTranscript ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => void handleRecoverChatHistory()}
+                      variant="soft"
+                      size="icon"
+                      className="rounded-xl"
+                      aria-label="Recuperar mensagens antigas do chat"
+                      title={historyRecoveryDisabledReason ?? 'Recuperar mensagens antigas pela Whapi'}
+                      disabled={Boolean(historyRecoveryDisabledReason)}
+                    >
+                      {syncingHistoryChatId === selectedChat.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                     </Button>
                     <Button
                       type="button"

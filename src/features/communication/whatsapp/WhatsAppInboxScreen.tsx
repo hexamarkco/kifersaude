@@ -5458,6 +5458,27 @@ export default function WhatsAppInboxScreen() {
                 <div className="flex items-center gap-2">
                   <Button
                     size="icon"
+                    variant={archivedSectionOpen ? 'soft' : 'secondary'}
+                    onClick={() => setArchivedSectionOpen((current) => !current)}
+                    className="rounded-xl"
+                    aria-label="Chats arquivados"
+                    title={archivedChats.length > 0 ? `Chats arquivados (${archivedChats.length})` : 'Chats arquivados'}
+                  >
+                    <span className="relative inline-flex">
+                      <Archive className="h-4 w-4" />
+                      {archivedChats.length > 0 ? (
+                        <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
+                          borderColor: 'rgba(212, 192, 167, 0.56)',
+                          background: 'var(--panel-accent-strong,#c86f1d)',
+                          color: '#fff8f0',
+                        }}>
+                          {archivedChats.length > 99 ? '99+' : archivedChats.length}
+                        </span>
+                      ) : null}
+                    </span>
+                  </Button>
+                  <Button
+                    size="icon"
                     variant="secondary"
                     onClick={() => setWhatsAppAgendaOpen(true)}
                     className="rounded-xl"

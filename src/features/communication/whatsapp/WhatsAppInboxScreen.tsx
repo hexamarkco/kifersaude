@@ -53,6 +53,8 @@ const CHAT_IDENTITY_LOOKUP_BATCH_SIZE = 25;
 const DEFAULT_TRANSCRIPT_TIME_ZONE = 'America/Sao_Paulo';
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const REACTION_PICKER_WIDTH_PX = 252;
+const REACTION_PICKER_HEIGHT_PX = 52;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -1357,6 +1359,7 @@ export default function WhatsAppInboxScreen() {
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [reactingMessageId, setReactingMessageId] = useState<string | null>(null);
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<string | null>(null);
+  const [reactionPickerPosition, setReactionPickerPosition] = useState<{ top: number; left: number } | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
@@ -1409,6 +1412,8 @@ export default function WhatsAppInboxScreen() {
   const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const reactionPickerRef = useRef<HTMLDivElement | null>(null);
+  const reactionAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const reactionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const voiceRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
   const voiceStreamRef = useRef<MediaStream | null>(null);
@@ -1808,6 +1813,14 @@ export default function WhatsAppInboxScreen() {
 
     return items;
   }, [visibleMessages]);
+
+  const openReactionPickerMessage = useMemo(() => {
+    if (!openReactionPickerMessageId) {
+      return null;
+    }
+
+    return visibleMessages.find((message) => message.id === openReactionPickerMessageId) ?? null;
+  }, [openReactionPickerMessageId, visibleMessages]);
 
   const applyPrefetchedLeadNames = useCallback((items: CommWhatsAppChat[]) => {
     return items.map((chat) => {
@@ -2326,7 +2339,10 @@ export default function WhatsAppInboxScreen() {
 
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as Node | null;
-      if (reactionPickerRef.current && target && !reactionPickerRef.current.contains(target)) {
+      const clickedInsidePicker = reactionPickerRef.current && target && reactionPickerRef.current.contains(target);
+      const clickedCurrentTrigger = reactionTriggerRefs.current[openReactionPickerMessageId]?.contains(target) ?? false;
+
+      if (!clickedInsidePicker && !clickedCurrentTrigger) {
         setOpenReactionPickerMessageId(null);
       }
     };
@@ -2334,6 +2350,67 @@ export default function WhatsAppInboxScreen() {
     window.addEventListener('mousedown', handlePointerDown);
     return () => window.removeEventListener('mousedown', handlePointerDown);
   }, [openReactionPickerMessageId]);
+
+  useEffect(() => {
+    if (openReactionPickerMessageId && !openReactionPickerMessage) {
+      setOpenReactionPickerMessageId(null);
+    }
+  }, [openReactionPickerMessage, openReactionPickerMessageId]);
+
+  useLayoutEffect(() => {
+    if (!openReactionPickerMessageId || typeof window === 'undefined') {
+      setReactionPickerPosition(null);
+      return;
+    }
+
+    const syncPosition = () => {
+      const anchor = reactionAnchorRefs.current[openReactionPickerMessageId];
+      if (!anchor) {
+        setReactionPickerPosition(null);
+        return;
+      }
+
+      const anchorRect = anchor.getBoundingClientRect();
+      const containerRect = messagesContainerRef.current?.getBoundingClientRect() ?? null;
+      const viewportPadding = 12;
+      const containerPadding = 12;
+      const boundsLeft = containerRect
+        ? Math.max(viewportPadding, containerRect.left + containerPadding)
+        : viewportPadding;
+      const boundsRight = containerRect
+        ? Math.min(window.innerWidth - viewportPadding, containerRect.right - containerPadding)
+        : window.innerWidth - viewportPadding;
+      const maxLeft = Math.max(boundsLeft, boundsRight - REACTION_PICKER_WIDTH_PX);
+      const availableLeft = anchorRect.right - boundsLeft;
+      const availableRight = boundsRight - anchorRect.left;
+      const preferredLeft = availableRight >= availableLeft
+        ? anchorRect.left
+        : anchorRect.right - REACTION_PICKER_WIDTH_PX;
+      const left = Math.min(Math.max(boundsLeft, preferredLeft), maxLeft);
+      const maxTop = Math.max(viewportPadding, window.innerHeight - REACTION_PICKER_HEIGHT_PX - viewportPadding);
+      const top = Math.min(
+        Math.max(viewportPadding, anchorRect.top - REACTION_PICKER_HEIGHT_PX - 8),
+        maxTop,
+      );
+
+      setReactionPickerPosition((current) => {
+        if (current && current.top === top && current.left === left) {
+          return current;
+        }
+
+        return { top, left };
+      });
+    };
+
+    syncPosition();
+    window.addEventListener('resize', syncPosition);
+    window.addEventListener('scroll', syncPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', syncPosition);
+      window.removeEventListener('scroll', syncPosition, true);
+    };
+  }, [openReactionPickerMessageId, visibleMessages]);
 
   useEffect(() => {
     if (!advancedFiltersOpen) {
@@ -4799,10 +4876,26 @@ export default function WhatsAppInboxScreen() {
 
                     return (
                       <div key={item.key} className={`message-bubble-row group/message flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
-                        <div className="relative max-w-[80%] pb-5">
+                        <div
+                          ref={(node) => {
+                            if (node) {
+                              reactionAnchorRefs.current[message.id] = node;
+                            } else {
+                              delete reactionAnchorRefs.current[message.id];
+                            }
+                          }}
+                          className="relative max-w-[80%] pb-5"
+                        >
                           {message.direction !== 'system' && message.external_message_id ? (
                             <>
                               <button
+                                ref={(node) => {
+                                  if (node) {
+                                    reactionTriggerRefs.current[message.id] = node;
+                                  } else {
+                                    delete reactionTriggerRefs.current[message.id];
+                                  }
+                                }}
                                 type="button"
                                 onClick={() => handleToggleReactionPicker(message.id)}
                                 className={`absolute top-2 z-[3] inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100`}
@@ -4811,29 +4904,6 @@ export default function WhatsAppInboxScreen() {
                               >
                                 <Smile className="h-4 w-4" />
                               </button>
-
-                              {openReactionPickerMessageId === message.id ? (
-                                <div
-                                  ref={reactionPickerRef}
-                                  className={`absolute -top-12 z-[5] flex items-center gap-1 rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] px-2 py-1 shadow-xl ${message.direction === 'outbound' ? 'left-0' : 'right-0'}`}
-                                >
-                                  {REACTION_OPTIONS.map((emoji) => {
-                                    const selected = getOwnReactionEmoji(message) === emoji;
-                                    return (
-                                      <button
-                                        key={`${message.id}:${emoji}`}
-                                        type="button"
-                                        onClick={() => void handleReactToMessage(message, emoji)}
-                                        disabled={reactingMessageId === message.id}
-                                        className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition hover:bg-[var(--panel-surface-soft,#f8f2e9)] ${selected ? 'bg-[var(--panel-accent-soft,#f4e2cc)]' : ''}`}
-                                        aria-label={`Reagir com ${emoji}`}
-                                      >
-                                        {emoji}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              ) : null}
                             </>
                           ) : null}
 
@@ -5422,6 +5492,33 @@ export default function WhatsAppInboxScreen() {
           onStartFromManual={() => void handleStartChatFromManual()}
           startingKey={startingChatKey}
         />
+
+        <PanelPopoverShell
+          ref={reactionPickerRef}
+          isOpen={Boolean(openReactionPickerMessage && reactionPickerPosition)}
+          position={reactionPickerPosition}
+          onClose={() => setOpenReactionPickerMessageId(null)}
+          ariaLabel="Seletor de reacoes da mensagem"
+          className="w-[252px] flex-row items-center gap-1 rounded-full border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] px-2 py-1 shadow-2xl"
+        >
+          {openReactionPickerMessage
+            ? REACTION_OPTIONS.map((emoji) => {
+                const selected = getOwnReactionEmoji(openReactionPickerMessage) === emoji;
+                return (
+                  <button
+                    key={`${openReactionPickerMessage.id}:${emoji}`}
+                    type="button"
+                    onClick={() => void handleReactToMessage(openReactionPickerMessage, emoji)}
+                    disabled={reactingMessageId === openReactionPickerMessage.id}
+                    className={`message-bubble-emoji-button inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition hover:bg-[var(--panel-surface-soft,#f8f2e9)] ${selected ? 'bg-[var(--panel-accent-soft,#f4e2cc)]' : ''}`}
+                    aria-label={`Reagir com ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                );
+              })
+            : null}
+        </PanelPopoverShell>
 
         <PanelPopoverShell
           ref={advancedFiltersRef}

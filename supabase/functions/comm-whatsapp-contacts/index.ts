@@ -277,6 +277,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const authHeader = req.headers.get('Authorization') || '';
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
     const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
     const channel = await ensurePrimaryChannel(supabaseAdmin);
 
@@ -372,7 +381,7 @@ Deno.serve(async (req: Request) => {
 
       const directChatId = buildWhapiDirectChatId(phoneNumber);
 
-      const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_open_or_create_chat', {
+      const { data, error } = await supabaseUser.rpc('comm_whatsapp_open_or_create_chat', {
         p_external_chat_id: directChatId,
         p_phone_number: phoneNumber,
         p_push_name: pushName || null,

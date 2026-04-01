@@ -11,6 +11,7 @@ import {
   Search,
   Smile,
   Sparkles,
+  Sticker,
   SunMedium,
   X,
   type LucideIcon,
@@ -663,10 +664,10 @@ export default function WhatsAppMediaDrawer({
       </div>
 
       <div className="comm-media-picker-modebar">
-          {[
+        {[
           { id: 'emoji', label: <Smile className="h-4 w-4" /> },
           { id: 'gif', label: <span>GIF</span> },
-          { id: 'sticker', label: <span>◌</span> },
+          { id: 'sticker', label: <Sticker className="h-4 w-4" /> },
         ].map((item) => (
           <button
             key={item.id}

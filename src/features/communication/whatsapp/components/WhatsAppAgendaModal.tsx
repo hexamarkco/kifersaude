@@ -931,68 +931,6 @@ export default function WhatsAppAgendaModal({
     setOnlyCurrentLead(false);
   };
 
-  const handleMarkVisiblePendingAsRead = useCallback(async () => {
-    if (visiblePendingReminders.length === 0) {
-      return;
-    }
-
-    const confirmed = await requestConfirmation({
-      title: 'Marcar itens visiveis como lidos',
-      description: `Deseja concluir ${visiblePendingReminders.length} item(ns) mostrado(s) na rotina atual?`,
-      confirmLabel: 'Concluir itens',
-      cancelLabel: 'Cancelar',
-    });
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const completionDate = new Date().toISOString();
-      visiblePendingReminders.forEach((item) => pendingRefreshIdsRef.current.add(item.id));
-
-      const { error: updateError } = await supabase
-        .from('reminders')
-        .update({
-          lido: true,
-          concluido_em: completionDate,
-        })
-        .in('id', visiblePendingReminders.map((item) => item.id));
-
-      if (updateError) {
-        visiblePendingReminders.forEach((item) => pendingRefreshIdsRef.current.delete(item.id));
-        throw updateError;
-      }
-
-      const leadIds = Array.from(
-        new Set(
-          visiblePendingReminders
-            .map((item) => getLeadIdForReminder(item))
-            .filter((leadId): leadId is string => Boolean(leadId)),
-        ),
-      );
-
-      await Promise.all(leadIds.map((leadId) => updateLeadNextReturnDate(leadId)));
-
-      setReminders((current) =>
-        current.map((item) =>
-          visiblePendingReminders.some((candidate) => candidate.id === item.id)
-            ? {
-                ...item,
-                lido: true,
-                concluido_em: completionDate,
-              }
-            : item,
-        ),
-      );
-
-      toast.success('Itens visiveis marcados como lidos.');
-    } catch (updateError) {
-      console.error('[WhatsAppAgendaModal] erro ao concluir itens visiveis:', updateError);
-      toast.error('Nao foi possivel atualizar os itens visiveis.');
-    }
-  }, [getLeadIdForReminder, requestConfirmation, updateLeadNextReturnDate, visiblePendingReminders]);
-
   const getReminderPriorityStyle = (priority: string) => {
     const tones = {
       baixa: 'info',
@@ -1360,7 +1298,7 @@ export default function WhatsAppAgendaModal({
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex w-full flex-wrap items-center justify-end gap-2 xl:w-auto">
                   <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => void loadReminders({ showLoading: true })} aria-label="Atualizar agenda" title="Atualizar agenda">
                     <RefreshCw className="h-4 w-4" />
                   </Button>
@@ -1380,11 +1318,6 @@ export default function WhatsAppAgendaModal({
                     <Plus className="h-4 w-4" />
                     Nova tarefa
                   </Button>
-                  {visiblePendingReminders.length > 0 ? (
-                    <Button onClick={() => void handleMarkVisiblePendingAsRead()} variant="secondary" size="md" className="h-11" disabled={!canEdit}>
-                      Marcar visiveis como lidos
-                    </Button>
-                  ) : null}
                 </div>
               </div>
             </section>

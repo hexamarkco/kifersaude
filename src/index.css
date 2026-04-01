@@ -1965,18 +1965,31 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   width: min(18rem, calc(100% - 1.5rem));
   margin: 0.25rem auto 1rem;
+  position: relative;
+  isolation: isolate;
+  flex-shrink: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(18, 15, 11, 0.96);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .comm-media-picker-modebutton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 2.35rem;
+  background: transparent;
   color: rgba(255, 248, 240, 0.64);
   font-size: 0.8rem;
   font-weight: 700;
   transition: background-color 160ms ease, color 160ms ease;
+}
+
+.comm-media-picker-modebutton:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 248, 240, 0.92);
 }
 
 .comm-media-picker-modebutton + .comm-media-picker-modebutton {

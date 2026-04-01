@@ -5249,7 +5249,7 @@ export default function WhatsAppInboxScreen() {
       } else if (typeof options.isPinned === 'boolean') {
         toast.success(options.isPinned ? 'Conversa fixada.' : 'Conversa desafixada.');
       } else if (typeof options.markAsUnread === 'boolean') {
-        toast.success(options.markAsUnread ? 'Conversa marcada como nao lida.' : 'Indicador de nao lida removido.');
+        toast.success(options.markAsUnread ? 'Conversa marcada como nao lida.' : 'Conversa marcada como lida.');
       }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao atualizar estado do chat', error);

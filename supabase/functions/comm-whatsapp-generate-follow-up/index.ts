@@ -191,6 +191,33 @@ const getUnknownMessageMarker = (messageType: string) => {
   return `[${normalized}]`;
 };
 
+const getDeletedMessageMarker = (messageType: string) => {
+  const normalized = messageType.trim().toLowerCase();
+
+  switch (normalized) {
+    case 'image':
+      return '[Imagem apagada]';
+    case 'video':
+    case 'gif':
+    case 'short':
+      return '[Video apagado]';
+    case 'audio':
+    case 'voice':
+      return '[Audio apagado]';
+    case 'document':
+      return '[Documento apagado]';
+    case 'sticker':
+      return '[Sticker apagado]';
+    case 'contact':
+    case 'contact_list':
+      return '[Contato apagado]';
+    case 'poll':
+      return '[Enquete apagada]';
+    default:
+      return '[Mensagem apagada]';
+  }
+};
+
 const buildTranscriptContent = (message: MessageRow) => {
   if (message.direction === 'system') {
     return '';
@@ -204,40 +231,49 @@ const buildTranscriptContent = (message: MessageRow) => {
   const caption = normalizeTranscriptText(toTrimmedString(message.media_caption));
   const transcription = normalizeTranscriptText(toTrimmedString(message.transcription_text));
   const kind = message.message_type.trim().toLowerCase();
+  const isDeleted = message.delivery_status.trim().toLowerCase() === 'deleted';
+
+  const withDeletedFlag = (content: string) => {
+    if (!isDeleted) {
+      return content;
+    }
+
+    return content ? `[Mensagem apagada] ${content}` : getDeletedMessageMarker(kind);
+  };
 
   if (kind === 'text') {
-    return text;
+    return withDeletedFlag(text);
   }
 
   if (kind === 'image') {
-    return caption ? `[Imagem] ${caption}` : '[Imagem]';
+    return withDeletedFlag(caption ? `[Imagem] ${caption}` : '[Imagem]');
   }
 
   if (kind === 'video') {
-    return caption ? `[Video] ${caption}` : '[Video]';
+    return withDeletedFlag(caption ? `[Video] ${caption}` : '[Video]');
   }
 
   if (kind === 'document') {
-    return caption ? `[Documento] ${caption}` : '[Documento]';
+    return withDeletedFlag(caption ? `[Documento] ${caption}` : '[Documento]');
   }
 
   if (kind === 'audio' || kind === 'voice') {
-    return transcription || AUDIO_WITHOUT_TRANSCRIPTION_MARKER;
+    return withDeletedFlag(transcription || AUDIO_WITHOUT_TRANSCRIPTION_MARKER);
   }
 
   if (caption) {
-    return caption;
+    return withDeletedFlag(caption);
   }
 
   if (text) {
-    return text;
+    return withDeletedFlag(text);
   }
 
   if (transcription) {
-    return transcription;
+    return withDeletedFlag(transcription);
   }
 
-  return getUnknownMessageMarker(kind);
+  return withDeletedFlag(getUnknownMessageMarker(kind));
 };
 
 const buildTranscriptLine = (message: MessageRow, leadLabel: string, timeZone: string) => {

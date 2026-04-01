@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowUpRight, Bell, CalendarDays, CalendarPlus, Check, Clock3, Loader2, RefreshCw, Sparkles, Unlink, Info, Link2 } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Bell, CalendarPlus, Check, Clock3, Loader2, RefreshCw, Sparkles, Unlink, Info, Link2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
@@ -44,7 +44,6 @@ type WhatsAppLeadDrawerProps = {
   linkLoadingLeadId: string | null;
   canViewAgenda: boolean;
   canEditAgenda: boolean;
-  onOpenAgenda: (() => void) | undefined;
 };
 
 const DAY_KEY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
@@ -89,7 +88,6 @@ export default function WhatsAppLeadDrawer({
   linkLoadingLeadId,
   canViewAgenda,
   canEditAgenda,
-  onOpenAgenda,
 }: WhatsAppLeadDrawerProps) {
   const [agendaReminders, setAgendaReminders] = useState<Reminder[]>([]);
   const [agendaLoading, setAgendaLoading] = useState(false);
@@ -441,12 +439,6 @@ export default function WhatsAppLeadDrawer({
                         <Button variant="secondary" size="sm" onClick={() => setSchedulerOpen(true)}>
                           <CalendarPlus className="h-4 w-4" />
                           Agendar
-                        </Button>
-                      ) : null}
-                      {onOpenAgenda ? (
-                        <Button variant="soft" size="sm" onClick={onOpenAgenda}>
-                          <CalendarDays className="h-4 w-4" />
-                          Agenda completa
                         </Button>
                       ) : null}
                       <Button variant="ghost" size="sm" onClick={() => void loadAgendaReminders()} disabled={agendaLoading}>

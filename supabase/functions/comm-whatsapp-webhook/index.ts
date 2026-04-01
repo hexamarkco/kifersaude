@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.5
 import {
   COMM_WHATSAPP_CHANNEL_SLUG,
   corsHeaders,
+  extractWhapiDeletedMessageEvent,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiEditedMessageEvent,
@@ -18,6 +19,7 @@ import {
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
   isRecord,
+  markCommWhatsAppMessageDeleted,
   normalizeCommWhatsAppPhone,
   normalizeWhapiChatId,
   persistCommWhatsAppMessage,
@@ -220,6 +222,23 @@ async function persistMessageFromWebhook(
     }
   }
 
+  const deletedEvent = extractWhapiDeletedMessageEvent(message, eventAction);
+  if (deletedEvent?.targetExternalMessageId) {
+    const deletedTarget = await markCommWhatsAppMessageDeleted(supabaseAdmin, {
+      channelId: channel.id,
+      targetExternalMessageId: deletedEvent.targetExternalMessageId,
+      deletedAt: deletedEvent.deletedAt,
+      originalText: deletedEvent.originalText,
+      actionType: deletedEvent.actionType,
+      deletedBy: deletedEvent.deletedBy,
+      eventExternalMessageId: deletedEvent.eventExternalMessageId,
+    });
+
+    if (deletedTarget) {
+      return { id: deletedTarget.chatId };
+    }
+  }
+
   const editedEvent = extractWhapiEditedMessageEvent(message, eventAction);
   if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
     const { data: existingMessage, error: existingMessageError } = await supabaseAdmin
@@ -385,6 +404,16 @@ async function applyMessageStatus(
 
   const deliveryStatus = toTrimmedString(statusItem.status) || 'pending';
   const statusUpdatedAt = stringTimestampToIso(statusItem.timestamp) || getNowIso();
+
+  if (deliveryStatus === 'deleted') {
+    await markCommWhatsAppMessageDeleted(supabaseAdmin, {
+      channelId,
+      targetExternalMessageId: externalMessageId,
+      deletedAt: statusUpdatedAt,
+      actionType: 'deleted',
+    });
+    return;
+  }
 
   await updateCommWhatsAppMessageStatus(supabaseAdmin, {
     channelId,

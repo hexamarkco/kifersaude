@@ -5,6 +5,7 @@ import {
   COMM_WHATSAPP_MODULE,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  extractWhapiDeletedMessageEvent,
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
@@ -16,6 +17,7 @@ import {
   getNowIso,
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
+  markCommWhatsAppMessageDeleted,
   normalizeWhapiChatId,
   persistCommWhatsAppMessage,
   summarizeWhapiMessage,
@@ -252,6 +254,23 @@ Deno.serve(async (req: Request) => {
               .eq('message_type', 'action');
           }
 
+          continue;
+        }
+      }
+
+      const deletedEvent = extractWhapiDeletedMessageEvent(message, 'messages');
+      if (deletedEvent?.targetExternalMessageId) {
+        const deletedTarget = await markCommWhatsAppMessageDeleted(supabaseAdmin, {
+          channelId: channel.id,
+          targetExternalMessageId: deletedEvent.targetExternalMessageId,
+          deletedAt: deletedEvent.deletedAt,
+          originalText: deletedEvent.originalText,
+          actionType: deletedEvent.actionType,
+          deletedBy: deletedEvent.deletedBy,
+          eventExternalMessageId: deletedEvent.eventExternalMessageId,
+        });
+
+        if (deletedTarget) {
           continue;
         }
       }

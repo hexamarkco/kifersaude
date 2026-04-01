@@ -330,6 +330,33 @@ const getUnknownMessageMarker = (messageType: string) => {
   return `[${normalized}]`;
 };
 
+const getDeletedMessageMarker = (messageType: string) => {
+  const normalized = messageType.trim().toLowerCase();
+
+  switch (normalized) {
+    case 'image':
+      return '[Imagem apagada]';
+    case 'video':
+    case 'gif':
+    case 'short':
+      return '[Video apagado]';
+    case 'audio':
+    case 'voice':
+      return '[Audio apagado]';
+    case 'document':
+      return '[Documento apagado]';
+    case 'sticker':
+      return '[Sticker apagado]';
+    case 'contact':
+    case 'contact_list':
+      return '[Contato apagado]';
+    case 'poll':
+      return '[Enquete apagada]';
+    default:
+      return '[Mensagem apagada]';
+  }
+};
+
 const buildTranscriptContent = (message: CommWhatsAppMessage) => {
   if (message.direction === 'system') {
     return '';
@@ -343,40 +370,49 @@ const buildTranscriptContent = (message: CommWhatsAppMessage) => {
   const caption = normalizeTranscriptText(message.media_caption);
   const transcription = normalizeTranscriptText(message.transcription_text);
   const kind = message.message_type.trim().toLowerCase();
+  const isDeleted = message.delivery_status.trim().toLowerCase() === 'deleted';
+
+  const withDeletedFlag = (content: string) => {
+    if (!isDeleted) {
+      return content;
+    }
+
+    return content ? `[Mensagem apagada] ${content}` : getDeletedMessageMarker(kind);
+  };
 
   if (kind === 'text') {
-    return text;
+    return withDeletedFlag(text);
   }
 
   if (kind === 'image') {
-    return caption ? `[Imagem] ${caption}` : '[Imagem]';
+    return withDeletedFlag(caption ? `[Imagem] ${caption}` : '[Imagem]');
   }
 
   if (kind === 'video') {
-    return caption ? `[Video] ${caption}` : '[Video]';
+    return withDeletedFlag(caption ? `[Video] ${caption}` : '[Video]');
   }
 
   if (kind === 'document') {
-    return caption ? `[Documento] ${caption}` : '[Documento]';
+    return withDeletedFlag(caption ? `[Documento] ${caption}` : '[Documento]');
   }
 
   if (kind === 'audio' || kind === 'voice') {
-    return transcription || AUDIO_WITHOUT_TRANSCRIPTION_MARKER;
+    return withDeletedFlag(transcription || AUDIO_WITHOUT_TRANSCRIPTION_MARKER);
   }
 
   if (caption) {
-    return caption;
+    return withDeletedFlag(caption);
   }
 
   if (text) {
-    return text;
+    return withDeletedFlag(text);
   }
 
   if (transcription) {
-    return transcription;
+    return withDeletedFlag(transcription);
   }
 
-  return getUnknownMessageMarker(kind);
+  return withDeletedFlag(getUnknownMessageMarker(kind));
 };
 
 const buildTranscriptLine = (message: CommWhatsAppMessage, leadLabel: string, timeZone: string) => {
@@ -567,6 +603,24 @@ const getEditedMessageInfo = (message: CommWhatsAppMessage) => {
     edited,
     originalText: originalText && originalText !== currentText ? originalText : null,
     editedAt,
+  };
+};
+
+const getDeletedMessageInfo = (message: CommWhatsAppMessage) => {
+  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+    ? message.metadata as Record<string, unknown>
+    : {};
+  const currentText = String(message.text_content ?? message.media_caption ?? '').trim();
+  const originalText = String(metadata.deleted_original_text_content ?? '').trim();
+  const deletedAt = String(metadata.deleted_at ?? '').trim() || null;
+  const deletedBy = String(metadata.deleted_by ?? '').trim() || null;
+  const deleted = message.delivery_status.trim().toLowerCase() === 'deleted' || metadata.deleted === true;
+
+  return {
+    deleted,
+    deletedAt,
+    deletedBy,
+    preservedText: originalText || currentText || getDeletedMessageMarker(message.message_type),
   };
 };
 
@@ -1122,6 +1176,7 @@ function WhatsAppMessageBody({
   const kind = message.message_type;
   const caption = isMediaPlaceholder(message) ? message.media_caption?.trim() || '' : message.text_content?.trim() || '';
   const editInfo = useMemo(() => getEditedMessageInfo(message), [message]);
+  const deletedInfo = useMemo(() => getDeletedMessageInfo(message), [message]);
 
   useEffect(() => {
     setShowOriginalText(false);
@@ -1153,6 +1208,27 @@ function WhatsAppMessageBody({
       ) : null}
     </div>
   ) : null;
+
+  if (deletedInfo.deleted) {
+    const deletedByLabel = deletedInfo.deletedBy === 'self'
+      ? 'Você apagou esta mensagem no WhatsApp.'
+      : deletedInfo.deletedBy === 'contact'
+        ? 'O contato apagou esta mensagem no WhatsApp.'
+        : 'Mensagem apagada no WhatsApp.';
+
+    return (
+      <div className="rounded-2xl border border-[rgba(215,154,143,0.45)] bg-[rgba(122,33,24,0.08)] px-3 py-3 text-[var(--panel-accent-red-text,#b4534a)]">
+        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          <span>Mensagem apagada</span>
+        </div>
+        <p className="mt-2 text-xs text-[var(--panel-text-muted,#876f5c)]">{deletedByLabel}</p>
+        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-soft,#5b4635)] line-through opacity-85">
+          {deletedInfo.preservedText}
+        </p>
+      </div>
+    );
+  }
 
   if (kind === 'image') {
     return (
@@ -3807,11 +3883,6 @@ export default function WhatsAppInboxScreen() {
     setLeadDrawerOpen(true);
   };
 
-  const handleOpenAgendaModal = useCallback(() => {
-    setLeadDrawerOpen(false);
-    setWhatsAppAgendaOpen(true);
-  }, []);
-
   const handleCloseLeadDrawer = () => {
     setLeadDrawerOpen(false);
   };
@@ -5528,7 +5599,6 @@ export default function WhatsAppInboxScreen() {
           linkLoadingLeadId={linkLoadingLeadId}
           canViewAgenda={canViewAgenda}
           canEditAgenda={canEditAgenda}
-          onOpenAgenda={handleOpenAgendaModal}
         />
 
         <WhatsAppStartChatModal

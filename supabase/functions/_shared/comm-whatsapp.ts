@@ -102,6 +102,15 @@ export type CommWhatsAppEditedMessageEvent = {
   actionType: string | null;
 };
 
+export type CommWhatsAppDeletedMessageEvent = {
+  eventExternalMessageId: string | null;
+  targetExternalMessageId: string | null;
+  originalText: string | null;
+  deletedAt: string;
+  actionType: string | null;
+  deletedBy: string | null;
+};
+
 export type CommWhatsAppReactionEvent = {
   eventExternalMessageId: string | null;
   targetExternalMessageId: string | null;
@@ -391,6 +400,42 @@ const pickBestSummary = (candidates: string[]): string => {
   return [...cleaned].sort((a, b) => b.length - a.length)[0] || '';
 };
 
+const getDeletedMessageMarker = (messageType: string) => {
+  const normalized = messageType.trim().toLowerCase();
+
+  switch (normalized) {
+    case 'image':
+      return '[Imagem apagada]';
+    case 'video':
+    case 'gif':
+    case 'short':
+      return '[Video apagado]';
+    case 'audio':
+    case 'voice':
+      return '[Audio apagado]';
+    case 'document':
+      return '[Documento apagado]';
+    case 'sticker':
+      return '[Sticker apagado]';
+    case 'contact':
+    case 'contact_list':
+      return '[Contato apagado]';
+    case 'poll':
+      return '[Enquete apagada]';
+    default:
+      return '[Mensagem apagada]';
+  }
+};
+
+export const buildDeletedMessageSummary = (messageType: string, preservedText?: string | null) => {
+  const normalizedText = toTrimmedString(preservedText);
+  if (normalizedText) {
+    return `[Apagada] ${normalizedText}`;
+  }
+
+  return getDeletedMessageMarker(messageType);
+};
+
 const summarizeInteractiveLikeMessage = (message: Record<string, unknown>): string => {
   const directCandidates = [
     ...collectTextFragments(message.interactive),
@@ -556,6 +601,9 @@ export const summarizeWhapiMessage = (message: unknown): string => {
         ...collectTextFragments(isRecord(message.context) ? message.context.quoted_content : null),
       ]);
       if (actionSummary) return actionSummary;
+      if (actionType.includes('delete') || actionType.includes('deleted') || actionType.includes('revoke') || actionType.includes('revoked')) {
+        return '[Mensagem apagada]';
+      }
       if (actionType === 'reaction') return '[Reação]';
       if (actionType === 'vote') return '[Voto em enquete]';
       if (actionType === 'media_notify') return '[Atualização de mídia]';
@@ -677,6 +725,83 @@ export const extractWhapiEditedMessageEvent = (
   };
 };
 
+export const extractWhapiDeletedMessageEvent = (
+  message: unknown,
+  eventAction: string,
+): CommWhatsAppDeletedMessageEvent | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const action = isRecord(message.action) ? message.action : null;
+  const context = isRecord(message.context) ? message.context : null;
+  const quotedContent = isRecord(context?.quoted_content) ? context.quoted_content : null;
+  const normalizedActionType = firstNonEmpty(
+    action?.type,
+    action?.event,
+    action?.action,
+    message.edit_type,
+    eventAction,
+  ).toLowerCase();
+  const normalizedStatus = toTrimmedString(message.status).toLowerCase();
+  const likelyDeleteEvent = normalizedStatus === 'deleted'
+    || normalizedActionType.includes('delete')
+    || normalizedActionType.includes('deleted')
+    || normalizedActionType.includes('revoke')
+    || normalizedActionType.includes('revoked');
+
+  if (!likelyDeleteEvent) {
+    return null;
+  }
+
+  const targetExternalMessageId = firstNonEmpty(
+    action?.target,
+    action?.target_message_id,
+    action?.targetMessageId,
+    action?.message_id,
+    action?.messageId,
+    message.target,
+    message.target_message_id,
+    message.targetMessageId,
+    context?.quoted_id,
+    context?.stanza_id,
+    context?.message_id,
+    context?.messageId,
+    context?.id,
+    quotedContent?.id,
+    quotedContent?.message_id,
+    normalizedStatus === 'deleted' ? message.id : null,
+  ) || null;
+  const originalText = firstNonEmpty(
+    summarizeMessageLikeValue(quotedContent),
+    summarizeMessageLikeValue(isRecord(action?.previous_message) ? action.previous_message : null),
+    summarizeMessageLikeValue(isRecord(action?.old_message) ? action.old_message : null),
+    summarizeMessageLikeValue(isRecord(action?.message) ? action.message : null),
+    summarizeMessageLikeValue(isRecord(message.text) ? { type: 'text', text: message.text } : null),
+    summarizeMessageLikeValue(isRecord(action?.text) ? { type: 'text', text: action.text } : null),
+    action?.previous_text,
+    action?.previous_body,
+    action?.old_text,
+  ) || null;
+  const deletedAt = unixTimestampToIso(message.timestamp) || stringTimestampToIso(message.timestamp) || getNowIso();
+  const eventExternalMessageId = toTrimmedString(message.type).toLowerCase() === 'action'
+    ? toTrimmedString(message.id) || null
+    : null;
+
+  if (!targetExternalMessageId) {
+    return null;
+  }
+
+  return {
+    eventExternalMessageId,
+    targetExternalMessageId,
+    originalText,
+    deletedAt,
+    actionType: normalizedActionType || (normalizedStatus === 'deleted' ? 'deleted' : null),
+    deletedBy: message.from_me === true ? 'self' : 'contact',
+  };
+};
+
 export const extractWhapiReactionEvent = (
   message: unknown,
   eventAction: string,
@@ -728,6 +853,95 @@ export const extractWhapiReactionEvent = (
     reactedAt,
   };
 };
+
+export async function markCommWhatsAppMessageDeleted(
+  supabaseAdmin: SupabaseClient,
+  input: {
+    channelId: string;
+    targetExternalMessageId: string;
+    deletedAt: string;
+    originalText?: string | null;
+    actionType?: string | null;
+    deletedBy?: string | null;
+    eventExternalMessageId?: string | null;
+  },
+): Promise<{ chatId: string } | null> {
+  const { data: existingMessage, error: existingMessageError } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .select('id, chat_id, text_content, media_caption, message_type, message_at, metadata')
+    .eq('channel_id', input.channelId)
+    .eq('external_message_id', input.targetExternalMessageId)
+    .maybeSingle();
+
+  if (existingMessageError) {
+    throw new Error(`Erro ao localizar mensagem apagada: ${existingMessageError.message}`);
+  }
+
+  if (!existingMessage) {
+    return null;
+  }
+
+  const existingMetadata = isRecord(existingMessage.metadata) ? existingMessage.metadata : {};
+  const preservedText = firstNonEmpty(
+    existingMetadata.deleted_original_text_content,
+    input.originalText,
+    existingMessage.text_content,
+    existingMessage.media_caption,
+  ) || null;
+  const nextMetadata = {
+    ...existingMetadata,
+    deleted: true,
+    deleted_at: input.deletedAt,
+    deleted_action_type: input.actionType ?? null,
+    deleted_by: input.deletedBy ?? existingMetadata.deleted_by ?? null,
+    deleted_original_text_content: preservedText,
+    deleted_source_message_id: input.eventExternalMessageId ?? existingMetadata.deleted_source_message_id ?? null,
+  };
+
+  const { error: updateMessageError } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .update({
+      delivery_status: 'deleted',
+      status_updated_at: input.deletedAt,
+      error_message: null,
+      metadata: nextMetadata,
+    })
+    .eq('id', existingMessage.id);
+
+  if (updateMessageError) {
+    throw new Error(`Erro ao marcar mensagem como apagada: ${updateMessageError.message}`);
+  }
+
+  if (input.eventExternalMessageId && input.eventExternalMessageId !== input.targetExternalMessageId) {
+    const { error: cleanupError } = await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .delete()
+      .eq('channel_id', input.channelId)
+      .eq('external_message_id', input.eventExternalMessageId)
+      .eq('message_type', 'action');
+
+    if (cleanupError) {
+      throw new Error(`Erro ao limpar evento auxiliar de exclusao: ${cleanupError.message}`);
+    }
+  }
+
+  const { error: updateChatError } = await supabaseAdmin
+    .from('comm_whatsapp_chats')
+    .update({
+      last_message_text: buildDeletedMessageSummary(toTrimmedString(existingMessage.message_type), preservedText),
+      updated_at: getNowIso(),
+    })
+    .eq('id', existingMessage.chat_id)
+    .eq('last_message_at', existingMessage.message_at);
+
+  if (updateChatError) {
+    throw new Error(`Erro ao atualizar resumo do chat apos exclusao: ${updateChatError.message}`);
+  }
+
+  return {
+    chatId: toTrimmedString(existingMessage.chat_id),
+  };
+}
 
 export const parseWhapiError = (payload: unknown): string => {
   if (typeof payload === 'string' && payload.trim()) {

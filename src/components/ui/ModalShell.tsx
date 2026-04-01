@@ -94,7 +94,7 @@ export default function ModalShell({
   return createPortal(
     <div className={cx('modal-theme-host painel-theme kifer-ds', isDarkThemeActive ? 'theme-dark' : 'theme-light')}>
       <div
-        className="fixed inset-0 z-[80] bg-stone-950/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[130] bg-stone-950/60 backdrop-blur-sm"
         aria-hidden="true"
         onClick={() => {
           if (closeOnOverlay) {
@@ -102,7 +102,7 @@ export default function ModalShell({
           }
         }}
       />
-      <div className="fixed inset-0 z-[90] flex items-stretch justify-center overflow-y-auto px-0 py-0 sm:items-center sm:px-4 sm:py-6">
+      <div className="fixed inset-0 z-[140] flex items-stretch justify-center overflow-y-auto px-0 py-0 sm:items-center sm:px-4 sm:py-6">
         <section
           role="dialog"
           aria-modal="true"

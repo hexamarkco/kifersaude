@@ -194,7 +194,7 @@ export const commWhatsAppService = {
       .limit(limit);
 
     if (activityFilter === 'unread') {
-      query = query.gt('unread_count', 0);
+      query = query.or('unread_count.gt.0,manual_unread.eq.true');
     }
 
     if (leadFilter === 'with_lead') {
@@ -268,11 +268,18 @@ export const commWhatsAppService = {
     return chats;
   },
 
-  async updateChatInboxState(chatId: string, options: { isArchived?: boolean | null; isMuted?: boolean | null }): Promise<CommWhatsAppChat> {
+  async updateChatInboxState(chatId: string, options: {
+    isArchived?: boolean | null;
+    isMuted?: boolean | null;
+    isPinned?: boolean | null;
+    markAsUnread?: boolean | null;
+  }): Promise<CommWhatsAppChat> {
     const { data, error } = await supabase.rpc('comm_whatsapp_update_chat_inbox_state', {
       p_chat_id: chatId,
       p_is_archived: typeof options.isArchived === 'boolean' ? options.isArchived : null,
       p_is_muted: typeof options.isMuted === 'boolean' ? options.isMuted : null,
+      p_is_pinned: typeof options.isPinned === 'boolean' ? options.isPinned : null,
+      p_mark_as_unread: typeof options.markAsUnread === 'boolean' ? options.markAsUnread : null,
     });
 
     if (error) {

@@ -507,6 +507,10 @@ export type CommWhatsAppChat = {
   archived_at?: string | null;
   is_muted: boolean;
   muted_at?: string | null;
+  is_pinned: boolean;
+  pinned_at?: string | null;
+  manual_unread: boolean;
+  manual_unread_at?: string | null;
   last_message_text?: string | null;
   last_message_direction: 'inbound' | 'outbound' | 'system';
   last_message_at?: string | null;

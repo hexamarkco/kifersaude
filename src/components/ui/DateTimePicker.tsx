@@ -610,7 +610,7 @@ export default function DateTimePicker({
             <div className={themeScopeClassName}>
               <div
                 ref={panelRef}
-                className="panel-glass-panel fixed z-[130] flex flex-col overflow-hidden rounded-2xl border shadow-xl"
+                className="panel-glass-panel fixed z-[160] flex flex-col overflow-hidden rounded-2xl border shadow-xl"
                 style={{
                   top: position.top,
                   left: position.left,

@@ -20,6 +20,7 @@ type ListChatsParams = {
   activityFilter?: 'all' | 'unread';
   leadFilter?: 'all' | 'with_lead' | 'without_lead';
   savedFilter?: 'all' | 'saved' | 'unsaved';
+  archivedFilter?: 'all' | 'active' | 'archived';
   leadStatusFilters?: string[];
   onlyUnread?: boolean;
   limit?: number;
@@ -182,6 +183,7 @@ export const commWhatsAppService = {
     const activityFilter = params.activityFilter ?? (params.onlyUnread ? 'unread' : 'all');
     const leadFilter = params.leadFilter ?? 'all';
     const savedFilter = params.savedFilter ?? 'all';
+    const archivedFilter = params.archivedFilter ?? 'all';
     const leadStatusFilters = (params.leadStatusFilters ?? []).map((value) => value.trim()).filter(Boolean);
 
     let query = supabase
@@ -205,6 +207,12 @@ export const commWhatsAppService = {
       query = query.not('saved_contact_name', 'is', null);
     } else if (savedFilter === 'unsaved') {
       query = query.is('saved_contact_name', null);
+    }
+
+    if (archivedFilter === 'active') {
+      query = query.eq('is_archived', false);
+    } else if (archivedFilter === 'archived') {
+      query = query.eq('is_archived', true);
     }
 
     const search = sanitizeSearch(params.search ?? '');
@@ -258,6 +266,26 @@ export const commWhatsAppService = {
     }
 
     return chats;
+  },
+
+  async updateChatInboxState(chatId: string, options: { isArchived?: boolean | null; isMuted?: boolean | null }): Promise<CommWhatsAppChat> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_update_chat_inbox_state', {
+      p_chat_id: chatId,
+      p_is_archived: typeof options.isArchived === 'boolean' ? options.isArchived : null,
+      p_is_muted: typeof options.isMuted === 'boolean' ? options.isMuted : null,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o estado desta conversa.'));
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+    const row = rows[0] as CommWhatsAppChat | undefined;
+    if (!row) {
+      throw new Error('A conversa atualizada nao foi retornada.');
+    }
+
+    return row;
   },
 
   async searchCrmLeads(params: { query?: string; phoneNumbers?: string[]; limit?: number } = {}): Promise<CommWhatsAppLeadSearchResult[]> {

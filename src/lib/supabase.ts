@@ -503,6 +503,10 @@ export type CommWhatsAppChat = {
   push_name?: string | null;
   lead_id?: string | null;
   lead_status?: string | null;
+  is_archived: boolean;
+  archived_at?: string | null;
+  is_muted: boolean;
+  muted_at?: string | null;
   last_message_text?: string | null;
   last_message_direction: 'inbound' | 'outbound' | 'system';
   last_message_at?: string | null;

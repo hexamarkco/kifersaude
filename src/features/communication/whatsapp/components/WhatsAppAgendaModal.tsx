@@ -1425,7 +1425,13 @@ export default function WhatsAppAgendaModal({
                   {pendingSelectedReminders.length > 0 ? (
                     <div className="space-y-3">{pendingSelectedReminders.map(renderReminderCard)}</div>
                   ) : (
-                    <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                    <div
+                      className="rounded-[1.3rem] border py-8 text-center text-sm"
+                      style={{
+                        ...PANEL_MUTED_INSET_STYLE,
+                        color: 'var(--panel-text-soft,#5b4635)',
+                      }}
+                    >
                       Nenhum item pendente neste dia.
                     </div>
                   )}
@@ -1455,12 +1461,24 @@ export default function WhatsAppAgendaModal({
                     completedSelectedReminders.length > 0 ? (
                       <div className="space-y-3">{completedSelectedReminders.map(renderReminderCard)}</div>
                     ) : (
-                      <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                      <div
+                        className="rounded-[1.3rem] border py-8 text-center text-sm"
+                        style={{
+                          ...PANEL_MUTED_INSET_STYLE,
+                          color: 'var(--panel-text-soft,#5b4635)',
+                        }}
+                      >
                         Nenhum item concluido neste dia.
                       </div>
                     )
                   ) : (
-                    <div className="rounded-[1.3rem] border py-5 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                    <div
+                      className="rounded-[1.3rem] border py-5 text-center text-sm"
+                      style={{
+                        ...PANEL_MUTED_INSET_STYLE,
+                        color: 'var(--panel-text-soft,#5b4635)',
+                      }}
+                    >
                       Expanda quando quiser revisar o que ja foi concluido neste dia.
                     </div>
                   )}

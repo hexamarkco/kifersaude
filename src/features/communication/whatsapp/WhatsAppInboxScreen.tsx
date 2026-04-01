@@ -4707,6 +4707,18 @@ export default function WhatsAppInboxScreen() {
                     </Button>
                     <Button
                       type="button"
+                      onClick={handleOpenFollowUpModal}
+                      variant="soft"
+                      size="icon"
+                      className="rounded-xl"
+                      aria-label="Gerar follow-up com IA"
+                      title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
+                      disabled={Boolean(followUpGenerationDisabledReason)}
+                    >
+                      {generatingFollowUp ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      type="button"
                       onClick={handleOpenLeadDrawer}
                       variant="soft"
                       size="icon"
@@ -5121,7 +5133,7 @@ export default function WhatsAppInboxScreen() {
                         </div>
                       )}
 
-                        <button
+                      <button
                           type="button"
                           onClick={() => setAttachmentMenuOpen((current) => !current)}
                           disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
@@ -5131,20 +5143,6 @@ export default function WhatsAppInboxScreen() {
                       >
                         <Plus className={`h-5 w-5 transition ${attachmentMenuOpen ? 'rotate-45' : ''}`} />
                       </button>
-                        <button
-                          type="button"
-                          onClick={handleOpenFollowUpModal}
-                          disabled={Boolean(followUpGenerationDisabledReason)}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${generatingFollowUp ? 'cursor-wait opacity-70' : ''}`}
-                          aria-label="Gerar follow-up com IA"
-                          title={followUpGenerationDisabledReason ?? 'Gerar follow-up com IA'}
-                        >
-                          {generatingFollowUp ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                          ) : (
-                            <Sparkles className="h-5 w-5" />
-                          )}
-                        </button>
                         <button
                           type="button"
                           ref={mediaDrawerTriggerRef}

@@ -1915,6 +1915,24 @@ export default function WhatsAppInboxScreen() {
     });
   }, []);
 
+  const preserveSelectedChatInList = useCallback((items: CommWhatsAppChat[]) => {
+    const selectedId = selectedChatIdRef.current;
+    if (!selectedId || items.some((chat) => chat.id === selectedId)) {
+      return items;
+    }
+
+    const optimisticSelectedChat = latestChatsRef.current.find((chat) => chat.id === selectedId);
+    if (!optimisticSelectedChat) {
+      return items;
+    }
+
+    return [...items, optimisticSelectedChat].sort((a, b) => {
+      const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+      const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, []);
+
   const patchLocalOutgoingMessage = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
     setLocalOutgoingMessages((current) => current.map((message) => (
       message.id === messageId
@@ -2736,11 +2754,7 @@ export default function WhatsAppInboxScreen() {
         ? Math.min(window.innerWidth - viewportPadding, containerRect.right - containerPadding)
         : window.innerWidth - viewportPadding;
       const maxLeft = Math.max(boundsLeft, boundsRight - REACTION_PICKER_WIDTH_PX);
-      const availableLeft = anchorRect.right - boundsLeft;
-      const availableRight = boundsRight - anchorRect.left;
-      const preferredLeft = availableRight >= availableLeft
-        ? anchorRect.left
-        : anchorRect.right - REACTION_PICKER_WIDTH_PX;
+      const preferredLeft = anchorRect.left + (anchorRect.width - REACTION_PICKER_WIDTH_PX) / 2;
       const left = Math.min(Math.max(boundsLeft, preferredLeft), maxLeft);
       const maxTop = Math.max(viewportPadding, window.innerHeight - REACTION_PICKER_HEIGHT_PX - viewportPadding);
       const top = Math.min(
@@ -3059,7 +3073,7 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const hydratedData = applyPrefetchedLeadNames(data);
+      const hydratedData = preserveSelectedChatInList(applyPrefetchedLeadNames(data));
 
       const nextSignature = buildChatsSignature(hydratedData);
 
@@ -3083,7 +3097,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
     }
-  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters, search]);
+  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters, preserveSelectedChatInList, search]);
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
@@ -6023,7 +6037,21 @@ export default function WhatsAppInboxScreen() {
           position={reactionPickerPosition}
           onClose={() => setOpenReactionPickerMessageId(null)}
           ariaLabel="Seletor de reacoes da mensagem"
-          className="w-[252px] flex-row items-center gap-1 rounded-full border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] px-2 py-1 shadow-2xl"
+          className="before:hidden border-none bg-transparent p-0 shadow-none"
+          style={{
+            width: REACTION_PICKER_WIDTH_PX,
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 6,
+            overflow: 'visible',
+            borderRadius: 9999,
+            padding: '6px 8px',
+            border: '1px solid rgba(214, 170, 92, 0.22)',
+            background: 'rgba(18, 12, 9, 0.96)',
+            boxShadow: '0 18px 46px rgba(0, 0, 0, 0.34)',
+          }}
         >
           {openReactionPickerMessage
             ? REACTION_OPTIONS.map((emoji) => {
@@ -6034,7 +6062,7 @@ export default function WhatsAppInboxScreen() {
                     type="button"
                     onClick={() => void handleReactToMessage(openReactionPickerMessage, emoji)}
                     disabled={reactingMessageId === openReactionPickerMessage.id}
-                    className={`message-bubble-emoji-button inline-flex h-9 w-9 items-center justify-center rounded-full text-lg transition hover:bg-[var(--panel-surface-soft,#f8f2e9)] ${selected ? 'bg-[var(--panel-accent-soft,#f4e2cc)]' : ''}`}
+                    className={`message-bubble-emoji-button inline-flex h-9 w-9 items-center justify-center rounded-full text-[1.45rem] leading-none transition ${selected ? 'bg-[rgba(255,255,255,0.12)] scale-105' : 'hover:bg-[rgba(255,255,255,0.08)]'}`}
                     aria-label={`Reagir com ${emoji}`}
                   >
                     {emoji}

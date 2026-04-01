@@ -65,7 +65,12 @@ BEGIN
     END,
     last_read_at = CASE
       WHEN p_mark_as_unread THEN NULL
+      WHEN p_mark_as_unread = false THEN now()
       ELSE public.comm_whatsapp_chats.last_read_at
+    END,
+    unread_count = CASE
+      WHEN p_mark_as_unread = false THEN 0
+      ELSE public.comm_whatsapp_chats.unread_count
     END,
     updated_at = now()
   WHERE public.comm_whatsapp_chats.id = p_chat_id

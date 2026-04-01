@@ -23,6 +23,52 @@
   --ks-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.08);
   --ks-shadow-md: 0 16px 34px -24px rgba(42, 24, 12, 0.26);
   --ks-shadow-lg: 0 24px 52px -30px rgba(42, 24, 12, 0.36);
+  --app-scrollbar-track: rgba(91, 70, 53, 0.12);
+  --app-scrollbar-track-hover: rgba(91, 70, 53, 0.18);
+  --app-scrollbar-thumb: linear-gradient(180deg, rgba(200, 111, 29, 0.9) 0%, rgba(122, 62, 22, 0.92) 100%);
+  --app-scrollbar-thumb-solid: #b56220;
+  --app-scrollbar-thumb-hover: linear-gradient(180deg, rgba(223, 139, 47, 0.96) 0%, rgba(144, 68, 20, 0.96) 100%);
+}
+
+html {
+  scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+* {
+  scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+*::-webkit-scrollbar-track {
+  border-radius: 9999px;
+  background: var(--app-scrollbar-track);
+}
+
+*::-webkit-scrollbar-track:hover {
+  background: var(--app-scrollbar-track-hover);
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 2.75rem;
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background: var(--app-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .kifer-ds {
@@ -387,6 +433,11 @@
   --panel-aurora-teal: rgba(200, 111, 29, 0.18);
   --panel-aurora-blue: rgba(107, 86, 69, 0.12);
   --panel-aurora-orange: rgba(223, 139, 47, 0.14);
+  --app-scrollbar-track: color-mix(in srgb, var(--panel-surface-soft, #efe6d8) 84%, transparent);
+  --app-scrollbar-track-hover: color-mix(in srgb, var(--panel-surface-soft, #efe6d8) 94%, transparent);
+  --app-scrollbar-thumb: linear-gradient(180deg, color-mix(in srgb, var(--panel-accent-strong, #b85c1f) 88%, white) 0%, var(--panel-accent-ink, #6f3f16) 100%);
+  --app-scrollbar-thumb-solid: color-mix(in srgb, var(--panel-accent-strong, #b85c1f) 82%, var(--panel-accent-ink, #6f3f16));
+  --app-scrollbar-thumb-hover: linear-gradient(180deg, color-mix(in srgb, var(--panel-focus, #c86f1d) 92%, white) 0%, color-mix(in srgb, var(--panel-accent-ink-strong, #4a2411) 80%, var(--panel-accent-strong, #b85c1f)) 100%);
 }
 
 .painel-theme.theme-dark {
@@ -463,6 +514,11 @@
   --panel-aurora-teal: rgba(223, 139, 47, 0.16);
   --panel-aurora-blue: rgba(171, 146, 123, 0.1);
   --panel-aurora-orange: rgba(200, 111, 29, 0.14);
+  --app-scrollbar-track: color-mix(in srgb, var(--panel-surface-soft, #2a1c15) 92%, transparent);
+  --app-scrollbar-track-hover: color-mix(in srgb, var(--panel-surface-soft-2, #35241a) 94%, transparent);
+  --app-scrollbar-thumb: linear-gradient(180deg, color-mix(in srgb, var(--panel-focus, #df8b2f) 88%, white) 0%, color-mix(in srgb, var(--panel-accent-border, #a96428) 82%, var(--panel-accent-ink, #f4c58f)) 100%);
+  --app-scrollbar-thumb-solid: color-mix(in srgb, var(--panel-accent-border, #a96428) 78%, var(--panel-accent-ink, #f4c58f));
+  --app-scrollbar-thumb-hover: linear-gradient(180deg, color-mix(in srgb, var(--panel-focus, #df8b2f) 94%, white) 0%, color-mix(in srgb, var(--panel-accent-ink, #f4c58f) 38%, var(--panel-accent-border, #a96428)) 100%);
 }
 
 .painel-theme.theme-light .panel-ui-input,
@@ -1619,8 +1675,8 @@
 }
 
 .panel-dropdown-scrollbar {
-  scrollbar-width: auto;
-  scrollbar-color: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
 }
 
 .panel-dropdown-dark {
@@ -1786,7 +1842,7 @@
 
 .comm-emoji-picker-scroll {
   height: calc(var(--comm-emoji-size) * var(--comm-emoji-rows) + var(--comm-emoji-gap) * (var(--comm-emoji-rows) - 1));
-  scrollbar-color: auto;
+  scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
 }
 
 .comm-emoji-picker-empty {

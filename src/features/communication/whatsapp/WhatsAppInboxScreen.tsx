@@ -457,7 +457,7 @@ const buildTranscriptContent = (message: CommWhatsAppMessage) => {
     return withDeletedFlag(caption ? `[Imagem] ${caption}` : '[Imagem]');
   }
 
-  if (kind === 'video') {
+  if (kind === 'video' || kind === 'gif' || kind === 'short') {
     return withDeletedFlag(caption ? `[Video] ${caption}` : '[Video]');
   }
 
@@ -5303,6 +5303,25 @@ export default function WhatsAppInboxScreen() {
                             color: 'var(--panel-text-soft,#5b4635)',
                           }}>
                             {item.label}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (item.type === 'media-group') {
+                      const groupMessages = item.messages;
+                      const lastMessage = groupMessages[groupMessages.length - 1];
+
+                      return (
+                        <div key={item.key} className={`message-bubble-row flex w-full ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                          <div className="relative max-w-[82%] pb-2">
+                            <div className={`rounded-[2rem] px-2 py-2 shadow-sm ${getMessageBubbleClasses(lastMessage.direction)}`}>
+                              <WhatsAppMediaGroupBody messages={groupMessages} onOpenImage={setLightboxMedia} />
+                              <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 px-2 text-[11px] font-medium">
+                                <span>{formatMessageTime(lastMessage.message_at)}</span>
+                                {lastMessage.direction === 'outbound' && <DeliveryStatusIndicator message={lastMessage} />}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       );

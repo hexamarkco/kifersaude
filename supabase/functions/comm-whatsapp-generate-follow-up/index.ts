@@ -249,7 +249,7 @@ const buildTranscriptContent = (message: MessageRow) => {
     return withDeletedFlag(caption ? `[Imagem] ${caption}` : '[Imagem]');
   }
 
-  if (kind === 'video') {
+  if (kind === 'video' || kind === 'gif' || kind === 'short') {
     return withDeletedFlag(caption ? `[Video] ${caption}` : '[Video]');
   }
 

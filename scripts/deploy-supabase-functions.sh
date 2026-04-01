@@ -123,6 +123,7 @@ skipped_count=0
 failed_count=0
 NO_VERIFY_JWT_FUNCTIONS=(
   "create-initial-admin"
+  "comm-whatsapp-webhook"
 )
 
 next_state_file="$(mktemp "$STATE_DIR/supabase-functions-state.XXXXXX")"

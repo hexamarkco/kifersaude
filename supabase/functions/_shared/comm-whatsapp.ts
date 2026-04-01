@@ -490,6 +490,8 @@ const readMediaPayload = (message: unknown): Record<string, unknown> | null => {
     case 'image':
       return isRecord(message.image) ? message.image : null;
     case 'video':
+    case 'gif':
+    case 'short':
       return isRecord(message.video) ? message.video : null;
     case 'document':
       return isRecord(message.document) ? message.document : null;

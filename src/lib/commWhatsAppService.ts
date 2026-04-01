@@ -91,6 +91,15 @@ export type CommWhatsAppFollowUpSuggestion = {
   fallback_used?: boolean;
 };
 
+export type CommWhatsAppRewriteTone = 'grammar' | 'professional' | 'friendly' | 'shorter' | 'assertive';
+
+export type CommWhatsAppRewriteSuggestion = {
+  text: string;
+  provider?: string | null;
+  model?: string | null;
+  fallback_used?: boolean;
+};
+
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const mediaObjectUrlCache = new Map<string, Promise<string>>();
@@ -527,6 +536,36 @@ export const commWhatsAppService = {
     const payload = (data ?? {}) as CommWhatsAppFollowUpSuggestion;
     if (!payload.text?.trim()) {
       throw new Error('A IA nao retornou uma sugestao de follow-up.');
+    }
+
+    return {
+      text: payload.text.trim(),
+      provider: payload.provider ?? null,
+      model: payload.model ?? null,
+      fallback_used: payload.fallback_used === true,
+    };
+  },
+
+  async rewriteMessage(options: {
+    message: string;
+    tone?: CommWhatsAppRewriteTone;
+    customInstructions?: string;
+  }): Promise<CommWhatsAppRewriteSuggestion> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-rewrite-message', {
+      body: {
+        message: options.message,
+        tone: options.tone ?? 'grammar',
+        customInstructions: options.customInstructions?.trim() || '',
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel reescrever a mensagem com IA.'));
+    }
+
+    const payload = (data ?? {}) as CommWhatsAppRewriteSuggestion;
+    if (!payload.text?.trim()) {
+      throw new Error('A IA nao retornou uma reescrita valida.');
     }
 
     return {

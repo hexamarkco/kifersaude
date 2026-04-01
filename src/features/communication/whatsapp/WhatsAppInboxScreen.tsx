@@ -19,6 +19,7 @@ import {
   type CommWhatsAppLeadSearchResult,
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
+  type CommWhatsAppRewriteTone,
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
 import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
@@ -36,6 +37,7 @@ import {
 } from '../../../lib/whatsAppQuickReplies';
 import { fetchAllPages, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
+import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
@@ -1422,6 +1424,12 @@ export default function WhatsAppInboxScreen() {
   const [followUpDraft, setFollowUpDraft] = useState('');
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
+  const [composerRewriteModalOpen, setComposerRewriteModalOpen] = useState(false);
+  const [composerRewriteSource, setComposerRewriteSource] = useState('');
+  const [composerRewriteDraft, setComposerRewriteDraft] = useState('');
+  const [composerRewriteCustomInstructions, setComposerRewriteCustomInstructions] = useState('');
+  const [composerRewriteTone, setComposerRewriteTone] = useState<CommWhatsAppRewriteTone>('grammar');
+  const [rewritingComposer, setRewritingComposer] = useState(false);
   const [copyingTranscript, setCopyingTranscript] = useState(false);
   const [syncingHistoryChatId, setSyncingHistoryChatId] = useState<string | null>(null);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
@@ -2195,6 +2203,29 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [generatingFollowUp, pendingAttachments.length, selectedChat, sending, voiceRecordingState]);
+  const composerRewriteDisabledReason = useMemo(() => {
+    if (!selectedChat) {
+      return 'Selecione uma conversa para reescrever a mensagem.';
+    }
+
+    if (!messageDraft.trim()) {
+      return 'Digite uma mensagem no composer para usar a IA.';
+    }
+
+    if (sending) {
+      return 'Aguarde o envio atual terminar para reescrever a mensagem.';
+    }
+
+    if (voiceRecordingState !== 'idle') {
+      return 'Finalize a gravacao de audio antes de reescrever a mensagem.';
+    }
+
+    if (rewritingComposer) {
+      return 'Reescrevendo mensagem com IA...';
+    }
+
+    return null;
+  }, [messageDraft, rewritingComposer, selectedChat, sending, voiceRecordingState]);
   const historyRecoveryDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para recuperar mensagens antigas.';
@@ -4405,6 +4436,84 @@ export default function WhatsAppInboxScreen() {
     setFollowUpCustomInstructions('');
   }, []);
 
+  const handleCloseComposerRewriteModal = useCallback(() => {
+    setComposerRewriteModalOpen(false);
+    setComposerRewriteSource('');
+    setComposerRewriteDraft('');
+    setComposerRewriteCustomInstructions('');
+    setComposerRewriteTone('grammar');
+  }, []);
+
+  const rewriteComposerText = useCallback(async (
+    sourceText: string,
+    tone: CommWhatsAppRewriteTone,
+    customInstructions: string,
+  ) => {
+    if (!sourceText.trim()) {
+      toast.error('Digite uma mensagem para reescrever com IA.');
+      return;
+    }
+
+    setRewritingComposer(true);
+
+    try {
+      const result = await commWhatsAppService.rewriteMessage({
+        message: sourceText,
+        tone,
+        customInstructions,
+      });
+      setComposerRewriteDraft(result.text.trim());
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao reescrever mensagem do composer', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel reescrever a mensagem com IA.');
+    } finally {
+      setRewritingComposer(false);
+    }
+  }, []);
+
+  const handleOpenComposerRewriteModal = useCallback(() => {
+    if (composerRewriteDisabledReason) {
+      toast.error(composerRewriteDisabledReason);
+      return;
+    }
+
+    const sourceText = messageDraft;
+    setComposerRewriteSource(sourceText);
+    setComposerRewriteDraft('');
+    setComposerRewriteCustomInstructions('');
+    setComposerRewriteTone('grammar');
+    setComposerRewriteModalOpen(true);
+    void rewriteComposerText(sourceText, 'grammar', '');
+  }, [composerRewriteDisabledReason, messageDraft, rewriteComposerText]);
+
+  const handleRegenerateComposerRewrite = useCallback(() => {
+    void rewriteComposerText(composerRewriteSource, composerRewriteTone, composerRewriteCustomInstructions);
+  }, [composerRewriteCustomInstructions, composerRewriteSource, composerRewriteTone, rewriteComposerText]);
+
+  const handleApplyComposerRewrite = useCallback(() => {
+    if (!composerRewriteDraft.trim()) {
+      return;
+    }
+
+    const nextValue = composerRewriteDraft;
+    const nextCursor = nextValue.length;
+
+    setMessageDraft(nextValue);
+    setComposerSelection({ start: nextCursor, end: nextCursor });
+    setComposerFocused(true);
+    handleCloseComposerRewriteModal();
+
+    requestAnimationFrame(() => {
+      const target = composerTextareaRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [composerRewriteDraft, handleCloseComposerRewriteModal]);
+
   const handleGenerateFollowUp = useCallback(async (customInstructions: string) => {
     if (!selectedChat) {
       return;
@@ -5355,6 +5464,17 @@ export default function WhatsAppInboxScreen() {
                       >
                         <Smile className="h-5 w-5" />
                       </button>
+                        <button
+                          type="button"
+                          onClick={handleOpenComposerRewriteModal}
+                          disabled={Boolean(composerRewriteDisabledReason)}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${composerRewriteModalOpen ? 'is-open' : ''}`}
+                          aria-label="Reescrever mensagem com IA"
+                          aria-expanded={composerRewriteModalOpen}
+                          title={composerRewriteDisabledReason ?? 'Reescrever mensagem com IA'}
+                        >
+                          <Sparkles className="h-4.5 w-4.5" />
+                        </button>
                     </div>
 
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
@@ -5508,6 +5628,22 @@ export default function WhatsAppInboxScreen() {
           saving={savingQuickReplies}
           onClose={() => setQuickRepliesModalOpen(false)}
           onSave={handleSaveQuickReplies}
+        />
+
+        <WhatsAppComposerRewriteModal
+          isOpen={composerRewriteModalOpen}
+          generating={rewritingComposer}
+          sourceValue={composerRewriteSource}
+          value={composerRewriteDraft}
+          tone={composerRewriteTone}
+          customInstructions={composerRewriteCustomInstructions}
+          onClose={handleCloseComposerRewriteModal}
+          onChangeSourceValue={setComposerRewriteSource}
+          onChangeValue={setComposerRewriteDraft}
+          onChangeTone={setComposerRewriteTone}
+          onChangeCustomInstructions={setComposerRewriteCustomInstructions}
+          onGenerate={handleRegenerateComposerRewrite}
+          onApply={handleApplyComposerRewrite}
         />
 
         <WhatsAppAgendaModal

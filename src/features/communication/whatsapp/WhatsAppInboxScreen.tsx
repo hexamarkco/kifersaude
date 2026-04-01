@@ -1962,6 +1962,7 @@ export default function WhatsAppInboxScreen() {
   );
   const activeChats = useMemo(() => chats.filter((chat) => !chat.is_archived), [chats]);
   const archivedChats = useMemo(() => chats.filter((chat) => chat.is_archived), [chats]);
+  const sidebarChats = archivedSectionOpen ? archivedChats : activeChats;
   const selectedChatTranscriptLabel = useMemo(
     () => {
       if (!selectedChat) {
@@ -5454,7 +5455,9 @@ export default function WhatsAppInboxScreen() {
           <div className="whatsapp-inbox-sidebar-header border-b p-4">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#8a735f)]">Conversas</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#8a735f)]">
+                  {archivedSectionOpen ? 'Arquivadas' : 'Conversas'}
+                </p>
                 <div className="flex items-center gap-2">
                   <Button
                     size="icon"
@@ -5552,17 +5555,23 @@ export default function WhatsAppInboxScreen() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Carregando conversas...
               </div>
-            ) : chats.length === 0 ? (
+            ) : sidebarChats.length === 0 ? (
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
-                <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />
+                {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
                 <div className="space-y-1">
-                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--panel-text,#1f2937)]">Nenhuma conversa ainda</p>
-                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.</p>
+                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--panel-text,#1f2937)]">
+                    {archivedSectionOpen ? 'Nenhum chat arquivado' : 'Nenhuma conversa ainda'}
+                  </p>
+                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">
+                    {archivedSectionOpen
+                      ? 'Arquive uma conversa para ela aparecer nesta lista separada.'
+                      : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}
+                  </p>
                 </div>
               </div>
             ) : (
               <>
-                {activeChats.map((chat) => (
+                {sidebarChats.map((chat) => (
                   <InboxChatListItem
                     key={chat.id}
                     chat={chat}
@@ -5585,53 +5594,6 @@ export default function WhatsAppInboxScreen() {
                     }}
                   />
                 ))}
-
-                {archivedChats.length > 0 ? (
-                  <div className="border-t border-[rgba(212,192,167,0.2)] px-2 py-2">
-                    <button
-                      type="button"
-                      onClick={() => setArchivedSectionOpen((current) => !current)}
-                      className="flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left text-sm font-semibold text-[var(--panel-text-soft,#5b4635)] transition hover:bg-[rgba(255,248,240,0.04)]"
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        <Archive className="h-4 w-4" />
-                        Chats arquivados
-                        <span className="rounded-full border border-[rgba(212,192,167,0.28)] px-2 py-0.5 text-[11px] text-[var(--panel-text-muted,#8a735f)]">
-                          {archivedChats.length}
-                        </span>
-                      </span>
-                      <ChevronUp className={`h-4 w-4 transition ${archivedSectionOpen ? '' : 'rotate-180'}`} />
-                    </button>
-
-                    {archivedSectionOpen ? (
-                      <div className="mt-2 overflow-hidden rounded-2xl border border-[rgba(212,192,167,0.16)]">
-                        {archivedChats.map((chat) => (
-                          <InboxChatListItem
-                            key={chat.id}
-                            chat={chat}
-                            selected={chat.id === selectedChatId}
-                            connectedUserName={channelState?.connected_user_name ?? null}
-                            draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
-                            onSelect={(chatId) => {
-                              setOpenChatMenuChatId(null);
-                              setSelectedChatId(chatId);
-                            }}
-                            menuOpen={openChatMenuChatId === chat.id}
-                            menuBusy={updatingChatStateId === chat.id}
-                            onToggleMenu={handleToggleChatMenu}
-                            menuTriggerRef={(node) => {
-                              if (node) {
-                                chatMenuTriggerRefs.current[chat.id] = node;
-                              } else {
-                                delete chatMenuTriggerRefs.current[chat.id];
-                              }
-                            }}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
               </>
             )}
           </div>

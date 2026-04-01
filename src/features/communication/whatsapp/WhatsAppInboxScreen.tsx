@@ -141,6 +141,9 @@ const summarizeQuickReplyPreview = (value: string) => {
 
 const createPendingAttachmentId = () => `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const createLocalOutgoingMessageId = () => `local-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const VIDEO_LIKE_MESSAGE_TYPES = new Set(['video', 'gif', 'short']);
+const GALLERY_MESSAGE_TYPES = new Set(['image', 'video', 'gif', 'short']);
+const GALLERY_GROUP_MAX_GAP_MS = 2 * 60 * 1000;
 
 const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document', caption?: string) => {
   const normalizedCaption = String(caption ?? '').trim();
@@ -152,6 +155,70 @@ const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document', cap
   if (kind === 'video') return '[Video]';
   if (kind === 'audio' || kind === 'voice') return '[Audio]';
   return '[Documento]';
+};
+
+const getMessageSummaryMarker = (messageType: string) => {
+  const normalized = messageType.trim().toLowerCase();
+
+  if (normalized === 'image') return '[Imagem]';
+  if (VIDEO_LIKE_MESSAGE_TYPES.has(normalized)) return '[Video]';
+  if (normalized === 'audio' || normalized === 'voice') return '[Audio]';
+  if (normalized === 'document') return '[Documento]';
+  if (normalized === 'sticker') return '[Sticker]';
+  if (normalized === 'contact' || normalized === 'contact_list') return '[Contato]';
+  if (normalized === 'poll') return '[Enquete]';
+  return getUnknownMessageMarker(normalized);
+};
+
+const isMessageSummaryMarker = (value?: string | null, messageType?: string) => {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    return false;
+  }
+
+  const markers = new Set([
+    '[Imagem]',
+    '[Video]',
+    '[Documento]',
+    '[Audio]',
+    '[Sticker]',
+    '[Contato]',
+    '[Enquete]',
+    '[Mensagem]',
+  ]);
+
+  if (messageType?.trim()) {
+    markers.add(getMessageSummaryMarker(messageType));
+  }
+
+  return markers.has(normalized);
+};
+
+const isVideoLikeMessageType = (messageType: string) => VIDEO_LIKE_MESSAGE_TYPES.has(messageType.trim().toLowerCase());
+
+const isGalleryMediaMessage = (message: CommWhatsAppMessage) => GALLERY_MESSAGE_TYPES.has(message.message_type.trim().toLowerCase());
+
+const getMessageVisibleCaption = (message: CommWhatsAppMessage) => {
+  const directCaption = String(message.media_caption ?? '').trim();
+  if (directCaption && !isMessageSummaryMarker(directCaption, message.message_type)) {
+    return directCaption;
+  }
+
+  const fallbackText = String(message.text_content ?? '').trim();
+  if (!fallbackText || isMessageSummaryMarker(fallbackText, message.message_type)) {
+    return '';
+  }
+
+  return fallbackText;
+};
+
+const getMessageTimestampMs = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
 };
 
 const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
@@ -552,14 +619,6 @@ const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMe
   }
 
   return Array.from(map.values()).sort(compareMessageChronology);
-};
-
-const isMediaPlaceholder = (message: CommWhatsAppMessage) => {
-  const content = String(message.text_content ?? '').trim();
-  if (!content) return true;
-
-  const placeholders = new Set(['[Imagem]', '[Documento]', '[Audio]', '[Mensagem]']);
-  return placeholders.has(content);
 };
 
 const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
@@ -1162,6 +1221,96 @@ function InboxMultiFilterGroup({
   );
 }
 
+function WhatsAppGalleryMediaTile({
+  message,
+  onOpenImage,
+  className,
+  overlayLabel,
+}: {
+  message: CommWhatsAppMessage;
+  onOpenImage: (payload: { src: string; name: string }) => void;
+  className?: string;
+  overlayLabel?: string;
+}) {
+  const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
+  const normalizedKind = isVideoLikeMessageType(message.message_type) ? 'video' : 'image';
+  const baseClassName = `relative block overflow-hidden rounded-[1.15rem] bg-[rgba(26,18,13,0.08)] ${className ?? ''}`.trim();
+
+  if (normalizedKind === 'image') {
+    return mediaUrl ? (
+      <button
+        type="button"
+        onClick={() => onOpenImage({ src: mediaUrl, name: message.media_file_name || 'Imagem enviada' })}
+        className={baseClassName}
+      >
+        <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
+        {overlayLabel ? (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-base font-semibold text-white">
+            {overlayLabel}
+          </span>
+        ) : null}
+      </button>
+    ) : (
+      <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--panel-text-muted,#8a735f)]`}>
+        {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
+      </div>
+    );
+  }
+
+  const secondaryLabel = message.media_duration_seconds && message.media_duration_seconds > 0
+    ? formatDurationLabel(Math.round(message.media_duration_seconds))
+    : formatFileSize(message.media_size_bytes) || 'Video';
+
+  return mediaUrl ? (
+    <a href={mediaUrl} target="_blank" rel="noreferrer" className={baseClassName}>
+      <video muted playsInline preload="metadata" className="h-full w-full object-cover">
+        <source src={mediaUrl} type={message.media_mime_type || undefined} />
+      </video>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 via-black/10 to-transparent px-3 py-2 text-xs font-medium text-white">
+        <span className="inline-flex items-center gap-1.5 truncate">
+          <Play className="h-3.5 w-3.5 fill-current" />
+          <span className="truncate">{secondaryLabel}</span>
+        </span>
+        {overlayLabel ? <span className="text-sm font-semibold">{overlayLabel}</span> : null}
+      </div>
+    </a>
+  ) : (
+    <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--panel-text-muted,#8a735f)]`}>
+      {loading ? 'Carregando video...' : error || 'Video indisponivel'}
+    </div>
+  );
+}
+
+function WhatsAppMediaGroupBody({
+  messages,
+  onOpenImage,
+}: {
+  messages: CommWhatsAppMessage[];
+  onOpenImage: (payload: { src: string; name: string }) => void;
+}) {
+  const visibleMessages = messages.slice(0, 4);
+  const hiddenCount = Math.max(0, messages.length - visibleMessages.length);
+
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      {visibleMessages.map((message, index) => {
+        const isWideHero = messages.length === 3 && index === 0;
+        const overlayLabel = hiddenCount > 0 && index === visibleMessages.length - 1 ? `+${hiddenCount}` : undefined;
+
+        return (
+          <WhatsAppGalleryMediaTile
+            key={message.id}
+            message={message}
+            onOpenImage={onOpenImage}
+            className={isWideHero ? 'col-span-2 aspect-[16/9]' : 'aspect-square'}
+            overlayLabel={overlayLabel}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 function WhatsAppMessageBody({
   message,
   onOpenImage,
@@ -1175,8 +1324,8 @@ function WhatsAppMessageBody({
 }) {
   const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
   const [showOriginalText, setShowOriginalText] = useState(false);
-  const kind = message.message_type;
-  const caption = isMediaPlaceholder(message) ? message.media_caption?.trim() || '' : message.text_content?.trim() || '';
+  const kind = message.message_type.trim().toLowerCase();
+  const caption = getMessageVisibleCaption(message);
   const editInfo = useMemo(() => getEditedMessageInfo(message), [message]);
   const deletedInfo = useMemo(() => getDeletedMessageInfo(message), [message]);
 
@@ -1258,7 +1407,7 @@ function WhatsAppMessageBody({
     );
   }
 
-  if (kind === 'video') {
+  if (isVideoLikeMessageType(kind)) {
     return (
       <div className="space-y-3">
         <div className="whatsapp-inbox-image-card overflow-hidden rounded-2xl border">
@@ -1272,13 +1421,13 @@ function WhatsAppMessageBody({
             </div>
           )}
           <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
-            <span className="truncate font-medium">{message.media_file_name || 'Vídeo'}</span>
-            <span className="shrink-0 opacity-80">{formatFileSize(message.media_size_bytes) || 'Mídia'}</span>
+              <span className="truncate font-medium">{message.media_file_name || 'Video'}</span>
+              <span className="shrink-0 opacity-80">{formatFileSize(message.media_size_bytes) || 'Midia'}</span>
+            </div>
           </div>
+          {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+          {editInfoNode}
         </div>
-        {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
-        {editInfoNode}
-      </div>
     );
   }
 
@@ -1875,10 +2024,42 @@ export default function WhatsAppInboxScreen() {
     const items: Array<
       | { type: 'day'; key: string; label: string }
       | { type: 'message'; key: string; message: CommWhatsAppMessage }
+      | { type: 'media-group'; key: string; messages: CommWhatsAppMessage[] }
     > = [];
     let previousDayKey = '';
 
-    for (const message of visibleMessages) {
+    const canGroupMediaMessages = (current: CommWhatsAppMessage, next: CommWhatsAppMessage) => {
+      if (!isGalleryMediaMessage(current) || !isGalleryMediaMessage(next)) {
+        return false;
+      }
+
+      if (current.direction !== next.direction || current.direction === 'system') {
+        return false;
+      }
+
+      if (current.delivery_status === 'deleted' || next.delivery_status === 'deleted') {
+        return false;
+      }
+
+      if (getMessageVisibleCaption(current) || getMessageVisibleCaption(next)) {
+        return false;
+      }
+
+      if (getMessageReactions(current).length > 0 || getMessageReactions(next).length > 0) {
+        return false;
+      }
+
+      const currentTimestamp = getMessageTimestampMs(current.message_at);
+      const nextTimestamp = getMessageTimestampMs(next.message_at);
+      if (currentTimestamp === null || nextTimestamp === null || nextTimestamp < currentTimestamp) {
+        return false;
+      }
+
+      return nextTimestamp - currentTimestamp <= GALLERY_GROUP_MAX_GAP_MS;
+    };
+
+    for (let index = 0; index < visibleMessages.length; index += 1) {
+      const message = visibleMessages[index];
       const dayKey = getMessageDayKey(message.message_at);
       if (dayKey && dayKey !== previousDayKey) {
         items.push({
@@ -1887,6 +2068,24 @@ export default function WhatsAppInboxScreen() {
           label: formatMessageDaySeparatorLabel(message.message_at),
         });
         previousDayKey = dayKey;
+      }
+
+      if (isGalleryMediaMessage(message) && !getMessageVisibleCaption(message)) {
+        const groupedMessages = [message];
+
+        while (index + 1 < visibleMessages.length && canGroupMediaMessages(groupedMessages[groupedMessages.length - 1], visibleMessages[index + 1])) {
+          groupedMessages.push(visibleMessages[index + 1]);
+          index += 1;
+        }
+
+        if (groupedMessages.length > 1) {
+          items.push({
+            type: 'media-group',
+            key: `media-group:${groupedMessages.map((item) => item.id).join(':')}`,
+            messages: groupedMessages,
+          });
+          continue;
+        }
       }
 
       items.push({

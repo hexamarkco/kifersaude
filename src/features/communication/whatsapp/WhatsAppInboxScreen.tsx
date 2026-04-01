@@ -651,7 +651,15 @@ const formatFileSize = (value?: number | null) => {
   return `${value} B`;
 };
 
-const getEditedMessageInfo = (message: CommWhatsAppMessage) => {
+const getEditedMessageInfo = (message?: CommWhatsAppMessage | null) => {
+  if (!message) {
+    return {
+      edited: false,
+      originalText: null,
+      editedAt: null,
+    };
+  }
+
   const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
     ? message.metadata as Record<string, unknown>
     : {};
@@ -667,7 +675,16 @@ const getEditedMessageInfo = (message: CommWhatsAppMessage) => {
   };
 };
 
-const getDeletedMessageInfo = (message: CommWhatsAppMessage) => {
+const getDeletedMessageInfo = (message?: CommWhatsAppMessage | null) => {
+  if (!message) {
+    return {
+      deleted: false,
+      deletedAt: null,
+      deletedBy: null,
+      preservedText: '[Mensagem apagada]',
+    };
+  }
+
   const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
     ? message.metadata as Record<string, unknown>
     : {};
@@ -685,7 +702,11 @@ const getDeletedMessageInfo = (message: CommWhatsAppMessage) => {
   };
 };
 
-const getMessageReactions = (message: CommWhatsAppMessage) => {
+const getMessageReactions = (message?: CommWhatsAppMessage | null) => {
+  if (!message) {
+    return [];
+  }
+
   const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
     ? message.metadata as Record<string, unknown>
     : {};
@@ -725,7 +746,11 @@ const getMessageReactions = (message: CommWhatsAppMessage) => {
   return Array.from(grouped.values()).sort((left, right) => right.count - left.count || left.emoji.localeCompare(right.emoji, 'pt-BR'));
 };
 
-const getReactionTooltipText = (message: CommWhatsAppMessage) => {
+const getReactionTooltipText = (message?: CommWhatsAppMessage | null) => {
+  if (!message) {
+    return '';
+  }
+
   const chatId = String(message.metadata?.chat_id ?? '').trim().toLowerCase();
   if (!chatId.endsWith('@g.us')) {
     return '';
@@ -741,7 +766,11 @@ const getReactionTooltipText = (message: CommWhatsAppMessage) => {
     .join('\n');
 };
 
-const getOwnReactionEmoji = (message: CommWhatsAppMessage) => {
+const getOwnReactionEmoji = (message?: CommWhatsAppMessage | null) => {
+  if (!message) {
+    return null;
+  }
+
   const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
     ? message.metadata as Record<string, unknown>
     : {};
@@ -2060,6 +2089,10 @@ export default function WhatsAppInboxScreen() {
 
     for (let index = 0; index < visibleMessages.length; index += 1) {
       const message = visibleMessages[index];
+      if (!message) {
+        continue;
+      }
+
       const dayKey = getMessageDayKey(message.message_at);
       if (dayKey && dayKey !== previousDayKey) {
         items.push({
@@ -2073,8 +2106,8 @@ export default function WhatsAppInboxScreen() {
       if (isGalleryMediaMessage(message) && !getMessageVisibleCaption(message)) {
         const groupedMessages = [message];
 
-        while (index + 1 < visibleMessages.length && canGroupMediaMessages(groupedMessages[groupedMessages.length - 1], visibleMessages[index + 1])) {
-          groupedMessages.push(visibleMessages[index + 1]);
+        while (index + 1 < visibleMessages.length && visibleMessages[index + 1] && canGroupMediaMessages(groupedMessages[groupedMessages.length - 1], visibleMessages[index + 1])) {
+          groupedMessages.push(visibleMessages[index + 1] as CommWhatsAppMessage);
           index += 1;
         }
 
@@ -5309,7 +5342,11 @@ export default function WhatsAppInboxScreen() {
                     }
 
                     if (item.type === 'media-group') {
-                      const groupMessages = item.messages;
+                      const groupMessages = item.messages.filter(Boolean);
+                      if (groupMessages.length === 0) {
+                        return null;
+                      }
+
                       const lastMessage = groupMessages[groupMessages.length - 1];
 
                       return (
@@ -5328,6 +5365,10 @@ export default function WhatsAppInboxScreen() {
                     }
 
                     const { message } = item;
+                    if (!message) {
+                      return null;
+                    }
+
                     const reactions = getMessageReactions(message);
                     const reactionTooltipText = getReactionTooltipText(message);
 

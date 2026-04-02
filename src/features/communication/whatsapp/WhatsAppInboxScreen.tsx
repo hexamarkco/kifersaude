@@ -1632,6 +1632,7 @@ function WhatsAppMessageBody({
   const caption = getMessageVisibleCaption(message);
   const editInfo = useMemo(() => getEditedMessageInfo(message), [message]);
   const deletedInfo = useMemo(() => getDeletedMessageInfo(message), [message]);
+  const linkPreview = useMemo(() => getMessageLinkPreview(message), [message]);
 
   useEffect(() => {
     setShowOriginalText(false);
@@ -1657,22 +1658,50 @@ function WhatsAppMessageBody({
         <div className="mt-2 grid gap-2">
           <div className="rounded-xl border border-[rgba(215,154,143,0.24)] bg-[rgba(122,33,24,0.04)] px-3 py-2">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Antes</p>
-            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-muted,#876f5c)] line-through opacity-85">
-              {editInfo.previousText}
-            </p>
+            <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-muted,#876f5c)] line-through opacity-85" text={editInfo.previousText} />
           </div>
           {editInfo.currentText ? (
             <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Depois</p>
-              <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]">
-                {editInfo.currentText}
-              </p>
+              <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]" text={editInfo.currentText} />
             </div>
           ) : null}
         </div>
       ) : null}
     </div>
   ) : null;
+  const linkPreviewContent = linkPreview ? (
+    <>
+      {linkPreview.previewImage ? (
+        <div className="overflow-hidden border-b border-[var(--panel-border-subtle,#e7dac8)] bg-black/10">
+          <img src={linkPreview.previewImage} alt={linkPreview.title || linkPreview.domain || 'Preview do link'} className="max-h-[220px] w-full object-cover" loading="lazy" />
+        </div>
+      ) : null}
+      <div className="space-y-1.5 px-3 py-3">
+        {linkPreview.title ? <p className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--panel-text,#1f2937)]">{linkPreview.title}</p> : null}
+        {linkPreview.description ? <p className="line-clamp-3 text-sm leading-5 text-[var(--panel-text-muted,#6b7280)]">{linkPreview.description}</p> : null}
+        <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#8a735f)]">{linkPreview.domain || 'Link'}</p>
+      </div>
+    </>
+  ) : null;
+  const linkPreviewNode = linkPreviewContent
+    ? linkPreview?.url
+      ? (
+        <a
+          href={linkPreview.url}
+          target="_blank"
+          rel="noreferrer"
+          className="block overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)] transition hover:border-[rgba(212,192,167,0.56)]"
+        >
+          {linkPreviewContent}
+        </a>
+      )
+      : (
+        <div className="overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)]">
+          {linkPreviewContent}
+        </div>
+      )
+    : null;
 
   if (deletedInfo.deleted) {
     const deletedByLabel = deletedInfo.deletedBy === 'self'
@@ -1688,9 +1717,7 @@ function WhatsAppMessageBody({
           <span>Mensagem apagada</span>
         </div>
         <p className="mt-2 text-xs text-[var(--panel-text-muted,#876f5c)]">{deletedByLabel}</p>
-        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-soft,#5b4635)] line-through opacity-85">
-          {deletedInfo.preservedText}
-        </p>
+        <LinkifiedText className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-soft,#5b4635)] line-through opacity-85" text={deletedInfo.preservedText} />
       </div>
     );
   }
@@ -1715,7 +1742,7 @@ function WhatsAppMessageBody({
             {loading ? 'Carregando imagem...' : error || 'Imagem indisponível'}
           </div>
         )}
-        {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+        {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
         {editInfoNode}
       </div>
     );
@@ -1739,7 +1766,7 @@ function WhatsAppMessageBody({
               <span className="shrink-0 opacity-80">{formatFileSize(message.media_size_bytes) || 'Midia'}</span>
             </div>
           </div>
-          {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+          {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
           {editInfoNode}
         </div>
     );
@@ -1778,7 +1805,7 @@ function WhatsAppMessageBody({
             )}
           </div>
         </div>
-        {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+        {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
         {editInfoNode}
       </div>
     );
@@ -1839,7 +1866,7 @@ function WhatsAppMessageBody({
             ) : null}
           </div>
         </div>
-        {caption ? <p className="whitespace-pre-wrap break-words text-sm leading-6">{caption}</p> : null}
+        {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
         {editInfoNode}
       </div>
     );
@@ -1847,7 +1874,8 @@ function WhatsAppMessageBody({
 
   return (
     <div className="space-y-3">
-      <p className="whitespace-pre-wrap break-words text-sm leading-6">{message.text_content || '[Mensagem sem texto]'}</p>
+      {linkPreviewNode}
+      <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={message.text_content || '[Mensagem sem texto]'} />
       {editInfoNode}
     </div>
   );

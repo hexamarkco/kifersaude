@@ -421,27 +421,27 @@ export default function WhatsAppLeadDrawer({
 
               {canViewAgenda ? (
                 <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4 sm:p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
+                  <div className="space-y-4">
+                    <div className="min-w-0">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#876f5c)]">
                         Agenda do chat
                       </p>
-                      <h3 className="mt-2 text-lg font-semibold text-[var(--panel-text,#1c1917)]">
+                      <h3 className="mt-2 text-lg font-semibold leading-tight text-[var(--panel-text,#1c1917)]">
                         Acompanhamento contextual
                       </h3>
                       <p className="mt-1 text-sm leading-6 text-[var(--panel-text-muted,#876f5c)]">
-                        Lembretes do lead e dos contratos vinculados a esta conversa, com foco na próxima ação operacional.
+                        Lembretes do lead e dos contratos ligados a esta conversa, com foco no próximo passo operacional.
                       </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
                       {agendaLead && canEditAgenda ? (
-                        <Button variant="secondary" size="sm" onClick={() => setSchedulerOpen(true)}>
+                        <Button variant="secondary" size="sm" className="min-w-[132px] justify-center" onClick={() => setSchedulerOpen(true)}>
                           <CalendarPlus className="h-4 w-4" />
                           Agendar
                         </Button>
                       ) : null}
-                      <Button variant="ghost" size="sm" onClick={() => void loadAgendaReminders()} disabled={agendaLoading}>
+                      <Button variant="ghost" size="sm" className="justify-center" onClick={() => void loadAgendaReminders()} disabled={agendaLoading}>
                         <RefreshCw className={`h-4 w-4 ${agendaLoading ? 'animate-spin' : ''}`} />
                         Atualizar
                       </Button>

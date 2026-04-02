@@ -189,6 +189,8 @@ export const commWhatsAppService = {
     let query = supabase
       .from('comm_whatsapp_chats')
       .select('*')
+      .order('is_pinned', { ascending: false })
+      .order('pinned_at', { ascending: false, nullsFirst: false })
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .order('updated_at', { ascending: false })
       .limit(limit);

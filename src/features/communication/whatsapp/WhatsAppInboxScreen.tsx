@@ -2162,8 +2162,8 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
-  const activeChats = useMemo(() => chats.filter((chat) => !chat.is_archived), [chats]);
-  const archivedChats = useMemo(() => chats.filter((chat) => chat.is_archived), [chats]);
+  const activeChats = useMemo(() => sortChatsByInboxOrder(chats.filter((chat) => !chat.is_archived)), [chats]);
+  const archivedChats = useMemo(() => sortChatsByInboxOrder(chats.filter((chat) => chat.is_archived)), [chats]);
   const sidebarChats = archivedSectionOpen ? archivedChats : activeChats;
   const selectedChatTranscriptLabel = useMemo(
     () => {
@@ -3684,7 +3684,7 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      let hydratedData = preserveSelectedChatInList(applyPrefetchedLeadNames(data));
+      let hydratedData = sortChatsByInboxOrder(preserveSelectedChatInList(applyPrefetchedLeadNames(data)));
 
       const selectedId = selectedChatIdRef.current;
       const optimisticSelectedChat = selectedId
@@ -3695,13 +3695,13 @@ export default function WhatsAppInboxScreen() {
         : null;
 
       if (selectedId && optimisticSelectedChat?.is_archived && fetchedSelectedChat && !fetchedSelectedChat.is_archived) {
-        hydratedData = hydratedData.map((chat) => chat.id === selectedId
+        hydratedData = sortChatsByInboxOrder(hydratedData.map((chat) => chat.id === selectedId
           ? {
               ...chat,
               is_archived: true,
               archived_at: optimisticSelectedChat.archived_at ?? chat.archived_at ?? new Date().toISOString(),
             }
-          : chat);
+          : chat));
 
         if (!restoringArchivedChatIdsRef.current.has(selectedId)) {
           restoringArchivedChatIdsRef.current.add(selectedId);

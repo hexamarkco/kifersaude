@@ -312,6 +312,11 @@ type LinkifiedTextProps = {
   linkClassName?: string;
 };
 
+type PointerAnchor = {
+  x: number;
+  y: number;
+};
+
 function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
   const matches = extractRenderableUrls(text);
 
@@ -348,6 +353,15 @@ function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
 
   return <p className={className}>{parts}</p>;
 }
+
+const createVirtualAnchorRect = (anchor: PointerAnchor) => ({
+  left: anchor.x,
+  right: anchor.x,
+  top: anchor.y,
+  bottom: anchor.y,
+  width: 0,
+  height: 0,
+});
 
 const getMessageLinkPreview = (message: CommWhatsAppMessage) => {
   const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
@@ -1542,6 +1556,7 @@ function InboxChatListItem({
   menuOpen,
   menuBusy,
   onToggleMenu,
+  onOpenContextMenu,
   menuTriggerRef,
 }: {
   chat: CommWhatsAppChat;
@@ -1552,12 +1567,19 @@ function InboxChatListItem({
   menuOpen: boolean;
   menuBusy: boolean;
   onToggleMenu: (chatId: string) => void;
+  onOpenContextMenu: (chatId: string, anchor: PointerAnchor) => void;
   menuTriggerRef: (node: HTMLButtonElement | null) => void;
 }) {
   return (
-    <div className={`group/chat whatsapp-inbox-chat-card border-b transition ${selected ? 'is-active' : ''}`}>
-      <div className="flex items-start gap-2 px-4 py-3">
-        <button type="button" onClick={() => onSelect(chat.id)} className="min-w-0 flex-1 text-left">
+    <div
+      className={`group/chat relative whatsapp-inbox-chat-card border-b transition ${selected ? 'is-active' : ''}`}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onOpenContextMenu(chat.id, { x: event.clientX, y: event.clientY });
+      }}
+    >
+      <div className="px-4 py-3">
+        <button type="button" onClick={() => onSelect(chat.id)} className="min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -1595,22 +1617,26 @@ function InboxChatListItem({
             )}
           </p>
         </button>
-
-        <button
-          ref={menuTriggerRef}
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleMenu(chat.id);
-          }}
-          className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[var(--panel-text-muted,#8a735f)] transition hover:bg-[rgba(255,248,240,0.08)] hover:text-[var(--panel-text,#f3e6d7)] ${menuOpen ? 'bg-[rgba(255,248,240,0.08)] text-[var(--panel-text,#f3e6d7)]' : 'opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100'} ${selected ? 'opacity-100' : ''}`}
-          aria-label="Abrir menu da conversa"
-          aria-expanded={menuOpen}
-          disabled={menuBusy}
-        >
-          {menuBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronDown className={`h-4 w-4 transition ${menuOpen ? 'rotate-180' : ''}`} />}
-        </button>
       </div>
+
+      <button
+        ref={menuTriggerRef}
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggleMenu(chat.id);
+        }}
+        className={cx(
+          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--panel-text-muted,#8a735f)] transition hover:bg-[rgba(255,248,240,0.08)] hover:text-[var(--panel-text,#f3e6d7)]',
+          menuOpen ? 'bg-[rgba(255,248,240,0.08)] text-[var(--panel-text,#f3e6d7)] opacity-100' : 'opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100',
+          selected ? 'opacity-100' : '',
+        )}
+        aria-label="Abrir menu da conversa"
+        aria-expanded={menuOpen}
+        disabled={menuBusy}
+      >
+        {menuBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />}
+      </button>
     </div>
   );
 }
@@ -1944,8 +1970,10 @@ export default function WhatsAppInboxScreen() {
   const [reactionPickerPosition, setReactionPickerPosition] = useState<{ top: number; left: number } | null>(null);
   const [openMessageActionMenuMessageId, setOpenMessageActionMenuMessageId] = useState<string | null>(null);
   const [messageActionMenuPosition, setMessageActionMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
+  const [messageActionMenuPointerAnchor, setMessageActionMenuPointerAnchor] = useState<PointerAnchor | null>(null);
   const [openChatMenuChatId, setOpenChatMenuChatId] = useState<string | null>(null);
   const [chatMenuPosition, setChatMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
+  const [chatMenuPointerAnchor, setChatMenuPointerAnchor] = useState<PointerAnchor | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
@@ -2580,12 +2608,25 @@ export default function WhatsAppInboxScreen() {
   }, [chats, openChatMenuChatId]);
 
   const handleToggleChatMenu = useCallback((chatId: string) => {
+    setChatMenuPointerAnchor(null);
     setOpenChatMenuChatId((current) => (current === chatId ? null : chatId));
   }, []);
 
   const handleToggleMessageActionMenu = useCallback((messageId: string) => {
     setOpenReactionPickerMessageId(null);
+    setMessageActionMenuPointerAnchor(null);
     setOpenMessageActionMenuMessageId((current) => (current === messageId ? null : messageId));
+  }, []);
+
+  const handleOpenChatMenuFromContext = useCallback((chatId: string, anchor: PointerAnchor) => {
+    setChatMenuPointerAnchor(anchor);
+    setOpenChatMenuChatId(chatId);
+  }, []);
+
+  const handleOpenMessageActionMenuFromContext = useCallback((messageId: string, anchor: PointerAnchor) => {
+    setOpenReactionPickerMessageId(null);
+    setMessageActionMenuPointerAnchor(anchor);
+    setOpenMessageActionMenuMessageId(messageId);
   }, []);
 
   const applyPrefetchedLeadNames = useCallback((items: CommWhatsAppChat[]) => {
@@ -3166,6 +3207,7 @@ export default function WhatsAppInboxScreen() {
       const clickedCurrentTrigger = messageActionTriggerRefs.current[openMessageActionMenuMessageId]?.contains(target) ?? false;
 
       if (!clickedInsideMenu && !clickedCurrentTrigger) {
+        setMessageActionMenuPointerAnchor(null);
         setOpenMessageActionMenuMessageId(null);
       }
     };
@@ -3185,6 +3227,7 @@ export default function WhatsAppInboxScreen() {
       const clickedCurrentTrigger = chatMenuTriggerRefs.current[openChatMenuChatId]?.contains(target) ?? false;
 
       if (!clickedInsideMenu && !clickedCurrentTrigger) {
+        setChatMenuPointerAnchor(null);
         setOpenChatMenuChatId(null);
       }
     };
@@ -3201,12 +3244,14 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     if (openMessageActionMenuMessageId && !openMessageActionMenuMessage) {
+      setMessageActionMenuPointerAnchor(null);
       setOpenMessageActionMenuMessageId(null);
     }
   }, [openMessageActionMenuMessage, openMessageActionMenuMessageId]);
 
   useEffect(() => {
     if (openChatMenuChatId && !openChatMenuChat) {
+      setChatMenuPointerAnchor(null);
       setOpenChatMenuChatId(null);
     }
   }, [openChatMenuChat, openChatMenuChatId]);
@@ -3269,13 +3314,17 @@ export default function WhatsAppInboxScreen() {
     }
 
     const syncPosition = () => {
-      const trigger = messageActionTriggerRefs.current[openMessageActionMenuMessageId];
-      if (!trigger) {
+      const trigger = messageActionMenuPointerAnchor
+        ? null
+        : messageActionTriggerRefs.current[openMessageActionMenuMessageId];
+      if (!trigger && !messageActionMenuPointerAnchor) {
         setMessageActionMenuPosition(null);
         return;
       }
 
-      const triggerRect = trigger.getBoundingClientRect();
+      const triggerRect = messageActionMenuPointerAnchor
+        ? createVirtualAnchorRect(messageActionMenuPointerAnchor)
+        : trigger!.getBoundingClientRect();
       const menuWidth = 216;
       const menuHeight = 124;
       const viewportPadding = 12;
@@ -3324,7 +3373,7 @@ export default function WhatsAppInboxScreen() {
       window.removeEventListener('resize', syncPosition);
       window.removeEventListener('scroll', syncPosition, true);
     };
-  }, [openMessageActionMenuMessageId]);
+  }, [messageActionMenuPointerAnchor, openMessageActionMenuMessageId]);
 
   useLayoutEffect(() => {
     if (!openChatMenuChatId || typeof window === 'undefined') {
@@ -3333,13 +3382,17 @@ export default function WhatsAppInboxScreen() {
     }
 
     const syncPosition = () => {
-      const trigger = chatMenuTriggerRefs.current[openChatMenuChatId];
-      if (!trigger) {
+      const trigger = chatMenuPointerAnchor
+        ? null
+        : chatMenuTriggerRefs.current[openChatMenuChatId];
+      if (!trigger && !chatMenuPointerAnchor) {
         setChatMenuPosition(null);
         return;
       }
 
-      const triggerRect = trigger.getBoundingClientRect();
+      const triggerRect = chatMenuPointerAnchor
+        ? createVirtualAnchorRect(chatMenuPointerAnchor)
+        : trigger!.getBoundingClientRect();
       const menuWidth = 248;
       const menuHeight = 232;
       const viewportPadding = 12;
@@ -3388,7 +3441,7 @@ export default function WhatsAppInboxScreen() {
       window.removeEventListener('resize', syncPosition);
       window.removeEventListener('scroll', syncPosition, true);
     };
-  }, [openChatMenuChatId]);
+  }, [chatMenuPointerAnchor, openChatMenuChatId]);
 
   useEffect(() => {
     if (!advancedFiltersOpen) {
@@ -4796,6 +4849,7 @@ export default function WhatsAppInboxScreen() {
 
     setEditingMessage(message);
     setEditingMessageDraft(getMessageEditableText(message));
+    setMessageActionMenuPointerAnchor(null);
     setOpenMessageActionMenuMessageId(null);
   }, []);
 
@@ -4887,6 +4941,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    setMessageActionMenuPointerAnchor(null);
     setOpenMessageActionMenuMessageId(null);
     setDeletingMessageId(message.id);
 
@@ -6025,12 +6080,14 @@ export default function WhatsAppInboxScreen() {
                     connectedUserName={channelState?.connected_user_name ?? null}
                     draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
                     onSelect={(chatId) => {
+                      setChatMenuPointerAnchor(null);
                       setOpenChatMenuChatId(null);
                       setSelectedChatId(chatId);
                     }}
                     menuOpen={openChatMenuChatId === chat.id}
                     menuBusy={updatingChatStateId === chat.id}
                     onToggleMenu={handleToggleChatMenu}
+                    onOpenContextMenu={handleOpenChatMenuFromContext}
                     menuTriggerRef={(node) => {
                       if (node) {
                         chatMenuTriggerRefs.current[chat.id] = node;
@@ -6286,6 +6343,27 @@ export default function WhatsAppInboxScreen() {
                                 <Smile className="h-4 w-4" />
                               </button>
 
+                            </>
+                          ) : null}
+
+                          <div
+                            className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}
+                            onContextMenu={(event) => {
+                              if (!showEditAction && !showDeleteAction) {
+                                return;
+                              }
+
+                              event.preventDefault();
+                              handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
+                            }}
+                          >
+                            <WhatsAppMessageBody
+                              message={message}
+                              onOpenImage={setLightboxMedia}
+                              onTranscribe={(target) => void handleTranscribeMessage(target)}
+                              transcribing={transcribingMessageId === message.id}
+                            />
+                            <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-medium">
                               {showEditAction || showDeleteAction ? (
                                 <button
                                   ref={(node) => {
@@ -6297,26 +6375,19 @@ export default function WhatsAppInboxScreen() {
                                   }}
                                   type="button"
                                   onClick={() => handleToggleMessageActionMenu(message.id)}
-                                  className={`absolute right-3 top-2 z-[3] inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/10 text-[var(--panel-text-soft,#f7efe3)] transition ${openMessageActionMenuMessageId === message.id ? 'opacity-100' : 'opacity-0 group-hover/message:opacity-100'} hover:bg-black/20 focus:opacity-100`}
+                                  className={cx(
+                                    'inline-flex h-5 w-5 items-center justify-center rounded-md text-[var(--panel-text-soft,#f7efe3)] transition hover:bg-black/15 focus:bg-black/15',
+                                    openMessageActionMenuMessageId === message.id
+                                      ? 'bg-black/15 opacity-100'
+                                      : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
+                                  )}
                                   aria-label="Mais acoes da mensagem"
                                   aria-expanded={openMessageActionMenuMessageId === message.id}
                                   title="Mais acoes"
                                 >
-                                  <ChevronDown className={`h-4 w-4 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
+                                  <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
                                 </button>
                               ) : null}
-
-                            </>
-                          ) : null}
-
-                          <div className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}>
-                            <WhatsAppMessageBody
-                              message={message}
-                              onOpenImage={setLightboxMedia}
-                              onTranscribe={(target) => void handleTranscribeMessage(target)}
-                              transcribing={transcribingMessageId === message.id}
-                            />
-                            <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 text-[11px] font-medium">
                               <span>{formatMessageTime(message.message_at)}</span>
                               {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
                               {message.direction === 'outbound' && message.delivery_status === 'failed' && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
@@ -6979,7 +7050,10 @@ export default function WhatsAppInboxScreen() {
           ref={messageActionMenuRef}
           isOpen={Boolean(openMessageActionMenuMessage && messageActionMenuPosition)}
           position={messageActionMenuPosition}
-          onClose={() => setOpenMessageActionMenuMessageId(null)}
+          onClose={() => {
+            setMessageActionMenuPointerAnchor(null);
+            setOpenMessageActionMenuMessageId(null);
+          }}
           ariaLabel="Menu da mensagem"
           className="before:hidden rounded-2xl border-[rgba(212,192,167,0.18)] bg-[rgba(16,12,10,0.98)] p-1 shadow-2xl"
           style={{ width: messageActionMenuPosition?.width ?? 216 }}
@@ -7015,55 +7089,62 @@ export default function WhatsAppInboxScreen() {
           ref={chatMenuRef}
           isOpen={Boolean(openChatMenuChat && chatMenuPosition)}
           position={chatMenuPosition}
-          onClose={() => setOpenChatMenuChatId(null)}
+          onClose={() => {
+            setChatMenuPointerAnchor(null);
+            setOpenChatMenuChatId(null);
+          }}
           ariaLabel="Menu da conversa"
           className="before:hidden rounded-2xl border-[rgba(212,192,167,0.18)] bg-[rgba(16,12,10,0.98)] p-1 shadow-2xl"
           style={{ width: chatMenuPosition?.width ?? 248 }}
         >
           {openChatMenuChat ? (
             <div className="flex flex-col gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setOpenChatMenuChatId(null);
-                  void handleUpdateChatInboxState(openChatMenuChat, { isArchived: !openChatMenuChat.is_archived });
-                }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatMenuPointerAnchor(null);
+                    setOpenChatMenuChatId(null);
+                    void handleUpdateChatInboxState(openChatMenuChat, { isArchived: !openChatMenuChat.is_archived });
+                  }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-60"
               >
                 {openChatMenuChat.is_archived ? <ArchiveRestore className="h-4 w-4 shrink-0" /> : <Archive className="h-4 w-4 shrink-0" />}
                 <span>{openChatMenuChat.is_archived ? 'Remover dos arquivados' : 'Arquivar conversa'}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpenChatMenuChatId(null);
-                  void handleUpdateChatInboxState(openChatMenuChat, { isMuted: !openChatMenuChat.is_muted });
-                }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatMenuPointerAnchor(null);
+                    setOpenChatMenuChatId(null);
+                    void handleUpdateChatInboxState(openChatMenuChat, { isMuted: !openChatMenuChat.is_muted });
+                  }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-60"
               >
                 {openChatMenuChat.is_muted ? <Bell className="h-4 w-4 shrink-0" /> : <BellOff className="h-4 w-4 shrink-0" />}
                 <span>{openChatMenuChat.is_muted ? 'Ativar notificacoes' : 'Silenciar notificacoes'}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpenChatMenuChatId(null);
-                  void handleUpdateChatInboxState(openChatMenuChat, { isPinned: !openChatMenuChat.is_pinned });
-                }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatMenuPointerAnchor(null);
+                    setOpenChatMenuChatId(null);
+                    void handleUpdateChatInboxState(openChatMenuChat, { isPinned: !openChatMenuChat.is_pinned });
+                  }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-60"
               >
                 <Pin className="h-4 w-4 shrink-0" />
                 <span>{openChatMenuChat.is_pinned ? 'Desafixar conversa' : 'Fixar conversa'}</span>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpenChatMenuChatId(null);
-                  void handleUpdateChatInboxState(openChatMenuChat, { markAsUnread: !openChatMenuChat.manual_unread && openChatMenuChat.unread_count <= 0 });
-                }}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatMenuPointerAnchor(null);
+                    setOpenChatMenuChatId(null);
+                    void handleUpdateChatInboxState(openChatMenuChat, { markAsUnread: !openChatMenuChat.manual_unread && openChatMenuChat.unread_count <= 0 });
+                  }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-60"
               >

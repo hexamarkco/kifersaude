@@ -2,10 +2,12 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
+  applyCommWhatsAppMessageEdit,
   COMM_WHATSAPP_MODULE,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiDeletedMessageEvent,
+  extractWhapiEditedMessageEvent,
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
@@ -271,6 +273,22 @@ Deno.serve(async (req: Request) => {
         });
 
         if (deletedTarget) {
+          continue;
+        }
+      }
+
+      const editedEvent = extractWhapiEditedMessageEvent(message, 'messages');
+      if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
+        const editedTarget = await applyCommWhatsAppMessageEdit(supabaseAdmin, {
+          channelId: channel.id,
+          targetExternalMessageId: editedEvent.targetExternalMessageId,
+          editedText: editedEvent.editedText,
+          editedAt: editedEvent.editedAt || getNowIso(),
+          originalText: editedEvent.originalText,
+          actionType: editedEvent.actionType,
+        });
+
+        if (editedTarget) {
           continue;
         }
       }

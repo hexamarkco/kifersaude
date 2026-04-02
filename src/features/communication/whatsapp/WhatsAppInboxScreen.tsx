@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Pin, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -39,6 +39,7 @@ import { fetchAllPages, supabase, type CommWhatsAppChat, type CommWhatsAppMessag
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
+import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
@@ -144,6 +145,7 @@ const createLocalOutgoingMessageId = () => `local-message-${Date.now()}-${Math.r
 const VIDEO_LIKE_MESSAGE_TYPES = new Set(['video', 'gif', 'short']);
 const GALLERY_MESSAGE_TYPES = new Set(['image', 'video', 'gif', 'short']);
 const GALLERY_GROUP_MAX_GAP_MS = 2 * 60 * 1000;
+const EDITABLE_OUTBOUND_MESSAGE_TYPES = new Set(['text', 'image', 'video', 'gif', 'short', 'document']);
 const EMPTY_COMPOSER_SELECTION: ComposerSelection = { start: 0, end: 0 };
 
 const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document', caption?: string) => {
@@ -211,6 +213,38 @@ const getMessageVisibleCaption = (message: CommWhatsAppMessage) => {
   }
 
   return fallbackText;
+};
+
+const getMessageEditableText = (message: CommWhatsAppMessage) => {
+  const messageType = message.message_type.trim().toLowerCase();
+
+  if (messageType === 'text') {
+    return String(message.text_content ?? '').trim();
+  }
+
+  return getMessageVisibleCaption(message);
+};
+
+const canEditOutboundMessage = (message: CommWhatsAppMessage) => {
+  if (message.direction !== 'outbound') {
+    return false;
+  }
+
+  if (!message.external_message_id?.trim()) {
+    return false;
+  }
+
+  if (message.delivery_status.trim().toLowerCase() === 'deleted') {
+    return false;
+  }
+
+  return EDITABLE_OUTBOUND_MESSAGE_TYPES.has(message.message_type.trim().toLowerCase());
+};
+
+const canDeleteOutboundMessage = (message: CommWhatsAppMessage) => {
+  return message.direction === 'outbound'
+    && Boolean(message.external_message_id?.trim())
+    && message.delivery_status.trim().toLowerCase() !== 'deleted';
 };
 
 const getMessageTimestampMs = (value?: string | null) => {
@@ -438,6 +472,15 @@ const getDeletedMessageMarker = (messageType: string) => {
     default:
       return '[Mensagem apagada]';
   }
+};
+
+const buildDeletedMessageSummary = (messageType: string, preservedText?: string | null) => {
+  const normalizedText = String(preservedText ?? '').trim();
+  if (normalizedText) {
+    return `[Apagada] ${normalizedText}`;
+  }
+
+  return getDeletedMessageMarker(messageType);
 };
 
 const buildTranscriptContent = (message: CommWhatsAppMessage) => {
@@ -690,6 +733,8 @@ const getEditedMessageInfo = (message?: CommWhatsAppMessage | null) => {
     return {
       edited: false,
       originalText: null,
+      previousText: null,
+      currentText: null,
       editedAt: null,
     };
   }
@@ -699,12 +744,20 @@ const getEditedMessageInfo = (message?: CommWhatsAppMessage | null) => {
     : {};
   const currentText = String(message.text_content ?? message.media_caption ?? '').trim();
   const originalText = String(metadata.original_text_content ?? '').trim();
+  const editHistory = Array.isArray(metadata.edit_history)
+    ? metadata.edit_history.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
+    : [];
+  const lastEdit = editHistory.length > 0 ? editHistory[editHistory.length - 1] : null;
+  const previousText = String(lastEdit?.previous_text ?? '').trim() || originalText || null;
+  const visibleCurrentText = getMessageEditableText(message) || currentText || null;
   const editedAt = String(metadata.edited_at ?? '').trim() || null;
   const edited = metadata.edited === true || Boolean(originalText && originalText !== currentText);
 
   return {
     edited,
     originalText: originalText && originalText !== currentText ? originalText : null,
+    previousText: previousText && previousText !== visibleCurrentText ? previousText : null,
+    currentText: visibleCurrentText,
     editedAt,
   };
 };
@@ -1482,7 +1535,7 @@ function WhatsAppMessageBody({
     <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
         <span>Editada</span>
-        {editInfo.originalText ? (
+        {editInfo.previousText ? (
           <Button
             type="button"
             variant="ghost"
@@ -1490,16 +1543,26 @@ function WhatsAppMessageBody({
             onClick={() => setShowOriginalText((current) => !current)}
             className="h-7 rounded-xl px-2.5 text-[11px] normal-case tracking-normal"
           >
-            {showOriginalText ? 'Ocultar original' : 'Ver original'}
+            {showOriginalText ? 'Ocultar alteracoes' : 'Ver antes e depois'}
           </Button>
         ) : null}
       </div>
-      {showOriginalText && editInfo.originalText ? (
-        <div className="mt-2 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Original</p>
-          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]">
-            {editInfo.originalText}
-          </p>
+      {showOriginalText && editInfo.previousText ? (
+        <div className="mt-2 grid gap-2">
+          <div className="rounded-xl border border-[rgba(215,154,143,0.24)] bg-[rgba(122,33,24,0.04)] px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Antes</p>
+            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-muted,#876f5c)] line-through opacity-85">
+              {editInfo.previousText}
+            </p>
+          </div>
+          {editInfo.currentText ? (
+            <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Depois</p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]">
+                {editInfo.currentText}
+              </p>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -1739,6 +1802,10 @@ export default function WhatsAppInboxScreen() {
   const [transcribingMessageId, setTranscribingMessageId] = useState<string | null>(null);
   const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null);
   const [reactingMessageId, setReactingMessageId] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<CommWhatsAppMessage | null>(null);
+  const [editingMessageDraft, setEditingMessageDraft] = useState('');
+  const [savingMessageEdit, setSavingMessageEdit] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<string | null>(null);
   const [reactionPickerPosition, setReactionPickerPosition] = useState<{ top: number; left: number } | null>(null);
   const [openChatMenuChatId, setOpenChatMenuChatId] = useState<string | null>(null);
@@ -4477,6 +4544,140 @@ export default function WhatsAppInboxScreen() {
     }
   }, [patchMessageReactionLocally, selectedChat?.external_chat_id]);
 
+  const handleOpenEditMessageModal = useCallback((message: CommWhatsAppMessage) => {
+    if (!canEditOutboundMessage(message)) {
+      toast.error('Esta mensagem nao pode ser editada no momento.');
+      return;
+    }
+
+    setEditingMessage(message);
+    setEditingMessageDraft(getMessageEditableText(message));
+  }, []);
+
+  const handleCloseEditMessageModal = useCallback(() => {
+    setEditingMessage(null);
+    setEditingMessageDraft('');
+  }, []);
+
+  const handleSaveEditedMessage = useCallback(async () => {
+    if (!editingMessage) {
+      return;
+    }
+
+    const nextText = editingMessageDraft.trim();
+    if (!nextText) {
+      toast.error('Digite o novo texto da mensagem.');
+      return;
+    }
+
+    const previousText = getMessageEditableText(editingMessage);
+    if (previousText === nextText) {
+      handleCloseEditMessageModal();
+      return;
+    }
+
+    setSavingMessageEdit(true);
+
+    try {
+      const result = await commWhatsAppService.editMessage(editingMessage.id, nextText);
+      const editedAt = result.editedAt || new Date().toISOString();
+      const metadata = editingMessage.metadata && typeof editingMessage.metadata === 'object' && !Array.isArray(editingMessage.metadata)
+        ? editingMessage.metadata as Record<string, unknown>
+        : {};
+      const existingHistory = Array.isArray(metadata.edit_history) ? metadata.edit_history : [];
+      const isMediaMessage = editingMessage.message_type.trim().toLowerCase() !== 'text';
+
+      patchMessageLocally(editingMessage.id, {
+        text_content: nextText,
+        media_caption: isMediaMessage ? nextText : editingMessage.media_caption,
+        status_updated_at: editedAt,
+        metadata: {
+          ...metadata,
+          edited: true,
+          edited_at: editedAt,
+          original_text_content: String(metadata.original_text_content ?? '').trim() || previousText || null,
+          edit_action_type: 'manual_edit',
+          edit_history: [
+            ...existingHistory,
+            {
+              at: editedAt,
+              previous_text: previousText || null,
+              next_text: nextText,
+              action_type: 'manual_edit',
+            },
+          ].slice(-10),
+        },
+      });
+
+      if (selectedChat && selectedChat.id === editingMessage.chat_id && selectedChat.last_message_at === editingMessage.message_at) {
+        upsertChatLocally({
+          ...selectedChat,
+          last_message_text: nextText,
+          updated_at: editedAt,
+        });
+      } else {
+        setChats((current) => current.map((chat) => chat.id === editingMessage.chat_id && chat.last_message_at === editingMessage.message_at
+          ? { ...chat, last_message_text: nextText, updated_at: editedAt }
+          : chat));
+      }
+
+      toast.success('Mensagem editada no WhatsApp.');
+      handleCloseEditMessageModal();
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao editar mensagem', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel editar a mensagem no WhatsApp.');
+    } finally {
+      setSavingMessageEdit(false);
+    }
+  }, [editingMessage, editingMessageDraft, handleCloseEditMessageModal, patchMessageLocally, selectedChat, upsertChatLocally]);
+
+  const handleDeleteMessage = useCallback(async (message: CommWhatsAppMessage) => {
+    if (!canDeleteOutboundMessage(message)) {
+      toast.error('Esta mensagem nao pode ser apagada no momento.');
+      return;
+    }
+
+    const confirmed = window.confirm('Apagar esta mensagem no WhatsApp para todos?');
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingMessageId(message.id);
+
+    try {
+      const result = await commWhatsAppService.deleteMessage(message.id);
+      const deletedAt = result.deletedAt || new Date().toISOString();
+      const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+        ? message.metadata as Record<string, unknown>
+        : {};
+      const preservedText = getMessageEditableText(message) || String(message.text_content ?? message.media_caption ?? '').trim() || getDeletedMessageMarker(message.message_type);
+
+      patchMessageLocally(message.id, {
+        delivery_status: 'deleted',
+        status_updated_at: deletedAt,
+        metadata: {
+          ...metadata,
+          deleted: true,
+          deleted_at: deletedAt,
+          deleted_action_type: 'manual_delete',
+          deleted_by: 'self',
+          deleted_original_text_content: String(metadata.deleted_original_text_content ?? '').trim() || preservedText,
+        },
+      });
+
+      setChats((current) => current.map((chat) => chat.id === message.chat_id && chat.last_message_at === message.message_at
+        ? { ...chat, last_message_text: buildDeletedMessageSummary(message.message_type, preservedText), updated_at: deletedAt }
+        : chat));
+
+      toast.success('Mensagem apagada no WhatsApp.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao apagar mensagem', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel apagar a mensagem no WhatsApp.');
+    } finally {
+      setDeletingMessageId(null);
+    }
+  }, [patchMessageLocally]);
+
   const handleTranscribeMessage = async (message: CommWhatsAppMessage) => {
     setTranscribingMessageId(message.id);
     patchMessageLocally(message.id, {
@@ -5805,6 +6006,8 @@ export default function WhatsAppInboxScreen() {
 
                     const reactions = getMessageReactions(message);
                     const reactionTooltipText = getReactionTooltipText(message);
+                    const showEditAction = canEditOutboundMessage(message);
+                    const showDeleteAction = canDeleteOutboundMessage(message);
 
                     return (
                       <div key={item.key} className={`message-bubble-row group/message flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
@@ -5820,22 +6023,49 @@ export default function WhatsAppInboxScreen() {
                         >
                           {message.direction !== 'system' && message.external_message_id ? (
                             <>
-                              <button
-                                ref={(node) => {
-                                  if (node) {
-                                    reactionTriggerRefs.current[message.id] = node;
-                                  } else {
-                                    delete reactionTriggerRefs.current[message.id];
-                                  }
-                                }}
-                                type="button"
-                                onClick={() => handleToggleReactionPicker(message.id)}
-                                className={`absolute top-2 z-[3] inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100`}
-                                aria-label="Reagir à mensagem"
-                                title="Reagir"
-                              >
-                                <Smile className="h-4 w-4" />
-                              </button>
+                              <div className={`absolute top-2 z-[3] flex flex-col gap-2 ${message.direction === 'outbound' ? '-left-10' : '-right-10'}`}>
+                                <button
+                                  ref={(node) => {
+                                    if (node) {
+                                      reactionTriggerRefs.current[message.id] = node;
+                                    } else {
+                                      delete reactionTriggerRefs.current[message.id];
+                                    }
+                                  }}
+                                  type="button"
+                                  onClick={() => handleToggleReactionPicker(message.id)}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm opacity-0 transition group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100"
+                                  aria-label="Reagir à mensagem"
+                                  title="Reagir"
+                                >
+                                  <Smile className="h-4 w-4" />
+                                </button>
+
+                                {showEditAction ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditMessageModal(message)}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm opacity-0 transition group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100"
+                                    aria-label="Editar mensagem"
+                                    title="Editar mensagem"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </button>
+                                ) : null}
+
+                                {showDeleteAction ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleDeleteMessage(message)}
+                                    disabled={deletingMessageId === message.id}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(215,154,143,0.45)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-accent-red-text,#b4534a)] shadow-sm opacity-0 transition group-hover/message:opacity-100 hover:bg-[rgba(122,33,24,0.08)] focus:opacity-100 disabled:opacity-100"
+                                    aria-label="Apagar mensagem"
+                                    title="Apagar mensagem"
+                                  >
+                                    {deletingMessageId === message.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                  </button>
+                                ) : null}
+                              </div>
                             </>
                           ) : null}
 
@@ -6321,6 +6551,19 @@ export default function WhatsAppInboxScreen() {
           saving={savingQuickReplies}
           onClose={() => setQuickRepliesModalOpen(false)}
           onSave={handleSaveQuickReplies}
+        />
+
+        <WhatsAppEditMessageModal
+          isOpen={Boolean(editingMessage)}
+          loading={savingMessageEdit}
+          value={editingMessageDraft}
+          title={editingMessage?.message_type.trim().toLowerCase() === 'text' ? 'Editar mensagem' : 'Editar legenda da mensagem'}
+          description={editingMessage?.message_type.trim().toLowerCase() === 'text'
+            ? 'Atualize o texto da mensagem enviada. O WhatsApp so permite editar mensagens proprias dentro da janela suportada.'
+            : 'Atualize o texto exibido nesta midia. O arquivo continua o mesmo; apenas a legenda sera alterada.'}
+          onClose={handleCloseEditMessageModal}
+          onChange={setEditingMessageDraft}
+          onSubmit={() => void handleSaveEditedMessage()}
         />
 
         <WhatsAppComposerRewriteModal

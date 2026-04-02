@@ -945,6 +945,91 @@ export async function markCommWhatsAppMessageDeleted(
   };
 }
 
+export async function applyCommWhatsAppMessageEdit(
+  supabaseAdmin: SupabaseClient,
+  input: {
+    channelId: string;
+    targetExternalMessageId: string;
+    editedText: string;
+    editedAt: string;
+    originalText?: string | null;
+    actionType?: string | null;
+  },
+): Promise<{ chatId: string } | null> {
+  const { data: existingMessage, error: existingMessageError } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .select('id, chat_id, text_content, message_type, media_caption, message_at, metadata')
+    .eq('channel_id', input.channelId)
+    .eq('external_message_id', input.targetExternalMessageId)
+    .maybeSingle();
+
+  if (existingMessageError) {
+    throw new Error(`Erro ao localizar mensagem editada: ${existingMessageError.message}`);
+  }
+
+  if (!existingMessage) {
+    return null;
+  }
+
+  const existingMetadata = isRecord(existingMessage.metadata) ? existingMessage.metadata : {};
+  const existingHistory = Array.isArray(existingMetadata.edit_history) ? existingMetadata.edit_history : [];
+  const originalText =
+    toTrimmedString(existingMetadata.original_text_content)
+    || input.originalText
+    || toTrimmedString(existingMessage.text_content)
+    || toTrimmedString(existingMessage.media_caption);
+  const isMediaMessage = ['image', 'video', 'gif', 'short', 'document', 'audio', 'voice', 'sticker'].includes(
+    toTrimmedString(existingMessage.message_type).toLowerCase(),
+  );
+  const nextMetadata = {
+    ...existingMetadata,
+    edited: true,
+    edited_at: input.editedAt,
+    original_text_content: originalText || null,
+    edit_action_type: input.actionType ?? existingMetadata.edit_action_type ?? null,
+    edit_history: [
+      ...existingHistory,
+      {
+        at: input.editedAt,
+        previous_text: toTrimmedString(existingMessage.text_content) || toTrimmedString(existingMessage.media_caption) || null,
+        next_text: input.editedText,
+        action_type: input.actionType ?? null,
+      },
+    ].slice(-10),
+  };
+
+  const { error: updateMessageError } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .update({
+      text_content: input.editedText,
+      media_caption: isMediaMessage ? input.editedText : existingMessage.media_caption,
+      status_updated_at: input.editedAt,
+      metadata: nextMetadata,
+    })
+    .eq('id', existingMessage.id);
+
+  if (updateMessageError) {
+    throw new Error(`Erro ao atualizar mensagem editada: ${updateMessageError.message}`);
+  }
+
+  const { error: updateChatError } = await supabaseAdmin
+    .from('comm_whatsapp_chats')
+    .update({
+      last_message_text: input.editedText,
+      updated_at: getNowIso(),
+    })
+    .eq('id', existingMessage.chat_id)
+    .eq('last_message_at', existingMessage.message_at);
+
+  if (updateChatError) {
+    throw new Error(`Erro ao atualizar resumo do chat apos edicao: ${updateChatError.message}`);
+  }
+
+  return {
+    chatId: toTrimmedString(existingMessage.chat_id),
+  };
+}
+
 export const parseWhapiError = (payload: unknown): string => {
   if (typeof payload === 'string' && payload.trim()) {
     const raw = payload.trim();

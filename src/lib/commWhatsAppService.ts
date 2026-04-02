@@ -790,6 +790,44 @@ export const commWhatsAppService = {
     }
   },
 
+  async editMessage(messageId: string, text: string): Promise<{ editedText: string; editedAt: string | null }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-manage-message', {
+      body: {
+        messageId,
+        action: 'edit',
+        text,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel editar a mensagem no WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { editedText?: string; editedAt?: string | null };
+    return {
+      editedText: typeof payload.editedText === 'string' ? payload.editedText.trim() : text.trim(),
+      editedAt: typeof payload.editedAt === 'string' ? payload.editedAt : null,
+    };
+  },
+
+  async deleteMessage(messageId: string): Promise<{ deletedAt: string | null }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-manage-message', {
+      body: {
+        messageId,
+        action: 'delete',
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel apagar a mensagem no WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { deletedAt?: string | null };
+    return {
+      deletedAt: typeof payload.deletedAt === 'string' ? payload.deletedAt : null,
+    };
+  },
+
   async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {
     if (params.mediaUrl?.trim()) {
       return params.mediaUrl.trim();

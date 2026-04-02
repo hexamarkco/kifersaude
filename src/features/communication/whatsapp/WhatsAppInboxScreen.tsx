@@ -1975,12 +1975,6 @@ export default function WhatsAppInboxScreen() {
     [leadPanel?.nome_completo, selectedChat],
   );
 
-  useEffect(() => {
-    if (selectedChat?.is_archived) {
-      setArchivedSectionOpen(true);
-    }
-  }, [selectedChat?.id, selectedChat?.is_archived]);
-
   const quickReplyLead = useMemo<Lead | null>(() => {
     if (!selectedChat) {
       return null;

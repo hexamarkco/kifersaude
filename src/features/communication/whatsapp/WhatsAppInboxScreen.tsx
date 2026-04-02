@@ -11,7 +11,6 @@ import StatusDropdown from '../../../components/StatusDropdown';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
-import { calculateFloatingPanelPosition } from '../../../lib/floatingPosition';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
@@ -1412,13 +1411,11 @@ function InboxChatListItem({
               </div>
               <p className="truncate text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <span className="whatsapp-inbox-chat-meta text-[11px] font-medium">{formatMessageTime(chat.last_message_at)}</span>
-              {(chat.unread_count > 0 || chat.manual_unread) && (
-                <span className="whatsapp-inbox-unread-badge inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
-                  {chat.unread_count > 0 ? chat.unread_count : '•'}
-                </span>
-              )}
+            <div className="flex h-10 shrink-0 flex-col items-end justify-between">
+              <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
+              <span className={`whatsapp-inbox-unread-badge inline-flex min-h-5 min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold transition-opacity ${(chat.unread_count > 0 || chat.manual_unread) ? 'opacity-100' : 'opacity-0'}`} aria-hidden={chat.unread_count > 0 || chat.manual_unread ? undefined : true}>
+                {chat.unread_count > 0 ? chat.unread_count : chat.manual_unread ? '•' : ''}
+              </span>
             </div>
           </div>
           <p className="mt-3 truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
@@ -3043,30 +3040,38 @@ export default function WhatsAppInboxScreen() {
       }
 
       const triggerRect = trigger.getBoundingClientRect();
-      const basePosition = calculateFloatingPanelPosition({
-        triggerRect,
-        panelWidth: 248,
-        panelHeight: 232,
-        gap: 8,
-      });
-      const left = Math.max(12, Math.min(triggerRect.right - basePosition.width, window.innerWidth - basePosition.width - 12));
+      const menuWidth = 248;
+      const menuHeight = 232;
+      const viewportPadding = 12;
+      const gap = 6;
+      const availableBelow = window.innerHeight - triggerRect.bottom - viewportPadding;
+      const availableAbove = triggerRect.top - viewportPadding;
+      const openUpward = availableBelow < Math.min(menuHeight, 180) && availableAbove > availableBelow;
+      const maxHeight = Math.max(160, Math.min(menuHeight, (openUpward ? availableAbove : availableBelow) - gap));
+      const left = Math.max(
+        viewportPadding,
+        Math.min(triggerRect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding),
+      );
+      const top = openUpward
+        ? Math.max(viewportPadding, triggerRect.top - maxHeight - gap)
+        : Math.min(window.innerHeight - maxHeight - viewportPadding, triggerRect.bottom + gap);
 
       setChatMenuPosition((current) => {
         if (
           current
-          && current.top === basePosition.top
+          && current.top === top
           && current.left === left
-          && current.width === basePosition.width
-          && current.maxHeight === basePosition.maxHeight
+          && current.width === menuWidth
+          && current.maxHeight === maxHeight
         ) {
           return current;
         }
 
         return {
-          top: basePosition.top,
+          top,
           left,
-          width: basePosition.width,
-          maxHeight: basePosition.maxHeight,
+          width: menuWidth,
+          maxHeight,
         };
       });
     };

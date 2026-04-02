@@ -94,6 +94,15 @@ export type CommWhatsAppMediaMeta = {
   mediaCaption: string | null;
 };
 
+export type CommWhatsAppLinkPreviewMeta = {
+  body: string | null;
+  url: string | null;
+  title: string | null;
+  description: string | null;
+  canonical: string | null;
+  preview: string | null;
+};
+
 export type CommWhatsAppEditedMessageEvent = {
   targetExternalMessageId: string | null;
   editedText: string | null;
@@ -532,6 +541,37 @@ export const extractWhapiMediaMeta = (message: unknown): CommWhatsAppMediaMeta =
     mediaSizeBytes: toNullableNumber(payload.file_size),
     mediaDurationSeconds: toNullableNumber(payload.seconds),
     mediaCaption: toTrimmedString(payload.caption) || null,
+  };
+};
+
+export const extractWhapiLinkPreviewMeta = (message: unknown): CommWhatsAppLinkPreviewMeta | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const payload = isRecord(message.link_preview) ? message.link_preview : null;
+  if (!payload) {
+    return null;
+  }
+
+  const body = toTrimmedString(payload.body) || null;
+  const url = toTrimmedString(payload.url) || toTrimmedString(payload.link) || null;
+  const title = toTrimmedString(payload.title) || null;
+  const description = toTrimmedString(payload.description) || null;
+  const canonical = toTrimmedString(payload.canonical) || null;
+  const preview = toTrimmedString(payload.preview) || null;
+
+  if (!body && !url && !title && !description && !canonical && !preview) {
+    return null;
+  }
+
+  return {
+    body,
+    url,
+    title,
+    description,
+    canonical,
+    preview,
   };
 };
 

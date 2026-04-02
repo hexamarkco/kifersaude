@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ import StatusDropdown from '../../../components/StatusDropdown';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
+import { cx } from '../../../lib/cx';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
@@ -280,6 +281,111 @@ const normalizeChatDraftPreview = (value: string) => {
   }
 
   return `${normalized.slice(0, 97).trimEnd()}...`;
+};
+
+const URL_PATTERN = /https?:\/\/[^\s<]+/gi;
+
+const normalizeRenderableUrl = (value: string) => value.replace(/[),.;!?]+$/g, '');
+
+const extractRenderableUrls = (value: string) => {
+  return Array.from(value.matchAll(URL_PATTERN))
+    .map((match) => {
+      const raw = match[0] ?? '';
+      const url = normalizeRenderableUrl(raw);
+      const index = match.index ?? 0;
+      if (!url) {
+        return null;
+      }
+
+      return {
+        index,
+        raw,
+        url,
+      };
+    })
+    .filter((item): item is { index: number; raw: string; url: string } => Boolean(item));
+};
+
+type LinkifiedTextProps = {
+  text: string;
+  className?: string;
+  linkClassName?: string;
+};
+
+function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
+  const matches = extractRenderableUrls(text);
+
+  if (matches.length === 0) {
+    return <p className={className}>{text}</p>;
+  }
+
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+
+  matches.forEach((match, index) => {
+    if (match.index > cursor) {
+      parts.push(text.slice(cursor, match.index));
+    }
+
+    parts.push(
+      <a
+        key={`${match.url}-${index}`}
+        href={match.url}
+        target="_blank"
+        rel="noreferrer"
+        className={cx('underline underline-offset-2 decoration-[rgba(255,255,255,0.38)] hover:decoration-current break-all', linkClassName)}
+      >
+        {match.url}
+      </a>,
+    );
+
+    cursor = match.index + match.raw.length;
+  });
+
+  if (cursor < text.length) {
+    parts.push(text.slice(cursor));
+  }
+
+  return <p className={className}>{parts}</p>;
+}
+
+const getMessageLinkPreview = (message: CommWhatsAppMessage) => {
+  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+    ? message.metadata as Record<string, unknown>
+    : {};
+  const preview = metadata.link_preview;
+  if (!preview || typeof preview !== 'object' || Array.isArray(preview)) {
+    return null;
+  }
+
+  const record = preview as Record<string, unknown>;
+  const url = String(record.url ?? record.link ?? record.canonical ?? '').trim();
+  const title = String(record.title ?? '').trim();
+  const description = String(record.description ?? '').trim();
+  const canonical = String(record.canonical ?? '').trim();
+  const body = String(record.body ?? '').trim();
+  const previewImage = String(record.preview ?? '').trim();
+
+  if (!url && !title && !description && !previewImage && !body) {
+    return null;
+  }
+
+  let domain = '';
+  try {
+    const parsed = new URL(canonical || url);
+    domain = parsed.hostname.replace(/^www\./i, '');
+  } catch {
+    domain = '';
+  }
+
+  return {
+    url: url || canonical || null,
+    title: title || null,
+    description: description || null,
+    body: body || null,
+    previewImage: previewImage || null,
+    domain: domain || null,
+  };
 };
 
 const collectPhoneLookupKeys = (value?: string | null) => {
@@ -1808,6 +1914,8 @@ export default function WhatsAppInboxScreen() {
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<string | null>(null);
   const [reactionPickerPosition, setReactionPickerPosition] = useState<{ top: number; left: number } | null>(null);
+  const [openMessageActionMenuMessageId, setOpenMessageActionMenuMessageId] = useState<string | null>(null);
+  const [messageActionMenuPosition, setMessageActionMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [openChatMenuChatId, setOpenChatMenuChatId] = useState<string | null>(null);
   const [chatMenuPosition, setChatMenuPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
@@ -1862,9 +1970,11 @@ export default function WhatsAppInboxScreen() {
   const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const reactionPickerRef = useRef<HTMLDivElement | null>(null);
+  const messageActionMenuRef = useRef<HTMLDivElement | null>(null);
   const chatMenuRef = useRef<HTMLDivElement | null>(null);
   const reactionAnchorRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const reactionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const messageActionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const chatMenuTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const voiceRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
@@ -2426,6 +2536,13 @@ export default function WhatsAppInboxScreen() {
 
     return visibleMessages.find((message) => message.id === openReactionPickerMessageId) ?? null;
   }, [openReactionPickerMessageId, visibleMessages]);
+  const openMessageActionMenuMessage = useMemo(() => {
+    if (!openMessageActionMenuMessageId) {
+      return null;
+    }
+
+    return visibleMessages.find((message) => message.id === openMessageActionMenuMessageId) ?? null;
+  }, [openMessageActionMenuMessageId, visibleMessages]);
   const openChatMenuChat = useMemo(() => {
     if (!openChatMenuChatId) {
       return null;
@@ -2436,6 +2553,11 @@ export default function WhatsAppInboxScreen() {
 
   const handleToggleChatMenu = useCallback((chatId: string) => {
     setOpenChatMenuChatId((current) => (current === chatId ? null : chatId));
+  }, []);
+
+  const handleToggleMessageActionMenu = useCallback((messageId: string) => {
+    setOpenReactionPickerMessageId(null);
+    setOpenMessageActionMenuMessageId((current) => (current === messageId ? null : messageId));
   }, []);
 
   const applyPrefetchedLeadNames = useCallback((items: CommWhatsAppChat[]) => {
@@ -3006,6 +3128,25 @@ export default function WhatsAppInboxScreen() {
   }, [openReactionPickerMessageId]);
 
   useEffect(() => {
+    if (!openMessageActionMenuMessageId) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      const clickedInsideMenu = messageActionMenuRef.current && target && messageActionMenuRef.current.contains(target);
+      const clickedCurrentTrigger = messageActionTriggerRefs.current[openMessageActionMenuMessageId]?.contains(target) ?? false;
+
+      if (!clickedInsideMenu && !clickedCurrentTrigger) {
+        setOpenMessageActionMenuMessageId(null);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    return () => window.removeEventListener('mousedown', handlePointerDown);
+  }, [openMessageActionMenuMessageId]);
+
+  useEffect(() => {
     if (!openChatMenuChatId) {
       return;
     }
@@ -3029,6 +3170,12 @@ export default function WhatsAppInboxScreen() {
       setOpenReactionPickerMessageId(null);
     }
   }, [openReactionPickerMessage, openReactionPickerMessageId]);
+
+  useEffect(() => {
+    if (openMessageActionMenuMessageId && !openMessageActionMenuMessage) {
+      setOpenMessageActionMenuMessageId(null);
+    }
+  }, [openMessageActionMenuMessage, openMessageActionMenuMessageId]);
 
   useEffect(() => {
     if (openChatMenuChatId && !openChatMenuChat) {
@@ -3088,6 +3235,70 @@ export default function WhatsAppInboxScreen() {
   }, [openReactionPickerMessageId, visibleMessages]);
 
   useLayoutEffect(() => {
+    if (!openMessageActionMenuMessageId || typeof window === 'undefined') {
+      setMessageActionMenuPosition(null);
+      return;
+    }
+
+    const syncPosition = () => {
+      const trigger = messageActionTriggerRefs.current[openMessageActionMenuMessageId];
+      if (!trigger) {
+        setMessageActionMenuPosition(null);
+        return;
+      }
+
+      const triggerRect = trigger.getBoundingClientRect();
+      const menuWidth = 216;
+      const menuHeight = 124;
+      const viewportPadding = 12;
+      const gap = 6;
+      const availableBelow = window.innerHeight - triggerRect.bottom - viewportPadding;
+      const availableAbove = triggerRect.top - viewportPadding;
+      const openUpward = availableBelow < Math.min(menuHeight, 120) && availableAbove > availableBelow;
+      const maxHeight = Math.max(96, Math.min(menuHeight, (openUpward ? availableAbove : availableBelow) - gap));
+      const measuredMenuHeight = Math.ceil(messageActionMenuRef.current?.getBoundingClientRect().height ?? 0);
+      const effectiveMenuHeight = Math.min(maxHeight, measuredMenuHeight || menuHeight);
+      const left = Math.max(
+        viewportPadding,
+        Math.min(triggerRect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding),
+      );
+      const top = openUpward
+        ? Math.max(viewportPadding, triggerRect.top - effectiveMenuHeight - gap)
+        : Math.min(window.innerHeight - maxHeight - viewportPadding, triggerRect.bottom + gap);
+
+      setMessageActionMenuPosition((current) => {
+        if (
+          current
+          && current.top === top
+          && current.left === left
+          && current.width === menuWidth
+          && current.maxHeight === maxHeight
+        ) {
+          return current;
+        }
+
+        return {
+          top,
+          left,
+          width: menuWidth,
+          maxHeight,
+        };
+      });
+    };
+
+    syncPosition();
+    const frameId = window.requestAnimationFrame(syncPosition);
+    window.addEventListener('resize', syncPosition);
+    window.addEventListener('scroll', syncPosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener('resize', syncPosition);
+      window.removeEventListener('scroll', syncPosition, true);
+    };
+  }, [openMessageActionMenuMessageId]);
+
+  useLayoutEffect(() => {
     if (!openChatMenuChatId || typeof window === 'undefined') {
       setChatMenuPosition(null);
       return;
@@ -3109,12 +3320,14 @@ export default function WhatsAppInboxScreen() {
       const availableAbove = triggerRect.top - viewportPadding;
       const openUpward = availableBelow < Math.min(menuHeight, 180) && availableAbove > availableBelow;
       const maxHeight = Math.max(160, Math.min(menuHeight, (openUpward ? availableAbove : availableBelow) - gap));
+      const measuredMenuHeight = Math.ceil(chatMenuRef.current?.getBoundingClientRect().height ?? 0);
+      const effectiveMenuHeight = Math.min(maxHeight, measuredMenuHeight || menuHeight);
       const left = Math.max(
         viewportPadding,
         Math.min(triggerRect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding),
       );
       const top = openUpward
-        ? Math.max(viewportPadding, triggerRect.top - maxHeight - gap)
+        ? Math.max(viewportPadding, triggerRect.top - effectiveMenuHeight - gap)
         : Math.min(window.innerHeight - maxHeight - viewportPadding, triggerRect.bottom + gap);
 
       setChatMenuPosition((current) => {
@@ -3138,10 +3351,12 @@ export default function WhatsAppInboxScreen() {
     };
 
     syncPosition();
+    const frameId = window.requestAnimationFrame(syncPosition);
     window.addEventListener('resize', syncPosition);
     window.addEventListener('scroll', syncPosition, true);
 
     return () => {
+      window.cancelAnimationFrame(frameId);
       window.removeEventListener('resize', syncPosition);
       window.removeEventListener('scroll', syncPosition, true);
     };
@@ -4508,6 +4723,7 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleToggleReactionPicker = useCallback((messageId: string) => {
+    setOpenMessageActionMenuMessageId(null);
     setOpenReactionPickerMessageId((current) => (current === messageId ? null : messageId));
   }, []);
 
@@ -4552,6 +4768,7 @@ export default function WhatsAppInboxScreen() {
 
     setEditingMessage(message);
     setEditingMessageDraft(getMessageEditableText(message));
+    setOpenMessageActionMenuMessageId(null);
   }, []);
 
   const handleCloseEditMessageModal = useCallback(() => {
@@ -4642,6 +4859,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    setOpenMessageActionMenuMessageId(null);
     setDeletingMessageId(message.id);
 
     try {
@@ -6019,53 +6237,47 @@ export default function WhatsAppInboxScreen() {
                               delete reactionAnchorRefs.current[message.id];
                             }
                           }}
-                          className="relative max-w-[80%] pb-5"
+                          className={`relative max-w-[80%] ${reactions.length > 0 ? 'pb-5' : ''}`}
                         >
                           {message.direction !== 'system' && message.external_message_id ? (
                             <>
-                              <div className={`absolute top-2 z-[3] flex flex-col gap-2 ${message.direction === 'outbound' ? '-left-10' : '-right-10'}`}>
+                              <button
+                                ref={(node) => {
+                                  if (node) {
+                                    reactionTriggerRefs.current[message.id] = node;
+                                  } else {
+                                    delete reactionTriggerRefs.current[message.id];
+                                  }
+                                }}
+                                type="button"
+                                onClick={() => handleToggleReactionPicker(message.id)}
+                                className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100`}
+                                aria-label="Reagir à mensagem"
+                                title="Reagir"
+                              >
+                                <Smile className="h-4 w-4" />
+                              </button>
+
+                              {showEditAction || showDeleteAction ? (
                                 <button
                                   ref={(node) => {
                                     if (node) {
-                                      reactionTriggerRefs.current[message.id] = node;
+                                      messageActionTriggerRefs.current[message.id] = node;
                                     } else {
-                                      delete reactionTriggerRefs.current[message.id];
+                                      delete messageActionTriggerRefs.current[message.id];
                                     }
                                   }}
                                   type="button"
-                                  onClick={() => handleToggleReactionPicker(message.id)}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm opacity-0 transition group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100"
-                                  aria-label="Reagir à mensagem"
-                                  title="Reagir"
+                                  onClick={() => handleToggleMessageActionMenu(message.id)}
+                                  className={`absolute right-3 top-2 z-[3] inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/10 text-[var(--panel-text-soft,#f7efe3)] transition ${openMessageActionMenuMessageId === message.id ? 'opacity-100' : 'opacity-0 group-hover/message:opacity-100'} hover:bg-black/20 focus:opacity-100`}
+                                  aria-label="Mais acoes da mensagem"
+                                  aria-expanded={openMessageActionMenuMessageId === message.id}
+                                  title="Mais acoes"
                                 >
-                                  <Smile className="h-4 w-4" />
+                                  <ChevronDown className={`h-4 w-4 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
                                 </button>
+                              ) : null}
 
-                                {showEditAction ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenEditMessageModal(message)}
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm opacity-0 transition group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100"
-                                    aria-label="Editar mensagem"
-                                    title="Editar mensagem"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </button>
-                                ) : null}
-
-                                {showDeleteAction ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => void handleDeleteMessage(message)}
-                                    disabled={deletingMessageId === message.id}
-                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(215,154,143,0.45)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-accent-red-text,#b4534a)] shadow-sm opacity-0 transition group-hover/message:opacity-100 hover:bg-[rgba(122,33,24,0.08)] focus:opacity-100 disabled:opacity-100"
-                                    aria-label="Apagar mensagem"
-                                    title="Apagar mensagem"
-                                  >
-                                    {deletingMessageId === message.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                                  </button>
-                                ) : null}
-                              </div>
                             </>
                           ) : null}
 
@@ -6733,6 +6945,42 @@ export default function WhatsAppInboxScreen() {
                 );
               })
             : null}
+        </PanelPopoverShell>
+
+        <PanelPopoverShell
+          ref={messageActionMenuRef}
+          isOpen={Boolean(openMessageActionMenuMessage && messageActionMenuPosition)}
+          position={messageActionMenuPosition}
+          onClose={() => setOpenMessageActionMenuMessageId(null)}
+          ariaLabel="Menu da mensagem"
+          className="before:hidden rounded-2xl border-[rgba(212,192,167,0.18)] bg-[rgba(16,12,10,0.98)] p-1 shadow-2xl"
+          style={{ width: messageActionMenuPosition?.width ?? 216 }}
+        >
+          {openMessageActionMenuMessage ? (
+            <div className="flex flex-col gap-1">
+              {canEditOutboundMessage(openMessageActionMenuMessage) ? (
+                <button
+                  type="button"
+                  onClick={() => handleOpenEditMessageModal(openMessageActionMenuMessage)}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                >
+                  <Pencil className="h-4 w-4 shrink-0" />
+                  <span>{openMessageActionMenuMessage.message_type.trim().toLowerCase() === 'text' ? 'Editar mensagem' : 'Editar legenda'}</span>
+                </button>
+              ) : null}
+              {canDeleteOutboundMessage(openMessageActionMenuMessage) ? (
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteMessage(openMessageActionMenuMessage)}
+                  disabled={deletingMessageId === openMessageActionMenuMessage.id}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-accent-red-text,#d9776b)] transition hover:bg-[rgba(122,33,24,0.16)] disabled:opacity-60"
+                >
+                  {deletingMessageId === openMessageActionMenuMessage.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
+                  <span>Apagar mensagem</span>
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </PanelPopoverShell>
 
         <PanelPopoverShell

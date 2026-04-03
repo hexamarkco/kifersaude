@@ -283,6 +283,13 @@ const normalizeChatDraftPreview = (value: string) => {
   return `${normalized.slice(0, 97).trimEnd()}...`;
 };
 
+const normalizeInboxSearch = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
 const URL_PATTERN = /https?:\/\/[^\s<]+/gi;
 
 const normalizeRenderableUrl = (value: string) => value.replace(/[),.;!?]+$/g, '');
@@ -798,25 +805,25 @@ const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMe
   return Array.from(map.values()).sort(compareMessageChronology);
 };
 
-const sortChatsByInboxOrder = (items: CommWhatsAppChat[]) => {
-  return [...items].sort((a, b) => {
-    if (a.is_pinned !== b.is_pinned) {
-      return a.is_pinned ? -1 : 1;
-    }
+const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
+  if (a.is_pinned !== b.is_pinned) {
+    return a.is_pinned ? -1 : 1;
+  }
 
-    if (a.is_pinned && b.is_pinned) {
-      const aPinnedAt = a.pinned_at ? new Date(a.pinned_at).getTime() : 0;
-      const bPinnedAt = b.pinned_at ? new Date(b.pinned_at).getTime() : 0;
-      if (aPinnedAt !== bPinnedAt) {
-        return bPinnedAt - aPinnedAt;
-      }
+  if (a.is_pinned && b.is_pinned) {
+    const aPinnedAt = a.pinned_at ? new Date(a.pinned_at).getTime() : 0;
+    const bPinnedAt = b.pinned_at ? new Date(b.pinned_at).getTime() : 0;
+    if (aPinnedAt !== bPinnedAt) {
+      return bPinnedAt - aPinnedAt;
     }
+  }
 
-    const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-    const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
-    return bTime - aTime;
-  });
+  const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+  const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+  return bTime - aTime;
 };
+
+const sortChatsByInboxOrder = (items: CommWhatsAppChat[]) => [...items].sort(compareChatsByInboxOrder);
 
 const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
   if (file.type.startsWith('image/')) {
@@ -1004,6 +1011,33 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
   }
 
   return displayName || formatCommWhatsAppPhoneLabel(chat.phone_number);
+};
+
+const getChatSearchRank = (chat: CommWhatsAppChat, query: string, connectedUserName?: string | null) => {
+  const normalizedQuery = normalizeInboxSearch(query);
+  const digitQuery = query.replace(/\D/g, '');
+
+  if (!normalizedQuery && !digitQuery) {
+    return 0;
+  }
+
+  const displayName = normalizeInboxSearch(getSafeChatDisplayName(chat, connectedUserName));
+  const phoneLabel = normalizeInboxSearch(formatCommWhatsAppPhoneLabel(chat.phone_number));
+  const phoneDigits = String(chat.phone_digits || chat.phone_number || '').replace(/\D/g, '');
+
+  if (normalizedQuery) {
+    if (displayName.startsWith(normalizedQuery)) return 0;
+    if (displayName.split(/\s+/).some((part) => part.startsWith(normalizedQuery))) return 1;
+    if (displayName.includes(normalizedQuery)) return 2;
+    if (phoneLabel.includes(normalizedQuery)) return 5;
+  }
+
+  if (digitQuery) {
+    if (phoneDigits.startsWith(digitQuery)) return 3;
+    if (phoneDigits.includes(digitQuery)) return 4;
+  }
+
+  return null;
 };
 
 const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => {
@@ -2190,8 +2224,28 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
-  const activeChats = useMemo(() => sortChatsByInboxOrder(chats.filter((chat) => !chat.is_archived)), [chats]);
-  const archivedChats = useMemo(() => sortChatsByInboxOrder(chats.filter((chat) => chat.is_archived)), [chats]);
+  const visibleChats = useMemo(() => {
+    if (!search) {
+      return chats;
+    }
+
+    return chats
+      .map((chat) => ({
+        chat,
+        rank: getChatSearchRank(chat, search, operationalState?.channel?.connected_user_name ?? null),
+      }))
+      .filter((item): item is { chat: CommWhatsAppChat; rank: number } => item.rank !== null)
+      .sort((a, b) => {
+        if (a.rank !== b.rank) {
+          return a.rank - b.rank;
+        }
+
+        return compareChatsByInboxOrder(a.chat, b.chat);
+      })
+      .map((item) => item.chat);
+  }, [chats, operationalState?.channel?.connected_user_name, search]);
+  const activeChats = useMemo(() => sortChatsByInboxOrder(visibleChats.filter((chat) => !chat.is_archived)), [visibleChats]);
+  const archivedChats = useMemo(() => sortChatsByInboxOrder(visibleChats.filter((chat) => chat.is_archived)), [visibleChats]);
   const sidebarChats = archivedSectionOpen ? archivedChats : activeChats;
   const selectedChatTranscriptLabel = useMemo(
     () => {
@@ -3726,11 +3780,10 @@ export default function WhatsAppInboxScreen() {
 
     try {
       const data = await commWhatsAppService.listChats({
-        search,
         activityFilter: chatActivityFilter,
         leadStatusFilters,
         archivedFilter: 'all',
-        limit: 200,
+        limit: 500,
       });
 
       if (requestId !== chatsRequestIdRef.current) {
@@ -3788,7 +3841,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
     }
-  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters, preserveSelectedChatInList, search]);
+  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters, preserveSelectedChatInList]);
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
@@ -6061,12 +6114,18 @@ export default function WhatsAppInboxScreen() {
                 {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
                 <div className="space-y-1">
                   <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--panel-text,#1f2937)]">
-                    {archivedSectionOpen ? 'Nenhum chat arquivado' : 'Nenhuma conversa ainda'}
+                    {search
+                      ? 'Nenhum resultado encontrado'
+                      : archivedSectionOpen
+                        ? 'Nenhum chat arquivado'
+                        : 'Nenhuma conversa ainda'}
                   </p>
                   <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">
-                    {archivedSectionOpen
-                      ? 'Arquive uma conversa para ela aparecer nesta lista separada.'
-                      : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}
+                    {search
+                      ? 'Busque pelo nome exibido ou pelo telefone da conversa.'
+                      : archivedSectionOpen
+                        ? 'Arquive uma conversa para ela aparecer nesta lista separada.'
+                        : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}
                   </p>
                 </div>
               </div>

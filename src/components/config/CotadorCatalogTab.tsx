@@ -735,10 +735,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <Layers3 className="h-3.5 w-3.5" />
               Catálogo do Cotador
             </div>
-            <h3 className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Modele operadora, linha, produto e tabela do jeito que o mercado pede</h3>
-            <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-              Exemplo real: operadora Amil, linhas diferentes, produtos como Bronze ou S750 e tabelas separadas por MEI, coparticipação e faixa de vidas.
-            </p>
+            <h3 className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Configurações do Cotador</h3>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -781,7 +778,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <OperadorasTab embedded />
       ) : activeTab === 'administradoras' ? (
         administradoras.length === 0 ? (
-          <EmptyState icon={ShieldCheck} title="Nenhuma administradora cadastrada" description="Cadastre administradoras para suportar adesão e produtos com elegibilidade institucional." />
+          <EmptyState icon={ShieldCheck} title="Nenhuma administradora cadastrada" description="Crie uma administradora." />
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {administradoras.map((item) => (
@@ -804,7 +801,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         )
       ) : activeTab === 'entidades' ? (
         entidades.length === 0 ? (
-          <EmptyState icon={Sparkles} title="Nenhuma entidade cadastrada" description="Cadastre entidades, sindicatos e associações para relacionar elegibilidade por produto." />
+          <EmptyState icon={Sparkles} title="Nenhuma entidade cadastrada" description="Crie uma entidade." />
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {entidades.map((item) => (
@@ -827,7 +824,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         )
       ) : activeTab === 'linhas' ? (
         linhas.length === 0 ? (
-          <EmptyState icon={Network} title="Nenhuma linha cadastrada" description="Cadastre linhas como Amil, Selecionada ou outras famílias comerciais antes de cadastrar os produtos." />
+          <EmptyState icon={Network} title="Nenhuma linha cadastrada" description="Crie uma linha." />
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {linhas.map((line) => (
@@ -851,14 +848,14 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         )
       ) : activeTab === 'produtos' ? (
         produtos.length === 0 ? (
-          <EmptyState icon={Building2} title="Nenhum produto cadastrado" description="Cadastre produtos como Bronze, Ouro, S380 ou S750 R1 e depois crie as tabelas comerciais por perfil e vidas." />
+          <EmptyState icon={Building2} title="Nenhum produto cadastrado" description="Crie um produto." />
         ) : (
           <div className="space-y-5">
             <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Organização de produtos</p>
-                  <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Produtos agrupados por operadora e linha</h4>
+                  <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Produtos</h4>
                 </div>
                 <div className="w-full lg:max-w-sm">
                   <Input
@@ -872,7 +869,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             </div>
 
             {groupedProducts.length === 0 ? (
-              <EmptyState icon={Search} title="Nenhum produto encontrado" description="Tente outro termo para localizar um produto, operadora ou linha." />
+              <EmptyState icon={Search} title="Nenhum produto encontrado" description="Ajuste a busca." />
             ) : (
               <div className="space-y-4">
                 {groupedProducts.map((group) => (
@@ -971,7 +968,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={entityModalKind !== null}
         onClose={resetEntityModal}
         title={entityEditingId ? 'Editar item institucional' : 'Novo item institucional'}
-        description="Cadastre administradoras e entidades que compõem a elegibilidade e distribuição comercial do Cotador."
+        description=""
         size="md"
       >
         <form onSubmit={handleEntitySubmit} className="space-y-5">
@@ -1001,7 +998,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={lineModalOpen}
         onClose={resetLineModal}
         title={lineEditingId ? 'Editar linha de produto' : 'Nova linha de produto'}
-        description="Cadastre linhas como Amil, Selecionada ou outras famílias comerciais da operadora."
+        description=""
         size="md"
       >
         <form onSubmit={handleLineSubmit} className="space-y-5">
@@ -1035,7 +1032,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={productModalOpen}
         onClose={resetProductModal}
         title={productEditingId ? 'Editar produto do Cotador' : 'Novo produto do Cotador'}
-        description="Cadastre produtos como Bronze, Ouro, Platinum, Black, S380, S450, S580 ou S750. A acomodação fica definida na tabela comercial."
+        description=""
         size="lg"
       >
         <form onSubmit={handleProductSubmit} className="space-y-5">

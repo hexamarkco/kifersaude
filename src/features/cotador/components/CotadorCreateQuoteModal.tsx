@@ -91,10 +91,7 @@ export default function CotadorCreateQuoteModal({
               <Users className="h-3.5 w-3.5" />
               Distribuição de vidas
             </div>
-            <h3 className="mt-3 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Monte a cotação com o contexto certo logo no início</h3>
-            <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-              O nome ajuda a organizar o histórico e a grade abaixo define como as tabelas do Cotador serão filtradas depois.
-            </p>
+            <h3 className="mt-3 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Nova cotação</h3>
           </div>
 
           <div>

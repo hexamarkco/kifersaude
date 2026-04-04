@@ -95,9 +95,6 @@ export default function CotadorWorkspace({
               Cotação ativa
             </div>
             <h2 className="mt-3 text-3xl font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.name}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--panel-text-soft,#5b4635)]">
-              Esta tela foca na operação da cotação: comparar planos, manter a shortlist e revisar a distribuição de vidas antes de seguir para proposta ou contrato.
-            </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -130,11 +127,7 @@ export default function CotadorWorkspace({
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">Planos da cotação</p>
               <h3 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Shortlist de comparação</h3>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                {selectedItems.length > 0
-                  ? `${selectedItems.length} plano(s) adicionados para esta cotação.`
-                  : 'Nenhum plano foi adicionado ainda. Use o botão abaixo para iniciar a comparação.'}
-              </p>
+              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{selectedItems.length} plano(s)</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={onCreateQuote}>
@@ -157,9 +150,7 @@ export default function CotadorWorkspace({
                 <Plus className="h-7 w-7" />
               </div>
               <p className="mt-5 text-xl font-semibold text-[color:var(--panel-text,#1a120d)]">Adicionar plano</p>
-              <p className="mt-2 max-w-md text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                Abra o seletor para escolher operadora, linha, produto e tabela conforme a distribuição de vidas desta cotação.
-              </p>
+              <p className="mt-2 max-w-md text-sm text-[color:var(--panel-text-soft,#5b4635)]">Selecione um plano.</p>
             </button>
           ) : (
             <div className="mt-6 grid gap-4 xl:grid-cols-2">

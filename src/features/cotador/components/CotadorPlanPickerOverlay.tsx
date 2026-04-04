@@ -285,9 +285,7 @@ export default function CotadorPlanPickerOverlay({
                       ? 'Escolha a tabela comercial'
                       : 'Escolha o produto'}
               </h3>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                Use os filtros da lateral para chegar rápido na carteira certa para {quote.name}.
-              </p>
+              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{quote.name}</p>
             </div>
             <button
               type="button"
@@ -433,7 +431,7 @@ export default function CotadorPlanPickerOverlay({
                 <div className="space-y-5">
                   <div>
                     <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione a operadora</h4>
-                    <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Comece pela operadora e depois aprofunde por linha, produto e tabela.</p>
+                    
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {operatorCards.map((card) => (
@@ -463,7 +461,7 @@ export default function CotadorPlanPickerOverlay({
                 <div className="space-y-5">
                   <div>
                     <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione a linha</h4>
-                    <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Cada linha pode abrir produtos e tabelas diferentes para MEI, não MEI e coparticipação.</p>
+                    
                   </div>
                   <div className="grid gap-4 xl:grid-cols-2">
                     {lineCards.map((line) => (
@@ -583,7 +581,7 @@ export default function CotadorPlanPickerOverlay({
                     <div className="rounded-[28px] border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-8 py-16 text-center">
                       <Search className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)]" />
                       <h4 className="mt-4 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Nenhum produto disponível</h4>
-                      <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Ajuste os filtros ou revise o catálogo do Cotador nas Configurações.</p>
+                      <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Ajuste os filtros.</p>
                     </div>
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

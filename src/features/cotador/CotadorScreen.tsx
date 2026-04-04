@@ -55,6 +55,29 @@ const buildActorOptions = (actors: CotadorCatalogActor[]) =>
     ).values(),
   ).sort((left, right) => left.label.localeCompare(right.label, 'pt-BR'));
 
+const matchesSearch = (item: CotadorCatalogItem, search: string) => {
+  const normalizedSearch = search.trim().toLowerCase();
+  if (!normalizedSearch) return true;
+
+  const values = [
+    item.titulo,
+    item.subtitulo,
+    item.linha?.name,
+    item.tabelaNome,
+    item.tabelaCodigo,
+    item.operadora.name,
+    item.administradora?.name,
+    item.modalidade,
+    item.perfilEmpresarial,
+    item.coparticipacao,
+    item.abrangencia,
+    item.acomodacao,
+    ...item.entidadesClasse.map((entity) => entity.name),
+  ];
+
+  return values.some((value) => (value ?? '').toLowerCase().includes(normalizedSearch));
+};
+
 const quoteContainsCatalogItem = (quote: CotadorQuote, catalogItemId: string) =>
   quote.selectedItems.some((item) => item.catalogItemKey === catalogItemId);
 
@@ -132,8 +155,6 @@ export default function CotadorScreen() {
   const filteredItems = useMemo(() => {
     if (!activeQuote) return [];
 
-    const normalizedSearch = filters.search.trim().toLowerCase();
-
     return quoteCatalog.filter((item) => {
       if (filters.selectedOnly && !quoteContainsCatalogItem(activeQuote, item.id)) return false;
       if (filters.operadoraId && item.operadora.id !== filters.operadoraId) return false;
@@ -147,59 +168,61 @@ export default function CotadorScreen() {
       if (item.vidasMin !== null && activeQuote.totalLives < item.vidasMin) return false;
       if (item.vidasMax !== null && activeQuote.totalLives > item.vidasMax) return false;
 
-      if (!normalizedSearch) return true;
-
-      const values = [
-        item.titulo,
-        item.subtitulo,
-        item.linha?.name,
-        item.tabelaNome,
-        item.tabelaCodigo,
-        item.operadora.name,
-        item.administradora?.name,
-        item.modalidade,
-        item.perfilEmpresarial,
-        item.coparticipacao,
-        item.abrangencia,
-        item.acomodacao,
-        ...item.entidadesClasse.map((entity) => entity.name),
-      ];
-
-      return values.some((value) => (value ?? '').toLowerCase().includes(normalizedSearch));
+      return matchesSearch(item, filters.search);
     });
   }, [activeQuote, filters, quoteCatalog]);
 
+  const getOptionScopedItems = (target: keyof CotadorCatalogFilters) => {
+    if (!activeQuote) return [] as CotadorCatalogItem[];
+
+    return quoteCatalog.filter((item) => {
+      if (target !== 'selectedOnly' && filters.selectedOnly && !quoteContainsCatalogItem(activeQuote, item.id)) return false;
+      if (target !== 'operadoraId' && filters.operadoraId && item.operadora.id !== filters.operadoraId) return false;
+      if (target !== 'linhaId' && filters.linhaId && item.linha?.id !== filters.linhaId) return false;
+      if (target !== 'administradoraId' && filters.administradoraId && item.administradora?.id !== filters.administradoraId) return false;
+      if (target !== 'entidadeId' && filters.entidadeId && !item.entidadesClasse.some((entity) => entity.id === filters.entidadeId)) return false;
+      if (target !== 'perfilEmpresarial' && filters.perfilEmpresarial && item.perfilEmpresarial !== filters.perfilEmpresarial) return false;
+      if (target !== 'coparticipacao' && filters.coparticipacao && item.coparticipacao !== filters.coparticipacao) return false;
+      if (target !== 'abrangencia' && filters.abrangencia && item.abrangencia !== filters.abrangencia) return false;
+      if (target !== 'acomodacao' && filters.acomodacao && item.acomodacao !== filters.acomodacao) return false;
+      if (item.vidasMin !== null && activeQuote.totalLives < item.vidasMin) return false;
+      if (item.vidasMax !== null && activeQuote.totalLives > item.vidasMax) return false;
+      if (target !== 'search' && !matchesSearch(item, filters.search)) return false;
+      return true;
+    });
+  };
+
   const filterOptions = useMemo(
     () => ({
-      operadoras: buildActorOptions(quoteCatalog.map((item) => item.operadora)),
+      operadoras: buildActorOptions(getOptionScopedItems('operadoraId').map((item) => item.operadora)),
       linhas: buildActorOptions(
-        quoteCatalog.map((item) => item.linha).filter((actor): actor is CotadorCatalogActor => actor !== null),
+        getOptionScopedItems('linhaId').map((item) => item.linha).filter((actor): actor is CotadorCatalogActor => actor !== null),
       ),
       administradoras: buildActorOptions(
-        quoteCatalog.map((item) => item.administradora).filter((actor): actor is CotadorCatalogActor => actor !== null),
+        getOptionScopedItems('administradoraId').map((item) => item.administradora).filter((actor): actor is CotadorCatalogActor => actor !== null),
       ),
-      entidades: buildActorOptions(quoteCatalog.flatMap((item) => item.entidadesClasse)),
+      entidades: buildActorOptions(getOptionScopedItems('entidadeId').flatMap((item) => item.entidadesClasse)),
       perfisEmpresariais: Array.from(
-        new Set(quoteCatalog.map((item) => item.perfilEmpresarial).filter((value): value is 'todos' | 'mei' | 'nao_mei' => Boolean(value))),
+        new Set(getOptionScopedItems('perfilEmpresarial').map((item) => item.perfilEmpresarial).filter((value): value is 'todos' | 'mei' | 'nao_mei' => Boolean(value))),
       ).map((value) => ({ value, label: value === 'mei' ? 'MEI' : value === 'nao_mei' ? 'Não MEI' : 'Todos' })),
       coparticipacoes: Array.from(
-        new Set(quoteCatalog.map((item) => item.coparticipacao).filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value))),
+        new Set(getOptionScopedItems('coparticipacao').map((item) => item.coparticipacao).filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value))),
       ).map((value) => ({
         value,
         label: value === 'parcial' ? 'Copart. parcial' : value === 'total' ? 'Copart. total' : 'Sem copart.',
       })),
       abrangencias: Array.from(
-        new Set(quoteCatalog.map((item) => item.abrangencia).filter((value): value is string => Boolean(value))),
+        new Set(getOptionScopedItems('abrangencia').map((item) => item.abrangencia).filter((value): value is string => Boolean(value))),
       )
         .sort((left, right) => left.localeCompare(right, 'pt-BR'))
         .map((value) => ({ value, label: value })),
       acomodacoes: Array.from(
-        new Set(quoteCatalog.map((item) => item.acomodacao).filter((value): value is string => Boolean(value))),
+        new Set(getOptionScopedItems('acomodacao').map((item) => item.acomodacao).filter((value): value is string => Boolean(value))),
       )
         .sort((left, right) => left.localeCompare(right, 'pt-BR'))
         .map((value) => ({ value, label: value })),
     }),
-    [quoteCatalog],
+    [activeQuote, filters, quoteCatalog],
   );
 
   const hasDetailedProducts = useMemo(
@@ -371,9 +394,6 @@ export default function CotadorScreen() {
               Cotador
             </div>
             <h1 className="mt-3 text-3xl font-semibold text-[color:var(--panel-text,#1a120d)] md:text-4xl">Cotações salvas</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--panel-text-soft,#5b4635)]">
-              A entrada do módulo agora fica focada no histórico. Abra uma cotação existente ou crie uma nova para entrar no workspace de comparação.
-            </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -398,9 +418,6 @@ export default function CotadorScreen() {
         <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
           <FileStack className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)]" />
           <h2 className="mt-4 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Nenhuma cotação salva ainda</h2>
-          <p className="mt-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-            Comece criando a primeira cotação e depois entre no workspace para adicionar planos, linhas e tabelas.
-          </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Button variant="secondary" onClick={() => navigate('/painel/cotador/configuracoes')}>
               Configurar catálogo

@@ -1060,14 +1060,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Abrangência</label>
               <FilterSingleSelect icon={MapPin} options={abrangenciaOptions} placeholder="Selecione a abrangência" value={productForm.abrangencia} onChange={(value) => setProductForm((current) => ({ ...current, abrangencia: value }))} />
             </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Comissão sugerida (%)</label>
-              <Input type="number" step="0.01" min="0" value={productForm.comissaoSugerida} onChange={(event) => setProductForm((current) => ({ ...current, comissaoSugerida: Number.parseFloat(event.target.value) || 0 }))} />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bônus por vida (R$)</label>
-              <Input type="number" step="0.01" min="0" value={productForm.bonusPorVidaValor} onChange={(event) => setProductForm((current) => ({ ...current, bonusPorVidaValor: Number.parseFloat(event.target.value) || 0 }))} />
-            </div>
           </div>
 
           <div>

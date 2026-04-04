@@ -4,14 +4,18 @@ import {
   supabase,
   type CotadorAdministradora,
   type CotadorEntidadeClasse,
+  type CotadorLinhaProduto,
   type CotadorProduto,
   type CotadorProdutoEntidade,
   type CotadorQuoteBeneficiaryRecord,
   type CotadorQuoteItemRecord,
   type CotadorQuoteRecord,
+  type CotadorTabela,
+  type CotadorTabelaFaixaPreco,
   type Operadora,
   type ProdutoPlano,
 } from '../../../lib/supabase';
+import { COTADOR_AGE_RANGES, type CotadorAgeRange } from '../shared/cotadorConstants';
 import {
   createEmptyCotadorAgeDistribution,
   getCotadorTotalLives,
@@ -20,7 +24,11 @@ import {
   sortCotadorQuotesByRecent,
 } from '../shared/cotadorUtils';
 import type {
+  CotadorBusinessProfile,
+  CotadorCatalogActor,
   CotadorCatalogItem,
+  CotadorCoparticipationKind,
+  CotadorPriceByAgeRange,
   CotadorQuote,
   CotadorQuoteInput,
   CotadorQuoteItem,
@@ -32,14 +40,22 @@ type CatalogManagerPayload = {
   observacoes?: string | null;
 };
 
+export type CotadorLineManagerRecord = CotadorLinhaProduto & {
+  operadora: Operadora | null;
+};
+
 export type CotadorProductManagerRecord = CotadorProduto & {
   operadora: Operadora | null;
+  linha: CotadorLinhaProduto | null;
   administradora: CotadorAdministradora | null;
   entidadesClasse: CotadorEntidadeClasse[];
 };
 
+export type CotadorPriceRowInput = Partial<Record<CotadorAgeRange, number>>;
+
 export type CotadorProductManagerInput = {
   operadora_id: string;
+  linha_id: string;
   administradora_id?: string | null;
   nome: string;
   modalidade?: string | null;
@@ -52,10 +68,32 @@ export type CotadorProductManagerInput = {
   entidadeIds: string[];
 };
 
+export type CotadorTableManagerRecord = CotadorTabela & {
+  produto: CotadorProductManagerRecord | null;
+  pricesByAgeRange: CotadorPriceByAgeRange;
+};
+
+export type CotadorTableManagerInput = {
+  produto_id: string;
+  nome: string;
+  codigo?: string | null;
+  modalidade: 'PF' | 'ADESAO' | 'PME';
+  perfil_empresarial: CotadorBusinessProfile;
+  coparticipacao: CotadorCoparticipationKind;
+  vidas_min?: number | null;
+  vidas_max?: number | null;
+  observacoes?: string | null;
+  ativo: boolean;
+  pricesByAgeRange: CotadorPriceRowInput;
+};
+
 const COTADOR_ADMINISTRADORAS_TABLE = 'cotador_administradoras';
 const COTADOR_ENTIDADES_TABLE = 'cotador_entidades_classe';
+const COTADOR_LINHAS_TABLE = 'cotador_linhas_produto';
 const COTADOR_PRODUTOS_TABLE = 'cotador_produtos';
 const COTADOR_PRODUTO_ENTIDADES_TABLE = 'cotador_produto_entidades';
+const COTADOR_TABELAS_TABLE = 'cotador_tabelas';
+const COTADOR_TABELA_PRECOS_TABLE = 'cotador_tabela_faixas_preco';
 const COTADOR_QUOTES_TABLE = 'cotador_quotes';
 const COTADOR_QUOTE_BENEFICIARIES_TABLE = 'cotador_quote_beneficiaries';
 const COTADOR_QUOTE_ITEMS_TABLE = 'cotador_quote_items';
@@ -116,87 +154,163 @@ const cleanOptionalText = (value?: string | null) => {
 
 const toNullableNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
+const sanitizePriceRows = (value: CotadorPriceRowInput): CotadorPriceByAgeRange =>
+  COTADOR_AGE_RANGES.reduce((accumulator, range) => {
+    const candidate = value[range];
+    if (typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0) {
+      accumulator[range] = candidate;
+    }
+    return accumulator;
+  }, {} as CotadorPriceByAgeRange);
+
+const buildPriceMapFromRows = (rows: CotadorTabelaFaixaPreco[]) =>
+  rows.reduce((accumulator, row) => {
+    if (COTADOR_AGE_RANGES.includes(row.age_range as CotadorAgeRange)) {
+      accumulator[row.age_range as CotadorAgeRange] = row.valor;
+    }
+    return accumulator;
+  }, {} as CotadorPriceByAgeRange);
+
+const buildActor = (id: string, name: string | null | undefined, active = true): CotadorCatalogActor => ({
+  id,
+  name: name ?? null,
+  active,
+});
+
 const compareCatalogItems = (left: CotadorCatalogItem, right: CotadorCatalogItem) => {
   const operadoraComparison = (left.operadora.name ?? '').localeCompare(right.operadora.name ?? '', 'pt-BR');
   if (operadoraComparison !== 0) {
     return operadoraComparison;
   }
 
-  const sourceRank = (source: CotadorCatalogItem['source']) => {
-    if (source === 'cotador_produto') {
-      return 0;
-    }
-    if (source === 'legacy_produto') {
-      return 1;
-    }
-    return 2;
-  };
-
-  const sourceComparison = sourceRank(left.source) - sourceRank(right.source);
-  if (sourceComparison !== 0) {
-    return sourceComparison;
+  const lineComparison = (left.linha?.name ?? '').localeCompare(right.linha?.name ?? '', 'pt-BR');
+  if (lineComparison !== 0) {
+    return lineComparison;
   }
 
-  return left.titulo.localeCompare(right.titulo, 'pt-BR');
+  const titleComparison = left.titulo.localeCompare(right.titulo, 'pt-BR');
+  if (titleComparison !== 0) {
+    return titleComparison;
+  }
+
+  return (left.tabelaNome ?? '').localeCompare(right.tabelaNome ?? '', 'pt-BR');
 };
 
-const buildCatalogFingerprint = (item: Pick<CotadorCatalogItem, 'titulo' | 'operadora' | 'modalidade' | 'abrangencia' | 'acomodacao'>) =>
-  [
-    item.operadora.id,
-    normalizeText(item.titulo),
-    normalizeText(item.modalidade),
-    normalizeText(item.abrangencia),
-    normalizeText(item.acomodacao),
-  ].join('|');
+const buildCatalogFingerprint = (
+  item: Pick<CotadorCatalogItem, 'operadora' | 'linha' | 'titulo' | 'tabelaNome' | 'modalidade' | 'perfilEmpresarial' | 'coparticipacao' | 'vidasMin' | 'vidasMax'>,
+) => [
+  item.operadora.id,
+  item.linha?.id ?? '',
+  normalizeText(item.titulo),
+  normalizeText(item.tabelaNome),
+  normalizeText(item.modalidade),
+  normalizeText(item.perfilEmpresarial),
+  normalizeText(item.coparticipacao),
+  item.vidasMin ?? '',
+  item.vidasMax ?? '',
+].join('|');
+
+const buildLineCatalogActor = (line: CotadorLinhaProduto | null | undefined) =>
+  line ? buildActor(line.id, line.nome, line.ativo) : null;
+
+const buildCotadorTableCatalogItem = (table: CotadorTableManagerRecord): CotadorCatalogItem => ({
+  id: `cotador-tabela:${table.id}`,
+  source: 'cotador_tabela',
+  cotadorLinhaId: table.produto?.linha_id ?? null,
+  cotadorTabelaId: table.id,
+  cotadorProdutoId: table.produto_id,
+  legacyProdutoPlanoId: table.produto?.legacy_produto_plano_id ?? null,
+  linha: buildLineCatalogActor(table.produto?.linha),
+  titulo: table.produto?.nome ?? table.nome,
+  subtitulo: table.produto?.linha?.nome ?? table.produto?.modalidade ?? 'Tabela comercial',
+  tabelaNome: table.nome,
+  tabelaCodigo: cleanOptionalText(table.codigo),
+  operadora: buildActor(
+    table.produto?.operadora?.id ?? table.produto?.operadora_id ?? `operadora:${table.id}`,
+    table.produto?.operadora?.nome ?? 'Operadora nao encontrada',
+    table.produto?.operadora?.ativo ?? false,
+  ),
+  administradora: table.produto?.administradora
+    ? buildActor(table.produto.administradora.id, table.produto.administradora.nome, table.produto.administradora.ativo)
+    : null,
+  entidadesClasse: (table.produto?.entidadesClasse ?? []).map((entity) => buildActor(entity.id, entity.nome, entity.ativo)),
+  modalidade: table.modalidade,
+  perfilEmpresarial: table.perfil_empresarial,
+  coparticipacao: table.coparticipacao,
+  vidasMin: table.vidas_min ?? null,
+  vidasMax: table.vidas_max ?? null,
+  pricesByAgeRange: table.pricesByAgeRange,
+  estimatedMonthlyTotal: null,
+  abrangencia: cleanOptionalText(table.produto?.abrangencia),
+  acomodacao: cleanOptionalText(table.produto?.acomodacao),
+  comissaoSugerida: toNullableNumber(table.produto?.comissao_sugerida),
+  bonusPorVidaValor: toNullableNumber(table.produto?.bonus_por_vida_valor),
+  observacao: cleanOptionalText(table.observacoes) ?? cleanOptionalText(table.produto?.observacoes),
+  ativo: Boolean(table.ativo && table.produto?.ativo && table.produto?.operadora?.ativo !== false && table.produto?.linha?.ativo !== false),
+});
 
 const buildCotadorProductCatalogItem = (product: CotadorProductManagerRecord): CotadorCatalogItem => ({
   id: `cotador-produto:${product.id}`,
   source: 'cotador_produto',
+  cotadorLinhaId: product.linha_id ?? null,
+  cotadorTabelaId: null,
   cotadorProdutoId: product.id,
   legacyProdutoPlanoId: product.legacy_produto_plano_id ?? null,
+  linha: buildLineCatalogActor(product.linha),
   titulo: product.nome,
-  subtitulo: cleanOptionalText(product.modalidade) ?? cleanOptionalText(product.administradora?.nome) ?? 'Produto do Cotador',
-  operadora: {
-    id: product.operadora?.id ?? product.operadora_id,
-    name: product.operadora?.nome ?? 'Operadora nao encontrada',
-    active: product.operadora?.ativo ?? false,
-  },
+  subtitulo: cleanOptionalText(product.linha?.nome) ?? cleanOptionalText(product.modalidade) ?? 'Produto do Cotador',
+  tabelaNome: null,
+  tabelaCodigo: null,
+  operadora: buildActor(
+    product.operadora?.id ?? product.operadora_id,
+    product.operadora?.nome ?? 'Operadora nao encontrada',
+    product.operadora?.ativo ?? false,
+  ),
   administradora: product.administradora
-    ? {
-        id: product.administradora.id,
-        name: product.administradora.nome,
-        active: product.administradora.ativo,
-      }
+    ? buildActor(product.administradora.id, product.administradora.nome, product.administradora.ativo)
     : null,
-  entidadesClasse: product.entidadesClasse.map((entity) => ({
-    id: entity.id,
-    name: entity.nome,
-    active: entity.ativo,
-  })),
+  entidadesClasse: product.entidadesClasse.map((entity) => buildActor(entity.id, entity.nome, entity.ativo)),
   modalidade: cleanOptionalText(product.modalidade),
+  perfilEmpresarial: null,
+  coparticipacao: null,
+  vidasMin: null,
+  vidasMax: null,
+  pricesByAgeRange: {},
+  estimatedMonthlyTotal: null,
   abrangencia: cleanOptionalText(product.abrangencia),
   acomodacao: cleanOptionalText(product.acomodacao),
   comissaoSugerida: toNullableNumber(product.comissao_sugerida),
   bonusPorVidaValor: toNullableNumber(product.bonus_por_vida_valor),
   observacao: cleanOptionalText(product.observacoes),
-  ativo: Boolean(product.ativo && product.operadora?.ativo !== false),
+  ativo: Boolean(product.ativo && product.operadora?.ativo !== false && product.linha?.ativo !== false),
 });
 
 const buildLegacyCatalogItem = (produto: ProdutoPlano, operadora: Operadora | null): CotadorCatalogItem => ({
   id: `legacy-produto:${produto.id}`,
   source: 'legacy_produto',
+  cotadorLinhaId: null,
+  cotadorTabelaId: null,
   cotadorProdutoId: null,
   legacyProdutoPlanoId: produto.id,
+  linha: null,
   titulo: produto.nome,
   subtitulo: cleanOptionalText(produto.modalidade) ?? 'Produto legado',
-  operadora: {
-    id: operadora?.id ?? produto.operadora_id,
-    name: operadora?.nome ?? 'Operadora nao encontrada',
-    active: operadora?.ativo ?? false,
-  },
+  tabelaNome: null,
+  tabelaCodigo: null,
+  operadora: buildActor(
+    operadora?.id ?? produto.operadora_id,
+    operadora?.nome ?? 'Operadora nao encontrada',
+    operadora?.ativo ?? false,
+  ),
   administradora: null,
   entidadesClasse: [],
   modalidade: cleanOptionalText(produto.modalidade),
+  perfilEmpresarial: null,
+  coparticipacao: null,
+  vidasMin: null,
+  vidasMax: null,
+  pricesByAgeRange: {},
+  estimatedMonthlyTotal: null,
   abrangencia: cleanOptionalText(produto.abrangencia),
   acomodacao: cleanOptionalText(produto.acomodacao),
   comissaoSugerida: toNullableNumber(produto.comissao_sugerida),
@@ -208,18 +322,25 @@ const buildLegacyCatalogItem = (produto: ProdutoPlano, operadora: Operadora | nu
 const buildOperadoraFallbackItem = (operadora: Operadora): CotadorCatalogItem => ({
   id: `operadora:${operadora.id}`,
   source: 'operadora',
+  cotadorLinhaId: null,
+  cotadorTabelaId: null,
   cotadorProdutoId: null,
   legacyProdutoPlanoId: null,
+  linha: null,
   titulo: operadora.nome,
   subtitulo: 'Carteira comercial ativa',
-  operadora: {
-    id: operadora.id,
-    name: operadora.nome,
-    active: operadora.ativo,
-  },
+  tabelaNome: null,
+  tabelaCodigo: null,
+  operadora: buildActor(operadora.id, operadora.nome, operadora.ativo),
   administradora: null,
   entidadesClasse: [],
   modalidade: null,
+  perfilEmpresarial: null,
+  coparticipacao: null,
+  vidasMin: null,
+  vidasMax: null,
+  pricesByAgeRange: {},
+  estimatedMonthlyTotal: null,
   abrangencia: null,
   acomodacao: null,
   comissaoSugerida: toNullableNumber(operadora.comissao_padrao),
@@ -241,6 +362,8 @@ const buildQuoteBeneficiariesRows = (quoteId: string, input: CotadorQuoteInput) 
 const buildQuoteItemsRows = (quoteId: string, items: CotadorQuoteItem[]) =>
   items.map((item, index) => ({
     quote_id: quoteId,
+    cotador_linha_id: item.cotadorLinhaId,
+    cotador_tabela_id: item.cotadorTabelaId,
     cotador_produto_id: item.cotadorProdutoId,
     legacy_produto_plano_id: item.legacyProdutoPlanoId,
     operadora_id: item.operadora.id,
@@ -249,10 +372,19 @@ const buildQuoteItemsRows = (quoteId: string, items: CotadorQuoteItem[]) =>
     source: item.source,
     titulo_snapshot: item.titulo,
     subtitulo_snapshot: item.subtitulo,
+    linha_nome_snapshot: item.linha?.name ?? null,
+    tabela_nome_snapshot: item.tabelaNome,
+    codigo_tabela_snapshot: item.tabelaCodigo,
     operadora_nome_snapshot: item.operadora.name ?? item.titulo,
     administradora_nome_snapshot: item.administradora?.name ?? null,
     entidade_nomes_snapshot: item.entidadesClasse.map((entity) => entity.name ?? '').filter(Boolean),
     modalidade_snapshot: item.modalidade,
+    perfil_empresarial_snapshot: item.perfilEmpresarial,
+    coparticipacao_snapshot: item.coparticipacao,
+    vidas_min_snapshot: item.vidasMin,
+    vidas_max_snapshot: item.vidasMax,
+    precos_faixa_snapshot: item.pricesByAgeRange,
+    mensalidade_total_snapshot: item.estimatedMonthlyTotal,
     abrangencia_snapshot: item.abrangencia,
     acomodacao_snapshot: item.acomodacao,
     comissao_sugerida_snapshot: item.comissaoSugerida,
@@ -265,28 +397,44 @@ const buildQuoteItemFromRow = (row: CotadorQuoteItemRecord): CotadorQuoteItem =>
   id: row.id,
   catalogItemKey: row.catalog_item_key,
   source: row.source,
+  cotadorLinhaId: row.cotador_linha_id ?? null,
+  cotadorTabelaId: row.cotador_tabela_id ?? null,
   cotadorProdutoId: row.cotador_produto_id ?? null,
   legacyProdutoPlanoId: row.legacy_produto_plano_id ?? null,
+  linha: row.linha_nome_snapshot
+    ? buildActor(row.cotador_linha_id ?? `linha:${row.id}`, row.linha_nome_snapshot, true)
+    : null,
   titulo: row.titulo_snapshot,
   subtitulo: row.subtitulo_snapshot ?? null,
-  operadora: {
-    id: row.operadora_id ?? `operadora:${row.id}`,
-    name: row.operadora_nome_snapshot,
-    active: true,
-  },
+  tabelaNome: row.tabela_nome_snapshot ?? null,
+  tabelaCodigo: row.codigo_tabela_snapshot ?? null,
+  operadora: buildActor(row.operadora_id ?? `operadora:${row.id}`, row.operadora_nome_snapshot, true),
   administradora: row.administradora_nome_snapshot
-    ? {
-        id: row.administradora_id ?? `administradora:${row.id}`,
-        name: row.administradora_nome_snapshot,
-        active: true,
-      }
+    ? buildActor(row.administradora_id ?? `administradora:${row.id}`, row.administradora_nome_snapshot, true)
     : null,
-  entidadesClasse: (Array.isArray(row.entidade_nomes_snapshot) ? row.entidade_nomes_snapshot : []).map((name, index) => ({
-    id: `entidade:${row.id}:${index}`,
-    name,
-    active: true,
-  })),
+  entidadesClasse: (Array.isArray(row.entidade_nomes_snapshot) ? row.entidade_nomes_snapshot : []).map((name, index) =>
+    buildActor(`entidade:${row.id}:${index}`, name, true),
+  ),
   modalidade: row.modalidade_snapshot ?? null,
+  perfilEmpresarial:
+    row.perfil_empresarial_snapshot === 'mei'
+    || row.perfil_empresarial_snapshot === 'nao_mei'
+    || row.perfil_empresarial_snapshot === 'todos'
+      ? row.perfil_empresarial_snapshot
+      : null,
+  coparticipacao:
+    row.coparticipacao_snapshot === 'sem'
+    || row.coparticipacao_snapshot === 'parcial'
+    || row.coparticipacao_snapshot === 'total'
+      ? row.coparticipacao_snapshot
+      : null,
+  vidasMin: typeof row.vidas_min_snapshot === 'number' ? row.vidas_min_snapshot : null,
+  vidasMax: typeof row.vidas_max_snapshot === 'number' ? row.vidas_max_snapshot : null,
+  pricesByAgeRange:
+    row.precos_faixa_snapshot && typeof row.precos_faixa_snapshot === 'object'
+      ? (row.precos_faixa_snapshot as CotadorPriceByAgeRange)
+      : {},
+  estimatedMonthlyTotal: toNullableNumber(row.mensalidade_total_snapshot),
   abrangencia: row.abrangencia_snapshot ?? null,
   acomodacao: row.acomodacao_snapshot ?? null,
   comissaoSugerida: toNullableNumber(row.comissao_sugerida_snapshot),
@@ -359,6 +507,36 @@ async function syncProductEntities(productId: string, entityIds: string[]) {
   }
 }
 
+async function syncTablePrices(tableId: string, pricesByAgeRange: CotadorPriceRowInput) {
+  const { error: deleteError } = await supabase
+    .from(COTADOR_TABELA_PRECOS_TABLE)
+    .delete()
+    .eq('tabela_id', tableId);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  const priceMap = sanitizePriceRows(pricesByAgeRange);
+  const rows = Object.entries(priceMap).map(([age_range, valor]) => ({
+    tabela_id: tableId,
+    age_range,
+    valor,
+  }));
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from(COTADOR_TABELA_PRECOS_TABLE)
+    .insert(rows);
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
 async function syncQuoteBeneficiaries(quoteId: string, input: CotadorQuoteInput) {
   const { error: deleteError } = await supabase
     .from(COTADOR_QUOTE_BENEFICIARIES_TABLE)
@@ -405,7 +583,7 @@ export const cotadorService = {
     }
   },
 
-  async createAdministradora(payload: CatalogManagerPayload): Promise<{ data: CotadorAdministradora | null; error: PostgrestError | null }> {
+  async createAdministradora(payload: CatalogManagerPayload) {
     try {
       const { data, error } = await supabase
         .from(COTADOR_ADMINISTRADORAS_TABLE)
@@ -420,7 +598,7 @@ export const cotadorService = {
     }
   },
 
-  async updateAdministradora(id: string, payload: CatalogManagerPayload): Promise<{ error: PostgrestError | null }> {
+  async updateAdministradora(id: string, payload: CatalogManagerPayload) {
     try {
       const { error } = await supabase
         .from(COTADOR_ADMINISTRADORAS_TABLE)
@@ -439,7 +617,7 @@ export const cotadorService = {
     }
   },
 
-  async deleteAdministradora(id: string): Promise<{ error: PostgrestError | null }> {
+  async deleteAdministradora(id: string) {
     try {
       const { error } = await supabase.from(COTADOR_ADMINISTRADORAS_TABLE).delete().eq('id', id);
       return { error };
@@ -470,7 +648,7 @@ export const cotadorService = {
     }
   },
 
-  async createEntidadeClasse(payload: CatalogManagerPayload): Promise<{ data: CotadorEntidadeClasse | null; error: PostgrestError | null }> {
+  async createEntidadeClasse(payload: CatalogManagerPayload) {
     try {
       const { data, error } = await supabase
         .from(COTADOR_ENTIDADES_TABLE)
@@ -485,7 +663,7 @@ export const cotadorService = {
     }
   },
 
-  async updateEntidadeClasse(id: string, payload: CatalogManagerPayload): Promise<{ error: PostgrestError | null }> {
+  async updateEntidadeClasse(id: string, payload: CatalogManagerPayload) {
     try {
       const { error } = await supabase
         .from(COTADOR_ENTIDADES_TABLE)
@@ -504,7 +682,7 @@ export const cotadorService = {
     }
   },
 
-  async deleteEntidadeClasse(id: string): Promise<{ error: PostgrestError | null }> {
+  async deleteEntidadeClasse(id: string) {
     try {
       const { error } = await supabase.from(COTADOR_ENTIDADES_TABLE).delete().eq('id', id);
       return { error };
@@ -514,12 +692,99 @@ export const cotadorService = {
     }
   },
 
+  async getLinhas(): Promise<CotadorLineManagerRecord[]> {
+    try {
+      const [{ data: linesData, error: linesError }, operadoras] = await Promise.all([
+        supabase
+          .from(COTADOR_LINHAS_TABLE)
+          .select('*')
+          .order('nome', { ascending: true }),
+        configService.getOperadoras(),
+      ]);
+
+      if (linesError) {
+        if (isMissingTableError(linesError, COTADOR_LINHAS_TABLE)) {
+          return [];
+        }
+        throw linesError;
+      }
+
+      const operadoraById = new Map(operadoras.map((operadora) => [operadora.id, operadora]));
+      return ((linesData as CotadorLinhaProduto[] | null) ?? []).map((line) => ({
+        ...line,
+        operadora: operadoraById.get(line.operadora_id) ?? null,
+      }));
+    } catch (error) {
+      console.error('Error loading cotador lines:', error);
+      return [];
+    }
+  },
+
+  async createLinha(payload: { operadora_id: string } & CatalogManagerPayload) {
+    try {
+      const { data, error } = await supabase
+        .from(COTADOR_LINHAS_TABLE)
+        .insert([{
+          operadora_id: payload.operadora_id,
+          nome: payload.nome.trim(),
+          ativo: payload.ativo,
+          observacoes: cleanOptionalText(payload.observacoes),
+        }])
+        .select()
+        .single();
+
+      return { data: (data as CotadorLinhaProduto) ?? null, error };
+    } catch (error) {
+      console.error('Error creating cotador line:', error);
+      return { data: null, error: toPostgrestError(error) };
+    }
+  },
+
+  async updateLinha(id: string, payload: { operadora_id: string } & CatalogManagerPayload) {
+    try {
+      const { error } = await supabase
+        .from(COTADOR_LINHAS_TABLE)
+        .update({
+          operadora_id: payload.operadora_id,
+          nome: payload.nome.trim(),
+          ativo: payload.ativo,
+          observacoes: cleanOptionalText(payload.observacoes),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      return { error };
+    } catch (error) {
+      console.error('Error updating cotador line:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
+  async deleteLinha(id: string) {
+    try {
+      const { error } = await supabase.from(COTADOR_LINHAS_TABLE).delete().eq('id', id);
+      return { error };
+    } catch (error) {
+      console.error('Error deleting cotador line:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
   async getProdutos(): Promise<CotadorProductManagerRecord[]> {
     try {
-      const { data: productsData, error: productsError } = await supabase
-        .from(COTADOR_PRODUTOS_TABLE)
-        .select('*')
-        .order('nome', { ascending: true });
+      const [{ data: productsData, error: productsError }, operadoras, lines, administradoras, entidades, linksData] = await Promise.all([
+        supabase
+          .from(COTADOR_PRODUTOS_TABLE)
+          .select('*')
+          .order('nome', { ascending: true }),
+        configService.getOperadoras(),
+        cotadorService.getLinhas(),
+        cotadorService.getAdministradoras(),
+        cotadorService.getEntidadesClasse(),
+        supabase
+          .from(COTADOR_PRODUTO_ENTIDADES_TABLE)
+          .select('*'),
+      ]);
 
       if (productsError) {
         if (isMissingTableError(productsError, COTADOR_PRODUTOS_TABLE)) {
@@ -528,33 +793,20 @@ export const cotadorService = {
         throw productsError;
       }
 
+      const linksError = linksData.error;
+      if (linksError && !isMissingTableError(linksError, COTADOR_PRODUTO_ENTIDADES_TABLE)) {
+        throw linksError;
+      }
+
       const products = (productsData as CotadorProduto[] | null) ?? [];
-      const [operadoras, administradoras, entidades, links] = await Promise.all([
-        configService.getOperadoras(),
-        cotadorService.getAdministradoras(),
-        cotadorService.getEntidadesClasse(),
-        (async () => {
-          const { data, error } = await supabase
-            .from(COTADOR_PRODUTO_ENTIDADES_TABLE)
-            .select('*');
-
-          if (error) {
-            if (isMissingTableError(error, COTADOR_PRODUTO_ENTIDADES_TABLE)) {
-              return [] as CotadorProdutoEntidade[];
-            }
-            throw error;
-          }
-
-          return (data as CotadorProdutoEntidade[] | null) ?? [];
-        })(),
-      ]);
-
+      const entityLinks = ((linksData.data as CotadorProdutoEntidade[] | null) ?? []);
       const operadoraById = new Map(operadoras.map((operadora) => [operadora.id, operadora]));
+      const lineById = new Map(lines.map((line) => [line.id, line]));
       const administradoraById = new Map(administradoras.map((administradora) => [administradora.id, administradora]));
       const entidadeById = new Map(entidades.map((entity) => [entity.id, entity]));
       const entityIdsByProduct = new Map<string, string[]>();
 
-      links.forEach((link) => {
+      entityLinks.forEach((link) => {
         const current = entityIdsByProduct.get(link.produto_id) ?? [];
         current.push(link.entidade_id);
         entityIdsByProduct.set(link.produto_id, current);
@@ -563,6 +815,7 @@ export const cotadorService = {
       return products.map((product) => ({
         ...product,
         operadora: operadoraById.get(product.operadora_id) ?? null,
+        linha: product.linha_id ? lineById.get(product.linha_id) ?? null : null,
         administradora: product.administradora_id ? administradoraById.get(product.administradora_id) ?? null : null,
         entidadesClasse: (entityIdsByProduct.get(product.id) ?? [])
           .map((entityId) => entidadeById.get(entityId) ?? null)
@@ -574,12 +827,13 @@ export const cotadorService = {
     }
   },
 
-  async createProduto(input: CotadorProductManagerInput): Promise<{ data: CotadorProduto | null; error: PostgrestError | null }> {
+  async createProduto(input: CotadorProductManagerInput) {
     try {
       const { data, error } = await supabase
         .from(COTADOR_PRODUTOS_TABLE)
         .insert([{
           operadora_id: input.operadora_id,
+          linha_id: input.linha_id,
           administradora_id: input.administradora_id ?? null,
           nome: input.nome.trim(),
           modalidade: cleanOptionalText(input.modalidade),
@@ -605,12 +859,13 @@ export const cotadorService = {
     }
   },
 
-  async updateProduto(id: string, input: CotadorProductManagerInput): Promise<{ error: PostgrestError | null }> {
+  async updateProduto(id: string, input: CotadorProductManagerInput) {
     try {
       const { error } = await supabase
         .from(COTADOR_PRODUTOS_TABLE)
         .update({
           operadora_id: input.operadora_id,
+          linha_id: input.linha_id,
           administradora_id: input.administradora_id ?? null,
           nome: input.nome.trim(),
           modalidade: cleanOptionalText(input.modalidade),
@@ -636,7 +891,7 @@ export const cotadorService = {
     }
   },
 
-  async deleteProduto(id: string): Promise<{ error: PostgrestError | null }> {
+  async deleteProduto(id: string) {
     try {
       const { error } = await supabase.from(COTADOR_PRODUTOS_TABLE).delete().eq('id', id);
       return { error };
@@ -646,18 +901,145 @@ export const cotadorService = {
     }
   },
 
+  async getTabelas(): Promise<CotadorTableManagerRecord[]> {
+    try {
+      const [{ data: tablesData, error: tablesError }, { data: priceData, error: priceError }, products] = await Promise.all([
+        supabase
+          .from(COTADOR_TABELAS_TABLE)
+          .select('*')
+          .order('nome', { ascending: true }),
+        supabase
+          .from(COTADOR_TABELA_PRECOS_TABLE)
+          .select('*'),
+        cotadorService.getProdutos(),
+      ]);
+
+      if (tablesError) {
+        if (isMissingTableError(tablesError, COTADOR_TABELAS_TABLE)) {
+          return [];
+        }
+        throw tablesError;
+      }
+
+      if (priceError && !isMissingTableError(priceError, COTADOR_TABELA_PRECOS_TABLE)) {
+        throw priceError;
+      }
+
+      const productById = new Map(products.map((product) => [product.id, product]));
+      const priceRows = (priceData as CotadorTabelaFaixaPreco[] | null) ?? [];
+
+      return ((tablesData as CotadorTabela[] | null) ?? []).map((table) => ({
+        ...table,
+        produto: productById.get(table.produto_id) ?? null,
+        pricesByAgeRange: buildPriceMapFromRows(priceRows.filter((row) => row.tabela_id === table.id)),
+      }));
+    } catch (error) {
+      console.error('Error loading cotador tables:', error);
+      return [];
+    }
+  },
+
+  async createTabela(input: CotadorTableManagerInput) {
+    try {
+      const { data, error } = await supabase
+        .from(COTADOR_TABELAS_TABLE)
+        .insert([{
+          produto_id: input.produto_id,
+          nome: input.nome.trim(),
+          codigo: cleanOptionalText(input.codigo),
+          modalidade: input.modalidade,
+          perfil_empresarial: input.perfil_empresarial,
+          coparticipacao: input.coparticipacao,
+          vidas_min: input.vidas_min ?? null,
+          vidas_max: input.vidas_max ?? null,
+          observacoes: cleanOptionalText(input.observacoes),
+          ativo: input.ativo,
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error };
+      }
+
+      await syncTablePrices((data as CotadorTabela).id, input.pricesByAgeRange);
+      return { data: (data as CotadorTabela) ?? null, error: null };
+    } catch (error) {
+      console.error('Error creating cotador table:', error);
+      return { data: null, error: toPostgrestError(error) };
+    }
+  },
+
+  async updateTabela(id: string, input: CotadorTableManagerInput) {
+    try {
+      const { error } = await supabase
+        .from(COTADOR_TABELAS_TABLE)
+        .update({
+          produto_id: input.produto_id,
+          nome: input.nome.trim(),
+          codigo: cleanOptionalText(input.codigo),
+          modalidade: input.modalidade,
+          perfil_empresarial: input.perfil_empresarial,
+          coparticipacao: input.coparticipacao,
+          vidas_min: input.vidas_min ?? null,
+          vidas_max: input.vidas_max ?? null,
+          observacoes: cleanOptionalText(input.observacoes),
+          ativo: input.ativo,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (error) {
+        return { error };
+      }
+
+      await syncTablePrices(id, input.pricesByAgeRange);
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating cotador table:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
+  async deleteTabela(id: string) {
+    try {
+      const { error } = await supabase.from(COTADOR_TABELAS_TABLE).delete().eq('id', id);
+      return { error };
+    } catch (error) {
+      console.error('Error deleting cotador table:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
   async loadCatalog(): Promise<CotadorCatalogItem[]> {
-    const [operadoras, legacyProdutos, cotadorProdutos] = await Promise.all([
+    const [operadoras, legacyProdutos, products, tables] = await Promise.all([
       configService.getOperadoras(),
       configService.getProdutosPlanos(),
       cotadorService.getProdutos(),
+      cotadorService.getTabelas(),
     ]);
 
     const operadoraById = new Map(operadoras.map((operadora) => [operadora.id, operadora]));
-    const normalizedItems = cotadorProdutos
-      .map(buildCotadorProductCatalogItem)
+    const normalizedTableItems = tables
+      .map(buildCotadorTableCatalogItem)
       .filter((item) => item.ativo);
-    const fingerprints = new Set(normalizedItems.map(buildCatalogFingerprint));
+    const fingerprints = new Set(normalizedTableItems.map(buildCatalogFingerprint));
+    const productsWithActiveTables = new Set(
+      tables.filter((table) => table.ativo).map((table) => table.produto_id),
+    );
+
+    const normalizedProductItems = products
+      .filter((product) => product.ativo && !productsWithActiveTables.has(product.id))
+      .map(buildCotadorProductCatalogItem)
+      .filter((item) => item.ativo)
+      .filter((item) => {
+        const fingerprint = buildCatalogFingerprint(item);
+        if (fingerprints.has(fingerprint)) {
+          return false;
+        }
+        fingerprints.add(fingerprint);
+        return true;
+      });
 
     const legacyItems = legacyProdutos
       .map((produto) => buildLegacyCatalogItem(produto, operadoraById.get(produto.operadora_id) ?? null))
@@ -667,17 +1049,16 @@ export const cotadorService = {
         if (fingerprints.has(fingerprint)) {
           return false;
         }
-
         fingerprints.add(fingerprint);
         return true;
       });
 
-    const coveredOperadoraIds = new Set([...normalizedItems, ...legacyItems].map((item) => item.operadora.id));
+    const coveredOperadoraIds = new Set([...normalizedTableItems, ...normalizedProductItems, ...legacyItems].map((item) => item.operadora.id));
     const fallbackItems = operadoras
       .filter((operadora) => operadora.ativo && !coveredOperadoraIds.has(operadora.id))
       .map(buildOperadoraFallbackItem);
 
-    return [...normalizedItems, ...legacyItems, ...fallbackItems].sort(compareCatalogItems);
+    return [...normalizedTableItems, ...normalizedProductItems, ...legacyItems, ...fallbackItems].sort(compareCatalogItems);
   },
 
   async getQuotes(): Promise<CotadorQuote[]> {
@@ -734,7 +1115,7 @@ export const cotadorService = {
     }
   },
 
-  async createQuote(input: CotadorQuoteInput): Promise<{ data: CotadorQuote | null; error: PostgrestError | null }> {
+  async createQuote(input: CotadorQuoteInput) {
     try {
       const ageDistribution = sanitizeCotadorAgeDistribution(input.ageDistribution);
       const totalLives = getCotadorTotalLives(ageDistribution);
@@ -775,7 +1156,7 @@ export const cotadorService = {
     }
   },
 
-  async updateQuote(quote: CotadorQuote, input: CotadorQuoteInput): Promise<{ data: CotadorQuote | null; error: PostgrestError | null }> {
+  async updateQuote(quote: CotadorQuote, input: CotadorQuoteInput) {
     try {
       const ageDistribution = sanitizeCotadorAgeDistribution(input.ageDistribution);
       const totalLives = getCotadorTotalLives(ageDistribution);
@@ -812,7 +1193,7 @@ export const cotadorService = {
     }
   },
 
-  async saveQuoteSelection(quoteId: string, items: CotadorQuoteItem[]): Promise<{ error: PostgrestError | null }> {
+  async saveQuoteSelection(quoteId: string, items: CotadorQuoteItem[]) {
     try {
       const { error: deleteError } = await supabase
         .from(COTADOR_QUOTE_ITEMS_TABLE)
@@ -823,21 +1204,14 @@ export const cotadorService = {
         return { error: deleteError };
       }
 
-      if (items.length === 0) {
-        const { error: touchError } = await supabase
-          .from(COTADOR_QUOTES_TABLE)
-          .update({ updated_at: new Date().toISOString() })
-          .eq('id', quoteId);
+      if (items.length > 0) {
+        const { error: insertError } = await supabase
+          .from(COTADOR_QUOTE_ITEMS_TABLE)
+          .insert(buildQuoteItemsRows(quoteId, items));
 
-        return { error: touchError };
-      }
-
-      const { error: insertError } = await supabase
-        .from(COTADOR_QUOTE_ITEMS_TABLE)
-        .insert(buildQuoteItemsRows(quoteId, items));
-
-      if (insertError) {
-        return { error: insertError };
+        if (insertError) {
+          return { error: insertError };
+        }
       }
 
       const { error: touchError } = await supabase

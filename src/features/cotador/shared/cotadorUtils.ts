@@ -10,6 +10,7 @@ import type {
   CotadorAgeDistribution,
   CotadorCatalogActor,
   CotadorCatalogItem,
+  CotadorPriceByAgeRange,
   CotadorQuote,
   CotadorQuoteDraft,
   CotadorQuoteInput,
@@ -55,6 +56,38 @@ const sanitizeCatalogActor = (value: Partial<CotadorCatalogActor> | null | undef
   active: value?.active !== false,
 });
 
+const sanitizePriceByAgeRange = (value: unknown): CotadorPriceByAgeRange => {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  return COTADOR_AGE_RANGES.reduce((accumulator, range) => {
+    const candidate = (value as Record<string, unknown>)[range];
+    if (typeof candidate === 'number' && Number.isFinite(candidate) && candidate >= 0) {
+      accumulator[range] = candidate;
+    }
+    return accumulator;
+  }, {} as CotadorPriceByAgeRange);
+};
+
+export const calculateCotadorEstimatedMonthlyTotal = (
+  ageDistribution: CotadorAgeDistribution,
+  pricesByAgeRange: CotadorPriceByAgeRange,
+) => {
+  const total = COTADOR_AGE_RANGES.reduce((sum, range) => {
+    const quantity = ageDistribution[range] ?? 0;
+    const price = pricesByAgeRange[range] ?? null;
+
+    if (!quantity || price === null || typeof price !== 'number') {
+      return sum;
+    }
+
+    return sum + quantity * price;
+  }, 0);
+
+  return total > 0 ? total : null;
+};
+
 const sanitizeQuoteItem = (value: unknown): CotadorQuoteItem | null => {
   if (!value || typeof value !== 'object') {
     return null;
@@ -78,14 +111,31 @@ const sanitizeQuoteItem = (value: unknown): CotadorQuoteItem | null => {
     id: typeof candidate.id === 'string' ? candidate.id : createQuoteItemId(),
     catalogItemKey: candidate.catalogItemKey,
     source: candidate.source,
+    cotadorLinhaId: typeof candidate.cotadorLinhaId === 'string' ? candidate.cotadorLinhaId : null,
+    cotadorTabelaId: typeof candidate.cotadorTabelaId === 'string' ? candidate.cotadorTabelaId : null,
     cotadorProdutoId: typeof candidate.cotadorProdutoId === 'string' ? candidate.cotadorProdutoId : null,
     legacyProdutoPlanoId: typeof candidate.legacyProdutoPlanoId === 'string' ? candidate.legacyProdutoPlanoId : null,
+    linha: isCotadorCatalogActor(candidate.linha) ? sanitizeCatalogActor(candidate.linha) : null,
     titulo: candidate.titulo,
     subtitulo: typeof candidate.subtitulo === 'string' ? candidate.subtitulo : null,
+    tabelaNome: typeof candidate.tabelaNome === 'string' ? candidate.tabelaNome : null,
+    tabelaCodigo: typeof candidate.tabelaCodigo === 'string' ? candidate.tabelaCodigo : null,
     operadora: sanitizeCatalogActor(isCotadorCatalogActor(candidate.operadora) ? candidate.operadora : undefined),
     administradora: isCotadorCatalogActor(candidate.administradora) ? sanitizeCatalogActor(candidate.administradora) : null,
     entidadesClasse,
     modalidade: typeof candidate.modalidade === 'string' ? candidate.modalidade : null,
+    perfilEmpresarial:
+      candidate.perfilEmpresarial === 'mei' || candidate.perfilEmpresarial === 'nao_mei' || candidate.perfilEmpresarial === 'todos'
+        ? candidate.perfilEmpresarial
+        : null,
+    coparticipacao:
+      candidate.coparticipacao === 'sem' || candidate.coparticipacao === 'parcial' || candidate.coparticipacao === 'total'
+        ? candidate.coparticipacao
+        : null,
+    vidasMin: typeof candidate.vidasMin === 'number' ? candidate.vidasMin : null,
+    vidasMax: typeof candidate.vidasMax === 'number' ? candidate.vidasMax : null,
+    pricesByAgeRange: sanitizePriceByAgeRange(candidate.pricesByAgeRange),
+    estimatedMonthlyTotal: typeof candidate.estimatedMonthlyTotal === 'number' ? candidate.estimatedMonthlyTotal : null,
     abrangencia: typeof candidate.abrangencia === 'string' ? candidate.abrangencia : null,
     acomodacao: typeof candidate.acomodacao === 'string' ? candidate.acomodacao : null,
     comissaoSugerida: typeof candidate.comissaoSugerida === 'number' ? candidate.comissaoSugerida : null,
@@ -134,14 +184,25 @@ export const buildCotadorQuoteItemFromCatalogItem = (item: CotadorCatalogItem): 
   id: createQuoteItemId(),
   catalogItemKey: item.id,
   source: item.source,
+  cotadorLinhaId: item.cotadorLinhaId,
+  cotadorTabelaId: item.cotadorTabelaId,
   cotadorProdutoId: item.cotadorProdutoId,
   legacyProdutoPlanoId: item.legacyProdutoPlanoId,
+  linha: item.linha ? sanitizeCatalogActor(item.linha) : null,
   titulo: item.titulo,
   subtitulo: item.subtitulo,
+  tabelaNome: item.tabelaNome,
+  tabelaCodigo: item.tabelaCodigo,
   operadora: sanitizeCatalogActor(item.operadora),
   administradora: item.administradora ? sanitizeCatalogActor(item.administradora) : null,
   entidadesClasse: item.entidadesClasse.map((entity) => sanitizeCatalogActor(entity)),
   modalidade: item.modalidade,
+  perfilEmpresarial: item.perfilEmpresarial,
+  coparticipacao: item.coparticipacao,
+  vidasMin: item.vidasMin,
+  vidasMax: item.vidasMax,
+  pricesByAgeRange: sanitizePriceByAgeRange(item.pricesByAgeRange),
+  estimatedMonthlyTotal: item.estimatedMonthlyTotal,
   abrangencia: item.abrangencia,
   acomodacao: item.acomodacao,
   comissaoSugerida: item.comissaoSugerida,
@@ -220,14 +281,25 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
           id: createQuoteItemId(),
           catalogItemKey,
           source: 'operadora',
+          cotadorLinhaId: null,
+          cotadorTabelaId: null,
           cotadorProdutoId: null,
           legacyProdutoPlanoId: null,
+          linha: null,
           titulo: catalogItemKey,
           subtitulo: null,
+          tabelaNome: null,
+          tabelaCodigo: null,
           operadora: sanitizeCatalogActor({ id: catalogItemKey, name: catalogItemKey, active: true }),
           administradora: null,
           entidadesClasse: [],
           modalidade: null,
+          perfilEmpresarial: null,
+          coparticipacao: null,
+          vidasMin: null,
+          vidasMax: null,
+          pricesByAgeRange: {},
+          estimatedMonthlyTotal: null,
           abrangencia: null,
           acomodacao: null,
           comissaoSugerida: null,

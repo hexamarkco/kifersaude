@@ -133,7 +133,7 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     description: "Administradoras, entidades e produtos do catalogo comercial.",
     icon: Calculator,
     accentClassName: "bg-orange-50 text-orange-700 ring-orange-100",
-    searchTerms: ["cotador", "administradora", "administradoras", "entidade", "entidades", "produto", "produtos", "catalogo"],
+    searchTerms: ["cotador", "administradora", "administradoras", "entidade", "entidades", "produto", "produtos", "linha", "linhas", "tabela", "tabelas", "mei", "coparticipacao", "catalogo"],
   },
   {
     id: "leads",

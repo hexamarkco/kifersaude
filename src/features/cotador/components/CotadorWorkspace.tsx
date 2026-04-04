@@ -1,4 +1,4 @@
-import { BadgePercent, Building2, CheckCircle2, Clock3, MapPin, Search, Sparkles, X } from 'lucide-react';
+import { BadgePercent, Building2, CheckCircle2, Clock3, Layers3, MapPin, Search, Sparkles, Table2, X } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
@@ -18,8 +18,11 @@ type CotadorWorkspaceProps = {
   selectedItems: CotadorQuoteItem[];
   filterOptions: {
     operadoras: SelectOption[];
+    linhas: SelectOption[];
     administradoras: SelectOption[];
     entidades: SelectOption[];
+    perfisEmpresariais: SelectOption[];
+    coparticipacoes: SelectOption[];
     abrangencias: SelectOption[];
     acomodacoes: SelectOption[];
   };
@@ -46,6 +49,20 @@ function MetricItem({ label, value }: MetricItemProps) {
     </div>
   );
 }
+
+const formatPerfilEmpresarial = (value: CotadorCatalogItem['perfilEmpresarial']) => {
+  if (value === 'mei') return 'MEI';
+  if (value === 'nao_mei') return 'Nao MEI';
+  if (value === 'todos') return 'Todos';
+  return 'Livre';
+};
+
+const formatCoparticipacao = (value: CotadorCatalogItem['coparticipacao']) => {
+  if (value === 'parcial') return 'Copart. parcial';
+  if (value === 'total') return 'Copart. total';
+  if (value === 'sem') return 'Sem copart.';
+  return 'A definir';
+};
 
 export default function CotadorWorkspace({
   quote,
@@ -121,11 +138,11 @@ export default function CotadorWorkspace({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-8">
           <Input
             value={filters.search}
             onChange={(event) => onUpdateFilters({ search: event.target.value })}
-            placeholder="Buscar por operadora, produto ou modalidade"
+            placeholder="Buscar por linha, produto, tabela ou modalidade"
             leftIcon={Search}
           />
           <FilterSingleSelect
@@ -134,6 +151,13 @@ export default function CotadorWorkspace({
             placeholder="Todas as operadoras"
             value={filters.operadoraId}
             onChange={(next) => onUpdateFilters({ operadoraId: next })}
+          />
+          <FilterSingleSelect
+            icon={Layers3}
+            options={filterOptions.linhas}
+            placeholder="Todas as linhas"
+            value={filters.linhaId}
+            onChange={(next) => onUpdateFilters({ linhaId: next })}
           />
           <FilterSingleSelect
             icon={BadgePercent}
@@ -150,19 +174,27 @@ export default function CotadorWorkspace({
             onChange={(next) => onUpdateFilters({ entidadeId: next })}
           />
           <FilterSingleSelect
+            icon={Table2}
+            options={filterOptions.perfisEmpresariais}
+            placeholder="Perfil empresarial"
+            value={filters.perfilEmpresarial}
+            onChange={(next) => onUpdateFilters({ perfilEmpresarial: next as CotadorCatalogFilters['perfilEmpresarial'] })}
+          />
+          <FilterSingleSelect
+            icon={Sparkles}
+            options={filterOptions.coparticipacoes}
+            placeholder="Coparticipacao"
+            value={filters.coparticipacao}
+            onChange={(next) => onUpdateFilters({ coparticipacao: next as CotadorCatalogFilters['coparticipacao'] })}
+          />
+          <FilterSingleSelect
             icon={MapPin}
             options={filterOptions.abrangencias}
             placeholder="Todas as abrangencias"
             value={filters.abrangencia}
             onChange={(next) => onUpdateFilters({ abrangencia: next })}
           />
-          <FilterSingleSelect
-            icon={Sparkles}
-            options={filterOptions.acomodacoes}
-            placeholder="Todas as acomodacoes"
-            value={filters.acomodacao}
-            onChange={(next) => onUpdateFilters({ acomodacao: next })}
-          />
+          <FilterSingleSelect icon={Sparkles} options={filterOptions.acomodacoes} placeholder="Todas as acomodacoes" value={filters.acomodacao} onChange={(next) => onUpdateFilters({ acomodacao: next })} />
         </div>
       </section>
 
@@ -212,11 +244,21 @@ export default function CotadorWorkspace({
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-full border border-[color:rgba(157,127,90,0.28)] bg-[color:rgba(255,253,250,0.86)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">
-                        {item.source === 'cotador_produto' ? 'Produto' : item.source === 'legacy_produto' ? 'Legado' : 'Operadora'}
+                        {item.source === 'cotador_tabela' ? 'Tabela' : item.source === 'cotador_produto' ? 'Produto' : item.source === 'legacy_produto' ? 'Legado' : 'Operadora'}
                           </span>
+                          {item.linha?.name && (
+                            <span className="rounded-full border border-[color:rgba(157,127,90,0.22)] bg-[color:rgba(255,253,250,0.82)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                              {item.linha.name}
+                            </span>
+                          )}
                           {item.modalidade && (
                             <span className="rounded-full border border-[color:rgba(157,127,90,0.22)] bg-[color:rgba(246,228,199,0.62)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#6f3f16)]">
                               {item.modalidade}
+                            </span>
+                          )}
+                          {item.tabelaNome && (
+                            <span className="rounded-full border border-[color:rgba(157,127,90,0.22)] bg-[color:rgba(255,253,250,0.82)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                              {item.tabelaNome}
                             </span>
                           )}
                           {isSelected && (
@@ -227,7 +269,17 @@ export default function CotadorWorkspace({
                         </div>
 
                         <h4 className="mt-3 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
-                        <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora.name ?? 'Operadora nao informada'}</p>
+                        <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                          {item.operadora.name ?? 'Operadora nao informada'}
+                          {item.linha?.name ? ` / ${item.linha.name}` : ''}
+                        </p>
+                        {(item.perfilEmpresarial || item.coparticipacao || item.vidasMin !== null || item.vidasMax !== null) && (
+                          <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+                            {`Perfil: ${formatPerfilEmpresarial(item.perfilEmpresarial)}`}
+                            {item.coparticipacao ? ` | ${formatCoparticipacao(item.coparticipacao)}` : ''}
+                            {item.vidasMin !== null || item.vidasMax !== null ? ` | Vidas: ${item.vidasMin ?? 1} a ${item.vidasMax ?? '...'}` : ''}
+                          </p>
+                        )}
                       </div>
 
                       <Button
@@ -257,10 +309,15 @@ export default function CotadorWorkspace({
                         label="Bonus por vida"
                         value={item.bonusPorVidaValor !== null ? `R$ ${item.bonusPorVidaValor.toFixed(2)}` : 'Sem bonus'}
                       />
+                      <MetricItem
+                        label="Mensalidade estimada"
+                        value={item.estimatedMonthlyTotal !== null ? `R$ ${item.estimatedMonthlyTotal.toFixed(2)}` : 'Sem tabela'}
+                      />
                     </div>
 
-                    {(item.administradora?.name || item.entidadesClasse.length > 0 || item.observacao) && (
+                    {(item.administradora?.name || item.entidadesClasse.length > 0 || item.observacao || item.tabelaCodigo) && (
                       <div className="mt-4 rounded-2xl border border-[color:rgba(157,127,90,0.2)] bg-[color:rgba(255,253,250,0.82)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                        {item.tabelaCodigo && <p>Codigo da tabela: {item.tabelaCodigo}</p>}
                         {item.administradora?.name && <p>Administradora: {item.administradora.name}</p>}
                         {item.entidadesClasse.length > 0 && <p>Entidades: {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</p>}
                         {item.observacao && <p>{item.observacao}</p>}
@@ -298,7 +355,8 @@ export default function CotadorWorkspace({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</p>
-                        <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora.name ?? 'Operadora nao informada'}</p>
+                        <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora.name ?? 'Operadora nao informada'}{item.linha?.name ? ` / ${item.linha.name}` : ''}</p>
+                        {item.tabelaNome && <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">{item.tabelaNome}</p>}
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => onToggleCatalogItem(item.catalogItemKey)} disabled={busy}>
                         <X className="h-4 w-4" />
@@ -317,6 +375,12 @@ export default function CotadorWorkspace({
                           {item.comissaoSugerida !== null ? `${item.comissaoSugerida.toFixed(2)}% de comissao` : 'Sem comissao sugerida'}
                         </span>
                       </div>
+                      {item.estimatedMonthlyTotal !== null && (
+                        <div className="flex items-center gap-2">
+                          <Table2 className="h-4 w-4 text-[color:var(--panel-text-muted,#876f5c)]" />
+                          <span>Mensalidade estimada: R$ {item.estimatedMonthlyTotal.toFixed(2)}</span>
+                        </div>
+                      )}
                       {item.administradora?.name && (
                         <div className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4 text-[color:var(--panel-text-muted,#876f5c)]" />

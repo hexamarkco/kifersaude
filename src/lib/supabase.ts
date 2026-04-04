@@ -448,9 +448,20 @@ export type CotadorEntidadeClasse = {
   updated_at: string;
 };
 
+export type CotadorLinhaProduto = {
+  id: string;
+  operadora_id: string;
+  nome: string;
+  ativo: boolean;
+  observacoes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type CotadorProduto = {
   id: string;
   operadora_id: string;
+  linha_id?: string | null;
   administradora_id?: string | null;
   legacy_produto_plano_id?: string | null;
   nome: string;
@@ -469,6 +480,31 @@ export type CotadorProdutoEntidade = {
   produto_id: string;
   entidade_id: string;
   created_at: string;
+};
+
+export type CotadorTabela = {
+  id: string;
+  produto_id: string;
+  nome: string;
+  codigo?: string | null;
+  modalidade: 'PF' | 'ADESAO' | 'PME';
+  perfil_empresarial: 'todos' | 'mei' | 'nao_mei';
+  coparticipacao: 'sem' | 'parcial' | 'total';
+  vidas_min?: number | null;
+  vidas_max?: number | null;
+  observacoes?: string | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CotadorTabelaFaixaPreco = {
+  id: string;
+  tabela_id: string;
+  age_range: string;
+  valor: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type CotadorQuoteRecord = {
@@ -494,18 +530,29 @@ export type CotadorQuoteBeneficiaryRecord = {
 export type CotadorQuoteItemRecord = {
   id: string;
   quote_id: string;
+  cotador_linha_id?: string | null;
+  cotador_tabela_id?: string | null;
   cotador_produto_id?: string | null;
   legacy_produto_plano_id?: string | null;
   operadora_id?: string | null;
   administradora_id?: string | null;
   catalog_item_key: string;
-  source: 'cotador_produto' | 'legacy_produto' | 'operadora';
+  source: 'cotador_tabela' | 'cotador_produto' | 'legacy_produto' | 'operadora';
   titulo_snapshot: string;
   subtitulo_snapshot?: string | null;
+  linha_nome_snapshot?: string | null;
+  tabela_nome_snapshot?: string | null;
+  codigo_tabela_snapshot?: string | null;
   operadora_nome_snapshot: string;
   administradora_nome_snapshot?: string | null;
   entidade_nomes_snapshot: string[];
   modalidade_snapshot?: string | null;
+  perfil_empresarial_snapshot?: string | null;
+  coparticipacao_snapshot?: string | null;
+  vidas_min_snapshot?: number | null;
+  vidas_max_snapshot?: number | null;
+  precos_faixa_snapshot?: Record<string, number> | null;
+  mensalidade_total_snapshot?: number | null;
   abrangencia_snapshot?: string | null;
   acomodacao_snapshot?: string | null;
   comissao_sugerida_snapshot?: number | null;

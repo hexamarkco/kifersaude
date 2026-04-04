@@ -7,6 +7,7 @@ import CotadorCreateQuoteModal from './components/CotadorCreateQuoteModal';
 import CotadorWorkspace from './components/CotadorWorkspace';
 import { cotadorService } from './services/cotadorService';
 import {
+  calculateCotadorEstimatedMonthlyTotal,
   buildCotadorQuoteDraft,
   buildCotadorQuoteItemFromCatalogItem,
   catalogMatchesQuoteModality,
@@ -27,8 +28,11 @@ import type {
 const DEFAULT_FILTERS: CotadorCatalogFilters = {
   search: '',
   operadoraId: '',
+  linhaId: '',
   administradoraId: '',
   entidadeId: '',
+  perfilEmpresarial: '',
+  coparticipacao: '',
   abrangencia: '',
   acomodacao: '',
   selectedOnly: false,
@@ -128,7 +132,12 @@ export default function CotadorScreen() {
       return [];
     }
 
-    return catalogItems.filter((item) => catalogMatchesQuoteModality(item.modalidade, activeQuote.modality));
+    return catalogItems
+      .filter((item) => catalogMatchesQuoteModality(item.modalidade, activeQuote.modality))
+      .map((item) => ({
+        ...item,
+        estimatedMonthlyTotal: calculateCotadorEstimatedMonthlyTotal(activeQuote.ageDistribution, item.pricesByAgeRange),
+      }));
   }, [activeQuote, catalogItems]);
 
   const filteredItems = useMemo(() => {
@@ -147,11 +156,23 @@ export default function CotadorScreen() {
         return false;
       }
 
+      if (filters.linhaId && item.linha?.id !== filters.linhaId) {
+        return false;
+      }
+
       if (filters.administradoraId && item.administradora?.id !== filters.administradoraId) {
         return false;
       }
 
       if (filters.entidadeId && !item.entidadesClasse.some((entity) => entity.id === filters.entidadeId)) {
+        return false;
+      }
+
+      if (filters.perfilEmpresarial && item.perfilEmpresarial !== filters.perfilEmpresarial) {
+        return false;
+      }
+
+      if (filters.coparticipacao && item.coparticipacao !== filters.coparticipacao) {
         return false;
       }
 
@@ -163,6 +184,14 @@ export default function CotadorScreen() {
         return false;
       }
 
+      if (item.vidasMin !== null && activeQuote.totalLives < item.vidasMin) {
+        return false;
+      }
+
+      if (item.vidasMax !== null && activeQuote.totalLives > item.vidasMax) {
+        return false;
+      }
+
       if (!normalizedSearch) {
         return true;
       }
@@ -170,9 +199,14 @@ export default function CotadorScreen() {
       const values = [
         item.titulo,
         item.subtitulo,
+        item.linha?.name,
+        item.tabelaNome,
+        item.tabelaCodigo,
         item.operadora.name,
         item.administradora?.name,
         item.modalidade,
+        item.perfilEmpresarial,
+        item.coparticipacao,
         item.abrangencia,
         item.acomodacao,
         ...item.entidadesClasse.map((entity) => entity.name),
@@ -185,12 +219,26 @@ export default function CotadorScreen() {
   const filterOptions = useMemo(
     () => ({
       operadoras: buildActorOptions(quoteCatalog.map((item) => item.operadora)),
+      linhas: buildActorOptions(
+        quoteCatalog
+          .map((item) => item.linha)
+          .filter((actor): actor is CotadorCatalogActor => actor !== null),
+      ),
       administradoras: buildActorOptions(
         quoteCatalog
           .map((item) => item.administradora)
           .filter((actor): actor is CotadorCatalogActor => actor !== null),
       ),
       entidades: buildActorOptions(quoteCatalog.flatMap((item) => item.entidadesClasse)),
+      perfisEmpresariais: Array.from(
+        new Set(quoteCatalog.map((item) => item.perfilEmpresarial).filter((value): value is 'todos' | 'mei' | 'nao_mei' => Boolean(value))),
+      ).map((value) => ({ value, label: value === 'mei' ? 'MEI' : value === 'nao_mei' ? 'Nao MEI' : 'Todos' })),
+      coparticipacoes: Array.from(
+        new Set(quoteCatalog.map((item) => item.coparticipacao).filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value))),
+      ).map((value) => ({
+        value,
+        label: value === 'parcial' ? 'Copart. parcial' : value === 'total' ? 'Copart. total' : 'Sem copart.',
+      })),
       abrangencias: Array.from(
         new Set(quoteCatalog.map((item) => item.abrangencia).filter((value): value is string => Boolean(value))),
       )
@@ -206,7 +254,7 @@ export default function CotadorScreen() {
   );
 
   const hasDetailedProducts = useMemo(
-    () => catalogItems.some((item) => item.source === 'cotador_produto' || item.source === 'legacy_produto'),
+    () => catalogItems.some((item) => item.source === 'cotador_tabela' || item.source === 'cotador_produto' || item.source === 'legacy_produto'),
     [catalogItems],
   );
 
@@ -257,7 +305,36 @@ export default function CotadorScreen() {
       return;
     }
 
-    const nextSelectedItems = activeQuote.selectedItems.filter((item) => catalogMatchesQuoteModality(item.modalidade, data.modality));
+    const nextSelectedItems = activeQuote.selectedItems
+      .map((item) => {
+        const matchingCatalogItem = catalogItems.find((catalogItem) => catalogItem.id === item.catalogItemKey);
+        if (matchingCatalogItem) {
+          return buildCotadorQuoteItemFromCatalogItem({
+            ...matchingCatalogItem,
+            estimatedMonthlyTotal: calculateCotadorEstimatedMonthlyTotal(data.ageDistribution, matchingCatalogItem.pricesByAgeRange),
+          });
+        }
+
+        return {
+          ...item,
+          estimatedMonthlyTotal: calculateCotadorEstimatedMonthlyTotal(data.ageDistribution, item.pricesByAgeRange),
+        };
+      })
+      .filter((item) => {
+        if (!catalogMatchesQuoteModality(item.modalidade, data.modality)) {
+          return false;
+        }
+
+        if (item.vidasMin !== null && data.totalLives < item.vidasMin) {
+          return false;
+        }
+
+        if (item.vidasMax !== null && data.totalLives > item.vidasMax) {
+          return false;
+        }
+
+        return true;
+      });
     const selectionResult = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
 
     if (selectionResult.error) {

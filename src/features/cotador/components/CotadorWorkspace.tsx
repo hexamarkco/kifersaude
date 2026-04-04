@@ -153,55 +153,61 @@ export default function CotadorWorkspace({
               <p className="mt-2 max-w-md text-sm text-[color:var(--panel-text-soft,#5b4635)]">Selecione um plano.</p>
             </button>
           ) : (
-            <div className="mt-6 grid gap-4 xl:grid-cols-2">
+            <div className="mt-6 grid gap-3 xl:grid-cols-2">
               {selectedItems.map((item) => (
-                <article key={item.id} className="rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
-                  <div className="flex items-start justify-between gap-4">
+                <article key={item.id} className="rounded-[24px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="rounded-full border border-[color:rgba(8,145,178,0.22)] bg-[color:rgba(8,145,178,0.1)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text,#1a120d)]">
-                          {item.operadora.name ?? 'Operadora'}
-                        </span>
-                        {item.linha?.name && (
-                          <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-soft,#5b4635)]">
-                            {item.linha.name}
-                          </span>
-                        )}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                        <span>{item.operadora.name ?? 'Operadora'}</span>
+                        {item.linha?.name && <span>:</span>}
+                        {item.linha?.name && <span>{item.linha.name}</span>}
                         {item.tabelaNome && (
-                          <span className="rounded-full border border-emerald-300/40 bg-emerald-100/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-900 dark:border-emerald-300/18 dark:bg-emerald-300/10 dark:text-emerald-100">
+                          <span className="rounded-full border border-emerald-300/40 bg-emerald-100/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-900 dark:border-emerald-300/18 dark:bg-emerald-300/10 dark:text-emerald-100">
                             {item.tabelaNome}
                           </span>
                         )}
                       </div>
-                      <h4 className="mt-4 text-xl font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
-                      <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                      <h4 className="mt-2 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
+                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
                         {item.perfilEmpresarial ? formatPerfil(item.perfilEmpresarial) : 'Perfil livre'}
                         {item.coparticipacao ? ` | ${formatCopart(item.coparticipacao)}` : ''}
                         {item.vidasMin !== null || item.vidasMax !== null ? ` | ${item.vidasMin ?? 1} a ${item.vidasMax ?? '...'} vidas` : ''}
                       </p>
                     </div>
-                    <Button variant="ghost" onClick={() => onToggleCatalogItem(item.catalogItemKey)} disabled={busy}>
+                    <Button variant="ghost" size="sm" onClick={() => onToggleCatalogItem(item.catalogItemKey)} disabled={busy}>
                       <Trash2 className="h-4 w-4" />
-                      Remover
                     </Button>
                   </div>
 
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <SummaryMetric label="Abrangência" value={item.abrangencia ?? 'A definir'} />
-                    <SummaryMetric label="Acomodação" value={item.acomodacao ?? 'A definir'} />
-                    <SummaryMetric label="Comissão" value={item.comissaoSugerida !== null ? `${item.comissaoSugerida.toFixed(2)}%` : 'Sem regra'} />
-                    <SummaryMetric label="Bônus por vida" value={item.bonusPorVidaValor !== null ? `R$ ${item.bonusPorVidaValor.toFixed(2)}` : 'Sem bônus'} />
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Abrangência</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.abrangencia ?? '-'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Acomodação</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.acomodacao ?? '-'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Comissão</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.comissaoSugerida !== null ? `${item.comissaoSugerida.toFixed(2)}%` : '-'}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Bônus</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.bonusPorVidaValor !== null ? `R$ ${item.bonusPorVidaValor.toFixed(2)}` : '-'}</p>
+                    </div>
                   </div>
 
                   {item.estimatedMonthlyTotal !== null && (
-                    <div className="mt-4 rounded-2xl border border-[color:rgba(8,145,178,0.22)] bg-[color:rgba(8,145,178,0.08)] px-4 py-3 dark:border-cyan-300/18 dark:bg-cyan-300/10">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-soft,#5b4635)] dark:text-cyan-100/80">Mensalidade estimada</p>
-                      <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-white">R$ {item.estimatedMonthlyTotal.toFixed(2)}</p>
+                    <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[color:rgba(8,145,178,0.22)] bg-[color:rgba(8,145,178,0.08)] px-4 py-3 dark:border-cyan-300/18 dark:bg-cyan-300/10">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-soft,#5b4635)] dark:text-cyan-100/80">Mensalidade</p>
+                      <p className="text-xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-white">R$ {item.estimatedMonthlyTotal.toFixed(2)}</p>
                     </div>
                   )}
 
                   {(item.administradora?.name || item.entidadesClasse.length > 0 || item.observacao) && (
-                    <div className="mt-4 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                    <div className="mt-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
                       {item.administradora?.name && <p>Administradora: {item.administradora.name}</p>}
                       {item.entidadesClasse.length > 0 && <p>Entidades: {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</p>}
                       {item.observacao && <p>{item.observacao}</p>}

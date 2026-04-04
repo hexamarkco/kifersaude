@@ -18,7 +18,7 @@ import Input from '../../../components/ui/Input';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import { cx } from '../../../lib/cx';
 import { COTADOR_MODALITY_OPTIONS, type CotadorQuoteModality } from '../shared/cotadorConstants';
-import { formatCotadorModality } from '../shared/cotadorUtils';
+import { formatCotadorCurrency, formatCotadorModality } from '../shared/cotadorUtils';
 import type { CotadorCatalogActor, CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote } from '../shared/cotadorTypes';
 
 type SelectOption = {
@@ -555,7 +555,7 @@ export default function CotadorPlanPickerOverlay({
                             {Object.entries(item.pricesByAgeRange).map(([range, value]) => (
                               <div key={`${item.id}-${range}`} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-center">
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
-                                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">R$ {value?.toFixed(2)}</p>
+                                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{formatCotadorCurrency(value)}</p>
                               </div>
                             ))}
                           </div>
@@ -563,7 +563,7 @@ export default function CotadorPlanPickerOverlay({
                           <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-[color:rgba(8,145,178,0.22)] bg-[color:rgba(8,145,178,0.08)] px-4 py-3 dark:border-cyan-300/18 dark:bg-cyan-300/10">
                             <span className="text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-cyan-100">Mensalidade estimada</span>
                             <span className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-white">
-                              {item.estimatedMonthlyTotal !== null ? `R$ ${item.estimatedMonthlyTotal.toFixed(2)}` : 'A calcular'}
+                              {item.estimatedMonthlyTotal !== null ? formatCotadorCurrency(item.estimatedMonthlyTotal) : 'A calcular'}
                             </span>
                           </div>
                         </div>
@@ -606,7 +606,7 @@ export default function CotadorPlanPickerOverlay({
                           </div>
                           <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                             <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{group.tableCount || group.itemCount} opção(ões)</span>
-                            {group.lowestPrice !== null && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">A partir de R$ {group.lowestPrice.toFixed(2)}</span>}
+                            {group.lowestPrice !== null && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">A partir de {formatCotadorCurrency(group.lowestPrice)}</span>}
                           </div>
                         </button>
                       ))}

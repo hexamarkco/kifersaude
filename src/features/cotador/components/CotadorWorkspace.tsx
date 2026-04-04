@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CalendarClock, CheckCircle2, Layers3, Plus, Settings2, Sparkles, Trash2, Users } from 'lucide-react';
 import Button from '../../../components/ui/Button';
-import { formatCotadorAgeSummary, formatCotadorDateTime, formatCotadorModality } from '../shared/cotadorUtils';
+import { formatCotadorAgeSummary, formatCotadorCurrency, formatCotadorDateTime, formatCotadorModality, formatCotadorPercent } from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 import type { CotadorQuoteModality } from '../shared/cotadorConstants';
 import CotadorPlanPickerOverlay from './CotadorPlanPickerOverlay';
@@ -191,18 +191,18 @@ export default function CotadorWorkspace({
                     </div>
                     <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Comissão</p>
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.comissaoSugerida !== null ? `${item.comissaoSugerida.toFixed(2)}%` : '-'}</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{formatCotadorPercent(item.comissaoSugerida)}</p>
                     </div>
                     <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Bônus</p>
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.bonusPorVidaValor !== null ? `R$ ${item.bonusPorVidaValor.toFixed(2)}` : '-'}</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{formatCotadorCurrency(item.bonusPorVidaValor)}</p>
                     </div>
                   </div>
 
                   {item.estimatedMonthlyTotal !== null && (
                     <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[color:rgba(8,145,178,0.22)] bg-[color:rgba(8,145,178,0.08)] px-4 py-3 dark:border-cyan-300/18 dark:bg-cyan-300/10">
                       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-soft,#5b4635)] dark:text-cyan-100/80">Mensalidade</p>
-                      <p className="text-xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-white">R$ {item.estimatedMonthlyTotal.toFixed(2)}</p>
+                      <p className="text-xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-white">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
                     </div>
                   )}
 

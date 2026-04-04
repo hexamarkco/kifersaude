@@ -18,6 +18,7 @@ import {
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { formatCurrencyFromNumber, parseFormattedNumber } from '../../lib/inputFormatters';
+import { formatCotadorCurrency } from '../../features/cotador/shared/cotadorUtils';
 import type { CotadorAgeRange } from '../../features/cotador/shared/cotadorConstants';
 import { COTADOR_AGE_RANGES } from '../../features/cotador/shared/cotadorConstants';
 import {
@@ -604,7 +605,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
     const operadoraId = lineOperadoraById.get(productForm.linhaId);
     if (!operadoraId) {
-      showMessage('error', 'Não foi possivel resolver a operadora desta linha.');
+      showMessage('error', 'Não foi possível resolver a operadora desta linha.');
       return;
     }
 
@@ -735,7 +736,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <Layers3 className="h-3.5 w-3.5" />
               Catálogo do Cotador
             </div>
-            <h3 className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Configurações do Cotador</h3>
+            <h3 className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Configurações</h3>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -899,7 +900,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                             <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                               {product.modalidade && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.modalidade}</span>}
                               {product.administradora?.nome && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.administradora.nome}</span>}
-                              {product.entidadesClasse.length > 0 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
+                      {product.entidadesClasse.length > 0 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
                               {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
                             </div>
                           </div>
@@ -954,7 +955,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                   <div key={range} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-center">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
                     <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
-                      {typeof table.pricesByAgeRange[range] === 'number' ? `R$ ${table.pricesByAgeRange[range]?.toFixed(2)}` : '-'}
+                      {typeof table.pricesByAgeRange[range] === 'number' ? formatCotadorCurrency(table.pricesByAgeRange[range]) : '-'}
                     </p>
                   </div>
                 ))}
@@ -968,7 +969,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={entityModalKind !== null}
         onClose={resetEntityModal}
         title={entityEditingId ? 'Editar item institucional' : 'Novo item institucional'}
-        description=""
+        description={undefined}
         size="md"
       >
         <form onSubmit={handleEntitySubmit} className="space-y-5">
@@ -998,7 +999,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={lineModalOpen}
         onClose={resetLineModal}
         title={lineEditingId ? 'Editar linha de produto' : 'Nova linha de produto'}
-        description=""
+        description={undefined}
         size="md"
       >
         <form onSubmit={handleLineSubmit} className="space-y-5">
@@ -1032,7 +1033,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={productModalOpen}
         onClose={resetProductModal}
         title={productEditingId ? 'Editar produto do Cotador' : 'Novo produto do Cotador'}
-        description=""
+        description={undefined}
         size="lg"
       >
         <form onSubmit={handleProductSubmit} className="space-y-5">
@@ -1102,7 +1103,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <Input value={tableForm.nome} onChange={(event) => setTableForm((current) => ({ ...current, nome: event.target.value }))} placeholder="Ex: PME MEI Copart Total 2 a 2 vidas" required />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Codigo da tabela</label>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Código da tabela</label>
               <Input
                 value={tableForm.codigo}
                 onChange={(event) => {
@@ -1122,7 +1123,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                   className="font-semibold text-[var(--panel-accent-ink,#6f3f16)] transition-opacity hover:opacity-80"
                   disabled={!autoGeneratedTableCode}
                 >
-                  Usar código automático
+                      Usar código automático
                 </button>
               </div>
             </div>
@@ -1155,10 +1156,10 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
 
           <div>
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
-              <Table2 className="h-4 w-4" />
-              Precos por faixa etária
-            </div>
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                <Table2 className="h-4 w-4" />
+                Preços por faixa etária
+              </div>
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
               {COTADOR_AGE_RANGES.map((range) => (
                 <div key={range} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-3">

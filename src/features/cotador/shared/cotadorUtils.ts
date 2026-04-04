@@ -169,10 +169,32 @@ export const getCotadorFilledAgeRanges = (distribution: CotadorAgeDistribution) 
 
 export const formatCotadorAgeSummary = (distribution: CotadorAgeDistribution) => {
   const filledRanges = getCotadorFilledAgeRanges(distribution);
-  return filledRanges.length ? filledRanges.join(' | ') : 'Nenhuma vida distribuida';
+  return filledRanges.length ? filledRanges.join(' | ') : 'Nenhuma vida distribuída';
 };
 
 export const formatCotadorModality = (modality: CotadorQuoteModality) => modalityLabelMap.get(modality) ?? modality;
+
+export const formatCotadorCurrency = (value: number | null | undefined) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '-';
+  }
+
+  return value.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  });
+};
+
+export const formatCotadorPercent = (value: number | null | undefined) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '-';
+  }
+
+  return `${value.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}%`;
+};
 
 export const buildCotadorQuoteDraft = (quote?: CotadorQuote | null): CotadorQuoteDraft => ({
   name: quote?.name ?? '',

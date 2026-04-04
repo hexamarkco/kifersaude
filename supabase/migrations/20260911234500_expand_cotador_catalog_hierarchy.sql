@@ -50,10 +50,13 @@ ON CONFLICT (operadora_id, nome) DO NOTHING;
 UPDATE public.cotador_produtos cp
 SET linha_id = cl.id
 FROM public.cotador_linhas_produto cl
-JOIN public.operadoras o ON o.id = cp.operadora_id
 WHERE cp.linha_id IS NULL
   AND cl.operadora_id = cp.operadora_id
-  AND cl.nome = o.nome;
+  AND cl.nome = (
+    SELECT o.nome
+    FROM public.operadoras o
+    WHERE o.id = cp.operadora_id
+  );
 
 CREATE INDEX IF NOT EXISTS idx_cotador_produtos_linha
   ON public.cotador_produtos (linha_id);

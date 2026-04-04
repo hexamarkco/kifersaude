@@ -61,6 +61,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="dashboard" element={<DashboardWrapper />} />
               <Route path="leads" element={<LeadsManagerWrapper />} />
               <Route path="cotador" element={<CotadorWrapper />} />
+              <Route path="cotador/configuracoes" element={<CotadorWrapper />} />
+              <Route path="cotador/:quoteId" element={<CotadorWrapper />} />
               <Route path="contratos" element={<ContractsManagerWrapper />} />
               <Route path="comissoes" element={<FinanceiroComissoesTab />} />
               <Route path="agenda" element={<FinanceiroAgendaTab />} />

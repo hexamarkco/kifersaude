@@ -46,14 +46,41 @@ const createWizardState = (mode: 'create' | 'edit', draft: CotadorQuoteDraft) =>
   draft,
 });
 
-const buildActorOptions = (actors: CotadorCatalogActor[]) =>
-  Array.from(
-    new Map(
-      actors
-        .filter((actor) => actor.name)
-        .map((actor) => [actor.id, { value: actor.id, label: actor.name ?? actor.id }]),
-    ).values(),
-  ).sort((left, right) => left.label.localeCompare(right.label, 'pt-BR'));
+const buildCountedOptions = (values: string[], formatLabel?: (value: string) => string) => {
+  const counts = new Map<string, number>();
+
+  values.filter(Boolean).forEach((value) => {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  });
+
+  return Array.from(counts.entries())
+    .sort((left, right) => left[0].localeCompare(right[0], 'pt-BR'))
+    .map(([value, count]) => ({
+      value,
+      label: `${formatLabel ? formatLabel(value) : value} (${count})`,
+    }));
+};
+
+const buildCountedActorOptions = (actors: CotadorCatalogActor[]) => {
+  const counts = new Map<string, { actor: CotadorCatalogActor; count: number }>();
+
+  actors.filter((actor) => actor.name).forEach((actor) => {
+    const current = counts.get(actor.id);
+    if (current) {
+      current.count += 1;
+      return;
+    }
+
+    counts.set(actor.id, { actor, count: 1 });
+  });
+
+  return Array.from(counts.values())
+    .sort((left, right) => (left.actor.name ?? '').localeCompare(right.actor.name ?? '', 'pt-BR'))
+    .map(({ actor, count }) => ({
+      value: actor.id,
+      label: `${actor.name ?? actor.id} (${count})`,
+    }));
+};
 
 const matchesSearch = (item: CotadorCatalogItem, search: string) => {
   const normalizedSearch = search.trim().toLowerCase();
@@ -194,33 +221,36 @@ export default function CotadorScreen() {
 
   const filterOptions = useMemo(
     () => ({
-      operadoras: buildActorOptions(getOptionScopedItems('operadoraId').map((item) => item.operadora)),
-      linhas: buildActorOptions(
+      operadoras: buildCountedActorOptions(getOptionScopedItems('operadoraId').map((item) => item.operadora)),
+      linhas: buildCountedActorOptions(
         getOptionScopedItems('linhaId').map((item) => item.linha).filter((actor): actor is CotadorCatalogActor => actor !== null),
       ),
-      administradoras: buildActorOptions(
+      administradoras: buildCountedActorOptions(
         getOptionScopedItems('administradoraId').map((item) => item.administradora).filter((actor): actor is CotadorCatalogActor => actor !== null),
       ),
-      entidades: buildActorOptions(getOptionScopedItems('entidadeId').flatMap((item) => item.entidadesClasse)),
-      perfisEmpresariais: Array.from(
-        new Set(getOptionScopedItems('perfilEmpresarial').map((item) => item.perfilEmpresarial).filter((value): value is 'todos' | 'mei' | 'nao_mei' => Boolean(value))),
-      ).map((value) => ({ value, label: value === 'mei' ? 'MEI' : value === 'nao_mei' ? 'Não MEI' : 'Todos' })),
-      coparticipacoes: Array.from(
-        new Set(getOptionScopedItems('coparticipacao').map((item) => item.coparticipacao).filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value))),
-      ).map((value) => ({
-        value,
-        label: value === 'parcial' ? 'Copart. parcial' : value === 'total' ? 'Copart. total' : 'Sem copart.',
-      })),
-      abrangencias: Array.from(
-        new Set(getOptionScopedItems('abrangencia').map((item) => item.abrangencia).filter((value): value is string => Boolean(value))),
-      )
-        .sort((left, right) => left.localeCompare(right, 'pt-BR'))
-        .map((value) => ({ value, label: value })),
-      acomodacoes: Array.from(
-        new Set(getOptionScopedItems('acomodacao').map((item) => item.acomodacao).filter((value): value is string => Boolean(value))),
-      )
-        .sort((left, right) => left.localeCompare(right, 'pt-BR'))
-        .map((value) => ({ value, label: value })),
+      entidades: buildCountedActorOptions(getOptionScopedItems('entidadeId').flatMap((item) => item.entidadesClasse)),
+      perfisEmpresariais: buildCountedOptions(
+        getOptionScopedItems('perfilEmpresarial')
+          .map((item) => item.perfilEmpresarial)
+          .filter((value): value is 'todos' | 'mei' | 'nao_mei' => Boolean(value)),
+        (value) => (value === 'mei' ? 'MEI' : value === 'nao_mei' ? 'Não MEI' : 'Todos'),
+      ),
+      coparticipacoes: buildCountedOptions(
+        getOptionScopedItems('coparticipacao')
+          .map((item) => item.coparticipacao)
+          .filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value)),
+        (value) => (value === 'parcial' ? 'Copart. parcial' : value === 'total' ? 'Copart. total' : 'Sem copart.'),
+      ),
+      abrangencias: buildCountedOptions(
+        getOptionScopedItems('abrangencia')
+          .map((item) => item.abrangencia)
+          .filter((value): value is string => Boolean(value)),
+      ),
+      acomodacoes: buildCountedOptions(
+        getOptionScopedItems('acomodacao')
+          .map((item) => item.acomodacao)
+          .filter((value): value is string => Boolean(value)),
+      ),
     }),
     [activeQuote, filters, quoteCatalog],
   );

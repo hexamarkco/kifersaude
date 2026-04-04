@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
   BadgePercent,
@@ -266,12 +267,12 @@ export default function CotadorPlanPickerOverlay({
     [filters.linhaId, lineCards],
   );
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-[color:rgba(12,16,25,0.58)] backdrop-blur-sm">
-      <div className="absolute inset-4 overflow-hidden rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_90%,var(--panel-surface-soft,#f4ede3))_0%,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))_100%)] text-[color:var(--panel-text,#1a120d)] shadow-[0_40px_120px_rgba(0,0,0,0.28)] md:inset-6">
-        <div className="flex h-full flex-col">
+  return createPortal(
+    <div className="fixed inset-0 z-[145] bg-[color:rgba(12,16,25,0.58)] backdrop-blur-sm">
+      <div className="flex h-full items-stretch justify-center p-4 md:p-6">
+        <div className="flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_90%,var(--panel-surface-soft,#f4ede3))_0%,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))_100%)] text-[color:var(--panel-text,#1a120d)] shadow-[0_40px_120px_rgba(0,0,0,0.28)]">
           <div className="flex items-center justify-between border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-6 py-5 md:px-8">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-accent-ink,#6f3f16)]">Adicionar plano</p>
@@ -619,6 +620,7 @@ export default function CotadorPlanPickerOverlay({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

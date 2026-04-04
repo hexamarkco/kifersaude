@@ -490,6 +490,7 @@ export type CotadorTabela = {
   modalidade: 'PF' | 'ADESAO' | 'PME';
   perfil_empresarial: 'todos' | 'mei' | 'nao_mei';
   coparticipacao: 'sem' | 'parcial' | 'total';
+  acomodacao?: string | null;
   vidas_min?: number | null;
   vidas_max?: number | null;
   observacoes?: string | null;

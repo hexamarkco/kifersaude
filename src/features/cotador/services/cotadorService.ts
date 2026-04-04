@@ -80,6 +80,7 @@ export type CotadorTableManagerInput = {
   modalidade: 'PF' | 'ADESAO' | 'PME';
   perfil_empresarial: CotadorBusinessProfile;
   coparticipacao: CotadorCoparticipationKind;
+  acomodacao?: string | null;
   vidas_min?: number | null;
   vidas_max?: number | null;
   observacoes?: string | null;
@@ -197,7 +198,7 @@ const compareCatalogItems = (left: CotadorCatalogItem, right: CotadorCatalogItem
 };
 
 const buildCatalogFingerprint = (
-  item: Pick<CotadorCatalogItem, 'operadora' | 'linha' | 'titulo' | 'tabelaNome' | 'modalidade' | 'perfilEmpresarial' | 'coparticipacao' | 'vidasMin' | 'vidasMax'>,
+  item: Pick<CotadorCatalogItem, 'operadora' | 'linha' | 'titulo' | 'tabelaNome' | 'modalidade' | 'perfilEmpresarial' | 'coparticipacao' | 'acomodacao' | 'vidasMin' | 'vidasMax'>,
 ) => [
   item.operadora.id,
   item.linha?.id ?? '',
@@ -206,6 +207,7 @@ const buildCatalogFingerprint = (
   normalizeText(item.modalidade),
   normalizeText(item.perfilEmpresarial),
   normalizeText(item.coparticipacao),
+  normalizeText(item.acomodacao),
   item.vidasMin ?? '',
   item.vidasMax ?? '',
 ].join('|');
@@ -242,7 +244,7 @@ const buildCotadorTableCatalogItem = (table: CotadorTableManagerRecord): Cotador
   pricesByAgeRange: table.pricesByAgeRange,
   estimatedMonthlyTotal: null,
   abrangencia: cleanOptionalText(table.produto?.abrangencia),
-  acomodacao: cleanOptionalText(table.produto?.acomodacao),
+  acomodacao: cleanOptionalText(table.acomodacao) ?? cleanOptionalText(table.produto?.acomodacao),
   comissaoSugerida: toNullableNumber(table.produto?.comissao_sugerida),
   bonusPorVidaValor: toNullableNumber(table.produto?.bonus_por_vida_valor),
   observacao: cleanOptionalText(table.observacoes) ?? cleanOptionalText(table.produto?.observacoes),
@@ -950,6 +952,7 @@ export const cotadorService = {
           modalidade: input.modalidade,
           perfil_empresarial: input.perfil_empresarial,
           coparticipacao: input.coparticipacao,
+          acomodacao: cleanOptionalText(input.acomodacao),
           vidas_min: input.vidas_min ?? null,
           vidas_max: input.vidas_max ?? null,
           observacoes: cleanOptionalText(input.observacoes),
@@ -981,6 +984,7 @@ export const cotadorService = {
           modalidade: input.modalidade,
           perfil_empresarial: input.perfil_empresarial,
           coparticipacao: input.coparticipacao,
+          acomodacao: cleanOptionalText(input.acomodacao),
           vidas_min: input.vidas_min ?? null,
           vidas_max: input.vidas_max ?? null,
           observacoes: cleanOptionalText(input.observacoes),

@@ -76,7 +76,7 @@ type ProductGroup = {
 
 const formatBusinessProfile = (value: string | null | undefined) => {
   if (value === 'mei') return 'MEI';
-  if (value === 'nao_mei') return 'Nao MEI';
+  if (value === 'nao_mei') return 'Não MEI';
   if (value === 'todos') return 'Todos';
   return 'Livre';
 };
@@ -144,31 +144,22 @@ export default function CotadorPlanPickerOverlay({
 
   const operatorCards = useMemo<OperatorCard[]>(() => {
     const grouped = new Map<string, OperatorCard>();
+    const lineMap = new Map<string, Set<string>>();
+    const productMap = new Map<string, Set<string>>();
 
     catalogItems.forEach((item) => {
       const current = grouped.get(item.operadora.id);
       if (current) {
         current.itemCount += 1;
-        if (item.linha?.id) {
-          current.lineCount = new Set([
-            ...Array.from({ length: current.lineCount }, (_, index) => `${index}`),
-          ]).size;
-        }
-        return;
+      } else {
+        grouped.set(item.operadora.id, {
+          actor: item.operadora,
+          lineCount: 0,
+          itemCount: 1,
+          productCount: 0,
+        });
       }
 
-      grouped.set(item.operadora.id, {
-        actor: item.operadora,
-        lineCount: 0,
-        itemCount: 0,
-        productCount: 0,
-      });
-    });
-
-    const lineMap = new Map<string, Set<string>>();
-    const productMap = new Map<string, Set<string>>();
-
-    catalogItems.forEach((item) => {
       const lineSet = lineMap.get(item.operadora.id) ?? new Set<string>();
       if (item.linha?.id) lineSet.add(item.linha.id);
       lineMap.set(item.operadora.id, lineSet);
@@ -176,11 +167,6 @@ export default function CotadorPlanPickerOverlay({
       const productSet = productMap.get(item.operadora.id) ?? new Set<string>();
       productSet.add(item.titulo);
       productMap.set(item.operadora.id, productSet);
-
-      const current = grouped.get(item.operadora.id);
-      if (current) {
-        current.itemCount += 1;
-      }
     });
 
     return Array.from(grouped.values())
@@ -205,13 +191,9 @@ export default function CotadorPlanPickerOverlay({
       const current = grouped.get(item.linha.id);
       if (current) {
         current.items.push(item);
-        return;
+      } else {
+        grouped.set(item.linha.id, { actor: item.linha, items: [item] });
       }
-
-      grouped.set(item.linha.id, {
-        actor: item.linha,
-        items: [item],
-      });
     });
 
     return Array.from(grouped.values())
@@ -227,42 +209,36 @@ export default function CotadorPlanPickerOverlay({
 
   const productGroups = useMemo<ProductGroup[]>(() => {
     const grouped = new Map<string, ProductGroup>();
-    const sourceItems = filters.linhaId
-      ? filteredItems
-      : lineCards.length > 0
-        ? filteredItems.filter((item) => item.linha?.id === filters.linhaId)
-        : filteredItems;
+    const sourceItems = filteredItems.filter((item) => item.source !== 'operadora');
 
-    sourceItems
-      .filter((item) => item.source !== 'operadora')
-      .forEach((item) => {
-        const key = `${item.linha?.id ?? 'sem-linha'}:${item.titulo}`;
-        const current = grouped.get(key);
-        if (current) {
-          current.itemCount += 1;
-          current.tableCount += item.source === 'cotador_tabela' ? 1 : 0;
-          current.items.push(item);
-          if (item.estimatedMonthlyTotal !== null) {
-            current.lowestPrice = current.lowestPrice === null
-              ? item.estimatedMonthlyTotal
-              : Math.min(current.lowestPrice, item.estimatedMonthlyTotal);
-          }
-          return;
+    sourceItems.forEach((item) => {
+      const key = `${item.linha?.id ?? 'sem-linha'}:${item.titulo}`;
+      const current = grouped.get(key);
+      if (current) {
+        current.itemCount += 1;
+        current.tableCount += item.source === 'cotador_tabela' ? 1 : 0;
+        current.items.push(item);
+        if (item.estimatedMonthlyTotal !== null) {
+          current.lowestPrice = current.lowestPrice === null
+            ? item.estimatedMonthlyTotal
+            : Math.min(current.lowestPrice, item.estimatedMonthlyTotal);
         }
+        return;
+      }
 
-        grouped.set(key, {
-          key,
-          title: item.titulo,
-          lineName: item.linha?.name ?? null,
-          itemCount: 1,
-          tableCount: item.source === 'cotador_tabela' ? 1 : 0,
-          lowestPrice: item.estimatedMonthlyTotal,
-          items: [item],
-        });
+      grouped.set(key, {
+        key,
+        title: item.titulo,
+        lineName: item.linha?.name ?? null,
+        itemCount: 1,
+        tableCount: item.source === 'cotador_tabela' ? 1 : 0,
+        lowestPrice: item.estimatedMonthlyTotal,
+        items: [item],
       });
+    });
 
     return Array.from(grouped.values()).sort((left, right) => left.title.localeCompare(right.title, 'pt-BR'));
-  }, [filteredItems, filters.linhaId, lineCards.length]);
+  }, [filteredItems]);
 
   const activeProductGroup = useMemo(
     () => productGroups.find((group) => group.key === selectedProductKey) ?? null,
@@ -275,10 +251,7 @@ export default function CotadorPlanPickerOverlay({
     return [...activeProductGroup.items].sort((left, right) => {
       const priceLeft = left.estimatedMonthlyTotal ?? Number.MAX_SAFE_INTEGER;
       const priceRight = right.estimatedMonthlyTotal ?? Number.MAX_SAFE_INTEGER;
-      if (priceLeft !== priceRight) {
-        return priceLeft - priceRight;
-      }
-
+      if (priceLeft !== priceRight) return priceLeft - priceRight;
       return (left.tabelaNome ?? left.titulo).localeCompare(right.tabelaNome ?? right.titulo, 'pt-BR');
     });
   }, [activeProductGroup]);
@@ -293,18 +266,16 @@ export default function CotadorPlanPickerOverlay({
     [filters.linhaId, lineCards],
   );
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[rgba(7,11,23,0.72)] backdrop-blur-sm">
-      <div className="absolute inset-4 overflow-hidden rounded-[32px] border border-[rgba(120,146,201,0.18)] bg-[linear-gradient(180deg,#101827_0%,#111c2d_100%)] text-slate-100 shadow-[0_40px_120px_rgba(0,0,0,0.45)] md:inset-6">
+    <div className="fixed inset-0 z-50 bg-[color:rgba(12,16,25,0.58)] backdrop-blur-sm">
+      <div className="absolute inset-4 overflow-hidden rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_90%,var(--panel-surface-soft,#f4ede3))_0%,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))_100%)] text-[color:var(--panel-text,#1a120d)] shadow-[0_40px_120px_rgba(0,0,0,0.28)] md:inset-6">
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b border-[rgba(120,146,201,0.15)] px-6 py-5 md:px-8">
+          <div className="flex items-center justify-between border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-6 py-5 md:px-8">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/80">Adicionar plano</p>
-              <h3 className="mt-2 text-2xl font-semibold text-white">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-accent-ink,#6f3f16)]">Adicionar plano</p>
+              <h3 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">
                 {!filters.operadoraId
                   ? 'Escolha a operadora'
                   : !filters.linhaId && lineCards.length > 0
@@ -313,14 +284,14 @@ export default function CotadorPlanPickerOverlay({
                       ? 'Escolha a tabela comercial'
                       : 'Escolha o produto'}
               </h3>
-              <p className="mt-1 text-sm text-slate-300">
-                Use os filtros da lateral para chegar rapido na carteira certa para {quote.name}.
+              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                Use os filtros da lateral para chegar rápido na carteira certa para {quote.name}.
               </p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[rgba(120,146,201,0.18)] bg-white/5 text-slate-200 transition-colors hover:bg-white/10"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text-soft,#5b4635)] transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]"
               aria-label="Fechar seletor"
             >
               <X className="h-5 w-5" />
@@ -328,11 +299,11 @@ export default function CotadorPlanPickerOverlay({
           </div>
 
           <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[320px_minmax(0,1fr)]">
-            <aside className="overflow-y-auto border-r border-[rgba(120,146,201,0.12)] bg-[rgba(8,13,24,0.62)] px-5 py-5 md:px-6">
+            <aside className="overflow-y-auto border-r border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-5 py-5 md:px-6">
               <div className="space-y-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Modalidade</p>
-                  <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl border border-[rgba(120,146,201,0.14)] bg-[rgba(255,255,255,0.03)] p-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Modalidade</p>
+                  <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-1.5 shadow-sm">
                     {COTADOR_MODALITY_OPTIONS.map((option) => {
                       const isActive = quote.modality === option.value;
                       return (
@@ -343,8 +314,8 @@ export default function CotadorPlanPickerOverlay({
                           className={cx(
                             'cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-all',
                             isActive
-                              ? 'bg-white text-slate-950 shadow-sm'
-                              : 'text-slate-300 hover:bg-white/8 hover:text-white',
+                              ? 'bg-[var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm'
+                              : 'text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]',
                           )}
                         >
                           {option.label}
@@ -354,13 +325,13 @@ export default function CotadorPlanPickerOverlay({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-[rgba(120,146,201,0.14)] bg-[rgba(255,255,255,0.03)] p-4">
+                <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Distribuicao</p>
-                      <p className="mt-1 text-base font-semibold text-white">{quote.totalLives} vidas</p>
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Distribuição</p>
+                      <p className="mt-1 text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.totalLives} vidas</p>
                     </div>
-                    <span className="rounded-full bg-cyan-400/12 px-3 py-1 text-xs font-semibold text-cyan-200">
+                    <span className="rounded-full bg-[color:rgba(8,145,178,0.1)] px-3 py-1 text-xs font-semibold text-[color:var(--panel-text,#1a120d)]">
                       {formatCotadorModality(quote.modality)}
                     </span>
                   </div>
@@ -397,41 +368,39 @@ export default function CotadorPlanPickerOverlay({
                   <FilterSingleSelect
                     icon={Sparkles}
                     options={filterOptions.coparticipacoes}
-                    placeholder="Coparticipacao"
+                    placeholder="Coparticipação"
                     value={filters.coparticipacao}
                     onChange={(next) => onUpdateFilters({ coparticipacao: next as CotadorCatalogFilters['coparticipacao'] })}
                   />
                   <FilterSingleSelect
                     icon={MapPin}
                     options={filterOptions.abrangencias}
-                    placeholder="Todas as abrangencias"
+                    placeholder="Todas as abrangências"
                     value={filters.abrangencia}
                     onChange={(next) => onUpdateFilters({ abrangencia: next })}
                   />
                   <FilterSingleSelect
                     icon={Layers3}
                     options={filterOptions.acomodacoes}
-                    placeholder="Todas as acomodacoes"
+                    placeholder="Todas as acomodações"
                     value={filters.acomodacao}
                     onChange={(next) => onUpdateFilters({ acomodacao: next })}
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" onClick={onResetFilters} fullWidth>
-                    Limpar filtros
-                  </Button>
-                </div>
+                <Button variant="secondary" onClick={onResetFilters} fullWidth>
+                  Limpar filtros
+                </Button>
               </div>
             </aside>
 
             <section className="min-h-0 overflow-y-auto px-5 py-5 md:px-8 md:py-6">
-              <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-slate-300">
+              <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
                 {filters.operadoraId && (
                   <button
                     type="button"
                     onClick={() => onUpdateFilters({ operadoraId: '', linhaId: '' })}
-                    className="inline-flex items-center gap-2 rounded-full border border-[rgba(120,146,201,0.2)] bg-white/5 px-3 py-1.5 transition-colors hover:bg-white/10"
+                    className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-1.5 transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)]"
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Voltar para operadoras
@@ -441,19 +410,19 @@ export default function CotadorPlanPickerOverlay({
                   <button
                     type="button"
                     onClick={() => onUpdateFilters({ linhaId: '' })}
-                    className="inline-flex items-center gap-2 rounded-full border border-[rgba(120,146,201,0.2)] bg-white/5 px-3 py-1.5 transition-colors hover:bg-white/10"
+                    className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-1.5 transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)]"
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Voltar para linhas
                   </button>
                 )}
                 {selectedOperator?.actor.name && (
-                  <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1.5 text-cyan-100">
+                  <span className="rounded-full border border-[color:rgba(8,145,178,0.2)] bg-[color:rgba(8,145,178,0.08)] px-3 py-1.5 text-[color:var(--panel-text,#1a120d)]">
                     {selectedOperator.actor.name}
                   </span>
                 )}
                 {selectedLine?.actor.name && (
-                  <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1.5 text-white">
+                  <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-1.5 text-[color:var(--panel-text,#1a120d)]">
                     {selectedLine.actor.name}
                   </span>
                 )}
@@ -462,8 +431,8 @@ export default function CotadorPlanPickerOverlay({
               {!filters.operadoraId ? (
                 <div className="space-y-5">
                   <div>
-                    <h4 className="text-lg font-semibold text-white">Selecione a operadora</h4>
-                    <p className="mt-1 text-sm text-slate-400">Comece pela operadora e depois aprofunde por linha, produto e tabela.</p>
+                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione a operadora</h4>
+                    <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Comece pela operadora e depois aprofunde por linha, produto e tabela.</p>
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     {operatorCards.map((card) => (
@@ -471,19 +440,19 @@ export default function CotadorPlanPickerOverlay({
                         key={card.actor.id}
                         type="button"
                         onClick={() => onUpdateFilters({ operadoraId: card.actor.id, linhaId: '' })}
-                        className="cursor-pointer rounded-[28px] border border-[rgba(120,146,201,0.15)] bg-[rgba(16,23,38,0.82)] p-5 text-left transition-all hover:-translate-y-0.5 hover:border-cyan-400/40 hover:bg-[rgba(18,31,52,0.94)]"
+                        className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))]"
                       >
                         <div className="flex items-start justify-between gap-4">
-                          <div className="rounded-2xl bg-[linear-gradient(135deg,rgba(93,164,255,0.26),rgba(17,24,39,0.1))] px-4 py-3 text-3xl font-semibold tracking-tight text-white">
+                          <div className="rounded-2xl bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_84%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-focus,#c86f1d)_30%,var(--panel-accent-ink,#6f3f16)))] px-4 py-3 text-3xl font-semibold tracking-tight text-[var(--panel-accent-ink-strong,#4a2411)]">
                             {getInitials(card.actor.name) || 'OP'}
                           </div>
-                          <Building2 className="h-5 w-5 text-slate-400" />
+                          <Building2 className="h-5 w-5 text-[color:var(--panel-text-muted,#876f5c)]" />
                         </div>
-                        <p className="mt-5 text-lg font-semibold text-white">{card.actor.name}</p>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-300">
-                          <span className="rounded-full bg-white/6 px-2.5 py-1">{card.lineCount} linhas</span>
-                          <span className="rounded-full bg-white/6 px-2.5 py-1">{card.productCount} produtos</span>
-                          <span className="rounded-full bg-white/6 px-2.5 py-1">{card.itemCount} ofertas</span>
+                        <p className="mt-5 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{card.actor.name}</p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{card.lineCount} linhas</span>
+                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{card.productCount} produtos</span>
+                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{card.itemCount} ofertas</span>
                         </div>
                       </button>
                     ))}
@@ -492,8 +461,8 @@ export default function CotadorPlanPickerOverlay({
               ) : !filters.linhaId && lineCards.length > 0 ? (
                 <div className="space-y-5">
                   <div>
-                    <h4 className="text-lg font-semibold text-white">Selecione a linha</h4>
-                    <p className="mt-1 text-sm text-slate-400">Cada linha pode abrir produtos e tabelas diferentes para MEI, não MEI e coparticipação.</p>
+                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione a linha</h4>
+                    <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Cada linha pode abrir produtos e tabelas diferentes para MEI, não MEI e coparticipação.</p>
                   </div>
                   <div className="grid gap-4 xl:grid-cols-2">
                     {lineCards.map((line) => (
@@ -501,23 +470,23 @@ export default function CotadorPlanPickerOverlay({
                         key={line.actor.id}
                         type="button"
                         onClick={() => onUpdateFilters({ linhaId: line.actor.id })}
-                        className="cursor-pointer rounded-[28px] border border-[rgba(120,146,201,0.15)] bg-[rgba(9,14,26,0.92)] p-5 text-left transition-all hover:border-cyan-400/38 hover:bg-[rgba(11,18,34,0.98)]"
+                        className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_74%,var(--panel-surface-soft,#f4ede3))]"
                       >
                         <div className="flex items-center justify-between gap-4">
                           <div>
-                            <p className="text-2xl font-semibold text-white">{line.actor.name}</p>
-                            <p className="mt-2 text-sm text-slate-400">{line.productCount} produto(s) | {line.tableCount} tabela(s)</p>
+                            <p className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{line.actor.name}</p>
+                            <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{line.productCount} produto(s) | {line.tableCount} tabela(s)</p>
                           </div>
-                          <ArrowLeft className="h-5 w-5 rotate-180 text-slate-400" />
+                          <ArrowLeft className="h-5 w-5 rotate-180 text-[color:var(--panel-text-muted,#876f5c)]" />
                         </div>
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
+                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                           {line.coparticipacoes.map((item) => (
-                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">
                               {item}
                             </span>
                           ))}
                           {line.businessProfiles.map((item) => (
-                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">
                               {item}
                             </span>
                           ))}
@@ -530,8 +499,8 @@ export default function CotadorPlanPickerOverlay({
                 <div className="space-y-5">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h4 className="text-lg font-semibold text-white">Selecione a tabela</h4>
-                      <p className="mt-1 text-sm text-slate-400">
+                      <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione a tabela</h4>
+                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
                         {activeProductGroup.title}
                         {activeProductGroup.lineName ? ` | ${activeProductGroup.lineName}` : ''}
                       </p>
@@ -547,16 +516,16 @@ export default function CotadorPlanPickerOverlay({
                         <div
                           key={item.id}
                           className={cx(
-                            'rounded-[28px] border p-5 transition-all',
+                            'rounded-[28px] border p-5 transition-all shadow-sm',
                             isSelected
-                              ? 'border-emerald-400/35 bg-emerald-500/10'
-                              : 'border-[rgba(120,146,201,0.15)] bg-[rgba(16,23,38,0.82)]',
+                              ? 'border-emerald-300/60 bg-emerald-50 dark:border-emerald-400/35 dark:bg-emerald-500/10'
+                              : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
                           )}
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <p className="text-lg font-semibold text-white">{item.tabelaNome ?? item.titulo}</p>
-                              <p className="mt-1 text-sm text-slate-400">{item.tabelaCodigo ?? item.linha?.name ?? 'Tabela comercial'}</p>
+                              <p className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.tabelaNome ?? item.titulo}</p>
+                              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.tabelaCodigo ?? item.linha?.name ?? 'Tabela comercial'}</p>
                             </div>
                             <Button
                               onClick={() => {
@@ -577,24 +546,24 @@ export default function CotadorPlanPickerOverlay({
                             </Button>
                           </div>
 
-                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
-                            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">{formatBusinessProfile(item.perfilEmpresarial)}</span>
-                            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">{formatCoparticipacao(item.coparticipacao)}</span>
-                            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">{formatLivesRange(item)}</span>
+                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{formatBusinessProfile(item.perfilEmpresarial)}</span>
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{formatCoparticipacao(item.coparticipacao)}</span>
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{formatLivesRange(item)}</span>
                           </div>
 
                           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
                             {Object.entries(item.pricesByAgeRange).map(([range, value]) => (
-                              <div key={`${item.id}-${range}`} className="rounded-2xl border border-white/8 bg-white/4 px-3 py-2 text-center">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{range}</p>
-                                <p className="mt-1 text-sm font-semibold text-white">R$ {value?.toFixed(2)}</p>
+                              <div key={`${item.id}-${range}`} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-center">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
+                                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">R$ {value?.toFixed(2)}</p>
                               </div>
                             ))}
                           </div>
 
-                          <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-cyan-400/15 bg-cyan-400/8 px-4 py-3">
-                            <span className="text-sm text-cyan-100">Mensalidade estimada</span>
-                            <span className="text-lg font-semibold text-white">
+                          <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-[color:rgba(8,145,178,0.22)] bg-[color:rgba(8,145,178,0.08)] px-4 py-3 dark:border-cyan-300/18 dark:bg-cyan-300/10">
+                            <span className="text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-cyan-100">Mensalidade estimada</span>
+                            <span className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-white">
                               {item.estimatedMonthlyTotal !== null ? `R$ ${item.estimatedMonthlyTotal.toFixed(2)}` : 'A calcular'}
                             </span>
                           </div>
@@ -606,14 +575,14 @@ export default function CotadorPlanPickerOverlay({
               ) : (
                 <div className="space-y-5">
                   <div>
-                    <h4 className="text-lg font-semibold text-white">Selecione o produto</h4>
-                    <p className="mt-1 text-sm text-slate-400">Depois disso voce escolhe a tabela ideal para a faixa de vidas desta cotacao.</p>
+                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione o produto</h4>
+                    <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Depois disso você escolhe a tabela ideal para a faixa de vidas desta cotação.</p>
                   </div>
                   {productGroups.length === 0 ? (
-                    <div className="rounded-[28px] border border-dashed border-white/12 bg-white/4 px-8 py-16 text-center">
-                      <Search className="mx-auto h-10 w-10 text-slate-400" />
-                      <h4 className="mt-4 text-lg font-semibold text-white">Nenhum produto disponivel</h4>
-                      <p className="mt-2 text-sm text-slate-400">Ajuste os filtros ou revise o catalogo do Cotador nas Configuracoes.</p>
+                    <div className="rounded-[28px] border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-8 py-16 text-center">
+                      <Search className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)]" />
+                      <h4 className="mt-4 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Nenhum produto disponível</h4>
+                      <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Ajuste os filtros ou revise o catálogo do Cotador nas Configurações.</p>
                     </div>
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -623,22 +592,22 @@ export default function CotadorPlanPickerOverlay({
                           type="button"
                           onClick={() => setSelectedProductKey(group.key)}
                           className={cx(
-                            'cursor-pointer rounded-[28px] border p-5 text-left transition-all',
+                            'cursor-pointer rounded-[28px] border p-5 text-left shadow-sm transition-all',
                             selectedProductKey === group.key
-                              ? 'border-cyan-400/45 bg-cyan-400/10'
-                              : 'border-[rgba(120,146,201,0.15)] bg-[rgba(16,23,38,0.82)] hover:border-cyan-400/30 hover:bg-[rgba(18,31,52,0.94)]',
+                              ? 'border-[color:rgba(8,145,178,0.3)] bg-[color:rgba(8,145,178,0.08)]'
+                              : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_74%,var(--panel-surface-soft,#f4ede3))]',
                           )}
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div>
-                              <p className="text-xl font-semibold text-white">{group.title}</p>
-                              <p className="mt-2 text-sm text-slate-400">{group.lineName ?? 'Produto avulso'}</p>
+                              <p className="text-xl font-semibold text-[color:var(--panel-text,#1a120d)]">{group.title}</p>
+                              <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{group.lineName ?? 'Produto avulso'}</p>
                             </div>
-                            <ArrowLeft className="h-5 w-5 rotate-180 text-slate-400" />
+                            <ArrowLeft className="h-5 w-5 rotate-180 text-[color:var(--panel-text-muted,#876f5c)]" />
                           </div>
-                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
-                            <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">{group.tableCount || group.itemCount} opcao(oes)</span>
-                            {group.lowestPrice !== null && <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">A partir de R$ {group.lowestPrice.toFixed(2)}</span>}
+                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{group.tableCount || group.itemCount} opção(ões)</span>
+                            {group.lowestPrice !== null && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">A partir de R$ {group.lowestPrice.toFixed(2)}</span>}
                           </div>
                         </button>
                       ))}

@@ -181,7 +181,7 @@ export default function CotadorScreen() {
       entidades: buildActorOptions(quoteCatalog.flatMap((item) => item.entidadesClasse)),
       perfisEmpresariais: Array.from(
         new Set(quoteCatalog.map((item) => item.perfilEmpresarial).filter((value): value is 'todos' | 'mei' | 'nao_mei' => Boolean(value))),
-      ).map((value) => ({ value, label: value === 'mei' ? 'MEI' : value === 'nao_mei' ? 'Nao MEI' : 'Todos' })),
+      ).map((value) => ({ value, label: value === 'mei' ? 'MEI' : value === 'nao_mei' ? 'Não MEI' : 'Todos' })),
       coparticipacoes: Array.from(
         new Set(quoteCatalog.map((item) => item.coparticipacao).filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value))),
       ).map((value) => ({
@@ -243,14 +243,14 @@ export default function CotadorScreen() {
     if (wizardState.mode === 'create') {
       const { data, error } = await cotadorService.createQuote(input);
       if (error || !data) {
-        toast.error('Nao foi possivel criar a cotacao agora.');
+        toast.error('Não foi possível criar a cotação agora.');
         setWizardBusy(false);
         return;
       }
 
       setQuotes((current) => sortCotadorQuotesByRecent([data, ...current]));
       setWizardState((current) => ({ ...current, isOpen: false }));
-      toast.success('Cotacao criada com sucesso.');
+      toast.success('Cotação criada com sucesso.');
       setWizardBusy(false);
       navigate(`/painel/cotador/${data.id}`);
       return;
@@ -263,7 +263,7 @@ export default function CotadorScreen() {
 
     const { data, error } = await cotadorService.updateQuote(activeQuote, input);
     if (error || !data) {
-      toast.error('Nao foi possivel atualizar a cotacao agora.');
+      toast.error('Não foi possível atualizar a cotação agora.');
       setWizardBusy(false);
       return;
     }
@@ -271,7 +271,7 @@ export default function CotadorScreen() {
     const nextSelectedItems = refreshSelectedItems(data, activeQuote.selectedItems);
     const selectionResult = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
     if (selectionResult.error) {
-      toast.error('A cotacao foi atualizada, mas a shortlist nao conseguiu ser sincronizada.');
+      toast.error('A cotação foi atualizada, mas a shortlist não conseguiu ser sincronizada.');
       setWizardBusy(false);
       return;
     }
@@ -283,7 +283,7 @@ export default function CotadorScreen() {
 
     setQuotes((current) => sortCotadorQuotesByRecent(current.map((quote) => (quote.id === nextQuote.id ? nextQuote : quote))));
     setWizardState((current) => ({ ...current, isOpen: false }));
-    toast.success('Cotacao atualizada com sucesso.');
+    toast.success('Cotação atualizada com sucesso.');
     setWizardBusy(false);
   };
 
@@ -301,7 +301,7 @@ export default function CotadorScreen() {
     setSelectionBusy(true);
     const { error } = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
     if (error) {
-      toast.error('Nao foi possivel atualizar a shortlist.');
+      toast.error('Não foi possível atualizar a shortlist.');
       setSelectionBusy(false);
       return;
     }
@@ -333,7 +333,7 @@ export default function CotadorScreen() {
     });
 
     if (error || !data) {
-      toast.error('Nao foi possivel trocar o tipo da cotacao.');
+      toast.error('Não foi possível trocar o tipo da cotação.');
       setSelectionBusy(false);
       return;
     }
@@ -341,7 +341,7 @@ export default function CotadorScreen() {
     const nextSelectedItems = refreshSelectedItems(data, activeQuote.selectedItems);
     const selectionResult = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
     if (selectionResult.error) {
-      toast.error('O tipo foi alterado, mas a shortlist nao foi atualizada.');
+      toast.error('O tipo foi alterado, mas a shortlist não foi atualizada.');
       setSelectionBusy(false);
       return;
     }
@@ -372,18 +372,18 @@ export default function CotadorScreen() {
             </div>
             <h1 className="mt-3 text-3xl font-semibold text-[color:var(--panel-text,#1a120d)] md:text-4xl">Cotações salvas</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--panel-text-soft,#5b4635)]">
-              A entrada do modulo agora fica focada no histórico. Abra uma cotacao existente ou crie uma nova para entrar no workspace de comparacao.
+              A entrada do módulo agora fica focada no histórico. Abra uma cotação existente ou crie uma nova para entrar no workspace de comparação.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => navigate('/painel/cotador/configuracoes')}>
               <Settings2 className="h-4 w-4" />
-              Configurar catalogo
+              Configurar catálogo
             </Button>
             <Button onClick={openCreateQuote}>
               <Plus className="h-4 w-4" />
-              Criar nova cotacao
+              Criar nova cotação
             </Button>
           </div>
         </div>
@@ -392,22 +392,22 @@ export default function CotadorScreen() {
       {loading ? (
         <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
-          <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando cotacoes...</p>
+          <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando cotações...</p>
         </div>
       ) : quotes.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
           <FileStack className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)]" />
-          <h2 className="mt-4 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Nenhuma cotacao salva ainda</h2>
+          <h2 className="mt-4 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Nenhuma cotação salva ainda</h2>
           <p className="mt-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-            Comece criando a primeira cotacao e depois entre no workspace para adicionar planos, linhas e tabelas.
+            Comece criando a primeira cotação e depois entre no workspace para adicionar planos, linhas e tabelas.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Button variant="secondary" onClick={() => navigate('/painel/cotador/configuracoes')}>
-              Configurar catalogo
+              Configurar catálogo
             </Button>
             <Button onClick={openCreateQuote}>
               <Plus className="h-4 w-4" />
-              Criar primeira cotacao
+              Criar primeira cotação
             </Button>
           </div>
         </div>
@@ -472,7 +472,7 @@ export default function CotadorScreen() {
         <div className="panel-page-shell">
           <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
-            <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando cotacao...</p>
+            <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando cotação...</p>
           </div>
         </div>
       );
@@ -487,8 +487,8 @@ export default function CotadorScreen() {
           </Button>
           <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
             <AlertCircle className="mx-auto h-10 w-10 text-red-600" />
-            <h2 className="mt-4 text-2xl font-semibold text-red-900">Cotacao nao encontrada</h2>
-            <p className="mt-2 text-sm text-red-700">Essa cotacao pode ter sido removida ou ainda nao foi carregada no modulo.</p>
+            <h2 className="mt-4 text-2xl font-semibold text-red-900">Cotação não encontrada</h2>
+            <p className="mt-2 text-sm text-red-700">Essa cotação pode ter sido removida ou ainda não foi carregada no módulo.</p>
           </div>
         </div>
       );

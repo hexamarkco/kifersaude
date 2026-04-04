@@ -53,13 +53,13 @@ export default function CotadorCreateQuoteModal({
     <ModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title={mode === 'create' ? 'Nova cotacao' : 'Editar cotacao'}
-      description="Defina o nome, distribua as vidas e escolha o contexto comercial inicial da cotacao."
+      title={mode === 'create' ? 'Nova cotação' : 'Editar cotação'}
+      description="Defina o nome, distribua as vidas e escolha o contexto comercial inicial da cotação."
       size="xl"
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs text-[color:var(--panel-text-muted,#876f5c)]">
-            {filledRanges.length > 0 ? filledRanges.join(' | ') : 'Preencha ao menos uma faixa etaria para continuar'}
+            {filledRanges.length > 0 ? filledRanges.join(' | ') : 'Preencha ao menos uma faixa etária para continuar'}
           </div>
           <div className="flex items-center justify-end gap-2">
             <Button variant="ghost" onClick={onClose} disabled={busy}>
@@ -78,7 +78,7 @@ export default function CotadorCreateQuoteModal({
               loading={busy}
             >
               <Save className="h-4 w-4" />
-              {mode === 'create' ? 'Criar cotacao' : 'Salvar cotacao'}
+              {mode === 'create' ? 'Criar cotação' : 'Salvar cotação'}
             </Button>
           </div>
         </div>
@@ -89,9 +89,9 @@ export default function CotadorCreateQuoteModal({
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(157,127,90,0.28)] bg-[color:rgba(255,253,250,0.84)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">
               <Users className="h-3.5 w-3.5" />
-              Distribuicao de vidas
+              Distribuição de vidas
             </div>
-            <h3 className="mt-3 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Monte a cotacao com o contexto certo logo no inicio</h3>
+            <h3 className="mt-3 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Monte a cotação com o contexto certo logo no início</h3>
             <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
               O nome ajuda a organizar o histórico e a grade abaixo define como as tabelas do Cotador serão filtradas depois.
             </p>
@@ -100,13 +100,13 @@ export default function CotadorCreateQuoteModal({
           <div>
             <label className="mb-2 flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]" htmlFor="cotador-quote-name">
               <FileText className="h-4 w-4" />
-              Nome da cotacao
+              Nome da cotação
             </label>
             <Input
               id="cotador-quote-name"
               value={draft.name}
               onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-              placeholder="Ex: Familia Souza | Analise PME"
+              placeholder="Ex: Família Souza | Análise PME"
               invalid={draft.name.trim().length > 0 && draft.name.trim().length < 3}
               autoFocus
             />
@@ -142,7 +142,7 @@ export default function CotadorCreateQuoteModal({
               Contexto comercial
             </div>
             <p className="mt-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-              Escolha o tipo inicial da cotacao. Depois, dentro da cotacao, voce pode refinar operadora, linha, produto e tabela.
+              Escolha o tipo inicial da cotação. Depois, dentro da cotação, você pode refinar operadora, linha, produto e tabela.
             </p>
           </div>
 
@@ -177,11 +177,11 @@ export default function CotadorCreateQuoteModal({
           </div>
 
           <div className="rounded-2xl border border-[color:rgba(157,127,90,0.18)] bg-[color:var(--panel-surface-soft,#f4ede3)] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Resumo rapido</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Resumo rápido</p>
             <div className="mt-3 space-y-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
               <p>Total de vidas: <span className="font-semibold text-[color:var(--panel-text,#1a120d)]">{totalLives}</span></p>
               <p>Faixas preenchidas: <span className="font-semibold text-[color:var(--panel-text,#1a120d)]">{filledRanges.length}</span></p>
-              <p>Tipo selecionado: <span className="font-semibold text-[color:var(--panel-text,#1a120d)]">{draft.modality ?? 'Nao definido'}</span></p>
+              <p>Tipo selecionado: <span className="font-semibold text-[color:var(--panel-text,#1a120d)]">{draft.modality ?? 'Não definido'}</span></p>
             </div>
           </div>
         </aside>

@@ -60,7 +60,6 @@ export type CotadorProductManagerInput = {
   nome: string;
   modalidade?: string | null;
   abrangencia?: string | null;
-  acomodacao?: string | null;
   comissao_sugerida?: number | null;
   bonus_por_vida_valor?: number | null;
   observacoes?: string | null;
@@ -840,7 +839,6 @@ export const cotadorService = {
           nome: input.nome.trim(),
           modalidade: cleanOptionalText(input.modalidade),
           abrangencia: cleanOptionalText(input.abrangencia),
-          acomodacao: cleanOptionalText(input.acomodacao),
           comissao_sugerida: input.comissao_sugerida ?? null,
           bonus_por_vida_valor: input.bonus_por_vida_valor ?? null,
           observacoes: cleanOptionalText(input.observacoes),
@@ -872,7 +870,6 @@ export const cotadorService = {
           nome: input.nome.trim(),
           modalidade: cleanOptionalText(input.modalidade),
           abrangencia: cleanOptionalText(input.abrangencia),
-          acomodacao: cleanOptionalText(input.acomodacao),
           comissao_sugerida: input.comissao_sugerida ?? null,
           bonus_por_vida_valor: input.bonus_por_vida_valor ?? null,
           observacoes: cleanOptionalText(input.observacoes),

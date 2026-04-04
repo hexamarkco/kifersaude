@@ -8,6 +8,7 @@ import {
   MapPin,
   Network,
   Plus,
+  Search,
   Save,
   ShieldCheck,
   Sparkles,
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
+import { formatCurrencyFromNumber, parseFormattedNumber } from '../../lib/inputFormatters';
 import type { CotadorAgeRange } from '../../features/cotador/shared/cotadorConstants';
 import { COTADOR_AGE_RANGES } from '../../features/cotador/shared/cotadorConstants';
 import {
@@ -65,7 +67,6 @@ type ProductFormState = {
   administradoraId: string;
   modalidade: string;
   abrangencia: string;
-  acomodacao: string;
   entidadeIds: string[];
   comissaoSugerida: number;
   bonusPorVidaValor: number;
@@ -114,7 +115,6 @@ const DEFAULT_PRODUCT_FORM: ProductFormState = {
   administradoraId: '',
   modalidade: '',
   abrangencia: '',
-  acomodacao: '',
   entidadeIds: [],
   comissaoSugerida: 0,
   bonusPorVidaValor: 0,
@@ -256,6 +256,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [productEditingId, setProductEditingId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<ProductFormState>(DEFAULT_PRODUCT_FORM);
+  const [productSearch, setProductSearch] = useState('');
   const [tableModalOpen, setTableModalOpen] = useState(false);
   const [tableEditingId, setTableEditingId] = useState<string | null>(null);
   const [tableForm, setTableForm] = useState<TableFormState>(DEFAULT_TABLE_FORM);
@@ -296,6 +297,75 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     () => entidades.filter((item) => item.ativo).map((item) => ({ value: item.id, label: item.nome })),
     [entidades],
   );
+
+  const filteredProducts = useMemo(() => {
+    const normalizedSearch = productSearch
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    if (!normalizedSearch) {
+      return produtos;
+    }
+
+    return produtos.filter((product) => {
+      const haystack = [
+        product.nome,
+        product.operadora?.nome,
+        product.linha?.nome,
+        product.modalidade,
+        product.administradora?.nome,
+        ...product.entidadesClasse.map((entity) => entity.nome),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [productSearch, produtos]);
+
+  const groupedProducts = useMemo(() => {
+    const groups = new Map<string, {
+      key: string;
+      operadoraNome: string;
+      linhaNome: string;
+      items: CotadorProductManagerRecord[];
+    }>();
+
+    filteredProducts.forEach((product) => {
+      const operadoraNome = product.operadora?.nome ?? 'Operadora não encontrada';
+      const linhaNome = product.linha?.nome ?? 'Linha não definida';
+      const key = `${operadoraNome}::${linhaNome}`;
+      const current = groups.get(key);
+
+      if (current) {
+        current.items.push(product);
+        return;
+      }
+
+      groups.set(key, {
+        key,
+        operadoraNome,
+        linhaNome,
+        items: [product],
+      });
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        items: [...group.items].sort((left, right) => left.nome.localeCompare(right.nome, 'pt-BR')),
+      }))
+      .sort((left, right) => {
+        const operadoraComparison = left.operadoraNome.localeCompare(right.operadoraNome, 'pt-BR');
+        if (operadoraComparison !== 0) return operadoraComparison;
+        return left.linhaNome.localeCompare(right.linhaNome, 'pt-BR');
+      });
+  }, [filteredProducts]);
 
   const lineOperadoraById = useMemo(
     () => new Map(linhas.map((line) => [line.id, line.operadora?.id ?? ''])),
@@ -433,7 +503,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       administradoraId: product?.administradora_id ?? '',
       modalidade: product?.modalidade ?? '',
       abrangencia: product?.abrangencia ?? '',
-      acomodacao: product?.acomodacao ?? '',
       entidadeIds: product?.entidadesClasse.map((entity) => entity.id) ?? [],
       comissaoSugerida: product?.comissao_sugerida ?? 0,
       bonusPorVidaValor: product?.bonus_por_vida_valor ?? 0,
@@ -448,7 +517,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     COTADOR_AGE_RANGES.forEach((range) => {
       const value = table?.pricesByAgeRange[range];
       if (typeof value === 'number') {
-        priceFields[range] = String(value);
+        priceFields[range] = formatCurrencyFromNumber(value);
       }
     });
 
@@ -546,7 +615,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       nome: productForm.nome,
       modalidade: productForm.modalidade || null,
       abrangencia: productForm.abrangencia || null,
-      acomodacao: productForm.acomodacao || null,
       entidadeIds: productForm.entidadeIds,
       comissao_sugerida: productForm.comissaoSugerida,
       bonus_por_vida_valor: productForm.bonusPorVidaValor,
@@ -579,7 +647,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     }
 
     const pricesByAgeRange = Object.entries(tableForm.pricesByAgeRange).reduce((accumulator, [range, value]) => {
-      const parsed = Number.parseFloat(value);
+      const parsed = parseFormattedNumber(value);
       if (Number.isFinite(parsed) && parsed >= 0) {
         accumulator[range as CotadorAgeRange] = parsed;
       }
@@ -724,7 +792,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     {item.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.observacoes}</p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="secondary" onClick={() => openEntityModal('administradoras', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}><Edit2 className="h-4 w-4" />Editar</Button>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openEntityModal('administradoras', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}>
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                     <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('administradoras', item.id, 'Excluir administradora', 'Essa ação remove a administradora do catálogo do Cotador.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
@@ -745,7 +815,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     {item.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.observacoes}</p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="secondary" onClick={() => openEntityModal('entidades', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}><Edit2 className="h-4 w-4" />Editar</Button>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openEntityModal('entidades', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}>
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                     <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('entidades', item.id, 'Excluir entidade', 'Essa ação remove a entidade do catálogo do Cotador.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
@@ -767,7 +839,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     {line.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{line.observacoes}</p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="secondary" onClick={() => openLineModal(line)}><Edit2 className="h-4 w-4" />Editar</Button>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openLineModal(line)}>
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                     <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('linhas', line.id, 'Excluir linha', 'Essa ação remove a linha e pode impactar os produtos vinculados.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
@@ -779,27 +853,75 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         produtos.length === 0 ? (
           <EmptyState icon={Building2} title="Nenhum produto cadastrado" description="Cadastre produtos como Bronze, Ouro, S380 ou S750 R1 e depois crie as tabelas comerciais por perfil e vidas." />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {produtos.map((product) => (
-              <article key={product.id} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h4>
-                    <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{product.operadora?.nome ?? 'Operadora'} / {product.linha?.nome ?? 'Linha não definida'}</p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                      {product.modalidade && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.modalidade}</span>}
-                      {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">Base: {product.acomodacao}</span>}
-                      {product.administradora?.nome && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.administradora.nome}</span>}
-                      {product.entidadesClasse.length > 0 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="secondary" onClick={() => openProductModal(product)}><Edit2 className="h-4 w-4" />Editar</Button>
-                    <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('produtos', product.id, 'Excluir produto', 'Essa ação remove o produto do catálogo do Cotador, mas snapshots de cotações permanecem preservados.') }><Trash2 className="h-4 w-4" /></Button>
-                  </div>
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Organização de produtos</p>
+                  <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Produtos agrupados por operadora e linha</h4>
                 </div>
-              </article>
-            ))}
+                <div className="w-full lg:max-w-sm">
+                  <Input
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Buscar produto, linha ou operadora"
+                    leftIcon={Search}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {groupedProducts.length === 0 ? (
+              <EmptyState icon={Search} title="Nenhum produto encontrado" description="Tente outro termo para localizar um produto, operadora ou linha." />
+            ) : (
+              <div className="space-y-4">
+                {groupedProducts.map((group) => (
+                  <section key={group.key} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+                    <div className="flex flex-col gap-3 border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{group.linhaNome}</h4>
+                        <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{group.operadoraNome}</p>
+                      </div>
+                      <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-1 text-xs font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                        {group.items.length} produto(s)
+                      </span>
+                    </div>
+
+                    <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+                      {group.items.map((product) => (
+                        <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h5 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h5>
+                              {!product.ativo && (
+                                <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">
+                                  Inativo
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                              {product.modalidade && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.modalidade}</span>}
+                              {product.administradora?.nome && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.administradora.nome}</span>}
+                              {product.entidadesClasse.length > 0 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
+                              {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end lg:self-auto">
+                            <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openProductModal(product)}>
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('produtos', product.id, 'Excluir produto', 'Essa ação remove o produto do catálogo do Cotador, mas snapshots de cotações permanecem preservados.') }>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
           </div>
         )
       ) : tabelas.length === 0 ? (
@@ -823,7 +945,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="secondary" onClick={() => openTableModal(table)}><Edit2 className="h-4 w-4" />Editar</Button>
+                  <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(table)}>
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
                   <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('tabelas', table.id, 'Excluir tabela', 'Essa ação remove a tabela comercial, mas snapshots já usados em cotações permanecem preservados.') }><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </div>
@@ -911,7 +1035,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={productModalOpen}
         onClose={resetProductModal}
         title={productEditingId ? 'Editar produto do Cotador' : 'Novo produto do Cotador'}
-        description="Cadastre produtos como Bronze, Ouro, Platinum, Black, S380, S450, S580 ou S750."
+        description="Cadastre produtos como Bronze, Ouro, Platinum, Black, S380, S450, S580 ou S750. A acomodação fica definida na tabela comercial."
         size="lg"
       >
         <form onSubmit={handleProductSubmit} className="space-y-5">
@@ -935,11 +1059,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <div>
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Abrangência</label>
               <FilterSingleSelect icon={MapPin} options={abrangenciaOptions} placeholder="Selecione a abrangência" value={productForm.abrangencia} onChange={(value) => setProductForm((current) => ({ ...current, abrangencia: value }))} />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Acomodação base (opcional)</label>
-              <FilterSingleSelect icon={Sparkles} options={acomodacaoOptions} placeholder="Selecione a acomodação" value={productForm.acomodacao} onChange={(value) => setProductForm((current) => ({ ...current, acomodacao: value }))} />
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Use só quando a acomodação for padrão do produto. Se variar por tabela, configure isso na tabela comercial.</p>
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Comissão sugerida (%)</label>
@@ -1056,9 +1175,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 <div key={range} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
                   <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                    type="text"
                     value={tableForm.pricesByAgeRange[range]}
                     onChange={(event) =>
                       setTableForm((current) => ({
@@ -1069,6 +1186,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                         },
                       }))
                     }
+                    autoFormat="currency"
                     className="mt-2"
                     placeholder="0,00"
                   />

@@ -36,12 +36,13 @@ import Tabs from '../ui/Tabs';
 import Textarea from '../ui/Textarea';
 import FilterSingleSelect from '../FilterSingleSelect';
 import MultiSelectDropdown from './MultiSelectDropdown';
+import OperadorasTab from './OperadorasTab';
 
 type CotadorCatalogTabProps = {
   embedded?: boolean;
 };
 
-type CatalogTabId = 'linhas' | 'produtos' | 'tabelas' | 'administradoras' | 'entidades';
+type CatalogTabId = 'operadoras' | 'linhas' | 'produtos' | 'tabelas' | 'administradoras' | 'entidades';
 
 type Message = {
   type: 'success' | 'error';
@@ -87,6 +88,7 @@ type TableFormState = {
 };
 
 const tabs: Array<{ id: CatalogTabId; label: string }> = [
+  { id: 'operadoras', label: 'Operadoras' },
   { id: 'linhas', label: 'Linhas' },
   { id: 'produtos', label: 'Produtos' },
   { id: 'tabelas', label: 'Tabelas' },
@@ -206,7 +208,7 @@ function EmptyState({
 
 export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTabProps) {
   const { options } = useConfig();
-  const [activeTab, setActiveTab] = useState<CatalogTabId>('linhas');
+  const [activeTab, setActiveTab] = useState<CatalogTabId>('operadoras');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
@@ -633,6 +635,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
           <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando catálogo do Cotador...</p>
         </div>
+      ) : activeTab === 'operadoras' ? (
+        <OperadorasTab embedded />
       ) : activeTab === 'administradoras' ? (
         administradoras.length === 0 ? (
           <EmptyState icon={ShieldCheck} title="Nenhuma administradora cadastrada" description="Cadastre administradoras para suportar adesão e produtos com elegibilidade institucional." />

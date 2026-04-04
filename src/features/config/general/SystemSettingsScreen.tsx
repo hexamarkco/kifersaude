@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  Building2,
   Calendar,
   Calculator,
   CheckCircle,
@@ -25,7 +24,6 @@ import { type SystemSettings } from "../../../lib/supabase";
 import ConfigOptionManager from "../../../components/config/ConfigOptionManager";
 import LeadOriginsManager from "../../../components/config/LeadOriginsManager";
 import LeadStatusManager from "../../../components/config/LeadStatusManager";
-import OperadorasTab from "../../../components/config/OperadorasTab";
 import CotadorCatalogTab from "../../../components/config/CotadorCatalogTab";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
 import Button from "../../../components/ui/Button";
@@ -62,7 +60,6 @@ export default function SystemSettingsScreen() {
     Record<SectionId, boolean>
   >({
     general: false,
-    operadoras: false,
     cotador: false,
     access: false,
     leads: false,
@@ -198,20 +195,16 @@ export default function SystemSettingsScreen() {
     normalizedSearchTerm,
     SECTION_OVERVIEW[0].searchTerms,
   );
-  const showOperadorasSection = matchesConfigSearch(
-    normalizedSearchTerm,
-    SECTION_OVERVIEW[1].searchTerms,
-  );
   const canViewAccessSettings = getRoleModulePermission(
     role,
     "config-access",
   ).can_view;
   const showAccessSection =
     canViewAccessSettings &&
-    matchesConfigSearch(normalizedSearchTerm, SECTION_OVERVIEW[2].searchTerms);
+    matchesConfigSearch(normalizedSearchTerm, SECTION_OVERVIEW[1].searchTerms);
   const showCotadorSection = matchesConfigSearch(
     normalizedSearchTerm,
-    SECTION_OVERVIEW[3].searchTerms,
+    SECTION_OVERVIEW[2].searchTerms,
   );
 
   const showLeadStatusManager = matchesConfigSearch(normalizedSearchTerm, [
@@ -233,7 +226,7 @@ export default function SystemSettingsScreen() {
   const showLeadsSection =
     matchesConfigSearch(
       normalizedSearchTerm,
-      SECTION_OVERVIEW[4].searchTerms,
+      SECTION_OVERVIEW[3].searchTerms,
     ) ||
     showLeadStatusManager ||
     showLeadOriginsManager ||
@@ -242,18 +235,16 @@ export default function SystemSettingsScreen() {
   const showContractsSection =
     matchesConfigSearch(
       normalizedSearchTerm,
-      SECTION_OVERVIEW[5].searchTerms,
+      SECTION_OVERVIEW[4].searchTerms,
     ) || visibleContractManagers.length > 0;
 
   const visibleSections = SECTION_OVERVIEW.filter((section) => {
-    switch (section.id) {
-      case "general":
-        return showGeneralSection;
-      case "operadoras":
-        return showOperadorasSection;
-      case "access":
-        return showAccessSection;
-      case "cotador":
+      switch (section.id) {
+        case "general":
+          return showGeneralSection;
+        case "access":
+          return showAccessSection;
+        case "cotador":
         return showCotadorSection;
       case "leads":
         return showLeadsSection;
@@ -341,7 +332,7 @@ export default function SystemSettingsScreen() {
                 Central de configurações
               </div>
               <h2 className="text-2xl font-semibold text-[color:var(--panel-text)]">
-                Sistema, operadoras e Cotador no mesmo fluxo
+                Sistema e catálogo comercial no mesmo fluxo
               </h2>
               <p className="mt-2 text-sm text-[color:var(--panel-text-soft)]">
                 Organize preferências, acessos, catálogo comercial, leads e contratos em uma experiência única, com busca e atalhos por área.
@@ -353,7 +344,7 @@ export default function SystemSettingsScreen() {
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por operadoras, cotador, permissões, leads, contratos..."
+                placeholder="Buscar por cotador, operadoras, permissões, leads, contratos..."
                 leftIcon={Search}
               />
             </div>
@@ -604,41 +595,6 @@ export default function SystemSettingsScreen() {
                     </span>
                   </Button>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {showOperadorasSection && (
-          <div id="settings-section-operadoras" className="space-y-4">
-            <button
-              type="button"
-              onClick={() => toggleSection("operadoras")}
-              className={SYSTEM_SETTINGS_SECTION_CARD_CLASS}
-            >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-emerald-bg)] text-[var(--panel-accent-emerald-text)]">
-                  <Building2 className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">
-                    Operadoras
-                  </h3>
-                  <p className="text-sm text-[color:var(--panel-text-soft)]">
-                    Comissão, prazo, bônus e manutenção da carteira comercial.
-                  </p>
-                </div>
-              </div>
-              <ChevronDown
-                className={`h-5 w-5 text-slate-500 transition-transform ${
-                  shouldExpandSection("operadoras") ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {shouldExpandSection("operadoras") && (
-              <div className={SYSTEM_SETTINGS_SECTION_BODY_CLASS}>
-                <OperadorasTab embedded />
               </div>
             )}
           </div>

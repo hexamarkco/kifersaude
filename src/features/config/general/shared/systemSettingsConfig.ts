@@ -1,5 +1,4 @@
 import {
-  Building2,
   Calculator,
   FileText,
   ListTree,
@@ -14,7 +13,6 @@ import type { SystemSettings } from "../../../../lib/supabase";
 export type SettingsMessage = { type: "success" | "error"; text: string };
 export type SectionId =
   | "general"
-  | "operadoras"
   | "cotador"
   | "access"
   | "leads"
@@ -112,14 +110,6 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     searchTerms: ["preferencias", "sistema", "notificacao", "sessao", "data", "fuso", "timezone"],
   },
   {
-    id: "operadoras",
-    title: "Operadoras",
-    description: "Comissao, prazo e regras comerciais.",
-    icon: Building2,
-    accentClassName: "bg-emerald-50 text-emerald-700 ring-emerald-100",
-    searchTerms: ["operadoras", "operadora", "bonus", "comissao", "prazo"],
-  },
-  {
     id: "access",
     title: "Perfis e acessos",
     description: "Permissoes por tipo de usuario.",
@@ -130,10 +120,10 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
   {
     id: "cotador",
     title: "Cotador",
-    description: "Administradoras, entidades e produtos do catalogo comercial.",
+    description: "Operadoras, administradoras, linhas, produtos, tabelas e regras comerciais.",
     icon: Calculator,
     accentClassName: "bg-orange-50 text-orange-700 ring-orange-100",
-    searchTerms: ["cotador", "administradora", "administradoras", "entidade", "entidades", "produto", "produtos", "linha", "linhas", "tabela", "tabelas", "mei", "coparticipacao", "catalogo"],
+    searchTerms: ["cotador", "operadora", "operadoras", "administradora", "administradoras", "entidade", "entidades", "produto", "produtos", "linha", "linhas", "tabela", "tabelas", "mei", "coparticipacao", "catalogo", "comissao", "bonus", "prazo"],
   },
   {
     id: "leads",

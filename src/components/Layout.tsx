@@ -18,6 +18,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Calculator,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase, Reminder, Contract } from '../lib/supabase';
@@ -136,6 +137,7 @@ export default function Layout({
 
   const crmChildren = [
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-orange-500' },
+    { id: 'cotador', label: 'Cotador', icon: Calculator },
     { id: 'contracts', label: 'Contratos', icon: FileText },
     { id: 'agenda', label: 'Agenda', icon: Calendar, badge: unreadReminders },
   ].filter(child => canView(child.id));

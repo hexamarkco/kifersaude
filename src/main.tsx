@@ -8,6 +8,7 @@ import {
   BlogTab,
   ConfigPage,
   ContractsManagerWrapper,
+  CotadorWrapper,
   DashboardWrapper,
   FinanceiroAgendaTab,
   FinanceiroComissoesTab,
@@ -59,6 +60,7 @@ createRoot(document.getElementById('root')!).render(
               <Route index element={<Navigate to="/painel/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardWrapper />} />
               <Route path="leads" element={<LeadsManagerWrapper />} />
+              <Route path="cotador" element={<CotadorWrapper />} />
               <Route path="contratos" element={<ContractsManagerWrapper />} />
               <Route path="comissoes" element={<FinanceiroComissoesTab />} />
               <Route path="agenda" element={<FinanceiroAgendaTab />} />

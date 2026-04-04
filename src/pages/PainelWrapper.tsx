@@ -14,6 +14,7 @@ import type { TabNavigationOptions } from '../types/navigation';
 const ROUTE_TAB_MAP: Record<string, string> = {
   'dashboard': 'dashboard',
   'leads': 'leads',
+  'cotador': 'cotador',
   'contratos': 'contracts',
   'comissoes': 'financeiro-comissoes',
   'agenda': 'agenda',
@@ -27,6 +28,7 @@ const ROUTE_TAB_MAP: Record<string, string> = {
 const TAB_ROUTE_MAP: Record<string, string> = {
   'dashboard': 'dashboard',
   'leads': 'leads',
+  'cotador': 'cotador',
   'contracts': 'contratos',
   'financeiro-comissoes': 'comissoes',
   'agenda': 'agenda',
@@ -54,6 +56,7 @@ export default function PainelWrapper() {
     const entries: Array<[string, boolean]> = [
       ['dashboard', getRoleModulePermission(role, 'dashboard').can_view],
       ['leads', getRoleModulePermission(role, 'leads').can_view],
+      ['cotador', getRoleModulePermission(role, 'cotador').can_view],
       ['contracts', getRoleModulePermission(role, 'contracts').can_view],
       ['financeiro-comissoes', getRoleModulePermission(role, 'financeiro-comissoes').can_view],
       ['agenda', getRoleModulePermission(role, 'agenda').can_view],

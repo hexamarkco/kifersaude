@@ -8,6 +8,7 @@ export type AccessModuleDefinition = {
 export const ACCESS_MODULES: AccessModuleDefinition[] = [
   { id: 'dashboard', label: 'Dashboard', description: 'Resumo geral das operações e indicadores-chave.', group: 'workspace' },
   { id: 'leads', label: 'Leads', description: 'Gestão completa do funil de leads.', group: 'workspace' },
+  { id: 'cotador', label: 'Cotador', description: 'Workspace interno para montar e comparar cotacoes por perfil.', group: 'workspace' },
   { id: 'contracts', label: 'Contratos', description: 'Gestão de contratos, titulares e dependentes.', group: 'workspace' },
   { id: 'reminders', label: 'Lembretes', description: 'Agenda e lembretes automáticos para acompanhamento.', group: 'workspace' },
   { id: 'financeiro-agenda', label: 'Financeiro - Tarefas', description: 'Acesso às tarefas do módulo financeiro.', group: 'workspace' },

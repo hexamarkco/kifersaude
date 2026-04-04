@@ -71,3 +71,4 @@ Ao implementar ou corrigir:
 - 2026-03-22: O hot path de nao lidas do WhatsApp passa a priorizar cursores compartilhados por chat (`whatsapp_chat_read_cursors`) e a inbox deve evitar cargas globais antecipadas de fotos fallback e syncs agressivos quando o chat ainda esta fresco.
 - 2026-03-22: O armazenamento bruto de webhooks barulhentos do WhatsApp deve priorizar archive em Storage (`whatsapp-webhook-archive`) com resumo leve em `whatsapp_webhook_events`, preservando compatibilidade para scripts operacionais.
 - 2026-03-26: O modulo operacional `/painel/whatsapp` e sua stack de inbox/campanhas foram removidos; permanece apenas a integracao WhatsApp usada por automacoes e configurada em Integracoes/Automacoes.
+- 2026-04-04: O modulo `Cotador` passa a viver em `/painel/cotador`, com cotacoes separadas do fluxo de contratos e estrutura preparada para operadoras, administradoras e entidades de classe evoluirem sem acoplar o pre-venda ao fechamento.

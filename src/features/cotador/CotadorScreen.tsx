@@ -2,30 +2,37 @@ import { useEffect, useMemo, useState } from 'react';
 import { Calculator, Clock3, Plus, Sparkles, Users } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { cx } from '../../lib/cx';
+import { toast } from '../../lib/toast';
 import CotadorCreateQuoteModal from './components/CotadorCreateQuoteModal';
 import CotadorWorkspace from './components/CotadorWorkspace';
-import { loadCotadorCatalog } from './services/cotadorCatalogService';
-import { buildCotadorQuoteDraft, catalogMatchesQuoteModality, createCotadorQuote, formatCotadorDateTime, formatCotadorModality, loadCotadorQuotesFromStorage, matchesCotadorSearch, saveCotadorQuotesToStorage, sortCotadorQuotesByRecent, updateCotadorQuote } from './shared/cotadorUtils';
-import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteDraft, CotadorQuoteInput } from './shared/cotadorTypes';
+import { cotadorService } from './services/cotadorService';
+import {
+  buildCotadorQuoteDraft,
+  buildCotadorQuoteItemFromCatalogItem,
+  catalogMatchesQuoteModality,
+  formatCotadorDateTime,
+  formatCotadorModality,
+  saveCotadorQuotesToStorage,
+  sortCotadorQuotesByRecent,
+} from './shared/cotadorUtils';
+import type {
+  CotadorCatalogActor,
+  CotadorCatalogFilters,
+  CotadorCatalogItem,
+  CotadorQuote,
+  CotadorQuoteDraft,
+  CotadorQuoteInput,
+} from './shared/cotadorTypes';
 
 const DEFAULT_FILTERS: CotadorCatalogFilters = {
   search: '',
   operadoraId: '',
+  administradoraId: '',
+  entidadeId: '',
   abrangencia: '',
   acomodacao: '',
   selectedOnly: false,
 };
-
-const buildSelectOptions = (values: Array<string | null | undefined>) =>
-  Array.from(
-    new Set(
-      values
-        .map((value) => value?.trim())
-        .filter((value): value is string => Boolean(value)),
-    ),
-  )
-    .sort((left, right) => left.localeCompare(right, 'pt-BR'))
-    .map((value) => ({ value, label: value }));
 
 const createWizardState = (mode: 'create' | 'edit', draft: CotadorQuoteDraft) => ({
   isOpen: true,
@@ -33,13 +40,26 @@ const createWizardState = (mode: 'create' | 'edit', draft: CotadorQuoteDraft) =>
   draft,
 });
 
+const buildActorOptions = (actors: CotadorCatalogActor[]) =>
+  Array.from(
+    new Map(
+      actors
+        .filter((actor) => actor.name)
+        .map((actor) => [actor.id, { value: actor.id, label: actor.name ?? actor.id }]),
+    ).values(),
+  ).sort((left, right) => left.label.localeCompare(right.label, 'pt-BR'));
+
+const quoteContainsCatalogItem = (quote: CotadorQuote, catalogItemId: string) =>
+  quote.selectedItems.some((item) => item.catalogItemKey === catalogItemId);
+
 export default function CotadorScreen() {
   const [catalogItems, setCatalogItems] = useState<CotadorCatalogItem[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
   const [quotes, setQuotes] = useState<CotadorQuote[]>([]);
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
   const [filters, setFilters] = useState<CotadorCatalogFilters>(DEFAULT_FILTERS);
-  const [storageReady, setStorageReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [wizardBusy, setWizardBusy] = useState(false);
+  const [selectionBusy, setSelectionBusy] = useState(false);
   const [wizardState, setWizardState] = useState<{
     isOpen: boolean;
     mode: 'create' | 'edit';
@@ -51,41 +71,35 @@ export default function CotadorScreen() {
   });
 
   useEffect(() => {
-    const storedQuotes = loadCotadorQuotesFromStorage();
-    setQuotes(storedQuotes);
-    setActiveQuoteId(storedQuotes[0]?.id ?? null);
-    setStorageReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!storageReady) {
-      return;
-    }
-
-    saveCotadorQuotesToStorage(quotes);
-  }, [quotes, storageReady]);
-
-  useEffect(() => {
     let active = true;
 
-    const loadCatalog = async () => {
-      setCatalogLoading(true);
-      const nextCatalog = await loadCotadorCatalog();
+    const loadWorkspace = async () => {
+      setLoading(true);
+      const [nextCatalog, nextQuotes] = await Promise.all([
+        cotadorService.loadCatalog(),
+        cotadorService.getQuotes(),
+      ]);
 
       if (!active) {
         return;
       }
 
       setCatalogItems(nextCatalog);
-      setCatalogLoading(false);
+      setQuotes(nextQuotes);
+      setActiveQuoteId((current) => current ?? nextQuotes[0]?.id ?? null);
+      setLoading(false);
     };
 
-    void loadCatalog();
+    void loadWorkspace();
 
     return () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    saveCotadorQuotesToStorage(quotes);
+  }, [quotes]);
 
   useEffect(() => {
     if (quotes.length === 0) {
@@ -117,28 +131,27 @@ export default function CotadorScreen() {
     return catalogItems.filter((item) => catalogMatchesQuoteModality(item.modalidade, activeQuote.modality));
   }, [activeQuote, catalogItems]);
 
-  const selectedItems = useMemo(() => {
-    if (!activeQuote) {
-      return [];
-    }
-
-    const catalogById = new Map(catalogItems.map((item) => [item.id, item]));
-    return activeQuote.selectedCatalogItemIds
-      .map((itemId) => catalogById.get(itemId) ?? null)
-      .filter((item): item is CotadorCatalogItem => item !== null);
-  }, [activeQuote, catalogItems]);
-
   const filteredItems = useMemo(() => {
     if (!activeQuote) {
       return [];
     }
 
+    const normalizedSearch = filters.search.trim().toLowerCase();
+
     return quoteCatalog.filter((item) => {
-      if (filters.selectedOnly && !activeQuote.selectedCatalogItemIds.includes(item.id)) {
+      if (filters.selectedOnly && !quoteContainsCatalogItem(activeQuote, item.id)) {
         return false;
       }
 
       if (filters.operadoraId && item.operadora.id !== filters.operadoraId) {
+        return false;
+      }
+
+      if (filters.administradoraId && item.administradora?.id !== filters.administradoraId) {
+        return false;
+      }
+
+      if (filters.entidadeId && !item.entidadesClasse.some((entity) => entity.id === filters.entidadeId)) {
         return false;
       }
 
@@ -150,37 +163,54 @@ export default function CotadorScreen() {
         return false;
       }
 
-      return matchesCotadorSearch(filters.search, [
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const values = [
         item.titulo,
         item.subtitulo,
         item.operadora.name,
+        item.administradora?.name,
         item.modalidade,
         item.abrangencia,
         item.acomodacao,
-        item.administradora?.name,
-        item.entidadeClasse?.name,
-      ]);
+        ...item.entidadesClasse.map((entity) => entity.name),
+      ];
+
+      return values.some((value) => (value ?? '').toLowerCase().includes(normalizedSearch));
     });
   }, [activeQuote, filters, quoteCatalog]);
 
-  const hasDetailedProducts = useMemo(() => catalogItems.some((item) => item.source === 'produto'), [catalogItems]);
-
   const filterOptions = useMemo(
     () => ({
-      operadoras: buildSelectOptions(quoteCatalog.map((item) => item.operadora.name ?? null)).map((option) => {
-        const matchingItem = quoteCatalog.find((item) => item.operadora.name === option.value);
-        return {
-          value: matchingItem?.operadora.id ?? option.value,
-          label: option.label,
-        };
-      }),
-      abrangencias: buildSelectOptions(quoteCatalog.map((item) => item.abrangencia)),
-      acomodacoes: buildSelectOptions(quoteCatalog.map((item) => item.acomodacao)),
+      operadoras: buildActorOptions(quoteCatalog.map((item) => item.operadora)),
+      administradoras: buildActorOptions(
+        quoteCatalog
+          .map((item) => item.administradora)
+          .filter((actor): actor is CotadorCatalogActor => actor !== null),
+      ),
+      entidades: buildActorOptions(quoteCatalog.flatMap((item) => item.entidadesClasse)),
+      abrangencias: Array.from(
+        new Set(quoteCatalog.map((item) => item.abrangencia).filter((value): value is string => Boolean(value))),
+      )
+        .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+        .map((value) => ({ value, label: value })),
+      acomodacoes: Array.from(
+        new Set(quoteCatalog.map((item) => item.acomodacao).filter((value): value is string => Boolean(value))),
+      )
+        .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+        .map((value) => ({ value, label: value })),
     }),
     [quoteCatalog],
   );
 
-  const totalSelectedItems = activeQuote?.selectedCatalogItemIds.length ?? 0;
+  const hasDetailedProducts = useMemo(
+    () => catalogItems.some((item) => item.source === 'cotador_produto' || item.source === 'legacy_produto'),
+    [catalogItems],
+  );
+
+  const totalSelectedItems = activeQuote?.selectedItems.length ?? 0;
 
   const handleCreateQuoteClick = () => {
     setWizardState(createWizardState('create', buildCotadorQuoteDraft()));
@@ -194,58 +224,99 @@ export default function CotadorScreen() {
     setWizardState(createWizardState('edit', buildCotadorQuoteDraft(activeQuote)));
   };
 
-  const handleWizardSubmit = (input: CotadorQuoteInput) => {
-    if (wizardState.mode === 'create') {
-      const nextQuote = createCotadorQuote(input);
-      setQuotes((current) => sortCotadorQuotesByRecent([nextQuote, ...current]));
-      setActiveQuoteId(nextQuote.id);
-    } else if (activeQuoteId) {
-      setQuotes((current) =>
-        sortCotadorQuotesByRecent(
-          current.map((quote) => {
-            if (quote.id !== activeQuoteId) {
-              return quote;
-            }
+  const handleWizardSubmit = async (input: CotadorQuoteInput) => {
+    setWizardBusy(true);
 
-            const updatedQuote = updateCotadorQuote(quote, input);
-            return {
-              ...updatedQuote,
-              selectedCatalogItemIds: quote.selectedCatalogItemIds.filter((itemId) => {
-                const catalogItem = catalogItems.find((item) => item.id === itemId);
-                return catalogItem ? catalogMatchesQuoteModality(catalogItem.modalidade, updatedQuote.modality) : false;
-              }),
-            };
-          }),
-        ),
-      );
+    if (wizardState.mode === 'create') {
+      const { data, error } = await cotadorService.createQuote(input);
+
+      if (error || !data) {
+        toast.error('Nao foi possivel criar a cotacao agora.');
+        setWizardBusy(false);
+        return;
+      }
+
+      setQuotes((current) => sortCotadorQuotesByRecent([data, ...current]));
+      setActiveQuoteId(data.id);
+      setWizardState((current) => ({ ...current, isOpen: false }));
+      toast.success('Cotacao criada com sucesso.');
+      setWizardBusy(false);
+      return;
     }
 
+    if (!activeQuote) {
+      setWizardBusy(false);
+      return;
+    }
+
+    const { data, error } = await cotadorService.updateQuote(activeQuote, input);
+
+    if (error || !data) {
+      toast.error('Nao foi possivel atualizar a cotacao agora.');
+      setWizardBusy(false);
+      return;
+    }
+
+    const nextSelectedItems = activeQuote.selectedItems.filter((item) => catalogMatchesQuoteModality(item.modalidade, data.modality));
+    const selectionResult = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
+
+    if (selectionResult.error) {
+      toast.error('A cotacao foi atualizada, mas a shortlist nao conseguiu ser sincronizada.');
+      setWizardBusy(false);
+      return;
+    }
+
+    const nextQuote: CotadorQuote = {
+      ...data,
+      selectedItems: nextSelectedItems,
+    };
+
+    setQuotes((current) => sortCotadorQuotesByRecent(current.map((quote) => (quote.id === nextQuote.id ? nextQuote : quote))));
     setWizardState((current) => ({ ...current, isOpen: false }));
+    toast.success('Cotacao atualizada com sucesso.');
+    setWizardBusy(false);
   };
 
-  const handleToggleCatalogItem = (itemId: string) => {
-    if (!activeQuoteId) {
+  const handleToggleCatalogItem = async (itemId: string) => {
+    if (!activeQuote || selectionBusy) {
+      return;
+    }
+
+    const catalogItem = quoteCatalog.find((item) => item.id === itemId);
+    if (!catalogItem) {
+      return;
+    }
+
+    const alreadySelected = activeQuote.selectedItems.some((item) => item.catalogItemKey === itemId);
+    const nextSelectedItems = alreadySelected
+      ? activeQuote.selectedItems.filter((item) => item.catalogItemKey !== itemId)
+      : [...activeQuote.selectedItems, buildCotadorQuoteItemFromCatalogItem(catalogItem)];
+
+    setSelectionBusy(true);
+    const { error } = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
+
+    if (error) {
+      toast.error('Nao foi possivel atualizar a shortlist.');
+      setSelectionBusy(false);
       return;
     }
 
     setQuotes((current) =>
       sortCotadorQuotesByRecent(
         current.map((quote) => {
-          if (quote.id !== activeQuoteId) {
+          if (quote.id !== activeQuote.id) {
             return quote;
           }
 
-          const alreadySelected = quote.selectedCatalogItemIds.includes(itemId);
           return {
             ...quote,
-            selectedCatalogItemIds: alreadySelected
-              ? quote.selectedCatalogItemIds.filter((currentItemId) => currentItemId !== itemId)
-              : [...quote.selectedCatalogItemIds, itemId],
+            selectedItems: nextSelectedItems,
             updatedAt: new Date().toISOString(),
           };
         }),
       ),
     );
+    setSelectionBusy(false);
   };
 
   return (
@@ -291,10 +362,10 @@ export default function CotadorScreen() {
         </div>
       </section>
 
-      {catalogLoading ? (
+      {loading ? (
         <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
-          <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando catalogo inicial do Cotador...</p>
+          <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando catalogo e cotacoes do Cotador...</p>
         </div>
       ) : quotes.length === 0 ? (
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_420px]">
@@ -305,7 +376,7 @@ export default function CotadorScreen() {
             </div>
             <h2 className="mt-4 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Crie a primeira cotacao para abrir o seletor</h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--panel-text-soft,#5b4635)]">
-              O wizard inicial ja coleta o nome da cotacao, a distribuicao de vidas por faixa etaria e o tipo comercial. Assim que terminar, o workspace abre com filtros e shortlist prontos para uso.
+              O wizard inicial ja coleta o nome da cotacao, a distribuicao de vidas por faixa etaria e o tipo comercial. Assim que terminar, o workspace abre com filtros, persistencia em banco e shortlist pronta para uso.
             </p>
             <div className="mt-6">
               <Button onClick={handleCreateQuoteClick}>
@@ -401,10 +472,11 @@ export default function CotadorScreen() {
             quote={activeQuote}
             catalogItems={quoteCatalog}
             filteredItems={filteredItems}
-            selectedItems={selectedItems}
+            selectedItems={activeQuote.selectedItems}
             filterOptions={filterOptions}
             filters={filters}
             hasDetailedProducts={hasDetailedProducts}
+            busy={selectionBusy}
             onUpdateFilters={(updates) => setFilters((current) => ({ ...current, ...updates }))}
             onResetFilters={() => setFilters(DEFAULT_FILTERS)}
             onToggleCatalogItem={handleToggleCatalogItem}
@@ -419,7 +491,10 @@ export default function CotadorScreen() {
         mode={wizardState.mode}
         initialDraft={wizardState.draft}
         onClose={() => setWizardState((current) => ({ ...current, isOpen: false }))}
-        onSubmit={handleWizardSubmit}
+        onSubmit={(input) => {
+          void handleWizardSubmit(input);
+        }}
+        busy={wizardBusy}
       />
     </div>
   );

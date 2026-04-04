@@ -430,6 +430,91 @@ export type ProdutoPlano = {
   updated_at: string;
 };
 
+export type CotadorAdministradora = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  observacoes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CotadorEntidadeClasse = {
+  id: string;
+  nome: string;
+  ativo: boolean;
+  observacoes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CotadorProduto = {
+  id: string;
+  operadora_id: string;
+  administradora_id?: string | null;
+  legacy_produto_plano_id?: string | null;
+  nome: string;
+  modalidade?: string | null;
+  abrangencia?: string | null;
+  acomodacao?: string | null;
+  comissao_sugerida?: number | null;
+  bonus_por_vida_valor?: number | null;
+  observacoes?: string | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CotadorProdutoEntidade = {
+  produto_id: string;
+  entidade_id: string;
+  created_at: string;
+};
+
+export type CotadorQuoteRecord = {
+  id: string;
+  nome: string;
+  modalidade: 'PF' | 'ADESAO' | 'PME';
+  total_vidas: number;
+  lead_id?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CotadorQuoteBeneficiaryRecord = {
+  id: string;
+  quote_id: string;
+  age_range: string;
+  quantidade: number;
+  ordem: number;
+  created_at: string;
+};
+
+export type CotadorQuoteItemRecord = {
+  id: string;
+  quote_id: string;
+  cotador_produto_id?: string | null;
+  legacy_produto_plano_id?: string | null;
+  operadora_id?: string | null;
+  administradora_id?: string | null;
+  catalog_item_key: string;
+  source: 'cotador_produto' | 'legacy_produto' | 'operadora';
+  titulo_snapshot: string;
+  subtitulo_snapshot?: string | null;
+  operadora_nome_snapshot: string;
+  administradora_nome_snapshot?: string | null;
+  entidade_nomes_snapshot: string[];
+  modalidade_snapshot?: string | null;
+  abrangencia_snapshot?: string | null;
+  acomodacao_snapshot?: string | null;
+  comissao_sugerida_snapshot?: number | null;
+  bonus_por_vida_valor_snapshot?: number | null;
+  observacoes_snapshot?: string | null;
+  ordem: number;
+  created_at: string;
+};
+
 export type LeadStatusConfig = {
   id: string;
   nome: string;

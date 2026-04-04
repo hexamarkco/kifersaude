@@ -12,6 +12,7 @@ type CotadorCreateQuoteModalProps = {
   isOpen: boolean;
   mode: 'create' | 'edit';
   initialDraft: CotadorQuoteDraft;
+  busy?: boolean;
   onClose: () => void;
   onSubmit: (input: CotadorQuoteInput) => void;
 };
@@ -38,6 +39,7 @@ export default function CotadorCreateQuoteModal({
   isOpen,
   mode,
   initialDraft,
+  busy = false,
   onClose,
   onSubmit,
 }: CotadorCreateQuoteModalProps) {
@@ -105,16 +107,16 @@ export default function CotadorCreateQuoteModal({
         Etapa {step + 1} de {stepDefinitions.length}
       </div>
       <div className="flex items-center justify-end gap-2">
-        <Button variant="ghost" onClick={onClose}>
+        <Button variant="ghost" onClick={onClose} disabled={busy}>
           Cancelar
         </Button>
         {step > 0 && (
-          <Button variant="secondary" onClick={() => setStep((current) => current - 1)}>
+          <Button variant="secondary" onClick={() => setStep((current) => current - 1)} disabled={busy}>
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Button>
         )}
-        <Button onClick={handleNext} disabled={!canAdvance}>
+        <Button onClick={handleNext} disabled={!canAdvance} loading={busy}>
           {isLastStep ? (
             <>
               <Save className="h-4 w-4" />

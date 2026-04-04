@@ -6,7 +6,15 @@ import {
   type CotadorAgeRange,
   type CotadorQuoteModality,
 } from './cotadorConstants';
-import type { CotadorAgeDistribution, CotadorQuote, CotadorQuoteDraft, CotadorQuoteInput } from './cotadorTypes';
+import type {
+  CotadorAgeDistribution,
+  CotadorCatalogActor,
+  CotadorCatalogItem,
+  CotadorQuote,
+  CotadorQuoteDraft,
+  CotadorQuoteInput,
+  CotadorQuoteItem,
+} from './cotadorTypes';
 
 const modalityLabelMap = new Map(COTADOR_MODALITY_OPTIONS.map((option) => [option.value, option.label]));
 
@@ -27,8 +35,65 @@ const toNonNegativeInt = (value: unknown) => {
 
 const createQuoteId = () => `cotacao-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const createQuoteItemId = () => `cotacao-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 const isCotadorQuoteModality = (value: unknown): value is CotadorQuoteModality =>
   COTADOR_MODALITY_OPTIONS.some((option) => option.value === value);
+
+const isCotadorCatalogActor = (value: unknown): value is CotadorCatalogActor =>
+  Boolean(
+    value
+    && typeof value === 'object'
+    && typeof (value as CotadorCatalogActor).id === 'string'
+    && 'name' in (value as CotadorCatalogActor)
+    && typeof (value as CotadorCatalogActor).active === 'boolean',
+  );
+
+const sanitizeCatalogActor = (value: Partial<CotadorCatalogActor> | null | undefined): CotadorCatalogActor => ({
+  id: typeof value?.id === 'string' ? value.id : `actor-${Math.random().toString(36).slice(2, 8)}`,
+  name: typeof value?.name === 'string' ? value.name : null,
+  active: value?.active !== false,
+});
+
+const sanitizeQuoteItem = (value: unknown): CotadorQuoteItem | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Partial<CotadorQuoteItem> & {
+    operadora?: unknown;
+    administradora?: unknown;
+    entidadesClasse?: unknown;
+  };
+
+  if (typeof candidate.catalogItemKey !== 'string' || typeof candidate.titulo !== 'string' || typeof candidate.source !== 'string') {
+    return null;
+  }
+
+  const entidadesClasse = Array.isArray(candidate.entidadesClasse)
+    ? candidate.entidadesClasse.filter(isCotadorCatalogActor).map((item) => sanitizeCatalogActor(item))
+    : [];
+
+  return {
+    id: typeof candidate.id === 'string' ? candidate.id : createQuoteItemId(),
+    catalogItemKey: candidate.catalogItemKey,
+    source: candidate.source,
+    cotadorProdutoId: typeof candidate.cotadorProdutoId === 'string' ? candidate.cotadorProdutoId : null,
+    legacyProdutoPlanoId: typeof candidate.legacyProdutoPlanoId === 'string' ? candidate.legacyProdutoPlanoId : null,
+    titulo: candidate.titulo,
+    subtitulo: typeof candidate.subtitulo === 'string' ? candidate.subtitulo : null,
+    operadora: sanitizeCatalogActor(isCotadorCatalogActor(candidate.operadora) ? candidate.operadora : undefined),
+    administradora: isCotadorCatalogActor(candidate.administradora) ? sanitizeCatalogActor(candidate.administradora) : null,
+    entidadesClasse,
+    modalidade: typeof candidate.modalidade === 'string' ? candidate.modalidade : null,
+    abrangencia: typeof candidate.abrangencia === 'string' ? candidate.abrangencia : null,
+    acomodacao: typeof candidate.acomodacao === 'string' ? candidate.acomodacao : null,
+    comissaoSugerida: typeof candidate.comissaoSugerida === 'number' ? candidate.comissaoSugerida : null,
+    bonusPorVidaValor: typeof candidate.bonusPorVidaValor === 'number' ? candidate.bonusPorVidaValor : null,
+    observacao: typeof candidate.observacao === 'string' ? candidate.observacao : null,
+    createdAt: typeof candidate.createdAt === 'string' ? candidate.createdAt : undefined,
+  };
+};
 
 export const createEmptyCotadorAgeDistribution = (): CotadorAgeDistribution =>
   COTADOR_AGE_RANGES.reduce((accumulator, range) => {
@@ -65,6 +130,25 @@ export const buildCotadorQuoteDraft = (quote?: CotadorQuote | null): CotadorQuot
   ageDistribution: sanitizeCotadorAgeDistribution(quote?.ageDistribution),
 });
 
+export const buildCotadorQuoteItemFromCatalogItem = (item: CotadorCatalogItem): CotadorQuoteItem => ({
+  id: createQuoteItemId(),
+  catalogItemKey: item.id,
+  source: item.source,
+  cotadorProdutoId: item.cotadorProdutoId,
+  legacyProdutoPlanoId: item.legacyProdutoPlanoId,
+  titulo: item.titulo,
+  subtitulo: item.subtitulo,
+  operadora: sanitizeCatalogActor(item.operadora),
+  administradora: item.administradora ? sanitizeCatalogActor(item.administradora) : null,
+  entidadesClasse: item.entidadesClasse.map((entity) => sanitizeCatalogActor(entity)),
+  modalidade: item.modalidade,
+  abrangencia: item.abrangencia,
+  acomodacao: item.acomodacao,
+  comissaoSugerida: item.comissaoSugerida,
+  bonusPorVidaValor: item.bonusPorVidaValor,
+  observacao: item.observacao,
+});
+
 export const createCotadorQuote = (input: CotadorQuoteInput): CotadorQuote => {
   const now = new Date().toISOString();
   const ageDistribution = sanitizeCotadorAgeDistribution(input.ageDistribution);
@@ -75,7 +159,8 @@ export const createCotadorQuote = (input: CotadorQuoteInput): CotadorQuote => {
     modality: input.modality,
     ageDistribution,
     totalLives: getCotadorTotalLives(ageDistribution),
-    selectedCatalogItemIds: [],
+    selectedItems: [],
+    leadId: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -105,6 +190,8 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
   const candidate = value as Partial<CotadorQuote> & {
     ageDistribution?: Partial<Record<CotadorAgeRange, unknown>>;
     modality?: unknown;
+    selectedCatalogItemIds?: unknown;
+    selectedItems?: unknown;
   };
 
   if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string' || !isCotadorQuoteModality(candidate.modality)) {
@@ -112,10 +199,12 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
   }
 
   const ageDistribution = sanitizeCotadorAgeDistribution(candidate.ageDistribution);
-  const selectedCatalogItemIds = Array.isArray(candidate.selectedCatalogItemIds)
+  const selectedItems = Array.isArray(candidate.selectedItems)
+    ? candidate.selectedItems.map(sanitizeQuoteItem).filter((item): item is CotadorQuoteItem => item !== null)
+    : [];
+  const legacySelectedIds = Array.isArray(candidate.selectedCatalogItemIds)
     ? candidate.selectedCatalogItemIds.filter((item): item is string => typeof item === 'string')
     : [];
-
   const createdAt = typeof candidate.createdAt === 'string' ? candidate.createdAt : new Date().toISOString();
   const updatedAt = typeof candidate.updatedAt === 'string' ? candidate.updatedAt : createdAt;
 
@@ -125,7 +214,27 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
     modality: candidate.modality,
     ageDistribution,
     totalLives: getCotadorTotalLives(ageDistribution),
-    selectedCatalogItemIds,
+    selectedItems: selectedItems.length
+      ? selectedItems
+      : legacySelectedIds.map((catalogItemKey) => ({
+          id: createQuoteItemId(),
+          catalogItemKey,
+          source: 'operadora',
+          cotadorProdutoId: null,
+          legacyProdutoPlanoId: null,
+          titulo: catalogItemKey,
+          subtitulo: null,
+          operadora: sanitizeCatalogActor({ id: catalogItemKey, name: catalogItemKey, active: true }),
+          administradora: null,
+          entidadesClasse: [],
+          modalidade: null,
+          abrangencia: null,
+          acomodacao: null,
+          comissaoSugerida: null,
+          bonusPorVidaValor: null,
+          observacao: null,
+        })),
+    leadId: typeof candidate.leadId === 'string' ? candidate.leadId : null,
     createdAt,
     updatedAt,
   };

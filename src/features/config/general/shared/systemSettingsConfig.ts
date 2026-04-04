@@ -1,5 +1,6 @@
 import {
   Building2,
+  Calculator,
   FileText,
   ListTree,
   Settings,
@@ -14,6 +15,7 @@ export type SettingsMessage = { type: "success" | "error"; text: string };
 export type SectionId =
   | "general"
   | "operadoras"
+  | "cotador"
   | "access"
   | "leads"
   | "contracts";
@@ -124,6 +126,14 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     icon: ShieldCheck,
     accentClassName: "bg-sky-50 text-sky-700 ring-sky-100",
     searchTerms: ["acesso", "perfil", "permissoes", "admin", "observer"],
+  },
+  {
+    id: "cotador",
+    title: "Cotador",
+    description: "Administradoras, entidades e produtos do catalogo comercial.",
+    icon: Calculator,
+    accentClassName: "bg-orange-50 text-orange-700 ring-orange-100",
+    searchTerms: ["cotador", "administradora", "administradoras", "entidade", "entidades", "produto", "produtos", "catalogo"],
   },
   {
     id: "leads",

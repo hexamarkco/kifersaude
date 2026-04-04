@@ -4,7 +4,7 @@ import Input from '../../../components/ui/Input';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import { cx } from '../../../lib/cx';
 import { formatCotadorAgeSummary, formatCotadorDateTime, formatCotadorModality } from '../shared/cotadorUtils';
-import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote } from '../shared/cotadorTypes';
+import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 
 type SelectOption = {
   value: string;
@@ -15,14 +15,17 @@ type CotadorWorkspaceProps = {
   quote: CotadorQuote;
   catalogItems: CotadorCatalogItem[];
   filteredItems: CotadorCatalogItem[];
-  selectedItems: CotadorCatalogItem[];
+  selectedItems: CotadorQuoteItem[];
   filterOptions: {
     operadoras: SelectOption[];
+    administradoras: SelectOption[];
+    entidades: SelectOption[];
     abrangencias: SelectOption[];
     acomodacoes: SelectOption[];
   };
   filters: CotadorCatalogFilters;
   hasDetailedProducts: boolean;
+  busy?: boolean;
   onUpdateFilters: (updates: Partial<CotadorCatalogFilters>) => void;
   onResetFilters: () => void;
   onToggleCatalogItem: (itemId: string) => void;
@@ -52,13 +55,14 @@ export default function CotadorWorkspace({
   filterOptions,
   filters,
   hasDetailedProducts,
+  busy = false,
   onUpdateFilters,
   onResetFilters,
   onToggleCatalogItem,
   onCreateQuote,
   onEditQuote,
 }: CotadorWorkspaceProps) {
-  const selectedIds = new Set(quote.selectedCatalogItemIds);
+  const selectedIds = new Set(quote.selectedItems.map((item) => item.catalogItemKey));
 
   return (
     <div className="space-y-6">
@@ -117,7 +121,7 @@ export default function CotadorWorkspace({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-6">
           <Input
             value={filters.search}
             onChange={(event) => onUpdateFilters({ search: event.target.value })}
@@ -130,6 +134,20 @@ export default function CotadorWorkspace({
             placeholder="Todas as operadoras"
             value={filters.operadoraId}
             onChange={(next) => onUpdateFilters({ operadoraId: next })}
+          />
+          <FilterSingleSelect
+            icon={BadgePercent}
+            options={filterOptions.administradoras}
+            placeholder="Todas as administradoras"
+            value={filters.administradoraId}
+            onChange={(next) => onUpdateFilters({ administradoraId: next })}
+          />
+          <FilterSingleSelect
+            icon={CheckCircle2}
+            options={filterOptions.entidades}
+            placeholder="Todas as entidades"
+            value={filters.entidadeId}
+            onChange={(next) => onUpdateFilters({ entidadeId: next })}
           />
           <FilterSingleSelect
             icon={MapPin}
@@ -194,7 +212,7 @@ export default function CotadorWorkspace({
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-full border border-[color:rgba(157,127,90,0.28)] bg-[color:rgba(255,253,250,0.86)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">
-                            {item.source === 'produto' ? 'Produto' : 'Operadora'}
+                        {item.source === 'cotador_produto' ? 'Produto' : item.source === 'legacy_produto' ? 'Legado' : 'Operadora'}
                           </span>
                           {item.modalidade && (
                             <span className="rounded-full border border-[color:rgba(157,127,90,0.22)] bg-[color:rgba(246,228,199,0.62)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#6f3f16)]">
@@ -215,6 +233,7 @@ export default function CotadorWorkspace({
                       <Button
                         variant={isSelected ? 'success' : 'primary'}
                         onClick={() => onToggleCatalogItem(item.id)}
+                        disabled={busy}
                       >
                         {isSelected ? (
                           <>
@@ -240,10 +259,10 @@ export default function CotadorWorkspace({
                       />
                     </div>
 
-                    {(item.administradora?.name || item.entidadeClasse?.name || item.observacao) && (
+                    {(item.administradora?.name || item.entidadesClasse.length > 0 || item.observacao) && (
                       <div className="mt-4 rounded-2xl border border-[color:rgba(157,127,90,0.2)] bg-[color:rgba(255,253,250,0.82)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
                         {item.administradora?.name && <p>Administradora: {item.administradora.name}</p>}
-                        {item.entidadeClasse?.name && <p>Entidade de classe: {item.entidadeClasse.name}</p>}
+                        {item.entidadesClasse.length > 0 && <p>Entidades: {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</p>}
                         {item.observacao && <p>{item.observacao}</p>}
                       </div>
                     )}
@@ -281,7 +300,7 @@ export default function CotadorWorkspace({
                         <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</p>
                         <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora.name ?? 'Operadora nao informada'}</p>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => onToggleCatalogItem(item.id)}>
+                      <Button variant="ghost" size="sm" onClick={() => onToggleCatalogItem(item.catalogItemKey)} disabled={busy}>
                         <X className="h-4 w-4" />
                         Remover
                       </Button>
@@ -298,6 +317,18 @@ export default function CotadorWorkspace({
                           {item.comissaoSugerida !== null ? `${item.comissaoSugerida.toFixed(2)}% de comissao` : 'Sem comissao sugerida'}
                         </span>
                       </div>
+                      {item.administradora?.name && (
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-[color:var(--panel-text-muted,#876f5c)]" />
+                          <span>Administradora: {item.administradora.name}</span>
+                        </div>
+                      )}
+                      {item.entidadesClasse.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-[color:var(--panel-text-muted,#876f5c)]" />
+                          <span>Entidades: {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

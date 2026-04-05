@@ -263,7 +263,6 @@ export default function CotadorWorkspace({
         onClose={() => setPickerOpen(false)}
         onSelectItem={(itemId) => {
           onToggleCatalogItem(itemId);
-          setPickerOpen(false);
         }}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}

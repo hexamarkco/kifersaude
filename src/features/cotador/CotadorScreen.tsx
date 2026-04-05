@@ -543,10 +543,6 @@ export default function CotadorScreen() {
             <ArrowLeft className="h-4 w-4" />
             Voltar para cotações
           </Button>
-          <Button variant="secondary" onClick={() => navigate('/painel/cotador/configuracoes')}>
-            <Settings2 className="h-4 w-4" />
-            Configurar catálogo
-          </Button>
         </div>
 
         <CotadorWorkspace

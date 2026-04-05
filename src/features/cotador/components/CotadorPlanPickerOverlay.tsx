@@ -90,14 +90,6 @@ const formatCoparticipacao = (value: string | null | undefined) => {
   return 'A definir';
 };
 
-const formatLivesRange = (item: CotadorCatalogItem) => {
-  if (item.vidasMin === null && item.vidasMax === null) {
-    return 'Sem faixa de vidas';
-  }
-
-  return `${item.vidasMin ?? 1} a ${item.vidasMax ?? '...'} vidas`;
-};
-
 export default function CotadorPlanPickerOverlay({
   isOpen,
   quote,
@@ -310,16 +302,16 @@ export default function CotadorPlanPickerOverlay({
         : 'product';
 
   const floatingPanelTitle = currentStep === 'line'
-    ? selectedOperator?.actor.name ?? 'Linhas disponíveis'
+    ? selectedOperator?.actor.name ?? 'Linhas'
     : currentStep === 'table'
-      ? activeProductGroup?.title ?? 'Tabelas comerciais'
-      : selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Produtos disponíveis';
+      ? activeProductGroup?.title ?? 'Tabelas'
+      : selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Produtos';
 
-  const floatingPanelSubtitle = currentStep === 'line'
-    ? 'Escolha a linha comercial para continuar.'
+  const floatingPanelSectionLabel = currentStep === 'line'
+    ? 'Linhas'
     : currentStep === 'table'
-      ? 'Selecione a melhor tabela para adicionar à cotação.'
-      : 'Veja as opções disponíveis dentro do contexto filtrado.';
+      ? 'Tabelas'
+      : 'Produtos';
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -540,9 +532,8 @@ export default function CotadorPlanPickerOverlay({
                 ) : (
                   <div className="relative min-h-[560px] xl:min-h-[640px]">
                     <div className="grid gap-4 transition-all sm:grid-cols-2 xl:grid-cols-5">
-                      {operatorCards.map((card, index) => {
+                      {operatorCards.map((card) => {
                         const isActive = selectedOperatorId === card.actor.id;
-                        const alignRight = index >= 3;
                         return (
                           <div key={card.actor.id} className={cx('relative', isActive ? 'z-20' : undefined)}>
                             <button
@@ -563,31 +554,23 @@ export default function CotadorPlanPickerOverlay({
                                     : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))]',
                               )}
                             >
-                              <div className="flex items-start justify-end gap-4">
-                                <Building2 className={cx('h-5 w-5 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.66)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                              </div>
-                              <p className={cx('mt-10 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
-                              <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.82)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.lineCount} linhas</span>
-                                <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.productCount} produtos</span>
+                              <div className="flex min-h-[132px] flex-col items-center justify-center gap-4 text-center">
+                                <div className={cx(
+                                  'flex h-14 w-14 items-center justify-center rounded-2xl border',
+                                  isDarkTheme
+                                    ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff3d1]'
+                                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-accent-ink,#6f3f16)]',
+                                )}>
+                                  <Building2 className="h-6 w-6" />
+                                </div>
+                                <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
                               </div>
                             </button>
 
                             {isActive && (
-                              <div className={cx(
-                                'mt-3 w-full xl:absolute xl:top-[calc(100%+12px)] xl:w-[400px] 2xl:w-[420px]',
-                                alignRight ? 'xl:right-0' : 'xl:left-0',
-                              )}>
-                                <div className={cx(
-                                  'overflow-hidden rounded-[28px] border shadow-[0_30px_70px_rgba(0,0,0,0.28)]',
-                                  isDarkTheme
-                                    ? 'border-[color:var(--panel-border,#4b3425)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#1d1410)_96%,black),color-mix(in_srgb,var(--panel-surface-soft,#2a1c15)_92%,var(--panel-surface,#1d1410)))]'
-                                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_96%,white),color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_84%,var(--panel-surface,#fffdfa)))]',
-                                )}>
-                                  <div className={cx(
-                                    'border-b px-5 py-4',
-                                    isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)]',
-                                  )}>
+                              <div className="absolute inset-x-0 top-0">
+                                <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] shadow-[0_28px_60px_rgba(15,10,6,0.34)]">
+                                  <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3">
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -605,7 +588,7 @@ export default function CotadorPlanPickerOverlay({
                                         setSelectedProductKey(null);
                                       }}
                                       className={cx(
-                                        'inline-flex items-center gap-2 text-sm transition-colors',
+                                        'inline-flex items-center gap-2 text-xs font-medium transition-colors',
                                         isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)] hover:text-white' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]',
                                       )}
                                     >
@@ -616,19 +599,19 @@ export default function CotadorPlanPickerOverlay({
                                           ? 'Voltar às linhas'
                                           : 'Voltar às operadoras'}
                                     </button>
-                                    <h5 className={cx('mt-4 text-xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</h5>
-                                    <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{floatingPanelSubtitle}</p>
-                                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                                      {selectedOperator?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedOperator.actor.name}</span>}
-                                      {selectedLine?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedLine.actor.name}</span>}
+                                    <div className="mt-3 flex items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className={cx('text-[11px] font-semibold uppercase tracking-[0.16em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.54)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>{floatingPanelSectionLabel}</p>
+                                        <p className={cx('mt-1 truncate text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</p>
+                                      </div>
                                     </div>
                                   </div>
 
-                                  <div className="max-h-[560px] overflow-y-auto">
+                                  <div className="max-h-[320px] overflow-y-auto">
                                     {currentStep === 'line' ? (
                                       lineCards.length === 0 ? (
-                                        <div className="px-5 py-10 text-center">
-                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível para esta operadora.</p>
+                                        <div className="px-4 py-6 text-center">
+                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível.</p>
                                         </div>
                                       ) : (
                                         <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
@@ -641,30 +624,20 @@ export default function CotadorPlanPickerOverlay({
                                                 setSelectedProductKey(null);
                                               }}
                                               className={cx(
-                                                'flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors',
+                                                'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
                                                 isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
                                               )}
                                             >
-                                              <div className="min-w-0 flex-1">
-                                                <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{line.actor.name}</p>
-                                                <div className={cx('mt-2 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                                  {line.coparticipacoes.map((item) => (
-                                                    <span key={`${line.actor.id}-${item}`} className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{item}</span>
-                                                  ))}
-                                                  {line.businessProfiles.map((item) => (
-                                                    <span key={`${line.actor.id}-${item}`} className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{item}</span>
-                                                  ))}
-                                                </div>
-                                              </div>
-                                              <ArrowLeft className={cx('mt-1 h-5 w-5 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                              <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{line.actor.name}</p>
+                                              <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
                                             </button>
                                           ))}
                                         </div>
                                       )
                                     ) : currentStep === 'table' ? (
                                       tableCandidates.length === 0 ? (
-                                        <div className="px-5 py-10 text-center">
-                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma tabela disponível para este produto.</p>
+                                        <div className="px-4 py-6 text-center">
+                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma tabela disponível.</p>
                                         </div>
                                       ) : (
                                         <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
@@ -680,7 +653,7 @@ export default function CotadorPlanPickerOverlay({
                                                 }}
                                                 disabled={busy || isSelected}
                                                 className={cx(
-                                                  'flex w-full items-start gap-4 px-5 py-4 text-left transition-colors disabled:cursor-default',
+                                                  'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
                                                   isSelected
                                                     ? isDarkTheme
                                                       ? 'bg-emerald-500/10'
@@ -690,33 +663,18 @@ export default function CotadorPlanPickerOverlay({
                                                       : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
                                                 )}
                                               >
-                                                <div className="pt-1">
+                                                <div>
                                                   {isSelected ? (
-                                                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                                                   ) : (
-                                                    <div className={cx('h-2.5 w-2.5 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                                    <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
                                                   )}
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                  <div className="flex flex-wrap items-start justify-between gap-3">
-                                                    <div className="min-w-0 flex-1">
-                                                      <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
-                                                      <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                                        {item.titulo !== item.tabelaNome ? item.titulo : item.acomodacao ?? item.linha?.name ?? 'Tabela comercial'}
-                                                      </p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                      <p className={cx('text-[10px] font-semibold uppercase tracking-[0.16em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.52)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Mensalidade</p>
-                                                      <p className={cx('mt-1 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
-                                                        {item.estimatedMonthlyTotal !== null ? formatCotadorCurrency(item.estimatedMonthlyTotal) : 'A calcular'}
-                                                      </p>
-                                                    </div>
-                                                  </div>
-                                                  <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                                    <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatBusinessProfile(item.perfilEmpresarial)}</span>
-                                                    <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatCoparticipacao(item.coparticipacao)}</span>
-                                                    <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatLivesRange(item)}</span>
-                                                  </div>
+                                                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                                                  <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
+                                                  <span className={cx('shrink-0 text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
+                                                    {item.estimatedMonthlyTotal !== null ? formatCotadorCurrency(item.estimatedMonthlyTotal) : '-'}
+                                                  </span>
                                                 </div>
                                               </button>
                                             );
@@ -724,8 +682,8 @@ export default function CotadorPlanPickerOverlay({
                                         </div>
                                       )
                                     ) : productGroups.length === 0 ? (
-                                      <div className="px-5 py-10 text-center">
-                                        <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível dentro dos filtros atuais.</p>
+                                      <div className="px-4 py-6 text-center">
+                                        <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
                                       </div>
                                     ) : (
                                       <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
@@ -735,19 +693,15 @@ export default function CotadorPlanPickerOverlay({
                                             type="button"
                                             onClick={() => setSelectedProductKey(group.key)}
                                             className={cx(
-                                              'flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors',
+                                              'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
                                               isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
                                             )}
                                           >
-                                            <div className="min-w-0 flex-1">
-                                              <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
-                                              <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{group.lineName ?? 'Produto avulso'}</p>
-                                              <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                                <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{group.tableCount || group.itemCount} opção(ões)</span>
-                                                {group.lowestPrice !== null && <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>A partir de {formatCotadorCurrency(group.lowestPrice)}</span>}
-                                              </div>
+                                            <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
+                                            <div className="flex items-center gap-3">
+                                              {group.lowestPrice !== null && <span className={cx('shrink-0 text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{formatCotadorCurrency(group.lowestPrice)}</span>}
+                                              <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
                                             </div>
-                                            <ArrowLeft className={cx('mt-1 h-5 w-5 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
                                           </button>
                                         ))}
                                       </div>

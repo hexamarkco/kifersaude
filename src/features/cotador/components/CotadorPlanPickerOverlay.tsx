@@ -93,6 +93,7 @@ const formatCoparticipacao = (value: string | null | undefined) => {
 export default function CotadorPlanPickerOverlay({
   isOpen,
   quote,
+  catalogItems,
   filteredItems,
   filters,
   filterOptions,
@@ -136,6 +137,11 @@ export default function CotadorPlanPickerOverlay({
   const discoveryItems = useMemo(
     () => filteredItems.filter((item) => item.source === 'cotador_tabela'),
     [filteredItems],
+  );
+
+  const structuralDiscoveryItems = useMemo(
+    () => catalogItems.filter((item) => item.source === 'cotador_tabela' || item.source === 'cotador_produto'),
+    [catalogItems],
   );
 
   const operatorCards = useMemo<OperatorCard[]>(() => {
@@ -272,6 +278,17 @@ export default function CotadorPlanPickerOverlay({
     [selectedLineId, lineCards],
   );
 
+  const selectedOperatorStructuralLineCount = useMemo(() => {
+    if (!selectedOperatorId) return 0;
+
+    return new Set(
+      structuralDiscoveryItems
+        .filter((item) => item.operadora.id === selectedOperatorId)
+        .map((item) => item.linha?.id)
+        .filter((value): value is string => Boolean(value)),
+    ).size;
+  }, [selectedOperatorId, structuralDiscoveryItems]);
+
   useEffect(() => {
     if (selectedOperatorId && !operatorCards.some((card) => card.actor.id === selectedOperatorId)) {
       setSelectedOperatorId(null);
@@ -297,7 +314,7 @@ export default function CotadorPlanPickerOverlay({
     ? 'operator'
     : activeProductGroup
       ? 'table'
-      : lineCards.length > 1 && !selectedLineId
+      : selectedOperatorStructuralLineCount > 1 && !selectedLineId
         ? 'line'
         : 'product';
 
@@ -333,7 +350,7 @@ export default function CotadorPlanPickerOverlay({
               <h3 className={cx('mt-2 text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
                 {!selectedOperatorId
                   ? 'Escolha a operadora'
-                  : !selectedLineId && lineCards.length > 1
+                  : !selectedLineId && selectedOperatorStructuralLineCount > 1
                     ? `Escolha a linha em ${selectedOperator?.actor.name ?? 'operadora'}`
                   : activeProductGroup
                       ? 'Escolha a tabela comercial'

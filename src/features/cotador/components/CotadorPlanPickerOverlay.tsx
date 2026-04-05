@@ -90,14 +90,6 @@ const formatCoparticipacao = (value: string | null | undefined) => {
   return 'A definir';
 };
 
-const getInitials = (value: string | null | undefined) =>
-  (value ?? '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-
 const formatLivesRange = (item: CotadorCatalogItem) => {
   if (item.vidasMin === null && item.vidasMax === null) {
     return 'Sem faixa de vidas';
@@ -542,7 +534,7 @@ export default function CotadorPlanPickerOverlay({
                   </div>
                 ) : (
                   <div className="relative min-h-[560px] xl:min-h-[640px]">
-                    <div className={cx('grid gap-4 transition-all sm:grid-cols-2 xl:grid-cols-5', selectedOperatorId ? 'xl:pr-[420px]' : undefined)}>
+                    <div className="grid gap-4 transition-all sm:grid-cols-2 xl:grid-cols-5">
                       {operatorCards.map((card) => {
                         const isActive = selectedOperatorId === card.actor.id;
                         return (
@@ -565,18 +557,10 @@ export default function CotadorPlanPickerOverlay({
                                   : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))]',
                             )}
                           >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className={cx(
-                                'flex h-[88px] w-full items-center justify-center rounded-2xl border text-center shadow-sm',
-                                isDarkTheme
-                                  ? 'border-[color:rgba(255,255,255,0.06)] bg-[linear-gradient(135deg,rgba(251,191,36,0.14),rgba(180,83,9,0.42))] text-[color:#fff3d1]'
-                                  : 'border-[color:rgba(157,127,90,0.18)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_84%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-focus,#c86f1d)_30%,var(--panel-accent-ink,#6f3f16)))] text-[var(--panel-accent-ink-strong,#4a2411)]',
-                              )}>
-                                <span className="line-clamp-2 text-3xl font-semibold tracking-tight">{getInitials(card.actor.name) || 'OP'}</span>
-                              </div>
+                            <div className="flex items-start justify-end gap-4">
                               <Building2 className={cx('h-5 w-5 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.66)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
                             </div>
-                            <p className={cx('mt-4 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
+                            <p className={cx('mt-10 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
                             <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.82)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
                               <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.lineCount} linhas</span>
                               <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.productCount} produtos</span>
@@ -587,7 +571,7 @@ export default function CotadorPlanPickerOverlay({
                     </div>
 
                     {selectedOperatorId && (
-                      <div className="mt-6 xl:absolute xl:left-8 xl:top-20 xl:z-10 xl:mt-0 xl:w-[420px]">
+                      <div className="mt-6 xl:absolute xl:left-[260px] xl:top-16 xl:z-10 xl:mt-0 xl:w-[440px] 2xl:left-[300px]">
                         <div className={cx(
                           'overflow-hidden rounded-[28px] border shadow-[0_30px_70px_rgba(0,0,0,0.28)]',
                           isDarkTheme

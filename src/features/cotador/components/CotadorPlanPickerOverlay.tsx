@@ -142,7 +142,7 @@ export default function CotadorPlanPickerOverlay({
   );
 
   const discoveryItems = useMemo(
-    () => filteredItems.filter((item) => item.source !== 'operadora'),
+    () => filteredItems.filter((item) => item.source === 'cotador_tabela'),
     [filteredItems],
   );
 
@@ -246,7 +246,12 @@ export default function CotadorPlanPickerOverlay({
       });
     });
 
-    return Array.from(grouped.values()).sort((left, right) => left.title.localeCompare(right.title, 'pt-BR'));
+    return Array.from(grouped.values()).sort((left, right) => {
+      const leftPrice = left.lowestPrice ?? Number.MAX_SAFE_INTEGER;
+      const rightPrice = right.lowestPrice ?? Number.MAX_SAFE_INTEGER;
+      if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+      return left.title.localeCompare(right.title, 'pt-BR');
+    });
   }, [lineScopedItems]);
 
   const activeProductGroup = useMemo(
@@ -300,7 +305,7 @@ export default function CotadorPlanPickerOverlay({
     ? 'operator'
     : activeProductGroup
       ? 'table'
-      : lineCards.length > 0 && !selectedLineId
+      : lineCards.length > 1 && !selectedLineId
         ? 'line'
         : 'product';
 
@@ -336,7 +341,7 @@ export default function CotadorPlanPickerOverlay({
               <h3 className={cx('mt-2 text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
                 {!selectedOperatorId
                   ? 'Escolha a operadora'
-                  : !selectedLineId && lineCards.length > 0
+                  : !selectedLineId && lineCards.length > 1
                     ? `Escolha a linha em ${selectedOperator?.actor.name ?? 'operadora'}`
                   : activeProductGroup
                       ? 'Escolha a tabela comercial'
@@ -535,221 +540,226 @@ export default function CotadorPlanPickerOverlay({
                 ) : (
                   <div className="relative min-h-[560px] xl:min-h-[640px]">
                     <div className="grid gap-4 transition-all sm:grid-cols-2 xl:grid-cols-5">
-                      {operatorCards.map((card) => {
+                      {operatorCards.map((card, index) => {
                         const isActive = selectedOperatorId === card.actor.id;
+                        const alignRight = index >= 3;
                         return (
-                          <button
-                            key={card.actor.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedOperatorId(card.actor.id);
-                              setSelectedLineId(null);
-                              setSelectedProductKey(null);
-                            }}
-                            className={cx(
-                              'group cursor-pointer rounded-[26px] border p-5 text-left transition-all duration-200',
-                              isActive
-                                ? isDarkTheme
-                                  ? 'border-[color:rgba(251,191,36,0.34)] bg-[color:rgba(251,191,36,0.08)] shadow-[0_18px_42px_rgba(0,0,0,0.22)]'
-                                  : 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_72%,var(--panel-accent-soft,#f6e4c7))] shadow-sm'
-                                : isDarkTheme
-                                  ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.02)] hover:-translate-y-0.5 hover:border-[color:rgba(251,191,36,0.22)] hover:bg-[color:rgba(255,255,255,0.04)]'
-                                  : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))]',
-                            )}
-                          >
-                            <div className="flex items-start justify-end gap-4">
-                              <Building2 className={cx('h-5 w-5 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.66)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                            </div>
-                            <p className={cx('mt-10 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
-                            <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.82)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                              <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.lineCount} linhas</span>
-                              <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.productCount} produtos</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {selectedOperatorId && (
-                      <div className="mt-6 xl:absolute xl:left-[260px] xl:top-16 xl:z-10 xl:mt-0 xl:w-[440px] 2xl:left-[300px]">
-                        <div className={cx(
-                          'overflow-hidden rounded-[28px] border shadow-[0_30px_70px_rgba(0,0,0,0.28)]',
-                          isDarkTheme
-                            ? 'border-[color:rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(10,14,22,0.98),rgba(6,10,18,0.98))]'
-                            : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
-                        )}>
-                          <div className={cx(
-                            'border-b px-5 py-4',
-                            isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)]',
-                          )}>
+                          <div key={card.actor.id} className={cx('relative', isActive ? 'z-20' : undefined)}>
                             <button
                               type="button"
                               onClick={() => {
-                                if (currentStep === 'table') {
-                                  setSelectedProductKey(null);
-                                  return;
-                                }
-                                if (currentStep === 'product' && selectedLineId) {
-                                  setSelectedLineId(null);
-                                  setSelectedProductKey(null);
-                                  return;
-                                }
-                                setSelectedOperatorId(null);
+                                setSelectedOperatorId(card.actor.id);
                                 setSelectedLineId(null);
                                 setSelectedProductKey(null);
                               }}
                               className={cx(
-                                'inline-flex items-center gap-2 text-sm transition-colors',
-                                isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)] hover:text-white' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]',
+                                'group w-full cursor-pointer rounded-[26px] border p-5 text-left transition-all duration-200',
+                                isActive
+                                  ? isDarkTheme
+                                    ? 'border-[color:rgba(251,191,36,0.34)] bg-[color:rgba(251,191,36,0.08)] shadow-[0_18px_42px_rgba(0,0,0,0.22)]'
+                                    : 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_72%,var(--panel-accent-soft,#f6e4c7))] shadow-sm'
+                                  : isDarkTheme
+                                    ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.02)] hover:-translate-y-0.5 hover:border-[color:rgba(251,191,36,0.22)] hover:bg-[color:rgba(255,255,255,0.04)]'
+                                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))]',
                               )}
                             >
-                              <ArrowLeft className="h-4 w-4" />
-                              {currentStep === 'table'
-                                ? 'Voltar aos produtos'
-                                : currentStep === 'product' && selectedLineId
-                                  ? 'Voltar às linhas'
-                                  : 'Voltar às operadoras'}
+                              <div className="flex items-start justify-end gap-4">
+                                <Building2 className={cx('h-5 w-5 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.66)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                              </div>
+                              <p className={cx('mt-10 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
+                              <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.82)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.lineCount} linhas</span>
+                                <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.productCount} produtos</span>
+                              </div>
                             </button>
-                            <h5 className={cx('mt-4 text-xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</h5>
-                            <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{floatingPanelSubtitle}</p>
-                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                              {selectedOperator?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedOperator.actor.name}</span>}
-                              {selectedLine?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedLine.actor.name}</span>}
-                            </div>
-                          </div>
 
-                          <div className="max-h-[560px] overflow-y-auto">
-                            {currentStep === 'line' ? (
-                              lineCards.length === 0 ? (
-                                <div className="px-5 py-10 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível para esta operadora.</p>
-                                </div>
-                              ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                  {lineCards.map((line) => (
+                            {isActive && (
+                              <div className={cx(
+                                'mt-3 w-full xl:absolute xl:top-[calc(100%+12px)] xl:w-[400px] 2xl:w-[420px]',
+                                alignRight ? 'xl:right-0' : 'xl:left-0',
+                              )}>
+                                <div className={cx(
+                                  'overflow-hidden rounded-[28px] border shadow-[0_30px_70px_rgba(0,0,0,0.28)]',
+                                  isDarkTheme
+                                    ? 'border-[color:var(--panel-border,#4b3425)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#1d1410)_96%,black),color-mix(in_srgb,var(--panel-surface-soft,#2a1c15)_92%,var(--panel-surface,#1d1410)))]'
+                                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_96%,white),color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_84%,var(--panel-surface,#fffdfa)))]',
+                                )}>
+                                  <div className={cx(
+                                    'border-b px-5 py-4',
+                                    isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)]',
+                                  )}>
                                     <button
-                                      key={line.actor.id}
                                       type="button"
                                       onClick={() => {
-                                        setSelectedLineId(line.actor.id);
+                                        if (currentStep === 'table') {
+                                          setSelectedProductKey(null);
+                                          return;
+                                        }
+                                        if (currentStep === 'product' && selectedLineId) {
+                                          setSelectedLineId(null);
+                                          setSelectedProductKey(null);
+                                          return;
+                                        }
+                                        setSelectedOperatorId(null);
+                                        setSelectedLineId(null);
                                         setSelectedProductKey(null);
                                       }}
                                       className={cx(
-                                        'flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors',
-                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        'inline-flex items-center gap-2 text-sm transition-colors',
+                                        isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)] hover:text-white' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]',
                                       )}
                                     >
-                                      <div className="min-w-0 flex-1">
-                                        <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{line.actor.name}</p>
-                                        <div className={cx('mt-2 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                          {line.coparticipacoes.map((item) => (
-                                            <span key={`${line.actor.id}-${item}`} className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{item}</span>
-                                          ))}
-                                          {line.businessProfiles.map((item) => (
-                                            <span key={`${line.actor.id}-${item}`} className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{item}</span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                      <ArrowLeft className={cx('mt-1 h-5 w-5 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                      <ArrowLeft className="h-4 w-4" />
+                                      {currentStep === 'table'
+                                        ? 'Voltar aos produtos'
+                                        : currentStep === 'product' && selectedLineId
+                                          ? 'Voltar às linhas'
+                                          : 'Voltar às operadoras'}
                                     </button>
-                                  ))}
-                                </div>
-                              )
-                            ) : currentStep === 'table' ? (
-                              tableCandidates.length === 0 ? (
-                                <div className="px-5 py-10 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma tabela disponível para este produto.</p>
-                                </div>
-                              ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                  {tableCandidates.map((item) => {
-                                    const isSelected = selectedIds.has(item.id);
-                                    return (
-                                      <button
-                                        key={item.id}
-                                        type="button"
-                                        onClick={() => {
-                                          if (isSelected || busy) return;
-                                          onSelectItem(item.id);
-                                        }}
-                                        disabled={busy || isSelected}
-                                        className={cx(
-                                          'flex w-full items-start gap-4 px-5 py-4 text-left transition-colors disabled:cursor-default',
-                                          isSelected
-                                            ? isDarkTheme
-                                              ? 'bg-emerald-500/10'
-                                              : 'bg-emerald-50'
-                                            : isDarkTheme
-                                              ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
-                                              : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
-                                        )}
-                                      >
-                                        <div className="pt-1">
-                                          {isSelected ? (
-                                            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                                          ) : (
-                                            <div className={cx('h-2.5 w-2.5 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
-                                          )}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                          <div className="flex flex-wrap items-start justify-between gap-3">
-                                            <div className="min-w-0 flex-1">
-                                              <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
-                                              <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                                {item.titulo !== item.tabelaNome ? item.titulo : item.acomodacao ?? item.linha?.name ?? 'Tabela comercial'}
-                                              </p>
-                                            </div>
-                                            <div className="text-right">
-                                              <p className={cx('text-[10px] font-semibold uppercase tracking-[0.16em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.52)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Mensalidade</p>
-                                              <p className={cx('mt-1 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
-                                                {item.estimatedMonthlyTotal !== null ? formatCotadorCurrency(item.estimatedMonthlyTotal) : 'A calcular'}
-                                              </p>
-                                            </div>
-                                          </div>
-                                          <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                            <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatBusinessProfile(item.perfilEmpresarial)}</span>
-                                            <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatCoparticipacao(item.coparticipacao)}</span>
-                                            <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatLivesRange(item)}</span>
-                                          </div>
-                                        </div>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )
-                            ) : productGroups.length === 0 ? (
-                              <div className="px-5 py-10 text-center">
-                                <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível dentro dos filtros atuais.</p>
-                              </div>
-                            ) : (
-                              <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                {productGroups.map((group) => (
-                                  <button
-                                    key={group.key}
-                                    type="button"
-                                    onClick={() => setSelectedProductKey(group.key)}
-                                    className={cx(
-                                      'flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors',
-                                      isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
-                                    )}
-                                  >
-                                    <div className="min-w-0 flex-1">
-                                      <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
-                                      <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{group.lineName ?? 'Produto avulso'}</p>
-                                      <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                        <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{group.tableCount || group.itemCount} opção(ões)</span>
-                                        {group.lowestPrice !== null && <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>A partir de {formatCotadorCurrency(group.lowestPrice)}</span>}
-                                      </div>
+                                    <h5 className={cx('mt-4 text-xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</h5>
+                                    <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{floatingPanelSubtitle}</p>
+                                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                                      {selectedOperator?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedOperator.actor.name}</span>}
+                                      {selectedLine?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedLine.actor.name}</span>}
                                     </div>
-                                    <ArrowLeft className={cx('mt-1 h-5 w-5 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                                  </button>
-                                ))}
+                                  </div>
+
+                                  <div className="max-h-[560px] overflow-y-auto">
+                                    {currentStep === 'line' ? (
+                                      lineCards.length === 0 ? (
+                                        <div className="px-5 py-10 text-center">
+                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível para esta operadora.</p>
+                                        </div>
+                                      ) : (
+                                        <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                          {lineCards.map((line) => (
+                                            <button
+                                              key={line.actor.id}
+                                              type="button"
+                                              onClick={() => {
+                                                setSelectedLineId(line.actor.id);
+                                                setSelectedProductKey(null);
+                                              }}
+                                              className={cx(
+                                                'flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors',
+                                                isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                              )}
+                                            >
+                                              <div className="min-w-0 flex-1">
+                                                <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{line.actor.name}</p>
+                                                <div className={cx('mt-2 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                                  {line.coparticipacoes.map((item) => (
+                                                    <span key={`${line.actor.id}-${item}`} className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{item}</span>
+                                                  ))}
+                                                  {line.businessProfiles.map((item) => (
+                                                    <span key={`${line.actor.id}-${item}`} className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{item}</span>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                              <ArrowLeft className={cx('mt-1 h-5 w-5 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )
+                                    ) : currentStep === 'table' ? (
+                                      tableCandidates.length === 0 ? (
+                                        <div className="px-5 py-10 text-center">
+                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma tabela disponível para este produto.</p>
+                                        </div>
+                                      ) : (
+                                        <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                          {tableCandidates.map((item) => {
+                                            const isSelected = selectedIds.has(item.id);
+                                            return (
+                                              <button
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => {
+                                                  if (isSelected || busy) return;
+                                                  onSelectItem(item.id);
+                                                }}
+                                                disabled={busy || isSelected}
+                                                className={cx(
+                                                  'flex w-full items-start gap-4 px-5 py-4 text-left transition-colors disabled:cursor-default',
+                                                  isSelected
+                                                    ? isDarkTheme
+                                                      ? 'bg-emerald-500/10'
+                                                      : 'bg-emerald-50'
+                                                    : isDarkTheme
+                                                      ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
+                                                      : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                                )}
+                                              >
+                                                <div className="pt-1">
+                                                  {isSelected ? (
+                                                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                                                  ) : (
+                                                    <div className={cx('h-2.5 w-2.5 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                                  )}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                                    <div className="min-w-0 flex-1">
+                                                      <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
+                                                      <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                                        {item.titulo !== item.tabelaNome ? item.titulo : item.acomodacao ?? item.linha?.name ?? 'Tabela comercial'}
+                                                      </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                      <p className={cx('text-[10px] font-semibold uppercase tracking-[0.16em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.52)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Mensalidade</p>
+                                                      <p className={cx('mt-1 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
+                                                        {item.estimatedMonthlyTotal !== null ? formatCotadorCurrency(item.estimatedMonthlyTotal) : 'A calcular'}
+                                                      </p>
+                                                    </div>
+                                                  </div>
+                                                  <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                                    <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatBusinessProfile(item.perfilEmpresarial)}</span>
+                                                    <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatCoparticipacao(item.coparticipacao)}</span>
+                                                    <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatLivesRange(item)}</span>
+                                                  </div>
+                                                </div>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )
+                                    ) : productGroups.length === 0 ? (
+                                      <div className="px-5 py-10 text-center">
+                                        <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível dentro dos filtros atuais.</p>
+                                      </div>
+                                    ) : (
+                                      <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                        {productGroups.map((group) => (
+                                          <button
+                                            key={group.key}
+                                            type="button"
+                                            onClick={() => setSelectedProductKey(group.key)}
+                                            className={cx(
+                                              'flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors',
+                                              isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                            )}
+                                          >
+                                            <div className="min-w-0 flex-1">
+                                              <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
+                                              <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{group.lineName ?? 'Produto avulso'}</p>
+                                              <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                                <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{group.tableCount || group.itemCount} opção(ões)</span>
+                                                {group.lowestPrice !== null && <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>A partir de {formatCotadorCurrency(group.lowestPrice)}</span>}
+                                              </div>
+                                            </div>
+                                            <ArrowLeft className={cx('mt-1 h-5 w-5 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    )}
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

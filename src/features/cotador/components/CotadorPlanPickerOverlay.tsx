@@ -413,7 +413,7 @@ export default function CotadorPlanPickerOverlay({
                   fullWidth
                   className={cx(
                     isDarkTheme
-                      ? 'border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef] shadow-none hover:border-[color:rgba(251,191,36,0.28)] hover:bg-[color:rgba(251,191,36,0.12)] hover:text-[color:#fff3d1]'
+                      ? 'border-[color:rgba(251,191,36,0.72)] bg-[color:rgba(180,83,9,0.14)] text-[color:#f4c95d] shadow-none hover:border-[color:#f4c95d] hover:bg-[color:rgba(251,191,36,0.16)] hover:text-[color:#ffe7a8]'
                       : undefined,
                   )}
                 >

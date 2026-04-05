@@ -907,6 +907,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     onChange={(event) => setProductSearch(event.target.value)}
                     placeholder="Buscar produto, linha ou operadora"
                     leftIcon={Search}
+                    className="[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef] shadow-none placeholder:text-[color:rgba(255,243,209,0.42)] focus:border-[color:rgba(251,191,36,0.28)] focus:ring-[color:rgba(251,191,36,0.26)]"
                   />
                 </div>
               </div>

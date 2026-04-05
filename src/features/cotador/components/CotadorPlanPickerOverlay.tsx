@@ -109,7 +109,6 @@ const formatLivesRange = (item: CotadorCatalogItem) => {
 export default function CotadorPlanPickerOverlay({
   isOpen,
   quote,
-  catalogItems,
   filteredItems,
   filters,
   filterOptions,
@@ -120,11 +119,15 @@ export default function CotadorPlanPickerOverlay({
   onResetFilters,
   onChangeQuoteModality,
 }: CotadorPlanPickerOverlayProps) {
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
   const isDarkTheme = isPanelDarkTheme();
 
   useEffect(() => {
     if (!isOpen) {
+      setSelectedOperatorId(null);
+      setSelectedLineId(null);
       setSelectedProductKey(null);
       return;
     }
@@ -137,21 +140,26 @@ export default function CotadorPlanPickerOverlay({
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen) return;
     setSelectedProductKey(null);
-  }, [filters.operadoraId, filters.linhaId, filters.search, quote.modality, isOpen]);
+  }, [filters.search, filters.administradoraId, filters.entidadeId, filters.perfilEmpresarial, filters.coparticipacao, filters.abrangencia, filters.acomodacao, quote.modality, isOpen]);
 
   const selectedIds = useMemo(
     () => new Set(quote.selectedItems.map((item) => item.catalogItemKey)),
     [quote.selectedItems],
   );
 
+  const discoveryItems = useMemo(
+    () => filteredItems.filter((item) => item.source !== 'operadora'),
+    [filteredItems],
+  );
+
   const operatorCards = useMemo<OperatorCard[]>(() => {
     const grouped = new Map<string, OperatorCard>();
     const lineMap = new Map<string, Set<string>>();
     const productMap = new Map<string, Set<string>>();
-    const realCatalogItems = catalogItems.filter((item) => item.source !== 'operadora');
 
-    realCatalogItems.forEach((item) => {
+    discoveryItems.forEach((item) => {
       const current = grouped.get(item.operadora.id);
       if (current) {
         current.itemCount += 1;
@@ -180,11 +188,11 @@ export default function CotadorPlanPickerOverlay({
         productCount: productMap.get(card.actor.id)?.size ?? 0,
       }))
       .sort((left, right) => (left.actor.name ?? '').localeCompare(right.actor.name ?? '', 'pt-BR'));
-  }, [catalogItems]);
+  }, [discoveryItems]);
 
   const operatorScopedItems = useMemo(
-    () => (filters.operadoraId ? catalogItems.filter((item) => item.operadora.id === filters.operadoraId) : []),
-    [catalogItems, filters.operadoraId],
+    () => (selectedOperatorId ? discoveryItems.filter((item) => item.operadora.id === selectedOperatorId) : []),
+    [discoveryItems, selectedOperatorId],
   );
 
   const lineCards = useMemo<LineCard[]>(() => {
@@ -211,9 +219,14 @@ export default function CotadorPlanPickerOverlay({
       .sort((left, right) => (left.actor.name ?? '').localeCompare(right.actor.name ?? '', 'pt-BR'));
   }, [operatorScopedItems]);
 
+  const lineScopedItems = useMemo(
+    () => (selectedLineId ? operatorScopedItems.filter((item) => item.linha?.id === selectedLineId) : operatorScopedItems),
+    [operatorScopedItems, selectedLineId],
+  );
+
   const productGroups = useMemo<ProductGroup[]>(() => {
     const grouped = new Map<string, ProductGroup>();
-    const sourceItems = filteredItems.filter((item) => item.source !== 'operadora');
+    const sourceItems = lineScopedItems;
 
     sourceItems.forEach((item) => {
       const key = `${item.linha?.id ?? 'sem-linha'}:${item.titulo}`;
@@ -242,7 +255,7 @@ export default function CotadorPlanPickerOverlay({
     });
 
     return Array.from(grouped.values()).sort((left, right) => left.title.localeCompare(right.title, 'pt-BR'));
-  }, [filteredItems]);
+  }, [lineScopedItems]);
 
   const activeProductGroup = useMemo(
     () => productGroups.find((group) => group.key === selectedProductKey) ?? null,
@@ -261,19 +274,63 @@ export default function CotadorPlanPickerOverlay({
   }, [activeProductGroup]);
 
   const selectedOperator = useMemo(
-    () => operatorCards.find((card) => card.actor.id === filters.operadoraId) ?? null,
-    [filters.operadoraId, operatorCards],
+    () => operatorCards.find((card) => card.actor.id === selectedOperatorId) ?? null,
+    [selectedOperatorId, operatorCards],
   );
 
   const selectedLine = useMemo(
-    () => lineCards.find((card) => card.actor.id === filters.linhaId) ?? null,
-    [filters.linhaId, lineCards],
+    () => lineCards.find((card) => card.actor.id === selectedLineId) ?? null,
+    [selectedLineId, lineCards],
   );
+
+  useEffect(() => {
+    if (selectedOperatorId && !operatorCards.some((card) => card.actor.id === selectedOperatorId)) {
+      setSelectedOperatorId(null);
+      setSelectedLineId(null);
+      setSelectedProductKey(null);
+    }
+  }, [operatorCards, selectedOperatorId]);
+
+  useEffect(() => {
+    if (selectedLineId && !lineCards.some((card) => card.actor.id === selectedLineId)) {
+      setSelectedLineId(null);
+      setSelectedProductKey(null);
+    }
+  }, [lineCards, selectedLineId]);
+
+  useEffect(() => {
+    if (selectedProductKey && !productGroups.some((group) => group.key === selectedProductKey)) {
+      setSelectedProductKey(null);
+    }
+  }, [productGroups, selectedProductKey]);
+
+  const currentStep = !selectedOperatorId
+    ? 'operator'
+    : activeProductGroup
+      ? 'table'
+      : lineCards.length > 0 && !selectedLineId
+        ? 'line'
+        : 'product';
+
+  const floatingPanelTitle = currentStep === 'line'
+    ? selectedOperator?.actor.name ?? 'Linhas disponíveis'
+    : currentStep === 'table'
+      ? activeProductGroup?.title ?? 'Tabelas comerciais'
+      : selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Produtos disponíveis';
+
+  const floatingPanelSubtitle = currentStep === 'line'
+    ? 'Escolha a linha comercial para continuar.'
+    : currentStep === 'table'
+      ? 'Selecione a melhor tabela para adicionar à cotação.'
+      : 'Veja as opções disponíveis dentro do contexto filtrado.';
 
   if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[145] bg-[color:rgba(12,16,25,0.58)] backdrop-blur-sm">
+    <div className={cx(
+      'painel-theme fixed inset-0 z-[145] bg-[color:rgba(12,16,25,0.58)] backdrop-blur-sm',
+      isDarkTheme ? 'theme-dark dark' : 'theme-light',
+    )}>
       <div className="flex h-full items-stretch justify-center p-4 md:p-6">
         <div className={cx(
           'flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-[32px] border shadow-[0_40px_120px_rgba(0,0,0,0.28)]',

@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Building2,
   CheckCircle,
+  Copy,
   Edit2,
   Layers3,
   MapPin,
@@ -295,6 +296,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [productForm, setProductForm] = useState<ProductFormState>(DEFAULT_PRODUCT_FORM);
   const [productSearch, setProductSearch] = useState('');
   const [tableModalOpen, setTableModalOpen] = useState(false);
+  const [tableModalMode, setTableModalMode] = useState<'create' | 'edit' | 'duplicate'>('create');
   const [tableEditingId, setTableEditingId] = useState<string | null>(null);
   const [tableForm, setTableForm] = useState<TableFormState>(DEFAULT_TABLE_FORM);
   const [tableCodeTouched, setTableCodeTouched] = useState(false);
@@ -506,6 +508,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
   const resetTableModal = () => {
     setTableModalOpen(false);
+    setTableModalMode('create');
     setTableEditingId(null);
     setTableForm(DEFAULT_TABLE_FORM);
     setTableCodeTouched(false);
@@ -549,7 +552,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setProductModalOpen(true);
   };
 
-  const openTableModal = (table?: CotadorTableManagerRecord) => {
+  const openTableModal = (table?: CotadorTableManagerRecord, mode: 'create' | 'edit' | 'duplicate' = table ? 'edit' : 'create') => {
     const priceFields = createEmptyTablePrices();
     COTADOR_AGE_RANGES.forEach((range) => {
       const value = table?.pricesByAgeRange[range];
@@ -558,11 +561,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       }
     });
 
-    setTableEditingId(table?.id ?? null);
+    setTableModalMode(mode);
+    setTableEditingId(mode === 'edit' ? table?.id ?? null : null);
     setTableForm({
       produtoId: table?.produto_id ?? '',
-      nome: table?.nome ?? '',
-      codigo: table?.codigo ?? '',
+      nome: mode === 'duplicate' && table?.nome ? `${table.nome} - copia` : table?.nome ?? '',
+      codigo: mode === 'duplicate' ? '' : table?.codigo ?? '',
       modalidade: table?.modalidade ?? 'PME',
       perfilEmpresarial: table?.perfil_empresarial ?? 'todos',
       coparticipacao: table?.coparticipacao ?? 'sem',
@@ -573,7 +577,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       ativo: table?.ativo ?? true,
       observacoes: table?.observacoes ?? '',
     });
-    setTableCodeTouched(Boolean(table?.codigo));
+    setTableCodeTouched(mode === 'edit' ? Boolean(table?.codigo) : false);
     setTableModalOpen(true);
   };
 
@@ -817,70 +821,73 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         administradoras.length === 0 ? (
           <EmptyState icon={ShieldCheck} title="Nenhuma administradora cadastrada" description="Crie uma administradora." />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {administradoras.map((item) => (
-              <article key={item.id} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.nome}</h4>
+          <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+              {administradoras.map((item) => (
+                <article key={item.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{item.nome}</h4>
                     {item.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.observacoes}</p>}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end lg:self-auto">
                     <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openEntityModal('administradoras', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('administradoras', item.id, 'Excluir administradora', 'Essa ação remove a administradora do catálogo do Cotador.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
+            </div>
           </div>
         )
       ) : activeTab === 'entidades' ? (
         entidades.length === 0 ? (
           <EmptyState icon={Sparkles} title="Nenhuma entidade cadastrada" description="Crie uma entidade." />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {entidades.map((item) => (
-              <article key={item.id} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.nome}</h4>
+          <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+              {entidades.map((item) => (
+                <article key={item.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{item.nome}</h4>
                     {item.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.observacoes}</p>}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end lg:self-auto">
                     <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openEntityModal('entidades', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('entidades', item.id, 'Excluir entidade', 'Essa ação remove a entidade do catálogo do Cotador.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
+            </div>
           </div>
         )
       ) : activeTab === 'linhas' ? (
         linhas.length === 0 ? (
           <EmptyState icon={Network} title="Nenhuma linha cadastrada" description="Crie uma linha." />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {linhas.map((line) => (
-              <article key={line.id} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{line.nome}</h4>
+          <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+              {linhas.map((line) => (
+                <article key={line.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{line.nome}</h4>
+                      {!line.ativo && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">Inativa</span>}
+                    </div>
                     <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Operadora: {line.operadora?.nome ?? 'Não encontrada'}</p>
                     {line.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{line.observacoes}</p>}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 self-end lg:self-auto">
                     <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openLineModal(line)}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('linhas', line.id, 'Excluir linha', 'Essa ação remove a linha e pode impactar os produtos vinculados.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
+            </div>
           </div>
         )
       ) : activeTab === 'produtos' ? (
@@ -910,7 +917,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             ) : (
               <div className="space-y-4">
                 {groupedProducts.map((group) => (
-                  <section key={group.key} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+                  <section key={group.key} className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
                     <div className="flex flex-col gap-3 border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                       <div>
                         <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{group.linhaNome}</h4>
@@ -961,43 +968,55 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       ) : tabelas.length === 0 ? (
         <EmptyState icon={Table2} title="Nenhuma tabela cadastrada" description="Crie tabelas por produto para separar MEI, não MEI, coparticipação, acomodação e faixas de vidas como 2 a 2, 3 a 5 ou 6 a 29." />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+          <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
           {[...tabelas].sort(compareCotadorTables).map((table) => (
-            <article key={table.id} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
+            <article key={table.id} className="px-5 py-4">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{table.nome}</h4>
-                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                    {table.produto?.operadora?.nome ?? 'Operadora'} / {table.produto?.linha?.nome ?? 'Linha'} / {table.produto?.nome ?? 'Produto'}
-                  </p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{table.nome}</h4>
+                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                        {table.produto?.operadora?.nome ?? 'Operadora'} / {table.produto?.linha?.nome ?? 'Linha'} / {table.produto?.nome ?? 'Produto'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(table, 'duplicate')} title="Criar cópia">
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(table, 'edit')} title="Editar tabela">
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('tabelas', table.id, 'Excluir tabela', 'Essa ação remove a tabela comercial, mas snapshots já usados em cotações permanecem preservados.') } title="Excluir tabela"><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </div>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                     <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{table.modalidade}</span>
                     <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatPerfilEmpresarial(table.perfil_empresarial)}</span>
                     <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatCoparticipacao(table.coparticipacao)}</span>
                     {table.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{table.acomodacao}</span>}
                     {(table.vidas_min || table.vidas_max) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">Vidas: {table.vidas_min ?? 1} a {table.vidas_max ?? '...'}</span>}
+                    {!table.ativo && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">Inativo</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(table)}>
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('tabelas', table.id, 'Excluir tabela', 'Essa ação remove a tabela comercial, mas snapshots já usados em cotações permanecem preservados.') }><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                {COTADOR_AGE_RANGES.map((range) => (
-                  <div key={range} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-center">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
-                    <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
-                      {typeof table.pricesByAgeRange[range] === 'number' ? formatCotadorCurrency(table.pricesByAgeRange[range]) : '-'}
-                    </p>
+                <div className="w-full xl:max-w-[560px]">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 xl:grid-cols-5">
+                    {COTADOR_AGE_RANGES.map((range) => (
+                      <div key={range} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-center">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
+                        <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                          {typeof table.pricesByAgeRange[range] === 'number' ? formatCotadorCurrency(table.pricesByAgeRange[range]) : '-'}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </article>
           ))}
+          </div>
         </div>
       )}
 
@@ -1124,7 +1143,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       <ModalShell
         isOpen={tableModalOpen}
         onClose={resetTableModal}
-        title={tableEditingId ? 'Editar tabela comercial' : 'Nova tabela comercial'}
+        title={tableModalMode === 'edit' ? 'Editar tabela comercial' : tableModalMode === 'duplicate' ? 'Criar cópia da tabela' : 'Nova tabela comercial'}
         description="Separe a tabela por modalidade, acomodação, perfil empresarial, coparticipação e faixa de vidas."
         size="xl"
       >

@@ -246,21 +246,16 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                             )}
                           </div>
 
-                          <div className="mt-3 grid grid-cols-1 gap-3 text-sm text-[color:var(--panel-text-soft)] sm:grid-cols-3">
-                            <div className="rounded-xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-3 py-2">
-                              <p className="text-xs uppercase tracking-wide text-[color:var(--panel-text-muted)]">Comissão</p>
-                              <p className="mt-1 font-semibold text-[color:var(--panel-text)]">{operadora.comissao_padrao}%</p>
-                            </div>
-                            <div className="rounded-xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-3 py-2">
-                              <p className="text-xs uppercase tracking-wide text-[color:var(--panel-text-muted)]">Prazo</p>
-                              <p className="mt-1 font-semibold text-[color:var(--panel-text)]">{operadora.prazo_recebimento_dias} dias</p>
-                            </div>
-                            <div className="rounded-xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-3 py-2">
-                              <p className="text-xs uppercase tracking-wide text-[color:var(--panel-text-muted)]">Bônus</p>
-                              <p className="mt-1 font-semibold text-[color:var(--panel-text)]">
-                                {operadora.bonus_por_vida ? `R$ ${operadora.bonus_padrao.toFixed(2)}` : 'Não possui'}
-                              </p>
-                            </div>
+                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft)]">
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1">
+                              Comissão: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.comissao_padrao}%</span>
+                            </span>
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1">
+                              Prazo: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.prazo_recebimento_dias} dias</span>
+                            </span>
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1">
+                              Bônus: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.bonus_por_vida ? `R$ ${operadora.bonus_padrao.toFixed(2)}` : 'Não possui'}</span>
+                            </span>
                           </div>
 
                           {operadora.observacoes && (

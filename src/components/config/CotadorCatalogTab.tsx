@@ -1224,12 +1224,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {(activeTab === 'produtos' || activeTab === 'tabelas') && (
-              <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
-                <Upload className="h-4 w-4" />
-                Importar
-              </Button>
-            )}
             {activeTab === 'linhas' && (
               <Button onClick={() => openLineModal()}>
                 <Plus className="h-4 w-4" />
@@ -1254,6 +1248,10 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 {activeTab === 'administradoras' ? 'Nova administradora' : 'Nova entidade'}
               </Button>
             )}
+            <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+              <Upload className="h-4 w-4" />
+              Importar
+            </Button>
           </div>
         </div>
 
@@ -1462,8 +1460,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       <ModalShell
         isOpen={importModalOpen}
         onClose={resetImportModal}
-        title="Importar tabelas e rede"
-        description="Use JSON completo para importar produto, rede e tabelas juntos, ou CSVs separados para tabelas e rede hospitalar."
+        title="Importar catálogo"
+        description="Centralize importações do catálogo a partir de arquivos estruturados."
         size="xl"
       >
         <form onSubmit={handleImportSubmit} className="space-y-5">

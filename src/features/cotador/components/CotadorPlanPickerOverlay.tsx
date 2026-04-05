@@ -359,7 +359,7 @@ export default function CotadorPlanPickerOverlay({
                     leftIcon={Search}
                     className={cx(
                       isDarkTheme
-                        ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef] shadow-none placeholder:text-[color:rgba(255,243,209,0.42)] focus:border-[color:rgba(251,191,36,0.28)] focus:ring-[color:rgba(251,191,36,0.26)]'
+                        ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] !border-[color:rgba(255,255,255,0.1)] !bg-[color:rgba(255,255,255,0.06)] !text-[color:#fff8ef] !shadow-none placeholder:!text-[color:rgba(255,243,209,0.42)] focus:!border-[color:rgba(251,191,36,0.28)] focus:!ring-[color:rgba(251,191,36,0.26)]'
                         : undefined,
                     )}
                   />
@@ -413,7 +413,7 @@ export default function CotadorPlanPickerOverlay({
                   fullWidth
                   className={cx(
                     isDarkTheme
-                      ? 'border-[color:rgba(251,191,36,0.72)] bg-[color:rgba(180,83,9,0.14)] text-[color:#f4c95d] shadow-none hover:border-[color:#f4c95d] hover:bg-[color:rgba(251,191,36,0.16)] hover:text-[color:#ffe7a8]'
+                      ? '!border-[color:rgba(251,191,36,0.72)] !bg-[color:rgba(180,83,9,0.14)] !text-[color:#f4c95d] !shadow-none hover:!border-[color:#f4c95d] hover:!bg-[color:rgba(251,191,36,0.16)] hover:!text-[color:#ffe7a8]'
                       : undefined,
                   )}
                 >

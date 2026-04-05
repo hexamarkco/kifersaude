@@ -201,6 +201,25 @@ const buildLivesCode = (vidasMin: string, vidasMax: string) => {
   return `${min}A${max}`;
 };
 
+const normalizeSortText = (value?: string | null) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const compareCotadorProducts = (left: CotadorProductManagerRecord, right: CotadorProductManagerRecord) => {
+  const comparisons = [
+    normalizeSortText(left.modalidade).localeCompare(normalizeSortText(right.modalidade), 'pt-BR'),
+    normalizeSortText(left.administradora?.nome).localeCompare(normalizeSortText(right.administradora?.nome), 'pt-BR'),
+    normalizeSortText(left.acomodacao).localeCompare(normalizeSortText(right.acomodacao), 'pt-BR'),
+    normalizeSortText(left.abrangencia).localeCompare(normalizeSortText(right.abrangencia), 'pt-BR'),
+    left.nome.localeCompare(right.nome, 'pt-BR'),
+  ];
+
+  return comparisons.find((result) => result !== 0) ?? 0;
+};
+
 function FeedbackBanner({ message }: { message: Message | null }) {
   if (!message) return null;
 
@@ -359,7 +378,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     return Array.from(groups.values())
       .map((group) => ({
         ...group,
-        items: [...group.items].sort((left, right) => left.nome.localeCompare(right.nome, 'pt-BR')),
+        items: [...group.items].sort(compareCotadorProducts),
       }))
       .sort((left, right) => {
         const operadoraComparison = left.operadoraNome.localeCompare(right.operadoraNome, 'pt-BR');

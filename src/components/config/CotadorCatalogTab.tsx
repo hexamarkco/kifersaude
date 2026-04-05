@@ -5,6 +5,8 @@ import {
   CheckCircle,
   Copy,
   Edit2,
+  FileJson,
+  FileSpreadsheet,
   Layers3,
   MapPin,
   Network,
@@ -15,6 +17,7 @@ import {
   Sparkles,
   Table2,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
@@ -30,6 +33,7 @@ import {
   type CotadorTableManagerInput,
   type CotadorTableManagerRecord,
 } from '../../features/cotador/services/cotadorService';
+import { cotadorImportService, type CotadorImportKind } from '../../features/cotador/services/cotadorImportService';
 import type { CotadorAdministradora, CotadorEntidadeClasse, Operadora } from '../../lib/supabase';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import Button from '../ui/Button';
@@ -106,6 +110,11 @@ type GroupedTableEntry = {
   vidasMax: CotadorTableManagerRecord['vidas_max'];
   product: CotadorProductManagerRecord | null;
   records: CotadorTableManagerRecord[];
+};
+
+type ImportFormState = {
+  kind: CotadorImportKind;
+  file: File | null;
 };
 
 const tabs: Array<{ id: CatalogTabId; label: string }> = [
@@ -453,6 +462,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [productEditingId, setProductEditingId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<ProductFormState>(DEFAULT_PRODUCT_FORM);
   const [productSearch, setProductSearch] = useState('');
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importForm, setImportForm] = useState<ImportFormState>({ kind: 'json-completo', file: null });
   const [tableModalOpen, setTableModalOpen] = useState(false);
   const [tableModalMode, setTableModalMode] = useState<'create' | 'edit' | 'duplicate'>('create');
   const [tableEditingId, setTableEditingId] = useState<string | null>(null);
@@ -753,6 +764,44 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setProdutos(nextProdutos);
     setTabelas(nextTabelas);
     setLoading(false);
+  };
+
+  const activeImportTemplate = useMemo(
+    () => cotadorImportService.getTemplate(importForm.kind),
+    [importForm.kind],
+  );
+
+  const resetImportModal = () => {
+    setImportModalOpen(false);
+    setImportForm({ kind: 'json-completo', file: null });
+  };
+
+  const handleImportSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!importForm.file) {
+      showMessage('error', 'Selecione um arquivo para importar.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const content = await importForm.file.text();
+      const result = await cotadorImportService.importFromText(importForm.kind, content);
+      await loadCatalogData();
+
+      const summaryParts = [];
+      if (result.importedProducts > 0) summaryParts.push(`${result.importedProducts} produto(s)`);
+      if (result.importedTables > 0) summaryParts.push(`${result.importedTables} tabela(s)`);
+      if (result.importedNetworkEntries > 0) summaryParts.push(`${result.importedNetworkEntries} item(ns) de rede`);
+
+      showMessage('success', `Importação concluída${summaryParts.length > 0 ? `: ${summaryParts.join(', ')}` : '.'}`);
+      resetImportModal();
+    } catch (error) {
+      showMessage('error', error instanceof Error ? error.message : 'Não foi possível importar o arquivo.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const resetEntityModal = () => {
@@ -1175,6 +1224,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
 
           <div className="flex flex-wrap gap-2">
+            {(activeTab === 'produtos' || activeTab === 'tabelas') && (
+              <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+                <Upload className="h-4 w-4" />
+                Importar
+              </Button>
+            )}
             {activeTab === 'linhas' && (
               <Button onClick={() => openLineModal()}>
                 <Plus className="h-4 w-4" />
@@ -1403,6 +1458,71 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
         </div>
       )}
+
+      <ModalShell
+        isOpen={importModalOpen}
+        onClose={resetImportModal}
+        title="Importar tabelas e rede"
+        description="Use JSON completo para importar produto, rede e tabelas juntos, ou CSVs separados para tabelas e rede hospitalar."
+        size="xl"
+      >
+        <form onSubmit={handleImportSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => setImportForm((current) => ({ ...current, kind: 'json-completo' }))}
+              className={`rounded-3xl border p-4 text-left transition-colors ${importForm.kind === 'json-completo' ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]'}`}
+            >
+              <FileJson className="h-5 w-5 text-[var(--panel-accent-ink,#6f3f16)]" />
+              <p className="mt-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">JSON completo</p>
+              <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Produto, rede hospitalar e tabelas no mesmo arquivo.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportForm((current) => ({ ...current, kind: 'csv-tabelas' }))}
+              className={`rounded-3xl border p-4 text-left transition-colors ${importForm.kind === 'csv-tabelas' ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]'}`}
+            >
+              <FileSpreadsheet className="h-5 w-5 text-[var(--panel-accent-ink,#6f3f16)]" />
+              <p className="mt-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">CSV de tabelas</p>
+              <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Linhas por tabela/acomodação com preços por faixa.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportForm((current) => ({ ...current, kind: 'csv-rede' }))}
+              className={`rounded-3xl border p-4 text-left transition-colors ${importForm.kind === 'csv-rede' ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]'}`}
+            >
+              <FileSpreadsheet className="h-5 w-5 text-[var(--panel-accent-ink,#6f3f16)]" />
+              <p className="mt-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">CSV de rede</p>
+              <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Hospitais estruturados por produto.</p>
+            </button>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Arquivo</label>
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
+              <input
+                type="file"
+                accept={importForm.kind === 'json-completo' ? '.json,application/json' : '.csv,text/csv'}
+                onChange={(event) => setImportForm((current) => ({ ...current, file: event.target.files?.[0] ?? null }))}
+                className="block w-full text-sm text-[color:var(--panel-text-soft,#5b4635)] file:mr-4 file:rounded-2xl file:border-0 file:bg-[var(--panel-accent-soft,#f6e4c7)] file:px-4 file:py-2 file:font-semibold file:text-[var(--panel-accent-ink,#6f3f16)]"
+              />
+              <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+                {importForm.file ? `Selecionado: ${importForm.file.name}` : 'Selecione um arquivo compatível com o formato escolhido.'}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Template</label>
+            <Textarea value={activeImportTemplate} readOnly rows={14} className="font-mono text-xs" />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" loading={submitting}><Upload className="h-4 w-4" />Importar arquivo</Button>
+            <Button type="button" variant="secondary" onClick={resetImportModal} disabled={submitting}>Cancelar</Button>
+          </div>
+        </form>
+      </ModalShell>
 
       <ModalShell
         isOpen={entityModalKind !== null}

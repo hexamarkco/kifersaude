@@ -474,6 +474,7 @@ export type CotadorProduto = {
   documentos_necessarios?: string | null;
   reembolso?: string | null;
   informacoes_importantes?: string | null;
+  rede_hospitalar?: unknown[] | null;
   observacoes?: string | null;
   ativo: boolean;
   created_at: string;
@@ -566,6 +567,7 @@ export type CotadorQuoteItemRecord = {
   documentos_necessarios_snapshot?: string | null;
   reembolso_snapshot?: string | null;
   informacoes_importantes_snapshot?: string | null;
+  rede_hospitalar_snapshot?: unknown[] | null;
   observacoes_snapshot?: string | null;
   ordem: number;
   created_at: string;

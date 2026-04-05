@@ -28,6 +28,7 @@ import type {
   CotadorCatalogActor,
   CotadorCatalogItem,
   CotadorCoparticipationKind,
+  CotadorHospitalNetworkEntry,
   CotadorPriceByAgeRange,
   CotadorQuote,
   CotadorQuoteInput,
@@ -67,6 +68,7 @@ export type CotadorProductManagerInput = {
   documentos_necessarios?: string | null;
   reembolso?: string | null;
   informacoes_importantes?: string | null;
+  rede_hospitalar?: CotadorHospitalNetworkEntry[] | null;
   observacoes?: string | null;
   ativo: boolean;
   entidadeIds: string[];
@@ -158,6 +160,31 @@ const cleanOptionalText = (value?: string | null) => {
 };
 
 const toNullableNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+
+const sanitizeHospitalNetwork = (value: unknown): CotadorHospitalNetworkEntry[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const candidate = entry as Record<string, unknown>;
+      const cidade = typeof candidate.cidade === 'string' ? candidate.cidade.trim() : '';
+      const hospital = typeof candidate.hospital === 'string' ? candidate.hospital.trim() : '';
+      if (!cidade || !hospital) return null;
+
+      return {
+        cidade,
+        regiao: typeof candidate.regiao === 'string' && candidate.regiao.trim() ? candidate.regiao.trim() : null,
+        hospital,
+        bairro: typeof candidate.bairro === 'string' && candidate.bairro.trim() ? candidate.bairro.trim() : null,
+        atendimentos: Array.isArray(candidate.atendimentos)
+          ? candidate.atendimentos.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim())
+          : [],
+        observacoes: typeof candidate.observacoes === 'string' && candidate.observacoes.trim() ? candidate.observacoes.trim() : null,
+      };
+    })
+    .filter((entry): entry is CotadorHospitalNetworkEntry => entry !== null);
+};
 
 const sanitizePriceRows = (value: CotadorPriceRowInput): CotadorPriceByAgeRange =>
   COTADOR_AGE_RANGES.reduce((accumulator, range) => {
@@ -255,6 +282,7 @@ const buildCotadorTableCatalogItem = (table: CotadorTableManagerRecord): Cotador
   documentosNecessarios: cleanOptionalText(table.produto?.documentos_necessarios),
   reembolso: cleanOptionalText(table.produto?.reembolso),
   informacoesImportantes: cleanOptionalText(table.produto?.informacoes_importantes),
+  redeHospitalar: sanitizeHospitalNetwork(table.produto?.rede_hospitalar),
   observacao: cleanOptionalText(table.observacoes) ?? cleanOptionalText(table.produto?.observacoes),
   ativo: Boolean(table.ativo && table.produto?.ativo && table.produto?.operadora?.ativo !== false && table.produto?.linha?.ativo !== false),
 });
@@ -295,6 +323,7 @@ const buildCotadorProductCatalogItem = (product: CotadorProductManagerRecord): C
   documentosNecessarios: cleanOptionalText(product.documentos_necessarios),
   reembolso: cleanOptionalText(product.reembolso),
   informacoesImportantes: cleanOptionalText(product.informacoes_importantes),
+  redeHospitalar: sanitizeHospitalNetwork(product.rede_hospitalar),
   observacao: cleanOptionalText(product.observacoes),
   ativo: Boolean(product.ativo && product.operadora?.ativo !== false && product.linha?.ativo !== false),
 });
@@ -333,6 +362,7 @@ const buildLegacyCatalogItem = (produto: ProdutoPlano, operadora: Operadora | nu
   documentosNecessarios: null,
   reembolso: null,
   informacoesImportantes: null,
+  redeHospitalar: [],
   observacao: null,
   ativo: Boolean(produto.ativo && operadora?.ativo !== false),
 });
@@ -367,6 +397,7 @@ const buildOperadoraFallbackItem = (operadora: Operadora): CotadorCatalogItem =>
   documentosNecessarios: null,
   reembolso: null,
   informacoesImportantes: null,
+  redeHospitalar: [],
   observacao: cleanOptionalText(operadora.observacoes),
   ativo: operadora.ativo,
 });
@@ -415,6 +446,7 @@ const buildQuoteItemsRows = (quoteId: string, items: CotadorQuoteItem[]) =>
     documentos_necessarios_snapshot: item.documentosNecessarios,
     reembolso_snapshot: item.reembolso,
     informacoes_importantes_snapshot: item.informacoesImportantes,
+    rede_hospitalar_snapshot: item.redeHospitalar,
     observacoes_snapshot: item.observacao,
     ordem: index,
   }));
@@ -469,6 +501,7 @@ const buildQuoteItemFromRow = (row: CotadorQuoteItemRecord): CotadorQuoteItem =>
   documentosNecessarios: row.documentos_necessarios_snapshot ?? null,
   reembolso: row.reembolso_snapshot ?? null,
   informacoesImportantes: row.informacoes_importantes_snapshot ?? null,
+  redeHospitalar: sanitizeHospitalNetwork(row.rede_hospitalar_snapshot),
   observacao: row.observacoes_snapshot ?? null,
   createdAt: row.created_at,
 });
@@ -875,6 +908,7 @@ export const cotadorService = {
           documentos_necessarios: cleanOptionalText(input.documentos_necessarios),
           reembolso: cleanOptionalText(input.reembolso),
           informacoes_importantes: cleanOptionalText(input.informacoes_importantes),
+          rede_hospitalar: input.rede_hospitalar ?? [],
           observacoes: cleanOptionalText(input.observacoes),
           ativo: input.ativo,
         }])
@@ -911,6 +945,7 @@ export const cotadorService = {
           documentos_necessarios: cleanOptionalText(input.documentos_necessarios),
           reembolso: cleanOptionalText(input.reembolso),
           informacoes_importantes: cleanOptionalText(input.informacoes_importantes),
+          ...(input.rede_hospitalar !== undefined ? { rede_hospitalar: input.rede_hospitalar } : {}),
           observacoes: cleanOptionalText(input.observacoes),
           ativo: input.ativo,
           updated_at: new Date().toISOString(),

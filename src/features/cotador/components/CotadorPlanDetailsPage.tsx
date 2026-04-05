@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ChevronDown, FileText, ShieldCheck, WalletCards } from 'lucide-react';
+import { ArrowLeft, Building2, ChevronDown, FileText, MapPin, Search, ShieldCheck, WalletCards } from 'lucide-react';
+import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
+import Input from '../../../components/ui/Input';
 import { formatCotadorCurrency } from '../shared/cotadorUtils';
 import type { CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 
@@ -54,6 +56,8 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
   }, [item.carencias, item.documentosNecessarios, item.informacoesImportantes, item.reembolso]);
 
   const [openSectionIds, setOpenSectionIds] = useState<string[]>(sections.length > 0 ? [sections[0].id] : []);
+  const [networkSearch, setNetworkSearch] = useState('');
+  const [networkCity, setNetworkCity] = useState('');
 
   useEffect(() => {
     setOpenSectionIds(sections.length > 0 ? [sections[0].id] : []);
@@ -66,6 +70,23 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
         : [...current, sectionId]
     ));
   };
+
+  const cityOptions = useMemo(
+    () => Array.from(new Set(item.redeHospitalar.map((entry) => entry.cidade).filter(Boolean))).sort((left, right) => left.localeCompare(right, 'pt-BR')).map((city) => ({ value: city, label: city })),
+    [item.redeHospitalar],
+  );
+
+  const filteredNetwork = useMemo(() => {
+    const normalizedSearch = networkSearch.trim().toLowerCase();
+
+    return item.redeHospitalar.filter((entry) => {
+      if (networkCity && entry.cidade !== networkCity) return false;
+      if (!normalizedSearch) return true;
+
+      const haystack = [entry.hospital, entry.bairro, entry.regiao, entry.cidade, entry.atendimentos.join(' ')].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
+  }, [item.redeHospitalar, networkCity, networkSearch]);
 
   return (
     <div className="panel-page-shell space-y-6">
@@ -159,6 +180,67 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
           </div>
         )}
       </section>
+
+      {item.redeHospitalar.length > 0 && (
+        <section className="rounded-[32px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-6 shadow-sm md:p-8">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">Rede hospitalar</p>
+            <h2 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Hospitais e atendimentos</h2>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[260px_minmax(0,1fr)]">
+            <FilterSingleSelect
+              icon={MapPin}
+              options={cityOptions}
+              placeholder="Todas as cidades"
+              value={networkCity}
+              onChange={setNetworkCity}
+            />
+            <Input
+              value={networkSearch}
+              onChange={(event) => setNetworkSearch(event.target.value)}
+              placeholder="Buscar hospital, bairro, regiao ou atendimento"
+              leftIcon={Search}
+            />
+          </div>
+
+          {filteredNetwork.length === 0 ? (
+            <div className="mt-6 rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+              Nenhum hospital encontrado para os filtros aplicados.
+            </div>
+          ) : (
+            <div className="mt-6 overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
+              <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+                {filteredNetwork.map((entry, index) => (
+                  <article key={`${entry.cidade}-${entry.hospital}-${index}`} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-start md:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start gap-3">
+                        <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
+                          <Building2 className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{entry.hospital}</p>
+                          <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                            {[entry.bairro, entry.regiao, entry.cidade].filter(Boolean).join(' | ')}
+                          </p>
+                          {entry.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{entry.observacoes}</p>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 md:max-w-[320px] md:justify-end">
+                      {entry.atendimentos.map((service) => (
+                        <span key={`${entry.hospital}-${service}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-xs font-medium text-[color:var(--panel-text,#1a120d)]">
+                          {service}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

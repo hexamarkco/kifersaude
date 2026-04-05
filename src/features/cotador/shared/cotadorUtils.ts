@@ -10,6 +10,7 @@ import type {
   CotadorAgeDistribution,
   CotadorCatalogActor,
   CotadorCatalogItem,
+  CotadorHospitalNetworkEntry,
   CotadorPriceByAgeRange,
   CotadorQuote,
   CotadorQuoteDraft,
@@ -55,6 +56,36 @@ const sanitizeCatalogActor = (value: Partial<CotadorCatalogActor> | null | undef
   name: typeof value?.name === 'string' ? value.name : null,
   active: value?.active !== false,
 });
+
+const sanitizeHospitalNetworkEntry = (value: unknown): CotadorHospitalNetworkEntry | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  const cidade = typeof candidate.cidade === 'string' ? candidate.cidade.trim() : '';
+  const hospital = typeof candidate.hospital === 'string' ? candidate.hospital.trim() : '';
+
+  if (!cidade || !hospital) {
+    return null;
+  }
+
+  return {
+    cidade,
+    regiao: typeof candidate.regiao === 'string' && candidate.regiao.trim() ? candidate.regiao.trim() : null,
+    hospital,
+    bairro: typeof candidate.bairro === 'string' && candidate.bairro.trim() ? candidate.bairro.trim() : null,
+    atendimentos: Array.isArray(candidate.atendimentos)
+      ? candidate.atendimentos.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim())
+      : [],
+    observacoes: typeof candidate.observacoes === 'string' && candidate.observacoes.trim() ? candidate.observacoes.trim() : null,
+  };
+};
+
+const sanitizeHospitalNetwork = (value: unknown): CotadorHospitalNetworkEntry[] =>
+  Array.isArray(value)
+    ? value.map(sanitizeHospitalNetworkEntry).filter((item): item is CotadorHospitalNetworkEntry => item !== null)
+    : [];
 
 const sanitizePriceByAgeRange = (value: unknown): CotadorPriceByAgeRange => {
   if (!value || typeof value !== 'object') {
@@ -144,6 +175,7 @@ const sanitizeQuoteItem = (value: unknown): CotadorQuoteItem | null => {
     documentosNecessarios: typeof candidate.documentosNecessarios === 'string' ? candidate.documentosNecessarios : null,
     reembolso: typeof candidate.reembolso === 'string' ? candidate.reembolso : null,
     informacoesImportantes: typeof candidate.informacoesImportantes === 'string' ? candidate.informacoesImportantes : null,
+    redeHospitalar: sanitizeHospitalNetwork(candidate.redeHospitalar),
     observacao: typeof candidate.observacao === 'string' ? candidate.observacao : null,
     createdAt: typeof candidate.createdAt === 'string' ? candidate.createdAt : undefined,
   };
@@ -238,6 +270,7 @@ export const buildCotadorQuoteItemFromCatalogItem = (item: CotadorCatalogItem): 
   documentosNecessarios: item.documentosNecessarios,
   reembolso: item.reembolso,
   informacoesImportantes: item.informacoesImportantes,
+  redeHospitalar: item.redeHospitalar,
   observacao: item.observacao,
 });
 
@@ -341,6 +374,7 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
           documentosNecessarios: null,
           reembolso: null,
           informacoesImportantes: null,
+          redeHospitalar: [],
           observacao: null,
         })),
     createdAt,

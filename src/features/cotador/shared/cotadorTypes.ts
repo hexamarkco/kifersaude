@@ -38,6 +38,15 @@ export type CotadorCatalogActor = {
   active: boolean;
 };
 
+export type CotadorHospitalNetworkEntry = {
+  cidade: string;
+  regiao: string | null;
+  hospital: string;
+  bairro: string | null;
+  atendimentos: string[];
+  observacoes: string | null;
+};
+
 export type CotadorPriceByAgeRange = Partial<Record<CotadorAgeRange, number>>;
 
 export type CotadorCatalogItem = {
@@ -71,6 +80,7 @@ export type CotadorCatalogItem = {
   documentosNecessarios: string | null;
   reembolso: string | null;
   informacoesImportantes: string | null;
+  redeHospitalar: CotadorHospitalNetworkEntry[];
   ativo: boolean;
 };
 
@@ -106,6 +116,7 @@ export type CotadorQuoteItem = {
   documentosNecessarios: string | null;
   reembolso: string | null;
   informacoesImportantes: string | null;
+  redeHospitalar: CotadorHospitalNetworkEntry[];
   createdAt?: string;
 };
 

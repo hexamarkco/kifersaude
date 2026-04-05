@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { CalendarClock, CheckCircle2, Layers3, Plus, Settings2, Sparkles, Trash2, Users } from 'lucide-react';
+import { Plus, Settings2, Sparkles, Trash2, Users } from 'lucide-react';
 import Button from '../../../components/ui/Button';
-import { formatCotadorAgeSummary, formatCotadorCurrency, formatCotadorDateTime, formatCotadorModality, formatCotadorPercent } from '../shared/cotadorUtils';
+import { formatCotadorAgeSummary, formatCotadorCurrency, formatCotadorDateTime, formatCotadorModality } from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 import type { CotadorQuoteModality } from '../shared/cotadorConstants';
 import CotadorPlanPickerOverlay from './CotadorPlanPickerOverlay';
@@ -27,7 +27,6 @@ type CotadorWorkspaceProps = {
     acomodacoes: SelectOption[];
   };
   filters: CotadorCatalogFilters;
-  hasDetailedProducts: boolean;
   busy?: boolean;
   onUpdateFilters: (updates: Partial<CotadorCatalogFilters>) => void;
   onResetFilters: () => void;
@@ -60,22 +59,6 @@ const formatCopart = (value: CotadorQuoteItem['coparticipacao']) => {
   return 'A definir';
 };
 
-const calculateEstimatedCommission = (monthlyTotal: number | null, commissionPercent: number | null) => {
-  if (monthlyTotal === null || commissionPercent === null) {
-    return null;
-  }
-
-  return monthlyTotal * (commissionPercent / 100);
-};
-
-const calculateEstimatedBonus = (bonusPerLife: number | null, totalLives: number) => {
-  if (bonusPerLife === null || totalLives <= 0) {
-    return null;
-  }
-
-  return bonusPerLife * totalLives;
-};
-
 export default function CotadorWorkspace({
   quote,
   catalogItems,
@@ -83,7 +66,6 @@ export default function CotadorWorkspace({
   selectedItems,
   filterOptions,
   filters,
-  hasDetailedProducts,
   busy = false,
   onUpdateFilters,
   onResetFilters,
@@ -207,24 +189,6 @@ export default function CotadorWorkspace({
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:#0f4c5c] dark:text-cyan-100/80">Mensalidade</p>
                         <p className="text-xl font-semibold text-[color:#123244] dark:text-white">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
                       </div>
-                      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                        <div className="rounded-xl bg-white/50 px-3 py-2 text-[color:#123244] dark:bg-white/5 dark:text-cyan-50">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Comissão</p>
-                          <p className="mt-1 font-semibold">
-                            {item.comissaoSugerida !== null
-                              ? `${formatCotadorPercent(item.comissaoSugerida)} | ${formatCotadorCurrency(calculateEstimatedCommission(item.estimatedMonthlyTotal, item.comissaoSugerida))}`
-                              : '-'}
-                          </p>
-                        </div>
-                        <div className="rounded-xl bg-white/50 px-3 py-2 text-[color:#123244] dark:bg-white/5 dark:text-cyan-50">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Bônus por vida</p>
-                          <p className="mt-1 font-semibold">
-                            {item.bonusPorVidaValor !== null
-                              ? `${formatCotadorCurrency(item.bonusPorVidaValor)} | Total ${formatCotadorCurrency(calculateEstimatedBonus(item.bonusPorVidaValor, quote.totalLives))}`
-                              : '-'}
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   )}
 
@@ -290,26 +254,6 @@ export default function CotadorWorkspace({
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
-            <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">
-              <CalendarClock className="h-4 w-4" />
-              Situação da cotação
-            </div>
-            <div className="mt-4 space-y-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                <span>{selectedItems.length > 0 ? `${selectedItems.length} plano(s) na shortlist.` : 'Ainda sem planos adicionados.'}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Layers3 className="mt-0.5 h-4 w-4 text-[color:var(--panel-text-muted,#876f5c)]" />
-                <span>{hasDetailedProducts ? `${catalogItems.length} oferta(s) disponível(is) no seletor atual.` : 'Catálogo ainda sem produtos detalhados.'}</span>
-              </div>
-              <div className="flex items-start gap-2">
-                <Sparkles className="mt-0.5 h-4 w-4 text-[color:var(--panel-text-muted,#876f5c)]" />
-                <span>Atualizada em {formatCotadorDateTime(quote.updatedAt)}.</span>
-              </div>
-            </div>
-          </section>
         </aside>
       </div>
 

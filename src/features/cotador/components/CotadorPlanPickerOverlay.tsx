@@ -17,6 +17,7 @@ import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import { cx } from '../../../lib/cx';
+import { isPanelDarkTheme } from '../../../components/ui/dropdownStyles';
 import { COTADOR_MODALITY_OPTIONS, type CotadorQuoteModality } from '../shared/cotadorConstants';
 import { formatCotadorCurrency, formatCotadorModality } from '../shared/cotadorUtils';
 import type { CotadorCatalogActor, CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote } from '../shared/cotadorTypes';
@@ -120,6 +121,7 @@ export default function CotadorPlanPickerOverlay({
   onChangeQuoteModality,
 }: CotadorPlanPickerOverlayProps) {
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
+  const isDarkTheme = isPanelDarkTheme();
 
   useEffect(() => {
     if (!isOpen) {
@@ -272,11 +274,16 @@ export default function CotadorPlanPickerOverlay({
   return createPortal(
     <div className="fixed inset-0 z-[145] bg-[color:rgba(12,16,25,0.58)] backdrop-blur-sm">
       <div className="flex h-full items-stretch justify-center p-4 md:p-6">
-        <div className="flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_90%,var(--panel-surface-soft,#f4ede3))_0%,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))_100%)] text-[color:var(--panel-text,#1a120d)] shadow-[0_40px_120px_rgba(0,0,0,0.28)]">
+        <div className={cx(
+          'flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-[32px] border shadow-[0_40px_120px_rgba(0,0,0,0.28)]',
+          isDarkTheme
+            ? 'border-[color:rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,#16100c_0%,#1f1711_100%)] text-[color:#fff8ef]'
+            : 'border-[var(--panel-border,#d4c0a7)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_90%,var(--panel-surface-soft,#f4ede3))_0%,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))_100%)] text-[color:var(--panel-text,#1a120d)]',
+        )}>
           <div className="flex items-center justify-between border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-6 py-5 md:px-8">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-accent-ink,#6f3f16)]">Adicionar plano</p>
-              <h3 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">
+              <p className={cx('text-xs font-semibold uppercase tracking-[0.24em]', isDarkTheme ? 'text-[color:#f3c892]' : 'text-[var(--panel-accent-ink,#6f3f16)]')}>Adicionar plano</p>
+              <h3 className={cx('mt-2 text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
                 {!filters.operadoraId
                   ? 'Escolha a operadora'
                   : !filters.linhaId && lineCards.length > 0
@@ -285,12 +292,17 @@ export default function CotadorPlanPickerOverlay({
                       ? 'Escolha a tabela comercial'
                       : 'Escolha o produto'}
               </h3>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{quote.name}</p>
+              <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{quote.name}</p>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text-soft,#5b4635)] transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]"
+              className={cx(
+                'inline-flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors',
+                isDarkTheme
+                  ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:rgba(255,243,209,0.8)] hover:bg-[color:rgba(255,255,255,0.08)] hover:text-white'
+                  : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]',
+              )}
               aria-label="Fechar seletor"
             >
               <X className="h-5 w-5" />
@@ -298,11 +310,21 @@ export default function CotadorPlanPickerOverlay({
           </div>
 
           <div className="grid min-h-0 flex-1 gap-0 xl:grid-cols-[320px_minmax(0,1fr)]">
-            <aside className="overflow-y-auto border-r border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-5 py-5 md:px-6">
+            <aside className={cx(
+              'overflow-y-auto border-r px-5 py-5 md:px-6',
+              isDarkTheme
+                ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.03)]'
+                : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))]',
+            )}>
               <div className="space-y-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Modalidade</p>
-                  <div className="mt-3 grid grid-cols-3 gap-2 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-1.5 shadow-sm">
+                    <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Modalidade</p>
+                    <div className={cx(
+                      'mt-3 grid grid-cols-3 gap-2 rounded-2xl border p-1.5 shadow-sm',
+                      isDarkTheme
+                        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
+                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
+                    )}>
                     {COTADOR_MODALITY_OPTIONS.map((option) => {
                       const isActive = quote.modality === option.value;
                       return (
@@ -313,8 +335,12 @@ export default function CotadorPlanPickerOverlay({
                           className={cx(
                             'cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-all',
                             isActive
-                              ? 'bg-[var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm'
-                              : 'text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]',
+                              ? isDarkTheme
+                                ? 'bg-[color:rgba(251,191,36,0.16)] text-[color:#fde68a] shadow-sm'
+                                : 'bg-[var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm'
+                              : isDarkTheme
+                                ? 'text-[color:rgba(255,243,209,0.82)] hover:bg-[color:rgba(255,255,255,0.06)] hover:text-white'
+                                : 'text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]',
                           )}
                         >
                           {option.label}
@@ -324,13 +350,23 @@ export default function CotadorPlanPickerOverlay({
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+                <div className={cx(
+                  'rounded-2xl border p-4 shadow-sm',
+                  isDarkTheme
+                    ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
+                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
+                )}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Distribuição</p>
-                      <p className="mt-1 text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.totalLives} vidas</p>
+                      <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Distribuição</p>
+                      <p className={cx('mt-1 text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{quote.totalLives} vidas</p>
                     </div>
-                    <span className="rounded-full bg-[color:rgba(8,145,178,0.1)] px-3 py-1 text-xs font-semibold text-[color:var(--panel-text,#1a120d)]">
+                    <span className={cx(
+                      'rounded-full px-3 py-1 text-xs font-semibold',
+                      isDarkTheme
+                        ? 'bg-[color:rgba(8,145,178,0.18)] text-[color:#b6f0ff]'
+                        : 'bg-[color:rgba(8,145,178,0.1)] text-[color:var(--panel-text,#1a120d)]',
+                    )}>
                       {formatCotadorModality(quote.modality)}
                     </span>
                   </div>
@@ -394,7 +430,7 @@ export default function CotadorPlanPickerOverlay({
             </aside>
 
             <section className="min-h-0 overflow-y-auto px-5 py-5 md:px-8 md:py-6">
-              <div className="mb-6 flex flex-wrap items-center gap-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+              <div className={cx('mb-6 flex flex-wrap items-center gap-3 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
                 {filters.operadoraId && (
                   <button
                     type="button"

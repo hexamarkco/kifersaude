@@ -13,7 +13,6 @@ import {
   buildCotadorQuoteItemFromCatalogItem,
   catalogMatchesQuoteModality,
   formatCotadorDateTime,
-  formatCotadorModality,
   saveCotadorQuotesToStorage,
   sortCotadorQuotesByRecent,
 } from './shared/cotadorUtils';
@@ -255,11 +254,6 @@ export default function CotadorScreen() {
     [activeQuote, filters, quoteCatalog],
   );
 
-  const hasDetailedProducts = useMemo(
-    () => catalogItems.some((item) => item.source === 'cotador_tabela' || item.source === 'cotador_produto' || item.source === 'legacy_produto'),
-    [catalogItems],
-  );
-
   const refreshSelectedItems = (quoteBase: CotadorQuote, sourceItems: CotadorQuote['selectedItems']) =>
     sourceItems
       .map((item) => {
@@ -416,14 +410,14 @@ export default function CotadorScreen() {
 
   const renderListScreen = () => (
     <div className="panel-page-shell space-y-6">
-      <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[radial-gradient(circle_at_top_left,rgba(253,230,195,0.95),rgba(255,253,250,0.96)_48%,rgba(247,240,231,0.99)_100%)] p-6 shadow-sm md:p-8">
+      <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[radial-gradient(circle_at_top_left,rgba(253,230,195,0.95),rgba(255,253,250,0.96)_48%,rgba(247,240,231,0.99)_100%)] p-6 shadow-sm md:p-8 dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[radial-gradient(circle_at_top_left,rgba(133,77,14,0.24),rgba(28,20,14,0.96)_40%,rgba(20,15,11,0.99)_100%)]">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(255,253,250,0.82)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(255,253,250,0.82)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)] dark:border-[color:rgba(251,191,36,0.18)] dark:bg-[color:rgba(251,191,36,0.12)] dark:text-[color:#fde68a]">
               <Calculator className="h-3.5 w-3.5" />
               Cotador
             </div>
-            <h1 className="mt-3 text-3xl font-semibold text-[color:var(--panel-text,#1a120d)] md:text-4xl">Cotações salvas</h1>
+            <h1 className="mt-3 text-3xl font-semibold text-[color:var(--panel-text,#1a120d)] md:text-4xl dark:text-[color:#fff8ef]">Cotações salvas</h1>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -440,14 +434,14 @@ export default function CotadorScreen() {
       </section>
 
       {loading ? (
-        <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
+        <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.03)]">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
-          <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando cotações...</p>
+          <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.76)]">Carregando cotações...</p>
         </div>
       ) : quotes.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
-          <FileStack className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)]" />
-          <h2 className="mt-4 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Nenhuma cotação salva ainda</h2>
+        <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.03)]">
+          <FileStack className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)] dark:text-[color:rgba(255,243,209,0.66)]" />
+          <h2 className="mt-4 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">Nenhuma cotação salva ainda</h2>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Button variant="secondary" onClick={() => navigate('/painel/cotador/configuracoes')}>
               Configurar catálogo
@@ -459,38 +453,39 @@ export default function CotadorScreen() {
           </div>
         </div>
       ) : (
-        <section className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
-          {quotes.map((quote) => (
-            <button
-              key={quote.id}
-              type="button"
-              onClick={() => navigate(`/painel/cotador/${quote.id}`)}
-              className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:rgba(255,253,250,0.98)]"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">{formatCotadorModality(quote.modality)}</p>
-                  <h2 className="mt-3 truncate text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.name}</h2>
-                </div>
-                <span className="rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(246,228,199,0.6)] px-3 py-1 text-xs font-semibold text-[var(--panel-accent-ink,#6f3f16)]">
-                  {quote.totalLives} vidas
-                </span>
-              </div>
+        <section className="overflow-hidden rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.03)]">
+          <div className="grid grid-cols-[minmax(0,1fr)_140px_180px_180px] gap-4 border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-5 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)] dark:border-[color:rgba(255,255,255,0.08)] dark:text-[color:rgba(255,243,209,0.62)]">
+            <span>Cotação</span>
+            <span>Vidas</span>
+            <span>Criada em</span>
+            <span>Atualizada em</span>
+          </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Faixas</p>
-                  <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{Object.values(quote.ageDistribution).filter((value) => value > 0).length} preenchidas</p>
+          <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] dark:divide-[color:rgba(255,255,255,0.08)]">
+            {quotes.map((quote) => (
+              <button
+                key={quote.id}
+                type="button"
+                onClick={() => navigate(`/painel/cotador/${quote.id}`)}
+                className="grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_140px_180px_180px] gap-4 px-5 py-4 text-left transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] dark:hover:bg-[color:rgba(255,255,255,0.05)]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{quote.name}</p>
                 </div>
-                <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Shortlist</p>
-                  <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.selectedItems.length} plano(s)</p>
+                <div>
+                  <span className="inline-flex rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(246,228,199,0.6)] px-3 py-1 text-xs font-semibold text-[var(--panel-accent-ink,#6f3f16)] dark:border-[color:rgba(251,191,36,0.18)] dark:bg-[color:rgba(251,191,36,0.12)] dark:text-[color:#fde68a]">
+                    {quote.totalLives} vidas
+                  </span>
                 </div>
-              </div>
-
-              <p className="mt-5 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Atualizada em {formatCotadorDateTime(quote.updatedAt)}</p>
-            </button>
-          ))}
+                <div className="text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.76)]">
+                  {formatCotadorDateTime(quote.createdAt)}
+                </div>
+                <div className="text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.76)]">
+                  {formatCotadorDateTime(quote.updatedAt)}
+                </div>
+              </button>
+            ))}
+          </div>
         </section>
       )}
     </div>
@@ -561,7 +556,6 @@ export default function CotadorScreen() {
           selectedItems={activeQuote.selectedItems}
           filterOptions={filterOptions}
           filters={filters}
-          hasDetailedProducts={hasDetailedProducts}
           busy={selectionBusy}
           onUpdateFilters={(updates) => setFilters((current) => ({ ...current, ...updates }))}
           onResetFilters={() => setFilters(DEFAULT_FILTERS)}

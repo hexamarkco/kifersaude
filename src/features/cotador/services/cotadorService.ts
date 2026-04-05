@@ -63,6 +63,10 @@ export type CotadorProductManagerInput = {
   acomodacao?: string | null;
   comissao_sugerida?: number | null;
   bonus_por_vida_valor?: number | null;
+  carencias?: string | null;
+  documentos_necessarios?: string | null;
+  reembolso?: string | null;
+  informacoes_importantes?: string | null;
   observacoes?: string | null;
   ativo: boolean;
   entidadeIds: string[];
@@ -247,6 +251,10 @@ const buildCotadorTableCatalogItem = (table: CotadorTableManagerRecord): Cotador
   acomodacao: cleanOptionalText(table.acomodacao) ?? cleanOptionalText(table.produto?.acomodacao),
   comissaoSugerida: toNullableNumber(table.produto?.comissao_sugerida),
   bonusPorVidaValor: toNullableNumber(table.produto?.bonus_por_vida_valor),
+  carencias: cleanOptionalText(table.produto?.carencias),
+  documentosNecessarios: cleanOptionalText(table.produto?.documentos_necessarios),
+  reembolso: cleanOptionalText(table.produto?.reembolso),
+  informacoesImportantes: cleanOptionalText(table.produto?.informacoes_importantes),
   observacao: cleanOptionalText(table.observacoes) ?? cleanOptionalText(table.produto?.observacoes),
   ativo: Boolean(table.ativo && table.produto?.ativo && table.produto?.operadora?.ativo !== false && table.produto?.linha?.ativo !== false),
 });
@@ -283,6 +291,10 @@ const buildCotadorProductCatalogItem = (product: CotadorProductManagerRecord): C
   acomodacao: cleanOptionalText(product.acomodacao),
   comissaoSugerida: toNullableNumber(product.comissao_sugerida),
   bonusPorVidaValor: toNullableNumber(product.bonus_por_vida_valor),
+  carencias: cleanOptionalText(product.carencias),
+  documentosNecessarios: cleanOptionalText(product.documentos_necessarios),
+  reembolso: cleanOptionalText(product.reembolso),
+  informacoesImportantes: cleanOptionalText(product.informacoes_importantes),
   observacao: cleanOptionalText(product.observacoes),
   ativo: Boolean(product.ativo && product.operadora?.ativo !== false && product.linha?.ativo !== false),
 });
@@ -317,6 +329,10 @@ const buildLegacyCatalogItem = (produto: ProdutoPlano, operadora: Operadora | nu
   acomodacao: cleanOptionalText(produto.acomodacao),
   comissaoSugerida: toNullableNumber(produto.comissao_sugerida),
   bonusPorVidaValor: toNullableNumber(produto.bonus_por_vida_valor),
+  carencias: null,
+  documentosNecessarios: null,
+  reembolso: null,
+  informacoesImportantes: null,
   observacao: null,
   ativo: Boolean(produto.ativo && operadora?.ativo !== false),
 });
@@ -347,6 +363,10 @@ const buildOperadoraFallbackItem = (operadora: Operadora): CotadorCatalogItem =>
   acomodacao: null,
   comissaoSugerida: toNullableNumber(operadora.comissao_padrao),
   bonusPorVidaValor: toNullableNumber(operadora.bonus_padrao),
+  carencias: null,
+  documentosNecessarios: null,
+  reembolso: null,
+  informacoesImportantes: null,
   observacao: cleanOptionalText(operadora.observacoes),
   ativo: operadora.ativo,
 });
@@ -391,6 +411,10 @@ const buildQuoteItemsRows = (quoteId: string, items: CotadorQuoteItem[]) =>
     acomodacao_snapshot: item.acomodacao,
     comissao_sugerida_snapshot: item.comissaoSugerida,
     bonus_por_vida_valor_snapshot: item.bonusPorVidaValor,
+    carencias_snapshot: item.carencias,
+    documentos_necessarios_snapshot: item.documentosNecessarios,
+    reembolso_snapshot: item.reembolso,
+    informacoes_importantes_snapshot: item.informacoesImportantes,
     observacoes_snapshot: item.observacao,
     ordem: index,
   }));
@@ -441,6 +465,10 @@ const buildQuoteItemFromRow = (row: CotadorQuoteItemRecord): CotadorQuoteItem =>
   acomodacao: row.acomodacao_snapshot ?? null,
   comissaoSugerida: toNullableNumber(row.comissao_sugerida_snapshot),
   bonusPorVidaValor: toNullableNumber(row.bonus_por_vida_valor_snapshot),
+  carencias: row.carencias_snapshot ?? null,
+  documentosNecessarios: row.documentos_necessarios_snapshot ?? null,
+  reembolso: row.reembolso_snapshot ?? null,
+  informacoesImportantes: row.informacoes_importantes_snapshot ?? null,
   observacao: row.observacoes_snapshot ?? null,
   createdAt: row.created_at,
 });
@@ -843,6 +871,10 @@ export const cotadorService = {
           acomodacao: cleanOptionalText(input.acomodacao),
           comissao_sugerida: input.comissao_sugerida ?? null,
           bonus_por_vida_valor: input.bonus_por_vida_valor ?? null,
+          carencias: cleanOptionalText(input.carencias),
+          documentos_necessarios: cleanOptionalText(input.documentos_necessarios),
+          reembolso: cleanOptionalText(input.reembolso),
+          informacoes_importantes: cleanOptionalText(input.informacoes_importantes),
           observacoes: cleanOptionalText(input.observacoes),
           ativo: input.ativo,
         }])
@@ -875,6 +907,10 @@ export const cotadorService = {
           acomodacao: cleanOptionalText(input.acomodacao),
           comissao_sugerida: input.comissao_sugerida ?? null,
           bonus_por_vida_valor: input.bonus_por_vida_valor ?? null,
+          carencias: cleanOptionalText(input.carencias),
+          documentos_necessarios: cleanOptionalText(input.documentos_necessarios),
+          reembolso: cleanOptionalText(input.reembolso),
+          informacoes_importantes: cleanOptionalText(input.informacoes_importantes),
           observacoes: cleanOptionalText(input.observacoes),
           ativo: input.ativo,
           updated_at: new Date().toISOString(),

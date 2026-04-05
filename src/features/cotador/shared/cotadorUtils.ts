@@ -140,6 +140,10 @@ const sanitizeQuoteItem = (value: unknown): CotadorQuoteItem | null => {
     acomodacao: typeof candidate.acomodacao === 'string' ? candidate.acomodacao : null,
     comissaoSugerida: typeof candidate.comissaoSugerida === 'number' ? candidate.comissaoSugerida : null,
     bonusPorVidaValor: typeof candidate.bonusPorVidaValor === 'number' ? candidate.bonusPorVidaValor : null,
+    carencias: typeof candidate.carencias === 'string' ? candidate.carencias : null,
+    documentosNecessarios: typeof candidate.documentosNecessarios === 'string' ? candidate.documentosNecessarios : null,
+    reembolso: typeof candidate.reembolso === 'string' ? candidate.reembolso : null,
+    informacoesImportantes: typeof candidate.informacoesImportantes === 'string' ? candidate.informacoesImportantes : null,
     observacao: typeof candidate.observacao === 'string' ? candidate.observacao : null,
     createdAt: typeof candidate.createdAt === 'string' ? candidate.createdAt : undefined,
   };
@@ -229,6 +233,10 @@ export const buildCotadorQuoteItemFromCatalogItem = (item: CotadorCatalogItem): 
   acomodacao: item.acomodacao,
   comissaoSugerida: item.comissaoSugerida,
   bonusPorVidaValor: item.bonusPorVidaValor,
+  carencias: item.carencias,
+  documentosNecessarios: item.documentosNecessarios,
+  reembolso: item.reembolso,
+  informacoesImportantes: item.informacoesImportantes,
   observacao: item.observacao,
 });
 
@@ -326,6 +334,10 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
           acomodacao: null,
           comissaoSugerida: null,
           bonusPorVidaValor: null,
+          carencias: null,
+          documentosNecessarios: null,
+          reembolso: null,
+          informacoesImportantes: null,
           observacao: null,
         })),
     leadId: typeof candidate.leadId === 'string' ? candidate.leadId : null,

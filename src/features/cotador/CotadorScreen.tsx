@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, Calculator, FileStack, Plus, Settings2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import CotadorCatalogTab from '../../components/config/CotadorCatalogTab';
 import { toast } from '../../lib/toast';
 import CotadorCreateQuoteModal from './components/CotadorCreateQuoteModal';
+import CotadorPlanDetailsPage from './components/CotadorPlanDetailsPage';
 import CotadorWorkspace from './components/CotadorWorkspace';
 import { cotadorService } from './services/cotadorService';
 import {
@@ -108,16 +109,16 @@ const quoteContainsCatalogItem = (quote: CotadorQuote, catalogItemId: string) =>
 export default function CotadorScreen() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { quoteId } = useParams<{ quoteId?: string }>();
+  const { quoteId, catalogItemKey } = useParams<{ quoteId?: string; catalogItemKey?: string }>();
   const isConfigRoute = location.pathname.endsWith('/configuracoes');
-  const isDetailRoute = Boolean(quoteId) && !isConfigRoute;
+  const isPlanDetailsRoute = Boolean(quoteId && catalogItemKey) && !isConfigRoute;
+  const isDetailRoute = Boolean(quoteId) && !isConfigRoute && !catalogItemKey;
 
   const [catalogItems, setCatalogItems] = useState<CotadorCatalogItem[]>([]);
   const [quotes, setQuotes] = useState<CotadorQuote[]>([]);
   const [filters, setFilters] = useState<CotadorCatalogFilters>(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(true);
   const [wizardBusy, setWizardBusy] = useState(false);
-  const [selectionBusy, setSelectionBusy] = useState(false);
   const [wizardState, setWizardState] = useState<{
     isOpen: boolean;
     mode: 'create' | 'edit';
@@ -127,6 +128,8 @@ export default function CotadorScreen() {
     mode: 'create',
     draft: buildCotadorQuoteDraft(),
   });
+  const selectionSyncingRef = useRef(false);
+  const pendingSelectionRef = useRef<{ quoteId: string; items: CotadorQuote['selectedItems'] } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -163,6 +166,16 @@ export default function CotadorScreen() {
   const activeQuote = useMemo(
     () => (quoteId ? quotes.find((quote) => quote.id === quoteId) ?? null : null),
     [quoteId, quotes],
+  );
+
+  const activePlanCatalogKey = useMemo(
+    () => (catalogItemKey ? decodeURIComponent(catalogItemKey) : null),
+    [catalogItemKey],
+  );
+
+  const activePlan = useMemo(
+    () => (activeQuote && activePlanCatalogKey ? activeQuote.selectedItems.find((item) => item.catalogItemKey === activePlanCatalogKey) ?? null : null),
+    [activePlanCatalogKey, activeQuote],
   );
 
   const quoteCatalog = useMemo(() => {
@@ -273,6 +286,29 @@ export default function CotadorScreen() {
         return true;
       });
 
+  const flushPendingSelection = async () => {
+    if (selectionSyncingRef.current) return;
+
+    selectionSyncingRef.current = true;
+    try {
+      while (pendingSelectionRef.current) {
+        const pending = pendingSelectionRef.current;
+        pendingSelectionRef.current = null;
+
+        const { error } = await cotadorService.saveQuoteSelection(pending.quoteId, pending.items);
+        if (error) {
+          toast.error('Não foi possível sincronizar a shortlist. Recarregando os planos da cotação.');
+          const refreshedQuotes = await cotadorService.getQuotes();
+          setQuotes(refreshedQuotes);
+          pendingSelectionRef.current = null;
+          break;
+        }
+      }
+    } finally {
+      selectionSyncingRef.current = false;
+    }
+  };
+
   const openCreateQuote = () => setWizardState(createWizardState('create', buildCotadorQuoteDraft()));
 
   const openEditQuote = () => {
@@ -331,7 +367,7 @@ export default function CotadorScreen() {
   };
 
   const handleToggleCatalogItem = async (itemId: string) => {
-    if (!activeQuote || selectionBusy) return;
+    if (!activeQuote) return;
 
     const catalogItem = quoteCatalog.find((item) => item.id === itemId);
     if (!catalogItem) return;
@@ -341,14 +377,7 @@ export default function CotadorScreen() {
       ? activeQuote.selectedItems.filter((item) => item.catalogItemKey !== itemId)
       : [...activeQuote.selectedItems, buildCotadorQuoteItemFromCatalogItem(catalogItem)];
 
-    setSelectionBusy(true);
-    const { error } = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
-    if (error) {
-      toast.error('Não foi possível atualizar a shortlist.');
-      setSelectionBusy(false);
-      return;
-    }
-
+    const optimisticUpdatedAt = new Date().toISOString();
     setQuotes((current) =>
       sortCotadorQuotesByRecent(
         current.map((quote) =>
@@ -356,13 +385,19 @@ export default function CotadorScreen() {
             ? {
                 ...quote,
                 selectedItems: nextSelectedItems,
-                updatedAt: new Date().toISOString(),
+                updatedAt: optimisticUpdatedAt,
               }
             : quote,
         ),
       ),
     );
-    setSelectionBusy(false);
+
+    pendingSelectionRef.current = {
+      quoteId: activeQuote.id,
+      items: nextSelectedItems,
+    };
+
+    void flushPendingSelection();
   };
 
   const renderListScreen = () => (
@@ -509,21 +544,51 @@ export default function CotadorScreen() {
           selectedItems={activeQuote.selectedItems}
           filterOptions={filterOptions}
           filters={filters}
-          busy={selectionBusy}
           onUpdateFilters={(updates) => setFilters((current) => ({ ...current, ...updates }))}
           onResetFilters={() => setFilters(DEFAULT_FILTERS)}
           onToggleCatalogItem={(itemId) => {
             void handleToggleCatalogItem(itemId);
           }}
+          onOpenPlanDetails={(itemKey) => navigate(`/painel/cotador/${activeQuote.id}/plano/${encodeURIComponent(itemKey)}`)}
           onEditQuote={openEditQuote}
         />
       </div>
     );
   };
 
+  const renderPlanDetailsScreen = () => {
+    if (loading) {
+      return renderDetailScreen();
+    }
+
+    if (!activeQuote || !activePlan) {
+      return (
+        <div className="panel-page-shell space-y-6">
+          <Button variant="secondary" onClick={() => navigate(quoteId ? `/painel/cotador/${quoteId}` : '/painel/cotador')}>
+            <ArrowLeft className="h-4 w-4" />
+            Voltar para a cotação
+          </Button>
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
+            <AlertCircle className="mx-auto h-10 w-10 text-red-600" />
+            <h2 className="mt-4 text-2xl font-semibold text-red-900">Plano não encontrado</h2>
+            <p className="mt-2 text-sm text-red-700">Esse plano pode ter sido removido da cotação ou ainda não foi sincronizado.</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <CotadorPlanDetailsPage
+        quote={activeQuote}
+        item={activePlan}
+        onBack={() => navigate(`/painel/cotador/${activeQuote.id}`)}
+      />
+    );
+  };
+
   return (
     <>
-      {isConfigRoute ? renderConfigScreen() : isDetailRoute ? renderDetailScreen() : renderListScreen()}
+      {isConfigRoute ? renderConfigScreen() : isPlanDetailsRoute ? renderPlanDetailsScreen() : isDetailRoute ? renderDetailScreen() : renderListScreen()}
 
       <CotadorCreateQuoteModal
         isOpen={wizardState.isOpen}

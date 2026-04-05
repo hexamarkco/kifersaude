@@ -71,6 +71,10 @@ type ProductFormState = {
   entidadeIds: string[];
   comissaoSugerida: number;
   bonusPorVidaValor: number;
+  carencias: string;
+  documentosNecessarios: string;
+  reembolso: string;
+  informacoesImportantes: string;
   ativo: boolean;
   observacoes: string;
 };
@@ -134,6 +138,10 @@ const DEFAULT_PRODUCT_FORM: ProductFormState = {
   entidadeIds: [],
   comissaoSugerida: 0,
   bonusPorVidaValor: 0,
+  carencias: '',
+  documentosNecessarios: '',
+  reembolso: '',
+  informacoesImportantes: '',
   ativo: true,
   observacoes: '',
 };
@@ -808,6 +816,10 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       entidadeIds: product?.entidadesClasse.map((entity) => entity.id) ?? [],
       comissaoSugerida: product?.comissao_sugerida ?? 0,
       bonusPorVidaValor: product?.bonus_por_vida_valor ?? 0,
+      carencias: product?.carencias ?? '',
+      documentosNecessarios: product?.documentos_necessarios ?? '',
+      reembolso: product?.reembolso ?? '',
+      informacoesImportantes: product?.informacoes_importantes ?? '',
       ativo: product?.ativo ?? true,
       observacoes: product?.observacoes ?? '',
     });
@@ -951,6 +963,10 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       entidadeIds: productForm.entidadeIds,
       comissao_sugerida: productForm.comissaoSugerida,
       bonus_por_vida_valor: productForm.bonusPorVidaValor,
+      carencias: productForm.carencias || null,
+      documentos_necessarios: productForm.documentosNecessarios || null,
+      reembolso: productForm.reembolso || null,
+      informacoes_importantes: productForm.informacoesImportantes || null,
       ativo: productForm.ativo,
       observacoes: productForm.observacoes,
     };
@@ -1502,6 +1518,25 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               emptyMessage="Nenhuma entidade disponível para vínculo."
               scrollable
             />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Carências</label>
+              <Textarea value={productForm.carencias} onChange={(event) => setProductForm((current) => ({ ...current, carencias: event.target.value }))} rows={4} placeholder="Opcional" />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Documentos necessários</label>
+              <Textarea value={productForm.documentosNecessarios} onChange={(event) => setProductForm((current) => ({ ...current, documentosNecessarios: event.target.value }))} rows={4} placeholder="Opcional" />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Reembolso</label>
+              <Textarea value={productForm.reembolso} onChange={(event) => setProductForm((current) => ({ ...current, reembolso: event.target.value }))} rows={4} placeholder="Opcional" />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Informações importantes</label>
+              <Textarea value={productForm.informacoesImportantes} onChange={(event) => setProductForm((current) => ({ ...current, informacoesImportantes: event.target.value }))} rows={4} placeholder="Opcional" />
+            </div>
           </div>
 
           <div>

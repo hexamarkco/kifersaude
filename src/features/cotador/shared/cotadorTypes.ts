@@ -65,6 +65,10 @@ export type CotadorCatalogItem = {
   comissaoSugerida: number | null;
   bonusPorVidaValor: number | null;
   observacao: string | null;
+  carencias: string | null;
+  documentosNecessarios: string | null;
+  reembolso: string | null;
+  informacoesImportantes: string | null;
   ativo: boolean;
 };
 
@@ -96,6 +100,10 @@ export type CotadorQuoteItem = {
   comissaoSugerida: number | null;
   bonusPorVidaValor: number | null;
   observacao: string | null;
+  carencias: string | null;
+  documentosNecessarios: string | null;
+  reembolso: string | null;
+  informacoesImportantes: string | null;
   createdAt?: string;
 };
 

@@ -470,6 +470,10 @@ export type CotadorProduto = {
   acomodacao?: string | null;
   comissao_sugerida?: number | null;
   bonus_por_vida_valor?: number | null;
+  carencias?: string | null;
+  documentos_necessarios?: string | null;
+  reembolso?: string | null;
+  informacoes_importantes?: string | null;
   observacoes?: string | null;
   ativo: boolean;
   created_at: string;
@@ -558,6 +562,10 @@ export type CotadorQuoteItemRecord = {
   acomodacao_snapshot?: string | null;
   comissao_sugerida_snapshot?: number | null;
   bonus_por_vida_valor_snapshot?: number | null;
+  carencias_snapshot?: string | null;
+  documentos_necessarios_snapshot?: string | null;
+  reembolso_snapshot?: string | null;
+  informacoes_importantes_snapshot?: string | null;
   observacoes_snapshot?: string | null;
   ordem: number;
   created_at: string;

@@ -1461,7 +1461,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={importModalOpen}
         onClose={resetImportModal}
         title="Importar catálogo"
-        description="Centralize importações do catálogo a partir de arquivos estruturados."
+        description="Centralize importações do catálogo a partir de arquivos estruturados, criando operadora, linha e produto quando ainda não existirem."
         size="xl"
       >
         <form onSubmit={handleImportSubmit} className="space-y-5">

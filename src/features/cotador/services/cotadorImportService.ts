@@ -40,6 +40,15 @@ type ProductReference = {
   redeHospitalar?: CotadorHospitalNetworkEntry[];
 };
 
+const DEFAULT_IMPORTED_OPERADORA = {
+  comissao_padrao: 8,
+  prazo_recebimento_dias: 30,
+  bonus_por_vida: false,
+  bonus_padrao: 0,
+  ativo: true,
+  observacoes: undefined,
+};
+
 type ImportedTableDefinition = {
   nome: string;
   codigo?: string | null;
@@ -173,6 +182,21 @@ const parseInteger = (value?: string | number | null) => {
 const getCsvPriceColumn = (range: string) =>
   range === '59+' ? 'preco_59_mais' : `preco_${range.replace(/-/g, '_')}`;
 
+const sanitizeImportText = (text: string) => {
+  const trimmed = text.trimStart().replace(/^\uFEFF/, '');
+  const jsonStart = Math.min(
+    ...['{', '[']
+      .map((token) => trimmed.indexOf(token))
+      .filter((index) => index >= 0),
+  );
+
+  if (Number.isFinite(jsonStart) && jsonStart > 0) {
+    return trimmed.slice(jsonStart);
+  }
+
+  return trimmed;
+};
+
 const parseCsv = (text: string): CsvRow[] => {
   const rows: string[][] = [];
   let currentCell = '';
@@ -248,6 +272,66 @@ const findLinha = (linhas: CotadorLineManagerRecord[], operadoraId: string, line
   return linhas.find((item) => item.operadora_id === operadoraId && normalizeText(item.nome) === normalized) ?? null;
 };
 
+const buildOperadoraRecord = (operadora: Operadora): Operadora => operadora;
+
+const buildLinhaRecord = (line: CotadorLineManagerRecord, operadora: Operadora): CotadorLineManagerRecord => ({
+  ...line,
+  operadora,
+});
+
+const ensureOperadora = async (
+  context: ImportLookupContext,
+  operadoraName: string,
+) => {
+  const existing = findOperadora(context.operadoras, operadoraName);
+  if (existing) {
+    return existing;
+  }
+
+  const createResult = await configService.createOperadora({
+    nome: operadoraName.trim(),
+    ...DEFAULT_IMPORTED_OPERADORA,
+  });
+
+  if (createResult.error || !createResult.data) {
+    throw new Error(`Erro ao criar operadora ${operadoraName}: ${String((createResult.error as { message?: string } | null)?.message ?? 'desconhecido')}`);
+  }
+
+  const created = buildOperadoraRecord(createResult.data);
+  context.operadoras = [...context.operadoras, created];
+  return created;
+};
+
+const ensureLinha = async (
+  context: ImportLookupContext,
+  operadora: Operadora,
+  lineName: string,
+) => {
+  const existing = findLinha(context.linhas, operadora.id, lineName);
+  if (existing) {
+    return existing;
+  }
+
+  const createResult = await cotadorService.createLinha({
+    operadora_id: operadora.id,
+    nome: lineName.trim(),
+    ativo: true,
+    observacoes: null,
+  });
+
+  if (createResult.error || !createResult.data) {
+    throw new Error(`Erro ao criar linha ${lineName}: ${String((createResult.error as { message?: string } | null)?.message ?? 'desconhecido')}`);
+  }
+
+  const created = buildLinhaRecord({
+    ...(createResult.data as CotadorLineManagerRecord),
+    operadora,
+  }, operadora);
+
+  context.linhas = [...context.linhas, created];
+  return created;
+};
+
 const findProduto = (products: CotadorProductManagerRecord[], lineId: string, productName: string) => {
   const normalized = normalizeText(productName);
   return products.find((item) => item.linha_id === lineId && normalizeText(item.nome) === normalized) ?? null;
@@ -319,15 +403,8 @@ const resolveProduct = async (
   context: ImportLookupContext,
   result: CotadorImportResult,
 ): Promise<CotadorProductManagerRecord> => {
-  const operadora = findOperadora(context.operadoras, reference.operadora);
-  if (!operadora) {
-    throw new Error(`Operadora não encontrada: ${reference.operadora}`);
-  }
-
-  const line = findLinha(context.linhas, operadora.id, reference.linha);
-  if (!line) {
-    throw new Error(`Linha não encontrada para ${reference.operadora}: ${reference.linha}`);
-  }
+  const operadora = await ensureOperadora(context, reference.operadora);
+  const line = await ensureLinha(context, operadora, reference.linha);
 
   const existingProduct = findProduto(context.products, line.id, reference.produto);
   const payload = getProductPayloadFromReference(reference, existingProduct, context, operadora, line);
@@ -458,7 +535,7 @@ const upsertImportedTable = async (
 };
 
 const parseJsonPayload = (text: string): ImportedJsonPayload => {
-  const parsed = JSON.parse(text) as Record<string, unknown>;
+  const parsed = JSON.parse(sanitizeImportText(text)) as Record<string, unknown>;
   const rawItems = Array.isArray(parsed.items) ? parsed.items : [parsed];
 
   const items = rawItems.map((rawItem) => {

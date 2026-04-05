@@ -19,7 +19,7 @@ import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import { cx } from '../../../lib/cx';
 import { isPanelDarkTheme } from '../../../components/ui/dropdownStyles';
 import { COTADOR_MODALITY_OPTIONS, type CotadorQuoteModality } from '../shared/cotadorConstants';
-import { formatCotadorCurrency, formatCotadorModality } from '../shared/cotadorUtils';
+import { formatCotadorCurrency } from '../shared/cotadorUtils';
 import type { CotadorCatalogActor, CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote } from '../shared/cotadorTypes';
 
 type SelectOption = {
@@ -149,8 +149,9 @@ export default function CotadorPlanPickerOverlay({
     const grouped = new Map<string, OperatorCard>();
     const lineMap = new Map<string, Set<string>>();
     const productMap = new Map<string, Set<string>>();
+    const realCatalogItems = catalogItems.filter((item) => item.source !== 'operadora');
 
-    catalogItems.forEach((item) => {
+    realCatalogItems.forEach((item) => {
       const current = grouped.get(item.operadora.id);
       if (current) {
         current.itemCount += 1;
@@ -350,28 +351,6 @@ export default function CotadorPlanPickerOverlay({
                   </div>
                 </div>
 
-                <div className={cx(
-                  'rounded-2xl border p-4 shadow-sm',
-                  isDarkTheme
-                    ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
-                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
-                )}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Distribuição</p>
-                      <p className={cx('mt-1 text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{quote.totalLives} vidas</p>
-                    </div>
-                    <span className={cx(
-                      'rounded-full px-3 py-1 text-xs font-semibold',
-                      isDarkTheme
-                        ? 'bg-[color:rgba(8,145,178,0.18)] text-[color:#b6f0ff]'
-                        : 'bg-[color:rgba(8,145,178,0.1)] text-[color:var(--panel-text,#1a120d)]',
-                    )}>
-                      {formatCotadorModality(quote.modality)}
-                    </span>
-                  </div>
-                </div>
-
                 <div className="space-y-3">
                   <Input
                     value={filters.search}
@@ -380,7 +359,7 @@ export default function CotadorPlanPickerOverlay({
                     leftIcon={Search}
                     className={cx(
                       isDarkTheme
-                        ? '[--panel-placeholder:rgba(255,243,209,0.42)] border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff8ef]'
+                        ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef] shadow-none placeholder:text-[color:rgba(255,243,209,0.42)] focus:border-[color:rgba(251,191,36,0.28)] focus:ring-[color:rgba(251,191,36,0.26)]'
                         : undefined,
                     )}
                   />
@@ -428,7 +407,16 @@ export default function CotadorPlanPickerOverlay({
                   />
                 </div>
 
-                <Button variant="secondary" onClick={onResetFilters} fullWidth>
+                <Button
+                  variant="secondary"
+                  onClick={onResetFilters}
+                  fullWidth
+                  className={cx(
+                    isDarkTheme
+                      ? 'border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef] shadow-none hover:border-[color:rgba(251,191,36,0.28)] hover:bg-[color:rgba(251,191,36,0.12)] hover:text-[color:#fff3d1]'
+                      : undefined,
+                  )}
+                >
                   Limpar filtros
                 </Button>
               </div>

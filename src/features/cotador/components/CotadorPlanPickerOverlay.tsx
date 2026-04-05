@@ -19,7 +19,6 @@ import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import { cx } from '../../../lib/cx';
 import { isPanelDarkTheme } from '../../../components/ui/dropdownStyles';
 import { COTADOR_MODALITY_OPTIONS, type CotadorQuoteModality } from '../shared/cotadorConstants';
-import { formatCotadorCurrency } from '../shared/cotadorUtils';
 import type { CotadorCatalogActor, CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote } from '../shared/cotadorTypes';
 
 type SelectOption = {
@@ -66,6 +65,22 @@ type LineCard = {
   coparticipacoes: string[];
 };
 
+type LineScenarioCard = {
+  key: string;
+  actor: CotadorCatalogActor;
+  tableName: string | null;
+  businessProfile: string;
+  coparticipacao: string;
+  livesLabel: string;
+  items: CotadorCatalogItem[];
+};
+
+type ProductDirectOption = {
+  key: string;
+  title: string;
+  item: CotadorCatalogItem;
+};
+
 type ProductGroup = {
   key: string;
   title: string;
@@ -90,6 +105,11 @@ const formatCoparticipacao = (value: string | null | undefined) => {
   return 'A definir';
 };
 
+const formatCompactLivesRange = (item: Pick<CotadorCatalogItem, 'vidasMin' | 'vidasMax'>) => {
+  if (item.vidasMin === null && item.vidasMax === null) return 'Livre';
+  return `${item.vidasMin ?? 1} a ${item.vidasMax ?? '...'}`;
+};
+
 export default function CotadorPlanPickerOverlay({
   isOpen,
   quote,
@@ -106,6 +126,7 @@ export default function CotadorPlanPickerOverlay({
 }: CotadorPlanPickerOverlayProps) {
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+  const [selectedLineScenarioKey, setSelectedLineScenarioKey] = useState<string | null>(null);
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
   const isDarkTheme = isPanelDarkTheme();
 
@@ -113,6 +134,7 @@ export default function CotadorPlanPickerOverlay({
     if (!isOpen) {
       setSelectedOperatorId(null);
       setSelectedLineId(null);
+      setSelectedLineScenarioKey(null);
       setSelectedProductKey(null);
       return;
     }
@@ -209,9 +231,59 @@ export default function CotadorPlanPickerOverlay({
       .sort((left, right) => (left.actor.name ?? '').localeCompare(right.actor.name ?? '', 'pt-BR'));
   }, [operatorScopedItems]);
 
+  const lineScenarioCards = useMemo<LineScenarioCard[]>(() => {
+    const grouped = new Map<string, LineScenarioCard>();
+
+    operatorScopedItems.forEach((item) => {
+      if (!item.linha?.id) return;
+
+      const key = [
+        item.linha.id,
+        item.tabelaNome ?? '',
+        item.modalidade ?? '',
+        item.perfilEmpresarial ?? '',
+        item.coparticipacao ?? '',
+        item.vidasMin ?? '',
+        item.vidasMax ?? '',
+      ].join('|');
+
+      const current = grouped.get(key);
+      if (current) {
+        current.items.push(item);
+        return;
+      }
+
+      grouped.set(key, {
+        key,
+        actor: item.linha,
+        tableName: item.tabelaNome,
+        businessProfile: formatBusinessProfile(item.perfilEmpresarial),
+        coparticipacao: formatCoparticipacao(item.coparticipacao),
+        livesLabel: formatCompactLivesRange(item),
+        items: [item],
+      });
+    });
+
+    return Array.from(grouped.values()).sort((left, right) => {
+      const lineComparison = (left.actor.name ?? '').localeCompare(right.actor.name ?? '', 'pt-BR');
+      if (lineComparison !== 0) return lineComparison;
+      const livesComparison = left.livesLabel.localeCompare(right.livesLabel, 'pt-BR');
+      if (livesComparison !== 0) return livesComparison;
+      const copartComparison = left.coparticipacao.localeCompare(right.coparticipacao, 'pt-BR');
+      if (copartComparison !== 0) return copartComparison;
+      return left.businessProfile.localeCompare(right.businessProfile, 'pt-BR');
+    });
+  }, [operatorScopedItems]);
+
   const lineScopedItems = useMemo(
-    () => (selectedLineId ? operatorScopedItems.filter((item) => item.linha?.id === selectedLineId) : operatorScopedItems),
-    [operatorScopedItems, selectedLineId],
+    () => {
+      if (selectedLineScenarioKey) {
+        return lineScenarioCards.find((card) => card.key === selectedLineScenarioKey)?.items ?? [];
+      }
+
+      return selectedLineId ? operatorScopedItems.filter((item) => item.linha?.id === selectedLineId) : operatorScopedItems;
+    },
+    [lineScenarioCards, operatorScopedItems, selectedLineId, selectedLineScenarioKey],
   );
 
   const productGroups = useMemo<ProductGroup[]>(() => {
@@ -289,10 +361,37 @@ export default function CotadorPlanPickerOverlay({
     ).size;
   }, [selectedOperatorId, structuralDiscoveryItems]);
 
+  const usesLineScenarioStep = selectedOperatorStructuralLineCount > 1;
+
+  const productDirectOptions = useMemo<ProductDirectOption[]>(() => {
+    if (!usesLineScenarioStep || !selectedLineScenarioKey) return [];
+
+    const titleCounts = new Map<string, number>();
+    lineScopedItems.forEach((item) => {
+      titleCounts.set(item.titulo, (titleCounts.get(item.titulo) ?? 0) + 1);
+    });
+
+    return [...lineScopedItems]
+      .sort((left, right) => {
+        const leftPrice = left.estimatedMonthlyTotal ?? Number.MAX_SAFE_INTEGER;
+        const rightPrice = right.estimatedMonthlyTotal ?? Number.MAX_SAFE_INTEGER;
+        if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+        const titleComparison = left.titulo.localeCompare(right.titulo, 'pt-BR');
+        if (titleComparison !== 0) return titleComparison;
+        return (left.acomodacao ?? '').localeCompare(right.acomodacao ?? '', 'pt-BR');
+      })
+      .map((item) => ({
+        key: item.id,
+        title: (titleCounts.get(item.titulo) ?? 0) > 1 && item.acomodacao ? `${item.titulo} - ${item.acomodacao}` : item.titulo,
+        item,
+      }));
+  }, [lineScopedItems, selectedLineScenarioKey, usesLineScenarioStep]);
+
   useEffect(() => {
     if (selectedOperatorId && !operatorCards.some((card) => card.actor.id === selectedOperatorId)) {
       setSelectedOperatorId(null);
       setSelectedLineId(null);
+      setSelectedLineScenarioKey(null);
       setSelectedProductKey(null);
     }
   }, [operatorCards, selectedOperatorId]);
@@ -300,9 +399,17 @@ export default function CotadorPlanPickerOverlay({
   useEffect(() => {
     if (selectedLineId && !lineCards.some((card) => card.actor.id === selectedLineId)) {
       setSelectedLineId(null);
+      setSelectedLineScenarioKey(null);
       setSelectedProductKey(null);
     }
   }, [lineCards, selectedLineId]);
+
+  useEffect(() => {
+    if (selectedLineScenarioKey && !lineScenarioCards.some((card) => card.key === selectedLineScenarioKey)) {
+      setSelectedLineScenarioKey(null);
+      setSelectedProductKey(null);
+    }
+  }, [lineScenarioCards, selectedLineScenarioKey]);
 
   useEffect(() => {
     if (selectedProductKey && !productGroups.some((group) => group.key === selectedProductKey)) {
@@ -312,7 +419,11 @@ export default function CotadorPlanPickerOverlay({
 
   const currentStep = !selectedOperatorId
     ? 'operator'
-    : activeProductGroup
+    : usesLineScenarioStep
+      ? !selectedLineScenarioKey
+        ? 'line'
+        : 'product'
+      : activeProductGroup
       ? 'table'
       : selectedOperatorStructuralLineCount > 1 && !selectedLineId
         ? 'line'
@@ -323,12 +434,6 @@ export default function CotadorPlanPickerOverlay({
     : currentStep === 'table'
       ? activeProductGroup?.title ?? 'Tabelas'
       : selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Produtos';
-
-  const floatingPanelSectionLabel = currentStep === 'line'
-    ? 'Linhas'
-    : currentStep === 'table'
-      ? 'Tabelas'
-      : 'Produtos';
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -350,7 +455,7 @@ export default function CotadorPlanPickerOverlay({
               <h3 className={cx('mt-2 text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
                 {!selectedOperatorId
                   ? 'Escolha a operadora'
-                  : !selectedLineId && selectedOperatorStructuralLineCount > 1
+                  : !selectedLineScenarioKey && selectedOperatorStructuralLineCount > 1
                     ? `Escolha a linha em ${selectedOperator?.actor.name ?? 'operadora'}`
                   : activeProductGroup
                       ? 'Escolha a tabela comercial'
@@ -476,6 +581,7 @@ export default function CotadorPlanPickerOverlay({
                     onResetFilters();
                     setSelectedOperatorId(null);
                     setSelectedLineId(null);
+                    setSelectedLineScenarioKey(null);
                     setSelectedProductKey(null);
                   }}
                   fullWidth
@@ -558,6 +664,7 @@ export default function CotadorPlanPickerOverlay({
                               onClick={() => {
                                 setSelectedOperatorId(card.actor.id);
                                 setSelectedLineId(null);
+                                setSelectedLineScenarioKey(null);
                                 setSelectedProductKey(null);
                               }}
                               className={cx(
@@ -595,13 +702,15 @@ export default function CotadorPlanPickerOverlay({
                                           setSelectedProductKey(null);
                                           return;
                                         }
-                                        if (currentStep === 'product' && selectedLineId) {
+                                        if (currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)) {
                                           setSelectedLineId(null);
+                                          setSelectedLineScenarioKey(null);
                                           setSelectedProductKey(null);
                                           return;
                                         }
                                         setSelectedOperatorId(null);
                                         setSelectedLineId(null);
+                                        setSelectedLineScenarioKey(null);
                                         setSelectedProductKey(null);
                                       }}
                                       className={cx(
@@ -612,32 +721,30 @@ export default function CotadorPlanPickerOverlay({
                                       <ArrowLeft className="h-4 w-4" />
                                       {currentStep === 'table'
                                         ? 'Voltar aos produtos'
-                                        : currentStep === 'product' && selectedLineId
+                                        : currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)
                                           ? 'Voltar às linhas'
                                           : 'Voltar às operadoras'}
                                     </button>
-                                    <div className="mt-3 flex items-center justify-between gap-3">
-                                      <div className="min-w-0">
-                                        <p className={cx('text-[11px] font-semibold uppercase tracking-[0.16em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.54)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>{floatingPanelSectionLabel}</p>
-                                        <p className={cx('mt-1 truncate text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</p>
-                                      </div>
+                                    <div className="mt-3 min-w-0">
+                                      <p className={cx('truncate text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</p>
                                     </div>
                                   </div>
 
                                   <div className="max-h-[320px] overflow-y-auto">
                                     {currentStep === 'line' ? (
-                                      lineCards.length === 0 ? (
+                                      lineScenarioCards.length === 0 ? (
                                         <div className="px-4 py-6 text-center">
                                           <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível.</p>
                                         </div>
                                       ) : (
                                         <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                          {lineCards.map((line) => (
+                                          {lineScenarioCards.map((lineScenario) => (
                                             <button
-                                              key={line.actor.id}
+                                              key={lineScenario.key}
                                               type="button"
                                               onClick={() => {
-                                                setSelectedLineId(line.actor.id);
+                                                setSelectedLineId(lineScenario.actor.id);
+                                                setSelectedLineScenarioKey(lineScenario.key);
                                                 setSelectedProductKey(null);
                                               }}
                                               className={cx(
@@ -645,7 +752,14 @@ export default function CotadorPlanPickerOverlay({
                                                 isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
                                               )}
                                             >
-                                              <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{line.actor.name}</p>
+                                              <div className="min-w-0 flex-1">
+                                                <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{lineScenario.actor.name}</p>
+                                                <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                                  <span>{lineScenario.livesLabel} vidas</span>
+                                                  <span>{lineScenario.coparticipacao}</span>
+                                                  <span>{lineScenario.businessProfile}</span>
+                                                </div>
+                                              </div>
                                               <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
                                             </button>
                                           ))}
@@ -687,12 +801,49 @@ export default function CotadorPlanPickerOverlay({
                                                     <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
                                                   )}
                                                 </div>
-                                                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                                                  <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
-                                                  <span className={cx('shrink-0 text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
-                                                    {item.estimatedMonthlyTotal !== null ? formatCotadorCurrency(item.estimatedMonthlyTotal) : '-'}
-                                                  </span>
+                                                <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )
+                                    ) : usesLineScenarioStep ? (
+                                      productDirectOptions.length === 0 ? (
+                                        <div className="px-4 py-6 text-center">
+                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
+                                        </div>
+                                      ) : (
+                                        <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                          {productDirectOptions.map((option) => {
+                                            const isSelected = selectedIds.has(option.item.id);
+                                            return (
+                                              <button
+                                                key={option.key}
+                                                type="button"
+                                                onClick={() => {
+                                                  if (isSelected || busy) return;
+                                                  onSelectItem(option.item.id);
+                                                }}
+                                                disabled={busy || isSelected}
+                                                className={cx(
+                                                  'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
+                                                  isSelected
+                                                    ? isDarkTheme
+                                                      ? 'bg-emerald-500/10'
+                                                      : 'bg-emerald-50'
+                                                    : isDarkTheme
+                                                      ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
+                                                      : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                                )}
+                                              >
+                                                <div>
+                                                  {isSelected ? (
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                                  ) : (
+                                                    <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                                  )}
                                                 </div>
+                                                <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{option.title}</p>
                                               </button>
                                             );
                                           })}

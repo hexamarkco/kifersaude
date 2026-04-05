@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FileText, Save, Users } from 'lucide-react';
+import { FileText, Save, UserRound, Users } from 'lucide-react';
+import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ModalShell from '../../../components/ui/ModalShell';
@@ -12,6 +13,7 @@ type CotadorCreateQuoteModalProps = {
   isOpen: boolean;
   mode: 'create' | 'edit';
   initialDraft: CotadorQuoteDraft;
+  leadOptions: Array<{ value: string; label: string }>;
   busy?: boolean;
   onClose: () => void;
   onSubmit: (input: CotadorQuoteInput) => void;
@@ -21,6 +23,7 @@ export default function CotadorCreateQuoteModal({
   isOpen,
   mode,
   initialDraft,
+  leadOptions,
   busy = false,
   onClose,
   onSubmit,
@@ -74,6 +77,7 @@ export default function CotadorCreateQuoteModal({
                 onSubmit({
                   name: draft.name.trim(),
                   modality: draft.modality ?? 'PME',
+                  leadId: draft.leadId ?? null,
                   ageDistribution: sanitizeCotadorAgeDistribution(draft.ageDistribution),
                 });
               }}
@@ -114,6 +118,20 @@ export default function CotadorCreateQuoteModal({
               invalid={draft.name.trim().length > 0 && draft.name.trim().length < 3}
               autoFocus
               className={isDarkTheme ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(24,16,12,0.88)] text-[color:#fff8ef] shadow-none placeholder:text-[color:rgba(255,243,209,0.42)] focus:border-[color:rgba(251,191,36,0.34)] focus:ring-[color:rgba(251,191,36,0.26)]' : undefined}
+            />
+          </div>
+
+          <div>
+            <label className={isDarkTheme ? 'mb-2 flex items-center gap-2 text-sm font-semibold text-[color:#fff3d1]' : 'mb-2 flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]'}>
+              <UserRound className="h-4 w-4" />
+              Lead do CRM
+            </label>
+            <FilterSingleSelect
+              icon={UserRound}
+              options={leadOptions}
+              placeholder="Sem lead vinculado"
+              value={draft.leadId ?? ''}
+              onChange={(value) => setDraft((current) => ({ ...current, leadId: value || null }))}
             />
           </div>
 

@@ -203,6 +203,7 @@ export const formatCotadorPercent = (value: number | null | undefined) => {
 export const buildCotadorQuoteDraft = (quote?: CotadorQuote | null): CotadorQuoteDraft => ({
   name: quote?.name ?? '',
   modality: quote?.modality ?? null,
+  leadId: quote?.leadId ?? null,
   ageDistribution: sanitizeCotadorAgeDistribution(quote?.ageDistribution),
 });
 
@@ -248,10 +249,10 @@ export const createCotadorQuote = (input: CotadorQuoteInput): CotadorQuote => {
     id: createQuoteId(),
     name: input.name.trim(),
     modality: input.modality,
+    leadId: input.leadId ?? null,
     ageDistribution,
     totalLives: getCotadorTotalLives(ageDistribution),
     selectedItems: [],
-    leadId: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -264,6 +265,7 @@ export const updateCotadorQuote = (quote: CotadorQuote, input: CotadorQuoteInput
     ...quote,
     name: input.name.trim(),
     modality: input.modality,
+    leadId: input.leadId ?? null,
     ageDistribution,
     totalLives: getCotadorTotalLives(ageDistribution),
     updatedAt: new Date().toISOString(),
@@ -303,6 +305,7 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
     id: candidate.id,
     name: candidate.name,
     modality: candidate.modality,
+    leadId: typeof candidate.leadId === 'string' ? candidate.leadId : null,
     ageDistribution,
     totalLives: getCotadorTotalLives(ageDistribution),
     selectedItems: selectedItems.length
@@ -340,7 +343,6 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
           informacoesImportantes: null,
           observacao: null,
         })),
-    leadId: typeof candidate.leadId === 'string' ? candidate.leadId : null,
     createdAt,
     updatedAt,
   };

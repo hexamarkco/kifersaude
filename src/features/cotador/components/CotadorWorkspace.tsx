@@ -12,6 +12,7 @@ type SelectOption = {
 
 type CotadorWorkspaceProps = {
   quote: CotadorQuote;
+  linkedLeadLabel: string;
   catalogItems: CotadorCatalogItem[];
   filteredItems: CotadorCatalogItem[];
   selectedItems: CotadorQuoteItem[];
@@ -59,6 +60,7 @@ const formatCopart = (value: CotadorQuoteItem['coparticipacao']) => {
 
 export default function CotadorWorkspace({
   quote,
+  linkedLeadLabel,
   catalogItems,
   filteredItems,
   selectedItems,
@@ -110,6 +112,7 @@ export default function CotadorWorkspace({
 
         <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <SummaryMetric label="Modalidades" value={modalitySummary} />
+          <SummaryMetric label="Lead CRM" value={linkedLeadLabel} />
           <SummaryMetric label="Total de vidas" value={`${quote.totalLives} vidas`} />
           <SummaryMetric label="Faixas" value={formatCotadorAgeSummary(quote.ageDistribution)} />
           <SummaryMetric label="Atualizada em" value={formatCotadorDateTime(quote.updatedAt)} />
@@ -183,10 +186,10 @@ export default function CotadorWorkspace({
                   </div>
 
                   {item.estimatedMonthlyTotal !== null && (
-                    <div className="mt-3 rounded-2xl border border-[color:rgba(14,116,144,0.24)] bg-[linear-gradient(135deg,rgba(224,242,254,0.88),rgba(240,249,255,0.96))] px-4 py-3 dark:border-cyan-300/20 dark:bg-[linear-gradient(135deg,rgba(8,47,73,0.72),rgba(14,116,144,0.16))]">
+                    <div className="mt-3 rounded-2xl border border-[color:rgba(157,127,90,0.24)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_72%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_94%,var(--panel-surface-soft,#f4ede3)))] px-4 py-3 dark:border-[color:rgba(251,191,36,0.18)] dark:bg-[linear-gradient(135deg,rgba(133,77,14,0.24),rgba(44,28,20,0.96))]">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:#0f4c5c] dark:text-cyan-100/80">Mensalidade</p>
-                        <p className="text-xl font-semibold text-[color:#123244] dark:text-white">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)] dark:text-[color:#f3c892]">Mensalidade</p>
+                        <p className="text-xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
                       </div>
                     </div>
                   )}

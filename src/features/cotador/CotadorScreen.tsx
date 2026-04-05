@@ -3,6 +3,7 @@ import { AlertCircle, ArrowLeft, Calculator, FileStack, Plus, Settings2 } from '
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import CotadorCatalogTab from '../../components/config/CotadorCatalogTab';
+import { fetchAllPages, supabase, type Lead } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
 import CotadorCreateQuoteModal from './components/CotadorCreateQuoteModal';
 import CotadorPlanDetailsPage from './components/CotadorPlanDetailsPage';
@@ -115,6 +116,7 @@ export default function CotadorScreen() {
   const isDetailRoute = Boolean(quoteId) && !isConfigRoute && !catalogItemKey;
 
   const [catalogItems, setCatalogItems] = useState<CotadorCatalogItem[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [quotes, setQuotes] = useState<CotadorQuote[]>([]);
   const [filters, setFilters] = useState<CotadorCatalogFilters>(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(true);
@@ -136,14 +138,25 @@ export default function CotadorScreen() {
 
     const loadWorkspace = async () => {
       setLoading(true);
-      const [nextCatalog, nextQuotes] = await Promise.all([
+      const [nextCatalog, nextQuotes, nextLeads] = await Promise.all([
         cotadorService.loadCatalog(),
         cotadorService.getQuotes(),
+        fetchAllPages<Lead>(async (from, to) => {
+          const response = await supabase
+            .from('leads')
+            .select('*')
+            .eq('arquivado', false)
+            .order('nome_completo')
+            .range(from, to);
+
+          return { data: response.data as Lead[] | null, error: response.error };
+        }),
       ]);
 
       if (!active) return;
 
       setCatalogItems(nextCatalog);
+      setLeads(nextLeads);
       setQuotes(nextQuotes);
       setLoading(false);
     };
@@ -177,6 +190,23 @@ export default function CotadorScreen() {
     () => (activeQuote && activePlanCatalogKey ? activeQuote.selectedItems.find((item) => item.catalogItemKey === activePlanCatalogKey) ?? null : null),
     [activePlanCatalogKey, activeQuote],
   );
+
+  const leadOptions = useMemo(
+    () => leads.map((lead) => ({
+      value: lead.id,
+      label: [lead.nome_completo, lead.telefone || null, lead.email || null].filter(Boolean).join(' | '),
+    })),
+    [leads],
+  );
+
+  const leadById = useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads]);
+
+  const activeQuoteLeadLabel = useMemo(() => {
+    if (!activeQuote?.leadId) return 'Nao vinculado';
+    const lead = leadById.get(activeQuote.leadId);
+    if (!lead) return 'Lead vinculado';
+    return lead.nome_completo;
+  }, [activeQuote?.leadId, leadById]);
 
   const quoteCatalog = useMemo(() => {
     if (!activeQuote) return [];
@@ -539,6 +569,7 @@ export default function CotadorScreen() {
 
         <CotadorWorkspace
           quote={activeQuote}
+          linkedLeadLabel={activeQuoteLeadLabel}
           catalogItems={quoteCatalog}
           filteredItems={filteredItems}
           selectedItems={activeQuote.selectedItems}
@@ -594,6 +625,7 @@ export default function CotadorScreen() {
         isOpen={wizardState.isOpen}
         mode={wizardState.mode}
         initialDraft={wizardState.draft}
+        leadOptions={leadOptions}
         onClose={() => setWizardState((current) => ({ ...current, isOpen: false }))}
         onSubmit={(input) => {
           void handleWizardSubmit(input);

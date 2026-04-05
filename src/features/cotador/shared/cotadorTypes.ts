@@ -9,12 +9,14 @@ export type CotadorCoparticipationKind = 'sem' | 'parcial' | 'total';
 export type CotadorQuoteDraft = {
   name: string;
   modality: CotadorQuoteModality | null;
+  leadId?: string | null;
   ageDistribution: CotadorAgeDistribution;
 };
 
 export type CotadorQuoteInput = {
   name: string;
   modality: CotadorQuoteModality;
+  leadId?: string | null;
   ageDistribution: CotadorAgeDistribution;
 };
 

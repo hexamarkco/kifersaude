@@ -1164,6 +1164,7 @@ export const cotadorService = {
         .insert([{
           nome: input.name.trim(),
           modalidade: input.modality,
+          lead_id: input.leadId ?? null,
           total_vidas: totalLives,
         }])
         .select()
@@ -1181,10 +1182,10 @@ export const cotadorService = {
           id: quoteRecord.id,
           name: quoteRecord.nome,
           modality: quoteRecord.modalidade,
+          leadId: quoteRecord.lead_id ?? null,
           ageDistribution,
           totalLives,
           selectedItems: [],
-          leadId: quoteRecord.lead_id ?? null,
           createdAt: quoteRecord.created_at,
           updatedAt: quoteRecord.updated_at,
         },
@@ -1205,6 +1206,7 @@ export const cotadorService = {
         .update({
           nome: input.name.trim(),
           modalidade: input.modality,
+          lead_id: input.leadId ?? null,
           total_vidas: totalLives,
           updated_at: new Date().toISOString(),
         })
@@ -1221,6 +1223,7 @@ export const cotadorService = {
           ...quote,
           name: input.name.trim(),
           modality: input.modality,
+          leadId: input.leadId ?? null,
           ageDistribution,
           totalLives,
           updatedAt: new Date().toISOString(),

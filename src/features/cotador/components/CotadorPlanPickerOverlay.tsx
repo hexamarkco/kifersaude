@@ -157,6 +157,22 @@ export default function CotadorPlanPickerOverlay({
     setSelectedProductKey(null);
   }, [filters.search, filters.administradoraId, filters.entidadeId, filters.perfilEmpresarial, filters.coparticipacao, filters.abrangencia, filters.acomodacao, activeModalityTab, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen || activeModalityTab === 'ADESAO') return;
+
+    if (filters.administradoraId || filters.entidadeId) {
+      onUpdateFilters({ administradoraId: '', entidadeId: '' });
+    }
+  }, [activeModalityTab, filters.administradoraId, filters.entidadeId, isOpen, onUpdateFilters]);
+
+  useEffect(() => {
+    if (!isOpen || activeModalityTab === 'PME') return;
+
+    if (filters.perfilEmpresarial) {
+      onUpdateFilters({ perfilEmpresarial: '' });
+    }
+  }, [activeModalityTab, filters.perfilEmpresarial, isOpen, onUpdateFilters]);
+
   const selectedIds = useMemo(
     () => new Set(quote.selectedItems.map((item) => item.catalogItemKey)),
     [quote.selectedItems],
@@ -589,27 +605,33 @@ export default function CotadorPlanPickerOverlay({
                         : undefined,
                     )}
                   />
-                  <FilterSingleSelect
-                    icon={ShieldCheck}
-                    options={filterOptions.administradoras}
-                    placeholder="Todas as administradoras"
-                    value={filters.administradoraId}
-                    onChange={(next) => onUpdateFilters({ administradoraId: next })}
-                  />
-                  <FilterSingleSelect
-                    icon={UserRound}
-                    options={filterOptions.entidades}
-                    placeholder="Todas as entidades"
-                    value={filters.entidadeId}
-                    onChange={(next) => onUpdateFilters({ entidadeId: next })}
-                  />
-                  <FilterSingleSelect
-                    icon={BadgePercent}
-                    options={filterOptions.perfisEmpresariais}
-                    placeholder="Perfil empresarial"
-                    value={filters.perfilEmpresarial}
-                    onChange={(next) => onUpdateFilters({ perfilEmpresarial: next as CotadorCatalogFilters['perfilEmpresarial'] })}
-                  />
+                  {activeModalityTab === 'ADESAO' && (
+                    <>
+                      <FilterSingleSelect
+                        icon={ShieldCheck}
+                        options={filterOptions.administradoras}
+                        placeholder="Todas as administradoras"
+                        value={filters.administradoraId}
+                        onChange={(next) => onUpdateFilters({ administradoraId: next })}
+                      />
+                      <FilterSingleSelect
+                        icon={UserRound}
+                        options={filterOptions.entidades}
+                        placeholder="Todas as entidades"
+                        value={filters.entidadeId}
+                        onChange={(next) => onUpdateFilters({ entidadeId: next })}
+                      />
+                    </>
+                  )}
+                  {activeModalityTab === 'PME' && (
+                    <FilterSingleSelect
+                      icon={BadgePercent}
+                      options={filterOptions.perfisEmpresariais}
+                      placeholder="Perfil empresarial"
+                      value={filters.perfilEmpresarial}
+                      onChange={(next) => onUpdateFilters({ perfilEmpresarial: next as CotadorCatalogFilters['perfilEmpresarial'] })}
+                    />
+                  )}
                   <FilterSingleSelect
                     icon={Sparkles}
                     options={filterOptions.coparticipacoes}

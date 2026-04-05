@@ -11,7 +11,6 @@ import {
   calculateCotadorEstimatedMonthlyTotal,
   buildCotadorQuoteDraft,
   buildCotadorQuoteItemFromCatalogItem,
-  catalogMatchesQuoteModality,
   formatCotadorDateTime,
   saveCotadorQuotesToStorage,
   sortCotadorQuotesByRecent,
@@ -24,7 +23,6 @@ import type {
   CotadorQuoteDraft,
   CotadorQuoteInput,
 } from './shared/cotadorTypes';
-import type { CotadorQuoteModality } from './shared/cotadorConstants';
 
 const DEFAULT_FILTERS: CotadorCatalogFilters = {
   search: '',
@@ -171,7 +169,6 @@ export default function CotadorScreen() {
     if (!activeQuote) return [];
 
     return catalogItems
-      .filter((item) => catalogMatchesQuoteModality(item.modalidade, activeQuote.modality))
       .map((item) => ({
         ...item,
         estimatedMonthlyTotal: calculateCotadorEstimatedMonthlyTotal(activeQuote.ageDistribution, item.pricesByAgeRange),
@@ -271,7 +268,6 @@ export default function CotadorScreen() {
         };
       })
       .filter((item) => {
-        if (!catalogMatchesQuoteModality(item.modalidade, quoteBase.modality)) return false;
         if (item.vidasMin !== null && quoteBase.totalLives < item.vidasMin) return false;
         if (item.vidasMax !== null && quoteBase.totalLives > item.vidasMax) return false;
         return true;
@@ -361,45 +357,6 @@ export default function CotadorScreen() {
                 ...quote,
                 selectedItems: nextSelectedItems,
                 updatedAt: new Date().toISOString(),
-              }
-            : quote,
-        ),
-      ),
-    );
-    setSelectionBusy(false);
-  };
-
-  const handleQuoteModalityChange = async (modality: CotadorQuoteModality) => {
-    if (!activeQuote || activeQuote.modality === modality || selectionBusy) return;
-
-    setSelectionBusy(true);
-    const { data, error } = await cotadorService.updateQuote(activeQuote, {
-      name: activeQuote.name,
-      modality,
-      ageDistribution: activeQuote.ageDistribution,
-    });
-
-    if (error || !data) {
-      toast.error('Não foi possível trocar o tipo da cotação.');
-      setSelectionBusy(false);
-      return;
-    }
-
-    const nextSelectedItems = refreshSelectedItems(data, activeQuote.selectedItems);
-    const selectionResult = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
-    if (selectionResult.error) {
-      toast.error('O tipo foi alterado, mas a shortlist não foi atualizada.');
-      setSelectionBusy(false);
-      return;
-    }
-
-    setQuotes((current) =>
-      sortCotadorQuotesByRecent(
-        current.map((quote) =>
-          quote.id === activeQuote.id
-            ? {
-                ...data,
-                selectedItems: nextSelectedItems,
               }
             : quote,
         ),
@@ -559,10 +516,6 @@ export default function CotadorScreen() {
             void handleToggleCatalogItem(itemId);
           }}
           onEditQuote={openEditQuote}
-          onOpenConfig={() => navigate('/painel/cotador/configuracoes')}
-          onChangeQuoteModality={(modality) => {
-            void handleQuoteModalityChange(modality);
-          }}
         />
       </div>
     );

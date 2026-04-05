@@ -58,7 +58,7 @@ export default function CotadorCreateQuoteModal({
       isOpen={isOpen}
       onClose={onClose}
       title={mode === 'create' ? 'Nova cotação' : 'Editar cotação'}
-      description="Defina o nome, distribua as vidas e escolha o contexto comercial inicial da cotação."
+      description="Defina o nome da cotação e distribua as vidas para comparar diferentes opções comerciais no mesmo cenário."
       size="xl"
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

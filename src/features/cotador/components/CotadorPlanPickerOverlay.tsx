@@ -18,7 +18,6 @@ import Input from '../../../components/ui/Input';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import { cx } from '../../../lib/cx';
 import { isPanelDarkTheme } from '../../../components/ui/dropdownStyles';
-import { COTADOR_MODALITY_OPTIONS, type CotadorQuoteModality } from '../shared/cotadorConstants';
 import type { CotadorCatalogActor, CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote } from '../shared/cotadorTypes';
 
 type SelectOption = {
@@ -47,7 +46,6 @@ type CotadorPlanPickerOverlayProps = {
   onSelectItem: (itemId: string) => void;
   onUpdateFilters: (updates: Partial<CotadorCatalogFilters>) => void;
   onResetFilters: () => void;
-  onChangeQuoteModality: (modality: CotadorQuoteModality) => void;
 };
 
 type OperatorCard = {
@@ -123,7 +121,6 @@ export default function CotadorPlanPickerOverlay({
   onSelectItem,
   onUpdateFilters,
   onResetFilters,
-  onChangeQuoteModality,
 }: CotadorPlanPickerOverlayProps) {
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
@@ -153,7 +150,7 @@ export default function CotadorPlanPickerOverlay({
   useEffect(() => {
     if (!isOpen) return;
     setSelectedProductKey(null);
-  }, [filters.search, filters.administradoraId, filters.entidadeId, filters.perfilEmpresarial, filters.coparticipacao, filters.abrangencia, filters.acomodacao, quote.modality, isOpen]);
+  }, [filters.search, filters.administradoraId, filters.entidadeId, filters.perfilEmpresarial, filters.coparticipacao, filters.abrangencia, filters.acomodacao, isOpen]);
 
   const selectedIds = useMemo(
     () => new Set(quote.selectedItems.map((item) => item.catalogItemKey)),
@@ -529,39 +526,6 @@ export default function CotadorPlanPickerOverlay({
                 : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))]',
             )}>
               <div className="space-y-5">
-                <div>
-                  <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Modalidade</p>
-                  <div className={cx(
-                    'mt-3 grid grid-cols-3 gap-2 rounded-2xl border p-1.5 shadow-sm',
-                    isDarkTheme
-                      ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
-                      : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
-                  )}>
-                    {COTADOR_MODALITY_OPTIONS.map((option) => {
-                      const isActive = quote.modality === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => onChangeQuoteModality(option.value)}
-                          className={cx(
-                            'cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-all',
-                            isActive
-                              ? isDarkTheme
-                                ? 'bg-[color:rgba(251,191,36,0.16)] text-[color:#fde68a] shadow-sm'
-                                : 'bg-[var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm'
-                              : isDarkTheme
-                                ? 'text-[color:rgba(255,243,209,0.82)] hover:bg-[color:rgba(255,255,255,0.06)] hover:text-white'
-                                : 'text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]',
-                          )}
-                        >
-                          {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 <div className="space-y-3">
                   <Input
                     value={filters.search}

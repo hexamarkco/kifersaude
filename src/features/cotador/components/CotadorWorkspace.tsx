@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Plus, Settings2, Sparkles, Trash2, Users } from 'lucide-react';
+import { Plus, Sparkles, Trash2, Users } from 'lucide-react';
 import Button from '../../../components/ui/Button';
-import { formatCotadorAgeSummary, formatCotadorCurrency, formatCotadorDateTime, formatCotadorModality } from '../shared/cotadorUtils';
+import { formatCotadorAgeSummary, formatCotadorCurrency, formatCotadorDateTime } from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
-import type { CotadorQuoteModality } from '../shared/cotadorConstants';
 import CotadorPlanPickerOverlay from './CotadorPlanPickerOverlay';
 
 type SelectOption = {
@@ -32,8 +31,6 @@ type CotadorWorkspaceProps = {
   onResetFilters: () => void;
   onToggleCatalogItem: (itemId: string) => void;
   onEditQuote: () => void;
-  onOpenConfig: () => void;
-  onChangeQuoteModality: (modality: CotadorQuoteModality) => void;
 };
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
@@ -71,8 +68,6 @@ export default function CotadorWorkspace({
   onResetFilters,
   onToggleCatalogItem,
   onEditQuote,
-  onOpenConfig,
-  onChangeQuoteModality,
 }: CotadorWorkspaceProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -80,6 +75,12 @@ export default function CotadorWorkspace({
     () => Object.entries(quote.ageDistribution).filter(([, quantity]) => quantity > 0),
     [quote.ageDistribution],
   );
+
+  const modalitySummary = useMemo(() => {
+    const values = Array.from(new Set(selectedItems.map((item) => item.modalidade).filter((value): value is string => Boolean(value))));
+    if (values.length === 0) return 'Sem restrição';
+    return values.join(' | ');
+  }, [selectedItems]);
 
   return (
     <div className="space-y-6">
@@ -94,10 +95,6 @@ export default function CotadorWorkspace({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={onOpenConfig}>
-              <Settings2 className="h-4 w-4" />
-              Configurar catálogo
-            </Button>
             <Button variant="secondary" onClick={onEditQuote}>
               <Users className="h-4 w-4" />
               Editar distribuição
@@ -110,7 +107,7 @@ export default function CotadorWorkspace({
         </div>
 
         <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryMetric label="Tipo" value={formatCotadorModality(quote.modality)} />
+          <SummaryMetric label="Modalidades" value={modalitySummary} />
           <SummaryMetric label="Total de vidas" value={`${quote.totalLives} vidas`} />
           <SummaryMetric label="Faixas" value={formatCotadorAgeSummary(quote.ageDistribution)} />
           <SummaryMetric label="Atualizada em" value={formatCotadorDateTime(quote.updatedAt)} />
@@ -266,7 +263,6 @@ export default function CotadorWorkspace({
         }}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}
-        onChangeQuoteModality={onChangeQuoteModality}
       />
     </div>
   );

@@ -220,6 +220,23 @@ const compareCotadorProducts = (left: CotadorProductManagerRecord, right: Cotado
   return comparisons.find((result) => result !== 0) ?? 0;
 };
 
+const compareCotadorTables = (left: CotadorTableManagerRecord, right: CotadorTableManagerRecord) => {
+  const comparisons = [
+    normalizeSortText(left.produto?.operadora?.nome).localeCompare(normalizeSortText(right.produto?.operadora?.nome), 'pt-BR'),
+    normalizeSortText(left.produto?.linha?.nome).localeCompare(normalizeSortText(right.produto?.linha?.nome), 'pt-BR'),
+    normalizeSortText(left.produto?.nome).localeCompare(normalizeSortText(right.produto?.nome), 'pt-BR'),
+    normalizeSortText(left.modalidade).localeCompare(normalizeSortText(right.modalidade), 'pt-BR'),
+    normalizeSortText(left.produto?.administradora?.nome).localeCompare(normalizeSortText(right.produto?.administradora?.nome), 'pt-BR'),
+    normalizeSortText(left.acomodacao).localeCompare(normalizeSortText(right.acomodacao), 'pt-BR'),
+    normalizeSortText(left.produto?.abrangencia).localeCompare(normalizeSortText(right.produto?.abrangencia), 'pt-BR'),
+    (left.vidas_min ?? 0) - (right.vidas_min ?? 0),
+    (left.vidas_max ?? Number.MAX_SAFE_INTEGER) - (right.vidas_max ?? Number.MAX_SAFE_INTEGER),
+    normalizeSortText(left.nome).localeCompare(normalizeSortText(right.nome), 'pt-BR'),
+  ];
+
+  return comparisons.find((result) => result !== 0) ?? 0;
+};
+
 function FeedbackBanner({ message }: { message: Message | null }) {
   if (!message) return null;
 
@@ -945,7 +962,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <EmptyState icon={Table2} title="Nenhuma tabela cadastrada" description="Crie tabelas por produto para separar MEI, não MEI, coparticipação, acomodação e faixas de vidas como 2 a 2, 3 a 5 ou 6 a 29." />
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
-          {tabelas.map((table) => (
+          {[...tabelas].sort(compareCotadorTables).map((table) => (
             <article key={table.id} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">

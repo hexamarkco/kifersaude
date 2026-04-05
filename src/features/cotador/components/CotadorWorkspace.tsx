@@ -32,7 +32,6 @@ type CotadorWorkspaceProps = {
   onUpdateFilters: (updates: Partial<CotadorCatalogFilters>) => void;
   onResetFilters: () => void;
   onToggleCatalogItem: (itemId: string) => void;
-  onCreateQuote: () => void;
   onEditQuote: () => void;
   onOpenConfig: () => void;
   onChangeQuoteModality: (modality: CotadorQuoteModality) => void;
@@ -61,6 +60,22 @@ const formatCopart = (value: CotadorQuoteItem['coparticipacao']) => {
   return 'A definir';
 };
 
+const calculateEstimatedCommission = (monthlyTotal: number | null, commissionPercent: number | null) => {
+  if (monthlyTotal === null || commissionPercent === null) {
+    return null;
+  }
+
+  return monthlyTotal * (commissionPercent / 100);
+};
+
+const calculateEstimatedBonus = (bonusPerLife: number | null, totalLives: number) => {
+  if (bonusPerLife === null || totalLives <= 0) {
+    return null;
+  }
+
+  return bonusPerLife * totalLives;
+};
+
 export default function CotadorWorkspace({
   quote,
   catalogItems,
@@ -73,7 +88,6 @@ export default function CotadorWorkspace({
   onUpdateFilters,
   onResetFilters,
   onToggleCatalogItem,
-  onCreateQuote,
   onEditQuote,
   onOpenConfig,
   onChangeQuoteModality,
@@ -90,7 +104,7 @@ export default function CotadorWorkspace({
       <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_74%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_92%,var(--panel-surface-soft,#f4ede3))_48%,color-mix(in_srgb,var(--panel-surface-muted,#f8f2e8)_90%,var(--panel-surface,#fffdfa))_100%)] p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(255,253,250,0.82)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(255,253,250,0.82)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)] dark:border-[color:rgba(251,191,36,0.2)] dark:bg-[color:rgba(251,191,36,0.12)] dark:text-[color:#fde68a]">
               <Sparkles className="h-3.5 w-3.5" />
               Cotação ativa
             </div>
@@ -126,13 +140,9 @@ export default function CotadorWorkspace({
           <div className="flex flex-col gap-4 border-b border-[color:var(--panel-border-subtle,#e7dac8)] pb-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">Planos da cotação</p>
-              <h3 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Shortlist de comparação</h3>
               <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{selectedItems.length} plano(s)</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={onCreateQuote}>
-                Nova cotação
-              </Button>
               <Button onClick={() => setPickerOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Adicionar plano
@@ -163,7 +173,7 @@ export default function CotadorWorkspace({
                         {item.linha?.name && <span>:</span>}
                         {item.linha?.name && <span>{item.linha.name}</span>}
                         {item.tabelaNome && (
-                          <span className="rounded-full border border-emerald-300/40 bg-emerald-100/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-900 dark:border-emerald-300/18 dark:bg-emerald-300/10 dark:text-emerald-100">
+                          <span className="rounded-full border border-[color:rgba(12,166,120,0.28)] bg-[color:rgba(12,166,120,0.12)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:#0f5132] dark:border-emerald-300/24 dark:bg-emerald-400/12 dark:text-emerald-100">
                             {item.tabelaNome}
                           </span>
                         )}
@@ -180,34 +190,46 @@ export default function CotadorWorkspace({
                     </Button>
                   </div>
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-2">
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_92%,var(--panel-surface,#fffdfa))] px-3 py-2 dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_78%,var(--panel-surface,#1b1611))]">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Abrangência</p>
                       <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.abrangencia ?? '-'}</p>
                     </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_92%,var(--panel-surface,#fffdfa))] px-3 py-2 dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_78%,var(--panel-surface,#1b1611))]">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Acomodação</p>
                       <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.acomodacao ?? '-'}</p>
-                    </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Comissão</p>
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{formatCotadorPercent(item.comissaoSugerida)}</p>
-                    </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Bônus</p>
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{formatCotadorCurrency(item.bonusPorVidaValor)}</p>
                     </div>
                   </div>
 
                   {item.estimatedMonthlyTotal !== null && (
-                    <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl border border-[color:rgba(8,145,178,0.22)] bg-[color:rgba(8,145,178,0.08)] px-4 py-3 dark:border-cyan-300/18 dark:bg-cyan-300/10">
-                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-soft,#5b4635)] dark:text-cyan-100/80">Mensalidade</p>
-                      <p className="text-xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-white">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
+                    <div className="mt-3 rounded-2xl border border-[color:rgba(14,116,144,0.24)] bg-[linear-gradient(135deg,rgba(224,242,254,0.88),rgba(240,249,255,0.96))] px-4 py-3 dark:border-cyan-300/20 dark:bg-[linear-gradient(135deg,rgba(8,47,73,0.72),rgba(14,116,144,0.16))]">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:#0f4c5c] dark:text-cyan-100/80">Mensalidade</p>
+                        <p className="text-xl font-semibold text-[color:#123244] dark:text-white">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
+                      </div>
+                      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                        <div className="rounded-xl bg-white/50 px-3 py-2 text-[color:#123244] dark:bg-white/5 dark:text-cyan-50">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Comissão</p>
+                          <p className="mt-1 font-semibold">
+                            {item.comissaoSugerida !== null
+                              ? `${formatCotadorPercent(item.comissaoSugerida)} | ${formatCotadorCurrency(calculateEstimatedCommission(item.estimatedMonthlyTotal, item.comissaoSugerida))}`
+                              : '-'}
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-white/50 px-3 py-2 text-[color:#123244] dark:bg-white/5 dark:text-cyan-50">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Bônus por vida</p>
+                          <p className="mt-1 font-semibold">
+                            {item.bonusPorVidaValor !== null
+                              ? `${formatCotadorCurrency(item.bonusPorVidaValor)} | Total ${formatCotadorCurrency(calculateEstimatedBonus(item.bonusPorVidaValor, quote.totalLives))}`
+                              : '-'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   )}
 
                   {(item.administradora?.name || item.entidadesClasse.length > 0 || item.observacao) && (
-                    <div className="mt-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                    <div className="mt-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_90%,var(--panel-surface,#fffdfa))] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_76%,var(--panel-surface,#1b1611))]">
                       {item.administradora?.name && <p>Administradora: {item.administradora.name}</p>}
                       {item.entidadesClasse.length > 0 && <p>Entidades: {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</p>}
                       {item.observacao && <p>{item.observacao}</p>}

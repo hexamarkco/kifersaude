@@ -439,19 +439,19 @@ export default function CotadorPlanPickerOverlay({
                         key={card.actor.id}
                         type="button"
                         onClick={() => onUpdateFilters({ operadoraId: card.actor.id, linhaId: '' })}
-                        className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))]"
+                        className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))] dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:color-mix(in_srgb,var(--panel-surface,#1b1611)_92%,black)] dark:hover:border-[color:rgba(251,191,36,0.28)] dark:hover:bg-[color:rgba(251,191,36,0.08)]"
                       >
                         <div className="flex items-start justify-between gap-4">
-                          <div className="rounded-2xl bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_84%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-focus,#c86f1d)_30%,var(--panel-accent-ink,#6f3f16)))] px-4 py-3 text-3xl font-semibold tracking-tight text-[var(--panel-accent-ink-strong,#4a2411)]">
+                          <div className="flex h-[76px] w-[76px] items-center justify-center rounded-2xl bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_84%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-focus,#c86f1d)_30%,var(--panel-accent-ink,#6f3f16)))] text-3xl font-semibold tracking-tight text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(251,191,36,0.26),rgba(180,83,9,0.62))] dark:text-[color:#fff3d1]">
                             {getInitials(card.actor.name) || 'OP'}
                           </div>
-                          <Building2 className="h-5 w-5 text-[color:var(--panel-text-muted,#876f5c)]" />
+                          <Building2 className="h-5 w-5 text-[color:var(--panel-text-muted,#876f5c)] dark:text-[color:rgba(255,243,209,0.7)]" />
                         </div>
-                        <p className="mt-5 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{card.actor.name}</p>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{card.lineCount} linhas</span>
-                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{card.productCount} produtos</span>
-                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{card.itemCount} ofertas</span>
+                        <p className="mt-5 text-lg font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{card.actor.name}</p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.82)]">
+                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:bg-[color:rgba(255,255,255,0.08)]">{card.lineCount} linhas</span>
+                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:bg-[color:rgba(255,255,255,0.08)]">{card.productCount} produtos</span>
+                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:bg-[color:rgba(255,255,255,0.08)]">{card.itemCount} ofertas</span>
                         </div>
                       </button>
                     ))}
@@ -469,23 +469,23 @@ export default function CotadorPlanPickerOverlay({
                         key={line.actor.id}
                         type="button"
                         onClick={() => onUpdateFilters({ linhaId: line.actor.id })}
-                        className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_74%,var(--panel-surface-soft,#f4ede3))]"
+                        className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_74%,var(--panel-surface-soft,#f4ede3))] dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:color-mix(in_srgb,var(--panel-surface,#1b1611)_92%,black)] dark:hover:border-[color:rgba(251,191,36,0.28)] dark:hover:bg-[color:rgba(251,191,36,0.08)]"
                       >
                         <div className="flex items-center justify-between gap-4">
                           <div>
-                            <p className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{line.actor.name}</p>
-                            <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{line.productCount} produto(s) | {line.tableCount} tabela(s)</p>
+                            <p className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{line.actor.name}</p>
+                            <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.76)]">{line.productCount} produto(s) | {line.tableCount} tabela(s)</p>
                           </div>
-                          <ArrowLeft className="h-5 w-5 rotate-180 text-[color:var(--panel-text-muted,#876f5c)]" />
+                          <ArrowLeft className="h-5 w-5 rotate-180 text-[color:var(--panel-text-muted,#876f5c)] dark:text-[color:rgba(255,243,209,0.66)]" />
                         </div>
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.82)]">
                           {line.coparticipacoes.map((item) => (
-                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">
+                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.08)]">
                               {item}
                             </span>
                           ))}
                           {line.businessProfiles.map((item) => (
-                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">
+                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.08)]">
                               {item}
                             </span>
                           ))}

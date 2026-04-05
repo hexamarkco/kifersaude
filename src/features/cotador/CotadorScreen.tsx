@@ -568,7 +568,6 @@ export default function CotadorScreen() {
           onToggleCatalogItem={(itemId) => {
             void handleToggleCatalogItem(itemId);
           }}
-          onCreateQuote={openCreateQuote}
           onEditQuote={openEditQuote}
           onOpenConfig={() => navigate('/painel/cotador/configuracoes')}
           onChangeQuoteModality={(modality) => {

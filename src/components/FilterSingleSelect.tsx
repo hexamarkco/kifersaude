@@ -72,12 +72,13 @@ export default function FilterSingleSelect({
       120,
       Math.min(288, shouldOpenUpward ? availableAbove - gap : availableBelow - gap),
     );
+    const renderedMenuHeight = Math.min(estimatedMenuHeight, maxHeight);
     const unclampedLeft = r.left;
     const width = Math.min(r.width, window.innerWidth - viewportPadding * 2);
     const left = Math.max(viewportPadding, Math.min(unclampedLeft, window.innerWidth - width - viewportPadding));
     const top = shouldOpenUpward
-      ? Math.max(viewportPadding, r.top - maxHeight - gap)
-      : Math.min(window.innerHeight - maxHeight - viewportPadding, r.bottom + gap);
+      ? Math.max(viewportPadding, r.top - renderedMenuHeight - gap)
+      : Math.min(window.innerHeight - renderedMenuHeight - viewportPadding, r.bottom + gap);
 
     setPos({ top, left, width, maxHeight });
   }, [isCompact, optionsWithDefault.length]);

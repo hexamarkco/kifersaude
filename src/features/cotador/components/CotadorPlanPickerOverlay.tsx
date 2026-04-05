@@ -342,11 +342,11 @@ export default function CotadorPlanPickerOverlay({
             <div>
               <p className={cx('text-xs font-semibold uppercase tracking-[0.24em]', isDarkTheme ? 'text-[color:#f3c892]' : 'text-[var(--panel-accent-ink,#6f3f16)]')}>Adicionar plano</p>
               <h3 className={cx('mt-2 text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
-                {!filters.operadoraId
+                {!selectedOperatorId
                   ? 'Escolha a operadora'
-                  : !filters.linhaId && lineCards.length > 0
+                  : !selectedLineId && lineCards.length > 0
                     ? `Escolha a linha em ${selectedOperator?.actor.name ?? 'operadora'}`
-                    : activeProductGroup
+                  : activeProductGroup
                       ? 'Escolha a tabela comercial'
                       : 'Escolha o produto'}
               </h3>
@@ -376,13 +376,13 @@ export default function CotadorPlanPickerOverlay({
             )}>
               <div className="space-y-5">
                 <div>
-                    <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Modalidade</p>
-                    <div className={cx(
-                      'mt-3 grid grid-cols-3 gap-2 rounded-2xl border p-1.5 shadow-sm',
-                      isDarkTheme
-                        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
-                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
-                    )}>
+                  <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Modalidade</p>
+                  <div className={cx(
+                    'mt-3 grid grid-cols-3 gap-2 rounded-2xl border p-1.5 shadow-sm',
+                    isDarkTheme
+                      ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
+                      : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
+                  )}>
                     {COTADOR_MODALITY_OPTIONS.map((option) => {
                       const isActive = quote.modality === option.value;
                       return (
@@ -466,7 +466,12 @@ export default function CotadorPlanPickerOverlay({
 
                 <Button
                   variant="secondary"
-                  onClick={onResetFilters}
+                  onClick={() => {
+                    onResetFilters();
+                    setSelectedOperatorId(null);
+                    setSelectedLineId(null);
+                    setSelectedProductKey(null);
+                  }}
                   fullWidth
                   className={cx(
                     isDarkTheme
@@ -476,250 +481,294 @@ export default function CotadorPlanPickerOverlay({
                 >
                   Limpar filtros
                 </Button>
+
+                {(selectedOperator || selectedLine || activeProductGroup) && (
+                  <div className={cx(
+                    'rounded-[24px] border p-4',
+                    isDarkTheme
+                      ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
+                      : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
+                  )}>
+                    <p className={cx('text-[11px] font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:#f3c892]' : 'text-[var(--panel-accent-ink,#6f3f16)]')}>Contexto atual</p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      {selectedOperator?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:var(--panel-text,#f8efe3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedOperator.actor.name}</span>}
+                      {selectedLine?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:var(--panel-text,#f8efe3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedLine.actor.name}</span>}
+                      {activeProductGroup?.title && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(251,191,36,0.18)] bg-[color:rgba(251,191,36,0.12)] text-[color:#fde68a]' : 'border-[color:rgba(8,145,178,0.2)] bg-[color:rgba(8,145,178,0.08)] text-[color:var(--panel-text,#1a120d)]')}>{activeProductGroup.title}</span>}
+                    </div>
+                  </div>
+                )}
               </div>
             </aside>
 
             <section className="min-h-0 overflow-y-auto px-5 py-5 md:px-8 md:py-6">
-              <div className={cx('mb-6 flex flex-wrap items-center gap-3 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                {filters.operadoraId && (
-                  <button
-                    type="button"
-                    onClick={() => onUpdateFilters({ operadoraId: '', linhaId: '' })}
-                    className={cx(
-                      'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors',
+              <div className="flex min-h-full flex-col gap-6">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                  <div>
+                    <h4 className={cx('text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>Quais planos deseja comparar?</h4>
+                    <p className={cx('mt-2 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                      Escolha a operadora e avance por linha, produto e tabela sem perder o contexto da cotação.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-sm">
+                    <span className={cx(
+                      'rounded-full border px-3 py-1.5',
                       isDarkTheme
-                        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff8ef] hover:bg-[color:rgba(255,255,255,0.08)]'
-                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]',
-                    )}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Voltar para operadoras
-                  </button>
-                )}
-                {filters.linhaId && (
-                  <button
-                    type="button"
-                    onClick={() => onUpdateFilters({ linhaId: '' })}
-                    className={cx(
-                      'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors',
+                        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff8ef]'
+                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)]',
+                    )}>
+                      {quote.name}
+                    </span>
+                    <span className={cx(
+                      'rounded-full border px-3 py-1.5',
                       isDarkTheme
-                        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff8ef] hover:bg-[color:rgba(255,255,255,0.08)]'
-                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]',
+                        ? 'border-[color:rgba(251,191,36,0.18)] bg-[color:rgba(251,191,36,0.12)] text-[color:#fde68a]'
+                        : 'border-[color:rgba(8,145,178,0.2)] bg-[color:rgba(8,145,178,0.08)] text-[color:var(--panel-text,#1a120d)]',
+                    )}>
+                      {quote.totalLives} vidas
+                    </span>
+                  </div>
+                </div>
+
+                {operatorCards.length === 0 ? (
+                  <div className={cx(
+                    'rounded-[28px] border border-dashed px-8 py-16 text-center',
+                    isDarkTheme
+                      ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.03)]'
+                      : 'border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                  )}>
+                    <Search className={cx('mx-auto h-10 w-10', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                    <h4 className={cx('mt-4 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>Nenhuma operadora disponível</h4>
+                    <p className={cx('mt-2 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Ajuste os filtros para liberar resultados.</p>
+                  </div>
+                ) : (
+                  <div className="relative min-h-[560px] xl:min-h-[640px]">
+                    <div className={cx('grid gap-4 transition-all sm:grid-cols-2 xl:grid-cols-5', selectedOperatorId ? 'xl:pr-[420px]' : undefined)}>
+                      {operatorCards.map((card) => {
+                        const isActive = selectedOperatorId === card.actor.id;
+                        return (
+                          <button
+                            key={card.actor.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedOperatorId(card.actor.id);
+                              setSelectedLineId(null);
+                              setSelectedProductKey(null);
+                            }}
+                            className={cx(
+                              'group cursor-pointer rounded-[26px] border p-5 text-left transition-all duration-200',
+                              isActive
+                                ? isDarkTheme
+                                  ? 'border-[color:rgba(251,191,36,0.34)] bg-[color:rgba(251,191,36,0.08)] shadow-[0_18px_42px_rgba(0,0,0,0.22)]'
+                                  : 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_72%,var(--panel-accent-soft,#f6e4c7))] shadow-sm'
+                                : isDarkTheme
+                                  ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.02)] hover:-translate-y-0.5 hover:border-[color:rgba(251,191,36,0.22)] hover:bg-[color:rgba(255,255,255,0.04)]'
+                                  : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))]',
+                            )}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className={cx(
+                                'flex h-[88px] w-full items-center justify-center rounded-2xl border text-center shadow-sm',
+                                isDarkTheme
+                                  ? 'border-[color:rgba(255,255,255,0.06)] bg-[linear-gradient(135deg,rgba(251,191,36,0.14),rgba(180,83,9,0.42))] text-[color:#fff3d1]'
+                                  : 'border-[color:rgba(157,127,90,0.18)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_84%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-focus,#c86f1d)_30%,var(--panel-accent-ink,#6f3f16)))] text-[var(--panel-accent-ink-strong,#4a2411)]',
+                              )}>
+                                <span className="line-clamp-2 text-3xl font-semibold tracking-tight">{getInitials(card.actor.name) || 'OP'}</span>
+                              </div>
+                              <Building2 className={cx('h-5 w-5 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.66)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                            </div>
+                            <p className={cx('mt-4 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
+                            <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.82)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                              <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.lineCount} linhas</span>
+                              <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{card.productCount} produtos</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {selectedOperatorId && (
+                      <div className="mt-6 xl:absolute xl:left-8 xl:top-20 xl:z-10 xl:mt-0 xl:w-[420px]">
+                        <div className={cx(
+                          'overflow-hidden rounded-[28px] border shadow-[0_30px_70px_rgba(0,0,0,0.28)]',
+                          isDarkTheme
+                            ? 'border-[color:rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,rgba(10,14,22,0.98),rgba(6,10,18,0.98))]'
+                            : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
+                        )}>
+                          <div className={cx(
+                            'border-b px-5 py-4',
+                            isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)]',
+                          )}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (currentStep === 'table') {
+                                  setSelectedProductKey(null);
+                                  return;
+                                }
+                                if (currentStep === 'product' && selectedLineId) {
+                                  setSelectedLineId(null);
+                                  setSelectedProductKey(null);
+                                  return;
+                                }
+                                setSelectedOperatorId(null);
+                                setSelectedLineId(null);
+                                setSelectedProductKey(null);
+                              }}
+                              className={cx(
+                                'inline-flex items-center gap-2 text-sm transition-colors',
+                                isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)] hover:text-white' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]',
+                              )}
+                            >
+                              <ArrowLeft className="h-4 w-4" />
+                              {currentStep === 'table'
+                                ? 'Voltar aos produtos'
+                                : currentStep === 'product' && selectedLineId
+                                  ? 'Voltar às linhas'
+                                  : 'Voltar às operadoras'}
+                            </button>
+                            <h5 className={cx('mt-4 text-xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</h5>
+                            <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{floatingPanelSubtitle}</p>
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                              {selectedOperator?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedOperator.actor.name}</span>}
+                              {selectedLine?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedLine.actor.name}</span>}
+                            </div>
+                          </div>
+
+                          <div className="max-h-[560px] overflow-y-auto">
+                            {currentStep === 'line' ? (
+                              lineCards.length === 0 ? (
+                                <div className="px-5 py-10 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível para esta operadora.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {lineCards.map((line) => (
+                                    <button
+                                      key={line.actor.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedLineId(line.actor.id);
+                                        setSelectedProductKey(null);
+                                      }}
+                                      className={cx(
+                                        'flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors',
+                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                      )}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{line.actor.name}</p>
+                                        <div className={cx('mt-2 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                          {line.coparticipacoes.map((item) => (
+                                            <span key={`${line.actor.id}-${item}`} className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{item}</span>
+                                          ))}
+                                          {line.businessProfiles.map((item) => (
+                                            <span key={`${line.actor.id}-${item}`} className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{item}</span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <ArrowLeft className={cx('mt-1 h-5 w-5 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                    </button>
+                                  ))}
+                                </div>
+                              )
+                            ) : currentStep === 'table' ? (
+                              tableCandidates.length === 0 ? (
+                                <div className="px-5 py-10 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma tabela disponível para este produto.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {tableCandidates.map((item) => {
+                                    const isSelected = selectedIds.has(item.id);
+                                    return (
+                                      <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => {
+                                          if (isSelected || busy) return;
+                                          onSelectItem(item.id);
+                                        }}
+                                        disabled={busy || isSelected}
+                                        className={cx(
+                                          'flex w-full items-start gap-4 px-5 py-4 text-left transition-colors disabled:cursor-default',
+                                          isSelected
+                                            ? isDarkTheme
+                                              ? 'bg-emerald-500/10'
+                                              : 'bg-emerald-50'
+                                            : isDarkTheme
+                                              ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
+                                              : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        )}
+                                      >
+                                        <div className="pt-1">
+                                          {isSelected ? (
+                                            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                                          ) : (
+                                            <div className={cx('h-2.5 w-2.5 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                          )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div className="min-w-0 flex-1">
+                                              <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
+                                              <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                                {item.titulo !== item.tabelaNome ? item.titulo : item.acomodacao ?? item.linha?.name ?? 'Tabela comercial'}
+                                              </p>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className={cx('text-[10px] font-semibold uppercase tracking-[0.16em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.52)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Mensalidade</p>
+                                              <p className={cx('mt-1 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
+                                                {item.estimatedMonthlyTotal !== null ? formatCotadorCurrency(item.estimatedMonthlyTotal) : 'A calcular'}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                            <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatBusinessProfile(item.perfilEmpresarial)}</span>
+                                            <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatCoparticipacao(item.coparticipacao)}</span>
+                                            <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{formatLivesRange(item)}</span>
+                                          </div>
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )
+                            ) : productGroups.length === 0 ? (
+                              <div className="px-5 py-10 text-center">
+                                <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível dentro dos filtros atuais.</p>
+                              </div>
+                            ) : (
+                              <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                {productGroups.map((group) => (
+                                  <button
+                                    key={group.key}
+                                    type="button"
+                                    onClick={() => setSelectedProductKey(group.key)}
+                                    className={cx(
+                                      'flex w-full items-start justify-between gap-4 px-5 py-4 text-left transition-colors',
+                                      isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                    )}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
+                                      <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{group.lineName ?? 'Produto avulso'}</p>
+                                      <div className={cx('mt-3 flex flex-wrap gap-2 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.78)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                        <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>{group.tableCount || group.itemCount} opção(ões)</span>
+                                        {group.lowestPrice !== null && <span className={cx('rounded-full px-2.5 py-1', isDarkTheme ? 'bg-[color:rgba(255,255,255,0.06)]' : 'bg-[var(--panel-surface-soft,#f4ede3)]')}>A partir de {formatCotadorCurrency(group.lowestPrice)}</span>}
+                                      </div>
+                                    </div>
+                                    <ArrowLeft className={cx('mt-1 h-5 w-5 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                    Voltar para linhas
-                  </button>
-                )}
-                {selectedOperator?.actor.name && (
-                  <span className={cx(
-                    'rounded-full border px-3 py-1.5',
-                    isDarkTheme
-                      ? 'border-[color:rgba(14,165,233,0.18)] bg-[color:rgba(14,165,233,0.12)] text-[color:#d5f3ff]'
-                      : 'border-[color:rgba(8,145,178,0.2)] bg-[color:rgba(8,145,178,0.08)] text-[color:var(--panel-text,#1a120d)]',
-                  )}>
-                    {selectedOperator.actor.name}
-                  </span>
-                )}
-                {selectedLine?.actor.name && (
-                  <span className={cx(
-                    'rounded-full border px-3 py-1.5',
-                    isDarkTheme
-                      ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]'
-                      : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]',
-                  )}>
-                    {selectedLine.actor.name}
-                  </span>
+                  </div>
                 )}
               </div>
-
-              {!filters.operadoraId ? (
-                <div className="space-y-5">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione a operadora</h4>
-                    
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    {operatorCards.map((card) => (
-                      <button
-                        key={card.actor.id}
-                        type="button"
-                        onClick={() => onUpdateFilters({ operadoraId: card.actor.id, linhaId: '' })}
-                        className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))] dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:color-mix(in_srgb,var(--panel-surface,#1b1611)_92%,black)] dark:hover:border-[color:rgba(251,191,36,0.28)] dark:hover:bg-[color:rgba(251,191,36,0.08)]"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex h-[76px] w-[76px] items-center justify-center rounded-2xl bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_84%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-focus,#c86f1d)_30%,var(--panel-accent-ink,#6f3f16)))] text-3xl font-semibold tracking-tight text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm dark:bg-[linear-gradient(135deg,rgba(251,191,36,0.26),rgba(180,83,9,0.62))] dark:text-[color:#fff3d1]">
-                            {getInitials(card.actor.name) || 'OP'}
-                          </div>
-                          <Building2 className="h-5 w-5 text-[color:var(--panel-text-muted,#876f5c)] dark:text-[color:rgba(255,243,209,0.7)]" />
-                        </div>
-                        <p className="mt-5 text-lg font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{card.actor.name}</p>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.82)]">
-                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:bg-[color:rgba(255,255,255,0.08)]">{card.lineCount} linhas</span>
-                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:bg-[color:rgba(255,255,255,0.08)]">{card.productCount} produtos</span>
-                          <span className="rounded-full bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:bg-[color:rgba(255,255,255,0.08)]">{card.itemCount} ofertas</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : !filters.linhaId && lineCards.length > 0 ? (
-                <div className="space-y-5">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione a linha</h4>
-                    
-                  </div>
-                  <div className="grid gap-4 xl:grid-cols-2">
-                    {lineCards.map((line) => (
-                      <button
-                        key={line.actor.id}
-                        type="button"
-                        onClick={() => onUpdateFilters({ linhaId: line.actor.id })}
-                        className="cursor-pointer rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 text-left shadow-sm transition-all hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_74%,var(--panel-surface-soft,#f4ede3))] dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:color-mix(in_srgb,var(--panel-surface,#1b1611)_92%,black)] dark:hover:border-[color:rgba(251,191,36,0.28)] dark:hover:bg-[color:rgba(251,191,36,0.08)]"
-                      >
-                        <div className="flex items-center justify-between gap-4">
-                          <div>
-                            <p className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{line.actor.name}</p>
-                            <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.76)]">{line.productCount} produto(s) | {line.tableCount} tabela(s)</p>
-                          </div>
-                          <ArrowLeft className="h-5 w-5 rotate-180 text-[color:var(--panel-text-muted,#876f5c)] dark:text-[color:rgba(255,243,209,0.66)]" />
-                        </div>
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.82)]">
-                          {line.coparticipacoes.map((item) => (
-                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.08)]">
-                              {item}
-                            </span>
-                          ))}
-                          {line.businessProfiles.map((item) => (
-                            <span key={`${line.actor.id}-${item}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.08)]">
-                              {item}
-                            </span>
-                          ))}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : activeProductGroup ? (
-                <div className="space-y-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione a tabela</h4>
-                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                        {activeProductGroup.title}
-                        {activeProductGroup.lineName ? ` | ${activeProductGroup.lineName}` : ''}
-                      </p>
-                    </div>
-                    <Button variant="secondary" onClick={() => setSelectedProductKey(null)}>
-                      Voltar aos produtos
-                    </Button>
-                  </div>
-                  <div className="grid gap-4 xl:grid-cols-2">
-                    {tableCandidates.map((item) => {
-                      const isSelected = selectedIds.has(item.id);
-                      return (
-                        <div
-                          key={item.id}
-                          className={cx(
-                            'rounded-[28px] border p-5 transition-all shadow-sm',
-                            isSelected
-                              ? 'border-emerald-300/60 bg-emerald-50 dark:border-emerald-400/35 dark:bg-emerald-500/10'
-                              : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.tabelaNome ?? item.titulo}</p>
-                              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.tabelaCodigo ?? item.linha?.name ?? 'Tabela comercial'}</p>
-                            </div>
-                            <Button
-                              onClick={() => {
-                                if (isSelected) return;
-                                onSelectItem(item.id);
-                              }}
-                              disabled={busy || isSelected}
-                              variant={isSelected ? 'success' : 'primary'}
-                            >
-                              {isSelected ? (
-                                <>
-                                  <CheckCircle2 className="h-4 w-4" />
-                                  Adicionado
-                                </>
-                              ) : (
-                                'Adicionar'
-                              )}
-                            </Button>
-                          </div>
-
-                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{formatBusinessProfile(item.perfilEmpresarial)}</span>
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{formatCoparticipacao(item.coparticipacao)}</span>
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{formatLivesRange(item)}</span>
-                          </div>
-
-                          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                            {Object.entries(item.pricesByAgeRange).map(([range, value]) => (
-                              <div key={`${item.id}-${range}`} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-2 text-center">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
-                                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{formatCotadorCurrency(value)}</p>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-[color:rgba(8,145,178,0.22)] bg-[color:rgba(8,145,178,0.08)] px-4 py-3 dark:border-cyan-300/18 dark:bg-cyan-300/10">
-                            <span className="text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-cyan-100">Mensalidade estimada</span>
-                            <span className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-white">
-                              {item.estimatedMonthlyTotal !== null ? formatCotadorCurrency(item.estimatedMonthlyTotal) : 'A calcular'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Selecione o produto</h4>
-                    <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Depois disso você escolhe a tabela ideal para a faixa de vidas desta cotação.</p>
-                  </div>
-                  {productGroups.length === 0 ? (
-                    <div className="rounded-[28px] border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-8 py-16 text-center">
-                      <Search className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)]" />
-                      <h4 className="mt-4 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Nenhum produto disponível</h4>
-                      <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Ajuste os filtros.</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {productGroups.map((group) => (
-                        <button
-                          key={group.key}
-                          type="button"
-                          onClick={() => setSelectedProductKey(group.key)}
-                          className={cx(
-                            'cursor-pointer rounded-[28px] border p-5 text-left shadow-sm transition-all',
-                            selectedProductKey === group.key
-                              ? 'border-[color:rgba(8,145,178,0.3)] bg-[color:rgba(8,145,178,0.08)]'
-                              : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_74%,var(--panel-surface-soft,#f4ede3))]',
-                          )}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="text-xl font-semibold text-[color:var(--panel-text,#1a120d)]">{group.title}</p>
-                              <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{group.lineName ?? 'Produto avulso'}</p>
-                            </div>
-                            <ArrowLeft className="h-5 w-5 rotate-180 text-[color:var(--panel-text-muted,#876f5c)]" />
-                          </div>
-                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">{group.tableCount || group.itemCount} opção(ões)</span>
-                            {group.lowestPrice !== null && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-2.5 py-1">A partir de {formatCotadorCurrency(group.lowestPrice)}</span>}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
             </section>
           </div>
         </div>

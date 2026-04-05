@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
@@ -78,6 +78,7 @@ type LineScenarioCard = {
 type ProductDirectOption = {
   key: string;
   title: string;
+  subtitle: string | null;
   item: CotadorCatalogItem;
 };
 
@@ -128,6 +129,9 @@ export default function CotadorPlanPickerOverlay({
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [selectedLineScenarioKey, setSelectedLineScenarioKey] = useState<string | null>(null);
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
+  const [floatingMenuPosition, setFloatingMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const gridContainerRef = useRef<HTMLDivElement | null>(null);
+  const operatorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const isDarkTheme = isPanelDarkTheme();
 
   useEffect(() => {
@@ -382,7 +386,8 @@ export default function CotadorPlanPickerOverlay({
       })
       .map((item) => ({
         key: item.id,
-        title: (titleCounts.get(item.titulo) ?? 0) > 1 && item.acomodacao ? `${item.titulo} - ${item.acomodacao}` : item.titulo,
+        title: item.titulo,
+        subtitle: item.acomodacao ?? ((titleCounts.get(item.titulo) ?? 0) > 1 ? item.tabelaNome : null),
         item,
       }));
   }, [lineScopedItems, selectedLineScenarioKey, usesLineScenarioStep]);
@@ -434,6 +439,44 @@ export default function CotadorPlanPickerOverlay({
     : currentStep === 'table'
       ? activeProductGroup?.title ?? 'Tabelas'
       : selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Produtos';
+
+  useEffect(() => {
+    if (!isOpen || !selectedOperatorId) {
+      setFloatingMenuPosition(null);
+      return;
+    }
+
+    const updateFloatingMenuPosition = () => {
+      const container = gridContainerRef.current;
+      const trigger = operatorButtonRefs.current[selectedOperatorId];
+      if (!container || !trigger) {
+        setFloatingMenuPosition(null);
+        return;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const triggerRect = trigger.getBoundingClientRect();
+      const gap = 14;
+      const panelWidth = Math.min(360, Math.max(300, containerRect.width * 0.24));
+
+      let left = triggerRect.right - containerRect.left + gap;
+      let top = triggerRect.top - containerRect.top;
+
+      if (left + panelWidth > containerRect.width) {
+        left = Math.max(0, triggerRect.left - containerRect.left - panelWidth - gap);
+      }
+
+      if (left < 0) {
+        left = 0;
+      }
+
+      setFloatingMenuPosition({ top, left, width: panelWidth });
+    };
+
+    updateFloatingMenuPosition();
+    window.addEventListener('resize', updateFloatingMenuPosition);
+    return () => window.removeEventListener('resize', updateFloatingMenuPosition);
+  }, [currentStep, isOpen, selectedOperatorId]);
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -653,13 +696,16 @@ export default function CotadorPlanPickerOverlay({
                     <p className={cx('mt-2 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Ajuste os filtros para liberar resultados.</p>
                   </div>
                 ) : (
-                  <div className="relative min-h-[560px] xl:min-h-[640px]">
+                  <div ref={gridContainerRef} className="relative min-h-[560px] xl:min-h-[640px]">
                     <div className="grid gap-4 transition-all sm:grid-cols-2 xl:grid-cols-5">
                       {operatorCards.map((card) => {
                         const isActive = selectedOperatorId === card.actor.id;
                         return (
-                          <div key={card.actor.id} className={cx('relative', isActive ? 'z-20' : undefined)}>
+                          <div key={card.actor.id} className={cx(isActive ? 'z-20' : undefined)}>
                             <button
+                              ref={(node) => {
+                                operatorButtonRefs.current[card.actor.id] = node;
+                              }}
                               type="button"
                               onClick={() => {
                                 setSelectedOperatorId(card.actor.id);
@@ -690,195 +736,205 @@ export default function CotadorPlanPickerOverlay({
                                 <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
                               </div>
                             </button>
-
-                            {isActive && (
-                              <div className="absolute inset-x-0 top-0">
-                                <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] shadow-[0_28px_60px_rgba(15,10,6,0.34)]">
-                                  <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (currentStep === 'table') {
-                                          setSelectedProductKey(null);
-                                          return;
-                                        }
-                                        if (currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)) {
-                                          setSelectedLineId(null);
-                                          setSelectedLineScenarioKey(null);
-                                          setSelectedProductKey(null);
-                                          return;
-                                        }
-                                        setSelectedOperatorId(null);
-                                        setSelectedLineId(null);
-                                        setSelectedLineScenarioKey(null);
-                                        setSelectedProductKey(null);
-                                      }}
-                                      className={cx(
-                                        'inline-flex items-center gap-2 text-xs font-medium transition-colors',
-                                        isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)] hover:text-white' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]',
-                                      )}
-                                    >
-                                      <ArrowLeft className="h-4 w-4" />
-                                      {currentStep === 'table'
-                                        ? 'Voltar aos produtos'
-                                        : currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)
-                                          ? 'Voltar às linhas'
-                                          : 'Voltar às operadoras'}
-                                    </button>
-                                    <div className="mt-3 min-w-0">
-                                      <p className={cx('truncate text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</p>
-                                    </div>
-                                  </div>
-
-                                  <div className="max-h-[320px] overflow-y-auto">
-                                    {currentStep === 'line' ? (
-                                      lineScenarioCards.length === 0 ? (
-                                        <div className="px-4 py-6 text-center">
-                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível.</p>
-                                        </div>
-                                      ) : (
-                                        <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                          {lineScenarioCards.map((lineScenario) => (
-                                            <button
-                                              key={lineScenario.key}
-                                              type="button"
-                                              onClick={() => {
-                                                setSelectedLineId(lineScenario.actor.id);
-                                                setSelectedLineScenarioKey(lineScenario.key);
-                                                setSelectedProductKey(null);
-                                              }}
-                                              className={cx(
-                                                'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                                isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
-                                              )}
-                                            >
-                                              <div className="min-w-0 flex-1">
-                                                <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{lineScenario.actor.name}</p>
-                                                <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                                  <span>{lineScenario.livesLabel} vidas</span>
-                                                  <span>{lineScenario.coparticipacao}</span>
-                                                  <span>{lineScenario.businessProfile}</span>
-                                                </div>
-                                              </div>
-                                              <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                                            </button>
-                                          ))}
-                                        </div>
-                                      )
-                                    ) : currentStep === 'table' ? (
-                                      tableCandidates.length === 0 ? (
-                                        <div className="px-4 py-6 text-center">
-                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma tabela disponível.</p>
-                                        </div>
-                                      ) : (
-                                        <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                          {tableCandidates.map((item) => {
-                                            const isSelected = selectedIds.has(item.id);
-                                            return (
-                                              <button
-                                                key={item.id}
-                                                type="button"
-                                                onClick={() => {
-                                                  if (isSelected || busy) return;
-                                                  onSelectItem(item.id);
-                                                }}
-                                                disabled={busy || isSelected}
-                                                className={cx(
-                                                  'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
-                                                  isSelected
-                                                    ? isDarkTheme
-                                                      ? 'bg-emerald-500/10'
-                                                      : 'bg-emerald-50'
-                                                    : isDarkTheme
-                                                      ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
-                                                      : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
-                                                )}
-                                              >
-                                                <div>
-                                                  {isSelected ? (
-                                                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                                                  ) : (
-                                                    <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
-                                                  )}
-                                                </div>
-                                                <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
-                                      )
-                                    ) : usesLineScenarioStep ? (
-                                      productDirectOptions.length === 0 ? (
-                                        <div className="px-4 py-6 text-center">
-                                          <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
-                                        </div>
-                                      ) : (
-                                        <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                          {productDirectOptions.map((option) => {
-                                            const isSelected = selectedIds.has(option.item.id);
-                                            return (
-                                              <button
-                                                key={option.key}
-                                                type="button"
-                                                onClick={() => {
-                                                  if (isSelected || busy) return;
-                                                  onSelectItem(option.item.id);
-                                                }}
-                                                disabled={busy || isSelected}
-                                                className={cx(
-                                                  'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
-                                                  isSelected
-                                                    ? isDarkTheme
-                                                      ? 'bg-emerald-500/10'
-                                                      : 'bg-emerald-50'
-                                                    : isDarkTheme
-                                                      ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
-                                                      : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
-                                                )}
-                                              >
-                                                <div>
-                                                  {isSelected ? (
-                                                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                                                  ) : (
-                                                    <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
-                                                  )}
-                                                </div>
-                                                <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{option.title}</p>
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
-                                      )
-                                    ) : productGroups.length === 0 ? (
-                                      <div className="px-4 py-6 text-center">
-                                        <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
-                                      </div>
-                                    ) : (
-                                      <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                        {productGroups.map((group) => (
-                                          <button
-                                            key={group.key}
-                                            type="button"
-                                            onClick={() => setSelectedProductKey(group.key)}
-                                            className={cx(
-                                              'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                              isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
-                                            )}
-                                          >
-                                            <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
-                                            <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                           </div>
                         );
                       })}
                     </div>
+
+                    {selectedOperatorId && floatingMenuPosition && (
+                      <div
+                        className="absolute z-30"
+                        style={{
+                          top: floatingMenuPosition.top,
+                          left: floatingMenuPosition.left,
+                          width: floatingMenuPosition.width,
+                        }}
+                      >
+                        <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] shadow-[0_28px_60px_rgba(15,10,6,0.34)]">
+                          <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (currentStep === 'table') {
+                                  setSelectedProductKey(null);
+                                  return;
+                                }
+                                if (currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)) {
+                                  setSelectedLineId(null);
+                                  setSelectedLineScenarioKey(null);
+                                  setSelectedProductKey(null);
+                                  return;
+                                }
+                                setSelectedOperatorId(null);
+                                setSelectedLineId(null);
+                                setSelectedLineScenarioKey(null);
+                                setSelectedProductKey(null);
+                              }}
+                              className={cx(
+                                'inline-flex items-center gap-2 text-xs font-medium transition-colors',
+                                isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)] hover:text-white' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]',
+                              )}
+                            >
+                              <ArrowLeft className="h-4 w-4" />
+                              {currentStep === 'table'
+                                ? 'Voltar aos produtos'
+                                : currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)
+                                  ? 'Voltar às linhas'
+                                  : 'Voltar às operadoras'}
+                            </button>
+                            <div className="mt-3 min-w-0">
+                              <p className={cx('truncate text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</p>
+                            </div>
+                          </div>
+
+                          <div className="max-h-[320px] overflow-y-auto">
+                            {currentStep === 'line' ? (
+                              lineScenarioCards.length === 0 ? (
+                                <div className="px-4 py-6 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {lineScenarioCards.map((lineScenario) => (
+                                    <button
+                                      key={lineScenario.key}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedLineId(lineScenario.actor.id);
+                                        setSelectedLineScenarioKey(lineScenario.key);
+                                        setSelectedProductKey(null);
+                                      }}
+                                      className={cx(
+                                        'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                      )}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{lineScenario.actor.name}</p>
+                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                          <span>{lineScenario.livesLabel} vidas</span>
+                                          <span>{lineScenario.coparticipacao}</span>
+                                          <span>{lineScenario.businessProfile}</span>
+                                        </div>
+                                      </div>
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                    </button>
+                                  ))}
+                                </div>
+                              )
+                            ) : currentStep === 'table' ? (
+                              tableCandidates.length === 0 ? (
+                                <div className="px-4 py-6 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma tabela disponível.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {tableCandidates.map((item) => {
+                                    const isSelected = selectedIds.has(item.id);
+                                    return (
+                                      <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => {
+                                          if (isSelected || busy) return;
+                                          onSelectItem(item.id);
+                                        }}
+                                        disabled={busy || isSelected}
+                                        className={cx(
+                                          'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
+                                          isSelected
+                                            ? isDarkTheme
+                                              ? 'bg-emerald-500/10'
+                                              : 'bg-emerald-50'
+                                            : isDarkTheme
+                                              ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
+                                              : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        )}
+                                      >
+                                        <div>
+                                          {isSelected ? (
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                          ) : (
+                                            <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                          )}
+                                        </div>
+                                        <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )
+                            ) : usesLineScenarioStep ? (
+                              productDirectOptions.length === 0 ? (
+                                <div className="px-4 py-6 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {productDirectOptions.map((option) => {
+                                    const isSelected = selectedIds.has(option.item.id);
+                                    return (
+                                      <button
+                                        key={option.key}
+                                        type="button"
+                                        onClick={() => {
+                                          if (isSelected || busy) return;
+                                          onSelectItem(option.item.id);
+                                        }}
+                                        disabled={busy || isSelected}
+                                        className={cx(
+                                          'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
+                                          isSelected
+                                            ? isDarkTheme
+                                              ? 'bg-emerald-500/10'
+                                              : 'bg-emerald-50'
+                                            : isDarkTheme
+                                              ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
+                                              : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        )}
+                                      >
+                                        <div>
+                                          {isSelected ? (
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                          ) : (
+                                            <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                          )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{option.title}</p>
+                                          {option.subtitle && <p className={cx('mt-0.5 truncate text-xs font-normal', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{option.subtitle}</p>}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )
+                            ) : productGroups.length === 0 ? (
+                              <div className="px-4 py-6 text-center">
+                                <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
+                              </div>
+                            ) : (
+                              <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                {productGroups.map((group) => (
+                                  <button
+                                    key={group.key}
+                                    type="button"
+                                    onClick={() => setSelectedProductKey(group.key)}
+                                    className={cx(
+                                      'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                                      isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                    )}
+                                  >
+                                    <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
+                                    <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -229,11 +229,6 @@ export default function CotadorWorkspace({
               </Button>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <SummaryMetric label="Tipo" value={formatCotadorModality(quote.modality)} />
-              <SummaryMetric label="Total" value={`${quote.totalLives} vidas`} />
-            </div>
-
             <div className="mt-4 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
                 <Users className="h-4 w-4" />

@@ -378,6 +378,11 @@ export default function CotadorPlanPickerOverlay({
                     onChange={(event) => onUpdateFilters({ search: event.target.value })}
                     placeholder="Buscar por operadora, linha, produto ou tabela"
                     leftIcon={Search}
+                    className={cx(
+                      isDarkTheme
+                        ? '[--panel-placeholder:rgba(255,243,209,0.42)] border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff8ef]'
+                        : undefined,
+                    )}
                   />
                   <FilterSingleSelect
                     icon={ShieldCheck}
@@ -435,7 +440,12 @@ export default function CotadorPlanPickerOverlay({
                   <button
                     type="button"
                     onClick={() => onUpdateFilters({ operadoraId: '', linhaId: '' })}
-                    className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-1.5 transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)]"
+                    className={cx(
+                      'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors',
+                      isDarkTheme
+                        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff8ef] hover:bg-[color:rgba(255,255,255,0.08)]'
+                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]',
+                    )}
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Voltar para operadoras
@@ -445,19 +455,34 @@ export default function CotadorPlanPickerOverlay({
                   <button
                     type="button"
                     onClick={() => onUpdateFilters({ linhaId: '' })}
-                    className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-1.5 transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)]"
+                    className={cx(
+                      'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors',
+                      isDarkTheme
+                        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff8ef] hover:bg-[color:rgba(255,255,255,0.08)]'
+                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]',
+                    )}
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Voltar para linhas
                   </button>
                 )}
                 {selectedOperator?.actor.name && (
-                  <span className="rounded-full border border-[color:rgba(8,145,178,0.2)] bg-[color:rgba(8,145,178,0.08)] px-3 py-1.5 text-[color:var(--panel-text,#1a120d)]">
+                  <span className={cx(
+                    'rounded-full border px-3 py-1.5',
+                    isDarkTheme
+                      ? 'border-[color:rgba(14,165,233,0.18)] bg-[color:rgba(14,165,233,0.12)] text-[color:#d5f3ff]'
+                      : 'border-[color:rgba(8,145,178,0.2)] bg-[color:rgba(8,145,178,0.08)] text-[color:var(--panel-text,#1a120d)]',
+                  )}>
                     {selectedOperator.actor.name}
                   </span>
                 )}
                 {selectedLine?.actor.name && (
-                  <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-1.5 text-[color:var(--panel-text,#1a120d)]">
+                  <span className={cx(
+                    'rounded-full border px-3 py-1.5',
+                    isDarkTheme
+                      ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef]'
+                      : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]',
+                  )}>
                     {selectedLine.actor.name}
                   </span>
                 )}

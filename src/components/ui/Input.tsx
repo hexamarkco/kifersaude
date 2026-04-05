@@ -55,7 +55,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       {LeftIcon && (
         <LeftIcon
           className={cx(
-            'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400',
+            'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--panel-placeholder,var(--panel-text-muted,#876f5c))]',
             panelInputIconSizeClasses[size],
           )}
           aria-hidden="true"
@@ -76,7 +76,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         {...props}
       />
       {rightSlot && (
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[color:var(--panel-placeholder,var(--panel-text-muted,#876f5c))]" aria-hidden="true">
           {rightSlot}
         </span>
       )}

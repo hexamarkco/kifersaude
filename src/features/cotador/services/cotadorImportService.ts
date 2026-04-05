@@ -13,6 +13,27 @@ export type CotadorImportResult = {
   warnings: string[];
 };
 
+export type CotadorImportPreviewItem = {
+  operadora: string;
+  linha: string;
+  produto: string;
+  modalidadeBase: string | null;
+  abrangencia: string | null;
+  acomodacoes: string[];
+  entidadesElegiveis: string[];
+  tabelasCount: number;
+  networkEntriesCount: number;
+};
+
+export type CotadorImportPreview = {
+  operadorasCount: number;
+  linhasCount: number;
+  produtosCount: number;
+  tabelasCount: number;
+  networkEntriesCount: number;
+  items: CotadorImportPreviewItem[];
+};
+
 type ImportLookupContext = {
   operadoras: Operadora[];
   linhas: CotadorLineManagerRecord[];
@@ -592,6 +613,25 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
   return { items };
 };
 
+const buildPreviewFromPayload = (payload: ImportedJsonPayload): CotadorImportPreview => ({
+  operadorasCount: new Set(payload.items.map((item) => normalizeText(item.operadora)).filter(Boolean)).size,
+  linhasCount: new Set(payload.items.map((item) => `${normalizeText(item.operadora)}::${normalizeText(item.linha)}`).filter(Boolean)).size,
+  produtosCount: payload.items.length,
+  tabelasCount: payload.items.reduce((total, item) => total + (item.tabelas?.length ?? 0), 0),
+  networkEntriesCount: payload.items.reduce((total, item) => total + (item.redeHospitalar?.length ?? 0), 0),
+  items: payload.items.map((item) => ({
+    operadora: item.operadora,
+    linha: item.linha,
+    produto: item.produto,
+    modalidadeBase: item.modalidadeBase ?? null,
+    abrangencia: item.abrangencia ?? null,
+    acomodacoes: item.acomodacoes ?? [],
+    entidadesElegiveis: item.entidadesElegiveis ?? [],
+    tabelasCount: item.tabelas?.length ?? 0,
+    networkEntriesCount: item.redeHospitalar?.length ?? 0,
+  })),
+});
+
 const parseCsvTables = (text: string) => {
   const rows = parseCsv(text);
   return rows.map((row) => {
@@ -740,6 +780,15 @@ export const cotadorImportService = {
     if (kind === 'csv-tabelas') return TEMPLATE_CSV_TABELAS;
     if (kind === 'csv-rede') return TEMPLATE_CSV_REDE;
     return TEMPLATE_JSON_COMPLETO;
+  },
+
+  previewFromText(kind: CotadorImportKind, text: string) {
+    if (kind !== 'json-completo') {
+      throw new Error('Preview disponível apenas para JSON completo.');
+    }
+
+    const payload = parseJsonPayload(text);
+    return buildPreviewFromPayload(payload);
   },
 
   async importFromText(kind: CotadorImportKind, text: string) {

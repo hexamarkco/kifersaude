@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
   Building2,
   CheckCircle,
   Copy,
+  Download,
   Edit2,
   FileJson,
-  FileSpreadsheet,
   Layers3,
   MapPin,
   Network,
@@ -33,7 +33,7 @@ import {
   type CotadorTableManagerInput,
   type CotadorTableManagerRecord,
 } from '../../features/cotador/services/cotadorService';
-import { cotadorImportService, type CotadorImportKind } from '../../features/cotador/services/cotadorImportService';
+import { cotadorImportService, type CotadorImportPreview } from '../../features/cotador/services/cotadorImportService';
 import type { CotadorAdministradora, CotadorEntidadeClasse, Operadora } from '../../lib/supabase';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import Button from '../ui/Button';
@@ -113,7 +113,6 @@ type GroupedTableEntry = {
 };
 
 type ImportFormState = {
-  kind: CotadorImportKind;
   file: File | null;
 };
 
@@ -463,7 +462,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [productForm, setProductForm] = useState<ProductFormState>(DEFAULT_PRODUCT_FORM);
   const [productSearch, setProductSearch] = useState('');
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importForm, setImportForm] = useState<ImportFormState>({ kind: 'json-completo', file: null });
+  const [importForm, setImportForm] = useState<ImportFormState>({ file: null });
+  const [importPreview, setImportPreview] = useState<CotadorImportPreview | null>(null);
+  const [importPreviewError, setImportPreviewError] = useState<string | null>(null);
+  const [importPreviewLoading, setImportPreviewLoading] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const [tableModalOpen, setTableModalOpen] = useState(false);
   const [tableModalMode, setTableModalMode] = useState<'create' | 'edit' | 'duplicate'>('create');
   const [tableEditingId, setTableEditingId] = useState<string | null>(null);
@@ -766,15 +769,63 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setLoading(false);
   };
 
-  const activeImportTemplate = useMemo(
-    () => cotadorImportService.getTemplate(importForm.kind),
-    [importForm.kind],
-  );
+  const activeImportTemplate = useMemo(() => cotadorImportService.getTemplate('json-completo'), []);
+
+  const handleDownloadImportTemplate = () => {
+    const blob = new Blob([activeImportTemplate], { type: 'application/json;charset=utf-8' });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = 'cotador-import-template.json';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(objectUrl);
+  };
 
   const resetImportModal = () => {
     setImportModalOpen(false);
-    setImportForm({ kind: 'json-completo', file: null });
+    setImportForm({ file: null });
+    setImportPreview(null);
+    setImportPreviewError(null);
+    setImportPreviewLoading(false);
+    if (importFileInputRef.current) {
+      importFileInputRef.current.value = '';
+    }
   };
+
+  useEffect(() => {
+    if (!importModalOpen || !importForm.file) {
+      setImportPreview(null);
+      setImportPreviewError(null);
+      setImportPreviewLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setImportPreviewLoading(true);
+    setImportPreviewError(null);
+
+    void importForm.file.text()
+      .then((content) => {
+        if (isCancelled) return;
+        const preview = cotadorImportService.previewFromText('json-completo', content);
+        setImportPreview(preview);
+      })
+      .catch((error) => {
+        if (isCancelled) return;
+        setImportPreview(null);
+        setImportPreviewError(error instanceof Error ? error.message : 'Não foi possível ler o arquivo selecionado.');
+      })
+      .finally(() => {
+        if (isCancelled) return;
+        setImportPreviewLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [importForm.file, importModalOpen]);
 
   const handleImportSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -784,10 +835,15 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       return;
     }
 
+    if (importPreviewError) {
+      showMessage('error', importPreviewError);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const content = await importForm.file.text();
-      const result = await cotadorImportService.importFromText(importForm.kind, content);
+      const result = await cotadorImportService.importFromText('json-completo', content);
       await loadCatalogData();
 
       const summaryParts = [];
@@ -1465,58 +1521,146 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         size="xl"
       >
         <form onSubmit={handleImportSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => setImportForm((current) => ({ ...current, kind: 'json-completo' }))}
-              className={`rounded-3xl border p-4 text-left transition-colors ${importForm.kind === 'json-completo' ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]'}`}
-            >
-              <FileJson className="h-5 w-5 text-[var(--panel-accent-ink,#6f3f16)]" />
-              <p className="mt-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">JSON completo</p>
-              <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Produto, rede hospitalar e tabelas no mesmo arquivo.</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setImportForm((current) => ({ ...current, kind: 'csv-tabelas' }))}
-              className={`rounded-3xl border p-4 text-left transition-colors ${importForm.kind === 'csv-tabelas' ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]'}`}
-            >
-              <FileSpreadsheet className="h-5 w-5 text-[var(--panel-accent-ink,#6f3f16)]" />
-              <p className="mt-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">CSV de tabelas</p>
-              <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Linhas por tabela/acomodação com preços por faixa.</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setImportForm((current) => ({ ...current, kind: 'csv-rede' }))}
-              className={`rounded-3xl border p-4 text-left transition-colors ${importForm.kind === 'csv-rede' ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]'}`}
-            >
-              <FileSpreadsheet className="h-5 w-5 text-[var(--panel-accent-ink,#6f3f16)]" />
-              <p className="mt-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">CSV de rede</p>
-              <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Hospitais estruturados por produto.</p>
-            </button>
+          <div className="rounded-3xl border border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)] p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:rgba(157,127,90,0.22)] bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-accent-ink,#6f3f16)]">
+                <FileJson className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">JSON completo</p>
+                <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Operadora, linha, produto, tabelas, rede hospitalar, administradora e entidades no mesmo arquivo.</p>
+              </div>
+            </div>
           </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Arquivo</label>
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_86%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_94%,var(--panel-surface-muted,#f8f2e8)))] p-4 shadow-sm">
               <input
+                ref={importFileInputRef}
                 type="file"
-                accept={importForm.kind === 'json-completo' ? '.json,application/json' : '.csv,text/csv'}
+                accept=".json,application/json"
                 onChange={(event) => setImportForm((current) => ({ ...current, file: event.target.files?.[0] ?? null }))}
-                className="block w-full text-sm text-[color:var(--panel-text-soft,#5b4635)] file:mr-4 file:rounded-2xl file:border-0 file:bg-[var(--panel-accent-soft,#f6e4c7)] file:px-4 file:py-2 file:font-semibold file:text-[var(--panel-accent-ink,#6f3f16)]"
+                className="sr-only"
               />
-              <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
-                {importForm.file ? `Selecionado: ${importForm.file.name}` : 'Selecione um arquivo compatível com o formato escolhido.'}
-              </p>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:rgba(157,127,90,0.22)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-accent-ink,#6f3f16)] shadow-sm">
+                      <Upload className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                        {importForm.file ? importForm.file.name : 'Nenhum arquivo selecionado'}
+                      </p>
+                      <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+                        JSON completo (.json)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => importFileInputRef.current?.click()}
+                  className="w-full md:w-auto"
+                >
+                  <Upload className="h-4 w-4" />
+                  {importForm.file ? 'Trocar arquivo' : 'Escolher arquivo'}
+                </Button>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                {importForm.file
+                  ? `Arquivo pronto para importacao: ${importForm.file.name}`
+                  : 'Selecione um arquivo compativel com o formato escolhido para continuar.'}
+              </div>
             </div>
           </div>
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Template</label>
-            <Textarea value={activeImportTemplate} readOnly rows={14} className="font-mono text-xs" />
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Modelo base de importação</p>
+                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Baixe um JSON exemplo para preencher com operadora, linha, produtos, tabelas e rede hospitalar.</p>
+                </div>
+                <Button type="button" variant="secondary" onClick={handleDownloadImportTemplate} className="w-full md:w-auto">
+                  <Download className="h-4 w-4" />
+                  Baixar template
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Preview da importação</label>
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+              {importPreviewLoading ? (
+                <div className="space-y-3">
+                  <div className="h-2 overflow-hidden rounded-full bg-[var(--panel-surface-soft,#f4ede3)]">
+                    <div className="h-full w-1/2 animate-pulse rounded-full bg-[var(--panel-accent-strong,#b85c1f)]" />
+                  </div>
+                  <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Lendo e validando o JSON...</p>
+                </div>
+              ) : importPreviewError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {importPreviewError}
+                </div>
+              ) : importPreview ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Operadoras</p>
+                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.operadorasCount}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Linhas</p>
+                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.linhasCount}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Produtos</p>
+                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.produtosCount}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Tabelas</p>
+                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.tabelasCount}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Rede</p>
+                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.networkEntriesCount}</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
+                    <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                      Itens encontrados
+                    </div>
+                    <div className="max-h-64 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
+                      {importPreview.items.map((item, index) => (
+                        <div key={`${item.operadora}-${item.linha}-${item.produto}-${index}`} className="px-4 py-3">
+                          <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.produto}</p>
+                          <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora} / {item.linha}{item.modalidadeBase ? ` / ${item.modalidadeBase}` : ''}</p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{item.tabelasCount} tabela(s)</span>
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{item.networkEntriesCount} item(ns) de rede</span>
+                            {item.acomodacoes.map((acomodacao) => <span key={`${item.produto}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{acomodacao}</span>)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Selecione um JSON para visualizar um resumo do que será importado.</p>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" loading={submitting}><Upload className="h-4 w-4" />Importar arquivo</Button>
+            <Button type="submit" loading={submitting} disabled={importPreviewLoading || Boolean(importPreviewError)}><Upload className="h-4 w-4" />Importar arquivo</Button>
             <Button type="button" variant="secondary" onClick={resetImportModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>

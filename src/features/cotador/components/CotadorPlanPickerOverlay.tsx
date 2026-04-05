@@ -698,10 +698,7 @@ export default function CotadorPlanPickerOverlay({
                                             )}
                                           >
                                             <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
-                                            <div className="flex items-center gap-3">
-                                              {group.lowestPrice !== null && <span className={cx('shrink-0 text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{formatCotadorCurrency(group.lowestPrice)}</span>}
-                                              <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                                            </div>
+                                            <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
                                           </button>
                                         ))}
                                       </div>

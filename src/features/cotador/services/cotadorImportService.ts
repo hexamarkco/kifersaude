@@ -1,5 +1,5 @@
 import { configService } from '../../../lib/configService';
-import type { CotadorAdministradora, CotadorEntidadeClasse, CotadorProduto, CotadorTabela, Operadora } from '../../../lib/supabase';
+import { supabase, type CotadorAdministradora, type CotadorEntidadeClasse, type CotadorProduto, type CotadorTabela, type Operadora } from '../../../lib/supabase';
 import { cotadorService, type CotadorLineManagerRecord, type CotadorPriceRowInput, type CotadorProductManagerInput, type CotadorProductManagerRecord, type CotadorTableManagerInput, type CotadorTableManagerRecord } from './cotadorService';
 import type { CotadorHospitalNetworkEntry } from '../shared/cotadorTypes';
 import { COTADOR_AGE_RANGES } from '../shared/cotadorConstants';
@@ -311,6 +311,34 @@ const logImportError = (message: string, payload?: unknown) => {
   }
 
   console.error(IMPORT_DEBUG_PREFIX, message, payload);
+};
+
+const waitForImportConsistency = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const countPersistedTablesForProduct = async (productId: string) => {
+  const attempts = 4;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const { count, error } = await supabase
+      .from('cotador_tabelas')
+      .select('id', { count: 'exact', head: true })
+      .eq('produto_id', productId);
+
+    if (error) {
+      logImportError('Falha ao consultar contagem persistida de tabelas', { productId, attempt, error });
+      throw error;
+    }
+
+    logImportInfo('Contagem persistida consultada', { productId, attempt, count: count ?? 0 });
+
+    if (attempt === attempts || (count ?? 0) > 0) {
+      return count ?? 0;
+    }
+
+    await waitForImportConsistency(250 * attempt);
+  }
+
+  return 0;
 };
 
 const validateImportedPayload = (payload: ImportedJsonPayload) => {
@@ -1026,15 +1054,12 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
     }
 
     if (payload.items.length > 0) {
-      const refreshTables = await cotadorService.getTabelas();
-      context.tables = refreshTables;
-
-      payload.items.forEach((item) => {
+      for (const item of payload.items) {
         const product = context.products.find((candidate) => normalizeText(candidate.nome) === normalizeText(item.produto) && normalizeText(candidate.linha?.nome) === normalizeText(item.linha));
-        if (!product) return;
+        if (!product) continue;
 
         const expectedRows = item.tabelas?.reduce((total, table) => total + countImportedTableRows(table), 0) ?? 0;
-        const actualRows = refreshTables.filter((table) => table.produto_id === product.id).length;
+        const actualRows = await countPersistedTablesForProduct(product.id);
 
         logImportInfo('Verificacao final do produto importado', {
           alvo: buildImportTargetLabel(item),
@@ -1052,7 +1077,7 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
           });
           throw new Error(`Importacao inconsistente para ${item.produto}: esperado ${expectedRows} tabela(s), encontrado ${actualRows}.`);
         }
-      });
+      }
     }
 
     logImportInfo('Import JSON concluido com sucesso', result);

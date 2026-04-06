@@ -284,6 +284,35 @@ const countImportedTableRows = (table: ImportedTableDefinition) => getImportedTa
 const buildImportTargetLabel = (item: Pick<ProductReference, 'operadora' | 'linha' | 'produto'>, table?: Pick<ImportedTableDefinition, 'nome'> | null) =>
   [item.operadora, item.linha, item.produto, table?.nome].filter(Boolean).join(' / ');
 
+const IMPORT_DEBUG_PREFIX = '[CotadorImport]';
+
+const logImportInfo = (message: string, payload?: unknown) => {
+  if (payload === undefined) {
+    console.log(IMPORT_DEBUG_PREFIX, message);
+    return;
+  }
+
+  console.log(IMPORT_DEBUG_PREFIX, message, payload);
+};
+
+const logImportWarn = (message: string, payload?: unknown) => {
+  if (payload === undefined) {
+    console.warn(IMPORT_DEBUG_PREFIX, message);
+    return;
+  }
+
+  console.warn(IMPORT_DEBUG_PREFIX, message, payload);
+};
+
+const logImportError = (message: string, payload?: unknown) => {
+  if (payload === undefined) {
+    console.error(IMPORT_DEBUG_PREFIX, message);
+    return;
+  }
+
+  console.error(IMPORT_DEBUG_PREFIX, message, payload);
+};
+
 const validateImportedPayload = (payload: ImportedJsonPayload) => {
   payload.items.forEach((item) => {
     const productLabel = buildImportTargetLabel(item);
@@ -542,6 +571,13 @@ const resolveProduct = async (
   context: ImportLookupContext,
   result: CotadorImportResult,
 ): Promise<ResolveProductResult> => {
+  logImportInfo('Resolvendo produto', {
+    alvo: buildImportTargetLabel(reference),
+    modalidadeBase: reference.modalidadeBase ?? null,
+    abrangencia: reference.abrangencia ?? null,
+    acomodacoes: reference.acomodacoes ?? [],
+  });
+
   const { operadora, createdOperadoraId } = await ensureOperadora(context, reference.operadora);
   const { line, createdLineId } = await ensureLinha(context, operadora, reference.linha);
 
@@ -549,8 +585,19 @@ const resolveProduct = async (
   const payload = getProductPayloadFromReference(reference, existingProduct, context, operadora, line);
 
   if (existingProduct) {
+    logImportInfo('Atualizando produto existente', {
+      alvo: buildImportTargetLabel(reference),
+      productId: existingProduct.id,
+      lineId: line.id,
+    });
+
     const updateResult = await cotadorService.updateProduto(existingProduct.id, payload);
     if (updateResult.error) {
+      logImportError('Falha ao atualizar produto', {
+        alvo: buildImportTargetLabel(reference),
+        productId: existingProduct.id,
+        erro: updateResult.error,
+      });
       throw new Error(`Erro ao atualizar produto ${reference.produto}: ${updateResult.error.message}`);
     }
 
@@ -585,10 +632,21 @@ const resolveProduct = async (
 
   const createResult = await cotadorService.createProduto(payload);
   if (createResult.error || !createResult.data) {
+    logImportError('Falha ao criar produto', {
+      alvo: buildImportTargetLabel(reference),
+      erro: createResult.error,
+    });
     throw new Error(`Erro ao criar produto ${reference.produto}: ${createResult.error?.message ?? 'desconhecido'}`);
   }
 
   const created = createProductRecordFromRaw(createResult.data, context, payload.entidadeIds);
+  logImportInfo('Produto criado', {
+    alvo: buildImportTargetLabel(reference),
+    productId: created.id,
+    lineId: line.id,
+    createdOperadoraId,
+    createdLineId,
+  });
   context.products = [...context.products, created];
   result.importedProducts += 1;
   return {
@@ -628,6 +686,14 @@ const upsertImportedTable = async (
   const activeAcomodacoes = getImportedTableActiveAcomodacoes(tableDefinition);
   const createdTableIds: string[] = [];
 
+  logImportInfo('Processando tabela importada', {
+    produto: product.nome,
+    productId: product.id,
+    tabela: tableDefinition.nome,
+    acomodacoes: activeAcomodacoes.map(([acomodacao]) => acomodacao),
+    expectedRows: activeAcomodacoes.length,
+  });
+
   try {
     for (const [acomodacao, pricesByAgeRange] of activeAcomodacoes) {
       const payload: CotadorTableManagerInput = {
@@ -666,15 +732,45 @@ const upsertImportedTable = async (
       }));
 
       if (existing) {
+        logImportInfo('Atualizando tabela existente', {
+          produto: product.nome,
+          productId: product.id,
+          tabela: tableDefinition.nome,
+          acomodacao,
+          tableId: existing.id,
+        });
+
         const updateResult = await cotadorService.updateTabela(existing.id, payload);
         if (updateResult.error) {
+          logImportError('Falha ao atualizar tabela existente', {
+            produto: product.nome,
+            productId: product.id,
+            tabela: tableDefinition.nome,
+            acomodacao,
+            tableId: existing.id,
+            erro: updateResult.error,
+          });
           throw new Error(`Erro ao atualizar tabela ${tableDefinition.nome}: ${updateResult.error.message}`);
         }
 
         context.tables = context.tables.map((table) => table.id === existing.id ? { ...existing, ...payload, produto: product, pricesByAgeRange } : table);
       } else {
+        logImportInfo('Criando tabela nova', {
+          produto: product.nome,
+          productId: product.id,
+          tabela: tableDefinition.nome,
+          acomodacao,
+        });
+
         const createResult = await cotadorService.createTabela(payload);
         if (createResult.error || !createResult.data) {
+          logImportError('Falha ao criar tabela nova', {
+            produto: product.nome,
+            productId: product.id,
+            tabela: tableDefinition.nome,
+            acomodacao,
+            erro: createResult.error,
+          });
           throw new Error(`Erro ao criar tabela ${tableDefinition.nome}: ${createResult.error?.message ?? 'desconhecido'}`);
         }
 
@@ -688,6 +784,12 @@ const upsertImportedTable = async (
     return { createdTableIds };
   } catch (error) {
     if (createdTableIds.length > 0) {
+      logImportWarn('Revertendo tabelas criadas parcialmente', {
+        produto: product.nome,
+        productId: product.id,
+        tabela: tableDefinition.nome,
+        createdTableIds,
+      });
       await Promise.all(createdTableIds.map((id) => cotadorService.deleteTabela(id)));
       context.tables = context.tables.filter((table) => !createdTableIds.includes(table.id));
       result.importedTables = Math.max(0, result.importedTables - createdTableIds.length);
@@ -698,6 +800,7 @@ const upsertImportedTable = async (
 };
 
 const rollbackImportMutations = async (mutations: ImportMutations) => {
+  logImportWarn('Iniciando rollback do import', mutations);
   const warnings: string[] = [];
   const uniqueTableIds = Array.from(new Set(mutations.createdTableIds)).reverse();
   const uniqueProductIds = Array.from(new Set(mutations.createdProductIds)).reverse();
@@ -865,6 +968,15 @@ const loadImportContext = async (): Promise<ImportLookupContext> => {
     cotadorService.getTabelas(),
   ]);
 
+  logImportInfo('Contexto de import carregado', {
+    operadoras: operadoras.length,
+    linhas: linhas.length,
+    administradoras: administradoras.length,
+    entidades: entidades.length,
+    produtos: products.length,
+    tabelas: tables.length,
+  });
+
   return { operadoras, linhas, administradoras, entidades, products, tables };
 };
 
@@ -879,9 +991,20 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
   };
 
   validateImportedPayload(payload);
+  logImportInfo('Iniciando import JSON completo', {
+    produtos: payload.items.length,
+    tabelas: payload.items.reduce((total, item) => total + (item.tabelas?.reduce((count, table) => count + countImportedTableRows(table), 0) ?? 0), 0),
+    rede: payload.items.reduce((total, item) => total + (item.redeHospitalar?.length ?? 0), 0),
+  });
 
   try {
     for (const item of payload.items) {
+      logImportInfo('Importando item', {
+        alvo: buildImportTargetLabel(item),
+        tabelas: item.tabelas?.length ?? 0,
+        rowsEsperadas: item.tabelas?.reduce((total, table) => total + countImportedTableRows(table), 0) ?? 0,
+      });
+
       const resolvedProduct = await resolveProduct(item, context, result);
       if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
       if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
@@ -913,14 +1036,29 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
         const expectedRows = item.tabelas?.reduce((total, table) => total + countImportedTableRows(table), 0) ?? 0;
         const actualRows = refreshTables.filter((table) => table.produto_id === product.id).length;
 
+        logImportInfo('Verificacao final do produto importado', {
+          alvo: buildImportTargetLabel(item),
+          productId: product.id,
+          expectedRows,
+          actualRows,
+        });
+
         if (actualRows !== expectedRows) {
+          logImportError('Importacao inconsistente detectada', {
+            alvo: buildImportTargetLabel(item),
+            productId: product.id,
+            expectedRows,
+            actualRows,
+          });
           throw new Error(`Importacao inconsistente para ${item.produto}: esperado ${expectedRows} tabela(s), encontrado ${actualRows}.`);
         }
       });
     }
 
+    logImportInfo('Import JSON concluido com sucesso', result);
     return result;
   } catch (error) {
+    logImportError('Import JSON falhou', error);
     const rollbackWarnings = await rollbackImportMutations(mutations);
     const message = error instanceof Error ? error.message : 'Nao foi possivel importar o arquivo.';
     if (rollbackWarnings.length > 0) {
@@ -1036,11 +1174,14 @@ export const cotadorImportService = {
 
     const payload = parseJsonPayload(text);
     validateImportedPayload(payload);
-    return buildPreviewFromPayload(payload);
+    const preview = buildPreviewFromPayload(payload);
+    logImportInfo('Preview de import gerado', preview);
+    return preview;
   },
 
   async importFromText(kind: CotadorImportKind, text: string) {
     const context = await loadImportContext();
+    logImportInfo('Disparando importacao', { kind });
 
     if (kind === 'csv-tabelas') return importCsvTabelas(text, context);
     if (kind === 'csv-rede') return importCsvRede(text, context);

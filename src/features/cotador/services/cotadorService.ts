@@ -4,9 +4,12 @@ import {
   supabase,
   type CotadorAdministradora,
   type CotadorEntidadeClasse,
-  type CotadorLinhaProduto,
+  type CotadorHospital,
+  type CotadorHospitalAlias,
+    type CotadorLinhaProduto,
   type CotadorProduto,
   type CotadorProdutoEntidade,
+  type CotadorProdutoHospital,
   type CotadorQuoteBeneficiaryRecord,
   type CotadorQuoteItemRecord,
   type CotadorQuoteRecord,
@@ -50,6 +53,18 @@ export type CotadorProductManagerRecord = CotadorProduto & {
   linha: CotadorLinhaProduto | null;
   administradora: CotadorAdministradora | null;
   entidadesClasse: CotadorEntidadeClasse[];
+};
+
+export type CotadorProductNetworkManagerRecord = CotadorHospitalNetworkEntry & {
+  link_id: string | null;
+  hospital_id: string | null;
+  aliases: string[];
+};
+
+export type CotadorProductNetworkManagerInput = CotadorHospitalNetworkEntry & {
+  linkId?: string | null;
+  hospitalId?: string | null;
+  aliases?: string[];
 };
 
 export type CotadorPriceRowInput = Partial<Record<CotadorAgeRange, number>>;
@@ -98,6 +113,9 @@ const COTADOR_ADMINISTRADORAS_TABLE = 'cotador_administradoras';
 const COTADOR_ENTIDADES_TABLE = 'cotador_entidades_classe';
 const COTADOR_LINHAS_TABLE = 'cotador_linhas_produto';
 const COTADOR_PRODUTOS_TABLE = 'cotador_produtos';
+const COTADOR_HOSPITAIS_TABLE = 'cotador_hospitais';
+const COTADOR_HOSPITAL_ALIASES_TABLE = 'cotador_hospital_aliases';
+const COTADOR_PRODUTO_HOSPITAIS_TABLE = 'cotador_produto_hospitais';
 const COTADOR_PRODUTO_ENTIDADES_TABLE = 'cotador_produto_entidades';
 const COTADOR_TABELAS_TABLE = 'cotador_tabelas';
 const COTADOR_TABELA_PRECOS_TABLE = 'cotador_tabela_faixas_preco';
@@ -147,6 +165,31 @@ const toPostgrestError = (error: unknown): PostgrestError => {
   };
 };
 
+const isMissingRpcError = (error: unknown, functionName: string) => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const { code, message, details, hint } = error as PostgrestError;
+  const normalizedCode = typeof code === 'string' ? code.toUpperCase() : '';
+  const normalizedFunctionName = functionName.toLowerCase();
+  const normalizedMessage = typeof message === 'string' ? message.toLowerCase() : '';
+  const normalizedDetails = typeof details === 'string' ? details.toLowerCase() : '';
+  const normalizedHint = typeof hint === 'string' ? hint.toLowerCase() : '';
+
+  if (normalizedCode === 'PGRST202' || normalizedCode === '42883') {
+    return true;
+  }
+
+  return (
+    normalizedMessage.includes(normalizedFunctionName)
+    || normalizedDetails.includes(normalizedFunctionName)
+    || normalizedHint.includes(normalizedFunctionName)
+    || normalizedMessage.includes('function')
+    || normalizedMessage.includes('could not find')
+  );
+};
+
 const normalizeText = (value?: string | null) =>
   (value ?? '')
     .normalize('NFD')
@@ -185,6 +228,92 @@ const sanitizeHospitalNetwork = (value: unknown): CotadorHospitalNetworkEntry[] 
     })
     .filter((entry): entry is CotadorHospitalNetworkEntry => entry !== null);
 };
+
+const sanitizeHospitalAliases = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(new Set(
+    value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  )).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+};
+
+const buildNormalizedProductNetworkEntry = (
+  hospital: CotadorHospital,
+  link: CotadorProdutoHospital,
+  aliases: CotadorHospitalAlias[],
+): CotadorProductNetworkManagerRecord => ({
+  link_id: link.id,
+  hospital_id: hospital.id,
+  hospital: hospital.nome,
+  cidade: hospital.cidade,
+  regiao: hospital.regiao ?? null,
+  bairro: hospital.bairro ?? null,
+  atendimentos: Array.isArray(link.atendimentos) ? link.atendimentos.map((item) => item.trim()).filter(Boolean) : [],
+  observacoes: cleanOptionalText(link.observacoes),
+  aliases: sanitizeHospitalAliases(aliases.map((alias) => alias.alias_nome).filter((name) => normalizeText(name) !== normalizeText(hospital.nome))),
+});
+
+async function loadNormalizedProductNetworkMap() {
+  const { data: linksData, error: linksError } = await supabase
+    .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
+    .select('*')
+    .order('ordem', { ascending: true });
+
+  if (linksError) {
+    if (isMissingTableError(linksError, COTADOR_PRODUTO_HOSPITAIS_TABLE)) {
+      return new Map<string, CotadorHospitalNetworkEntry[]>();
+    }
+    throw linksError;
+  }
+
+  const links = (linksData as CotadorProdutoHospital[] | null) ?? [];
+  if (links.length === 0) {
+    return new Map<string, CotadorHospitalNetworkEntry[]>();
+  }
+
+  const hospitalIds = Array.from(new Set(links.map((link) => link.hospital_id).filter(Boolean)));
+  if (hospitalIds.length === 0) {
+    return new Map<string, CotadorHospitalNetworkEntry[]>();
+  }
+
+  const { data: hospitalsData, error: hospitalsError } = await supabase
+    .from(COTADOR_HOSPITAIS_TABLE)
+    .select('*')
+    .in('id', hospitalIds);
+
+  if (hospitalsError) {
+    if (isMissingTableError(hospitalsError, COTADOR_HOSPITAIS_TABLE)) {
+      return new Map<string, CotadorHospitalNetworkEntry[]>();
+    }
+    throw hospitalsError;
+  }
+
+  const hospitalById = new Map(((hospitalsData as CotadorHospital[] | null) ?? []).map((hospital) => [hospital.id, hospital]));
+  const networkByProduct = new Map<string, CotadorHospitalNetworkEntry[]>();
+
+  links.forEach((link) => {
+    const hospital = hospitalById.get(link.hospital_id);
+    if (!hospital) return;
+
+    const current = networkByProduct.get(link.produto_id) ?? [];
+    current.push({
+      hospital: hospital.nome,
+      cidade: hospital.cidade,
+      regiao: cleanOptionalText(hospital.regiao),
+      bairro: cleanOptionalText(hospital.bairro),
+      atendimentos: Array.isArray(link.atendimentos) ? link.atendimentos.map((item) => item.trim()).filter(Boolean) : [],
+      observacoes: cleanOptionalText(link.observacoes),
+    });
+    networkByProduct.set(link.produto_id, current);
+  });
+
+  return new Map(
+    Array.from(networkByProduct.entries()).map(([productId, entries]) => [productId, sanitizeHospitalNetwork(entries)]),
+  );
+}
 
 const sanitizePriceRows = (value: CotadorPriceRowInput): CotadorPriceByAgeRange =>
   COTADOR_AGE_RANGES.reduce((accumulator, range) => {
@@ -835,7 +964,7 @@ export const cotadorService = {
 
   async getProdutos(): Promise<CotadorProductManagerRecord[]> {
     try {
-      const [{ data: productsData, error: productsError }, operadoras, lines, administradoras, entidades, linksData] = await Promise.all([
+      const [{ data: productsData, error: productsError }, operadoras, lines, administradoras, entidades, linksData, normalizedNetworkByProduct] = await Promise.all([
         supabase
           .from(COTADOR_PRODUTOS_TABLE)
           .select('*')
@@ -847,6 +976,7 @@ export const cotadorService = {
         supabase
           .from(COTADOR_PRODUTO_ENTIDADES_TABLE)
           .select('*'),
+        loadNormalizedProductNetworkMap(),
       ]);
 
       if (productsError) {
@@ -877,6 +1007,7 @@ export const cotadorService = {
 
       return products.map((product) => ({
         ...product,
+        rede_hospitalar: normalizedNetworkByProduct.get(product.id) ?? sanitizeHospitalNetwork(product.rede_hospitalar),
         operadora: operadoraById.get(product.operadora_id) ?? null,
         linha: product.linha_id ? lineById.get(product.linha_id) ?? null : null,
         administradora: product.administradora_id ? administradoraById.get(product.administradora_id) ?? null : null,
@@ -1037,17 +1168,143 @@ export const cotadorService = {
 
   async updateProdutoRedeHospitalar(id: string, redeHospitalar: CotadorHospitalNetworkEntry[]) {
     try {
-      const { error } = await supabase
-        .from(COTADOR_PRODUTOS_TABLE)
-        .update({
-          rede_hospitalar: redeHospitalar,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
+      const sanitizedNetwork = sanitizeHospitalNetwork(redeHospitalar);
+      const { error } = await supabase.rpc('replace_cotador_produto_rede_hospitalar', {
+        p_produto_id: id,
+        p_entries: sanitizedNetwork,
+      });
 
-      return { error };
+      if (error) {
+        if (isMissingRpcError(error, 'replace_cotador_produto_rede_hospitalar')) {
+          const fallback = await supabase
+            .from(COTADOR_PRODUTOS_TABLE)
+            .update({
+              rede_hospitalar: sanitizedNetwork,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', id);
+
+          return { error: fallback.error };
+        }
+
+        return { error };
+      }
+
+      return { error: null };
     } catch (error) {
       console.error('Error updating cotador product network:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
+  async getProdutoRedeHospitalarDetalhada(produtoId: string): Promise<CotadorProductNetworkManagerRecord[]> {
+    try {
+      const { data: linksData, error: linksError } = await supabase
+        .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
+        .select('*')
+        .eq('produto_id', produtoId)
+        .order('ordem', { ascending: true });
+
+      if (linksError) {
+        if (isMissingTableError(linksError, COTADOR_PRODUTO_HOSPITAIS_TABLE)) {
+          return [];
+        }
+        throw linksError;
+      }
+
+      const links = (linksData as CotadorProdutoHospital[] | null) ?? [];
+      if (links.length === 0) {
+        return [];
+      }
+
+      const hospitalIds = Array.from(new Set(links.map((link) => link.hospital_id).filter(Boolean)));
+      const [{ data: hospitalsData, error: hospitalsError }, { data: aliasesData, error: aliasesError }] = await Promise.all([
+        supabase
+          .from(COTADOR_HOSPITAIS_TABLE)
+          .select('*')
+          .in('id', hospitalIds),
+        supabase
+          .from(COTADOR_HOSPITAL_ALIASES_TABLE)
+          .select('*')
+          .in('hospital_id', hospitalIds),
+      ]);
+
+      if (hospitalsError) {
+        throw hospitalsError;
+      }
+
+      if (aliasesError && !isMissingTableError(aliasesError, COTADOR_HOSPITAL_ALIASES_TABLE)) {
+        throw aliasesError;
+      }
+
+      const hospitalById = new Map(((hospitalsData as CotadorHospital[] | null) ?? []).map((hospital) => [hospital.id, hospital]));
+      const aliasesByHospitalId = new Map<string, CotadorHospitalAlias[]>();
+
+      ((aliasesData as CotadorHospitalAlias[] | null) ?? []).forEach((alias) => {
+        const current = aliasesByHospitalId.get(alias.hospital_id) ?? [];
+        current.push(alias);
+        aliasesByHospitalId.set(alias.hospital_id, current);
+      });
+
+      return links.reduce<CotadorProductNetworkManagerRecord[]>((accumulator, link) => {
+        const hospital = hospitalById.get(link.hospital_id);
+        if (!hospital) return accumulator;
+        accumulator.push(buildNormalizedProductNetworkEntry(hospital, link, aliasesByHospitalId.get(link.hospital_id) ?? []));
+        return accumulator;
+      }, []);
+    } catch (error) {
+      console.error('Error loading detailed cotador product network:', error);
+      return [];
+    }
+  },
+
+  async replaceProdutoRedeHospitalarDetalhada(produtoId: string, redeHospitalar: CotadorProductNetworkManagerInput[]) {
+    try {
+      const payload = redeHospitalar
+        .map((entry) => {
+          const sanitizedBase = sanitizeHospitalNetwork([entry])[0] ?? null;
+          if (!sanitizedBase) return null;
+
+          return {
+            hospitalId: entry.hospitalId ?? null,
+            linkId: entry.linkId ?? null,
+            hospital: sanitizedBase.hospital,
+            cidade: sanitizedBase.cidade,
+            regiao: sanitizedBase.regiao,
+            bairro: sanitizedBase.bairro,
+            atendimentos: sanitizedBase.atendimentos,
+            observacoes: sanitizedBase.observacoes,
+            aliases: sanitizeHospitalAliases(entry.aliases),
+          };
+        })
+        .filter((entry): entry is {
+          hospitalId: string | null;
+          linkId: string | null;
+          hospital: string;
+          cidade: string;
+          regiao: string | null;
+          bairro: string | null;
+          atendimentos: string[];
+          observacoes: string | null;
+          aliases: string[];
+        } => entry !== null);
+
+      const { error } = await supabase.rpc('replace_cotador_produto_rede_hospitalar', {
+        p_produto_id: produtoId,
+        p_entries: payload,
+      });
+
+      if (error) {
+        if (isMissingRpcError(error, 'replace_cotador_produto_rede_hospitalar')) {
+          return cotadorService.updateProdutoRedeHospitalar(produtoId, payload);
+        }
+
+        return { error };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error replacing detailed cotador product network:', error);
       return { error: toPostgrestError(error) };
     }
   },

@@ -481,6 +481,40 @@ export type CotadorProduto = {
   updated_at: string;
 };
 
+export type CotadorHospital = {
+  id: string;
+  nome: string;
+  nome_normalizado: string;
+  cidade: string;
+  cidade_normalizada: string;
+  regiao?: string | null;
+  regiao_normalizada: string;
+  bairro?: string | null;
+  bairro_normalizado: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CotadorHospitalAlias = {
+  id: string;
+  hospital_id: string;
+  alias_nome: string;
+  alias_nome_normalizado: string;
+  created_at: string;
+};
+
+export type CotadorProdutoHospital = {
+  id: string;
+  produto_id: string;
+  hospital_id: string;
+  atendimentos: string[];
+  observacoes?: string | null;
+  ordem: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type CotadorProdutoEntidade = {
   produto_id: string;
   entidade_id: string;

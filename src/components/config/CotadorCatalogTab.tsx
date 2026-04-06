@@ -32,6 +32,8 @@ import {
   type CotadorPriceRowInput,
   type CotadorProductManagerInput,
   type CotadorProductManagerRecord,
+  type CotadorProductNetworkManagerInput,
+  type CotadorProductNetworkManagerRecord,
   type CotadorTableManagerInput,
   type CotadorTableManagerRecord,
 } from '../../features/cotador/services/cotadorService';
@@ -126,7 +128,10 @@ type NetworkEntryFormState = {
   bairro: string;
   atendimentos: string[];
   observacoes: string;
+  aliasesText: string;
 };
+
+type NetworkDraftEntry = CotadorProductNetworkManagerRecord;
 
 type NetworkListStatusFilter = 'all' | 'with-network' | 'without-network';
 
@@ -222,6 +227,7 @@ const DEFAULT_NETWORK_ENTRY_FORM: NetworkEntryFormState = {
   bairro: '',
   atendimentos: [],
   observacoes: '',
+  aliasesText: '',
 };
 
 const modalidadeOptions = [
@@ -363,7 +369,25 @@ const parseProductAcomodacoes = (value?: string | null, allowedValues?: string[]
   return Array.from(new Set(tokens.length > 0 ? tokens : [trimmed]));
 };
 
-const sanitizeNetworkEntry = (entry: Partial<CotadorHospitalNetworkEntry>): CotadorHospitalNetworkEntry | null => {
+const sanitizeNetworkAliases = (value: unknown) => {
+  if (Array.isArray(value)) {
+    return Array.from(new Set(value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean)))
+      .sort((left, right) => left.localeCompare(right, 'pt-BR'));
+  }
+
+  if (typeof value !== 'string') {
+    return [] as string[];
+  }
+
+  return Array.from(new Set(
+    value
+      .split(/\r?\n|;/)
+      .map((item) => item.trim())
+      .filter(Boolean),
+  )).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+};
+
+const sanitizeNetworkEntry = (entry: Partial<NetworkDraftEntry>): NetworkDraftEntry | null => {
   const hospital = entry.hospital?.trim() ?? '';
   const cidade = entry.cidade?.trim() ?? '';
 
@@ -372,21 +396,24 @@ const sanitizeNetworkEntry = (entry: Partial<CotadorHospitalNetworkEntry>): Cota
   const atendimentos = Array.from(new Set((entry.atendimentos ?? []).map((item) => item.trim()).filter(Boolean)));
 
   return {
+    link_id: typeof entry.link_id === 'string' ? entry.link_id : null,
+    hospital_id: typeof entry.hospital_id === 'string' ? entry.hospital_id : null,
     hospital,
     cidade,
     regiao: entry.regiao?.trim() || null,
     bairro: entry.bairro?.trim() || null,
     atendimentos,
     observacoes: entry.observacoes?.trim() || null,
+    aliases: sanitizeNetworkAliases(entry.aliases),
   };
 };
 
-const sanitizeNetworkEntries = (value: unknown): CotadorHospitalNetworkEntry[] => {
+const sanitizeNetworkEntries = (value: unknown): NetworkDraftEntry[] => {
   if (!Array.isArray(value)) return [];
 
   return value
-    .map((item) => sanitizeNetworkEntry(item as Partial<CotadorHospitalNetworkEntry>))
-    .filter((item): item is CotadorHospitalNetworkEntry => item !== null)
+    .map((item) => sanitizeNetworkEntry(item as Partial<NetworkDraftEntry>))
+    .filter((item): item is NetworkDraftEntry => item !== null)
     .sort((left, right) => {
       const cityComparison = normalizeSortText(left.cidade).localeCompare(normalizeSortText(right.cidade), 'pt-BR');
       if (cityComparison !== 0) return cityComparison;
@@ -396,16 +423,17 @@ const sanitizeNetworkEntries = (value: unknown): CotadorHospitalNetworkEntry[] =
     });
 };
 
-const buildNetworkEntryFormFromValue = (entry?: CotadorHospitalNetworkEntry | null): NetworkEntryFormState => ({
+const buildNetworkEntryFormFromValue = (entry?: NetworkDraftEntry | null): NetworkEntryFormState => ({
   hospital: entry?.hospital ?? '',
   cidade: entry?.cidade ?? '',
   regiao: entry?.regiao ?? '',
   bairro: entry?.bairro ?? '',
   atendimentos: entry?.atendimentos ?? [],
   observacoes: entry?.observacoes ?? '',
+  aliasesText: (entry?.aliases ?? []).join('\n'),
 });
 
-const formatNetworkLocation = (entry: CotadorHospitalNetworkEntry) =>
+const formatNetworkLocation = (entry: Pick<CotadorHospitalNetworkEntry, 'bairro' | 'regiao' | 'cidade'>) =>
   [entry.bairro, entry.regiao, entry.cidade].filter(Boolean).join(' | ');
 
 const serializeProductAcomodacoes = (values: string[]) =>
@@ -585,7 +613,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [tablesPerPage, setTablesPerPage] = useState(25);
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
   const [networkProductId, setNetworkProductId] = useState<string | null>(null);
-  const [networkDraft, setNetworkDraft] = useState<CotadorHospitalNetworkEntry[]>([]);
+  const [networkDraft, setNetworkDraft] = useState<NetworkDraftEntry[]>([]);
+  const [networkModalLoading, setNetworkModalLoading] = useState(false);
   const [networkEntryModalOpen, setNetworkEntryModalOpen] = useState(false);
   const [networkEntryForm, setNetworkEntryForm] = useState<NetworkEntryFormState>(DEFAULT_NETWORK_ENTRY_FORM);
   const [networkEditingIndex, setNetworkEditingIndex] = useState<number | null>(null);
@@ -913,14 +942,14 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const filteredNetworkEntries = useMemo(() => {
     const normalizedSearch = normalizeSortText(networkSearch);
 
-    return networkDraft.reduce<Array<{ entry: CotadorHospitalNetworkEntry; index: number }>>((accumulator, entry, index) => {
+    return networkDraft.reduce<Array<{ entry: NetworkDraftEntry; index: number }>>((accumulator, entry, index) => {
       if (networkCity && entry.cidade !== networkCity) return accumulator;
       if (!normalizedSearch) {
         accumulator.push({ entry, index });
         return accumulator;
       }
 
-      const matchesSearch = [entry.hospital, entry.cidade, entry.regiao, entry.bairro, entry.atendimentos.join(' '), entry.observacoes]
+      const matchesSearch = [entry.hospital, entry.cidade, entry.regiao, entry.bairro, entry.atendimentos.join(' '), entry.observacoes, entry.aliases.join(' ')]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
@@ -953,6 +982,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setNetworkModalOpen(false);
     setNetworkProductId(null);
     setNetworkDraft([]);
+    setNetworkModalLoading(false);
     setNetworkEntryModalOpen(false);
     setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
     setNetworkEditingIndex(null);
@@ -960,15 +990,20 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setNetworkCity('');
   };
 
-  const openNetworkModal = (product: CotadorProductManagerRecord) => {
+  const openNetworkModal = async (product: CotadorProductManagerRecord) => {
     setNetworkProductId(product.id);
-    setNetworkDraft(sanitizeNetworkEntries(product.rede_hospitalar));
+    setNetworkDraft([]);
+    setNetworkModalLoading(true);
     setNetworkEntryModalOpen(false);
     setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
     setNetworkEditingIndex(null);
     setNetworkSearch('');
     setNetworkCity('');
     setNetworkModalOpen(true);
+
+    const detailedNetwork = await cotadorService.getProdutoRedeHospitalarDetalhada(product.id);
+    setNetworkDraft(detailedNetwork.length > 0 ? sanitizeNetworkEntries(detailedNetwork) : sanitizeNetworkEntries(product.rede_hospitalar));
+    setNetworkModalLoading(false);
   };
 
   const openNetworkEntryCreateModal = () => {
@@ -977,7 +1012,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setNetworkEntryModalOpen(true);
   };
 
-  const startEditingNetworkEntry = (entry: CotadorHospitalNetworkEntry, index: number) => {
+  const startEditingNetworkEntry = (entry: NetworkDraftEntry, index: number) => {
     setNetworkEditingIndex(index);
     setNetworkEntryForm(buildNetworkEntryFormFromValue(entry));
     setNetworkEntryModalOpen(true);
@@ -995,7 +1030,17 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       return;
     }
 
-    const sanitizedEntry = sanitizeNetworkEntry(networkEntryForm);
+    const currentEntry = networkEditingIndex === null ? null : networkDraft[networkEditingIndex] ?? null;
+    const sanitizedEntry = sanitizeNetworkEntry({
+      ...currentEntry,
+      hospital: networkEntryForm.hospital,
+      cidade: networkEntryForm.cidade,
+      regiao: networkEntryForm.regiao,
+      bairro: networkEntryForm.bairro,
+      atendimentos: networkEntryForm.atendimentos,
+      observacoes: networkEntryForm.observacoes,
+      aliases: sanitizeNetworkAliases(networkEntryForm.aliasesText),
+    });
     if (!sanitizedEntry) {
       toast.error('Nao foi possivel validar o hospital informado.');
       return;
@@ -1026,7 +1071,20 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
     setSubmitting(true);
     const sanitizedDraft = sanitizeNetworkEntries(networkDraft);
-    const result = await cotadorService.updateProdutoRedeHospitalar(selectedNetworkProduct.id, sanitizedDraft);
+    const result = await cotadorService.replaceProdutoRedeHospitalarDetalhada(
+      selectedNetworkProduct.id,
+      sanitizedDraft.map<CotadorProductNetworkManagerInput>((entry) => ({
+        linkId: entry.link_id,
+        hospitalId: entry.hospital_id,
+        hospital: entry.hospital,
+        cidade: entry.cidade,
+        regiao: entry.regiao,
+        bairro: entry.bairro,
+        atendimentos: entry.atendimentos,
+        observacoes: entry.observacoes,
+        aliases: entry.aliases,
+      })),
+    );
 
     if (result.error) {
       toast.error('Nao foi possivel salvar a rede hospitalar deste produto.');
@@ -1034,7 +1092,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       return;
     }
 
-    setProdutos((current) => current.map((product) => product.id === selectedNetworkProduct.id ? { ...product, rede_hospitalar: sanitizedDraft } : product));
+    await loadCatalogData();
     toast.success('Rede hospitalar salva com sucesso.');
     setSubmitting(false);
     resetNetworkModal();
@@ -2479,7 +2537,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 Prestadores da rede
               </div>
 
-              {filteredNetworkEntries.length === 0 ? (
+              {networkModalLoading ? (
+                <div className="px-4 py-10 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                  Carregando hospitais compartilhados desta rede...
+                </div>
+              ) : filteredNetworkEntries.length === 0 ? (
                 <div className="px-4 py-10 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
                   Nenhum prestador encontrado para os filtros atuais.
                 </div>
@@ -2495,6 +2557,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                             <span key={`${entry.hospital}-${service}-${index}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{service}</span>
                           ))}
                         </div>
+                        {entry.aliases.length > 0 && (
+                          <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+                            Aliases: {entry.aliases.join(', ')}
+                          </p>
+                        )}
                         {entry.observacoes && <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">{entry.observacoes}</p>}
                       </div>
                       <div className="flex items-center gap-2 self-end lg:self-auto">
@@ -2524,6 +2591,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                   Adicionar hospital
                 </Button>
               </div>
+              <p className="mt-3 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+                O cadastro passa a reaproveitar hospitais compartilhados e permite guardar aliases para normalizacao manual de importacoes futuras.
+              </p>
             </div>
 
             <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
@@ -2581,6 +2651,16 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observacoes</label>
               <Textarea value={networkEntryForm.observacoes} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, observacoes: event.target.value }))} rows={3} placeholder="Ex: Prestador habilitado apenas na acomodacao QP" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Aliases para normalizacao manual</label>
+              <Textarea
+                value={networkEntryForm.aliasesText}
+                onChange={(event) => setNetworkEntryForm((current) => ({ ...current, aliasesText: event.target.value }))}
+                rows={4}
+                placeholder={"Ex: ASM - HOSPITAL PASTEUR\nHOSPITAL PASTEUR"}
+              />
+              <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Use um alias por linha para vincular nomes alternativos ao mesmo hospital compartilhado.</p>
             </div>
           </div>
 

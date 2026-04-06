@@ -881,7 +881,7 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
         reembolso: cleanText(typeof details.reembolso === 'string' ? details.reembolso : null),
         informacoesImportantes: cleanText(typeof details.informacoesImportantes === 'string' ? details.informacoesImportantes : null),
       },
-      redeHospitalar: Array.isArray(item.redeHospitalar) ? item.redeHospitalar as CotadorHospitalNetworkEntry[] : [],
+      redeHospitalar: Array.isArray(item.redeHospitalar) ? item.redeHospitalar as CotadorHospitalNetworkEntry[] : undefined,
       tabelas: tabelas.map((table) => {
         const candidate = table as Record<string, unknown>;
         const parsedPrices = parseImportedPricesByAcomodacao(candidate.precosPorAcomodacao);
@@ -1036,6 +1036,20 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
       if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
       if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
       if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
+
+      if (item.redeHospitalar !== undefined) {
+        const networkResult = await cotadorService.updateProdutoRedeHospitalar(resolvedProduct.product.id, item.redeHospitalar);
+        if (networkResult.error) {
+          throw new Error(`Erro ao sincronizar rede hospitalar de ${item.produto}: ${networkResult.error.message}`);
+        }
+
+        context.products = context.products.map((candidate) => (
+          candidate.id === resolvedProduct.product.id
+            ? { ...candidate, rede_hospitalar: item.redeHospitalar } as CotadorProductManagerRecord
+            : candidate
+        ));
+      }
+
       result.importedNetworkEntries += item.redeHospitalar?.length ?? 0;
 
       const settledTableResults = await Promise.allSettled((item.tabelas ?? []).map((table) => upsertImportedTable(resolvedProduct.product, table, context, result)));
@@ -1176,6 +1190,11 @@ const importCsvRede = async (text: string, context: ImportLookupContext): Promis
       if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
       if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
       if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
+
+      const networkResult = await cotadorService.updateProdutoRedeHospitalar(resolvedProduct.product.id, network);
+      if (networkResult.error) {
+        throw new Error(`Erro ao sincronizar rede hospitalar de ${first.produto}: ${networkResult.error.message}`);
+      }
 
       result.importedNetworkEntries += network.length;
       context.products = context.products.map((item) => item.id === resolvedProduct.product.id ? { ...item, rede_hospitalar: network } as CotadorProductManagerRecord : item);

@@ -628,63 +628,73 @@ const upsertImportedTable = async (
   const activeAcomodacoes = getImportedTableActiveAcomodacoes(tableDefinition);
   const createdTableIds: string[] = [];
 
-  for (const [acomodacao, pricesByAgeRange] of activeAcomodacoes) {
-    const payload: CotadorTableManagerInput = {
-      produto_id: product.id,
-      nome: tableDefinition.nome,
-      codigo: cleanText(tableDefinition.codigo),
-      modalidade: tableDefinition.modalidade,
-      perfil_empresarial: tableDefinition.perfilEmpresarial,
-      coparticipacao: tableDefinition.coparticipacao,
-      acomodacao: cleanText(acomodacao),
-      vidas_min: tableDefinition.vidasMin ?? null,
-      vidas_max: tableDefinition.vidasMax ?? null,
-      observacoes: cleanText(tableDefinition.observacoes),
-      ativo: tableDefinition.ativo ?? true,
-      pricesByAgeRange,
-    };
+  try {
+    for (const [acomodacao, pricesByAgeRange] of activeAcomodacoes) {
+      const payload: CotadorTableManagerInput = {
+        produto_id: product.id,
+        nome: tableDefinition.nome,
+        codigo: cleanText(tableDefinition.codigo),
+        modalidade: tableDefinition.modalidade,
+        perfil_empresarial: tableDefinition.perfilEmpresarial,
+        coparticipacao: tableDefinition.coparticipacao,
+        acomodacao: cleanText(acomodacao),
+        vidas_min: tableDefinition.vidasMin ?? null,
+        vidas_max: tableDefinition.vidasMax ?? null,
+        observacoes: cleanText(tableDefinition.observacoes),
+        ativo: tableDefinition.ativo ?? true,
+        pricesByAgeRange,
+      };
 
-    const existing = context.tables.find((table) => buildTableLookupKey({
-      productId: product.id,
-      name: table.nome,
-      modalidade: table.modalidade,
-      perfil: table.perfil_empresarial,
-      copart: table.coparticipacao,
-      vidasMin: table.vidas_min ?? null,
-      vidasMax: table.vidas_max ?? null,
-      acomodacao: table.acomodacao ?? null,
-    }) === buildTableLookupKey({
-      productId: product.id,
-      name: payload.nome,
-      modalidade: payload.modalidade,
-      perfil: payload.perfil_empresarial,
-      copart: payload.coparticipacao,
-      vidasMin: payload.vidas_min,
-      vidasMax: payload.vidas_max,
-      acomodacao: payload.acomodacao,
-    }));
+      const existing = context.tables.find((table) => buildTableLookupKey({
+        productId: product.id,
+        name: table.nome,
+        modalidade: table.modalidade,
+        perfil: table.perfil_empresarial,
+        copart: table.coparticipacao,
+        vidasMin: table.vidas_min ?? null,
+        vidasMax: table.vidas_max ?? null,
+        acomodacao: table.acomodacao ?? null,
+      }) === buildTableLookupKey({
+        productId: product.id,
+        name: payload.nome,
+        modalidade: payload.modalidade,
+        perfil: payload.perfil_empresarial,
+        copart: payload.coparticipacao,
+        vidasMin: payload.vidas_min,
+        vidasMax: payload.vidas_max,
+        acomodacao: payload.acomodacao,
+      }));
 
-    if (existing) {
-      const updateResult = await cotadorService.updateTabela(existing.id, payload);
-      if (updateResult.error) {
-        throw new Error(`Erro ao atualizar tabela ${tableDefinition.nome}: ${updateResult.error.message}`);
+      if (existing) {
+        const updateResult = await cotadorService.updateTabela(existing.id, payload);
+        if (updateResult.error) {
+          throw new Error(`Erro ao atualizar tabela ${tableDefinition.nome}: ${updateResult.error.message}`);
+        }
+
+        context.tables = context.tables.map((table) => table.id === existing.id ? { ...existing, ...payload, produto: product, pricesByAgeRange } : table);
+      } else {
+        const createResult = await cotadorService.createTabela(payload);
+        if (createResult.error || !createResult.data) {
+          throw new Error(`Erro ao criar tabela ${tableDefinition.nome}: ${createResult.error?.message ?? 'desconhecido'}`);
+        }
+
+        createdTableIds.push(createResult.data.id);
+        context.tables = [...context.tables, createTableRecordFromRaw(createResult.data, product, pricesByAgeRange)];
       }
 
-      context.tables = context.tables.map((table) => table.id === existing.id ? { ...existing, ...payload, produto: product, pricesByAgeRange } : table);
-    } else {
-      const createResult = await cotadorService.createTabela(payload);
-      if (createResult.error || !createResult.data) {
-        throw new Error(`Erro ao criar tabela ${tableDefinition.nome}: ${createResult.error?.message ?? 'desconhecido'}`);
-      }
-
-      createdTableIds.push(createResult.data.id);
-      context.tables = [...context.tables, createTableRecordFromRaw(createResult.data, product, pricesByAgeRange)];
+      result.importedTables += 1;
     }
 
-    result.importedTables += 1;
-  }
+    return { createdTableIds };
+  } catch (error) {
+    if (createdTableIds.length > 0) {
+      await Promise.all(createdTableIds.map((id) => cotadorService.deleteTabela(id)));
+      context.tables = context.tables.filter((table) => !createdTableIds.includes(table.id));
+      result.importedTables = Math.max(0, result.importedTables - createdTableIds.length);
+    }
 
-  return { createdTableIds };
+    throw error;
+  }
 };
 
 const rollbackImportMutations = async (mutations: ImportMutations) => {
@@ -878,10 +888,35 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
       if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
       result.importedNetworkEntries += item.redeHospitalar?.length ?? 0;
 
-      for (const table of item.tabelas ?? []) {
-        const tableResult = await upsertImportedTable(resolvedProduct.product, table, context, result);
-        mutations.createdTableIds.push(...tableResult.createdTableIds);
+      const settledTableResults = await Promise.allSettled((item.tabelas ?? []).map((table) => upsertImportedTable(resolvedProduct.product, table, context, result)));
+      const tableError = settledTableResults.find((entry): entry is PromiseRejectedResult => entry.status === 'rejected');
+
+      if (tableError) {
+        throw tableError.reason;
       }
+
+      settledTableResults.forEach((entry) => {
+        if (entry.status === 'fulfilled') {
+          mutations.createdTableIds.push(...entry.value.createdTableIds);
+        }
+      });
+    }
+
+    if (payload.items.length > 0) {
+      const refreshTables = await cotadorService.getTabelas();
+      context.tables = refreshTables;
+
+      payload.items.forEach((item) => {
+        const product = context.products.find((candidate) => normalizeText(candidate.nome) === normalizeText(item.produto) && normalizeText(candidate.linha?.nome) === normalizeText(item.linha));
+        if (!product) return;
+
+        const expectedRows = item.tabelas?.reduce((total, table) => total + countImportedTableRows(table), 0) ?? 0;
+        const actualRows = refreshTables.filter((table) => table.produto_id === product.id).length;
+
+        if (actualRows !== expectedRows) {
+          throw new Error(`Importacao inconsistente para ${item.produto}: esperado ${expectedRows} tabela(s), encontrado ${actualRows}.`);
+        }
+      });
     }
 
     return result;

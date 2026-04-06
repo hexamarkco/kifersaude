@@ -28,6 +28,8 @@ import { COTADOR_AGE_RANGES } from '../../features/cotador/shared/cotadorConstan
 import type { CotadorHospitalNetworkEntry } from '../../features/cotador/shared/cotadorTypes';
 import {
   cotadorService,
+  type CotadorHospitalManagerInput,
+  type CotadorHospitalManagerRecord,
   type CotadorLineManagerRecord,
   type CotadorPriceRowInput,
   type CotadorProductManagerInput,
@@ -134,6 +136,16 @@ type NetworkEntryFormState = {
 type NetworkDraftEntry = CotadorProductNetworkManagerRecord;
 
 type NetworkListStatusFilter = 'all' | 'with-network' | 'without-network';
+type NetworkDirectoryMode = 'products' | 'hospitals';
+
+type NetworkHospitalFormState = {
+  nome: string;
+  cidade: string;
+  regiao: string;
+  bairro: string;
+  aliasesText: string;
+  ativo: boolean;
+};
 
 type NetworkProductSummary = {
   product: CotadorProductManagerRecord;
@@ -228,6 +240,15 @@ const DEFAULT_NETWORK_ENTRY_FORM: NetworkEntryFormState = {
   atendimentos: [],
   observacoes: '',
   aliasesText: '',
+};
+
+const DEFAULT_NETWORK_HOSPITAL_FORM: NetworkHospitalFormState = {
+  nome: '',
+  cidade: '',
+  regiao: '',
+  bairro: '',
+  aliasesText: '',
+  ativo: true,
 };
 
 const modalidadeOptions = [
@@ -433,7 +454,16 @@ const buildNetworkEntryFormFromValue = (entry?: NetworkDraftEntry | null): Netwo
   aliasesText: (entry?.aliases ?? []).join('\n'),
 });
 
-const formatNetworkLocation = (entry: Pick<CotadorHospitalNetworkEntry, 'bairro' | 'regiao' | 'cidade'>) =>
+const buildNetworkHospitalFormFromValue = (hospital?: CotadorHospitalManagerRecord | null): NetworkHospitalFormState => ({
+  nome: hospital?.nome ?? '',
+  cidade: hospital?.cidade ?? '',
+  regiao: hospital?.regiao ?? '',
+  bairro: hospital?.bairro ?? '',
+  aliasesText: (hospital?.aliases ?? []).join('\n'),
+  ativo: hospital?.ativo ?? true,
+});
+
+const formatNetworkLocation = (entry: { bairro?: string | null; regiao?: string | null; cidade?: string | null }) =>
   [entry.bairro, entry.regiao, entry.cidade].filter(Boolean).join(' | ');
 
 const serializeProductAcomodacoes = (values: string[]) =>
@@ -627,6 +657,17 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [networkListStatus, setNetworkListStatus] = useState<NetworkListStatusFilter>('all');
   const [networkPage, setNetworkPage] = useState(1);
   const [networkPerPage, setNetworkPerPage] = useState(25);
+  const [networkDirectoryMode, setNetworkDirectoryMode] = useState<NetworkDirectoryMode>('products');
+  const [networkHospitals, setNetworkHospitals] = useState<CotadorHospitalManagerRecord[]>([]);
+  const [networkHospitalsLoading, setNetworkHospitalsLoading] = useState(false);
+  const [networkHospitalSearch, setNetworkHospitalSearch] = useState('');
+  const [networkHospitalCity, setNetworkHospitalCity] = useState('');
+  const [networkHospitalOperadoraId, setNetworkHospitalOperadoraId] = useState('');
+  const [networkHospitalPage, setNetworkHospitalPage] = useState(1);
+  const [networkHospitalPerPage, setNetworkHospitalPerPage] = useState(25);
+  const [networkHospitalModalOpen, setNetworkHospitalModalOpen] = useState(false);
+  const [networkHospitalEditingId, setNetworkHospitalEditingId] = useState<string | null>(null);
+  const [networkHospitalForm, setNetworkHospitalForm] = useState<NetworkHospitalFormState>(DEFAULT_NETWORK_HOSPITAL_FORM);
   const [networkImportModalOpen, setNetworkImportModalOpen] = useState(false);
   const [networkImportForm, setNetworkImportForm] = useState<ImportFormState>({ file: null });
   const [networkImportPreview, setNetworkImportPreview] = useState<CotadorImportPreview | null>(null);
@@ -978,6 +1019,128 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     [networkImportPreviewItems],
   );
 
+  const selectedNetworkHospital = useMemo(
+    () => networkHospitals.find((hospital) => hospital.id === networkHospitalEditingId) ?? null,
+    [networkHospitalEditingId, networkHospitals],
+  );
+
+  const networkHospitalCityOptions = useMemo(
+    () => Array.from(new Set(networkHospitals.map((hospital) => hospital.cidade).filter(Boolean)))
+      .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+      .map((city) => ({ value: city, label: city })),
+    [networkHospitals],
+  );
+
+  const networkHospitalOperadoraOptions = useMemo(
+    () => Array.from(new Map<string, { value: string; label: string }>(
+      networkHospitals.flatMap((hospital) => hospital.linkedProducts)
+        .reduce<Array<[string, { value: string; label: string }]>>((accumulator, link) => {
+          if (link.operadora?.id) {
+            accumulator.push([link.operadora.id, { value: link.operadora.id, label: link.operadora.nome }]);
+          }
+          return accumulator;
+        }, []),
+    ).values()).sort((left, right) => left.label.localeCompare(right.label, 'pt-BR')),
+    [networkHospitals],
+  );
+
+  const filteredNetworkHospitals = useMemo(() => {
+    const normalizedSearch = normalizeSortText(networkHospitalSearch);
+
+    return networkHospitals.filter((hospital) => {
+      if (networkHospitalCity && hospital.cidade !== networkHospitalCity) return false;
+      if (networkHospitalOperadoraId && !hospital.linkedProducts.some((link) => link.operadora?.id === networkHospitalOperadoraId)) return false;
+      if (!normalizedSearch) return true;
+
+      const haystack = [
+        hospital.nome,
+        hospital.cidade,
+        hospital.regiao,
+        hospital.bairro,
+        ...hospital.aliases,
+        ...hospital.linkedProducts.map((link) => [link.produto_nome, link.operadora?.nome, link.linha?.nome, link.atendimentos.join(' '), link.observacoes].filter(Boolean).join(' ')),
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      return normalizeSortText(haystack).includes(normalizedSearch);
+    });
+  }, [networkHospitalCity, networkHospitalOperadoraId, networkHospitalSearch, networkHospitals]);
+
+  const networkHospitalsWithLinksCount = useMemo(
+    () => networkHospitals.filter((hospital) => hospital.linkedProducts.length > 0).length,
+    [networkHospitals],
+  );
+
+  const totalNetworkHospitalPages = Math.max(1, Math.ceil(filteredNetworkHospitals.length / networkHospitalPerPage));
+
+  useEffect(() => {
+    if (networkHospitalPage > totalNetworkHospitalPages) {
+      setNetworkHospitalPage(totalNetworkHospitalPages);
+    }
+  }, [networkHospitalPage, totalNetworkHospitalPages]);
+
+  const paginatedNetworkHospitals = useMemo(() => {
+    const startIndex = (networkHospitalPage - 1) * networkHospitalPerPage;
+    return filteredNetworkHospitals.slice(startIndex, startIndex + networkHospitalPerPage);
+  }, [filteredNetworkHospitals, networkHospitalPage, networkHospitalPerPage]);
+
+  const loadNetworkHospitals = async () => {
+    setNetworkHospitalsLoading(true);
+    const hospitals = await cotadorService.getHospitaisRedeDetalhados();
+    setNetworkHospitals(hospitals);
+    setNetworkHospitalsLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'redes') {
+      void loadNetworkHospitals();
+    }
+  }, [activeTab]);
+
+  const resetNetworkHospitalModal = () => {
+    setNetworkHospitalModalOpen(false);
+    setNetworkHospitalEditingId(null);
+    setNetworkHospitalForm(DEFAULT_NETWORK_HOSPITAL_FORM);
+  };
+
+  const openNetworkHospitalModal = (hospital: CotadorHospitalManagerRecord) => {
+    setNetworkHospitalEditingId(hospital.id);
+    setNetworkHospitalForm(buildNetworkHospitalFormFromValue(hospital));
+    setNetworkHospitalModalOpen(true);
+  };
+
+  const handleNetworkHospitalSubmit = async () => {
+    if (!selectedNetworkHospital) return;
+
+    if (!networkHospitalForm.nome.trim() || !networkHospitalForm.cidade.trim() || !networkHospitalForm.regiao.trim()) {
+      toast.error('Preencha nome, cidade e regiao para salvar o hospital compartilhado.');
+      return;
+    }
+
+    setSubmitting(true);
+    const payload: CotadorHospitalManagerInput = {
+      nome: networkHospitalForm.nome.trim(),
+      cidade: networkHospitalForm.cidade.trim(),
+      regiao: networkHospitalForm.regiao.trim(),
+      bairro: networkHospitalForm.bairro.trim() || null,
+      aliases: sanitizeNetworkAliases(networkHospitalForm.aliasesText),
+      ativo: networkHospitalForm.ativo,
+    };
+
+    const result = await cotadorService.updateHospitalRede(selectedNetworkHospital.id, payload);
+    if (result.error) {
+      toast.error('Nao foi possivel salvar o hospital compartilhado.');
+      setSubmitting(false);
+      return;
+    }
+
+    await Promise.all([loadCatalogData(), loadNetworkHospitals()]);
+    toast.success('Hospital compartilhado atualizado com sucesso.');
+    setSubmitting(false);
+    resetNetworkHospitalModal();
+  };
+
   const resetNetworkModal = () => {
     setNetworkModalOpen(false);
     setNetworkProductId(null);
@@ -1092,7 +1255,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       return;
     }
 
-    await loadCatalogData();
+    await Promise.all([loadCatalogData(), loadNetworkHospitals()]);
     toast.success('Rede hospitalar salva com sucesso.');
     setSubmitting(false);
     resetNetworkModal();
@@ -1169,7 +1332,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     try {
       const content = await networkImportForm.file.text();
       const result = await cotadorImportService.importFromText('json-completo', content);
-      await loadCatalogData();
+      await Promise.all([loadCatalogData(), loadNetworkHospitals()]);
 
       if (result.importedNetworkEntries === 0) {
         toast.error('Nenhum item de rede foi importado. Revise o arquivo e tente novamente.');
@@ -2020,7 +2183,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
         )
       ) : activeTab === 'redes' ? (
-        networkProducts.length === 0 ? (
+        networkProducts.length === 0 && networkHospitals.length === 0 && !networkHospitalsLoading ? (
           <EmptyState icon={MapPin} title="Nenhuma rede cadastrada" description="Adicione produtos ao catalogo para comecar a vincular hospitais e atendimentos." />
         ) : (
           <div className="space-y-5">
@@ -2029,128 +2192,253 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Gestao da rede</p>
-                    <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Produtos e prestadores</h4>
+                    <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">
+                      {networkDirectoryMode === 'products' ? 'Produtos e prestadores' : 'Hospitais compartilhados'}
+                    </h4>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProducts.length} produto(s)</span>
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProductsWithEntriesCount} com rede</span>
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProducts.length - networkProductsWithEntriesCount} sem rede</span>
+                    {networkDirectoryMode === 'products' ? (
+                      <>
+                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProducts.length} produto(s)</span>
+                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProductsWithEntriesCount} com rede</span>
+                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProducts.length - networkProductsWithEntriesCount} sem rede</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkHospitals.length} hospital(is)</span>
+                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkHospitalsWithLinksCount} com vinculos</span>
+                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkHospitals.reduce((total, hospital) => total + hospital.linkedProducts.length, 0)} plano(s) vinculados</span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_220px_220px_220px_220px]">
-                  <Input
-                    value={networkListSearch}
-                    onChange={(event) => {
-                      setNetworkListSearch(event.target.value);
-                      setNetworkPage(1);
-                    }}
-                    placeholder="Buscar produto, hospital, cidade ou linha"
-                    leftIcon={Search}
-                  />
-                  <FilterSingleSelect
-                    icon={Building2}
-                    options={networkListOperadoraOptions}
-                    placeholder="Todas as operadoras"
-                    value={networkListOperadoraId}
-                    onChange={(value) => {
-                      setNetworkListOperadoraId(value);
-                      setNetworkPage(1);
-                    }}
-                  />
-                  <FilterSingleSelect
-                    icon={Network}
-                    options={networkListLineOptions}
-                    placeholder="Todas as linhas"
-                    value={networkListLineId}
-                    onChange={(value) => {
-                      setNetworkListLineId(value);
-                      setNetworkPage(1);
-                    }}
-                  />
-                  <FilterSingleSelect
-                    icon={MapPin}
-                    options={networkListCityOptions}
-                    placeholder="Todas as cidades"
-                    value={networkListCity}
-                    onChange={(value) => {
-                      setNetworkListCity(value);
-                      setNetworkPage(1);
-                    }}
-                  />
-                  <FilterSingleSelect
-                    icon={ShieldCheck}
-                    options={[
-                      { value: 'all', label: 'Todos' },
-                      { value: 'with-network', label: 'Com rede' },
-                      { value: 'without-network', label: 'Sem rede' },
-                    ]}
-                    placeholder="Status da rede"
-                    value={networkListStatus}
-                    onChange={(value) => {
-                      setNetworkListStatus((value as NetworkListStatusFilter) || 'all');
-                      setNetworkPage(1);
-                    }}
-                  />
+                <div className="inline-flex rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setNetworkDirectoryMode('products')}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${networkDirectoryMode === 'products' ? 'bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)] shadow-sm' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]'}`}
+                  >
+                    Por produto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNetworkDirectoryMode('hospitals')}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${networkDirectoryMode === 'hospitals' ? 'bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)] shadow-sm' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]'}`}
+                  >
+                    Hospitais
+                  </button>
                 </div>
+
+                {networkDirectoryMode === 'products' ? (
+                  <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_220px_220px_220px_220px]">
+                    <Input
+                      value={networkListSearch}
+                      onChange={(event) => {
+                        setNetworkListSearch(event.target.value);
+                        setNetworkPage(1);
+                      }}
+                      placeholder="Buscar produto, hospital, cidade ou linha"
+                      leftIcon={Search}
+                    />
+                    <FilterSingleSelect
+                      icon={Building2}
+                      options={networkListOperadoraOptions}
+                      placeholder="Todas as operadoras"
+                      value={networkListOperadoraId}
+                      onChange={(value) => {
+                        setNetworkListOperadoraId(value);
+                        setNetworkPage(1);
+                      }}
+                    />
+                    <FilterSingleSelect
+                      icon={Network}
+                      options={networkListLineOptions}
+                      placeholder="Todas as linhas"
+                      value={networkListLineId}
+                      onChange={(value) => {
+                        setNetworkListLineId(value);
+                        setNetworkPage(1);
+                      }}
+                    />
+                    <FilterSingleSelect
+                      icon={MapPin}
+                      options={networkListCityOptions}
+                      placeholder="Todas as cidades"
+                      value={networkListCity}
+                      onChange={(value) => {
+                        setNetworkListCity(value);
+                        setNetworkPage(1);
+                      }}
+                    />
+                    <FilterSingleSelect
+                      icon={ShieldCheck}
+                      options={[
+                        { value: 'all', label: 'Todos' },
+                        { value: 'with-network', label: 'Com rede' },
+                        { value: 'without-network', label: 'Sem rede' },
+                      ]}
+                      placeholder="Status da rede"
+                      value={networkListStatus}
+                      onChange={(value) => {
+                        setNetworkListStatus((value as NetworkListStatusFilter) || 'all');
+                        setNetworkPage(1);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_240px_240px]">
+                    <Input
+                      value={networkHospitalSearch}
+                      onChange={(event) => {
+                        setNetworkHospitalSearch(event.target.value);
+                        setNetworkHospitalPage(1);
+                      }}
+                      placeholder="Buscar hospital, alias, cidade, plano ou operadora"
+                      leftIcon={Search}
+                    />
+                    <FilterSingleSelect
+                      icon={MapPin}
+                      options={networkHospitalCityOptions}
+                      placeholder="Todas as cidades"
+                      value={networkHospitalCity}
+                      onChange={(value) => {
+                        setNetworkHospitalCity(value);
+                        setNetworkHospitalPage(1);
+                      }}
+                    />
+                    <FilterSingleSelect
+                      icon={Building2}
+                      options={networkHospitalOperadoraOptions}
+                      placeholder="Todas as operadoras"
+                      value={networkHospitalOperadoraId}
+                      onChange={(value) => {
+                        setNetworkHospitalOperadoraId(value);
+                        setNetworkHospitalPage(1);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
-            {filteredNetworkProducts.length === 0 ? (
-              <EmptyState icon={Search} title="Nenhum produto encontrado" description="Ajuste os filtros da aba Redes para localizar o produto ou a cidade desejada." />
+            {networkDirectoryMode === 'products' ? (
+              filteredNetworkProducts.length === 0 ? (
+                <EmptyState icon={Search} title="Nenhum produto encontrado" description="Ajuste os filtros da aba Redes para localizar o produto ou a cidade desejada." />
+              ) : (
+                <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+                  <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+                    {paginatedNetworkProducts.map((summary) => {
+                      const { product, entries, cities } = summary;
+
+                      return (
+                        <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h4>
+                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                {entries.length} prestador(es)
+                              </span>
+                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                {cities.length} cidade(s)
+                              </span>
+                              {entries.length === 0 && (
+                                <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">
+                                  Sem rede
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                              {product.operadora?.nome ?? 'Operadora'} / {product.linha?.nome ?? 'Linha'}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                              {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
+                              {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
+                              {cities.slice(0, 4).map((city) => <span key={`${product.id}-${city}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{city}</span>)}
+                              {cities.length > 4 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{cities.length - 4} cidade(s)</span>}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end lg:self-auto">
+                            <Button variant="secondary" onClick={() => void openNetworkModal(product)}>
+                              <MapPin className="h-4 w-4" />
+                              Gerenciar rede
+                            </Button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  <Pagination
+                    currentPage={networkPage}
+                    totalPages={totalNetworkPages}
+                    itemsPerPage={networkPerPage}
+                    totalItems={filteredNetworkProducts.length}
+                    onPageChange={setNetworkPage}
+                    onItemsPerPageChange={(nextPageSize) => {
+                      setNetworkPerPage(nextPageSize);
+                      setNetworkPage(1);
+                    }}
+                  />
+                </div>
+              )
+            ) : networkHospitalsLoading ? (
+              <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
+                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
+                <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando hospitais compartilhados...</p>
+              </div>
+            ) : filteredNetworkHospitals.length === 0 ? (
+              <EmptyState icon={Search} title="Nenhum hospital encontrado" description="Ajuste os filtros da visao global de hospitais para localizar um cadastro compartilhado." />
             ) : (
               <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
                 <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
-                  {paginatedNetworkProducts.map((summary) => {
-                    const { product, entries, cities } = summary;
-
-                    return (
-                      <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h4>
+                  {paginatedNetworkHospitals.map((hospital) => (
+                    <article key={hospital.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{hospital.nome}</h4>
+                          <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                            {hospital.linkedProducts.length} plano(s)
+                          </span>
+                          {hospital.aliases.length > 0 && (
                             <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
-                              {entries.length} prestador(es)
+                              {hospital.aliases.length} alias(es)
                             </span>
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
-                              {cities.length} cidade(s)
-                            </span>
-                            {entries.length === 0 && (
-                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">
-                                Sem rede
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                            {product.operadora?.nome ?? 'Operadora'} / {product.linha?.nome ?? 'Linha'}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                            {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
-                            {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
-                            {cities.slice(0, 4).map((city) => <span key={`${product.id}-${city}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{city}</span>)}
-                            {cities.length > 4 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{cities.length - 4} cidade(s)</span>}
-                          </div>
+                          )}
                         </div>
+                        <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{formatNetworkLocation(hospital)}</p>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                          {hospital.aliases.slice(0, 3).map((alias) => <span key={`${hospital.id}-${alias}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{alias}</span>)}
+                          {hospital.aliases.length > 3 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{hospital.aliases.length - 3} alias(es)</span>}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                          {hospital.linkedProducts.slice(0, 4).map((link) => (
+                            <span key={link.link_id} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">
+                              {(link.operadora?.nome ?? 'Operadora')} / {(link.linha?.nome ?? 'Linha')} / {link.produto_nome}
+                            </span>
+                          ))}
+                          {hospital.linkedProducts.length > 4 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{hospital.linkedProducts.length - 4} vinculo(s)</span>}
+                        </div>
+                      </div>
 
-                        <div className="flex items-center gap-2 self-end lg:self-auto">
-                          <Button variant="secondary" onClick={() => openNetworkModal(product)}>
-                            <MapPin className="h-4 w-4" />
-                            Gerenciar rede
-                          </Button>
-                        </div>
-                      </article>
-                    );
-                  })}
+                      <div className="flex items-center gap-2 self-end lg:self-auto">
+                        <Button variant="secondary" onClick={() => openNetworkHospitalModal(hospital)}>
+                          <Edit2 className="h-4 w-4" />
+                          Gerenciar hospital
+                        </Button>
+                      </div>
+                    </article>
+                  ))}
                 </div>
                 <Pagination
-                  currentPage={networkPage}
-                  totalPages={totalNetworkPages}
-                  itemsPerPage={networkPerPage}
-                  totalItems={filteredNetworkProducts.length}
-                  onPageChange={setNetworkPage}
+                  currentPage={networkHospitalPage}
+                  totalPages={totalNetworkHospitalPages}
+                  itemsPerPage={networkHospitalPerPage}
+                  totalItems={filteredNetworkHospitals.length}
+                  onPageChange={setNetworkHospitalPage}
                   onItemsPerPageChange={(nextPageSize) => {
-                    setNetworkPerPage(nextPageSize);
-                    setNetworkPage(1);
+                    setNetworkHospitalPerPage(nextPageSize);
+                    setNetworkHospitalPage(1);
                   }}
                 />
               </div>
@@ -2672,6 +2960,83 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetNetworkEntryForm}>Cancelar</Button>
           </div>
         </div>
+      </ModalShell>
+
+      <ModalShell
+        isOpen={networkHospitalModalOpen}
+        onClose={resetNetworkHospitalModal}
+        title={selectedNetworkHospital ? `Hospital compartilhado · ${selectedNetworkHospital.nome}` : 'Hospital compartilhado'}
+        description={selectedNetworkHospital ? 'Gerencie o cadastro canônico do hospital e revise todos os planos vinculados a ele.' : undefined}
+        size="xl"
+      >
+        {selectedNetworkHospital && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Nome do hospital *</label>
+                <Input value={networkHospitalForm.nome} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, nome: event.target.value }))} required />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
+                <Input value={networkHospitalForm.cidade} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, cidade: event.target.value }))} required />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao *</label>
+                <Input value={networkHospitalForm.regiao} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, regiao: event.target.value }))} required />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
+                <Input value={networkHospitalForm.bairro} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, bairro: event.target.value }))} placeholder="Opcional" />
+              </div>
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Aliases para normalizacao manual</label>
+                <Textarea value={networkHospitalForm.aliasesText} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, aliasesText: event.target.value }))} rows={4} placeholder={"Ex: ASM - HOSPITAL PASTEUR\nHOSPITAL PASTEUR"} />
+                <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Use um alias por linha para cobrir variacoes de importacao entre operadoras e arquivos.</p>
+              </div>
+            </div>
+
+            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
+              <input type="checkbox" checked={networkHospitalForm.ativo} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5 h-5 w-5 rounded border-slate-300 text-amber-600 focus:ring-2 focus:ring-amber-500" />
+              <div>
+                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Hospital ativo</p>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Hospitais inativos continuam preservados, mas podem ser ocultados em fluxos futuros.</p>
+              </div>
+            </label>
+
+            <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+              <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3">
+                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Planos vinculados</p>
+                <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Todos os produtos que usam este hospital compartilhado na rede.</p>
+              </div>
+              <div className="max-h-80 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
+                {selectedNetworkHospital.linkedProducts.map((link) => (
+                  <article key={link.link_id} className="px-4 py-3">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{link.produto_nome}</p>
+                        <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{link.operadora?.nome ?? 'Operadora'} / {link.linha?.nome ?? 'Linha'}</p>
+                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[color:var(--panel-text-soft,#5b4635)]">
+                          {link.produto_abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{link.produto_abrangencia}</span>}
+                          {link.produto_acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{link.produto_acomodacao}</span>}
+                          {link.atendimentos.map((service) => <span key={`${link.link_id}-${service}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{service}</span>)}
+                        </div>
+                        {link.observacoes && <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">{link.observacoes}</p>}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="button" loading={submitting} onClick={() => void handleNetworkHospitalSubmit()}>
+                <Save className="h-4 w-4" />
+                Salvar hospital
+              </Button>
+              <Button type="button" variant="secondary" onClick={resetNetworkHospitalModal} disabled={submitting}>Cancelar</Button>
+            </div>
+          </div>
+        )}
       </ModalShell>
 
       <ModalShell

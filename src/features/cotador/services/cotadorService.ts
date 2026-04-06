@@ -67,6 +67,34 @@ export type CotadorProductNetworkManagerInput = CotadorHospitalNetworkEntry & {
   aliases?: string[];
 };
 
+export type CotadorHospitalLinkedProductRecord = {
+  link_id: string;
+  hospital_id: string;
+  produto_id: string;
+  produto_nome: string;
+  produto_acomodacao: string | null;
+  produto_abrangencia: string | null;
+  operadora: Operadora | null;
+  linha: CotadorLinhaProduto | null;
+  atendimentos: string[];
+  observacoes: string | null;
+  ordem: number;
+};
+
+export type CotadorHospitalManagerRecord = CotadorHospital & {
+  aliases: string[];
+  linkedProducts: CotadorHospitalLinkedProductRecord[];
+};
+
+export type CotadorHospitalManagerInput = {
+  nome: string;
+  cidade: string;
+  regiao?: string | null;
+  bairro?: string | null;
+  aliases: string[];
+  ativo: boolean;
+};
+
 export type CotadorPriceRowInput = Partial<Record<CotadorAgeRange, number>>;
 
 export type CotadorProductManagerInput = {
@@ -256,6 +284,46 @@ const buildNormalizedProductNetworkEntry = (
   aliases: sanitizeHospitalAliases(aliases.map((alias) => alias.alias_nome).filter((name) => normalizeText(name) !== normalizeText(hospital.nome))),
 });
 
+const buildHospitalLinkedProductRecord = (
+  link: CotadorProdutoHospital,
+  product: CotadorProductManagerRecord | null,
+): CotadorHospitalLinkedProductRecord => ({
+  link_id: link.id,
+  hospital_id: link.hospital_id,
+  produto_id: link.produto_id,
+  produto_nome: product?.nome ?? 'Produto nao encontrado',
+  produto_acomodacao: cleanOptionalText(product?.acomodacao),
+  produto_abrangencia: cleanOptionalText(product?.abrangencia),
+  operadora: product?.operadora ?? null,
+  linha: product?.linha ?? null,
+  atendimentos: Array.isArray(link.atendimentos) ? link.atendimentos.map((item) => item.trim()).filter(Boolean) : [],
+  observacoes: cleanOptionalText(link.observacoes),
+  ordem: link.ordem,
+});
+
+const compareHospitalLinkedProducts = (left: CotadorHospitalLinkedProductRecord, right: CotadorHospitalLinkedProductRecord) => {
+  const operadoraComparison = normalizeText(left.operadora?.nome).localeCompare(normalizeText(right.operadora?.nome), 'pt-BR');
+  if (operadoraComparison !== 0) return operadoraComparison;
+
+  const lineComparison = normalizeText(left.linha?.nome).localeCompare(normalizeText(right.linha?.nome), 'pt-BR');
+  if (lineComparison !== 0) return lineComparison;
+
+  const productComparison = normalizeText(left.produto_nome).localeCompare(normalizeText(right.produto_nome), 'pt-BR');
+  if (productComparison !== 0) return productComparison;
+
+  return left.ordem - right.ordem;
+};
+
+const compareHospitals = (left: CotadorHospitalManagerRecord, right: CotadorHospitalManagerRecord) => {
+  const cityComparison = normalizeText(left.cidade).localeCompare(normalizeText(right.cidade), 'pt-BR');
+  if (cityComparison !== 0) return cityComparison;
+
+  const regionComparison = normalizeText(left.regiao).localeCompare(normalizeText(right.regiao), 'pt-BR');
+  if (regionComparison !== 0) return regionComparison;
+
+  return normalizeText(left.nome).localeCompare(normalizeText(right.nome), 'pt-BR');
+};
+
 async function loadNormalizedProductNetworkMap() {
   const { data: linksData, error: linksError } = await supabase
     .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
@@ -313,6 +381,101 @@ async function loadNormalizedProductNetworkMap() {
   return new Map(
     Array.from(networkByProduct.entries()).map(([productId, entries]) => [productId, sanitizeHospitalNetwork(entries)]),
   );
+}
+
+async function syncHospitalAliases(hospitalId: string, aliases: string[]) {
+  const normalizedAliases = sanitizeHospitalAliases(aliases);
+
+  const { data: hospitalData, error: hospitalError } = await supabase
+    .from(COTADOR_HOSPITAIS_TABLE)
+    .select('nome')
+    .eq('id', hospitalId)
+    .single();
+
+  if (hospitalError) {
+    throw hospitalError;
+  }
+
+  const canonicalName = typeof hospitalData?.nome === 'string' ? hospitalData.nome.trim() : '';
+  const aliasRows = Array.from(new Set([canonicalName, ...normalizedAliases].filter(Boolean))).map((aliasNome) => ({
+    hospital_id: hospitalId,
+    alias_nome: aliasNome,
+  }));
+
+  const { error: deleteError } = await supabase
+    .from(COTADOR_HOSPITAL_ALIASES_TABLE)
+    .delete()
+    .eq('hospital_id', hospitalId);
+
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  if (aliasRows.length === 0) {
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from(COTADOR_HOSPITAL_ALIASES_TABLE)
+    .insert(aliasRows);
+
+  if (insertError) {
+    throw insertError;
+  }
+}
+
+async function buildFallbackHospitalsFromProducts() {
+  const products = await cotadorService.getProdutos();
+  const grouped = new Map<string, CotadorHospitalManagerRecord>();
+
+  products.forEach((product) => {
+    sanitizeHospitalNetwork(product.rede_hospitalar).forEach((entry, index) => {
+      const key = [normalizeText(entry.hospital), normalizeText(entry.cidade), normalizeText(entry.regiao), normalizeText(entry.bairro)].join('|');
+      const current = grouped.get(key);
+      const linkedProduct = {
+        link_id: `${product.id}:${key}:${index}`,
+        hospital_id: key,
+        produto_id: product.id,
+        produto_nome: product.nome,
+        produto_acomodacao: cleanOptionalText(product.acomodacao),
+        produto_abrangencia: cleanOptionalText(product.abrangencia),
+        operadora: product.operadora ?? null,
+        linha: product.linha ?? null,
+        atendimentos: entry.atendimentos,
+        observacoes: entry.observacoes,
+        ordem: index,
+      } satisfies CotadorHospitalLinkedProductRecord;
+
+      if (current) {
+        current.linkedProducts.push(linkedProduct);
+        return;
+      }
+
+      grouped.set(key, {
+        id: key,
+        nome: entry.hospital,
+        nome_normalizado: normalizeText(entry.hospital),
+        cidade: entry.cidade,
+        cidade_normalizada: normalizeText(entry.cidade),
+        regiao: entry.regiao,
+        regiao_normalizada: normalizeText(entry.regiao),
+        bairro: entry.bairro,
+        bairro_normalizado: normalizeText(entry.bairro),
+        ativo: true,
+        created_at: '',
+        updated_at: '',
+        aliases: [],
+        linkedProducts: [linkedProduct],
+      });
+    });
+  });
+
+  return Array.from(grouped.values())
+    .map((hospital) => ({
+      ...hospital,
+      linkedProducts: [...hospital.linkedProducts].sort(compareHospitalLinkedProducts),
+    }))
+    .sort(compareHospitals);
 }
 
 const sanitizePriceRows = (value: CotadorPriceRowInput): CotadorPriceByAgeRange =>
@@ -1305,6 +1468,102 @@ export const cotadorService = {
       return { error: null };
     } catch (error) {
       console.error('Error replacing detailed cotador product network:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
+  async getHospitaisRedeDetalhados(): Promise<CotadorHospitalManagerRecord[]> {
+    try {
+      const [{ data: hospitalsData, error: hospitalsError }, { data: aliasesData, error: aliasesError }, { data: linksData, error: linksError }, products] = await Promise.all([
+        supabase
+          .from(COTADOR_HOSPITAIS_TABLE)
+          .select('*')
+          .order('cidade_normalizada', { ascending: true })
+          .order('regiao_normalizada', { ascending: true })
+          .order('nome_normalizado', { ascending: true }),
+        supabase
+          .from(COTADOR_HOSPITAL_ALIASES_TABLE)
+          .select('*'),
+        supabase
+          .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
+          .select('*')
+          .order('ordem', { ascending: true }),
+        cotadorService.getProdutos(),
+      ]);
+
+      if (hospitalsError) {
+        if (isMissingTableError(hospitalsError, COTADOR_HOSPITAIS_TABLE)) {
+          return buildFallbackHospitalsFromProducts();
+        }
+        throw hospitalsError;
+      }
+
+      if (aliasesError && !isMissingTableError(aliasesError, COTADOR_HOSPITAL_ALIASES_TABLE)) {
+        throw aliasesError;
+      }
+
+      if (linksError && !isMissingTableError(linksError, COTADOR_PRODUTO_HOSPITAIS_TABLE)) {
+        throw linksError;
+      }
+
+      const hospitals = (hospitalsData as CotadorHospital[] | null) ?? [];
+      const aliases = (aliasesData as CotadorHospitalAlias[] | null) ?? [];
+      const links = (linksData as CotadorProdutoHospital[] | null) ?? [];
+      const productById = new Map(products.map((product) => [product.id, product]));
+      const aliasesByHospitalId = new Map<string, CotadorHospitalAlias[]>();
+      const linksByHospitalId = new Map<string, CotadorProdutoHospital[]>();
+
+      aliases.forEach((alias) => {
+        const current = aliasesByHospitalId.get(alias.hospital_id) ?? [];
+        current.push(alias);
+        aliasesByHospitalId.set(alias.hospital_id, current);
+      });
+
+      links.forEach((link) => {
+        const current = linksByHospitalId.get(link.hospital_id) ?? [];
+        current.push(link);
+        linksByHospitalId.set(link.hospital_id, current);
+      });
+
+      return hospitals
+        .map<CotadorHospitalManagerRecord>((hospital) => ({
+          ...hospital,
+          aliases: sanitizeHospitalAliases((aliasesByHospitalId.get(hospital.id) ?? []).map((alias) => alias.alias_nome).filter((name) => normalizeText(name) !== normalizeText(hospital.nome))),
+          linkedProducts: (linksByHospitalId.get(hospital.id) ?? [])
+            .map((link) => buildHospitalLinkedProductRecord(link, productById.get(link.produto_id) ?? null))
+            .sort(compareHospitalLinkedProducts),
+        }))
+        .sort(compareHospitals);
+    } catch (error) {
+      console.error('Error loading cotador hospitals network:', error);
+      return buildFallbackHospitalsFromProducts();
+    }
+  },
+
+  async updateHospitalRede(id: string, input: CotadorHospitalManagerInput) {
+    try {
+      const payload = {
+        nome: input.nome.trim(),
+        cidade: input.cidade.trim(),
+        regiao: cleanOptionalText(input.regiao),
+        bairro: cleanOptionalText(input.bairro),
+        ativo: input.ativo,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from(COTADOR_HOSPITAIS_TABLE)
+        .update(payload)
+        .eq('id', id);
+
+      if (error) {
+        return { error };
+      }
+
+      await syncHospitalAliases(id, input.aliases);
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating cotador hospital network:', error);
       return { error: toPostgrestError(error) };
     }
   },

@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import { useMemo, useRef, useState, useEffect } from 'react';
+import { MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
 import Button from '../../../../components/ui/Button';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -7,6 +7,26 @@ import Textarea from '../../../../components/ui/Textarea';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
+
+type SpeechRecognitionType = {
+  new (): {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    onresult: ((event: unknown) => void) | null;
+    onerror: ((event: unknown) => void) | null;
+    onend: (() => void) | null;
+    start: () => void;
+    stop: () => void;
+  };
+};
+
+declare global {
+  interface Window {
+    SpeechRecognition: SpeechRecognitionType;
+    webkitSpeechRecognition: SpeechRecognitionType;
+  }
+}
 
 type WhatsAppFollowUpModalProps = {
   isOpen: boolean;
@@ -33,7 +53,50 @@ export default function WhatsAppFollowUpModal({
   onGenerate,
   onSend,
 }: WhatsAppFollowUpModalProps) {
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<unknown>(null);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || (!window.SpeechRecognition && !window.webkitSpeechRecognition)) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SpeechRecognitionClass = (window.SpeechRecognition || window.webkitSpeechRecognition) as any;
+    const recognitionInstance = new SpeechRecognitionClass();
+    recognitionInstance.continuous = true;
+    recognitionInstance.interimResults = true;
+    recognitionInstance.lang = 'pt-BR';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognitionInstance.onresult = (event: any) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
+      }
+      if (finalTranscript) {
+        onChangeCustomInstructions(customInstructions + ' ' + finalTranscript);
+      }
+    };
+    recognitionInstance.onerror = () => {
+      setIsRecording(false);
+    };
+    recognitionInstance.onend = () => {
+      setIsRecording(false);
+    };
+    recognitionRef.current = recognitionInstance;
+  }, []);
+
+  const handleToggleRecording = () => {
+    if (isRecording) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (recognitionRef.current as any)?.stop();
+      setIsRecording(false);
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (recognitionRef.current as any)?.start();
+      setIsRecording(true);
+    }
+  };
 
   return (
     <ModalShell
@@ -86,6 +149,19 @@ export default function WhatsAppFollowUpModal({
               }
               disabled={generating || submitting}
             />
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant={isRecording ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={handleToggleRecording}
+                disabled={generating || submitting}
+                className={isRecording ? 'animate-pulse' : ''}
+              >
+                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                <span>{isRecording ? 'Parar' : 'Gravar áudio'}</span>
+              </Button>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">

@@ -14,6 +14,7 @@ import {
   CalendarPlus,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Circle,
@@ -59,6 +60,7 @@ import {
 } from "../../components/ui/panelStyles";
 import { TodoCalendarSkeleton } from "../../components/ui/panelSkeletons";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
+import PanelPopoverShell from "../../components/ui/PanelPopoverShell";
 import { toast } from "../../lib/toast";
 import {
   getReminderWhatsappLink,
@@ -164,8 +166,14 @@ export default function AgendaScreen() {
   const [markingLostLeadId, setMarkingLostLeadId] = useState<string | null>(null);
   const [quickSchedulingAction, setQuickSchedulingAction] = useState<{
     reminderId: string;
-    daysAhead: 1 | 2;
+    daysAhead: 1 | 2 | 3 | 4 | 5;
   } | null>(null);
+  const [quickScheduleDropdown, setQuickScheduleDropdown] = useState<{
+    reminderId: string;
+    position: { top: number; left: number };
+  } | null>(null);
+  const quickScheduleDropdownRef = useRef<HTMLDivElement>(null);
+  const quickScheduleButtonRef = useRef<HTMLButtonElement>(null);
   const [reschedulingReminderId, setReschedulingReminderId] = useState<string | null>(null);
   const [reminderPendingDeletion, setReminderPendingDeletion] = useState<Reminder | null>(null);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
@@ -298,6 +306,24 @@ export default function AgendaScreen() {
     },
     [contractsMap],
   );
+
+  useEffect(() => {
+    if (!quickScheduleDropdown) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        quickScheduleDropdownRef.current &&
+        !quickScheduleDropdownRef.current.contains(event.target as Node) &&
+        quickScheduleButtonRef.current &&
+        !quickScheduleButtonRef.current.contains(event.target as Node)
+      ) {
+        setQuickScheduleDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [quickScheduleDropdown]);
 
   const fetchLeadInfo = useCallback(
     async (leadId: string) => {
@@ -574,7 +600,7 @@ export default function AgendaScreen() {
     }
   };
 
-  const handleQuickSchedule = async (reminder: Reminder, daysAhead: 1 | 2) => {
+  const handleQuickSchedule = async (reminder: Reminder, daysAhead: 1 | 2 | 3 | 4 | 5) => {
     if (reminder.lido) {
       return;
     }
@@ -1364,52 +1390,66 @@ export default function AgendaScreen() {
                 </Button>
                 {!reminder.lido && (
                   <>
-                    <Button
-                      onClick={handleCardAction(() => handleQuickSchedule(reminder, 1))}
-                      disabled={isQuickSchedulingCurrentReminder}
-                      variant="primary"
-                      size="icon"
-                      className="h-9 w-9"
-                      title="Agendar +1 dia util e marcar atual como lido"
-                      aria-label="Agendar +1 dia util e marcar atual como lido"
-                    >
-                      {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 1 ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <span className="relative inline-flex">
-                          <CalendarPlus className="h-4 w-4" />
-                          <span
-                            className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border px-0.5 text-[9px] font-bold leading-none"
-                            style={getPanelToneStyle("neutral")}
-                          >
-                            1
+                    <div className="relative">
+                      <Button
+                        ref={quickScheduleButtonRef}
+                        onClick={(e) => {
+                          if (quickScheduleDropdown?.reminderId === reminder.id) {
+                            setQuickScheduleDropdown(null);
+                          } else {
+                            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                            setQuickScheduleDropdown({
+                              reminderId: reminder.id,
+                              position: { top: rect.bottom + 4, left: rect.left },
+                            });
+                          }
+                        }}
+                        disabled={isQuickSchedulingCurrentReminder}
+                        variant="primary"
+                        size="icon"
+                        className="h-9 w-9"
+                        title="Agendar dias uteis e marcar atual como lido"
+                        aria-label="Agendar dias uteis e marcar atual como lido"
+                      >
+                        {isQuickSchedulingCurrentReminder ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <span className="relative inline-flex">
+                            <CalendarPlus className="h-4 w-4" />
+                            <ChevronDown className="absolute -bottom-1 -right-1 h-2.5 w-2.5" />
                           </span>
-                        </span>
+                        )}
+                      </Button>
+                      {quickScheduleDropdown?.reminderId === reminder.id && (
+                        <PanelPopoverShell
+                          ref={quickScheduleDropdownRef}
+                          isOpen={true}
+                          position={quickScheduleDropdown.position}
+                          onClose={() => setQuickScheduleDropdown(null)}
+                          ariaLabel="Selecionar dias para agendar"
+                          className="rounded-xl border-[rgba(212,192,167,0.18)] bg-[var(--panel-bg,#fdfbf7)] p-1 shadow-xl"
+                          style={{ width: 140 }}
+                        >
+                          <div className="flex flex-col gap-1">
+                            {[1, 2, 3, 4, 5].map((days) => (
+                              <button
+                                key={days}
+                                type="button"
+                                onClick={handleCardAction(() => {
+                                  setQuickScheduleDropdown(null);
+                                  handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
+                                })}
+                                disabled={isQuickSchedulingCurrentReminder}
+                                className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--panel-text,#594d3e)] transition hover:bg-[rgba(212,192,167,0.12)] disabled:opacity-60"
+                              >
+                                <CalendarPlus className="h-4 w-4" />
+                                <span>+{days} dia{days > 1 ? "s" : ""}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </PanelPopoverShell>
                       )}
-                    </Button>
-                    <Button
-                      onClick={handleCardAction(() => handleQuickSchedule(reminder, 2))}
-                      disabled={isQuickSchedulingCurrentReminder}
-                      variant="primary"
-                      size="icon"
-                      className="h-9 w-9"
-                      title="Agendar +2 dias uteis e marcar atual como lido"
-                      aria-label="Agendar +2 dias uteis e marcar atual como lido"
-                    >
-                      {isQuickSchedulingCurrentReminder && quickSchedulingAction?.daysAhead === 2 ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <span className="relative inline-flex">
-                          <CalendarPlus className="h-4 w-4" />
-                          <span
-                            className="absolute -right-1 -top-1 flex h-3.5 min-w-[14px] items-center justify-center rounded-full border px-0.5 text-[9px] font-bold leading-none"
-                            style={getPanelToneStyle("neutral")}
-                          >
-                            2
-                          </span>
-                        </span>
-                      )}
-                    </Button>
+                    </div>
                   </>
                 )}
                 <Button

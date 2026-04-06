@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Sparkles, Trash2, Users } from 'lucide-react';
+import { MapPin, Plus, Sparkles, Trash2, Users } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import { formatCotadorAgeSummary, formatCotadorCurrency, formatCotadorDateTime } from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
@@ -194,6 +194,14 @@ export default function CotadorWorkspace({
                     <Button variant="secondary" size="sm" onClick={() => onOpenPlanDetails(item.catalogItemKey)}>
                       Ver mais detalhes
                     </Button>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span>
+                        {item.redeHospitalar.length > 0
+                          ? `${item.redeHospitalar.length} prestador(es) na rede deste plano`
+                          : 'Rede hospitalar ainda nao cadastrada para este plano'}
+                      </span>
+                    </div>
                   </div>
 
                   {(item.administradora?.name || item.entidadesClasse.length > 0 || item.observacao) && (

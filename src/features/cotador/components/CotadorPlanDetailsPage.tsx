@@ -35,6 +35,23 @@ const formatCopart = (value: CotadorQuoteItem['coparticipacao']) => {
 
 const cleanDetailText = (value?: string | null) => value?.trim() ?? '';
 
+const networkLegend = [
+  'H: Hospital Eletivo',
+  'H CARD: Hospital Cardiologico',
+  'HD: Hospital Dia',
+  'H ORT: Hospital Cirurgia Ortopedica',
+  'M: Maternidade',
+  'HP: Hospital Pediatrico',
+  'PA: Pronto Atendimento',
+  'PS: Pronto Socorro',
+  'PS CARD: Pronto Socorro Cardiologico',
+  'PS OBST: Pronto Socorro Obstetrico',
+  'PSI: Pronto Socorro Infantil',
+  'PSO: Pronto Socorro Ortopedico',
+  '*: prestador habilitado apenas na acomodacao QP',
+  '**: prestador habilitado apenas na acomodacao QC',
+];
+
 export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorPlanDetailsPageProps) {
   const sections = useMemo<DetailSection[]>(() => {
     const entries: Array<DetailSection | null> = [
@@ -58,10 +75,16 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
   const [openSectionIds, setOpenSectionIds] = useState<string[]>(sections.length > 0 ? [sections[0].id] : []);
   const [networkSearch, setNetworkSearch] = useState('');
   const [networkCity, setNetworkCity] = useState('');
+  const networkEntriesCount = item.redeHospitalar.length;
 
   useEffect(() => {
     setOpenSectionIds(sections.length > 0 ? [sections[0].id] : []);
   }, [sections]);
+
+  useEffect(() => {
+    setNetworkSearch('');
+    setNetworkCity('');
+  }, [item.id]);
 
   const toggleSection = (sectionId: string) => {
     setOpenSectionIds((current) => (
@@ -119,7 +142,7 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
           )}
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Cotacao</p>
             <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.name}</p>
@@ -131,6 +154,12 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
           <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Tabela</p>
             <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.tabelaNome ?? '-'}</p>
+          </div>
+          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Rede hospitalar</p>
+            <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+              {networkEntriesCount > 0 ? `${networkEntriesCount} prestador(es)` : 'Nao cadastrada'}
+            </p>
           </div>
         </div>
       </section>
@@ -177,66 +206,84 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
         )}
       </section>
 
-      {item.redeHospitalar.length > 0 && (
-        <section className="rounded-[32px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-6 shadow-sm md:p-8">
+      <section id="rede-do-plano" className="rounded-[32px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-6 shadow-sm md:p-8">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">Rede hospitalar</p>
-            <h2 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Hospitais e atendimentos</h2>
+            <h2 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Rede do plano</h2>
+            <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+              Consulte os prestadores disponiveis e os tipos de atendimento cobertos por este plano.
+            </p>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[260px_minmax(0,1fr)]">
-            <FilterSingleSelect
-              icon={MapPin}
-              options={cityOptions}
-              placeholder="Todas as cidades"
-              value={networkCity}
-              onChange={setNetworkCity}
-            />
-            <Input
-              value={networkSearch}
-              onChange={(event) => setNetworkSearch(event.target.value)}
-              placeholder="Buscar hospital, bairro, regiao ou atendimento"
-              leftIcon={Search}
-            />
-          </div>
-
-          {filteredNetwork.length === 0 ? (
+          {networkEntriesCount === 0 ? (
             <div className="mt-6 rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-              Nenhum hospital encontrado para os filtros aplicados.
+              Este plano ainda nao possui rede hospitalar cadastrada para exibicao.
             </div>
           ) : (
-            <div className="mt-6 overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
-              <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
-                {filteredNetwork.map((entry, index) => (
-                  <article key={`${entry.cidade}-${entry.hospital}-${index}`} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-start md:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start gap-3">
-                        <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
-                          <Building2 className="h-4 w-4" />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{entry.hospital}</p>
-                          <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                            {[entry.bairro, entry.regiao, entry.cidade].filter(Boolean).join(' | ')}
-                          </p>
-                          {entry.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{entry.observacoes}</p>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2 md:max-w-[320px] md:justify-end">
-                      {entry.atendimentos.map((service) => (
-                        <span key={`${entry.hospital}-${service}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-xs font-medium text-[color:var(--panel-text,#1a120d)]">
-                          {service}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))}
+            <>
+              <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-[260px_minmax(0,1fr)]">
+                <FilterSingleSelect
+                  icon={MapPin}
+                  options={cityOptions}
+                  placeholder="Todas as cidades"
+                  value={networkCity}
+                  onChange={setNetworkCity}
+                />
+                <Input
+                  value={networkSearch}
+                  onChange={(event) => setNetworkSearch(event.target.value)}
+                  placeholder="Buscar hospital, bairro, regiao ou atendimento"
+                  leftIcon={Search}
+                />
               </div>
-            </div>
+
+              {filteredNetwork.length === 0 ? (
+                <div className="mt-6 rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                  Nenhum hospital encontrado para os filtros aplicados.
+                </div>
+              ) : (
+                <div className="mt-6 overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
+                  <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+                    {filteredNetwork.map((entry, index) => (
+                      <article key={`${entry.cidade}-${entry.hospital}-${index}`} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start gap-3">
+                            <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
+                              <Building2 className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{entry.hospital}</p>
+                              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                                {[entry.bairro, entry.regiao, entry.cidade].filter(Boolean).join(' | ')}
+                              </p>
+                              {entry.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{entry.observacoes}</p>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 md:max-w-[320px] md:justify-end">
+                          {entry.atendimentos.map((service) => (
+                            <span key={`${entry.hospital}-${service}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-xs font-medium text-[color:var(--panel-text,#1a120d)]">
+                              {service}
+                            </span>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4 shadow-sm">
+                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Legenda das siglas</p>
+                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)] md:grid-cols-2">
+                  {networkLegend.map((legendItem) => (
+                    <p key={legendItem}>{legendItem}</p>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
-        </section>
-      )}
+      </section>
     </div>
   );
 }

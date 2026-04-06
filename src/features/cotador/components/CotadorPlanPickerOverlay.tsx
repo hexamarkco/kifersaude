@@ -190,7 +190,7 @@ export default function CotadorPlanPickerOverlay({
   );
 
   const discoveryItems = useMemo(
-    () => modalityFilteredItems.filter((item) => item.source === 'cotador_tabela'),
+    () => modalityFilteredItems.filter((item) => item.source === 'cotador_tabela' || item.source === 'cotador_produto'),
     [modalityFilteredItems],
   );
 

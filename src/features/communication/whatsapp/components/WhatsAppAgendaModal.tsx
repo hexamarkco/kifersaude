@@ -1167,7 +1167,9 @@ export default function WhatsAppAgendaModal({
                 <div className="relative">
                   <Button
                     ref={quickScheduleButtonRef}
+                    type="button"
                     onClick={(e) => {
+                      e.stopPropagation();
                       if (quickScheduleDropdown?.reminderId === reminder.id) {
                         setQuickScheduleDropdown(null);
                       } else {

@@ -1393,7 +1393,9 @@ export default function AgendaScreen() {
                     <div className="relative">
                       <Button
                         ref={quickScheduleButtonRef}
+                        type="button"
                         onClick={(e) => {
+                          e.stopPropagation();
                           if (quickScheduleDropdown?.reminderId === reminder.id) {
                             setQuickScheduleDropdown(null);
                           } else {

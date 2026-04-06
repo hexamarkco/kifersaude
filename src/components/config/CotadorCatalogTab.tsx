@@ -42,6 +42,7 @@ import ModalShell from '../ui/ModalShell';
 import Tabs from '../ui/Tabs';
 import Textarea from '../ui/Textarea';
 import FilterSingleSelect from '../FilterSingleSelect';
+import Pagination from '../Pagination';
 import OperadorasTab from './OperadorasTab';
 
 type CotadorCatalogTabProps = {
@@ -474,6 +475,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [tableForm, setTableForm] = useState<TableFormState>(DEFAULT_TABLE_FORM);
   const [tableNameTouched, setTableNameTouched] = useState(false);
   const [tableCodeTouched, setTableCodeTouched] = useState(false);
+  const [tablesPage, setTablesPage] = useState(1);
+  const [tablesPerPage, setTablesPerPage] = useState(25);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
@@ -656,6 +659,19 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       records: [...entry.records].sort((left, right) => normalizeSortText(left.acomodacao).localeCompare(normalizeSortText(right.acomodacao), 'pt-BR')),
     }));
   }, [tabelas]);
+
+  const totalTablePages = Math.max(1, Math.ceil(groupedTableEntries.length / tablesPerPage));
+
+  useEffect(() => {
+    if (tablesPage > totalTablePages) {
+      setTablesPage(totalTablePages);
+    }
+  }, [tablesPage, totalTablePages]);
+
+  const paginatedTableEntries = useMemo(() => {
+    const startIndex = (tablesPage - 1) * tablesPerPage;
+    return groupedTableEntries.slice(startIndex, startIndex + tablesPerPage);
+  }, [groupedTableEntries, tablesPage, tablesPerPage]);
 
   const activeTablePricingAcomodacoes = tableModalMode === 'create'
     ? selectedTableProductAcomodacoes
@@ -1482,40 +1498,51 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       ) : (
         <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
           <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
-          {groupedTableEntries.map((entry) => (
-            <article key={entry.key} className="px-5 py-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          {paginatedTableEntries.map((entry) => (
+            <article key={entry.key} className="px-4 py-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{entry.baseName}</h4>
-                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                      <h4 className="text-base font-semibold leading-tight text-[color:var(--panel-text,#1a120d)]">{entry.baseName}</h4>
+                      <p className="mt-0.5 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
                         {entry.product?.operadora?.nome ?? 'Operadora'} / {entry.product?.linha?.nome ?? 'Linha'} / {entry.product?.nome ?? 'Produto'}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(entry.records, 'duplicate')} title="Criar cópia">
+                      <Button variant="icon" size="icon" className="h-9 w-9 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(entry.records, 'duplicate')} title="Criar cópia">
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(entry.records, 'edit')} title="Editar tabela">
+                      <Button variant="icon" size="icon" className="h-9 w-9 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(entry.records, 'edit')} title="Editar tabela">
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDeleteTableGroup(entry)} title="Excluir tabela"><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="icon" size="icon" className="h-9 w-9 text-red-600 hover:bg-red-50" onClick={() => void handleDeleteTableGroup(entry)} title="Excluir tabela"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{entry.modalidade}</span>
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatPerfilEmpresarial(entry.perfilEmpresarial)}</span>
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatCoparticipacao(entry.coparticipacao)}</span>
-                    {entry.records.map((record) => record.acomodacao).filter(Boolean).map((acomodacao) => <span key={`${entry.key}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{acomodacao}</span>)}
-                    {(entry.vidasMin || entry.vidasMax) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">Vidas: {entry.vidasMin ?? 1} a {entry.vidasMax ?? '...'}</span>}
-                    {!entry.records.every((record) => record.ativo) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">Inativo</span>}
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-[color:var(--panel-text-soft,#5b4635)]">
+                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{entry.modalidade}</span>
+                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{formatPerfilEmpresarial(entry.perfilEmpresarial)}</span>
+                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{formatCoparticipacao(entry.coparticipacao)}</span>
+                    {entry.records.map((record) => record.acomodacao).filter(Boolean).map((acomodacao) => <span key={`${entry.key}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{acomodacao}</span>)}
+                    {(entry.vidasMin || entry.vidasMax) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">Vidas: {entry.vidasMin ?? 1} a {entry.vidasMax ?? '...'}</span>}
+                    {!entry.records.every((record) => record.ativo) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5 font-medium text-[color:var(--panel-text-muted,#876f5c)]">Inativo</span>}
                   </div>
                 </div>
               </div>
             </article>
           ))}
           </div>
+          <Pagination
+            currentPage={tablesPage}
+            totalPages={totalTablePages}
+            itemsPerPage={tablesPerPage}
+            totalItems={groupedTableEntries.length}
+            onPageChange={setTablesPage}
+            onItemsPerPageChange={(nextPageSize) => {
+              setTablesPerPage(nextPageSize);
+              setTablesPage(1);
+            }}
+          />
         </div>
       )}
 

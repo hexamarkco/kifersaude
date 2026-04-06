@@ -341,6 +341,35 @@ const countPersistedTablesForProduct = async (productId: string) => {
   return 0;
 };
 
+const findExistingImportedTable = async (productId: string, payload: CotadorTableManagerInput) => {
+  let query = supabase
+    .from('cotador_tabelas')
+    .select('*')
+    .eq('produto_id', productId)
+    .eq('nome', payload.nome)
+    .eq('modalidade', payload.modalidade)
+    .eq('perfil_empresarial', payload.perfil_empresarial)
+    .eq('coparticipacao', payload.coparticipacao)
+    .limit(1);
+
+  query = payload.acomodacao ? query.eq('acomodacao', payload.acomodacao) : query.is('acomodacao', null);
+  query = payload.vidas_min === null || payload.vidas_min === undefined ? query.is('vidas_min', null) : query.eq('vidas_min', payload.vidas_min);
+  query = payload.vidas_max === null || payload.vidas_max === undefined ? query.is('vidas_max', null) : query.eq('vidas_max', payload.vidas_max);
+
+  const { data, error } = await query.maybeSingle();
+  if (error) {
+    logImportError('Falha ao buscar tabela existente para import', {
+      productId,
+      nome: payload.nome,
+      acomodacao: payload.acomodacao ?? null,
+      erro: error,
+    });
+    throw error;
+  }
+
+  return (data as CotadorTabela | null) ?? null;
+};
+
 const validateImportedPayload = (payload: ImportedJsonPayload) => {
   payload.items.forEach((item) => {
     const productLabel = buildImportTargetLabel(item);
@@ -685,26 +714,6 @@ const resolveProduct = async (
   };
 };
 
-const buildTableLookupKey = (input: {
-  productId: string;
-  name: string;
-  modalidade: string;
-  perfil: string;
-  copart: string;
-  vidasMin?: number | null;
-  vidasMax?: number | null;
-  acomodacao?: string | null;
-}) => [
-  input.productId,
-  normalizeText(input.name),
-  normalizeText(input.modalidade),
-  normalizeText(input.perfil),
-  normalizeText(input.copart),
-  input.vidasMin ?? '',
-  input.vidasMax ?? '',
-  normalizeText(input.acomodacao),
-].join('|');
-
 const upsertImportedTable = async (
   product: CotadorProductManagerRecord,
   tableDefinition: ImportedTableDefinition,
@@ -739,25 +748,7 @@ const upsertImportedTable = async (
         pricesByAgeRange,
       };
 
-      const existing = context.tables.find((table) => buildTableLookupKey({
-        productId: product.id,
-        name: table.nome,
-        modalidade: table.modalidade,
-        perfil: table.perfil_empresarial,
-        copart: table.coparticipacao,
-        vidasMin: table.vidas_min ?? null,
-        vidasMax: table.vidas_max ?? null,
-        acomodacao: table.acomodacao ?? null,
-      }) === buildTableLookupKey({
-        productId: product.id,
-        name: payload.nome,
-        modalidade: payload.modalidade,
-        perfil: payload.perfil_empresarial,
-        copart: payload.coparticipacao,
-        vidasMin: payload.vidas_min,
-        vidasMax: payload.vidas_max,
-        acomodacao: payload.acomodacao,
-      }));
+      const existing = await findExistingImportedTable(product.id, payload);
 
       if (existing) {
         logImportInfo('Atualizando tabela existente', {
@@ -766,6 +757,7 @@ const upsertImportedTable = async (
           tabela: tableDefinition.nome,
           acomodacao,
           tableId: existing.id,
+          existingProductId: existing.produto_id,
         });
 
         const updateResult = await cotadorService.updateTabela(existing.id, payload);
@@ -781,7 +773,10 @@ const upsertImportedTable = async (
           throw new Error(`Erro ao atualizar tabela ${tableDefinition.nome}: ${updateResult.error.message}`);
         }
 
-        context.tables = context.tables.map((table) => table.id === existing.id ? { ...existing, ...payload, produto: product, pricesByAgeRange } : table);
+        const nextRecord = createTableRecordFromRaw({ ...existing, ...payload }, product, pricesByAgeRange);
+        context.tables = context.tables.some((table) => table.id === existing.id)
+          ? context.tables.map((table) => table.id === existing.id ? nextRecord : table)
+          : [...context.tables, nextRecord];
       } else {
         logImportInfo('Criando tabela nova', {
           produto: product.nome,

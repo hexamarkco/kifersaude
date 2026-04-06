@@ -850,6 +850,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       if (result.importedProducts > 0) summaryParts.push(`${result.importedProducts} produto(s)`);
       if (result.importedTables > 0) summaryParts.push(`${result.importedTables} tabela(s)`);
       if (result.importedNetworkEntries > 0) summaryParts.push(`${result.importedNetworkEntries} item(ns) de rede`);
+      if (result.warnings.length > 0) summaryParts.push(`${result.warnings.length} aviso(s)`);
+
+      if (summaryParts.length === 0) {
+        showMessage('error', 'Nenhum item foi importado. Revise o arquivo e tente novamente.');
+        return;
+      }
 
       showMessage('success', `Importação concluída${summaryParts.length > 0 ? `: ${summaryParts.join(', ')}` : '.'}`);
       resetImportModal();

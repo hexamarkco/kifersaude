@@ -89,6 +89,24 @@ type ImportedJsonPayload = {
   items: Array<ProductReference & { tabelas?: ImportedTableDefinition[] }>;
 };
 
+type ResolveProductResult = {
+  product: CotadorProductManagerRecord;
+  createdOperadoraId: string | null;
+  createdLineId: string | null;
+  createdProductId: string | null;
+};
+
+type UpsertImportedTableResult = {
+  createdTableIds: string[];
+};
+
+type ImportMutations = {
+  createdOperadoraIds: string[];
+  createdLineIds: string[];
+  createdProductIds: string[];
+  createdTableIds: string[];
+};
+
 type CsvRow = Record<string, string>;
 
 const TEMPLATE_JSON_COMPLETO = `{
@@ -226,6 +244,98 @@ const sanitizeImportText = (text: string) => {
   return trimmed;
 };
 
+const IMPORTED_TABLE_MODALITIES = new Set<ImportedTableDefinition['modalidade']>(['PF', 'ADESAO', 'PME']);
+const IMPORTED_BUSINESS_PROFILES = new Set<ImportedTableDefinition['perfilEmpresarial']>(['todos', 'mei', 'nao_mei']);
+const IMPORTED_COPART_OPTIONS = new Set<ImportedTableDefinition['coparticipacao']>(['sem', 'parcial', 'total']);
+
+const normalizeImportedAcomodacoes = (value?: string[] | null) =>
+  Array.from(new Set((value ?? []).map((item) => item.trim()).filter(Boolean)));
+
+const parseImportedPriceRow = (values?: Record<string, unknown> | null) =>
+  COTADOR_AGE_RANGES.reduce((accumulator, range) => {
+    const parsedValue = parseNumber(values?.[range] as string | number | null | undefined);
+    if (parsedValue !== null) {
+      accumulator[range] = parsedValue;
+    }
+    return accumulator;
+  }, {} as CotadorPriceRowInput);
+
+const parseImportedPricesByAcomodacao = (value: unknown) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {} as Record<string, CotadorPriceRowInput>;
+  }
+
+  return Object.entries(value as Record<string, Record<string, unknown>>).reduce((accumulator, [acomodacao, prices]) => {
+    const normalizedAcomodacao = acomodacao.trim();
+    if (!normalizedAcomodacao) {
+      return accumulator;
+    }
+
+    accumulator[normalizedAcomodacao] = parseImportedPriceRow(prices);
+    return accumulator;
+  }, {} as Record<string, CotadorPriceRowInput>);
+};
+
+const getImportedTableActiveAcomodacoes = (table: ImportedTableDefinition) =>
+  Object.entries(table.precosPorAcomodacao).filter(([acomodacao, prices]) => acomodacao.trim().length > 0 && Object.keys(prices).length > 0);
+
+const countImportedTableRows = (table: ImportedTableDefinition) => getImportedTableActiveAcomodacoes(table).length;
+
+const buildImportTargetLabel = (item: Pick<ProductReference, 'operadora' | 'linha' | 'produto'>, table?: Pick<ImportedTableDefinition, 'nome'> | null) =>
+  [item.operadora, item.linha, item.produto, table?.nome].filter(Boolean).join(' / ');
+
+const validateImportedPayload = (payload: ImportedJsonPayload) => {
+  payload.items.forEach((item) => {
+    const productLabel = buildImportTargetLabel(item);
+    const normalizedAcomodacoes = normalizeImportedAcomodacoes(item.acomodacoes);
+
+    (item.tabelas ?? []).forEach((table) => {
+      const tableLabel = buildImportTargetLabel(item, table);
+      const { vidasMin, vidasMax } = table;
+
+      if (!table.nome.trim()) {
+        throw new Error(`Tabela sem nome em ${productLabel}.`);
+      }
+
+      if (!IMPORTED_TABLE_MODALITIES.has(table.modalidade)) {
+        throw new Error(`Modalidade invalida em ${tableLabel}: ${table.modalidade}.`);
+      }
+
+      if (!IMPORTED_BUSINESS_PROFILES.has(table.perfilEmpresarial)) {
+        throw new Error(`Perfil empresarial invalido em ${tableLabel}: ${table.perfilEmpresarial}.`);
+      }
+
+      if (!IMPORTED_COPART_OPTIONS.has(table.coparticipacao)) {
+        throw new Error(`Coparticipacao invalida em ${tableLabel}: ${table.coparticipacao}.`);
+      }
+
+      if (vidasMin !== null && vidasMin !== undefined && vidasMin < 1) {
+        throw new Error(`Faixa de vidas invalida em ${tableLabel}: vidasMin deve ser maior que zero.`);
+      }
+
+      if (vidasMax !== null && vidasMax !== undefined && vidasMax < 1) {
+        throw new Error(`Faixa de vidas invalida em ${tableLabel}: vidasMax deve ser maior que zero.`);
+      }
+
+      if (vidasMin !== null && vidasMin !== undefined && vidasMax !== null && vidasMax !== undefined && vidasMin > vidasMax) {
+        throw new Error(`Faixa de vidas invalida em ${tableLabel}: vidasMin nao pode ser maior que vidasMax.`);
+      }
+
+      const activeAcomodacoes = getImportedTableActiveAcomodacoes(table);
+      if (activeAcomodacoes.length === 0) {
+        throw new Error(`Tabela sem precos validos por acomodacao em ${tableLabel}.`);
+      }
+
+      if (normalizedAcomodacoes.length > 0) {
+        const invalidAcomodacao = activeAcomodacoes.find(([acomodacao]) => !normalizedAcomodacoes.includes(acomodacao));
+        if (invalidAcomodacao) {
+          throw new Error(`Acomodacao ${invalidAcomodacao[0]} nao esta cadastrada no produto ${productLabel}.`);
+        }
+      }
+    });
+  });
+};
+
 const parseCsv = (text: string): CsvRow[] => {
   const rows: string[][] = [];
   let currentCell = '';
@@ -314,7 +424,7 @@ const ensureOperadora = async (
 ) => {
   const existing = findOperadora(context.operadoras, operadoraName);
   if (existing) {
-    return existing;
+    return { operadora: existing, createdOperadoraId: null };
   }
 
   const createResult = await configService.createOperadora({
@@ -328,7 +438,7 @@ const ensureOperadora = async (
 
   const created = buildOperadoraRecord(createResult.data);
   context.operadoras = [...context.operadoras, created];
-  return created;
+  return { operadora: created, createdOperadoraId: created.id };
 };
 
 const ensureLinha = async (
@@ -338,7 +448,7 @@ const ensureLinha = async (
 ) => {
   const existing = findLinha(context.linhas, operadora.id, lineName);
   if (existing) {
-    return existing;
+    return { line: existing, createdLineId: null };
   }
 
   const createResult = await cotadorService.createLinha({
@@ -358,7 +468,7 @@ const ensureLinha = async (
   }, operadora);
 
   context.linhas = [...context.linhas, created];
-  return created;
+  return { line: created, createdLineId: created.id };
 };
 
 const findProduto = (products: CotadorProductManagerRecord[], lineId: string, productName: string) => {
@@ -431,9 +541,9 @@ const resolveProduct = async (
   reference: ProductReference,
   context: ImportLookupContext,
   result: CotadorImportResult,
-): Promise<CotadorProductManagerRecord> => {
-  const operadora = await ensureOperadora(context, reference.operadora);
-  const line = await ensureLinha(context, operadora, reference.linha);
+): Promise<ResolveProductResult> => {
+  const { operadora, createdOperadoraId } = await ensureOperadora(context, reference.operadora);
+  const { line, createdLineId } = await ensureLinha(context, operadora, reference.linha);
 
   const existingProduct = findProduto(context.products, line.id, reference.produto);
   const payload = getProductPayloadFromReference(reference, existingProduct, context, operadora, line);
@@ -463,10 +573,15 @@ const resolveProduct = async (
       ativo: payload.ativo,
     } as CotadorProductManagerRecord;
 
-    context.products = context.products.map((item) => (item.id === existingProduct.id ? nextProduct : item));
-    result.importedProducts += 1;
-    return nextProduct;
-  }
+      context.products = context.products.map((item) => (item.id === existingProduct.id ? nextProduct : item));
+      result.importedProducts += 1;
+      return {
+        product: nextProduct,
+        createdOperadoraId,
+        createdLineId,
+        createdProductId: null,
+      };
+    }
 
   const createResult = await cotadorService.createProduto(payload);
   if (createResult.error || !createResult.data) {
@@ -476,7 +591,12 @@ const resolveProduct = async (
   const created = createProductRecordFromRaw(createResult.data, context, payload.entidadeIds);
   context.products = [...context.products, created];
   result.importedProducts += 1;
-  return created;
+  return {
+    product: created,
+    createdOperadoraId,
+    createdLineId,
+    createdProductId: created.id,
+  };
 };
 
 const buildTableLookupKey = (input: {
@@ -504,8 +624,9 @@ const upsertImportedTable = async (
   tableDefinition: ImportedTableDefinition,
   context: ImportLookupContext,
   result: CotadorImportResult,
-) => {
-  const activeAcomodacoes = Object.entries(tableDefinition.precosPorAcomodacao);
+): Promise<UpsertImportedTableResult> => {
+  const activeAcomodacoes = getImportedTableActiveAcomodacoes(tableDefinition);
+  const createdTableIds: string[] = [];
 
   for (const [acomodacao, pricesByAgeRange] of activeAcomodacoes) {
     const payload: CotadorTableManagerInput = {
@@ -556,11 +677,44 @@ const upsertImportedTable = async (
         throw new Error(`Erro ao criar tabela ${tableDefinition.nome}: ${createResult.error?.message ?? 'desconhecido'}`);
       }
 
+      createdTableIds.push(createResult.data.id);
       context.tables = [...context.tables, createTableRecordFromRaw(createResult.data, product, pricesByAgeRange)];
     }
 
     result.importedTables += 1;
   }
+
+  return { createdTableIds };
+};
+
+const rollbackImportMutations = async (mutations: ImportMutations) => {
+  const warnings: string[] = [];
+  const uniqueTableIds = Array.from(new Set(mutations.createdTableIds)).reverse();
+  const uniqueProductIds = Array.from(new Set(mutations.createdProductIds)).reverse();
+  const uniqueLineIds = Array.from(new Set(mutations.createdLineIds)).reverse();
+  const uniqueOperadoraIds = Array.from(new Set(mutations.createdOperadoraIds)).reverse();
+
+  for (const tableId of uniqueTableIds) {
+    const { error } = await cotadorService.deleteTabela(tableId);
+    if (error) warnings.push(`nao foi possivel reverter a tabela ${tableId}`);
+  }
+
+  for (const productId of uniqueProductIds) {
+    const { error } = await cotadorService.deleteProduto(productId);
+    if (error) warnings.push(`nao foi possivel reverter o produto ${productId}`);
+  }
+
+  for (const lineId of uniqueLineIds) {
+    const { error } = await cotadorService.deleteLinha(lineId);
+    if (error) warnings.push(`nao foi possivel reverter a linha ${lineId}`);
+  }
+
+  for (const operadoraId of uniqueOperadoraIds) {
+    const { error } = await configService.deleteOperadora(operadoraId);
+    if (error) warnings.push(`nao foi possivel reverter a operadora ${operadoraId}`);
+  }
+
+  return warnings;
 };
 
 const parseJsonPayload = (text: string): ImportedJsonPayload => {
@@ -579,7 +733,7 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
       administradora: cleanText(typeof item.administradora === 'string' ? item.administradora : null),
       modalidadeBase: cleanText(typeof item.modalidadeBase === 'string' ? item.modalidadeBase : typeof item.modalidade_base === 'string' ? item.modalidade_base : null),
       abrangencia: normalizeImportedAabrangencia(typeof item.abrangencia === 'string' ? item.abrangencia : null),
-      acomodacoes: Array.isArray(item.acomodacoes) ? item.acomodacoes.map((value) => String(value).trim()).filter(Boolean) : [],
+      acomodacoes: normalizeImportedAcomodacoes(Array.isArray(item.acomodacoes) ? item.acomodacoes.map((value) => String(value)) : []),
       entidadesElegiveis: Array.isArray(item.entidadesElegiveis) ? item.entidadesElegiveis.map((value) => String(value).trim()).filter(Boolean) : [],
       detalhes: {
         carencias: cleanText(typeof details.carencias === 'string' ? details.carencias : null),
@@ -590,17 +744,7 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
       redeHospitalar: Array.isArray(item.redeHospitalar) ? item.redeHospitalar as CotadorHospitalNetworkEntry[] : [],
       tabelas: tabelas.map((table) => {
         const candidate = table as Record<string, unknown>;
-        const prices = (candidate.precosPorAcomodacao ?? {}) as Record<string, Record<string, unknown>>;
-        const parsedPrices = Object.entries(prices).reduce((accumulator, [acomodacao, values]) => {
-          accumulator[acomodacao] = COTADOR_AGE_RANGES.reduce((priceAccumulator, range) => {
-            const parsedValue = parseNumber(values?.[range] as string | number | null | undefined);
-            if (parsedValue !== null) {
-              priceAccumulator[range] = parsedValue;
-            }
-            return priceAccumulator;
-          }, {} as CotadorPriceRowInput);
-          return accumulator;
-        }, {} as Record<string, CotadorPriceRowInput>);
+        const parsedPrices = parseImportedPricesByAcomodacao(candidate.precosPorAcomodacao);
 
         return {
           nome: String(candidate.nome ?? ''),
@@ -625,7 +769,7 @@ const buildPreviewFromPayload = (payload: ImportedJsonPayload): CotadorImportPre
   operadorasCount: new Set(payload.items.map((item) => normalizeText(item.operadora)).filter(Boolean)).size,
   linhasCount: new Set(payload.items.map((item) => `${normalizeText(item.operadora)}::${normalizeText(item.linha)}`).filter(Boolean)).size,
   produtosCount: payload.items.length,
-  tabelasCount: payload.items.reduce((total, item) => total + (item.tabelas?.length ?? 0), 0),
+  tabelasCount: payload.items.reduce((total, item) => total + (item.tabelas?.reduce((tableTotal, table) => tableTotal + countImportedTableRows(table), 0) ?? 0), 0),
   networkEntriesCount: payload.items.reduce((total, item) => total + (item.redeHospitalar?.length ?? 0), 0),
   items: payload.items.map((item) => ({
     operadora: item.operadora,
@@ -635,7 +779,7 @@ const buildPreviewFromPayload = (payload: ImportedJsonPayload): CotadorImportPre
     abrangencia: item.abrangencia ?? null,
     acomodacoes: item.acomodacoes ?? [],
     entidadesElegiveis: item.entidadesElegiveis ?? [],
-    tabelasCount: item.tabelas?.length ?? 0,
+    tabelasCount: item.tabelas?.reduce((total, table) => total + countImportedTableRows(table), 0) ?? 0,
     networkEntriesCount: item.redeHospitalar?.length ?? 0,
   })),
 });
@@ -717,34 +861,81 @@ const loadImportContext = async (): Promise<ImportLookupContext> => {
 const importJsonCompleto = async (text: string, context: ImportLookupContext): Promise<CotadorImportResult> => {
   const result: CotadorImportResult = { importedProducts: 0, importedTables: 0, importedNetworkEntries: 0, warnings: [] };
   const payload = parseJsonPayload(text);
+  const mutations: ImportMutations = {
+    createdOperadoraIds: [],
+    createdLineIds: [],
+    createdProductIds: [],
+    createdTableIds: [],
+  };
 
-  for (const item of payload.items) {
-    const product = await resolveProduct(item, context, result);
-    result.importedNetworkEntries += item.redeHospitalar?.length ?? 0;
+  validateImportedPayload(payload);
 
-    for (const table of item.tabelas ?? []) {
-      await upsertImportedTable(product, table, context, result);
+  try {
+    for (const item of payload.items) {
+      const resolvedProduct = await resolveProduct(item, context, result);
+      if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
+      if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
+      if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
+      result.importedNetworkEntries += item.redeHospitalar?.length ?? 0;
+
+      for (const table of item.tabelas ?? []) {
+        const tableResult = await upsertImportedTable(resolvedProduct.product, table, context, result);
+        mutations.createdTableIds.push(...tableResult.createdTableIds);
+      }
     }
-  }
 
-  return result;
+    return result;
+  } catch (error) {
+    const rollbackWarnings = await rollbackImportMutations(mutations);
+    const message = error instanceof Error ? error.message : 'Nao foi possivel importar o arquivo.';
+    if (rollbackWarnings.length > 0) {
+      throw new Error(`${message} Rollback parcial: ${rollbackWarnings.join('; ')}.`);
+    }
+    throw error;
+  }
 };
 
 const importCsvTabelas = async (text: string, context: ImportLookupContext): Promise<CotadorImportResult> => {
   const result: CotadorImportResult = { importedProducts: 0, importedTables: 0, importedNetworkEntries: 0, warnings: [] };
   const rows = parseCsvTables(text);
+  const mutations: ImportMutations = {
+    createdOperadoraIds: [],
+    createdLineIds: [],
+    createdProductIds: [],
+    createdTableIds: [],
+  };
 
-  for (const row of rows) {
-    const product = await resolveProduct(row.product, context, result);
-    await upsertImportedTable(product, row.table, context, result);
+  try {
+    for (const row of rows) {
+      const resolvedProduct = await resolveProduct(row.product, context, result);
+      if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
+      if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
+      if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
+
+      const tableResult = await upsertImportedTable(resolvedProduct.product, row.table, context, result);
+      mutations.createdTableIds.push(...tableResult.createdTableIds);
+    }
+
+    return result;
+  } catch (error) {
+    const rollbackWarnings = await rollbackImportMutations(mutations);
+    const message = error instanceof Error ? error.message : 'Nao foi possivel importar o arquivo CSV de tabelas.';
+    if (rollbackWarnings.length > 0) {
+      throw new Error(`${message} Rollback parcial: ${rollbackWarnings.join('; ')}.`);
+    }
+    throw error;
   }
-
-  return result;
 };
 
 const importCsvRede = async (text: string, context: ImportLookupContext): Promise<CotadorImportResult> => {
   const result: CotadorImportResult = { importedProducts: 0, importedTables: 0, importedNetworkEntries: 0, warnings: [] };
   const rows = parseCsvNetwork(text);
+  const mutations: ImportMutations = {
+    createdOperadoraIds: [],
+    createdLineIds: [],
+    createdProductIds: [],
+    createdTableIds: [],
+  };
   const grouped = new Map<string, ImportedNetworkCsvRow[]>();
 
   rows.forEach((row) => {
@@ -754,33 +945,46 @@ const importCsvRede = async (text: string, context: ImportLookupContext): Promis
     grouped.set(key, current);
   });
 
-  for (const groupRows of grouped.values()) {
-    const first = groupRows[0];
-    const network = groupRows.map((row) => ({
-      cidade: row.cidade,
-      regiao: row.regiao,
-      hospital: row.hospital,
-      bairro: row.bairro,
-      atendimentos: row.atendimentos,
-      observacoes: row.observacoes,
-    }));
+  try {
+    for (const groupRows of grouped.values()) {
+      const first = groupRows[0];
+      const network = groupRows.map((row) => ({
+        cidade: row.cidade,
+        regiao: row.regiao,
+        hospital: row.hospital,
+        bairro: row.bairro,
+        atendimentos: row.atendimentos,
+        observacoes: row.observacoes,
+      }));
 
-    const product = await resolveProduct({
-      operadora: first.operadora,
-      linha: first.linha,
-      produto: first.produto,
-      administradora: first.administradora,
-      modalidadeBase: first.modalidadeBase,
-      abrangencia: first.abrangencia,
-      acomodacoes: first.acomodacoes,
-      redeHospitalar: network,
-    }, context, result);
+      const resolvedProduct = await resolveProduct({
+        operadora: first.operadora,
+        linha: first.linha,
+        produto: first.produto,
+        administradora: first.administradora,
+        modalidadeBase: first.modalidadeBase,
+        abrangencia: first.abrangencia,
+        acomodacoes: first.acomodacoes,
+        redeHospitalar: network,
+      }, context, result);
 
-    result.importedNetworkEntries += network.length;
-    context.products = context.products.map((item) => item.id === product.id ? { ...item, rede_hospitalar: network } as CotadorProductManagerRecord : item);
+      if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
+      if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
+      if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
+
+      result.importedNetworkEntries += network.length;
+      context.products = context.products.map((item) => item.id === resolvedProduct.product.id ? { ...item, rede_hospitalar: network } as CotadorProductManagerRecord : item);
+    }
+
+    return result;
+  } catch (error) {
+    const rollbackWarnings = await rollbackImportMutations(mutations);
+    const message = error instanceof Error ? error.message : 'Nao foi possivel importar o arquivo CSV de rede.';
+    if (rollbackWarnings.length > 0) {
+      throw new Error(`${message} Rollback parcial: ${rollbackWarnings.join('; ')}.`);
+    }
+    throw error;
   }
-
-  return result;
 };
 
 export const cotadorImportService = {
@@ -796,6 +1000,7 @@ export const cotadorImportService = {
     }
 
     const payload = parseJsonPayload(text);
+    validateImportedPayload(payload);
     return buildPreviewFromPayload(payload);
   },
 

@@ -919,8 +919,18 @@ export const cotadorService = {
         return { data: null, error };
       }
 
-      await syncProductEntities((data as CotadorProduto).id, input.entidadeIds);
-      return { data: (data as CotadorProduto) ?? null, error: null };
+      const createdProduct = (data as CotadorProduto) ?? null;
+
+      try {
+        await syncProductEntities(createdProduct.id, input.entidadeIds);
+        return { data: createdProduct, error: null };
+      } catch (syncError) {
+        const { error: rollbackError } = await supabase.from(COTADOR_PRODUTOS_TABLE).delete().eq('id', createdProduct.id);
+        if (rollbackError) {
+          console.error('Error rolling back cotador product after entity sync failure:', rollbackError);
+        }
+        return { data: null, error: toPostgrestError(syncError) };
+      }
     } catch (error) {
       console.error('Error creating cotador product:', error);
       return { data: null, error: toPostgrestError(error) };
@@ -929,6 +939,29 @@ export const cotadorService = {
 
   async updateProduto(id: string, input: CotadorProductManagerInput) {
     try {
+      const [{ data: previousProduct, error: previousProductError }, { data: previousEntityLinks, error: previousEntityLinksError }] = await Promise.all([
+        supabase
+          .from(COTADOR_PRODUTOS_TABLE)
+          .select('*')
+          .eq('id', id)
+          .single(),
+        supabase
+          .from(COTADOR_PRODUTO_ENTIDADES_TABLE)
+          .select('*')
+          .eq('produto_id', id),
+      ]);
+
+      if (previousProductError) {
+        return { error: previousProductError };
+      }
+
+      if (previousEntityLinksError && !isMissingTableError(previousEntityLinksError, COTADOR_PRODUTO_ENTIDADES_TABLE)) {
+        return { error: previousEntityLinksError };
+      }
+
+      const previousProductRow = previousProduct as CotadorProduto;
+      const previousEntityIds = ((previousEntityLinks as CotadorProdutoEntidade[] | null) ?? []).map((link) => link.entidade_id);
+
       const { error } = await supabase
         .from(COTADOR_PRODUTOS_TABLE)
         .update({
@@ -956,8 +989,46 @@ export const cotadorService = {
         return { error };
       }
 
-      await syncProductEntities(id, input.entidadeIds);
-      return { error: null };
+      try {
+        await syncProductEntities(id, input.entidadeIds);
+        return { error: null };
+      } catch (syncError) {
+        const { error: rollbackError } = await supabase
+          .from(COTADOR_PRODUTOS_TABLE)
+          .update({
+            operadora_id: previousProductRow.operadora_id,
+            linha_id: previousProductRow.linha_id,
+            administradora_id: previousProductRow.administradora_id ?? null,
+            nome: previousProductRow.nome,
+            modalidade: cleanOptionalText(previousProductRow.modalidade),
+            abrangencia: cleanOptionalText(previousProductRow.abrangencia),
+            acomodacao: cleanOptionalText(previousProductRow.acomodacao),
+            comissao_sugerida: previousProductRow.comissao_sugerida ?? null,
+            bonus_por_vida_valor: previousProductRow.bonus_por_vida_valor ?? null,
+            carencias: cleanOptionalText(previousProductRow.carencias),
+            documentos_necessarios: cleanOptionalText(previousProductRow.documentos_necessarios),
+            reembolso: cleanOptionalText(previousProductRow.reembolso),
+            informacoes_importantes: cleanOptionalText(previousProductRow.informacoes_importantes),
+            rede_hospitalar: previousProductRow.rede_hospitalar ?? [],
+            observacoes: cleanOptionalText(previousProductRow.observacoes),
+            ativo: previousProductRow.ativo,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id);
+
+        if (rollbackError) {
+          console.error('Error rolling back cotador product update:', rollbackError);
+          return { error: toPostgrestError(syncError) };
+        }
+
+        try {
+          await syncProductEntities(id, previousEntityIds);
+        } catch (restoreError) {
+          console.error('Error restoring cotador product entities after rollback:', restoreError);
+        }
+
+        return { error: toPostgrestError(syncError) };
+      }
     } catch (error) {
       console.error('Error updating cotador product:', error);
       return { error: toPostgrestError(error) };
@@ -1036,8 +1107,18 @@ export const cotadorService = {
         return { data: null, error };
       }
 
-      await syncTablePrices((data as CotadorTabela).id, input.pricesByAgeRange);
-      return { data: (data as CotadorTabela) ?? null, error: null };
+      const createdTable = (data as CotadorTabela) ?? null;
+
+      try {
+        await syncTablePrices(createdTable.id, input.pricesByAgeRange);
+        return { data: createdTable, error: null };
+      } catch (syncError) {
+        const { error: rollbackError } = await supabase.from(COTADOR_TABELAS_TABLE).delete().eq('id', createdTable.id);
+        if (rollbackError) {
+          console.error('Error rolling back cotador table after price sync failure:', rollbackError);
+        }
+        return { data: null, error: toPostgrestError(syncError) };
+      }
     } catch (error) {
       console.error('Error creating cotador table:', error);
       return { data: null, error: toPostgrestError(error) };
@@ -1046,6 +1127,29 @@ export const cotadorService = {
 
   async updateTabela(id: string, input: CotadorTableManagerInput) {
     try {
+      const [{ data: previousTable, error: previousTableError }, { data: previousPriceRows, error: previousPriceRowsError }] = await Promise.all([
+        supabase
+          .from(COTADOR_TABELAS_TABLE)
+          .select('*')
+          .eq('id', id)
+          .single(),
+        supabase
+          .from(COTADOR_TABELA_PRECOS_TABLE)
+          .select('*')
+          .eq('tabela_id', id),
+      ]);
+
+      if (previousTableError) {
+        return { error: previousTableError };
+      }
+
+      if (previousPriceRowsError && !isMissingTableError(previousPriceRowsError, COTADOR_TABELA_PRECOS_TABLE)) {
+        return { error: previousPriceRowsError };
+      }
+
+      const previousTableRow = previousTable as CotadorTabela;
+      const previousPrices = buildPriceMapFromRows((previousPriceRows as CotadorTabelaFaixaPreco[] | null) ?? []);
+
       const { error } = await supabase
         .from(COTADOR_TABELAS_TABLE)
         .update({
@@ -1068,8 +1172,41 @@ export const cotadorService = {
         return { error };
       }
 
-      await syncTablePrices(id, input.pricesByAgeRange);
-      return { error: null };
+      try {
+        await syncTablePrices(id, input.pricesByAgeRange);
+        return { error: null };
+      } catch (syncError) {
+        const { error: rollbackError } = await supabase
+          .from(COTADOR_TABELAS_TABLE)
+          .update({
+            produto_id: previousTableRow.produto_id,
+            nome: previousTableRow.nome,
+            codigo: cleanOptionalText(previousTableRow.codigo),
+            modalidade: previousTableRow.modalidade,
+            perfil_empresarial: previousTableRow.perfil_empresarial,
+            coparticipacao: previousTableRow.coparticipacao,
+            acomodacao: cleanOptionalText(previousTableRow.acomodacao),
+            vidas_min: previousTableRow.vidas_min ?? null,
+            vidas_max: previousTableRow.vidas_max ?? null,
+            observacoes: cleanOptionalText(previousTableRow.observacoes),
+            ativo: previousTableRow.ativo,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id);
+
+        if (rollbackError) {
+          console.error('Error rolling back cotador table update:', rollbackError);
+          return { error: toPostgrestError(syncError) };
+        }
+
+        try {
+          await syncTablePrices(id, previousPrices);
+        } catch (restoreError) {
+          console.error('Error restoring cotador table prices after rollback:', restoreError);
+        }
+
+        return { error: toPostgrestError(syncError) };
+      }
     } catch (error) {
       console.error('Error updating cotador table:', error);
       return { error: toPostgrestError(error) };

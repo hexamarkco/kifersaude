@@ -857,15 +857,19 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
   const parsed = JSON.parse(sanitizeImportText(text)) as Record<string, unknown>;
   const rawItems = Array.isArray(parsed.items) ? parsed.items : [parsed];
 
-  const items = rawItems.map((rawItem) => {
+  const items = rawItems.flatMap((rawItem) => {
     const item = rawItem as Record<string, unknown>;
     const details = (item.detalhes ?? {}) as Record<string, unknown>;
     const tabelas = Array.isArray(item.tabelas) ? item.tabelas : [];
 
-    return {
-      operadora: String(item.operadora ?? ''),
-      linha: String(item.linha ?? ''),
-      produto: String(item.produto ?? item.nome ?? ''),
+    const productNames = Array.isArray(item.produtos)
+      ? item.produtos.map((value) => String(value).trim()).filter(Boolean)
+      : [String(item.produto ?? item.nome ?? '').trim()].filter(Boolean);
+
+    return productNames.map((productName) => ({
+      operadora: String(item.operadora ?? '').trim(),
+      linha: String(item.linha ?? '').trim(),
+      produto: productName,
       administradora: cleanText(typeof item.administradora === 'string' ? item.administradora : null),
       modalidadeBase: cleanText(typeof item.modalidadeBase === 'string' ? item.modalidadeBase : typeof item.modalidade_base === 'string' ? item.modalidade_base : null),
       abrangencia: normalizeImportedAabrangencia(typeof item.abrangencia === 'string' ? item.abrangencia : null),
@@ -895,7 +899,7 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
           precosPorAcomodacao: parsedPrices,
         };
       }),
-    } as ProductReference & { tabelas: ImportedTableDefinition[] };
+    }) as ProductReference & { tabelas: ImportedTableDefinition[] });
   }).filter((item) => item.operadora && item.linha && item.produto);
 
   return { items };
@@ -1050,6 +1054,14 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
 
     if (payload.items.length > 0) {
       for (const item of payload.items) {
+        if ((item.tabelas?.length ?? 0) === 0) {
+          logImportInfo('Verificacao final ignorada para item sem tabelas', {
+            alvo: buildImportTargetLabel(item),
+            redeItems: item.redeHospitalar?.length ?? 0,
+          });
+          continue;
+        }
+
         const product = context.products.find((candidate) => normalizeText(candidate.nome) === normalizeText(item.produto) && normalizeText(candidate.linha?.nome) === normalizeText(item.linha));
         if (!product) continue;
 

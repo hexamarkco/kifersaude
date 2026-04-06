@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "template": "json-rede",
+  "observacoes": [
+    "Preencha redeHospitalar com os prestadores da Linha Amil.",
+    "Este arquivo pode ser importado pelo botao Importar em /painel/cotador/configuracoes.",
+    "Itens sem tabelas serao tratados como atualizacao de rede hospitalar do produto.",
+    "Use a mesma rede para Platinum R1 e Platinum R2.",
+    "Mantenha atendimentos em siglas e use observacoes para excecoes como * e **."
+  ],
+  "legendaAtendimentos": {
+    "H": "Hospital Eletivo",
+    "H CARD": "Hospital Cardiologico",
+    "HD": "Hospital Dia",
+    "H ORT": "Hospital Cirurgia Ortopedica",
+    "M": "Maternidade",
+    "HP": "Hospital Pediatrico",
+    "PA": "Pronto Atendimento",
+    "PS": "Pronto Socorro",
+    "PS CARD": "Pronto Socorro Cardiologico",
+    "PS OBST": "Pronto Socorro Obstetrico",
+    "PSI": "Pronto Socorro Infantil",
+    "PSO": "Pronto Socorro Ortopedico",
+    "*": "Prestador habilitado apenas na acomodacao QP",
+    "**": "Prestador habilitado apenas na acomodacao QC"
+  },
+  "exemploEntrada": {
+    "hospital": "AMIL - HOSPITAL PASTEUR",
+    "regiao": "ZONA NORTE",
+    "cidade": "RIO DE JANEIRO",
+    "bairro": null,
+    "atendimentos": ["H", "H CARD", "H ORT", "HP", "M", "PS", "PS OBST", "PSI", "PSO"],
+    "observacoes": null
+  },
+  "items": [
+    {
+      "operadora": "Amil",
+      "linha": "Linha Amil",
+      "produtos": ["Bronze RJ"],
+      "modalidadeBase": "PME",
+      "abrangencia": "Regional",
+      "acomodacoes": ["Enfermaria"],
+      "redeHospitalar": []
+    },
+    {
+      "operadora": "Amil",
+      "linha": "Linha Amil",
+      "produtos": ["Bronze RJ Mais"],
+      "modalidadeBase": "PME",
+      "abrangencia": "Estadual",
+      "acomodacoes": ["Enfermaria"],
+      "redeHospitalar": []
+    },
+    {
+      "operadora": "Amil",
+      "linha": "Linha Amil",
+      "produtos": ["Prata"],
+      "modalidadeBase": "PME",
+      "abrangencia": "Nacional",
+      "acomodacoes": ["Enfermaria", "Apartamento"],
+      "redeHospitalar": []
+    },
+    {
+      "operadora": "Amil",
+      "linha": "Linha Amil",
+      "produtos": ["Ouro"],
+      "modalidadeBase": "PME",
+      "abrangencia": "Nacional",
+      "acomodacoes": ["Enfermaria", "Apartamento"],
+      "redeHospitalar": []
+    },
+    {
+      "operadora": "Amil",
+      "linha": "Linha Amil",
+      "produtos": ["Platinum R1", "Platinum R2"],
+      "modalidadeBase": "PME",
+      "abrangencia": "Nacional",
+      "acomodacoes": ["Apartamento"],
+      "redeHospitalar": []
+    }
+  ]
+}

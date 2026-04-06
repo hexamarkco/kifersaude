@@ -1035,6 +1035,23 @@ export const cotadorService = {
     }
   },
 
+  async updateProdutoRedeHospitalar(id: string, redeHospitalar: CotadorHospitalNetworkEntry[]) {
+    try {
+      const { error } = await supabase
+        .from(COTADOR_PRODUTOS_TABLE)
+        .update({
+          rede_hospitalar: redeHospitalar,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      return { error };
+    } catch (error) {
+      console.error('Error updating cotador product network:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
   async deleteProduto(id: string) {
     try {
       const { error } = await supabase.from(COTADOR_PRODUTOS_TABLE).delete().eq('id', id);

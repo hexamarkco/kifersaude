@@ -22,8 +22,10 @@ import {
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { formatCurrencyFromNumber, parseFormattedNumber } from '../../lib/inputFormatters';
+import { toast } from '../../lib/toast';
 import type { CotadorAgeRange } from '../../features/cotador/shared/cotadorConstants';
 import { COTADOR_AGE_RANGES } from '../../features/cotador/shared/cotadorConstants';
+import type { CotadorHospitalNetworkEntry } from '../../features/cotador/shared/cotadorTypes';
 import {
   cotadorService,
   type CotadorLineManagerRecord,
@@ -49,7 +51,7 @@ type CotadorCatalogTabProps = {
   embedded?: boolean;
 };
 
-type CatalogTabId = 'operadoras' | 'linhas' | 'produtos' | 'tabelas' | 'administradoras' | 'entidades';
+type CatalogTabId = 'operadoras' | 'linhas' | 'produtos' | 'tabelas' | 'redes' | 'administradoras' | 'entidades';
 
 type Message = {
   type: 'success' | 'error';
@@ -117,11 +119,21 @@ type ImportFormState = {
   file: File | null;
 };
 
+type NetworkEntryFormState = {
+  hospital: string;
+  cidade: string;
+  regiao: string;
+  bairro: string;
+  atendimentos: string[];
+  observacoes: string;
+};
+
 const tabs: Array<{ id: CatalogTabId; label: string }> = [
   { id: 'operadoras', label: 'Operadoras' },
   { id: 'linhas', label: 'Linhas' },
   { id: 'produtos', label: 'Produtos' },
   { id: 'tabelas', label: 'Tabelas' },
+  { id: 'redes', label: 'Redes' },
   { id: 'administradoras', label: 'Administradoras' },
   { id: 'entidades', label: 'Entidades' },
 ];
@@ -195,6 +207,15 @@ const DEFAULT_TABLE_FORM: TableFormState = {
   observacoes: '',
 };
 
+const DEFAULT_NETWORK_ENTRY_FORM: NetworkEntryFormState = {
+  hospital: '',
+  cidade: '',
+  regiao: '',
+  bairro: '',
+  atendimentos: [],
+  observacoes: '',
+};
+
 const modalidadeOptions = [
   { value: 'PF', label: 'PF' },
   { value: 'ADESAO', label: 'Adesao' },
@@ -212,6 +233,38 @@ const coparticipacaoOptions = [
   { value: 'parcial', label: 'Copart. parcial' },
   { value: 'total', label: 'Copart. total' },
 ] as const;
+
+const networkServiceOptions = [
+  { value: 'H', label: 'H' },
+  { value: 'H CARD', label: 'H CARD' },
+  { value: 'HD', label: 'HD' },
+  { value: 'H ORT', label: 'H ORT' },
+  { value: 'M', label: 'M' },
+  { value: 'HP', label: 'HP' },
+  { value: 'PA', label: 'PA' },
+  { value: 'PS', label: 'PS' },
+  { value: 'PS CARD', label: 'PS CARD' },
+  { value: 'PS OBST', label: 'PS OBST' },
+  { value: 'PSI', label: 'PSI' },
+  { value: 'PSO', label: 'PSO' },
+] as const;
+
+const networkLegend = [
+  'H: Hospital Eletivo',
+  'H CARD: Hospital Cardiologico',
+  'HD: Hospital Dia',
+  'H ORT: Hospital Cirurgia Ortopedica',
+  'M: Maternidade',
+  'HP: Hospital Pediatrico',
+  'PA: Pronto Atendimento',
+  'PS: Pronto Socorro',
+  'PS CARD: Pronto Socorro Cardiologico',
+  'PS OBST: Pronto Socorro Obstetrico',
+  'PSI: Pronto Socorro Infantil',
+  'PSO: Pronto Socorro Ortopedico',
+  '*: habilitado apenas na acomodacao QP',
+  '**: habilitado apenas na acomodacao QC',
+];
 
 const formatPerfilEmpresarial = (value: 'todos' | 'mei' | 'nao_mei') => {
   if (value === 'mei') return 'MEI';
@@ -301,6 +354,49 @@ const parseProductAcomodacoes = (value?: string | null, allowedValues?: string[]
 
   return Array.from(new Set(tokens.length > 0 ? tokens : [trimmed]));
 };
+
+const sanitizeNetworkEntry = (entry: Partial<CotadorHospitalNetworkEntry>): CotadorHospitalNetworkEntry | null => {
+  const hospital = entry.hospital?.trim() ?? '';
+  const cidade = entry.cidade?.trim() ?? '';
+
+  if (!hospital || !cidade) return null;
+
+  const atendimentos = Array.from(new Set((entry.atendimentos ?? []).map((item) => item.trim()).filter(Boolean)));
+
+  return {
+    hospital,
+    cidade,
+    regiao: entry.regiao?.trim() || null,
+    bairro: entry.bairro?.trim() || null,
+    atendimentos,
+    observacoes: entry.observacoes?.trim() || null,
+  };
+};
+
+const sanitizeNetworkEntries = (value: unknown): CotadorHospitalNetworkEntry[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => sanitizeNetworkEntry(item as Partial<CotadorHospitalNetworkEntry>))
+    .filter((item): item is CotadorHospitalNetworkEntry => item !== null)
+    .sort((left, right) => {
+      const cityComparison = normalizeSortText(left.cidade).localeCompare(normalizeSortText(right.cidade), 'pt-BR');
+      if (cityComparison !== 0) return cityComparison;
+      return normalizeSortText(left.hospital).localeCompare(normalizeSortText(right.hospital), 'pt-BR');
+    });
+};
+
+const buildNetworkEntryFormFromValue = (entry?: CotadorHospitalNetworkEntry | null): NetworkEntryFormState => ({
+  hospital: entry?.hospital ?? '',
+  cidade: entry?.cidade ?? '',
+  regiao: entry?.regiao ?? '',
+  bairro: entry?.bairro ?? '',
+  atendimentos: entry?.atendimentos ?? [],
+  observacoes: entry?.observacoes ?? '',
+});
+
+const formatNetworkLocation = (entry: CotadorHospitalNetworkEntry) =>
+  [entry.bairro, entry.regiao, entry.cidade].filter(Boolean).join(' | ');
 
 const serializeProductAcomodacoes = (values: string[]) =>
   Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).join(PRODUCT_ACOMODACAO_SEPARATOR);
@@ -477,6 +573,13 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [tableCodeTouched, setTableCodeTouched] = useState(false);
   const [tablesPage, setTablesPage] = useState(1);
   const [tablesPerPage, setTablesPerPage] = useState(25);
+  const [networkModalOpen, setNetworkModalOpen] = useState(false);
+  const [networkProductId, setNetworkProductId] = useState<string | null>(null);
+  const [networkDraft, setNetworkDraft] = useState<CotadorHospitalNetworkEntry[]>([]);
+  const [networkEntryForm, setNetworkEntryForm] = useState<NetworkEntryFormState>(DEFAULT_NETWORK_ENTRY_FORM);
+  const [networkEditingIndex, setNetworkEditingIndex] = useState<number | null>(null);
+  const [networkSearch, setNetworkSearch] = useState('');
+  const [networkCity, setNetworkCity] = useState('');
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
@@ -584,6 +687,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       });
   }, [filteredProducts]);
 
+  const networkProducts = useMemo(
+    () => [...produtos].sort(compareCotadorProducts),
+    [produtos],
+  );
+
   const lineOperadoraById = useMemo(
     () => new Map(linhas.map((line) => [line.id, line.operadora?.id ?? ''])),
     [linhas],
@@ -672,6 +780,116 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     const startIndex = (tablesPage - 1) * tablesPerPage;
     return groupedTableEntries.slice(startIndex, startIndex + tablesPerPage);
   }, [groupedTableEntries, tablesPage, tablesPerPage]);
+
+  const selectedNetworkProduct = useMemo(
+    () => produtos.find((product) => product.id === networkProductId) ?? null,
+    [networkProductId, produtos],
+  );
+
+  const networkProductCityOptions = useMemo(
+    () => Array.from(new Set(networkDraft.map((entry) => entry.cidade).filter(Boolean))).sort((left, right) => left.localeCompare(right, 'pt-BR')).map((city) => ({ value: city, label: city })),
+    [networkDraft],
+  );
+
+  const filteredNetworkEntries = useMemo(() => {
+    const normalizedSearch = normalizeSortText(networkSearch);
+
+    return networkDraft.reduce<Array<{ entry: CotadorHospitalNetworkEntry; index: number }>>((accumulator, entry, index) => {
+      if (networkCity && entry.cidade !== networkCity) return accumulator;
+      if (!normalizedSearch) {
+        accumulator.push({ entry, index });
+        return accumulator;
+      }
+
+      const matchesSearch = [entry.hospital, entry.cidade, entry.regiao, entry.bairro, entry.atendimentos.join(' '), entry.observacoes]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearch);
+
+      if (matchesSearch) {
+        accumulator.push({ entry, index });
+      }
+
+      return accumulator;
+    }, []);
+  }, [networkCity, networkDraft, networkSearch]);
+
+  const resetNetworkModal = () => {
+    setNetworkModalOpen(false);
+    setNetworkProductId(null);
+    setNetworkDraft([]);
+    setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
+    setNetworkEditingIndex(null);
+    setNetworkSearch('');
+    setNetworkCity('');
+  };
+
+  const openNetworkModal = (product: CotadorProductManagerRecord) => {
+    setNetworkProductId(product.id);
+    setNetworkDraft(sanitizeNetworkEntries(product.rede_hospitalar));
+    setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
+    setNetworkEditingIndex(null);
+    setNetworkSearch('');
+    setNetworkCity('');
+    setNetworkModalOpen(true);
+  };
+
+  const startEditingNetworkEntry = (entry: CotadorHospitalNetworkEntry, index: number) => {
+    setNetworkEditingIndex(index);
+    setNetworkEntryForm(buildNetworkEntryFormFromValue(entry));
+  };
+
+  const resetNetworkEntryForm = () => {
+    setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
+    setNetworkEditingIndex(null);
+  };
+
+  const handleNetworkEntrySubmit = () => {
+    const sanitizedEntry = sanitizeNetworkEntry(networkEntryForm);
+    if (!sanitizedEntry) {
+      toast.error('Preencha ao menos hospital e cidade para adicionar o prestador.');
+      return;
+    }
+
+    setNetworkDraft((current) => {
+      if (networkEditingIndex === null) {
+        return sanitizeNetworkEntries([...current, sanitizedEntry]);
+      }
+
+      return sanitizeNetworkEntries(current.map((entry, index) => index === networkEditingIndex ? sanitizedEntry : entry));
+    });
+
+    toast.success(networkEditingIndex === null ? 'Prestador adicionado na rede.' : 'Prestador atualizado na rede.');
+    resetNetworkEntryForm();
+  };
+
+  const handleRemoveNetworkEntry = (entryIndex: number) => {
+    setNetworkDraft((current) => current.filter((_, index) => index !== entryIndex));
+    if (networkEditingIndex === entryIndex) {
+      resetNetworkEntryForm();
+    }
+    toast.success('Prestador removido da rede.');
+  };
+
+  const handleSaveNetwork = async () => {
+    if (!selectedNetworkProduct) return;
+
+    setSubmitting(true);
+    const sanitizedDraft = sanitizeNetworkEntries(networkDraft);
+    const result = await cotadorService.updateProdutoRedeHospitalar(selectedNetworkProduct.id, sanitizedDraft);
+
+    if (result.error) {
+      toast.error('Nao foi possivel salvar a rede hospitalar deste produto.');
+      setSubmitting(false);
+      return;
+    }
+
+    setProdutos((current) => current.map((product) => product.id === selectedNetworkProduct.id ? { ...product, rede_hospitalar: sanitizedDraft } : product));
+    toast.success('Rede hospitalar salva com sucesso.');
+    setSubmitting(false);
+    resetNetworkModal();
+  };
 
   const activeTablePricingAcomodacoes = tableModalMode === 'create'
     ? selectedTableProductAcomodacoes
@@ -1493,6 +1711,45 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             )}
           </div>
         )
+      ) : activeTab === 'redes' ? (
+        networkProducts.length === 0 ? (
+          <EmptyState icon={MapPin} title="Nenhuma rede cadastrada" description="Adicione produtos ao catalogo para comecar a vincular hospitais e atendimentos." />
+        ) : (
+          <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+              {networkProducts.map((product) => {
+                const networkCount = sanitizeNetworkEntries(product.rede_hospitalar).length;
+
+                return (
+                  <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h4>
+                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                          {networkCount} prestador(es)
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                        {product.operadora?.nome ?? 'Operadora'} / {product.linha?.nome ?? 'Linha'}
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                        {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
+                        {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 self-end lg:self-auto">
+                      <Button variant="secondary" onClick={() => openNetworkModal(product)}>
+                        <MapPin className="h-4 w-4" />
+                        Gerenciar rede
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        )
       ) : tabelas.length === 0 ? (
         <EmptyState icon={Table2} title="Nenhuma tabela cadastrada" description="Crie tabelas por produto para separar MEI, não MEI, coparticipação e faixas de vidas como 2 a 2, 3 a 5 ou 6 a 29." />
       ) : (
@@ -1560,8 +1817,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 <FileJson className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">JSON completo</p>
-                <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Operadora, linha, produto, tabelas, rede hospitalar, administradora e entidades no mesmo arquivo.</p>
+                  <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">JSON do catalogo</p>
+                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Aceita operadora, linha, produto, tabelas, rede hospitalar, administradora e entidades. Se quiser, envie apenas a rede hospitalar.</p>
               </div>
             </div>
           </div>
@@ -1618,7 +1875,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Modelo base de importação</p>
-                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Baixe um JSON exemplo para preencher com operadora, linha, produtos, tabelas e rede hospitalar.</p>
+                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Baixe um JSON exemplo para preencher com operadora, linha, produtos, tabelas e rede hospitalar ou use um arquivo focado so na rede.</p>
                 </div>
                 <Button type="button" variant="secondary" onClick={handleDownloadImportTemplate} className="w-full md:w-auto">
                   <Download className="h-4 w-4" />
@@ -1697,6 +1954,154 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetImportModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>
+      </ModalShell>
+
+      <ModalShell
+        isOpen={networkModalOpen}
+        onClose={resetNetworkModal}
+        title={selectedNetworkProduct ? `Rede hospitalar · ${selectedNetworkProduct.nome}` : 'Rede hospitalar'}
+        description={selectedNetworkProduct ? `${selectedNetworkProduct.operadora?.nome ?? 'Operadora'} / ${selectedNetworkProduct.linha?.nome ?? 'Linha'}` : undefined}
+        size="xl"
+      >
+        {selectedNetworkProduct && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Abrangencia</p>
+                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{selectedNetworkProduct.abrangencia ?? '-'}</p>
+              </div>
+              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Acomodacoes</p>
+                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{selectedNetworkProduct.acomodacao ? formatProductAcomodacoesLabel(parseProductAcomodacoes(selectedNetworkProduct.acomodacao, acomodacaoOptions.map((option) => option.value))) : '-'}</p>
+              </div>
+              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Prestadores</p>
+                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{networkDraft.length}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[220px_minmax(0,1fr)]">
+              <FilterSingleSelect
+                icon={MapPin}
+                options={networkProductCityOptions}
+                placeholder="Todas as cidades"
+                value={networkCity}
+                onChange={setNetworkCity}
+              />
+              <Input
+                value={networkSearch}
+                onChange={(event) => setNetworkSearch(event.target.value)}
+                placeholder="Buscar hospital, cidade, regiao ou atendimento"
+                leftIcon={Search}
+              />
+            </div>
+
+            <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+              <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                Prestadores da rede
+              </div>
+
+              {filteredNetworkEntries.length === 0 ? (
+                <div className="px-4 py-10 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                  Nenhum prestador encontrado para os filtros atuais.
+                </div>
+              ) : (
+                <div className="max-h-72 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
+                  {filteredNetworkEntries.map(({ entry, index }) => (
+                    <article key={`${entry.hospital}-${index}`} className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{entry.hospital}</p>
+                        <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{formatNetworkLocation(entry)}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-[color:var(--panel-text-soft,#5b4635)]">
+                          {entry.atendimentos.map((service) => (
+                            <span key={`${entry.hospital}-${service}-${index}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{service}</span>
+                          ))}
+                        </div>
+                        {entry.observacoes && <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">{entry.observacoes}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 self-end lg:self-auto">
+                        <Button variant="icon" size="icon" className="h-9 w-9 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => startEditingNetworkEntry(entry, index)} title="Editar prestador">
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="icon" size="icon" className="h-9 w-9 text-red-600 hover:bg-red-50" onClick={() => handleRemoveNetworkEntry(index)} title="Remover prestador">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                    {networkEditingIndex === null ? 'Adicionar prestador' : 'Editar prestador'}
+                  </p>
+                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Use siglas de atendimento e detalhes extras em observacoes quando houver excecoes.</p>
+                </div>
+                {networkEditingIndex !== null && (
+                  <Button type="button" variant="secondary" onClick={resetNetworkEntryForm}>Cancelar edicao</Button>
+                )}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Hospital *</label>
+                  <Input value={networkEntryForm.hospital} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, hospital: event.target.value }))} placeholder="Ex: AMIL - HOSPITAL PASTEUR" />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
+                  <Input value={networkEntryForm.cidade} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, cidade: event.target.value }))} placeholder="Ex: Rio de Janeiro" />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao</label>
+                  <Input value={networkEntryForm.regiao} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, regiao: event.target.value }))} placeholder="Ex: Zona Norte" />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
+                  <Input value={networkEntryForm.bairro} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, bairro: event.target.value }))} placeholder="Opcional" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Atendimentos</label>
+                  <InlineCheckboxGroup
+                    options={networkServiceOptions.map((option) => ({ value: option.value, label: option.label }))}
+                    values={networkEntryForm.atendimentos}
+                    onChange={(values) => setNetworkEntryForm((current) => ({ ...current, atendimentos: values }))}
+                    emptyMessage="Nenhuma sigla configurada."
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observacoes</label>
+                  <Textarea value={networkEntryForm.observacoes} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, observacoes: event.target.value }))} rows={3} placeholder="Ex: Prestador habilitado apenas na acomodacao QP" />
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button type="button" onClick={handleNetworkEntrySubmit}>
+                  <Plus className="h-4 w-4" />
+                  {networkEditingIndex === null ? 'Adicionar prestador' : 'Atualizar prestador'}
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+              <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Legenda das siglas</p>
+              <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)] md:grid-cols-2">
+                {networkLegend.map((item) => <p key={item}>{item}</p>)}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="button" loading={submitting} onClick={() => void handleSaveNetwork()}>
+                <Save className="h-4 w-4" />
+                Salvar rede
+              </Button>
+              <Button type="button" variant="secondary" onClick={resetNetworkModal} disabled={submitting}>Cancelar</Button>
+            </div>
+          </div>
+        )}
       </ModalShell>
 
       <ModalShell

@@ -7,6 +7,7 @@ import Textarea from '../../../../components/ui/Textarea';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
+import { commWhatsAppService } from '../../../../lib/commWhatsAppService';
 
 type SpeechRecognitionType = {
   new (): {
@@ -54,6 +55,7 @@ export default function WhatsAppFollowUpModal({
   onSend,
 }: WhatsAppFollowUpModalProps) {
   const [isRecording, setIsRecording] = useState(false);
+  const [isCorrecting, setIsCorrecting] = useState(false);
   const [currentTranscript, setCurrentTranscript] = useState("");
   const recognitionRef = useRef<unknown>(null);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
@@ -89,17 +91,29 @@ export default function WhatsAppFollowUpModal({
     recognitionRef.current = recognitionInstance;
   }, []);
 
-  const handleToggleRecording = () => {
+  const handleToggleRecording = async () => {
     if (isRecording) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rec = recognitionRef.current as any;
       rec?.stop();
-      // Commit the final transcript to instructions
-      if (currentTranscript.trim()) {
-        onChangeCustomInstructions(customInstructions + (customInstructions ? ' ' : '') + currentTranscript.trim());
-      }
+      const transcript = currentTranscript.trim();
       setCurrentTranscript("");
       setIsRecording(false);
+      
+      if (transcript) {
+        setIsCorrecting(true);
+        try {
+          const corrected = await commWhatsAppService.rewriteMessage({
+            message: transcript,
+            tone: 'grammar',
+          });
+          onChangeCustomInstructions(customInstructions + (customInstructions ? ' ' : '') + corrected.text);
+        } catch {
+          onChangeCustomInstructions(customInstructions + (customInstructions ? ' ' : '') + transcript);
+        } finally {
+          setIsCorrecting(false);
+        }
+      }
     } else {
       setCurrentTranscript("");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -165,11 +179,12 @@ export default function WhatsAppFollowUpModal({
                 variant={isRecording ? 'primary' : 'secondary'}
                 size="sm"
                 onClick={handleToggleRecording}
+                loading={isCorrecting}
                 disabled={generating || submitting}
                 className={isRecording ? 'animate-pulse' : ''}
               >
                 {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                <span>{isRecording ? 'Parar' : 'Gravar áudio'}</span>
+                <span>{isCorrecting ? 'Corrigindo...' : isRecording ? 'Parar' : 'Gravar áudio'}</span>
               </Button>
               {isRecording && currentTranscript && (
                 <div className="mt-2 text-xs text-[var(--panel-text-muted,#876f5c)] italic">

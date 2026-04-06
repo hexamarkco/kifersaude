@@ -68,7 +68,7 @@ BEGIN
   NEW.nome_normalizado := COALESCE(public.normalize_cotador_hospital_term(NEW.nome), '');
   NEW.cidade_normalizada := COALESCE(public.normalize_cotador_hospital_term(NEW.cidade), '');
   NEW.regiao_normalizada := COALESCE(public.normalize_cotador_hospital_term(NEW.regiao), '');
-  NEW.bairro_normalizada := COALESCE(public.normalize_cotador_hospital_term(NEW.bairro), '');
+  NEW.bairro_normalizado := COALESCE(public.normalize_cotador_hospital_term(NEW.bairro), '');
   RETURN NEW;
 END;
 $$;
@@ -339,7 +339,7 @@ BEGIN
       WHERE h.nome_normalizado = COALESCE(public.normalize_cotador_hospital_term(v_hospital_nome), '')
         AND h.cidade_normalizada = COALESCE(public.normalize_cotador_hospital_term(v_cidade), '')
         AND h.regiao_normalizada = COALESCE(public.normalize_cotador_hospital_term(v_regiao), '')
-        AND h.bairro_normalizada = COALESCE(public.normalize_cotador_hospital_term(v_bairro), '')
+        AND h.bairro_normalizado = COALESCE(public.normalize_cotador_hospital_term(v_bairro), '')
       ORDER BY h.updated_at DESC
       LIMIT 1;
 
@@ -354,7 +354,7 @@ BEGIN
       WHERE ha.alias_nome_normalizado = COALESCE(public.normalize_cotador_hospital_term(v_hospital_nome), '')
         AND h.cidade_normalizada = COALESCE(public.normalize_cotador_hospital_term(v_cidade), '')
         AND h.regiao_normalizada = COALESCE(public.normalize_cotador_hospital_term(v_regiao), '')
-        AND h.bairro_normalizada = COALESCE(public.normalize_cotador_hospital_term(v_bairro), '')
+        AND h.bairro_normalizado = COALESCE(public.normalize_cotador_hospital_term(v_bairro), '')
       ORDER BY h.updated_at DESC
       LIMIT 1;
     END IF;
@@ -526,7 +526,7 @@ JOIN public.cotador_hospitais h
   ON h.nome_normalizado = COALESCE(public.normalize_cotador_hospital_term(tmp.hospital), '')
  AND h.cidade_normalizada = COALESCE(public.normalize_cotador_hospital_term(tmp.cidade), '')
  AND h.regiao_normalizada = COALESCE(public.normalize_cotador_hospital_term(tmp.regiao), '')
- AND h.bairro_normalizada = COALESCE(public.normalize_cotador_hospital_term(tmp.bairro), '')
+ AND h.bairro_normalizado = COALESCE(public.normalize_cotador_hospital_term(tmp.bairro), '')
 ON CONFLICT (produto_id, hospital_id) DO UPDATE
 SET atendimentos = EXCLUDED.atendimentos,
     observacoes = EXCLUDED.observacoes,

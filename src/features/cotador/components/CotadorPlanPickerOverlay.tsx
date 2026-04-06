@@ -110,6 +110,13 @@ const formatCompactLivesRange = (item: Pick<CotadorCatalogItem, 'vidasMin' | 'vi
   return `${item.vidasMin ?? 1} a ${item.vidasMax ?? '...'}`;
 };
 
+const compareOptionalPriceAsc = (left: number | null, right: number | null) => {
+  if (left === null && right === null) return 0;
+  if (left === null) return 1;
+  if (right === null) return -1;
+  return left - right;
+};
+
 export default function CotadorPlanPickerOverlay({
   isOpen,
   quote,
@@ -350,9 +357,8 @@ export default function CotadorPlanPickerOverlay({
     });
 
     return Array.from(grouped.values()).sort((left, right) => {
-      const leftPrice = left.lowestPrice ?? Number.MAX_SAFE_INTEGER;
-      const rightPrice = right.lowestPrice ?? Number.MAX_SAFE_INTEGER;
-      if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+      const priceComparison = compareOptionalPriceAsc(left.lowestPrice, right.lowestPrice);
+      if (priceComparison !== 0) return priceComparison;
       return left.title.localeCompare(right.title, 'pt-BR');
     });
   }, [lineScopedItems]);
@@ -366,9 +372,8 @@ export default function CotadorPlanPickerOverlay({
     if (!activeProductGroup) return [];
 
     return [...activeProductGroup.items].sort((left, right) => {
-      const priceLeft = left.estimatedMonthlyTotal ?? Number.MAX_SAFE_INTEGER;
-      const priceRight = right.estimatedMonthlyTotal ?? Number.MAX_SAFE_INTEGER;
-      if (priceLeft !== priceRight) return priceLeft - priceRight;
+      const priceComparison = compareOptionalPriceAsc(left.estimatedMonthlyTotal, right.estimatedMonthlyTotal);
+      if (priceComparison !== 0) return priceComparison;
       return (left.tabelaNome ?? left.titulo).localeCompare(right.tabelaNome ?? right.titulo, 'pt-BR');
     });
   }, [activeProductGroup]);
@@ -406,9 +411,8 @@ export default function CotadorPlanPickerOverlay({
 
     return [...lineScopedItems]
       .sort((left, right) => {
-        const leftPrice = left.estimatedMonthlyTotal ?? Number.MAX_SAFE_INTEGER;
-        const rightPrice = right.estimatedMonthlyTotal ?? Number.MAX_SAFE_INTEGER;
-        if (leftPrice !== rightPrice) return leftPrice - rightPrice;
+        const priceComparison = compareOptionalPriceAsc(left.estimatedMonthlyTotal, right.estimatedMonthlyTotal);
+        if (priceComparison !== 0) return priceComparison;
         const titleComparison = left.titulo.localeCompare(right.titulo, 'pt-BR');
         if (titleComparison !== 0) return titleComparison;
         return (left.acomodacao ?? '').localeCompare(right.acomodacao ?? '', 'pt-BR');

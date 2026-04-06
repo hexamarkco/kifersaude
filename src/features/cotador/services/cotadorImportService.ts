@@ -166,6 +166,14 @@ const cleanText = (value?: string | null) => {
   return trimmed ? trimmed : null;
 };
 
+const normalizeImportedAabrangencia = (value?: string | null) => {
+  const cleaned = cleanText(value);
+  const normalized = normalizeText(cleaned);
+  if (!normalized) return null;
+  if (normalized === 'rio de janeiro' || normalized === 'rj') return null;
+  return cleaned;
+};
+
 const parseBoolean = (value?: string | null, fallback = true) => {
   const normalized = normalizeText(value);
   if (!normalized) return fallback;
@@ -404,7 +412,7 @@ const getProductPayloadFromReference = (
     administradora_id: administradora?.id ?? null,
     nome: reference.produto,
     modalidade: cleanText(reference.modalidadeBase) ?? existingProduct?.modalidade ?? null,
-    abrangencia: cleanText(reference.abrangencia) ?? existingProduct?.abrangencia ?? null,
+    abrangencia: normalizeImportedAabrangencia(reference.abrangencia) ?? existingProduct?.abrangencia ?? null,
     acomodacao: (reference.acomodacoes && reference.acomodacoes.length > 0 ? reference.acomodacoes.join(' | ') : existingProduct?.acomodacao) ?? null,
     entidadeIds,
     comissao_sugerida: existingProduct?.comissao_sugerida ?? null,
@@ -570,7 +578,7 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
       produto: String(item.produto ?? item.nome ?? ''),
       administradora: cleanText(typeof item.administradora === 'string' ? item.administradora : null),
       modalidadeBase: cleanText(typeof item.modalidadeBase === 'string' ? item.modalidadeBase : typeof item.modalidade_base === 'string' ? item.modalidade_base : null),
-      abrangencia: cleanText(typeof item.abrangencia === 'string' ? item.abrangencia : null),
+      abrangencia: normalizeImportedAabrangencia(typeof item.abrangencia === 'string' ? item.abrangencia : null),
       acomodacoes: Array.isArray(item.acomodacoes) ? item.acomodacoes.map((value) => String(value).trim()).filter(Boolean) : [],
       entidadesElegiveis: Array.isArray(item.entidadesElegiveis) ? item.entidadesElegiveis.map((value) => String(value).trim()).filter(Boolean) : [],
       detalhes: {

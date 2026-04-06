@@ -6,7 +6,6 @@ import {
   Building2,
   CheckCircle2,
   Layers3,
-  MapPin,
   Search,
   ShieldCheck,
   Sparkles,
@@ -172,6 +171,13 @@ export default function CotadorPlanPickerOverlay({
       onUpdateFilters({ perfilEmpresarial: '' });
     }
   }, [activeModalityTab, filters.perfilEmpresarial, isOpen, onUpdateFilters]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (filters.abrangencia) {
+      onUpdateFilters({ abrangencia: '' });
+    }
+  }, [filters.abrangencia, isOpen, onUpdateFilters]);
 
   const selectedIds = useMemo(
     () => new Set(quote.selectedItems.map((item) => item.catalogItemKey)),
@@ -638,13 +644,6 @@ export default function CotadorPlanPickerOverlay({
                     placeholder="Coparticipação"
                     value={filters.coparticipacao}
                     onChange={(next) => onUpdateFilters({ coparticipacao: next as CotadorCatalogFilters['coparticipacao'] })}
-                  />
-                  <FilterSingleSelect
-                    icon={MapPin}
-                    options={filterOptions.abrangencias}
-                    placeholder="Todas as abrangências"
-                    value={filters.abrangencia}
-                    onChange={(next) => onUpdateFilters({ abrangencia: next })}
                   />
                   <FilterSingleSelect
                     icon={Layers3}

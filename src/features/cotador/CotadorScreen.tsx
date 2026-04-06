@@ -229,7 +229,6 @@ export default function CotadorScreen() {
       if (filters.entidadeId && !item.entidadesClasse.some((entity) => entity.id === filters.entidadeId)) return false;
       if (filters.perfilEmpresarial && item.perfilEmpresarial !== filters.perfilEmpresarial) return false;
       if (filters.coparticipacao && item.coparticipacao !== filters.coparticipacao) return false;
-      if (filters.abrangencia && item.abrangencia !== filters.abrangencia) return false;
       if (filters.acomodacao && item.acomodacao !== filters.acomodacao) return false;
       if (item.vidasMin !== null && activeQuote.totalLives < item.vidasMin) return false;
       if (item.vidasMax !== null && activeQuote.totalLives > item.vidasMax) return false;
@@ -249,7 +248,6 @@ export default function CotadorScreen() {
       if (target !== 'entidadeId' && filters.entidadeId && !item.entidadesClasse.some((entity) => entity.id === filters.entidadeId)) return false;
       if (target !== 'perfilEmpresarial' && filters.perfilEmpresarial && item.perfilEmpresarial !== filters.perfilEmpresarial) return false;
       if (target !== 'coparticipacao' && filters.coparticipacao && item.coparticipacao !== filters.coparticipacao) return false;
-      if (target !== 'abrangencia' && filters.abrangencia && item.abrangencia !== filters.abrangencia) return false;
       if (target !== 'acomodacao' && filters.acomodacao && item.acomodacao !== filters.acomodacao) return false;
       if (item.vidasMin !== null && activeQuote.totalLives < item.vidasMin) return false;
       if (item.vidasMax !== null && activeQuote.totalLives > item.vidasMax) return false;
@@ -280,11 +278,7 @@ export default function CotadorScreen() {
           .filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value)),
         (value) => (value === 'parcial' ? 'Copart. parcial' : value === 'total' ? 'Copart. total' : 'Sem copart.'),
       ),
-      abrangencias: buildCountedOptions(
-        getOptionScopedItems('abrangencia')
-          .map((item) => item.abrangencia)
-          .filter((value): value is string => Boolean(value)),
-      ),
+      abrangencias: [],
       acomodacoes: buildCountedOptions(
         getOptionScopedItems('acomodacao')
           .map((item) => item.acomodacao)

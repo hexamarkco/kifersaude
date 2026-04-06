@@ -174,11 +174,7 @@ export default function CotadorWorkspace({
                     </Button>
                   </div>
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-2">
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_92%,var(--panel-surface,#fffdfa))] px-3 py-2 dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_78%,var(--panel-surface,#1b1611))]">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Abrangência</p>
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.abrangencia ?? '-'}</p>
-                    </div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-1 xl:grid-cols-1">
                     <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_92%,var(--panel-surface,#fffdfa))] px-3 py-2 dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_78%,var(--panel-surface,#1b1611))]">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Acomodação</p>
                       <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.acomodacao ?? '-'}</p>

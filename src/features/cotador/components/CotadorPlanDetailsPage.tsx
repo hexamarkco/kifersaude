@@ -119,14 +119,10 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
           )}
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Cotacao</p>
             <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.name}</p>
-          </div>
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Abrangencia</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.abrangencia ?? '-'}</p>
           </div>
           <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Acomodacao</p>

@@ -442,6 +442,48 @@ export const commWhatsAppService = {
     return { chat: payload.chat };
   },
 
+  async findExistingChat(params: { leadId?: string | null; phoneDigits?: string[] }): Promise<CommWhatsAppChat | null> {
+    const normalizedLeadId = params.leadId?.trim() || null;
+    const normalizedPhoneDigits = Array.from(new Set((params.phoneDigits ?? []).map((value) => value.trim()).filter(Boolean)));
+
+    if (normalizedLeadId) {
+      const { data, error } = await supabase
+        .from('comm_whatsapp_chats')
+        .select('*')
+        .eq('lead_id', normalizedLeadId)
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel localizar a conversa existente deste lead.'));
+      }
+
+      if (data) {
+        return data as CommWhatsAppChat;
+      }
+    }
+
+    if (normalizedPhoneDigits.length === 0) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('comm_whatsapp_chats')
+      .select('*')
+      .in('phone_digits', normalizedPhoneDigits)
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel localizar a conversa existente deste numero.'));
+    }
+
+    return ((data ?? [])[0] as CommWhatsAppChat | undefined) ?? null;
+  },
+
   async listMessagesPage(chatId: string, params: ListMessagesPageParams = {}): Promise<CommWhatsAppMessagesPage> {
     const safeLimit = Math.min(Math.max(params.limit ?? 50, 1), 200);
     const { data, error } = await supabase.rpc('comm_whatsapp_list_messages_page', {

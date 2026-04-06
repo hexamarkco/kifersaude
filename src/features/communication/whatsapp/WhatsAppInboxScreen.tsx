@@ -5397,7 +5397,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleOpenAgendaLeadChat = useCallback(async (lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone'>) => {
     const phoneKeys = collectPhoneLookupKeys(lead.telefone);
-    const existingChat = latestChatsRef.current.find((chat) => {
+    const localExistingChat = latestChatsRef.current.find((chat) => {
       if (lead.id && chat.lead_id === lead.id) {
         return true;
       }
@@ -5410,8 +5410,8 @@ export default function WhatsAppInboxScreen() {
       return chatPhoneKeys.some((key) => phoneKeys.includes(key));
     }) ?? null;
 
-    if (existingChat) {
-      setSelectedChatId(existingChat.id);
+    if (localExistingChat) {
+      setSelectedChatId(localExistingChat.id);
       return;
     }
 
@@ -5424,6 +5424,17 @@ export default function WhatsAppInboxScreen() {
     setStartingChatKey(openingKey);
 
     try {
+      const persistedExistingChat = await commWhatsAppService.findExistingChat({
+        leadId: lead.id,
+        phoneDigits: phoneKeys,
+      });
+
+      if (persistedExistingChat) {
+        upsertChatLocally(persistedExistingChat);
+        setSelectedChatId(persistedExistingChat.id);
+        return;
+      }
+
       const result = lead.id
         ? await commWhatsAppService.startChat({
             source: 'crm',

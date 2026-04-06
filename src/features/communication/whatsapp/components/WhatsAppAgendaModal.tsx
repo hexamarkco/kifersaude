@@ -66,6 +66,15 @@ type SchedulerDraft = {
 
 const RELATED_ENTITY_BATCH_SIZE = 80;
 
+type WhatsAppAgendaCacheSnapshot = {
+  reminders: Reminder[];
+  contracts: Contract[];
+  leads: Lead[];
+  updatedAt: string;
+};
+
+let whatsAppAgendaCacheSnapshot: WhatsAppAgendaCacheSnapshot | null = null;
+
 const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
   if (items.length === 0 || batchSize <= 0) {
     return [];
@@ -184,6 +193,24 @@ export default function WhatsAppAgendaModal({
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
+  const applyAgendaSnapshot = useCallback((snapshot: WhatsAppAgendaCacheSnapshot) => {
+    setReminders(snapshot.reminders);
+    setLastUpdated(new Date(snapshot.updatedAt));
+    setError(null);
+
+    const nextContractsMap = new Map<string, Contract>();
+    snapshot.contracts.forEach((contract) => {
+      nextContractsMap.set(contract.id, contract);
+    });
+    setContractsMap(nextContractsMap);
+
+    const nextLeadsMap = new Map<string, Lead>();
+    snapshot.leads.forEach((lead) => {
+      nextLeadsMap.set(lead.id, lead);
+    });
+    setLeadsMap(nextLeadsMap);
+  }, []);
+
   const currentLeadId = currentLead?.id ?? null;
   const currentLeadContractIds = useMemo(
     () => new Set(currentLeadContracts.map((contract) => contract.id)),
@@ -230,19 +257,10 @@ export default function WhatsAppAgendaModal({
           }>,
       );
 
-      setReminders(remindersData);
-      setLastUpdated(new Date());
-      setError(null);
-
       const contractIds = Array.from(
         new Set(remindersData.map((reminder) => reminder.contract_id).filter((id): id is string => Boolean(id))),
       );
       const fetchedContracts = await fetchContractsByIds(contractIds);
-      const nextContractsMap = new Map<string, Contract>();
-      fetchedContracts.forEach((contract) => {
-        nextContractsMap.set(contract.id, contract);
-      });
-      setContractsMap(nextContractsMap);
 
       const leadIds = Array.from(
         new Set([
@@ -251,11 +269,15 @@ export default function WhatsAppAgendaModal({
         ]),
       );
       const fetchedLeads = await fetchLeadsByIds(leadIds);
-      const nextLeadsMap = new Map<string, Lead>();
-      fetchedLeads.forEach((lead) => {
-        nextLeadsMap.set(lead.id, lead);
-      });
-      setLeadsMap(nextLeadsMap);
+      const snapshot: WhatsAppAgendaCacheSnapshot = {
+        reminders: remindersData,
+        contracts: fetchedContracts,
+        leads: fetchedLeads,
+        updatedAt: new Date().toISOString(),
+      };
+
+      whatsAppAgendaCacheSnapshot = snapshot;
+      applyAgendaSnapshot(snapshot);
     } catch (loadError) {
       console.error('[WhatsAppAgendaModal] erro ao carregar agenda', loadError);
       setError('Nao foi possivel carregar a agenda agora.');
@@ -264,7 +286,7 @@ export default function WhatsAppAgendaModal({
         setLoading(false);
       }
     }
-  }, []);
+  }, [applyAgendaSnapshot]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -274,7 +296,14 @@ export default function WhatsAppAgendaModal({
     setSelectedDate(getDefaultSelectedDate());
     setOnlyCurrentLead(false);
     setShowCompleted(false);
-    void loadReminders({ showLoading: true });
+
+    if (whatsAppAgendaCacheSnapshot) {
+      applyAgendaSnapshot(whatsAppAgendaCacheSnapshot);
+      setLoading(false);
+      void loadReminders();
+    } else {
+      void loadReminders({ showLoading: true });
+    }
 
     const channel = supabase
       .channel(`whatsapp-agenda-reminders-${Math.random().toString(36).slice(2)}`)
@@ -303,7 +332,7 @@ export default function WhatsAppAgendaModal({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOpen, loadReminders]);
+  }, [applyAgendaSnapshot, isOpen, loadReminders]);
 
   useEffect(() => {
     if (currentLead) {
@@ -708,6 +737,7 @@ export default function WhatsAppAgendaModal({
     }
 
     setOpeningLeadChatId(leadId);
+    onClose();
 
     try {
       await onOpenLeadChat({
@@ -715,7 +745,6 @@ export default function WhatsAppAgendaModal({
         nome_completo: leadInfo.nome_completo,
         telefone: leadInfo.telefone,
       });
-      onClose();
     } catch (openError) {
       console.error('[WhatsAppAgendaModal] erro ao abrir chat do lead:', openError);
       toast.error('Nao foi possivel abrir o chat deste lead.');

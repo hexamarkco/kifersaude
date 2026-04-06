@@ -688,6 +688,60 @@ const summarizeMessageLikeValue = (value: unknown) => {
   return pickBestSummary(collectTextFragments(value));
 };
 
+const isGenericMessageMarker = (value: string) => /^\[[^\]]+\]$/.test(value.trim());
+
+const extractTextLikeValue = (value: unknown): string => {
+  if (!value) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (!isRecord(value)) {
+    return '';
+  }
+
+  const directText = firstNonEmpty(
+    value.body,
+    value.text,
+    value.caption,
+    value.content,
+    value.message,
+    value.edited_text,
+    value.edited_body,
+    value.new_text,
+    value.new_body,
+  );
+  if (directText && !isGenericMessageMarker(directText)) {
+    return directText;
+  }
+
+  const nestedText = firstNonEmpty(
+    readNestedBody(value, 'text'),
+    readNestedBody(value, 'document'),
+    readNestedBody(value, 'image'),
+    readNestedBody(value, 'video'),
+    readNestedBody(value, 'link_preview'),
+  );
+  if (nestedText && !isGenericMessageMarker(nestedText)) {
+    return nestedText;
+  }
+
+  const summarized = summarizeMessageLikeValue(value);
+  if (summarized && !isGenericMessageMarker(summarized)) {
+    return summarized;
+  }
+
+  const fragmentText = pickBestSummary(collectTextFragments(value));
+  if (fragmentText && !isGenericMessageMarker(fragmentText)) {
+    return fragmentText;
+  }
+
+  return '';
+};
+
 export const extractWhapiEditedMessageEvent = (
   message: unknown,
   eventAction: string,
@@ -735,21 +789,27 @@ export const extractWhapiEditedMessageEvent = (
   ) || null;
 
   const editedText = firstNonEmpty(
-    summarizeMessageLikeValue(nestedEditedMessage),
-    summarizeMessageLikeValue(actionEditedMessage),
-    summarizeMessageLikeValue(actionMessage),
-    summarizeMessageLikeValue(isRecord(message.text) ? { type: 'text', text: message.text } : null),
-    summarizeMessageLikeValue(isRecord(action?.text) ? { type: 'text', text: action.text } : null),
-    summarizeMessageLikeValue(action),
+    extractTextLikeValue(nestedEditedMessage),
+    extractTextLikeValue(actionEditedMessage),
+    extractTextLikeValue(actionMessage),
+    extractTextLikeValue(message.text),
+    extractTextLikeValue(action?.text),
+    extractTextLikeValue(action?.edited_text),
+    extractTextLikeValue(action?.edited_body),
+    extractTextLikeValue(message.edited_text),
+    extractTextLikeValue(message.edited_body),
+    extractTextLikeValue(message.body),
+    extractTextLikeValue(action?.body),
   ) || null;
 
   const originalText = firstNonEmpty(
-    summarizeMessageLikeValue(quotedContent),
-    summarizeMessageLikeValue(isRecord(action?.previous_message) ? action.previous_message : null),
-    summarizeMessageLikeValue(isRecord(action?.old_message) ? action.old_message : null),
-    action?.previous_text,
-    action?.previous_body,
-    action?.old_text,
+    extractTextLikeValue(quotedContent),
+    extractTextLikeValue(isRecord(action?.previous_message) ? action.previous_message : null),
+    extractTextLikeValue(isRecord(action?.old_message) ? action.old_message : null),
+    extractTextLikeValue(action?.previous_text),
+    extractTextLikeValue(action?.previous_body),
+    extractTextLikeValue(action?.old_text),
+    extractTextLikeValue(action?.old_body),
   ) || null;
 
   const editedAt = unixTimestampToIso(message.timestamp) || stringTimestampToIso(message.timestamp) || getNowIso();

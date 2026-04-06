@@ -128,6 +128,14 @@ type NetworkEntryFormState = {
   observacoes: string;
 };
 
+type NetworkListStatusFilter = 'all' | 'with-network' | 'without-network';
+
+type NetworkProductSummary = {
+  product: CotadorProductManagerRecord;
+  entries: CotadorHospitalNetworkEntry[];
+  cities: string[];
+};
+
 const tabs: Array<{ id: CatalogTabId; label: string }> = [
   { id: 'operadoras', label: 'Operadoras' },
   { id: 'linhas', label: 'Linhas' },
@@ -580,6 +588,19 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [networkEditingIndex, setNetworkEditingIndex] = useState<number | null>(null);
   const [networkSearch, setNetworkSearch] = useState('');
   const [networkCity, setNetworkCity] = useState('');
+  const [networkListSearch, setNetworkListSearch] = useState('');
+  const [networkListOperadoraId, setNetworkListOperadoraId] = useState('');
+  const [networkListLineId, setNetworkListLineId] = useState('');
+  const [networkListCity, setNetworkListCity] = useState('');
+  const [networkListStatus, setNetworkListStatus] = useState<NetworkListStatusFilter>('all');
+  const [networkPage, setNetworkPage] = useState(1);
+  const [networkPerPage, setNetworkPerPage] = useState(25);
+  const [networkImportModalOpen, setNetworkImportModalOpen] = useState(false);
+  const [networkImportForm, setNetworkImportForm] = useState<ImportFormState>({ file: null });
+  const [networkImportPreview, setNetworkImportPreview] = useState<CotadorImportPreview | null>(null);
+  const [networkImportPreviewError, setNetworkImportPreviewError] = useState<string | null>(null);
+  const [networkImportPreviewLoading, setNetworkImportPreviewLoading] = useState(false);
+  const networkImportFileInputRef = useRef<HTMLInputElement | null>(null);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   useEffect(() => {
@@ -691,6 +712,101 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     () => [...produtos].sort(compareCotadorProducts),
     [produtos],
   );
+
+  const networkProductSummaries = useMemo<NetworkProductSummary[]>(
+    () => networkProducts.map((product) => {
+      const entries = sanitizeNetworkEntries(product.rede_hospitalar);
+      const cities = Array.from(new Set(entries.map((entry) => entry.cidade).filter(Boolean))).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+
+      return {
+        product,
+        entries,
+        cities,
+      };
+    }),
+    [networkProducts],
+  );
+
+  const networkListOperadoraOptions = useMemo(
+    () => Array.from(new Map<string, NonNullable<CotadorProductManagerRecord['operadora']>>(
+      networkProducts.reduce<Array<[string, NonNullable<CotadorProductManagerRecord['operadora']>]>>((accumulator, product) => {
+        if (product.operadora?.id) {
+          accumulator.push([product.operadora.id, product.operadora]);
+        }
+        return accumulator;
+      }, []),
+    ).values())
+      .filter((operadora): operadora is NonNullable<CotadorProductManagerRecord['operadora']> => Boolean(operadora))
+      .sort((left, right) => left.nome.localeCompare(right.nome, 'pt-BR'))
+      .map((operadora) => ({ value: operadora.id, label: operadora.nome })),
+    [networkProducts],
+  );
+
+  const networkListLineOptions = useMemo(
+    () => Array.from(new Map<string, NonNullable<CotadorProductManagerRecord['linha']>>(
+      networkProducts.reduce<Array<[string, NonNullable<CotadorProductManagerRecord['linha']>]>>((accumulator, product) => {
+        if (product.linha?.id) {
+          accumulator.push([product.linha.id, product.linha]);
+        }
+        return accumulator;
+      }, []),
+    ).values())
+      .filter((line): line is NonNullable<CotadorProductManagerRecord['linha']> => Boolean(line))
+      .sort((left, right) => left.nome.localeCompare(right.nome, 'pt-BR'))
+      .map((line) => ({ value: line.id, label: line.nome })),
+    [networkProducts],
+  );
+
+  const networkListCityOptions = useMemo(
+    () => Array.from(new Set(networkProductSummaries.flatMap((summary) => summary.cities)))
+      .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+      .map((city) => ({ value: city, label: city })),
+    [networkProductSummaries],
+  );
+
+  const filteredNetworkProducts = useMemo(() => {
+    const normalizedSearch = normalizeSortText(networkListSearch);
+
+    return networkProductSummaries.filter((summary) => {
+      if (networkListOperadoraId && summary.product.operadora?.id !== networkListOperadoraId) return false;
+      if (networkListLineId && summary.product.linha?.id !== networkListLineId) return false;
+      if (networkListCity && !summary.cities.includes(networkListCity)) return false;
+      if (networkListStatus === 'with-network' && summary.entries.length === 0) return false;
+      if (networkListStatus === 'without-network' && summary.entries.length > 0) return false;
+      if (!normalizedSearch) return true;
+
+      const haystack = [
+        summary.product.nome,
+        summary.product.operadora?.nome,
+        summary.product.linha?.nome,
+        summary.product.abrangencia,
+        summary.product.acomodacao,
+        ...summary.entries.map((entry) => [entry.hospital, entry.cidade, entry.regiao, entry.bairro, entry.atendimentos.join(' '), entry.observacoes].filter(Boolean).join(' ')),
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      return normalizeSortText(haystack).includes(normalizedSearch);
+    });
+  }, [networkListCity, networkListLineId, networkListOperadoraId, networkListSearch, networkListStatus, networkProductSummaries]);
+
+  const totalNetworkPages = Math.max(1, Math.ceil(filteredNetworkProducts.length / networkPerPage));
+
+  const networkProductsWithEntriesCount = useMemo(
+    () => networkProductSummaries.filter((summary) => summary.entries.length > 0).length,
+    [networkProductSummaries],
+  );
+
+  useEffect(() => {
+    if (networkPage > totalNetworkPages) {
+      setNetworkPage(totalNetworkPages);
+    }
+  }, [networkPage, totalNetworkPages]);
+
+  const paginatedNetworkProducts = useMemo(() => {
+    const startIndex = (networkPage - 1) * networkPerPage;
+    return filteredNetworkProducts.slice(startIndex, startIndex + networkPerPage);
+  }, [filteredNetworkProducts, networkPage, networkPerPage]);
 
   const lineOperadoraById = useMemo(
     () => new Map(linhas.map((line) => [line.id, line.operadora?.id ?? ''])),
@@ -815,6 +931,21 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     }, []);
   }, [networkCity, networkDraft, networkSearch]);
 
+  const networkImportPreviewItems = useMemo(
+    () => (networkImportPreview?.items ?? []).filter((item) => item.networkEntriesCount > 0),
+    [networkImportPreview],
+  );
+
+  const networkImportPreviewTablesCount = useMemo(
+    () => networkImportPreviewItems.reduce((total, item) => total + item.tabelasCount, 0),
+    [networkImportPreviewItems],
+  );
+
+  const networkImportPreviewEntriesCount = useMemo(
+    () => networkImportPreviewItems.reduce((total, item) => total + item.networkEntriesCount, 0),
+    [networkImportPreviewItems],
+  );
+
   const resetNetworkModal = () => {
     setNetworkModalOpen(false);
     setNetworkProductId(null);
@@ -889,6 +1020,93 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     toast.success('Rede hospitalar salva com sucesso.');
     setSubmitting(false);
     resetNetworkModal();
+  };
+
+  const resetNetworkImportModal = () => {
+    setNetworkImportModalOpen(false);
+    setNetworkImportForm({ file: null });
+    setNetworkImportPreview(null);
+    setNetworkImportPreviewError(null);
+    setNetworkImportPreviewLoading(false);
+    if (networkImportFileInputRef.current) {
+      networkImportFileInputRef.current.value = '';
+    }
+  };
+
+  useEffect(() => {
+    if (!networkImportModalOpen || !networkImportForm.file) {
+      setNetworkImportPreview(null);
+      setNetworkImportPreviewError(null);
+      setNetworkImportPreviewLoading(false);
+      return;
+    }
+
+    let isCancelled = false;
+    setNetworkImportPreviewLoading(true);
+    setNetworkImportPreviewError(null);
+
+    void networkImportForm.file.text()
+      .then((content) => {
+        if (isCancelled) return;
+        const preview = cotadorImportService.previewFromText('json-completo', content);
+        setNetworkImportPreview(preview);
+      })
+      .catch((error) => {
+        if (isCancelled) return;
+        setNetworkImportPreview(null);
+        setNetworkImportPreviewError(error instanceof Error ? error.message : 'Nao foi possivel ler o arquivo selecionado.');
+      })
+      .finally(() => {
+        if (isCancelled) return;
+        setNetworkImportPreviewLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [networkImportForm.file, networkImportModalOpen]);
+
+  const handleNetworkImportSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!networkImportForm.file) {
+      toast.error('Selecione um arquivo JSON para importar a rede.');
+      return;
+    }
+
+    if (networkImportPreviewError) {
+      toast.error(networkImportPreviewError);
+      return;
+    }
+
+    if (networkImportPreviewItems.length === 0 || networkImportPreviewEntriesCount === 0) {
+      toast.error('O arquivo nao contem itens de rede hospitalar para importar.');
+      return;
+    }
+
+    if (networkImportPreviewTablesCount > 0) {
+      toast.error('Este modal aceita apenas JSON focado em rede. Para importar tabelas, use o importador geral do catalogo.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const content = await networkImportForm.file.text();
+      const result = await cotadorImportService.importFromText('json-completo', content);
+      await loadCatalogData();
+
+      if (result.importedNetworkEntries === 0) {
+        toast.error('Nenhum item de rede foi importado. Revise o arquivo e tente novamente.');
+        return;
+      }
+
+      toast.success(`Importacao de rede concluida: ${result.importedNetworkEntries} item(ns) em ${networkImportPreviewItems.length} produto(s).`);
+      resetNetworkImportModal();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel importar a rede.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const activeTablePricingAcomodacoes = tableModalMode === 'create'
@@ -981,7 +1199,14 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     });
   }, [selectedTableProductAcomodacoes, tableModalMode, tableModalOpen]);
 
-  const showMessage = (type: Message['type'], text: string) => setMessage({ type, text });
+  const showMessage = (type: Message['type'], text: string) => {
+    setMessage({ type, text });
+    if (type === 'success') {
+      toast.success(text);
+      return;
+    }
+    toast.error(text);
+  };
 
   const loadCatalogData = async () => {
     setLoading(true);
@@ -1544,10 +1769,17 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 {activeTab === 'administradoras' ? 'Nova administradora' : 'Nova entidade'}
               </Button>
             )}
-            <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
-              <Upload className="h-4 w-4" />
-              Importar
-            </Button>
+            {activeTab === 'redes' ? (
+              <Button variant="secondary" onClick={() => setNetworkImportModalOpen(true)}>
+                <Upload className="h-4 w-4" />
+                Importar rede
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+                <Upload className="h-4 w-4" />
+                Importar
+              </Button>
+            )}
           </div>
         </div>
 
@@ -1715,39 +1947,138 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         networkProducts.length === 0 ? (
           <EmptyState icon={MapPin} title="Nenhuma rede cadastrada" description="Adicione produtos ao catalogo para comecar a vincular hospitais e atendimentos." />
         ) : (
-          <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
-              {networkProducts.map((product) => {
-                const networkCount = sanitizeNetworkEntries(product.rede_hospitalar).length;
+          <div className="space-y-5">
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Gestao da rede</p>
+                    <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Produtos e prestadores</h4>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProducts.length} produto(s)</span>
+                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProductsWithEntriesCount} com rede</span>
+                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProducts.length - networkProductsWithEntriesCount} sem rede</span>
+                  </div>
+                </div>
 
-                return (
-                  <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h4>
-                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
-                          {networkCount} prestador(es)
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                        {product.operadora?.nome ?? 'Operadora'} / {product.linha?.nome ?? 'Linha'}
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                        {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
-                        {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end lg:self-auto">
-                      <Button variant="secondary" onClick={() => openNetworkModal(product)}>
-                        <MapPin className="h-4 w-4" />
-                        Gerenciar rede
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_220px_220px_220px_220px]">
+                  <Input
+                    value={networkListSearch}
+                    onChange={(event) => {
+                      setNetworkListSearch(event.target.value);
+                      setNetworkPage(1);
+                    }}
+                    placeholder="Buscar produto, hospital, cidade ou linha"
+                    leftIcon={Search}
+                  />
+                  <FilterSingleSelect
+                    icon={Building2}
+                    options={networkListOperadoraOptions}
+                    placeholder="Todas as operadoras"
+                    value={networkListOperadoraId}
+                    onChange={(value) => {
+                      setNetworkListOperadoraId(value);
+                      setNetworkPage(1);
+                    }}
+                  />
+                  <FilterSingleSelect
+                    icon={Network}
+                    options={networkListLineOptions}
+                    placeholder="Todas as linhas"
+                    value={networkListLineId}
+                    onChange={(value) => {
+                      setNetworkListLineId(value);
+                      setNetworkPage(1);
+                    }}
+                  />
+                  <FilterSingleSelect
+                    icon={MapPin}
+                    options={networkListCityOptions}
+                    placeholder="Todas as cidades"
+                    value={networkListCity}
+                    onChange={(value) => {
+                      setNetworkListCity(value);
+                      setNetworkPage(1);
+                    }}
+                  />
+                  <FilterSingleSelect
+                    icon={ShieldCheck}
+                    options={[
+                      { value: 'all', label: 'Todos' },
+                      { value: 'with-network', label: 'Com rede' },
+                      { value: 'without-network', label: 'Sem rede' },
+                    ]}
+                    placeholder="Status da rede"
+                    value={networkListStatus}
+                    onChange={(value) => {
+                      setNetworkListStatus((value as NetworkListStatusFilter) || 'all');
+                      setNetworkPage(1);
+                    }}
+                  />
+                </div>
+              </div>
             </div>
+
+            {filteredNetworkProducts.length === 0 ? (
+              <EmptyState icon={Search} title="Nenhum produto encontrado" description="Ajuste os filtros da aba Redes para localizar o produto ou a cidade desejada." />
+            ) : (
+              <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+                <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+                  {paginatedNetworkProducts.map((summary) => {
+                    const { product, entries, cities } = summary;
+
+                    return (
+                      <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h4>
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                              {entries.length} prestador(es)
+                            </span>
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                              {cities.length} cidade(s)
+                            </span>
+                            {entries.length === 0 && (
+                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">
+                                Sem rede
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                            {product.operadora?.nome ?? 'Operadora'} / {product.linha?.nome ?? 'Linha'}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                            {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
+                            {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
+                            {cities.slice(0, 4).map((city) => <span key={`${product.id}-${city}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{city}</span>)}
+                            {cities.length > 4 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{cities.length - 4} cidade(s)</span>}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end lg:self-auto">
+                          <Button variant="secondary" onClick={() => openNetworkModal(product)}>
+                            <MapPin className="h-4 w-4" />
+                            Gerenciar rede
+                          </Button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+                <Pagination
+                  currentPage={networkPage}
+                  totalPages={totalNetworkPages}
+                  itemsPerPage={networkPerPage}
+                  totalItems={filteredNetworkProducts.length}
+                  onPageChange={setNetworkPage}
+                  onItemsPerPageChange={(nextPageSize) => {
+                    setNetworkPerPage(nextPageSize);
+                    setNetworkPage(1);
+                  }}
+                />
+              </div>
+            )}
           </div>
         )
       ) : tabelas.length === 0 ? (
@@ -1952,6 +2283,135 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" loading={submitting} disabled={importPreviewLoading || Boolean(importPreviewError)}><Upload className="h-4 w-4" />Importar arquivo</Button>
             <Button type="button" variant="secondary" onClick={resetImportModal} disabled={submitting}>Cancelar</Button>
+          </div>
+        </form>
+      </ModalShell>
+
+      <ModalShell
+        isOpen={networkImportModalOpen}
+        onClose={resetNetworkImportModal}
+        title="Importar rede hospitalar"
+        description="Use um JSON focado em rede para atualizar prestadores por produto sem misturar tabelas comerciais."
+        size="xl"
+      >
+        <form onSubmit={handleNetworkImportSubmit} className="space-y-5">
+          <div className="rounded-3xl border border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)] p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:rgba(157,127,90,0.22)] bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-accent-ink,#6f3f16)]">
+                <FileJson className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">JSON de rede</p>
+                <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Aceita entradas com `redeHospitalar` e pode usar `produtos: [...]` para replicar a mesma rede em mais de um produto.</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Arquivo</label>
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_86%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_94%,var(--panel-surface-muted,#f8f2e8)))] p-4 shadow-sm">
+              <input
+                ref={networkImportFileInputRef}
+                type="file"
+                accept=".json,application/json"
+                onChange={(event) => setNetworkImportForm((current) => ({ ...current, file: event.target.files?.[0] ?? null }))}
+                className="sr-only"
+              />
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:rgba(157,127,90,0.22)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-accent-ink,#6f3f16)] shadow-sm">
+                      <Upload className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{networkImportForm.file ? networkImportForm.file.name : 'Nenhum arquivo selecionado'}</p>
+                      <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">JSON focado em rede (.json)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => networkImportFileInputRef.current?.click()}
+                  className="w-full md:w-auto"
+                >
+                  <Upload className="h-4 w-4" />
+                  {networkImportForm.file ? 'Trocar arquivo' : 'Escolher arquivo'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Preview da rede</label>
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+              {networkImportPreviewLoading ? (
+                <div className="space-y-3">
+                  <div className="h-2 overflow-hidden rounded-full bg-[var(--panel-surface-soft,#f4ede3)]">
+                    <div className="h-full w-1/2 animate-pulse rounded-full bg-[var(--panel-accent-strong,#b85c1f)]" />
+                  </div>
+                  <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Lendo e validando o JSON de rede...</p>
+                </div>
+              ) : networkImportPreviewError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{networkImportPreviewError}</div>
+              ) : networkImportPreview ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Produtos com rede</p>
+                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkImportPreviewItems.length}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Itens de rede</p>
+                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkImportPreviewEntriesCount}</p>
+                    </div>
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Tabelas no arquivo</p>
+                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkImportPreviewTablesCount}</p>
+                    </div>
+                  </div>
+
+                  {networkImportPreviewTablesCount > 0 && (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      O arquivo possui tabelas comerciais. Use este modal apenas para JSON focado em rede ou utilize o importador geral do catalogo.
+                    </div>
+                  )}
+
+                  {networkImportPreviewItems.length === 0 ? (
+                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                      Nenhum item de rede identificado no arquivo.
+                    </div>
+                  ) : (
+                    <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
+                      <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Produtos encontrados</div>
+                      <div className="max-h-72 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
+                        {networkImportPreviewItems.map((item, index) => (
+                          <div key={`${item.operadora}-${item.linha}-${item.produto}-${index}`} className="px-4 py-3">
+                            <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.produto}</p>
+                            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora} / {item.linha}</p>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{item.networkEntriesCount} item(ns) de rede</span>
+                              {item.acomodacoes.map((acomodacao) => <span key={`${item.produto}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{acomodacao}</span>)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Selecione um JSON para visualizar os produtos e os prestadores que serao atualizados.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" loading={submitting} disabled={networkImportPreviewLoading || Boolean(networkImportPreviewError)}>
+              <Upload className="h-4 w-4" />
+              Importar rede
+            </Button>
+            <Button type="button" variant="secondary" onClick={resetNetworkImportModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>
       </ModalShell>

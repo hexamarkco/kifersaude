@@ -258,8 +258,19 @@ export default function WhatsAppAgendaModal({
       }
     };
 
+    const handleScroll = () => setQuickScheduleDropdown(null);
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    const scrollContainer = document.querySelector('.overflow-auto, .overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+      }
+    };
   }, [quickScheduleDropdown]);
 
   const loadReminders = useCallback(async (options?: { showLoading?: boolean }) => {
@@ -1174,9 +1185,16 @@ export default function WhatsAppAgendaModal({
                         setQuickScheduleDropdown(null);
                       } else {
                         const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                        const viewportHeight = window.innerHeight;
+                        const spaceBelow = viewportHeight - rect.bottom;
+                        const dropdownHeight = 200;
+                        const shouldOpenUpward = spaceBelow < dropdownHeight + 20;
                         setQuickScheduleDropdown({
                           reminderId: reminder.id,
-                          position: { top: rect.bottom + 4, left: rect.left },
+                          position: {
+                            top: shouldOpenUpward ? rect.top - dropdownHeight - 8 : rect.bottom + 4,
+                            left: rect.left,
+                          },
                         });
                       }
                     }}

@@ -390,6 +390,8 @@ const sanitizeNetworkEntries = (value: unknown): CotadorHospitalNetworkEntry[] =
     .sort((left, right) => {
       const cityComparison = normalizeSortText(left.cidade).localeCompare(normalizeSortText(right.cidade), 'pt-BR');
       if (cityComparison !== 0) return cityComparison;
+      const regionComparison = normalizeSortText(left.regiao).localeCompare(normalizeSortText(right.regiao), 'pt-BR');
+      if (regionComparison !== 0) return regionComparison;
       return normalizeSortText(left.hospital).localeCompare(normalizeSortText(right.hospital), 'pt-BR');
     });
 };
@@ -584,6 +586,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
   const [networkProductId, setNetworkProductId] = useState<string | null>(null);
   const [networkDraft, setNetworkDraft] = useState<CotadorHospitalNetworkEntry[]>([]);
+  const [networkEntryModalOpen, setNetworkEntryModalOpen] = useState(false);
   const [networkEntryForm, setNetworkEntryForm] = useState<NetworkEntryFormState>(DEFAULT_NETWORK_ENTRY_FORM);
   const [networkEditingIndex, setNetworkEditingIndex] = useState<number | null>(null);
   const [networkSearch, setNetworkSearch] = useState('');
@@ -950,6 +953,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setNetworkModalOpen(false);
     setNetworkProductId(null);
     setNetworkDraft([]);
+    setNetworkEntryModalOpen(false);
     setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
     setNetworkEditingIndex(null);
     setNetworkSearch('');
@@ -959,6 +963,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const openNetworkModal = (product: CotadorProductManagerRecord) => {
     setNetworkProductId(product.id);
     setNetworkDraft(sanitizeNetworkEntries(product.rede_hospitalar));
+    setNetworkEntryModalOpen(false);
     setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
     setNetworkEditingIndex(null);
     setNetworkSearch('');
@@ -966,20 +971,33 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setNetworkModalOpen(true);
   };
 
+  const openNetworkEntryCreateModal = () => {
+    setNetworkEditingIndex(null);
+    setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
+    setNetworkEntryModalOpen(true);
+  };
+
   const startEditingNetworkEntry = (entry: CotadorHospitalNetworkEntry, index: number) => {
     setNetworkEditingIndex(index);
     setNetworkEntryForm(buildNetworkEntryFormFromValue(entry));
+    setNetworkEntryModalOpen(true);
   };
 
   const resetNetworkEntryForm = () => {
     setNetworkEntryForm(DEFAULT_NETWORK_ENTRY_FORM);
     setNetworkEditingIndex(null);
+    setNetworkEntryModalOpen(false);
   };
 
   const handleNetworkEntrySubmit = () => {
+    if (!networkEntryForm.hospital.trim() || !networkEntryForm.cidade.trim() || !networkEntryForm.regiao.trim()) {
+      toast.error('Preencha nome do hospital, cidade e regiao para salvar o cadastro.');
+      return;
+    }
+
     const sanitizedEntry = sanitizeNetworkEntry(networkEntryForm);
     if (!sanitizedEntry) {
-      toast.error('Preencha ao menos hospital e cidade para adicionar o prestador.');
+      toast.error('Nao foi possivel validar o hospital informado.');
       return;
     }
 
@@ -2480,10 +2498,10 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                         {entry.observacoes && <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">{entry.observacoes}</p>}
                       </div>
                       <div className="flex items-center gap-2 self-end lg:self-auto">
-                        <Button variant="icon" size="icon" className="h-9 w-9 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => startEditingNetworkEntry(entry, index)} title="Editar prestador">
+                        <Button variant="icon" size="icon" className="h-9 w-9 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => startEditingNetworkEntry(entry, index)} title="Editar hospital">
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button variant="icon" size="icon" className="h-9 w-9 text-red-600 hover:bg-red-50" onClick={() => handleRemoveNetworkEntry(index)} title="Remover prestador">
+                        <Button variant="icon" size="icon" className="h-9 w-9 text-red-600 hover:bg-red-50" onClick={() => handleRemoveNetworkEntry(index)} title="Remover hospital">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -2497,51 +2515,13 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
-                    {networkEditingIndex === null ? 'Adicionar prestador' : 'Editar prestador'}
+                    Cadastro manual de hospital
                   </p>
-                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Use siglas de atendimento e detalhes extras em observacoes quando houver excecoes.</p>
+                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Abra um modal dedicado para cadastrar ou editar nome, cidade, regiao, bairro e atendimentos.</p>
                 </div>
-                {networkEditingIndex !== null && (
-                  <Button type="button" variant="secondary" onClick={resetNetworkEntryForm}>Cancelar edicao</Button>
-                )}
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Hospital *</label>
-                  <Input value={networkEntryForm.hospital} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, hospital: event.target.value }))} placeholder="Ex: AMIL - HOSPITAL PASTEUR" />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
-                  <Input value={networkEntryForm.cidade} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, cidade: event.target.value }))} placeholder="Ex: Rio de Janeiro" />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao</label>
-                  <Input value={networkEntryForm.regiao} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, regiao: event.target.value }))} placeholder="Ex: Zona Norte" />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
-                  <Input value={networkEntryForm.bairro} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, bairro: event.target.value }))} placeholder="Opcional" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Atendimentos</label>
-                  <InlineCheckboxGroup
-                    options={networkServiceOptions.map((option) => ({ value: option.value, label: option.label }))}
-                    values={networkEntryForm.atendimentos}
-                    onChange={(values) => setNetworkEntryForm((current) => ({ ...current, atendimentos: values }))}
-                    emptyMessage="Nenhuma sigla configurada."
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observacoes</label>
-                  <Textarea value={networkEntryForm.observacoes} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, observacoes: event.target.value }))} rows={3} placeholder="Ex: Prestador habilitado apenas na acomodacao QP" />
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <Button type="button" onClick={handleNetworkEntrySubmit}>
+                <Button type="button" onClick={openNetworkEntryCreateModal}>
                   <Plus className="h-4 w-4" />
-                  {networkEditingIndex === null ? 'Adicionar prestador' : 'Atualizar prestador'}
+                  Adicionar hospital
                 </Button>
               </div>
             </div>
@@ -2562,6 +2542,56 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             </div>
           </div>
         )}
+      </ModalShell>
+
+      <ModalShell
+        isOpen={networkEntryModalOpen}
+        onClose={resetNetworkEntryForm}
+        title={networkEditingIndex === null ? 'Adicionar hospital da rede' : 'Editar hospital da rede'}
+        description="Cadastre o hospital manualmente com nome, cidade, regiao, bairro opcional e os atendimentos disponiveis neste plano."
+        size="lg"
+      >
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Hospital *</label>
+              <Input value={networkEntryForm.hospital} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, hospital: event.target.value }))} placeholder="Ex: HOSPITAL PASTEUR" required />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
+              <Input value={networkEntryForm.cidade} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, cidade: event.target.value }))} placeholder="Ex: Rio de Janeiro" required />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao *</label>
+              <Input value={networkEntryForm.regiao} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, regiao: event.target.value }))} placeholder="Ex: Zona Norte" required />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
+              <Input value={networkEntryForm.bairro} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, bairro: event.target.value }))} placeholder="Opcional" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Atendimentos</label>
+              <InlineCheckboxGroup
+                options={networkServiceOptions.map((option) => ({ value: option.value, label: option.label }))}
+                values={networkEntryForm.atendimentos}
+                onChange={(values) => setNetworkEntryForm((current) => ({ ...current, atendimentos: values }))}
+                emptyMessage="Nenhuma sigla configurada."
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observacoes</label>
+              <Textarea value={networkEntryForm.observacoes} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, observacoes: event.target.value }))} rows={3} placeholder="Ex: Prestador habilitado apenas na acomodacao QP" />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" onClick={handleNetworkEntrySubmit}>
+              <Save className="h-4 w-4" />
+              {networkEditingIndex === null ? 'Adicionar hospital' : 'Atualizar hospital'}
+            </Button>
+            <Button type="button" variant="secondary" onClick={resetNetworkEntryForm}>Cancelar</Button>
+          </div>
+        </div>
       </ModalShell>
 
       <ModalShell

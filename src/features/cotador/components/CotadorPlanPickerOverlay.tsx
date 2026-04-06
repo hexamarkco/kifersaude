@@ -876,10 +876,10 @@ export default function CotadorPlanPickerOverlay({
                                         key={item.id}
                                         type="button"
                                         onClick={() => {
-                                          if (isSelected || busy) return;
+                                          if (busy) return;
                                           onSelectItem(item.id);
                                         }}
-                                        disabled={busy || isSelected}
+                                        disabled={busy}
                                         className={cx(
                                           'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
                                           isSelected
@@ -918,10 +918,10 @@ export default function CotadorPlanPickerOverlay({
                                         key={option.key}
                                         type="button"
                                         onClick={() => {
-                                          if (isSelected || busy) return;
+                                          if (busy) return;
                                           onSelectItem(option.item.id);
                                         }}
-                                        disabled={busy || isSelected}
+                                        disabled={busy}
                                         className={cx(
                                           'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
                                           isSelected

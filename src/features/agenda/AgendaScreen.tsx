@@ -71,6 +71,14 @@ import type { ManualReminderPrompt } from "../reminders/shared/reminderTypes";
 const RELATED_ENTITY_BATCH_SIZE = 100;
 
 type AgendaStatusFilter = "todos" | "nao-lidos" | "lidos";
+type AgendaTimeFilter = "todos" | "atrasados" | "dia" | "futuros";
+
+const TIME_FILTER_OPTIONS = [
+  { value: "todos", label: "Todos" },
+  { value: "atrasados", label: "Atrasados" },
+  { value: "dia", label: "Hoje" },
+  { value: "futuros", label: "Futuros" },
+];
 
 const PRIORITY_OPTIONS = [
   { value: "all", label: "Todas prioridades" },
@@ -144,6 +152,7 @@ export default function AgendaScreen() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [statusFilter, setStatusFilter] = useState<AgendaStatusFilter>("nao-lidos");
+  const [timeFilter, setTimeFilter] = useState<AgendaTimeFilter>("todos");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -968,6 +977,11 @@ export default function AgendaScreen() {
   }, [reminders]);
 
   const filteredReminders = useMemo(() => {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(now);
+    todayEnd.setHours(23, 59, 59, 999);
+
     return reminders
       .filter((reminder) => {
         if (statusFilter === "nao-lidos" && reminder.lido) {
@@ -984,6 +998,22 @@ export default function AgendaScreen() {
 
         if (priorityFilter !== "all" && reminder.prioridade !== priorityFilter) {
           return false;
+        }
+
+        if (timeFilter !== "todos") {
+          const reminderDate = new Date(reminder.data_lembrete);
+          if (timeFilter === "atrasados") {
+            if (!reminder.lido && reminderDate < now) return true;
+            return false;
+          }
+          if (timeFilter === "dia") {
+            if (reminderDate >= now && reminderDate <= todayEnd) return true;
+            return false;
+          }
+          if (timeFilter === "futuros") {
+            if (reminderDate > todayEnd) return true;
+            return false;
+          }
         }
 
         if (!searchQuery.trim()) {
@@ -1009,6 +1039,7 @@ export default function AgendaScreen() {
     reminders,
     searchQuery,
     statusFilter,
+    timeFilter,
     typeFilter,
   ]);
 
@@ -1666,6 +1697,14 @@ export default function AgendaScreen() {
                 placeholder="Todas prioridades"
                 includePlaceholderOption={false}
                 options={PRIORITY_OPTIONS}
+              />
+              <FilterSingleSelect
+                size="compact"
+                value={timeFilter}
+                onChange={setTimeFilter}
+                placeholder="Periodo"
+                includePlaceholderOption={false}
+                options={TIME_FILTER_OPTIONS}
               />
               <div className="flex flex-wrap items-center gap-2">
                 <Button

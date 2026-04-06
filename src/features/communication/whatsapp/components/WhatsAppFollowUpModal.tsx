@@ -54,6 +54,7 @@ export default function WhatsAppFollowUpModal({
   onSend,
 }: WhatsAppFollowUpModalProps) {
   const [isRecording, setIsRecording] = useState(false);
+  const [currentTranscript, setCurrentTranscript] = useState("");
   const recognitionRef = useRef<unknown>(null);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
 
@@ -67,18 +68,20 @@ export default function WhatsAppFollowUpModal({
     recognitionInstance.lang = 'pt-BR';
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognitionInstance.onresult = (event: any) => {
+      let interimTranscript = '';
       let finalTranscript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
         }
       }
-      if (finalTranscript) {
-        onChangeCustomInstructions(customInstructions + ' ' + finalTranscript);
-      }
+      setCurrentTranscript(interimTranscript + finalTranscript);
     };
     recognitionInstance.onerror = () => {
       setIsRecording(false);
+      setCurrentTranscript("");
     };
     recognitionInstance.onend = () => {
       setIsRecording(false);
@@ -89,9 +92,16 @@ export default function WhatsAppFollowUpModal({
   const handleToggleRecording = () => {
     if (isRecording) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (recognitionRef.current as any)?.stop();
+      const rec = recognitionRef.current as any;
+      rec?.stop();
+      // Commit the final transcript to instructions
+      if (currentTranscript.trim()) {
+        onChangeCustomInstructions(customInstructions + (customInstructions ? ' ' : '') + currentTranscript.trim());
+      }
+      setCurrentTranscript("");
       setIsRecording(false);
     } else {
+      setCurrentTranscript("");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (recognitionRef.current as any)?.start();
       setIsRecording(true);
@@ -161,6 +171,11 @@ export default function WhatsAppFollowUpModal({
                 {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 <span>{isRecording ? 'Parar' : 'Gravar áudio'}</span>
               </Button>
+              {isRecording && currentTranscript && (
+                <div className="mt-2 text-xs text-[var(--panel-text-muted,#876f5c)] italic">
+                  "...{currentTranscript}"
+                </div>
+              )}
             </div>
           </div>
 

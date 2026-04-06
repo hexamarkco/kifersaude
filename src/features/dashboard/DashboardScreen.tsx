@@ -1746,7 +1746,7 @@ export default function DashboardScreen({
 
     const { error: insertError } = await supabase
       .from("reminders")
-      .upsert(remindersToInsert, { onConflict: "contract_id" });
+      .upsert(remindersToInsert, { onConflict: "contract_id", ignoreDuplicates: true });
     if (insertError) {
       console.error("Erro ao criar lembretes de reajuste:", insertError);
       return false;

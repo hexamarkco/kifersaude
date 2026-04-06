@@ -1430,7 +1430,7 @@ export default function AgendaScreen() {
                           onClose={() => setQuickScheduleDropdown(null)}
                           ariaLabel="Selecionar dias para agendar"
                           className="rounded-xl border-[rgba(212,192,167,0.18)] bg-[var(--panel-bg,#fdfbf7)] p-1 shadow-xl"
-                          style={{ width: 140 }}
+                          style={{ width: 140, zIndex: 9999 }}
                         >
                           <div className="flex flex-col gap-1">
                             {[1, 2, 3, 4, 5].map((days) => (

@@ -25,6 +25,9 @@ type FilterSingleSelectProps = {
   neutralValues?: string[];
   disabled?: boolean;
   size?: 'default' | 'compact';
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  emptyMessage?: string;
 };
 
 type DropdownPos = { top: number; left: number; width: number; maxHeight: number };
@@ -39,14 +42,19 @@ export default function FilterSingleSelect({
   neutralValues = [],
   disabled = false,
   size = 'default',
+  searchable = false,
+  searchPlaceholder = 'Buscar...',
+  emptyMessage = 'Nenhuma opcao encontrada.',
 }: FilterSingleSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [pos, setPos] = useState<DropdownPos | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const listboxId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const isCompact = size === 'compact';
 
@@ -127,6 +135,17 @@ export default function FilterSingleSelect({
     [optionsWithDefault, value],
   );
 
+  const filteredOptions = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLocaleLowerCase('pt-BR');
+    if (!searchable || !normalizedSearch) return optionsWithDefault;
+
+    const defaultOption = includePlaceholderOption ? optionsWithDefault.find((option) => option.value === '') ?? null : null;
+    const matchingOptions = options
+      .filter((option) => option.label.toLocaleLowerCase('pt-BR').includes(normalizedSearch));
+
+    return defaultOption ? [defaultOption, ...matchingOptions] : matchingOptions;
+  }, [includePlaceholderOption, options, optionsWithDefault, searchTerm, searchable]);
+
   const selectedLabel = useMemo(
     () => selectedOption?.label ?? placeholder,
     [placeholder, selectedOption],
@@ -141,17 +160,23 @@ export default function FilterSingleSelect({
   }, [neutralValues, selectedOption]);
 
   const selectedIndex = useMemo(
-    () => optionsWithDefault.findIndex((option) => option.value === value),
-    [optionsWithDefault, value],
+    () => filteredOptions.findIndex((option) => option.value === value),
+    [filteredOptions, value],
   );
 
   useEffect(() => {
     if (!isOpen) {
       setHighlightedIndex(-1);
+      setSearchTerm('');
       return;
     }
     setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
   }, [isOpen, selectedIndex]);
+
+  useEffect(() => {
+    if (!isOpen || !searchable) return;
+    searchInputRef.current?.focus();
+  }, [isOpen, searchable]);
 
   useEffect(() => {
     if (!isOpen || highlightedIndex < 0) return;
@@ -159,7 +184,7 @@ export default function FilterSingleSelect({
   }, [highlightedIndex, isOpen]);
 
   const selectOptionByIndex = (index: number) => {
-    const option = optionsWithDefault[index];
+    const option = filteredOptions[index];
     if (!option || disabled) return;
     onChange(option.value);
     setIsOpen(false);
@@ -171,7 +196,7 @@ export default function FilterSingleSelect({
     if (event.key === 'Tab') { setIsOpen(false); return; }
     if (event.key === 'Escape') { setIsOpen(false); return; }
 
-    const lastIndex = optionsWithDefault.length - 1;
+    const lastIndex = filteredOptions.length - 1;
     if (lastIndex < 0) return;
 
     if (event.key === 'ArrowDown') {
@@ -203,6 +228,35 @@ export default function FilterSingleSelect({
   const chevronSizeClass = isCompact ? 'h-3 w-3' : 'h-4 w-4';
   const labelTextClass = isCompact ? 'text-xs' : 'text-sm';
   const isDarkTheme = isPanelDarkTheme();
+
+  const handleSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    const lastIndex = filteredOptions.length - 1;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setIsOpen(false);
+      return;
+    }
+
+    if (lastIndex < 0) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setHighlightedIndex((current) => (current >= lastIndex ? 0 : Math.max(current + 1, 0)));
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setHighlightedIndex((current) => (current <= 0 ? lastIndex : current - 1));
+      return;
+    }
+
+    if (event.key === 'Enter' && highlightedIndex >= 0) {
+      event.preventDefault();
+      selectOptionByIndex(highlightedIndex);
+    }
+  };
 
   return (
     <div className="relative" ref={containerRef}>
@@ -269,7 +323,32 @@ export default function FilterSingleSelect({
           style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
           role="listbox"
         >
-          {optionsWithDefault.map((option, index) => {
+          {searchable && (
+            <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] p-2 dark:border-[color:rgba(255,255,255,0.08)]">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={searchPlaceholder}
+                className={cx(
+                  'h-10 w-full rounded-xl border px-3 text-sm transition-colors focus:outline-none focus:ring-2',
+                  isDarkTheme
+                    ? 'border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(24,16,12,0.88)] text-stone-100 placeholder:text-stone-400 focus:border-[color:rgba(251,191,36,0.34)] focus:ring-[color:rgba(251,191,36,0.22)]'
+                    : 'border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)] placeholder:text-[color:var(--panel-text-muted,#876f5c)] focus:border-[var(--panel-focus,#c86f1d)] focus:ring-[color:rgba(200,111,29,0.18)]',
+                )}
+              />
+            </div>
+          )}
+          {filteredOptions.length === 0 ? (
+            <div className={cx(
+              'px-3 py-4 text-sm',
+              isDarkTheme ? 'text-stone-400' : 'text-[color:var(--panel-text-muted,#876f5c)]',
+            )}>
+              {emptyMessage}
+            </div>
+          ) : filteredOptions.map((option, index) => {
             const isSelected = option.value === value;
             const isHighlighted = highlightedIndex === index;
 

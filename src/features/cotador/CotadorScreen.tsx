@@ -139,6 +139,7 @@ export default function CotadorScreen() {
   const [filters, setFilters] = useState<CotadorCatalogFilters>(DEFAULT_FILTERS);
   const [loading, setLoading] = useState(true);
   const [wizardBusy, setWizardBusy] = useState(false);
+  const [leadBusy, setLeadBusy] = useState(false);
   const [wizardState, setWizardState] = useState<{
     isOpen: boolean;
     mode: 'create' | 'edit';
@@ -461,6 +462,33 @@ export default function CotadorScreen() {
     void flushPendingSelection();
   };
 
+  const handleUpdateLead = async (leadId: string | null) => {
+    if (!activeQuote || activeQuote.leadId === leadId) return;
+
+    setLeadBusy(true);
+    const { data, error } = await cotadorService.updateQuote(activeQuote, {
+      name: activeQuote.name,
+      modality: activeQuote.modality,
+      leadId,
+      ageDistribution: activeQuote.ageDistribution,
+    });
+
+    if (error || !data) {
+      toast.error('Não foi possível atualizar o lead da cotação agora.');
+      setLeadBusy(false);
+      return;
+    }
+
+    const nextQuote: CotadorQuote = {
+      ...data,
+      selectedItems: activeQuote.selectedItems,
+    };
+
+    setQuotes((current) => sortCotadorQuotesByRecent(current.map((quote) => (quote.id === nextQuote.id ? nextQuote : quote))));
+    toast.success(leadId ? 'Lead vinculado com sucesso.' : 'Vínculo com o lead removido.');
+    setLeadBusy(false);
+  };
+
   const renderListScreen = () => (
     <div className="panel-page-shell space-y-6">
       <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[radial-gradient(circle_at_top_left,rgba(253,230,195,0.95),rgba(255,253,250,0.96)_48%,rgba(247,240,231,0.99)_100%)] p-6 shadow-sm md:p-8 dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[radial-gradient(circle_at_top_left,rgba(133,77,14,0.24),rgba(28,20,14,0.96)_40%,rgba(20,15,11,0.99)_100%)]">
@@ -601,6 +629,7 @@ export default function CotadorScreen() {
         <CotadorWorkspace
           quote={activeQuote}
           linkedLeadLabel={activeQuoteLeadLabel}
+          leadOptions={leadOptions}
           catalogItems={quoteCatalog}
           filteredItems={filteredItems}
           selectedItems={activeQuote.selectedItems}
@@ -613,6 +642,10 @@ export default function CotadorScreen() {
           }}
           onOpenPlanDetails={(itemKey) => navigate(`/painel/cotador/${activeQuote.id}/plano/${encodeURIComponent(itemKey)}`)}
           onEditQuote={openEditQuote}
+          onUpdateLead={(leadId) => {
+            void handleUpdateLead(leadId);
+          }}
+          leadBusy={leadBusy}
         />
       </div>
     );

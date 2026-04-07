@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Building2, Check, MapPin, Minus, Plus, Search, Sparkles, Trash2, Users } from 'lucide-react';
+import { Building2, Check, Link2, MapPin, Minus, Plus, Search, Sparkles, Trash2, UserRound, Users } from 'lucide-react';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ModalShell from '../../../components/ui/ModalShell';
-import { formatCotadorAgeSummary, formatCotadorCurrency, formatCotadorDateTime } from '../shared/cotadorUtils';
+import { formatCotadorCurrency, formatCotadorDateTime } from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 import CotadorPlanPickerOverlay from './CotadorPlanPickerOverlay';
 
@@ -16,6 +16,7 @@ type SelectOption = {
 type CotadorWorkspaceProps = {
   quote: CotadorQuote;
   linkedLeadLabel: string;
+  leadOptions: Array<{ value: string; label: string }>;
   catalogItems: CotadorCatalogItem[];
   filteredItems: CotadorCatalogItem[];
   selectedItems: CotadorQuoteItem[];
@@ -26,6 +27,7 @@ type CotadorWorkspaceProps = {
     entidades: SelectOption[];
     perfisEmpresariais: SelectOption[];
     coparticipacoes: SelectOption[];
+    networkLocations: SelectOption[];
     abrangencias: SelectOption[];
     acomodacoes: SelectOption[];
   };
@@ -36,6 +38,8 @@ type CotadorWorkspaceProps = {
   onToggleCatalogItem: (itemId: string) => void;
   onOpenPlanDetails: (catalogItemKey: string) => void;
   onEditQuote: () => void;
+  onUpdateLead: (leadId: string | null) => void;
+  leadBusy?: boolean;
 };
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
@@ -96,6 +100,7 @@ const compareNetworkCompareRows = (left: NetworkCompareRow, right: NetworkCompar
 export default function CotadorWorkspace({
   quote,
   linkedLeadLabel,
+  leadOptions,
   catalogItems,
   filteredItems,
   selectedItems,
@@ -107,6 +112,8 @@ export default function CotadorWorkspace({
   onToggleCatalogItem,
   onOpenPlanDetails,
   onEditQuote,
+  onUpdateLead,
+  leadBusy = false,
 }: CotadorWorkspaceProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [networkCompareOpen, setNetworkCompareOpen] = useState(false);
@@ -118,12 +125,6 @@ export default function CotadorWorkspace({
     () => Object.entries(quote.ageDistribution).filter(([, quantity]) => quantity > 0),
     [quote.ageDistribution],
   );
-
-  const modalitySummary = useMemo(() => {
-    const values = Array.from(new Set(selectedItems.map((item) => item.modalidade).filter((value): value is string => Boolean(value))));
-    if (values.length === 0) return 'Sem restrição';
-    return values.join(' | ');
-  }, [selectedItems]);
 
   const networkPlansHaveData = useMemo(
     () => selectedItems.some((item) => item.redeHospitalar.length > 0),
@@ -228,11 +229,8 @@ export default function CotadorWorkspace({
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <SummaryMetric label="Modalidades" value={modalitySummary} />
-          <SummaryMetric label="Lead CRM" value={linkedLeadLabel} />
-          <SummaryMetric label="Total de vidas" value={`${quote.totalLives} vidas`} />
-          <SummaryMetric label="Faixas" value={formatCotadorAgeSummary(quote.ageDistribution)} />
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:max-w-2xl">
+          <SummaryMetric label="Criada em" value={formatCotadorDateTime(quote.createdAt)} />
           <SummaryMetric label="Atualizada em" value={formatCotadorDateTime(quote.updatedAt)} />
         </div>
       </section>
@@ -359,6 +357,38 @@ export default function CotadorWorkspace({
         </section>
 
         <aside className="space-y-4">
+          <section className="rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl border border-[color:rgba(111,63,22,0.14)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_84%,var(--panel-surface,#fffdfa))] p-2.5 text-[var(--panel-accent-ink,#6f3f16)]">
+                <Link2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Lead CRM</p>
+                <h3 className="mt-2 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Vincular lead</h3>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Busque por nome, telefone ou email para conectar esta cotação ao lead certo.</p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <FilterSingleSelect
+                icon={UserRound}
+                options={leadOptions}
+                placeholder="Sem lead vinculado"
+                value={quote.leadId ?? ''}
+                onChange={(value) => onUpdateLead(value || null)}
+                searchable
+                searchPlaceholder="Digite para buscar um lead"
+                emptyMessage="Nenhum lead encontrado para a busca."
+                disabled={leadBusy}
+              />
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Lead atual</p>
+              <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{linkedLeadLabel}</p>
+            </div>
+          </section>
+
           <section className="rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>

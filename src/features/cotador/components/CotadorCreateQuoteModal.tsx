@@ -132,6 +132,9 @@ export default function CotadorCreateQuoteModal({
               placeholder="Sem lead vinculado"
               value={draft.leadId ?? ''}
               onChange={(value) => setDraft((current) => ({ ...current, leadId: value || null }))}
+              searchable
+              searchPlaceholder="Digite para buscar um lead"
+              emptyMessage="Nenhum lead encontrado para a busca."
             />
           </div>
 

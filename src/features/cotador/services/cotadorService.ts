@@ -169,7 +169,7 @@ const isMissingTableError = (error: unknown, table: string) => {
 
   return (
     normalizedMessage.includes(`resource ${tableLower}`)
-    || normalizedMessage.includes(`relation \"${tableLower}`)
+    || normalizedMessage.includes(`relation "${tableLower}`)
     || normalizedMessage.includes(`relation '${tableLower}`)
     || normalizedMessage.includes('does not exist')
     || normalizedMessage.includes(tableLower)
@@ -268,6 +268,64 @@ const sanitizeHospitalAliases = (value: unknown): string[] => {
   )).sort((left, right) => left.localeCompare(right, 'pt-BR'));
 };
 
+const buildHospitalNetworkIdentityKey = (entry: Pick<CotadorHospitalNetworkEntry, 'hospital' | 'cidade' | 'bairro'>) => (
+  [normalizeText(entry.hospital), normalizeText(entry.cidade), normalizeText(entry.bairro)].join('|')
+);
+
+const buildHospitalNetworkLooseKey = (entry: Pick<CotadorHospitalNetworkEntry, 'hospital' | 'cidade'>) => (
+  [normalizeText(entry.hospital), normalizeText(entry.cidade)].join('|')
+);
+
+const compareHospitalNetworkEntries = (left: CotadorHospitalNetworkEntry, right: CotadorHospitalNetworkEntry) => {
+  const cityComparison = normalizeText(left.cidade).localeCompare(normalizeText(right.cidade), 'pt-BR');
+  if (cityComparison !== 0) return cityComparison;
+
+  const bairroComparison = normalizeText(left.bairro).localeCompare(normalizeText(right.bairro), 'pt-BR');
+  if (bairroComparison !== 0) return bairroComparison;
+
+  return normalizeText(left.hospital).localeCompare(normalizeText(right.hospital), 'pt-BR');
+};
+
+const mergeHospitalNetworkEntries = (
+  normalizedEntries: CotadorHospitalNetworkEntry[],
+  rawEntries: CotadorHospitalNetworkEntry[],
+) => {
+  const sanitizedNormalized = sanitizeHospitalNetwork(normalizedEntries);
+  const sanitizedRaw = sanitizeHospitalNetwork(rawEntries);
+
+  if (sanitizedNormalized.length === 0) {
+    return sanitizedRaw.sort(compareHospitalNetworkEntries);
+  }
+
+  const exactKeys = new Set(sanitizedNormalized.map((entry) => buildHospitalNetworkIdentityKey(entry)));
+  const looseKeyCounts = sanitizedNormalized.reduce((accumulator, entry) => {
+    const key = buildHospitalNetworkLooseKey(entry);
+    accumulator.set(key, (accumulator.get(key) ?? 0) + 1);
+    return accumulator;
+  }, new Map<string, number>());
+
+  const extras = sanitizedRaw.filter((entry) => {
+    const exactKey = buildHospitalNetworkIdentityKey(entry);
+    if (entry.bairro && exactKeys.has(exactKey)) {
+      return false;
+    }
+
+    const looseKey = buildHospitalNetworkLooseKey(entry);
+    const looseMatches = looseKeyCounts.get(looseKey) ?? 0;
+    if (looseMatches === 1) {
+      return false;
+    }
+
+    if (!entry.bairro && looseMatches > 0) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return sanitizeHospitalNetwork([...sanitizedNormalized, ...extras]).sort(compareHospitalNetworkEntries);
+};
+
 const buildNormalizedProductNetworkEntry = (
   hospital: CotadorHospital,
   link: CotadorProdutoHospital,
@@ -318,8 +376,8 @@ const compareHospitals = (left: CotadorHospitalManagerRecord, right: CotadorHosp
   const cityComparison = normalizeText(left.cidade).localeCompare(normalizeText(right.cidade), 'pt-BR');
   if (cityComparison !== 0) return cityComparison;
 
-  const regionComparison = normalizeText(left.regiao).localeCompare(normalizeText(right.regiao), 'pt-BR');
-  if (regionComparison !== 0) return regionComparison;
+  const bairroComparison = normalizeText(left.bairro).localeCompare(normalizeText(right.bairro), 'pt-BR');
+  if (bairroComparison !== 0) return bairroComparison;
 
   return normalizeText(left.nome).localeCompare(normalizeText(right.nome), 'pt-BR');
 };
@@ -430,7 +488,7 @@ async function buildFallbackHospitalsFromProducts() {
 
   products.forEach((product) => {
     sanitizeHospitalNetwork(product.rede_hospitalar).forEach((entry, index) => {
-      const key = [normalizeText(entry.hospital), normalizeText(entry.cidade), normalizeText(entry.regiao), normalizeText(entry.bairro)].join('|');
+      const key = buildHospitalNetworkIdentityKey(entry);
       const current = grouped.get(key);
       const linkedProduct = {
         link_id: `${product.id}:${key}:${index}`,
@@ -1170,7 +1228,10 @@ export const cotadorService = {
 
       return products.map((product) => ({
         ...product,
-        rede_hospitalar: normalizedNetworkByProduct.get(product.id) ?? sanitizeHospitalNetwork(product.rede_hospitalar),
+        rede_hospitalar: mergeHospitalNetworkEntries(
+          normalizedNetworkByProduct.get(product.id) ?? [],
+          sanitizeHospitalNetwork(product.rede_hospitalar),
+        ),
         operadora: operadoraById.get(product.operadora_id) ?? null,
         linha: product.linha_id ? lineById.get(product.linha_id) ?? null : null,
         administradora: product.administradora_id ? administradoraById.get(product.administradora_id) ?? null : null,

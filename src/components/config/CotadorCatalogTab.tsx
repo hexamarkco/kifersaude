@@ -438,10 +438,55 @@ const sanitizeNetworkEntries = (value: unknown): NetworkDraftEntry[] => {
     .sort((left, right) => {
       const cityComparison = normalizeSortText(left.cidade).localeCompare(normalizeSortText(right.cidade), 'pt-BR');
       if (cityComparison !== 0) return cityComparison;
-      const regionComparison = normalizeSortText(left.regiao).localeCompare(normalizeSortText(right.regiao), 'pt-BR');
-      if (regionComparison !== 0) return regionComparison;
+      const bairroComparison = normalizeSortText(left.bairro).localeCompare(normalizeSortText(right.bairro), 'pt-BR');
+      if (bairroComparison !== 0) return bairroComparison;
       return normalizeSortText(left.hospital).localeCompare(normalizeSortText(right.hospital), 'pt-BR');
     });
+};
+
+const buildNetworkEntryIdentityKey = (entry: Pick<NetworkDraftEntry, 'hospital' | 'cidade' | 'bairro'>) => (
+  [normalizeSortText(entry.hospital), normalizeSortText(entry.cidade), normalizeSortText(entry.bairro)].join('|')
+);
+
+const buildNetworkEntryLooseKey = (entry: Pick<NetworkDraftEntry, 'hospital' | 'cidade'>) => (
+  [normalizeSortText(entry.hospital), normalizeSortText(entry.cidade)].join('|')
+);
+
+const mergeNetworkDraftEntries = (normalizedEntries: NetworkDraftEntry[], rawEntries: NetworkDraftEntry[]) => {
+  const sanitizedNormalized = sanitizeNetworkEntries(normalizedEntries);
+  const sanitizedRaw = sanitizeNetworkEntries(rawEntries);
+
+  if (sanitizedNormalized.length === 0) {
+    return sanitizedRaw;
+  }
+
+  const exactKeys = new Set(sanitizedNormalized.map((entry) => buildNetworkEntryIdentityKey(entry)));
+  const looseCounts = sanitizedNormalized.reduce((accumulator, entry) => {
+    const key = buildNetworkEntryLooseKey(entry);
+    accumulator.set(key, (accumulator.get(key) ?? 0) + 1);
+    return accumulator;
+  }, new Map<string, number>());
+
+  const extras = sanitizedRaw.filter((entry) => {
+    const exactKey = buildNetworkEntryIdentityKey(entry);
+    if (entry.bairro && exactKeys.has(exactKey)) {
+      return false;
+    }
+
+    const looseKey = buildNetworkEntryLooseKey(entry);
+    const looseMatches = looseCounts.get(looseKey) ?? 0;
+    if (looseMatches === 1) {
+      return false;
+    }
+
+    if (!entry.bairro && looseMatches > 0) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return sanitizeNetworkEntries([...sanitizedNormalized, ...extras]);
 };
 
 const buildNetworkEntryFormFromValue = (entry?: NetworkDraftEntry | null): NetworkEntryFormState => ({
@@ -463,8 +508,8 @@ const buildNetworkHospitalFormFromValue = (hospital?: CotadorHospitalManagerReco
   ativo: hospital?.ativo ?? true,
 });
 
-const formatNetworkLocation = (entry: { bairro?: string | null; regiao?: string | null; cidade?: string | null }) =>
-  [entry.bairro, entry.regiao, entry.cidade].filter(Boolean).join(' | ');
+const formatNetworkLocation = (entry: { bairro?: string | null; cidade?: string | null }) =>
+  [entry.bairro, entry.cidade].filter(Boolean).join(' | ');
 
 const serializeProductAcomodacoes = (values: string[]) =>
   Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).join(PRODUCT_ACOMODACAO_SEPARATOR);
@@ -1113,8 +1158,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const handleNetworkHospitalSubmit = async () => {
     if (!selectedNetworkHospital) return;
 
-    if (!networkHospitalForm.nome.trim() || !networkHospitalForm.cidade.trim() || !networkHospitalForm.regiao.trim()) {
-      toast.error('Preencha nome, cidade e regiao para salvar o hospital compartilhado.');
+    if (!networkHospitalForm.nome.trim() || !networkHospitalForm.cidade.trim()) {
+      toast.error('Preencha nome e cidade para salvar o hospital compartilhado.');
       return;
     }
 
@@ -1122,7 +1167,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     const payload: CotadorHospitalManagerInput = {
       nome: networkHospitalForm.nome.trim(),
       cidade: networkHospitalForm.cidade.trim(),
-      regiao: networkHospitalForm.regiao.trim(),
+      regiao: networkHospitalForm.regiao.trim() || null,
       bairro: networkHospitalForm.bairro.trim() || null,
       aliases: sanitizeNetworkAliases(networkHospitalForm.aliasesText),
       ativo: networkHospitalForm.ativo,
@@ -1165,7 +1210,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setNetworkModalOpen(true);
 
     const detailedNetwork = await cotadorService.getProdutoRedeHospitalarDetalhada(product.id);
-    setNetworkDraft(detailedNetwork.length > 0 ? sanitizeNetworkEntries(detailedNetwork) : sanitizeNetworkEntries(product.rede_hospitalar));
+    setNetworkDraft(mergeNetworkDraftEntries(detailedNetwork, sanitizeNetworkEntries(product.rede_hospitalar)));
     setNetworkModalLoading(false);
   };
 
@@ -1188,8 +1233,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   };
 
   const handleNetworkEntrySubmit = () => {
-    if (!networkEntryForm.hospital.trim() || !networkEntryForm.cidade.trim() || !networkEntryForm.regiao.trim()) {
-      toast.error('Preencha nome do hospital, cidade e regiao para salvar o cadastro.');
+    if (!networkEntryForm.hospital.trim() || !networkEntryForm.cidade.trim()) {
+      toast.error('Preencha nome do hospital e cidade para salvar o cadastro.');
       return;
     }
 
@@ -2815,7 +2860,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <Input
                 value={networkSearch}
                 onChange={(event) => setNetworkSearch(event.target.value)}
-                placeholder="Buscar hospital, cidade, regiao ou atendimento"
+                placeholder="Buscar hospital, cidade, bairro ou atendimento"
                 leftIcon={Search}
               />
             </div>
@@ -2872,7 +2917,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                   <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
                     Cadastro manual de hospital
                   </p>
-                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Abra um modal dedicado para cadastrar ou editar nome, cidade, regiao, bairro e atendimentos.</p>
+                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Abra um modal dedicado para cadastrar ou editar nome, cidade, bairro e atendimentos.</p>
                 </div>
                 <Button type="button" onClick={openNetworkEntryCreateModal}>
                   <Plus className="h-4 w-4" />
@@ -2906,7 +2951,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={networkEntryModalOpen}
         onClose={resetNetworkEntryForm}
         title={networkEditingIndex === null ? 'Adicionar hospital da rede' : 'Editar hospital da rede'}
-        description="Cadastre o hospital manualmente com nome, cidade, regiao, bairro opcional e os atendimentos disponiveis neste plano."
+        description="Cadastre o hospital manualmente com nome, cidade, bairro opcional e os atendimentos disponiveis neste plano."
         size="lg"
       >
         <div className="space-y-5">
@@ -2918,10 +2963,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <div>
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
               <Input value={networkEntryForm.cidade} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, cidade: event.target.value }))} placeholder="Ex: Rio de Janeiro" required />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao *</label>
-              <Input value={networkEntryForm.regiao} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, regiao: event.target.value }))} placeholder="Ex: Zona Norte" required />
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
@@ -2979,10 +3020,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <div>
                 <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
                 <Input value={networkHospitalForm.cidade} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, cidade: event.target.value }))} required />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao *</label>
-                <Input value={networkHospitalForm.regiao} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, regiao: event.target.value }))} required />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>

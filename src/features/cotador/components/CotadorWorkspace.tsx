@@ -135,7 +135,7 @@ export default function CotadorWorkspace({
 
     selectedItems.forEach((item) => {
       item.redeHospitalar.forEach((entry) => {
-        const key = [entry.hospital, entry.cidade, entry.bairro, entry.regiao].map(normalizeNetworkText).join('|');
+        const key = [entry.hospital, entry.cidade, entry.bairro].map(normalizeNetworkText).join('|');
         const current = rows.get(key) ?? {
           key,
           hospital: entry.hospital,
@@ -184,14 +184,13 @@ export default function CotadorWorkspace({
 
       if (!normalizedSearch) return true;
 
-      const haystack = [
-        row.hospital,
-        row.cidade,
-        row.bairro,
-        row.regiao,
-        row.services.join(' '),
-        row.observacoes.join(' '),
-      ]
+        const haystack = [
+          row.hospital,
+          row.cidade,
+          row.bairro,
+          row.services.join(' '),
+          row.observacoes.join(' '),
+        ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
@@ -439,7 +438,7 @@ export default function CotadorWorkspace({
               <Input
                 value={networkCompareSearch}
                 onChange={(event) => setNetworkCompareSearch(event.target.value)}
-                placeholder="Buscar hospital, bairro, cidade, regiao ou atendimento"
+                placeholder="Buscar hospital, bairro, cidade ou atendimento"
                 leftIcon={Search}
               />
               <FilterSingleSelect
@@ -515,7 +514,7 @@ export default function CotadorWorkspace({
                                 </span>
                               </div>
                               <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                                {[row.bairro, row.regiao, row.cidade].filter(Boolean).join(' | ')}
+                                {[row.bairro, row.cidade].filter(Boolean).join(' | ')}
                               </p>
                               {row.services.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1.5">

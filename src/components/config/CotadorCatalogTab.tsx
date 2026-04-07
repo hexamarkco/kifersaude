@@ -7,6 +7,7 @@ import {
   Download,
   Edit2,
   FileJson,
+  GitMerge,
   Layers3,
   MapPin,
   Network,
@@ -154,6 +155,20 @@ type NetworkDraftEntry = CotadorProductNetworkManagerRecord;
 type NetworkListStatusFilter = 'all' | 'with-network' | 'without-network';
 type NetworkDirectoryMode = 'products' | 'hospitals';
 type NetworkHospitalDataStatusFilter = 'all' | 'missing-bairro' | 'missing-regiao' | 'missing-any' | 'suspect-bairro' | 'complete';
+
+type NetworkHospitalMergeSuggestion = {
+  key: string;
+  targetId: string;
+  sourceId: string;
+  targetName: string;
+  sourceName: string;
+  city: string;
+  targetLocation: string;
+  sourceLocation: string;
+  confidence: 'high' | 'medium';
+  reasons: string[];
+  sharedLinkedProducts: number;
+};
 
 type NetworkHospitalFormState = {
   nome: string;
@@ -546,6 +561,96 @@ const hasSuspectHospitalBairro = (hospital: Pick<CotadorHospitalManagerRecord, '
   return false;
 };
 
+const buildHospitalAliasSet = (hospital: Pick<CotadorHospitalManagerRecord, 'nome' | 'aliases'>) =>
+  Array.from(new Set([hospital.nome, ...hospital.aliases].map((value) => normalizeSortText(value)).filter(Boolean)));
+
+const getTokenOverlapRatio = (left: string, right: string) => {
+  const leftTokens = new Set(left.split(' ').filter((token) => token.length > 2));
+  const rightTokens = new Set(right.split(' ').filter((token) => token.length > 2));
+  if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
+
+  let shared = 0;
+  leftTokens.forEach((token) => {
+    if (rightTokens.has(token)) shared += 1;
+  });
+
+  return shared / Math.max(leftTokens.size, rightTokens.size);
+};
+
+const getHospitalMergeCandidate = (
+  left: CotadorHospitalManagerRecord,
+  right: CotadorHospitalManagerRecord,
+): NetworkHospitalMergeSuggestion | null => {
+  const leftCity = normalizeSortText(left.cidade);
+  const rightCity = normalizeSortText(right.cidade);
+  if (!leftCity || leftCity !== rightCity) return null;
+
+  const leftBairro = normalizeSortText(left.bairro);
+  const rightBairro = normalizeSortText(right.bairro);
+  const bothBairrosDefined = Boolean(leftBairro && rightBairro);
+  const sameBairro = bothBairrosDefined && leftBairro === rightBairro;
+  const oneMissingBairro = !leftBairro || !rightBairro;
+  if (bothBairrosDefined && !sameBairro) {
+    return null;
+  }
+
+  const leftAliases = buildHospitalAliasSet(left);
+  const rightAliases = buildHospitalAliasSet(right);
+  const sharedAliases = leftAliases.filter((alias) => rightAliases.includes(alias));
+  const exactNameMatch = normalizeSortText(left.nome) === normalizeSortText(right.nome);
+  const similarName = getTokenOverlapRatio(normalizeSortText(left.nome), normalizeSortText(right.nome));
+  const sharedLinkedProducts = left.linkedProducts.filter((link) => right.linkedProducts.some((candidate) => candidate.produto_id === link.produto_id)).length;
+
+  const reasons: string[] = [];
+  let confidence: NetworkHospitalMergeSuggestion['confidence'] | null = null;
+
+  if (exactNameMatch && (sameBairro || oneMissingBairro)) {
+    confidence = 'high';
+    reasons.push(sameBairro ? 'Mesmo nome e mesmo bairro' : 'Mesmo nome na mesma cidade com bairro faltando em um dos cadastros');
+  }
+
+  if (sharedAliases.length > 0 && (sameBairro || oneMissingBairro)) {
+    confidence = confidence ?? 'high';
+    reasons.push(`Alias em comum: ${sharedAliases.slice(0, 2).join(', ')}`);
+  }
+
+  if (!confidence && sameBairro && similarName >= 0.75) {
+    confidence = 'medium';
+    reasons.push('Mesmo bairro e nome muito parecido');
+  }
+
+  if (!confidence && oneMissingBairro && similarName >= 0.9) {
+    confidence = 'medium';
+    reasons.push('Mesmo nome/cidade com um bairro ainda ausente');
+  }
+
+  if (!confidence && sharedLinkedProducts > 0 && (exactNameMatch || similarName >= 0.85) && (sameBairro || oneMissingBairro)) {
+    confidence = 'medium';
+    reasons.push(`Ja aparecem juntos em ${sharedLinkedProducts} plano(s)`);
+  }
+
+  if (!confidence) return null;
+
+  const leftStrength = (left.linkedProducts.length * 10) + (left.aliases.length * 2) + (left.bairro ? 3 : 0) + (left.regiao ? 2 : 0);
+  const rightStrength = (right.linkedProducts.length * 10) + (right.aliases.length * 2) + (right.bairro ? 3 : 0) + (right.regiao ? 2 : 0);
+  const target = leftStrength >= rightStrength ? left : right;
+  const source = target.id === left.id ? right : left;
+
+  return {
+    key: [target.id, source.id].join('::'),
+    targetId: target.id,
+    sourceId: source.id,
+    targetName: target.nome,
+    sourceName: source.nome,
+    city: target.cidade,
+    targetLocation: formatNetworkLocation(target),
+    sourceLocation: formatNetworkLocation(source),
+    confidence,
+    reasons: Array.from(new Set(reasons)),
+    sharedLinkedProducts,
+  };
+};
+
 const formatNetworkAliasesTextarea = (value: string) => value
   .split(/\r?\n/)
   .map((line) => formatCotadorLocationText(line))
@@ -779,6 +884,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [networkHospitalDataStatus, setNetworkHospitalDataStatus] = useState<NetworkHospitalDataStatusFilter>('all');
   const [networkHospitalPage, setNetworkHospitalPage] = useState(1);
   const [networkHospitalPerPage, setNetworkHospitalPerPage] = useState(25);
+  const [mergingHospitalKey, setMergingHospitalKey] = useState<string | null>(null);
   const [networkHospitalModalOpen, setNetworkHospitalModalOpen] = useState(false);
   const [networkHospitalEditingId, setNetworkHospitalEditingId] = useState<string | null>(null);
   const [networkHospitalForm, setNetworkHospitalForm] = useState<NetworkHospitalFormState>(DEFAULT_NETWORK_HOSPITAL_FORM);
@@ -1309,6 +1415,31 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     return counts;
   }, [networkHospitals]);
 
+  const networkHospitalMergeSuggestions = useMemo<NetworkHospitalMergeSuggestion[]>(() => {
+    const suggestions: NetworkHospitalMergeSuggestion[] = [];
+
+    for (let leftIndex = 0; leftIndex < networkHospitals.length; leftIndex += 1) {
+      for (let rightIndex = leftIndex + 1; rightIndex < networkHospitals.length; rightIndex += 1) {
+        const candidate = getHospitalMergeCandidate(networkHospitals[leftIndex], networkHospitals[rightIndex]);
+        if (candidate) {
+          suggestions.push(candidate);
+        }
+      }
+    }
+
+    return suggestions
+      .sort((left, right) => {
+        if (left.confidence !== right.confidence) {
+          return left.confidence === 'high' ? -1 : 1;
+        }
+        if (left.sharedLinkedProducts !== right.sharedLinkedProducts) {
+          return right.sharedLinkedProducts - left.sharedLinkedProducts;
+        }
+        return left.targetName.localeCompare(right.targetName, 'pt-BR');
+      })
+      .slice(0, 12);
+  }, [networkHospitals]);
+
   const totalNetworkHospitalPages = Math.max(1, Math.ceil(filteredNetworkHospitals.length / networkHospitalPerPage));
 
   useEffect(() => {
@@ -1385,6 +1516,33 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     toast.success('Hospital compartilhado atualizado com sucesso.');
     setSubmitting(false);
     resetNetworkHospitalModal();
+  };
+
+  const handleMergeNetworkHospitals = async (suggestion: NetworkHospitalMergeSuggestion) => {
+    const confirmed = await requestConfirmation({
+      title: 'Mesclar hospitais compartilhados',
+      description: `O cadastro ${suggestion.sourceName} sera consolidado em ${suggestion.targetName}. Os aliases e vinculos de planos serao preservados.`,
+      confirmLabel: 'Mesclar',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    setMergingHospitalKey(suggestion.key);
+    const result = await cotadorService.mergeHospitaisRede(suggestion.targetId, suggestion.sourceId);
+    if (result.error) {
+      toast.error('Nao foi possivel mesclar os hospitais sugeridos.');
+      setMergingHospitalKey(null);
+      return;
+    }
+
+    await Promise.all([loadCatalogData(), loadNetworkHospitals()]);
+    if (networkHospitalEditingId === suggestion.sourceId) {
+      resetNetworkHospitalModal();
+    }
+    toast.success('Hospitais mesclados com sucesso.');
+    setMergingHospitalKey(null);
   };
 
   const resetNetworkModal = () => {
@@ -2700,6 +2858,64 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                         );
                       })}
                     </div>
+
+                    {networkHospitalMergeSuggestions.length > 0 && (
+                      <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+                        <div className="flex flex-col gap-1">
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Sugestoes de merge</p>
+                          <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Duplicidades de alta confianca para consolidar aliases e vinculos de rede.</p>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                          {networkHospitalMergeSuggestions.map((suggestion) => (
+                            <div key={suggestion.key} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+                              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className={suggestion.confidence === 'high' ? 'rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-800' : 'rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-800'}>
+                                      {suggestion.confidence === 'high' ? 'Alta confianca' : 'Media confianca'}
+                                    </span>
+                                    {suggestion.sharedLinkedProducts > 0 && (
+                                      <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                        {suggestion.sharedLinkedProducts} plano(s) em comum
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                    <div className="rounded-2xl border border-[color:rgba(16,185,129,0.18)] bg-[color:rgba(16,185,129,0.08)] px-3 py-3">
+                                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-800">Manter</p>
+                                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{suggestion.targetName}</p>
+                                      <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{suggestion.targetLocation || suggestion.city}</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-[color:rgba(245,158,11,0.18)] bg-[color:rgba(245,158,11,0.08)] px-3 py-3">
+                                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">Mesclar de</p>
+                                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{suggestion.sourceName}</p>
+                                      <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{suggestion.sourceLocation || suggestion.city}</p>
+                                    </div>
+                                  </div>
+                                  <ul className="mt-3 space-y-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                                    {suggestion.reasons.map((reason) => (
+                                      <li key={`${suggestion.key}-${reason}`}>• {reason}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                <div className="flex items-center gap-2 self-end lg:self-auto">
+                                  <Button
+                                    variant="secondary"
+                                    loading={mergingHospitalKey === suggestion.key}
+                                    disabled={Boolean(mergingHospitalKey && mergingHospitalKey !== suggestion.key)}
+                                    onClick={() => void handleMergeNetworkHospitals(suggestion)}
+                                  >
+                                    <GitMerge className="h-4 w-4" />
+                                    Mesclar
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

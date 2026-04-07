@@ -1641,6 +1641,20 @@ export const cotadorService = {
     }
   },
 
+  async mergeHospitaisRede(targetId: string, sourceId: string) {
+    try {
+      const { data, error } = await supabase.rpc('merge_cotador_hospitais', {
+        p_target_id: targetId,
+        p_source_id: sourceId,
+      });
+
+      return { data: (data as string | null) ?? null, error };
+    } catch (error) {
+      console.error('Error merging cotador hospitals:', error);
+      return { data: null, error: toPostgrestError(error) };
+    }
+  },
+
   async deleteProduto(id: string) {
     try {
       const { error } = await supabase.from(COTADOR_PRODUTOS_TABLE).delete().eq('id', id);

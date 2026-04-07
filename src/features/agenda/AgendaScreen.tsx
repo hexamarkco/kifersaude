@@ -1699,9 +1699,10 @@ export default function AgendaScreen() {
                 options={PRIORITY_OPTIONS}
               />
               <FilterSingleSelect
+                icon={Calendar}
                 size="compact"
                 value={timeFilter}
-                onChange={setTimeFilter}
+                onChange={(val) => setTimeFilter(val as AgendaTimeFilter)}
                 placeholder="Periodo"
                 includePlaceholderOption={false}
                 options={TIME_FILTER_OPTIONS}

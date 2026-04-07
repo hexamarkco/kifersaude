@@ -232,19 +232,26 @@ export default function WhatsAppFollowUpModal({
                 messageSegments.map((segment, index) => (
                   <div
                     key={`${index}:${segment}`}
-                    className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-3"
+                    className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm"
                   >
-                    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
-                      Mensagem {index + 1}
+                    <div className="rounded-t-xl border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                        Mensagem {index + 1}
+                      </span>
                     </div>
-                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1a120d)]">
-                      {segment}
-                    </p>
+                    <div className="p-3">
+                      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1a120d)]">
+                        {segment}
+                      </p>
+                    </div>
                   </div>
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-6 text-sm text-[var(--panel-text-muted,#876f5c)]">
-                  Gere ou escreva uma sugestão para visualizar como ela será enviada.
+                <div className="rounded-xl border-2 border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-4 py-8 text-center">
+                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[var(--panel-text-muted,#876f5c)]" />
+                  <p className="text-sm text-[var(--panel-text-muted,#876f5c)]">
+                    Gere ou escreva uma sugestão para visualizar como ela será enviada.
+                  </p>
                 </div>
               )}
             </div>

@@ -1778,11 +1778,16 @@ export default function ContractDetails({
             setEditingDependent(null);
             setSelectedHolderId(null);
           }}
-          onSave={() => {
-            setShowDependentForm(false);
-            setEditingDependent(null);
-            setSelectedHolderId(null);
-            loadData();
+          onSave={async () => {
+            await loadData();
+            const addAnother = window.confirm('Dependente salvo! Deseja adicionar outro dependente?');
+            if (addAnother && selectedHolderId) {
+              setEditingDependent(null);
+            } else {
+              setShowDependentForm(false);
+              setEditingDependent(null);
+              setSelectedHolderId(null);
+            }
           }}
         />
       )}

@@ -5606,8 +5606,6 @@ export default function WhatsAppInboxScreen() {
 
   const handleCloseFollowUpModal = useCallback(() => {
     setFollowUpModalOpen(false);
-    setFollowUpDraft('');
-    setFollowUpCustomInstructions('');
   }, []);
 
   const handleCloseComposerRewriteModal = useCallback(() => {
@@ -5704,6 +5702,9 @@ export default function WhatsAppInboxScreen() {
         customInstructions,
       });
       setFollowUpDraft(result.text.trim());
+      if (customInstructions) {
+        setFollowUpCustomInstructions(customInstructions);
+      }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao gerar follow-up', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível gerar o follow-up com IA.');
@@ -5718,11 +5719,8 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    setFollowUpCustomInstructions('');
-    setFollowUpDraft('');
     setFollowUpModalOpen(true);
-    void handleGenerateFollowUp('');
-  }, [followUpGenerationDisabledReason, handleGenerateFollowUp]);
+  }, [followUpGenerationDisabledReason]);
 
   const handleCopyChatTranscript = useCallback(async () => {
     if (!selectedChat || copyingTranscript) {

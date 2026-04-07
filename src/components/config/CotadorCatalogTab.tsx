@@ -25,7 +25,7 @@ import { formatCurrencyFromNumber, parseFormattedNumber } from '../../lib/inputF
 import { toast } from '../../lib/toast';
 import type { CotadorAgeRange } from '../../features/cotador/shared/cotadorConstants';
 import { COTADOR_AGE_RANGES } from '../../features/cotador/shared/cotadorConstants';
-import type { CotadorHospitalNetworkEntry } from '../../features/cotador/shared/cotadorTypes';
+import type { CotadorHospitalNetworkEntry, CotadorQuote } from '../../features/cotador/shared/cotadorTypes';
 import {
   formatCotadorHospitalLocationLabel,
   formatCotadorLocationText,
@@ -124,6 +124,15 @@ type GroupedTableEntry = {
   vidasMax: CotadorTableManagerRecord['vidas_max'];
   product: CotadorProductManagerRecord | null;
   records: CotadorTableManagerRecord[];
+};
+
+type ProductCompletenessStatus = {
+  missingNetwork: boolean;
+  missingPrice: boolean;
+  missingCarencias: boolean;
+  missingDocuments: boolean;
+  missingReembolso: boolean;
+  complete: boolean;
 };
 
 type ImportFormState = {
@@ -717,6 +726,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [linhas, setLinhas] = useState<CotadorLineManagerRecord[]>([]);
   const [produtos, setProdutos] = useState<CotadorProductManagerRecord[]>([]);
   const [tabelas, setTabelas] = useState<CotadorTableManagerRecord[]>([]);
+  const [quotes, setQuotes] = useState<CotadorQuote[]>([]);
+  const [importFailureCount, setImportFailureCount] = useState(0);
   const [entityModalKind, setEntityModalKind] = useState<'administradoras' | 'entidades' | null>(null);
   const [entityEditingId, setEntityEditingId] = useState<string | null>(null);
   const [entityForm, setEntityForm] = useState<BaseCatalogForm>(DEFAULT_BASE_FORM);
@@ -1059,6 +1070,95 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       records: [...entry.records].sort((left, right) => normalizeSortText(left.acomodacao).localeCompare(normalizeSortText(right.acomodacao), 'pt-BR')),
     }));
   }, [tabelas]);
+
+  const activeTablesByProductId = useMemo(() => {
+    const grouped = new Map<string, CotadorTableManagerRecord[]>();
+
+    tabelas.forEach((table) => {
+      if (!table.ativo) return;
+      const current = grouped.get(table.produto_id) ?? [];
+      current.push(table);
+      grouped.set(table.produto_id, current);
+    });
+
+    return grouped;
+  }, [tabelas]);
+
+  const productCompletenessById = useMemo(() => {
+    const next = new Map<string, ProductCompletenessStatus>();
+
+    produtos.forEach((product) => {
+      const activeTables = activeTablesByProductId.get(product.id) ?? [];
+      const hasNetwork = sanitizeNetworkEntries(product.rede_hospitalar).length > 0;
+      const hasPrice = activeTables.some((table) => Object.keys(table.pricesByAgeRange).length > 0);
+      const hasCarencias = Boolean(product.carencias?.trim());
+      const hasDocuments = Boolean(product.documentos_necessarios?.trim());
+      const hasReembolso = Boolean(product.reembolso?.trim());
+
+      const status: ProductCompletenessStatus = {
+        missingNetwork: !hasNetwork,
+        missingPrice: !hasPrice,
+        missingCarencias: !hasCarencias,
+        missingDocuments: !hasDocuments,
+        missingReembolso: !hasReembolso,
+        complete: hasNetwork && hasPrice && hasCarencias && hasDocuments && hasReembolso,
+      };
+
+      next.set(product.id, status);
+    });
+
+    return next;
+  }, [activeTablesByProductId, produtos]);
+
+  const activeCatalogKeys = useMemo(() => {
+    const keys = new Set<string>();
+    const productsWithActiveTables = new Set(tabelas.filter((table) => table.ativo).map((table) => table.produto_id));
+
+    tabelas.forEach((table) => {
+      const product = table.produto;
+      if (table.ativo && product?.ativo && product.operadora?.ativo !== false && product.linha?.ativo !== false) {
+        keys.add(`cotador-tabela:${table.id}`);
+      }
+    });
+
+    produtos.forEach((product) => {
+      if (product.ativo && product.operadora?.ativo !== false && product.linha?.ativo !== false && !productsWithActiveTables.has(product.id)) {
+        keys.add(`cotador-produto:${product.id}`);
+      }
+    });
+
+    return keys;
+  }, [produtos, tabelas]);
+
+  const catalogMetrics = useMemo(() => {
+    const pfQuotes = quotes.filter((quote) => quote.modality === 'PF').length;
+    const adesaoQuotes = quotes.filter((quote) => quote.modality === 'ADESAO').length;
+    const pmeQuotes = quotes.filter((quote) => quote.modality === 'PME').length;
+    const outdatedQuoteItems = quotes.reduce((total, quote) => total + quote.selectedItems.filter((item) => {
+      if (!item.catalogItemKey.startsWith('cotador-')) return false;
+      return !activeCatalogKeys.has(item.catalogItemKey);
+    }).length, 0);
+
+    const values = Array.from(productCompletenessById.values());
+    return {
+      totalProducts: produtos.length,
+      totalQuotes: quotes.length,
+      withoutNetwork: values.filter((status) => status.missingNetwork).length,
+      withoutPrice: values.filter((status) => status.missingPrice).length,
+      withoutCarencias: values.filter((status) => status.missingCarencias).length,
+      withoutDocuments: values.filter((status) => status.missingDocuments).length,
+      withoutReembolso: values.filter((status) => status.missingReembolso).length,
+      completeProducts: values.filter((status) => status.complete).length,
+      inactiveTables: tabelas.filter((table) => !table.ativo).length,
+      outdatedQuoteItems,
+      importFailureCount,
+      quoteBreakdown: {
+        pf: pfQuotes,
+        adesao: adesaoQuotes,
+        pme: pmeQuotes,
+      },
+    };
+  }, [activeCatalogKeys, importFailureCount, productCompletenessById, produtos.length, quotes, tabelas]);
 
   const totalTablePages = Math.max(1, Math.ceil(groupedTableEntries.length / tablesPerPage));
 
@@ -1488,6 +1588,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       toast.success(`Importacao de rede concluida: ${result.importedNetworkEntries} item(ns) em ${networkImportPreviewItems.length} produto(s).`);
       resetNetworkImportModal();
     } catch (error) {
+      setImportFailureCount((current) => current + 1);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel importar a rede.');
     } finally {
       setSubmitting(false);
@@ -1598,13 +1699,14 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setCatalogLoadError(null);
 
     try {
-      const [nextOperadoras, nextAdministradoras, nextEntidades, nextLinhas, nextProdutos, nextTabelas] = await Promise.all([
+      const [nextOperadoras, nextAdministradoras, nextEntidades, nextLinhas, nextProdutos, nextTabelas, nextQuotes] = await Promise.all([
         configService.getOperadoras(true),
         cotadorService.getAdministradoras(true),
         cotadorService.getEntidadesClasse(true),
         cotadorService.getLinhas(true),
         cotadorService.getProdutos(true),
         cotadorService.getTabelas(true),
+        cotadorService.getQuotes(),
       ]);
 
       setOperadoras(nextOperadoras);
@@ -1613,6 +1715,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       setLinhas(nextLinhas);
       setProdutos(nextProdutos);
       setTabelas(nextTabelas);
+      setQuotes(nextQuotes);
     } catch (error) {
       console.error('Error loading Cotador catalog admin data:', error);
       setCatalogLoadError(error instanceof Error ? error.message : 'Nao foi possivel carregar o catalogo do Cotador.');
@@ -1717,6 +1820,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       showMessage('success', `Importação concluída${summaryParts.length > 0 ? `: ${summaryParts.join(', ')}` : '.'}`);
       resetImportModal();
     } catch (error) {
+      setImportFailureCount((current) => current + 1);
       showMessage('error', error instanceof Error ? error.message : 'Não foi possível importar o arquivo.');
     } finally {
       setSubmitting(false);
@@ -2184,6 +2288,46 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant="panel" className="mt-6" />
       </div>
 
+      {!loading && !catalogLoadError && (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Produtos sem rede</p>
+            <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{catalogMetrics.withoutNetwork}</p>
+            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">de {catalogMetrics.totalProducts} produto(s)</p>
+          </div>
+          <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Produtos sem preco</p>
+            <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{catalogMetrics.withoutPrice}</p>
+            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">sem tabela ativa com valor</p>
+          </div>
+          <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Produtos sem carencia</p>
+            <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{catalogMetrics.withoutCarencias}</p>
+            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">informacao comercial pendente</p>
+          </div>
+          <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Documentacao</p>
+            <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{catalogMetrics.withoutDocuments}</p>
+            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">produto(s) sem documentos</p>
+          </div>
+          <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Produtos sem reembolso</p>
+            <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{catalogMetrics.withoutReembolso}</p>
+            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">politica de reembolso pendente</p>
+          </div>
+          <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Cotacoes salvas</p>
+            <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{catalogMetrics.totalQuotes}</p>
+            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">PF {catalogMetrics.quoteBreakdown.pf} | ADESAO {catalogMetrics.quoteBreakdown.adesao} | PME {catalogMetrics.quoteBreakdown.pme}</p>
+          </div>
+          <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Alertas operacionais</p>
+            <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{catalogMetrics.outdatedQuoteItems + catalogMetrics.inactiveTables + catalogMetrics.importFailureCount}</p>
+            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{catalogMetrics.outdatedQuoteItems} item(ns) desatualizado(s) | {catalogMetrics.inactiveTables} tabela(s) inativa(s) | {catalogMetrics.importFailureCount} falha(s) de importacao</p>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
@@ -2313,21 +2457,43 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                       {group.items.map((product) => (
                         <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                           <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h5 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h5>
-                              {!product.ativo && (
-                                <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">
-                                  Inativo
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                              {product.modalidade && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.modalidade}</span>}
-                              {product.administradora?.nome && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.administradora.nome}</span>}
-                      {product.entidadesClasse.length > 0 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
-                              {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
-                              {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
-                            </div>
+                            {(() => {
+                              const completeness = productCompletenessById.get(product.id);
+
+                              return (
+                                <>
+                             <div className="flex flex-wrap items-center gap-2">
+                               <h5 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h5>
+                               {!product.ativo && (
+                                 <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">
+                                   Inativo
+                                 </span>
+                               )}
+                               {completeness?.complete && (
+                                 <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+                                   Completo
+                                 </span>
+                               )}
+                             </div>
+                             <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                               {product.modalidade && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.modalidade}</span>}
+                               {product.administradora?.nome && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.administradora.nome}</span>}
+                       {product.entidadesClasse.length > 0 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
+                               {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
+                               {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
+                             </div>
+                             {completeness && !completeness.complete && (
+                               <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                                 {completeness.missingNetwork && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem rede</span>}
+                                 {completeness.missingPrice && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem preco</span>}
+                                 {completeness.missingCarencias && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem carencia</span>}
+                                 {completeness.missingDocuments && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem documentos</span>}
+                                 {completeness.missingReembolso && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem reembolso</span>}
+                               </div>
+                             )}
+                                </>
+                              );
+                            })()}
                           </div>
 
                           <div className="flex items-center gap-2 self-end lg:self-auto">
@@ -2701,6 +2867,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     {entry.records.map((record) => record.acomodacao).filter(Boolean).map((acomodacao) => <span key={`${entry.key}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{acomodacao}</span>)}
                     {(entry.vidasMin || entry.vidasMax) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">Vidas: {entry.vidasMin ?? 1} a {entry.vidasMax ?? '...'}</span>}
                     {!entry.records.every((record) => record.ativo) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5 font-medium text-[color:var(--panel-text-muted,#876f5c)]">Inativo</span>}
+                    {entry.records.some((record) => Object.keys(record.pricesByAgeRange).length === 0) && <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Sem preco</span>}
+                    {entry.product && !productCompletenessById.get(entry.product.id)?.complete && <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Produto incompleto</span>}
                   </div>
                 </div>
               </div>

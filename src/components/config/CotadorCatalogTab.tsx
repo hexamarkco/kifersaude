@@ -27,6 +27,13 @@ import type { CotadorAgeRange } from '../../features/cotador/shared/cotadorConst
 import { COTADOR_AGE_RANGES } from '../../features/cotador/shared/cotadorConstants';
 import type { CotadorHospitalNetworkEntry } from '../../features/cotador/shared/cotadorTypes';
 import {
+  formatCotadorHospitalLocationLabel,
+  formatCotadorLocationText,
+  formatCotadorOptionalLocationText,
+  resolveCotadorRegionByCity,
+  sanitizeCotadorHospitalBairro,
+} from '../../features/cotador/shared/cotadorHospitalLocation';
+import {
   cotadorService,
   type CotadorHospitalManagerInput,
   type CotadorHospitalManagerRecord,
@@ -392,7 +399,7 @@ const parseProductAcomodacoes = (value?: string | null, allowedValues?: string[]
 
 const sanitizeNetworkAliases = (value: unknown) => {
   if (Array.isArray(value)) {
-    return Array.from(new Set(value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean)))
+    return Array.from(new Set(value.filter((item): item is string => typeof item === 'string').map((item) => formatCotadorLocationText(item)).filter(Boolean)))
       .sort((left, right) => left.localeCompare(right, 'pt-BR'));
   }
 
@@ -403,17 +410,19 @@ const sanitizeNetworkAliases = (value: unknown) => {
   return Array.from(new Set(
     value
       .split(/\r?\n|;/)
-      .map((item) => item.trim())
+      .map((item) => formatCotadorLocationText(item))
       .filter(Boolean),
   )).sort((left, right) => left.localeCompare(right, 'pt-BR'));
 };
 
 const sanitizeNetworkEntry = (entry: Partial<NetworkDraftEntry>): NetworkDraftEntry | null => {
-  const hospital = entry.hospital?.trim() ?? '';
-  const cidade = entry.cidade?.trim() ?? '';
+  const hospital = formatCotadorLocationText(entry.hospital);
+  const cidade = formatCotadorLocationText(entry.cidade);
 
   if (!hospital || !cidade) return null;
 
+  const regiao = resolveCotadorRegionByCity(cidade) ?? formatCotadorOptionalLocationText(entry.regiao);
+  const bairro = sanitizeCotadorHospitalBairro(entry.bairro, hospital, cidade, regiao);
   const atendimentos = Array.from(new Set((entry.atendimentos ?? []).map((item) => item.trim()).filter(Boolean)));
 
   return {
@@ -421,8 +430,8 @@ const sanitizeNetworkEntry = (entry: Partial<NetworkDraftEntry>): NetworkDraftEn
     hospital_id: typeof entry.hospital_id === 'string' ? entry.hospital_id : null,
     hospital,
     cidade,
-    regiao: entry.regiao?.trim() || null,
-    bairro: entry.bairro?.trim() || null,
+    regiao,
+    bairro,
     atendimentos,
     observacoes: entry.observacoes?.trim() || null,
     aliases: sanitizeNetworkAliases(entry.aliases),
@@ -492,7 +501,7 @@ const mergeNetworkDraftEntries = (normalizedEntries: NetworkDraftEntry[], rawEnt
 const buildNetworkEntryFormFromValue = (entry?: NetworkDraftEntry | null): NetworkEntryFormState => ({
   hospital: entry?.hospital ?? '',
   cidade: entry?.cidade ?? '',
-  regiao: entry?.regiao ?? '',
+  regiao: entry?.regiao ?? resolveCotadorRegionByCity(entry?.cidade) ?? '',
   bairro: entry?.bairro ?? '',
   atendimentos: entry?.atendimentos ?? [],
   observacoes: entry?.observacoes ?? '',
@@ -502,14 +511,20 @@ const buildNetworkEntryFormFromValue = (entry?: NetworkDraftEntry | null): Netwo
 const buildNetworkHospitalFormFromValue = (hospital?: CotadorHospitalManagerRecord | null): NetworkHospitalFormState => ({
   nome: hospital?.nome ?? '',
   cidade: hospital?.cidade ?? '',
-  regiao: hospital?.regiao ?? '',
+  regiao: hospital?.regiao ?? resolveCotadorRegionByCity(hospital?.cidade) ?? '',
   bairro: hospital?.bairro ?? '',
   aliasesText: (hospital?.aliases ?? []).join('\n'),
   ativo: hospital?.ativo ?? true,
 });
 
-const formatNetworkLocation = (entry: { bairro?: string | null; cidade?: string | null }) =>
-  [entry.bairro, entry.cidade].filter(Boolean).join(' | ');
+const formatNetworkLocation = (entry: { bairro?: string | null; regiao?: string | null; cidade?: string | null }) =>
+  formatCotadorHospitalLocationLabel(entry);
+
+const formatNetworkAliasesTextarea = (value: string) => value
+  .split(/\r?\n/)
+  .map((line) => formatCotadorLocationText(line))
+  .filter(Boolean)
+  .join('\n');
 
 const serializeProductAcomodacoes = (values: string[]) =>
   Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).join(PRODUCT_ACOMODACAO_SEPARATOR);
@@ -1158,17 +1173,17 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const handleNetworkHospitalSubmit = async () => {
     if (!selectedNetworkHospital) return;
 
-    if (!networkHospitalForm.nome.trim() || !networkHospitalForm.cidade.trim()) {
-      toast.error('Preencha nome e cidade para salvar o hospital compartilhado.');
+    if (!networkHospitalForm.nome.trim() || !networkHospitalForm.cidade.trim() || !networkHospitalForm.regiao.trim()) {
+      toast.error('Preencha nome, cidade e regiao para salvar o hospital compartilhado.');
       return;
     }
 
     setSubmitting(true);
     const payload: CotadorHospitalManagerInput = {
-      nome: networkHospitalForm.nome.trim(),
-      cidade: networkHospitalForm.cidade.trim(),
-      regiao: networkHospitalForm.regiao.trim() || null,
-      bairro: networkHospitalForm.bairro.trim() || null,
+      nome: formatCotadorLocationText(networkHospitalForm.nome),
+      cidade: formatCotadorLocationText(networkHospitalForm.cidade),
+      regiao: resolveCotadorRegionByCity(networkHospitalForm.cidade) ?? formatCotadorOptionalLocationText(networkHospitalForm.regiao),
+      bairro: sanitizeCotadorHospitalBairro(networkHospitalForm.bairro, networkHospitalForm.nome, networkHospitalForm.cidade, networkHospitalForm.regiao),
       aliases: sanitizeNetworkAliases(networkHospitalForm.aliasesText),
       ativo: networkHospitalForm.ativo,
     };
@@ -1233,8 +1248,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   };
 
   const handleNetworkEntrySubmit = () => {
-    if (!networkEntryForm.hospital.trim() || !networkEntryForm.cidade.trim()) {
-      toast.error('Preencha nome do hospital e cidade para salvar o cadastro.');
+    if (!networkEntryForm.hospital.trim() || !networkEntryForm.cidade.trim() || !networkEntryForm.regiao.trim()) {
+      toast.error('Preencha nome do hospital, cidade e regiao para salvar o cadastro.');
       return;
     }
 
@@ -2860,7 +2875,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <Input
                 value={networkSearch}
                 onChange={(event) => setNetworkSearch(event.target.value)}
-                placeholder="Buscar hospital, cidade, bairro ou atendimento"
+                placeholder="Buscar hospital, cidade, regiao, bairro ou atendimento"
                 leftIcon={Search}
               />
             </div>
@@ -2917,7 +2932,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                   <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
                     Cadastro manual de hospital
                   </p>
-                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Abra um modal dedicado para cadastrar ou editar nome, cidade, bairro e atendimentos.</p>
+                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Abra um modal dedicado para cadastrar ou editar nome, cidade, regiao, bairro e atendimentos.</p>
                 </div>
                 <Button type="button" onClick={openNetworkEntryCreateModal}>
                   <Plus className="h-4 w-4" />
@@ -2951,22 +2966,29 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         isOpen={networkEntryModalOpen}
         onClose={resetNetworkEntryForm}
         title={networkEditingIndex === null ? 'Adicionar hospital da rede' : 'Editar hospital da rede'}
-        description="Cadastre o hospital manualmente com nome, cidade, bairro opcional e os atendimentos disponiveis neste plano."
+        description="Cadastre o hospital manualmente com nome, cidade, regiao, bairro opcional e os atendimentos disponiveis neste plano."
         size="lg"
       >
         <div className="space-y-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Hospital *</label>
-              <Input value={networkEntryForm.hospital} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, hospital: event.target.value }))} placeholder="Ex: HOSPITAL PASTEUR" required />
+              <Input value={networkEntryForm.hospital} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, hospital: formatCotadorLocationText(event.target.value) }))} placeholder="Ex: HOSPITAL PASTEUR" required />
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
-              <Input value={networkEntryForm.cidade} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, cidade: event.target.value }))} placeholder="Ex: Rio de Janeiro" required />
+              <Input value={networkEntryForm.cidade} onChange={(event) => setNetworkEntryForm((current) => {
+                const cidade = formatCotadorLocationText(event.target.value);
+                return { ...current, cidade, regiao: resolveCotadorRegionByCity(cidade) ?? current.regiao };
+              })} placeholder="Ex: RIO DE JANEIRO" required />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao *</label>
+              <Input value={networkEntryForm.regiao} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, regiao: formatCotadorLocationText(event.target.value) }))} placeholder="Ex: CAPITAL" required />
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
-              <Input value={networkEntryForm.bairro} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, bairro: event.target.value }))} placeholder="Opcional" />
+              <Input value={networkEntryForm.bairro} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, bairro: formatCotadorLocationText(event.target.value) }))} placeholder="Opcional" />
             </div>
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Atendimentos</label>
@@ -2983,12 +3005,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             </div>
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Aliases para normalizacao manual</label>
-              <Textarea
-                value={networkEntryForm.aliasesText}
-                onChange={(event) => setNetworkEntryForm((current) => ({ ...current, aliasesText: event.target.value }))}
-                rows={4}
-                placeholder={"Ex: ASM - HOSPITAL PASTEUR\nHOSPITAL PASTEUR"}
-              />
+                <Textarea
+                  value={networkEntryForm.aliasesText}
+                  onChange={(event) => setNetworkEntryForm((current) => ({ ...current, aliasesText: formatNetworkAliasesTextarea(event.target.value) }))}
+                  rows={4}
+                  placeholder={"Ex: ASM - HOSPITAL PASTEUR\nHOSPITAL PASTEUR"}
+                />
               <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Use um alias por linha para vincular nomes alternativos ao mesmo hospital compartilhado.</p>
             </div>
           </div>
@@ -3015,19 +3037,26 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Nome do hospital *</label>
-                <Input value={networkHospitalForm.nome} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, nome: event.target.value }))} required />
+                <Input value={networkHospitalForm.nome} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, nome: formatCotadorLocationText(event.target.value) }))} required />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
-                <Input value={networkHospitalForm.cidade} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, cidade: event.target.value }))} required />
+                <Input value={networkHospitalForm.cidade} onChange={(event) => setNetworkHospitalForm((current) => {
+                  const cidade = formatCotadorLocationText(event.target.value);
+                  return { ...current, cidade, regiao: resolveCotadorRegionByCity(cidade) ?? current.regiao };
+                })} required />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao *</label>
+                <Input value={networkHospitalForm.regiao} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, regiao: formatCotadorLocationText(event.target.value) }))} required />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
-                <Input value={networkHospitalForm.bairro} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, bairro: event.target.value }))} placeholder="Opcional" />
+                <Input value={networkHospitalForm.bairro} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, bairro: formatCotadorLocationText(event.target.value) }))} placeholder="Opcional" />
               </div>
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Aliases para normalizacao manual</label>
-                <Textarea value={networkHospitalForm.aliasesText} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, aliasesText: event.target.value }))} rows={4} placeholder={"Ex: ASM - HOSPITAL PASTEUR\nHOSPITAL PASTEUR"} />
+                <Textarea value={networkHospitalForm.aliasesText} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, aliasesText: formatNetworkAliasesTextarea(event.target.value) }))} rows={4} placeholder={"Ex: ASM - HOSPITAL PASTEUR\nHOSPITAL PASTEUR"} />
                 <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Use um alias por linha para cobrir variacoes de importacao entre operadoras e arquivos.</p>
               </div>
             </div>

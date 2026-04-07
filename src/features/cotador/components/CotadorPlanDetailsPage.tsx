@@ -39,6 +39,9 @@ const compareNetworkEntries = (left: CotadorQuoteItem['redeHospitalar'][number],
   const cityComparison = (left.cidade ?? '').localeCompare(right.cidade ?? '', 'pt-BR');
   if (cityComparison !== 0) return cityComparison;
 
+  const regionComparison = (left.regiao ?? '').localeCompare(right.regiao ?? '', 'pt-BR');
+  if (regionComparison !== 0) return regionComparison;
+
   const bairroComparison = (left.bairro ?? '').localeCompare(right.bairro ?? '', 'pt-BR');
   if (bairroComparison !== 0) return bairroComparison;
 
@@ -122,7 +125,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
       if (networkCity && entry.cidade !== networkCity) return false;
       if (!normalizedSearch) return true;
 
-        const haystack = [entry.hospital, entry.bairro, entry.cidade, entry.atendimentos.join(' ')].filter(Boolean).join(' ').toLowerCase();
+        const haystack = [entry.hospital, entry.bairro, entry.regiao, entry.cidade, entry.atendimentos.join(' ')].filter(Boolean).join(' ').toLowerCase();
       return haystack.includes(normalizedSearch);
     });
   }, [networkCity, networkSearch, sortedNetwork]);
@@ -238,7 +241,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
         isOpen={networkModalOpen}
         onClose={() => setNetworkModalOpen(false)}
         title="Rede do plano"
-        description="A rede esta ordenada por cidade e bairro. Use os filtros para localizar um prestador especifico."
+        description="A rede esta ordenada por cidade, regiao e bairro. Use os filtros para localizar um prestador especifico."
         size="xl"
       >
         {networkEntriesCount === 0 ? (
@@ -258,7 +261,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
               <Input
                 value={networkSearch}
                 onChange={(event) => setNetworkSearch(event.target.value)}
-                placeholder="Buscar hospital, bairro, cidade ou atendimento"
+                placeholder="Buscar hospital, bairro, regiao ou atendimento"
                 leftIcon={Search}
               />
             </div>
@@ -283,7 +286,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
 
                     <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
                       {group.entries.map((entry, index) => (
-                        <article key={`${group.city}-${entry.bairro}-${entry.hospital}-${index}`} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-start md:justify-between">
+                        <article key={`${group.city}-${entry.regiao}-${entry.bairro}-${entry.hospital}-${index}`} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-start md:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start gap-3">
                               <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
@@ -292,7 +295,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
                               <div className="min-w-0">
                                 <p className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{entry.hospital}</p>
                                 <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                                  {[entry.bairro, entry.cidade].filter(Boolean).join(' | ')}
+                                  {[entry.bairro, entry.regiao, entry.cidade].filter(Boolean).join(' | ')}
                                 </p>
                                 {entry.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{entry.observacoes}</p>}
                               </div>

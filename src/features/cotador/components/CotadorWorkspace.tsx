@@ -135,7 +135,7 @@ export default function CotadorWorkspace({
 
     selectedItems.forEach((item) => {
       item.redeHospitalar.forEach((entry) => {
-        const key = [entry.hospital, entry.cidade, entry.bairro].map(normalizeNetworkText).join('|');
+        const key = [entry.hospital, entry.cidade, entry.regiao, entry.bairro].map(normalizeNetworkText).join('|');
         const current = rows.get(key) ?? {
           key,
           hospital: entry.hospital,
@@ -188,6 +188,7 @@ export default function CotadorWorkspace({
           row.hospital,
           row.cidade,
           row.bairro,
+          row.regiao,
           row.services.join(' '),
           row.observacoes.join(' '),
         ]
@@ -274,9 +275,10 @@ export default function CotadorWorkspace({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
-                        {item.linha?.name ?? item.titulo}
+                        {item.operadora.name ?? 'OPERADORA'}
                       </p>
-                      <h4 className="mt-2 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.operadora.name ?? 'Operadora'}</h4>
+                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.linha?.name ?? 'LINHA'}</p>
+                      <h4 className="mt-3 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {item.perfilEmpresarial && (
                           <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
@@ -438,7 +440,7 @@ export default function CotadorWorkspace({
               <Input
                 value={networkCompareSearch}
                 onChange={(event) => setNetworkCompareSearch(event.target.value)}
-                placeholder="Buscar hospital, bairro, cidade ou atendimento"
+                placeholder="Buscar hospital, bairro, regiao, cidade ou atendimento"
                 leftIcon={Search}
               />
               <FilterSingleSelect
@@ -514,7 +516,7 @@ export default function CotadorWorkspace({
                                 </span>
                               </div>
                               <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                                {[row.bairro, row.cidade].filter(Boolean).join(' | ')}
+                                {[row.bairro, row.regiao, row.cidade].filter(Boolean).join(' | ')}
                               </p>
                               {row.services.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1.5">

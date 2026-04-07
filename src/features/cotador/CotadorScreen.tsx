@@ -184,11 +184,12 @@ export default function CotadorScreen() {
     const recalculatedItems = baseQuote.selectedItems.map((item) => {
       const catalogItem = catalogByKey.get(item.catalogItemKey);
       const pricesToUse = catalogItem?.pricesByAgeRange ?? item.pricesByAgeRange;
+      const networkToUse = catalogItem?.redeHospitalar ?? item.redeHospitalar;
       const estimatedMonthlyTotal = calculateCotadorEstimatedMonthlyTotal(
         baseQuote.ageDistribution,
         pricesToUse,
       );
-      return { ...item, estimatedMonthlyTotal, pricesByAgeRange: pricesToUse };
+      return { ...item, estimatedMonthlyTotal, pricesByAgeRange: pricesToUse, redeHospitalar: networkToUse };
     });
 
     return { ...baseQuote, selectedItems: recalculatedItems };

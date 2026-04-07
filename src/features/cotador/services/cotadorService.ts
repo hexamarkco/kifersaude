@@ -37,6 +37,12 @@ import type {
   CotadorQuoteInput,
   CotadorQuoteItem,
 } from '../shared/cotadorTypes';
+import {
+  formatCotadorLocationText,
+  formatCotadorOptionalLocationText,
+  resolveCotadorRegionByCity,
+  sanitizeCotadorHospitalBairro,
+} from '../shared/cotadorHospitalLocation';
 
 type CatalogManagerPayload = {
   nome: string;
@@ -239,15 +245,21 @@ const sanitizeHospitalNetwork = (value: unknown): CotadorHospitalNetworkEntry[] 
     .map((entry) => {
       if (!entry || typeof entry !== 'object') return null;
       const candidate = entry as Record<string, unknown>;
-      const cidade = typeof candidate.cidade === 'string' ? candidate.cidade.trim() : '';
-      const hospital = typeof candidate.hospital === 'string' ? candidate.hospital.trim() : '';
+      const cidade = typeof candidate.cidade === 'string' ? formatCotadorLocationText(candidate.cidade) : '';
+      const hospital = typeof candidate.hospital === 'string' ? formatCotadorLocationText(candidate.hospital) : '';
       if (!cidade || !hospital) return null;
+
+      const regiaoInformada = typeof candidate.regiao === 'string' ? formatCotadorOptionalLocationText(candidate.regiao) : null;
+      const regiao = resolveCotadorRegionByCity(cidade) ?? regiaoInformada;
+      const bairro = typeof candidate.bairro === 'string'
+        ? sanitizeCotadorHospitalBairro(candidate.bairro, hospital, cidade, regiao)
+        : null;
 
       return {
         cidade,
-        regiao: typeof candidate.regiao === 'string' && candidate.regiao.trim() ? candidate.regiao.trim() : null,
+        regiao,
         hospital,
-        bairro: typeof candidate.bairro === 'string' && candidate.bairro.trim() ? candidate.bairro.trim() : null,
+        bairro,
         atendimentos: Array.isArray(candidate.atendimentos)
           ? candidate.atendimentos.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim())
           : [],
@@ -263,7 +275,7 @@ const sanitizeHospitalAliases = (value: unknown): string[] => {
   return Array.from(new Set(
     value
       .filter((item): item is string => typeof item === 'string')
-      .map((item) => item.trim())
+      .map((item) => formatCotadorLocationText(item))
       .filter(Boolean),
   )).sort((left, right) => left.localeCompare(right, 'pt-BR'));
 };
@@ -375,6 +387,9 @@ const compareHospitalLinkedProducts = (left: CotadorHospitalLinkedProductRecord,
 const compareHospitals = (left: CotadorHospitalManagerRecord, right: CotadorHospitalManagerRecord) => {
   const cityComparison = normalizeText(left.cidade).localeCompare(normalizeText(right.cidade), 'pt-BR');
   if (cityComparison !== 0) return cityComparison;
+
+  const regionComparison = normalizeText(left.regiao).localeCompare(normalizeText(right.regiao), 'pt-BR');
+  if (regionComparison !== 0) return regionComparison;
 
   const bairroComparison = normalizeText(left.bairro).localeCompare(normalizeText(right.bairro), 'pt-BR');
   if (bairroComparison !== 0) return bairroComparison;
@@ -1603,11 +1618,16 @@ export const cotadorService = {
 
   async updateHospitalRede(id: string, input: CotadorHospitalManagerInput) {
     try {
+      const nome = formatCotadorLocationText(input.nome);
+      const cidade = formatCotadorLocationText(input.cidade);
+      const regiao = resolveCotadorRegionByCity(cidade) ?? formatCotadorOptionalLocationText(input.regiao);
+      const bairro = sanitizeCotadorHospitalBairro(input.bairro, nome, cidade, regiao);
+
       const payload = {
-        nome: input.nome.trim(),
-        cidade: input.cidade.trim(),
-        regiao: cleanOptionalText(input.regiao),
-        bairro: cleanOptionalText(input.bairro),
+        nome,
+        cidade,
+        regiao,
+        bairro,
         ativo: input.ativo,
         updated_at: new Date().toISOString(),
       };

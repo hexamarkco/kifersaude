@@ -182,13 +182,19 @@ export default function CotadorWorkspace({
                   </div>
 
                   {item.estimatedMonthlyTotal !== null && (
-                    <div className="mt-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-3 py-2 dark:bg-[color:var(--panel-surface-soft,#2a2119)]">
-                      <div className="flex items-center justify-between gap-2">
+                    <div className="mt-3 rounded-2xl border border-[color:rgba(111,63,22,0.22)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-3 py-2.5 dark:border-[color:rgba(243,200,146,0.16)] dark:bg-[color:var(--panel-surface-soft,#2a2119)]">
+                      <div className="flex items-center justify-between gap-3">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Mensalidade</p>
-                        <p className="text-lg font-semibold text-[color:var(--panel-accent,#6f3f16)] dark:text-[color:var(--panel-accent-soft,#f3c892)]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
+                        <p className="text-2xl font-semibold tabular-nums text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
                       </div>
                     </div>
                   )}
+
+                  <div className="mt-3 flex items-center gap-3">
+                    <Button variant="secondary" size="sm" onClick={() => onOpenPlanDetails(item.catalogItemKey)}>
+                      Ver mais detalhes
+                    </Button>
+                  </div>
 
                   <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                       <MapPin className="h-3.5 w-3.5" />

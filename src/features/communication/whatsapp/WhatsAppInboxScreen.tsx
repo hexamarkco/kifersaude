@@ -213,6 +213,11 @@ const getMessageVisibleCaption = (message: CommWhatsAppMessage) => {
     return '';
   }
 
+  const marker = getMessageSummaryMarker(message.message_type);
+  if (message.message_type.trim().toLowerCase() !== 'text' && marker && fallbackText.startsWith(`${marker} `)) {
+    return fallbackText.slice(marker.length).trim();
+  }
+
   return fallbackText;
 };
 
@@ -224,6 +229,30 @@ const getMessageEditableText = (message: CommWhatsAppMessage) => {
   }
 
   return getMessageVisibleCaption(message);
+};
+
+const normalizeComparableMessageText = (messageType: string, value: unknown) => {
+  const text = String(value ?? '').trim();
+  if (!text) return '';
+
+  if (messageType.trim().toLowerCase() === 'text') {
+    return text;
+  }
+
+  const marker = getMessageSummaryMarker(messageType);
+  if (!marker) {
+    return text;
+  }
+
+  if (text === marker) {
+    return '';
+  }
+
+  if (text.startsWith(`${marker} `)) {
+    return text.slice(marker.length).trim();
+  }
+
+  return text;
 };
 
 const canEditOutboundMessage = (message: CommWhatsAppMessage) => {
@@ -869,16 +898,16 @@ const getEditedMessageInfo = (message?: CommWhatsAppMessage | null) => {
   const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
     ? message.metadata as Record<string, unknown>
     : {};
-  const currentText = String(message.text_content ?? message.media_caption ?? '').trim();
-  const originalText = String(metadata.original_text_content ?? '').trim();
+  const currentText = getMessageEditableText(message) || normalizeComparableMessageText(message.message_type, message.text_content);
+  const originalText = normalizeComparableMessageText(message.message_type, metadata.original_text_content);
   const editHistory = Array.isArray(metadata.edit_history)
     ? metadata.edit_history.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
     : [];
   const lastEdit = editHistory.length > 0 ? editHistory[editHistory.length - 1] : null;
-  const previousText = String(lastEdit?.previous_text ?? '').trim() || originalText || null;
+  const previousText = normalizeComparableMessageText(message.message_type, lastEdit?.previous_text) || originalText || null;
   const visibleCurrentText = getMessageEditableText(message) || currentText || null;
   const editedAt = String(metadata.edited_at ?? '').trim() || null;
-  const edited = metadata.edited === true || Boolean(originalText && originalText !== currentText);
+  const edited = metadata.edited === true || Boolean(editedAt) || editHistory.length > 0 || Boolean(originalText && originalText !== visibleCurrentText);
 
   return {
     edited,

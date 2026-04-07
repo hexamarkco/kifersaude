@@ -777,6 +777,9 @@ const buildQuoteBeneficiariesRows = (quoteId: string, input: CotadorQuoteInput) 
     }))
     .filter((item) => item.quantidade > 0);
 
+const buildQuoteBeneficiariesPayload = (input: CotadorQuoteInput) =>
+  buildQuoteBeneficiariesRows('00000000-0000-0000-0000-000000000000', input).map(({ quote_id: _quoteId, ...row }) => row);
+
 const buildQuoteItemsRows = (quoteId: string, items: CotadorQuoteItem[]) =>
   items.map((item, index) => ({
     quote_id: quoteId,
@@ -815,6 +818,9 @@ const buildQuoteItemsRows = (quoteId: string, items: CotadorQuoteItem[]) =>
     observacoes_snapshot: item.observacao,
     ordem: index,
   }));
+
+const buildQuoteItemsPayload = (items: CotadorQuoteItem[]) =>
+  buildQuoteItemsRows('00000000-0000-0000-0000-000000000000', items).map(({ quote_id: _quoteId, ...row }) => row);
 
 const buildQuoteItemFromRow = (row: CotadorQuoteItemRecord): CotadorQuoteItem => ({
   id: row.id,
@@ -965,32 +971,8 @@ async function syncTablePrices(tableId: string, pricesByAgeRange: CotadorPriceRo
   }
 }
 
-async function syncQuoteBeneficiaries(quoteId: string, input: CotadorQuoteInput) {
-  const { error: deleteError } = await supabase
-    .from(COTADOR_QUOTE_BENEFICIARIES_TABLE)
-    .delete()
-    .eq('quote_id', quoteId);
-
-  if (deleteError) {
-    throw deleteError;
-  }
-
-  const rows = buildQuoteBeneficiariesRows(quoteId, input);
-  if (rows.length === 0) {
-    return;
-  }
-
-  const { error: insertError } = await supabase
-    .from(COTADOR_QUOTE_BENEFICIARIES_TABLE)
-    .insert(rows);
-
-  if (insertError) {
-    throw insertError;
-  }
-}
-
 export const cotadorService = {
-  async getAdministradoras(): Promise<CotadorAdministradora[]> {
+  async getAdministradoras(throwOnError = false): Promise<CotadorAdministradora[]> {
     try {
       const { data, error } = await supabase
         .from(COTADOR_ADMINISTRADORAS_TABLE)
@@ -999,6 +981,7 @@ export const cotadorService = {
 
       if (error) {
         if (isMissingTableError(error, COTADOR_ADMINISTRADORAS_TABLE)) {
+          if (throwOnError) throw error;
           return [];
         }
         throw error;
@@ -1007,6 +990,7 @@ export const cotadorService = {
       return (data as CotadorAdministradora[] | null) ?? [];
     } catch (error) {
       console.error('Error loading cotador administradoras:', error);
+      if (throwOnError) throw error;
       return [];
     }
   },
@@ -1055,7 +1039,7 @@ export const cotadorService = {
     }
   },
 
-  async getEntidadesClasse(): Promise<CotadorEntidadeClasse[]> {
+  async getEntidadesClasse(throwOnError = false): Promise<CotadorEntidadeClasse[]> {
     try {
       const { data, error } = await supabase
         .from(COTADOR_ENTIDADES_TABLE)
@@ -1064,6 +1048,7 @@ export const cotadorService = {
 
       if (error) {
         if (isMissingTableError(error, COTADOR_ENTIDADES_TABLE)) {
+          if (throwOnError) throw error;
           return [];
         }
         throw error;
@@ -1072,6 +1057,7 @@ export const cotadorService = {
       return (data as CotadorEntidadeClasse[] | null) ?? [];
     } catch (error) {
       console.error('Error loading cotador entidades:', error);
+      if (throwOnError) throw error;
       return [];
     }
   },
@@ -1120,18 +1106,19 @@ export const cotadorService = {
     }
   },
 
-  async getLinhas(): Promise<CotadorLineManagerRecord[]> {
+  async getLinhas(throwOnError = false): Promise<CotadorLineManagerRecord[]> {
     try {
       const [{ data: linesData, error: linesError }, operadoras] = await Promise.all([
         supabase
           .from(COTADOR_LINHAS_TABLE)
           .select('*')
           .order('nome', { ascending: true }),
-        configService.getOperadoras(),
+        configService.getOperadoras(throwOnError),
       ]);
 
       if (linesError) {
         if (isMissingTableError(linesError, COTADOR_LINHAS_TABLE)) {
+          if (throwOnError) throw linesError;
           return [];
         }
         throw linesError;
@@ -1144,6 +1131,7 @@ export const cotadorService = {
       }));
     } catch (error) {
       console.error('Error loading cotador lines:', error);
+      if (throwOnError) throw error;
       return [];
     }
   },
@@ -1198,17 +1186,17 @@ export const cotadorService = {
     }
   },
 
-  async getProdutos(): Promise<CotadorProductManagerRecord[]> {
+  async getProdutos(throwOnError = false): Promise<CotadorProductManagerRecord[]> {
     try {
       const [{ data: productsData, error: productsError }, operadoras, lines, administradoras, entidades, linksData, normalizedNetworkByProduct] = await Promise.all([
         supabase
           .from(COTADOR_PRODUTOS_TABLE)
           .select('*')
           .order('nome', { ascending: true }),
-        configService.getOperadoras(),
-        cotadorService.getLinhas(),
-        cotadorService.getAdministradoras(),
-        cotadorService.getEntidadesClasse(),
+        configService.getOperadoras(throwOnError),
+        cotadorService.getLinhas(throwOnError),
+        cotadorService.getAdministradoras(throwOnError),
+        cotadorService.getEntidadesClasse(throwOnError),
         supabase
           .from(COTADOR_PRODUTO_ENTIDADES_TABLE)
           .select('*'),
@@ -1217,6 +1205,7 @@ export const cotadorService = {
 
       if (productsError) {
         if (isMissingTableError(productsError, COTADOR_PRODUTOS_TABLE)) {
+          if (throwOnError) throw productsError;
           return [];
         }
         throw productsError;
@@ -1256,6 +1245,7 @@ export const cotadorService = {
       }));
     } catch (error) {
       console.error('Error loading cotador products:', error);
+      if (throwOnError) throw error;
       return [];
     }
   },
@@ -1548,7 +1538,7 @@ export const cotadorService = {
     }
   },
 
-  async getHospitaisRedeDetalhados(): Promise<CotadorHospitalManagerRecord[]> {
+  async getHospitaisRedeDetalhados(throwOnError = false): Promise<CotadorHospitalManagerRecord[]> {
     try {
       const [{ data: hospitalsData, error: hospitalsError }, { data: aliasesData, error: aliasesError }, { data: linksData, error: linksError }, products] = await Promise.all([
         supabase
@@ -1564,11 +1554,12 @@ export const cotadorService = {
           .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
           .select('*')
           .order('ordem', { ascending: true }),
-        cotadorService.getProdutos(),
+        cotadorService.getProdutos(throwOnError),
       ]);
 
       if (hospitalsError) {
         if (isMissingTableError(hospitalsError, COTADOR_HOSPITAIS_TABLE)) {
+          if (throwOnError) throw hospitalsError;
           return buildFallbackHospitalsFromProducts();
         }
         throw hospitalsError;
@@ -1612,6 +1603,7 @@ export const cotadorService = {
         .sort(compareHospitals);
     } catch (error) {
       console.error('Error loading cotador hospitals network:', error);
+      if (throwOnError) throw error;
       return buildFallbackHospitalsFromProducts();
     }
   },
@@ -1659,7 +1651,7 @@ export const cotadorService = {
     }
   },
 
-  async getTabelas(): Promise<CotadorTableManagerRecord[]> {
+  async getTabelas(throwOnError = false): Promise<CotadorTableManagerRecord[]> {
     try {
       const [{ data: tablesData, error: tablesError }, { data: priceData, error: priceError }, products] = await Promise.all([
         supabase
@@ -1669,11 +1661,12 @@ export const cotadorService = {
         supabase
           .from(COTADOR_TABELA_PRECOS_TABLE)
           .select('*'),
-        cotadorService.getProdutos(),
+        cotadorService.getProdutos(throwOnError),
       ]);
 
       if (tablesError) {
         if (isMissingTableError(tablesError, COTADOR_TABELAS_TABLE)) {
+          if (throwOnError) throw tablesError;
           return [];
         }
         throw tablesError;
@@ -1693,6 +1686,7 @@ export const cotadorService = {
       }));
     } catch (error) {
       console.error('Error loading cotador tables:', error);
+      if (throwOnError) throw error;
       return [];
     }
   },
@@ -1941,27 +1935,28 @@ export const cotadorService = {
     }
   },
 
-  async createQuote(input: CotadorQuoteInput) {
+  async createQuote(input: CotadorQuoteInput, items: CotadorQuoteItem[] = []) {
     try {
       const ageDistribution = sanitizeCotadorAgeDistribution(input.ageDistribution);
       const totalLives = getCotadorTotalLives(ageDistribution);
-      const { data, error } = await supabase
-        .from(COTADOR_QUOTES_TABLE)
-        .insert([{
-          nome: input.name.trim(),
-          modalidade: input.modality,
-          lead_id: input.leadId ?? null,
-          total_vidas: totalLives,
-        }])
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('upsert_cotador_quote_bundle', {
+        p_quote_id: null,
+        p_nome: input.name.trim(),
+        p_modalidade: input.modality,
+        p_lead_id: input.leadId ?? null,
+        p_total_vidas: totalLives,
+        p_beneficiaries: buildQuoteBeneficiariesPayload(input),
+        p_items: buildQuoteItemsPayload(items),
+      });
 
       if (error) {
         return { data: null, error };
       }
 
-      const quoteRecord = data as CotadorQuoteRecord;
-      await syncQuoteBeneficiaries(quoteRecord.id, input);
+      const quoteRecord = data as CotadorQuoteRecord | null;
+      if (!quoteRecord) {
+        return { data: null, error: toPostgrestError(new Error('Quote RPC returned empty response')) };
+      }
 
       return {
         data: {
@@ -1971,7 +1966,7 @@ export const cotadorService = {
           leadId: quoteRecord.lead_id ?? null,
           ageDistribution,
           totalLives,
-          selectedItems: [],
+          selectedItems: items,
           createdAt: quoteRecord.created_at,
           updatedAt: quoteRecord.updated_at,
         },
@@ -1983,36 +1978,41 @@ export const cotadorService = {
     }
   },
 
-  async updateQuote(quote: CotadorQuote, input: CotadorQuoteInput) {
+  async updateQuote(quote: CotadorQuote, input: CotadorQuoteInput, items: CotadorQuoteItem[] = quote.selectedItems) {
     try {
       const ageDistribution = sanitizeCotadorAgeDistribution(input.ageDistribution);
       const totalLives = getCotadorTotalLives(ageDistribution);
-      const { error } = await supabase
-        .from(COTADOR_QUOTES_TABLE)
-        .update({
-          nome: input.name.trim(),
-          modalidade: input.modality,
-          lead_id: input.leadId ?? null,
-          total_vidas: totalLives,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', quote.id);
+      const { data, error } = await supabase.rpc('upsert_cotador_quote_bundle', {
+        p_quote_id: quote.id,
+        p_nome: input.name.trim(),
+        p_modalidade: input.modality,
+        p_lead_id: input.leadId ?? null,
+        p_total_vidas: totalLives,
+        p_beneficiaries: buildQuoteBeneficiariesPayload(input),
+        p_items: buildQuoteItemsPayload(items),
+      });
 
       if (error) {
         return { data: null, error };
       }
 
-      await syncQuoteBeneficiaries(quote.id, input);
+      const quoteRecord = data as CotadorQuoteRecord | null;
+      if (!quoteRecord) {
+        return { data: null, error: toPostgrestError(new Error('Quote RPC returned empty response')) };
+      }
 
       return {
         data: {
           ...quote,
-          name: input.name.trim(),
-          modality: input.modality,
-          leadId: input.leadId ?? null,
+          id: quoteRecord.id,
+          name: quoteRecord.nome,
+          modality: quoteRecord.modalidade,
+          leadId: quoteRecord.lead_id ?? null,
           ageDistribution,
           totalLives,
-          updatedAt: new Date().toISOString(),
+          selectedItems: items,
+          createdAt: quoteRecord.created_at,
+          updatedAt: quoteRecord.updated_at,
         },
         error: null,
       };
@@ -2024,31 +2024,12 @@ export const cotadorService = {
 
   async saveQuoteSelection(quoteId: string, items: CotadorQuoteItem[]) {
     try {
-      const { error: deleteError } = await supabase
-        .from(COTADOR_QUOTE_ITEMS_TABLE)
-        .delete()
-        .eq('quote_id', quoteId);
+      const { error } = await supabase.rpc('replace_cotador_quote_items', {
+        p_quote_id: quoteId,
+        p_items: buildQuoteItemsPayload(items),
+      });
 
-      if (deleteError) {
-        return { error: deleteError };
-      }
-
-      if (items.length > 0) {
-        const { error: insertError } = await supabase
-          .from(COTADOR_QUOTE_ITEMS_TABLE)
-          .insert(buildQuoteItemsRows(quoteId, items));
-
-        if (insertError) {
-          return { error: insertError };
-        }
-      }
-
-      const { error: touchError } = await supabase
-        .from(COTADOR_QUOTES_TABLE)
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', quoteId);
-
-      return { error: touchError };
+      return { error };
     } catch (error) {
       console.error('Error saving cotador quote selection:', error);
       return { error: toPostgrestError(error) };

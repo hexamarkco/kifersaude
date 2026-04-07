@@ -517,7 +517,7 @@ export const configService = {
     }
   },
 
-  async getOperadoras(): Promise<Operadora[]> {
+  async getOperadoras(throwOnError = false): Promise<Operadora[]> {
     try {
       const { data, error } = await supabase
         .from('operadoras')
@@ -528,6 +528,9 @@ export const configService = {
       return data || [];
     } catch (error) {
       console.error('Error loading operadoras:', error);
+      if (throwOnError) {
+        throw error;
+      }
       return [];
     }
   },

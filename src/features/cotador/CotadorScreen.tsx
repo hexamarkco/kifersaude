@@ -402,17 +402,21 @@ export default function CotadorScreen() {
       return;
     }
 
-    const { data, error } = await cotadorService.updateQuote(activeQuote, input);
+    const nextSelectedItems = refreshSelectedItems(
+      {
+        ...activeQuote,
+        name: input.name,
+        modality: input.modality,
+        leadId: input.leadId ?? null,
+        ageDistribution: input.ageDistribution,
+        totalLives: Object.values(input.ageDistribution).reduce((total, value) => total + value, 0),
+      },
+      activeQuote.selectedItems,
+    );
+
+    const { data, error } = await cotadorService.updateQuote(activeQuote, input, nextSelectedItems);
     if (error || !data) {
       toast.error('Não foi possível atualizar a cotação agora.');
-      setWizardBusy(false);
-      return;
-    }
-
-    const nextSelectedItems = refreshSelectedItems(data, activeQuote.selectedItems);
-    const selectionResult = await cotadorService.saveQuoteSelection(activeQuote.id, nextSelectedItems);
-    if (selectionResult.error) {
-      toast.error('A cotação foi atualizada, mas a shortlist não conseguiu ser sincronizada.');
       setWizardBusy(false);
       return;
     }
@@ -471,7 +475,7 @@ export default function CotadorScreen() {
       modality: activeQuote.modality,
       leadId,
       ageDistribution: activeQuote.ageDistribution,
-    });
+    }, activeQuote.selectedItems);
 
     if (error || !data) {
       toast.error('Não foi possível atualizar o lead da cotação agora.');

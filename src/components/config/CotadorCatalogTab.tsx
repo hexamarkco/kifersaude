@@ -144,6 +144,7 @@ type NetworkDraftEntry = CotadorProductNetworkManagerRecord;
 
 type NetworkListStatusFilter = 'all' | 'with-network' | 'without-network';
 type NetworkDirectoryMode = 'products' | 'hospitals';
+type NetworkHospitalDataStatusFilter = 'all' | 'missing-bairro' | 'missing-regiao' | 'missing-any' | 'suspect-bairro' | 'complete';
 
 type NetworkHospitalFormState = {
   nome: string;
@@ -520,6 +521,22 @@ const buildNetworkHospitalFormFromValue = (hospital?: CotadorHospitalManagerReco
 const formatNetworkLocation = (entry: { bairro?: string | null; regiao?: string | null; cidade?: string | null }) =>
   formatCotadorHospitalLocationLabel(entry);
 
+const hasSuspectHospitalBairro = (hospital: Pick<CotadorHospitalManagerRecord, 'nome' | 'cidade' | 'regiao' | 'bairro'>) => {
+  const bairro = formatCotadorLocationText(hospital.bairro);
+  if (!bairro) return false;
+
+  const nome = formatCotadorLocationText(hospital.nome);
+  const cidade = formatCotadorLocationText(hospital.cidade);
+  const regiao = formatCotadorLocationText(hospital.regiao);
+
+  if (bairro === nome || bairro === cidade || bairro === regiao) return true;
+  if (/^(S\/N|SN|\d+)(\s|-)/.test(bairro)) return true;
+  if (/^(RUA|R\.|R |AVENIDA|AV\.|AV |ESTRADA|ESTR\.|RODOVIA|ROD\.|ALAMEDA|TRAVESSA|TV\.|PRACA|PCA\.)/.test(bairro)) return true;
+  if (/(ANDAR|SALA|BLOCO|LOJA|CONJ|CJ\b|TERREO|PAVIMENTO)/.test(bairro)) return true;
+
+  return false;
+};
+
 const formatNetworkAliasesTextarea = (value: string) => value
   .split(/\r?\n/)
   .map((line) => formatCotadorLocationText(line))
@@ -610,6 +627,29 @@ function EmptyState({
   );
 }
 
+function ErrorState({
+  title,
+  description,
+  onRetry,
+}: {
+  title: string;
+  description: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-12 text-center">
+      <AlertCircle className="mx-auto h-10 w-10 text-red-600" />
+      <h4 className="mt-4 text-lg font-semibold text-red-900">{title}</h4>
+      <p className="mt-2 text-sm text-red-700">{description}</p>
+      <div className="mt-5 flex justify-center">
+        <Button variant="secondary" onClick={onRetry}>
+          Tentar novamente
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function InlineCheckboxGroup({
   options,
   values,
@@ -668,6 +708,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const { options } = useConfig();
   const [activeTab, setActiveTab] = useState<CatalogTabId>('operadoras');
   const [loading, setLoading] = useState(true);
+  const [catalogLoadError, setCatalogLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
@@ -720,9 +761,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [networkDirectoryMode, setNetworkDirectoryMode] = useState<NetworkDirectoryMode>('products');
   const [networkHospitals, setNetworkHospitals] = useState<CotadorHospitalManagerRecord[]>([]);
   const [networkHospitalsLoading, setNetworkHospitalsLoading] = useState(false);
+  const [networkHospitalsError, setNetworkHospitalsError] = useState<string | null>(null);
   const [networkHospitalSearch, setNetworkHospitalSearch] = useState('');
   const [networkHospitalCity, setNetworkHospitalCity] = useState('');
   const [networkHospitalOperadoraId, setNetworkHospitalOperadoraId] = useState('');
+  const [networkHospitalDataStatus, setNetworkHospitalDataStatus] = useState<NetworkHospitalDataStatusFilter>('all');
   const [networkHospitalPage, setNetworkHospitalPage] = useState(1);
   const [networkHospitalPerPage, setNetworkHospitalPerPage] = useState(25);
   const [networkHospitalModalOpen, setNetworkHospitalModalOpen] = useState(false);
@@ -1108,8 +1151,17 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     const normalizedSearch = normalizeSortText(networkHospitalSearch);
 
     return networkHospitals.filter((hospital) => {
+      const missingBairro = !hospital.bairro?.trim();
+      const missingRegiao = !hospital.regiao?.trim();
+      const suspectBairro = hasSuspectHospitalBairro(hospital);
+
       if (networkHospitalCity && hospital.cidade !== networkHospitalCity) return false;
       if (networkHospitalOperadoraId && !hospital.linkedProducts.some((link) => link.operadora?.id === networkHospitalOperadoraId)) return false;
+      if (networkHospitalDataStatus === 'missing-bairro' && !missingBairro) return false;
+      if (networkHospitalDataStatus === 'missing-regiao' && !missingRegiao) return false;
+      if (networkHospitalDataStatus === 'missing-any' && !missingBairro && !missingRegiao) return false;
+      if (networkHospitalDataStatus === 'suspect-bairro' && !suspectBairro) return false;
+      if (networkHospitalDataStatus === 'complete' && (missingBairro || missingRegiao || suspectBairro)) return false;
       if (!normalizedSearch) return true;
 
       const haystack = [
@@ -1125,12 +1177,37 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
       return normalizeSortText(haystack).includes(normalizedSearch);
     });
-  }, [networkHospitalCity, networkHospitalOperadoraId, networkHospitalSearch, networkHospitals]);
+  }, [networkHospitalCity, networkHospitalDataStatus, networkHospitalOperadoraId, networkHospitalSearch, networkHospitals]);
 
   const networkHospitalsWithLinksCount = useMemo(
     () => networkHospitals.filter((hospital) => hospital.linkedProducts.length > 0).length,
     [networkHospitals],
   );
+
+  const networkHospitalQualityCounts = useMemo(() => {
+    const counts = {
+      all: networkHospitals.length,
+      'missing-bairro': 0,
+      'missing-regiao': 0,
+      'missing-any': 0,
+      'suspect-bairro': 0,
+      complete: 0,
+    } satisfies Record<NetworkHospitalDataStatusFilter, number>;
+
+    networkHospitals.forEach((hospital) => {
+      const missingBairro = !hospital.bairro?.trim();
+      const missingRegiao = !hospital.regiao?.trim();
+      const suspectBairro = hasSuspectHospitalBairro(hospital);
+
+      if (missingBairro) counts['missing-bairro'] += 1;
+      if (missingRegiao) counts['missing-regiao'] += 1;
+      if (missingBairro || missingRegiao) counts['missing-any'] += 1;
+      if (suspectBairro) counts['suspect-bairro'] += 1;
+      if (!missingBairro && !missingRegiao && !suspectBairro) counts.complete += 1;
+    });
+
+    return counts;
+  }, [networkHospitals]);
 
   const totalNetworkHospitalPages = Math.max(1, Math.ceil(filteredNetworkHospitals.length / networkHospitalPerPage));
 
@@ -1147,9 +1224,18 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
   const loadNetworkHospitals = async () => {
     setNetworkHospitalsLoading(true);
-    const hospitals = await cotadorService.getHospitaisRedeDetalhados();
-    setNetworkHospitals(hospitals);
-    setNetworkHospitalsLoading(false);
+    setNetworkHospitalsError(null);
+
+    try {
+      const hospitals = await cotadorService.getHospitaisRedeDetalhados(true);
+      setNetworkHospitals(hospitals);
+    } catch (error) {
+      console.error('Error loading detailed hospital network:', error);
+      setNetworkHospitalsError(error instanceof Error ? error.message : 'Nao foi possivel carregar os hospitais compartilhados.');
+      setNetworkHospitals([]);
+    } finally {
+      setNetworkHospitalsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -1509,22 +1595,30 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
   const loadCatalogData = async () => {
     setLoading(true);
-    const [nextOperadoras, nextAdministradoras, nextEntidades, nextLinhas, nextProdutos, nextTabelas] = await Promise.all([
-      configService.getOperadoras(),
-      cotadorService.getAdministradoras(),
-      cotadorService.getEntidadesClasse(),
-      cotadorService.getLinhas(),
-      cotadorService.getProdutos(),
-      cotadorService.getTabelas(),
-    ]);
+    setCatalogLoadError(null);
 
-    setOperadoras(nextOperadoras);
-    setAdministradoras(nextAdministradoras);
-    setEntidades(nextEntidades);
-    setLinhas(nextLinhas);
-    setProdutos(nextProdutos);
-    setTabelas(nextTabelas);
-    setLoading(false);
+    try {
+      const [nextOperadoras, nextAdministradoras, nextEntidades, nextLinhas, nextProdutos, nextTabelas] = await Promise.all([
+        configService.getOperadoras(true),
+        cotadorService.getAdministradoras(true),
+        cotadorService.getEntidadesClasse(true),
+        cotadorService.getLinhas(true),
+        cotadorService.getProdutos(true),
+        cotadorService.getTabelas(true),
+      ]);
+
+      setOperadoras(nextOperadoras);
+      setAdministradoras(nextAdministradoras);
+      setEntidades(nextEntidades);
+      setLinhas(nextLinhas);
+      setProdutos(nextProdutos);
+      setTabelas(nextTabelas);
+    } catch (error) {
+      console.error('Error loading Cotador catalog admin data:', error);
+      setCatalogLoadError(error instanceof Error ? error.message : 'Nao foi possivel carregar o catalogo do Cotador.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const activeImportTemplate = useMemo(() => cotadorImportService.getTemplate('json-completo'), []);
@@ -2090,6 +2184,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
           <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando catálogo do Cotador...</p>
         </div>
+      ) : catalogLoadError ? (
+        <ErrorState
+          title="Nao foi possivel carregar o catalogo"
+          description={catalogLoadError}
+          onRetry={() => void loadCatalogData()}
+        />
       ) : activeTab === 'operadoras' ? (
         <OperadorasTab embedded />
       ) : activeTab === 'administradoras' ? (
@@ -2347,36 +2447,88 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_240px_240px]">
-                    <Input
-                      value={networkHospitalSearch}
-                      onChange={(event) => {
-                        setNetworkHospitalSearch(event.target.value);
-                        setNetworkHospitalPage(1);
-                      }}
-                      placeholder="Buscar hospital, alias, cidade, plano ou operadora"
-                      leftIcon={Search}
-                    />
-                    <FilterSingleSelect
-                      icon={MapPin}
-                      options={networkHospitalCityOptions}
-                      placeholder="Todas as cidades"
-                      value={networkHospitalCity}
-                      onChange={(value) => {
-                        setNetworkHospitalCity(value);
-                        setNetworkHospitalPage(1);
-                      }}
-                    />
-                    <FilterSingleSelect
-                      icon={Building2}
-                      options={networkHospitalOperadoraOptions}
-                      placeholder="Todas as operadoras"
-                      value={networkHospitalOperadoraId}
-                      onChange={(value) => {
-                        setNetworkHospitalOperadoraId(value);
-                        setNetworkHospitalPage(1);
-                      }}
-                    />
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_220px_220px_220px]">
+                      <Input
+                        value={networkHospitalSearch}
+                        onChange={(event) => {
+                          setNetworkHospitalSearch(event.target.value);
+                          setNetworkHospitalPage(1);
+                        }}
+                        placeholder="Buscar hospital, alias, cidade, plano ou operadora"
+                        leftIcon={Search}
+                      />
+                      <FilterSingleSelect
+                        icon={AlertCircle}
+                        options={[
+                          { value: 'all', label: 'Todos os cadastros' },
+                          { value: 'missing-bairro', label: 'Sem bairro' },
+                          { value: 'missing-regiao', label: 'Sem regiao' },
+                          { value: 'missing-any', label: 'Incompletos' },
+                          { value: 'suspect-bairro', label: 'Bairro suspeito' },
+                          { value: 'complete', label: 'Completos' },
+                        ]}
+                        placeholder="Qualidade do cadastro"
+                        value={networkHospitalDataStatus}
+                        onChange={(value) => {
+                          setNetworkHospitalDataStatus((value as NetworkHospitalDataStatusFilter) || 'all');
+                          setNetworkHospitalPage(1);
+                        }}
+                      />
+                      <FilterSingleSelect
+                        icon={MapPin}
+                        options={networkHospitalCityOptions}
+                        placeholder="Todas as cidades"
+                        value={networkHospitalCity}
+                        onChange={(value) => {
+                          setNetworkHospitalCity(value);
+                          setNetworkHospitalPage(1);
+                        }}
+                      />
+                      <FilterSingleSelect
+                        icon={Building2}
+                        options={networkHospitalOperadoraOptions}
+                        placeholder="Todas as operadoras"
+                        value={networkHospitalOperadoraId}
+                        onChange={(value) => {
+                          setNetworkHospitalOperadoraId(value);
+                          setNetworkHospitalPage(1);
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: 'all', label: 'Todos' },
+                        { value: 'missing-bairro', label: 'Sem bairro' },
+                        { value: 'missing-regiao', label: 'Sem regiao' },
+                        { value: 'missing-any', label: 'Incompletos' },
+                        { value: 'suspect-bairro', label: 'Suspeitos' },
+                        { value: 'complete', label: 'Completos' },
+                      ].map((option) => {
+                        const isActive = networkHospitalDataStatus === option.value;
+                        const count = networkHospitalQualityCounts[option.value as NetworkHospitalDataStatusFilter];
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => {
+                              setNetworkHospitalDataStatus(option.value as NetworkHospitalDataStatusFilter);
+                              setNetworkHospitalPage(1);
+                            }}
+                            className={[
+                              'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                              isActive
+                                ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)]'
+                                : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface,#fffdfa)] hover:text-[color:var(--panel-text,#1a120d)]',
+                            ].join(' ')}
+                          >
+                            {option.label} ({count})
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -2447,6 +2599,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
                 <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando hospitais compartilhados...</p>
               </div>
+            ) : networkHospitalsError ? (
+              <ErrorState
+                title="Nao foi possivel carregar os hospitais compartilhados"
+                description={networkHospitalsError}
+                onRetry={() => void loadNetworkHospitals()}
+              />
             ) : filteredNetworkHospitals.length === 0 ? (
               <EmptyState icon={Search} title="Nenhum hospital encontrado" description="Ajuste os filtros da visao global de hospitais para localizar um cadastro compartilhado." />
             ) : (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, Calculator, FileStack, Plus, Settings2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/ui/Button';
@@ -28,6 +28,7 @@ import type {
 
 const DEFAULT_FILTERS: CotadorCatalogFilters = {
   search: '',
+  networkLocation: '',
   operadoraId: '',
   linhaId: '',
   administradoraId: '',
@@ -102,6 +103,23 @@ const matchesSearch = (item: CotadorCatalogItem, search: string) => {
   ];
 
   return values.some((value) => (value ?? '').toLowerCase().includes(normalizedSearch));
+};
+
+const normalizeFilterTerm = (value?: string | null) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const matchesNetworkLocation = (item: CotadorCatalogItem, networkLocation: string) => {
+  const normalizedLocation = normalizeFilterTerm(networkLocation);
+  if (!normalizedLocation) return true;
+
+  return item.redeHospitalar.some((entry) => {
+    const values = [entry.cidade, entry.bairro];
+    return values.some((value) => normalizeFilterTerm(value).includes(normalizedLocation));
+  });
 };
 
 const quoteContainsCatalogItem = (quote: CotadorQuote, catalogItemId: string) =>
@@ -244,6 +262,7 @@ export default function CotadorScreen() {
       if (filters.perfilEmpresarial && item.perfilEmpresarial !== filters.perfilEmpresarial) return false;
       if (filters.coparticipacao && item.coparticipacao !== filters.coparticipacao) return false;
       if (filters.acomodacao && item.acomodacao !== filters.acomodacao) return false;
+      if (!matchesNetworkLocation(item, filters.networkLocation)) return false;
       if (item.vidasMin !== null && activeQuote.totalLives < item.vidasMin) return false;
       if (item.vidasMax !== null && activeQuote.totalLives > item.vidasMax) return false;
 
@@ -251,7 +270,7 @@ export default function CotadorScreen() {
     });
   }, [activeQuote, filters, quoteCatalog]);
 
-  const getOptionScopedItems = (target: keyof CotadorCatalogFilters) => {
+  const getOptionScopedItems = useCallback((target: keyof CotadorCatalogFilters) => {
     if (!activeQuote) return [] as CotadorCatalogItem[];
 
     return quoteCatalog.filter((item) => {
@@ -263,12 +282,13 @@ export default function CotadorScreen() {
       if (target !== 'perfilEmpresarial' && filters.perfilEmpresarial && item.perfilEmpresarial !== filters.perfilEmpresarial) return false;
       if (target !== 'coparticipacao' && filters.coparticipacao && item.coparticipacao !== filters.coparticipacao) return false;
       if (target !== 'acomodacao' && filters.acomodacao && item.acomodacao !== filters.acomodacao) return false;
+      if (target !== 'networkLocation' && !matchesNetworkLocation(item, filters.networkLocation)) return false;
       if (item.vidasMin !== null && activeQuote.totalLives < item.vidasMin) return false;
       if (item.vidasMax !== null && activeQuote.totalLives > item.vidasMax) return false;
       if (target !== 'search' && !matchesSearch(item, filters.search)) return false;
       return true;
     });
-  };
+  }, [activeQuote, filters, quoteCatalog]);
 
   const filterOptions = useMemo(
     () => ({
@@ -299,7 +319,7 @@ export default function CotadorScreen() {
           .filter((value): value is string => Boolean(value)),
       ),
     }),
-    [activeQuote, filters, quoteCatalog],
+    [getOptionScopedItems],
   );
 
   const refreshSelectedItems = (quoteBase: CotadorQuote, sourceItems: CotadorQuote['selectedItems']) =>

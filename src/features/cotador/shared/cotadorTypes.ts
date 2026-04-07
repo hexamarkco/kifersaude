@@ -122,6 +122,7 @@ export type CotadorQuoteItem = {
 
 export type CotadorCatalogFilters = {
   search: string;
+  networkLocation: string;
   operadoraId: string;
   linhaId: string;
   administradoraId: string;

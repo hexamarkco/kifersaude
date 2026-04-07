@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   Layers3,
+  MapPin,
   Search,
   ShieldCheck,
   Sparkles,
@@ -156,12 +157,12 @@ export default function CotadorPlanPickerOverlay({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [isOpen]);
+  }, [isOpen, quote.modality]);
 
   useEffect(() => {
     if (!isOpen) return;
     setSelectedProductKey(null);
-  }, [filters.search, filters.administradoraId, filters.entidadeId, filters.perfilEmpresarial, filters.coparticipacao, filters.abrangencia, filters.acomodacao, activeModalityTab, isOpen]);
+  }, [filters.search, filters.networkLocation, filters.administradoraId, filters.entidadeId, filters.perfilEmpresarial, filters.coparticipacao, filters.abrangencia, filters.acomodacao, activeModalityTab, isOpen]);
 
   useEffect(() => {
     if (!isOpen || activeModalityTab === 'ADESAO') return;
@@ -501,7 +502,7 @@ export default function CotadorPlanPickerOverlay({
       const panelWidth = Math.min(360, Math.max(300, containerRect.width * 0.24));
 
       let left = triggerRect.right - containerRect.left + gap;
-      let top = triggerRect.top - containerRect.top;
+      const top = triggerRect.top - containerRect.top;
 
       if (left + panelWidth > containerRect.width) {
         left = Math.max(0, triggerRect.left - containerRect.left - panelWidth - gap);
@@ -609,6 +610,17 @@ export default function CotadorPlanPickerOverlay({
                     onChange={(event) => onUpdateFilters({ search: event.target.value })}
                     placeholder="Buscar por operadora, linha, produto ou tabela"
                     leftIcon={Search}
+                    className={cx(
+                      isDarkTheme
+                        ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] !border-[color:rgba(255,255,255,0.1)] !bg-[color:rgba(255,255,255,0.06)] !text-[color:#fff8ef] !shadow-none placeholder:!text-[color:rgba(255,243,209,0.42)] focus:!border-[color:rgba(251,191,36,0.28)] focus:!ring-[color:rgba(251,191,36,0.26)]'
+                      : undefined,
+                    )}
+                  />
+                  <Input
+                    value={filters.networkLocation}
+                    onChange={(event) => onUpdateFilters({ networkLocation: event.target.value })}
+                    placeholder="Filtrar por cidade ou bairro da rede"
+                    leftIcon={MapPin}
                     className={cx(
                       isDarkTheme
                         ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] !border-[color:rgba(255,255,255,0.1)] !bg-[color:rgba(255,255,255,0.06)] !text-[color:#fff8ef] !shadow-none placeholder:!text-[color:rgba(255,243,209,0.42)] focus:!border-[color:rgba(251,191,36,0.28)] focus:!ring-[color:rgba(251,191,36,0.26)]'

@@ -182,27 +182,22 @@ export default function CotadorWorkspace({
                   </div>
 
                   {item.estimatedMonthlyTotal !== null && (
-                    <div className="mt-3 rounded-2xl border border-[color:rgba(157,127,90,0.24)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_72%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_94%,var(--panel-surface-soft,#f4ede3)))] px-4 py-3 dark:border-[color:rgba(251,191,36,0.18)] dark:bg-[linear-gradient(135deg,rgba(133,77,14,0.24),rgba(44,28,20,0.96))]">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)] dark:text-[color:#f3c892]">Mensalidade</p>
-                        <p className="text-xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
+                    <div className="mt-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-3 py-2 dark:bg-[color:var(--panel-surface-soft,#2a2119)]">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Mensalidade</p>
+                        <p className="text-lg font-semibold text-[color:var(--panel-accent,#6f3f16)] dark:text-[color:var(--panel-accent-soft,#f3c892)]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
                       </div>
                     </div>
                   )}
 
-                  <div className="mt-3">
-                    <Button variant="secondary" size="sm" onClick={() => onOpenPlanDetails(item.catalogItemKey)}>
-                      Ver mais detalhes
-                    </Button>
-                    <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                       <MapPin className="h-3.5 w-3.5" />
                       <span>
                         {item.redeHospitalar.length > 0
-                          ? `${item.redeHospitalar.length} prestador(es) na rede deste plano`
-                          : 'Rede hospitalar ainda nao cadastrada para este plano'}
+                          ? `${item.redeHospitalar.length} prestador(es) na rede`
+                          : 'Rede hospitalar ainda nao cadastrada'}
                       </span>
                     </div>
-                  </div>
 
                   {(item.administradora?.name || item.entidadesClasse.length > 0 || item.observacao) && (
                     <div className="mt-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_90%,var(--panel-surface,#fffdfa))] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_76%,var(--panel-surface,#1b1611))]">

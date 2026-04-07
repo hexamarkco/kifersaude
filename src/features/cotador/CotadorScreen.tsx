@@ -176,10 +176,23 @@ export default function CotadorScreen() {
     setFilters(DEFAULT_FILTERS);
   }, [quoteId]);
 
-  const activeQuote = useMemo(
-    () => (quoteId ? quotes.find((quote) => quote.id === quoteId) ?? null : null),
-    [quoteId, quotes],
-  );
+  const activeQuote = useMemo(() => {
+    const baseQuote = quoteId ? quotes.find((quote) => quote.id === quoteId) ?? null : null;
+    if (!baseQuote) return null;
+
+    const catalogByKey = new Map(catalogItems.map((item) => [item.id, item]));
+    const recalculatedItems = baseQuote.selectedItems.map((item) => {
+      const catalogItem = catalogByKey.get(item.catalogItemKey);
+      const pricesToUse = catalogItem?.pricesByAgeRange ?? item.pricesByAgeRange;
+      const estimatedMonthlyTotal = calculateCotadorEstimatedMonthlyTotal(
+        baseQuote.ageDistribution,
+        pricesToUse,
+      );
+      return { ...item, estimatedMonthlyTotal, pricesByAgeRange: pricesToUse };
+    });
+
+    return { ...baseQuote, selectedItems: recalculatedItems };
+  }, [quoteId, quotes, catalogItems]);
 
   const activePlanCatalogKey = useMemo(
     () => (catalogItemKey ? decodeURIComponent(catalogItemKey) : null),

@@ -28,3 +28,6 @@ deploy-functions.bat
 deploy.bat
 supabase/.temp/
 supabase/supabase/.temp/
+
+scripts/
+*.json

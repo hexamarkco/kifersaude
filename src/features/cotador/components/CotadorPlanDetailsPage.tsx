@@ -5,10 +5,9 @@ import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ModalShell from '../../../components/ui/ModalShell';
 import { formatCotadorCurrency } from '../shared/cotadorUtils';
-import type { CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
+import type { CotadorQuoteItem } from '../shared/cotadorTypes';
 
 type CotadorPlanDetailsPageProps = {
-  quote: CotadorQuote;
   item: CotadorQuoteItem;
   onBack: () => void;
 };
@@ -63,7 +62,7 @@ const networkLegend = [
   '**: prestador habilitado apenas na acomodacao QC',
 ];
 
-export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorPlanDetailsPageProps) {
+export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDetailsPageProps) {
   const sections = useMemo<DetailSection[]>(() => {
     const entries: Array<DetailSection | null> = [
       cleanDetailText(item.carencias)
@@ -88,11 +87,6 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
   const [networkCity, setNetworkCity] = useState('');
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
   const networkEntriesCount = item.redeHospitalar.length;
-  const networkCitiesCount = useMemo(
-    () => new Set(item.redeHospitalar.map((entry) => entry.cidade).filter(Boolean)).size,
-    [item.redeHospitalar],
-  );
-
   useEffect(() => {
     setOpenSectionIds(sections.length > 0 ? [sections[0].id] : []);
   }, [sections]);
@@ -169,26 +163,25 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
             </p>
           </div>
 
-          {item.estimatedMonthlyTotal !== null && (
-            <div className="rounded-2xl border border-[color:rgba(14,116,144,0.24)] bg-[linear-gradient(135deg,rgba(224,242,254,0.88),rgba(240,249,255,0.96))] px-5 py-4 text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:#0f4c5c]">Mensalidade</p>
-              <p className="mt-2 text-2xl font-semibold text-[color:#123244]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
-            </div>
-          )}
+          <div className="flex flex-col items-stretch gap-3 xl:min-w-[260px] xl:items-end">
+            {item.estimatedMonthlyTotal !== null && (
+              <div className="rounded-2xl border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_68%,var(--panel-surface-soft,#f4ede3))] px-5 py-4 text-right dark:border-[color:rgba(243,200,146,0.16)] dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_84%,var(--panel-surface,#1b1611))]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)] dark:text-[color:#c8b29b]">Mensalidade</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
+              </div>
+            )}
+
+            <Button variant="secondary" onClick={() => setNetworkModalOpen(true)} disabled={networkEntriesCount === 0}>
+              <MapPin className="h-4 w-4" />
+              Ver rede do plano
+            </Button>
+          </div>
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Cotacao</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.name}</p>
-          </div>
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-2">
           <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Acomodacao</p>
             <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.acomodacao ?? '-'}</p>
-          </div>
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Tabela</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.tabelaNome ?? '-'}</p>
           </div>
           <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Rede hospitalar</p>
@@ -237,46 +230,6 @@ export default function CotadorPlanDetailsPage({ quote, item, onBack }: CotadorP
                 </div>
               );
             })}
-          </div>
-        )}
-      </section>
-
-      <section id="rede-do-plano" className="rounded-[32px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-6 shadow-sm md:p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">Rede hospitalar</p>
-            <h2 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Rede do plano</h2>
-            <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-              Abra o modal para consultar a rede ordenada por cidade e regiao, com filtros de busca e legenda completa.
-            </p>
-          </div>
-
-          <Button variant="secondary" onClick={() => setNetworkModalOpen(true)} disabled={networkEntriesCount === 0}>
-            <MapPin className="h-4 w-4" />
-            Ver rede do plano
-          </Button>
-        </div>
-
-        <div className="mt-6 grid gap-3 md:grid-cols-3">
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Prestadores</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{networkEntriesCount}</p>
-          </div>
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Cidades</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{networkCitiesCount}</p>
-          </div>
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Status</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
-              {networkEntriesCount > 0 ? 'Rede disponivel em modal' : 'Rede nao cadastrada'}
-            </p>
-          </div>
-        </div>
-
-        {networkEntriesCount === 0 && (
-          <div className="mt-6 rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-            Este plano ainda nao possui rede hospitalar cadastrada para exibicao.
           </div>
         )}
       </section>

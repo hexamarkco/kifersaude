@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
-import { MapPin, Plus, Sparkles, Trash2, Users } from 'lucide-react';
+import { Building2, Check, MapPin, Minus, Plus, Search, Sparkles, Trash2, Users } from 'lucide-react';
+import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
+import Input from '../../../components/ui/Input';
+import ModalShell from '../../../components/ui/ModalShell';
 import { formatCotadorAgeSummary, formatCotadorCurrency, formatCotadorDateTime } from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 import CotadorPlanPickerOverlay from './CotadorPlanPickerOverlay';
@@ -58,6 +61,38 @@ const formatCopart = (value: CotadorQuoteItem['coparticipacao']) => {
   return 'A definir';
 };
 
+type NetworkCompareMode = 'all' | 'shared' | 'differentials';
+
+type NetworkCompareRow = {
+  key: string;
+  hospital: string;
+  cidade: string;
+  bairro: string | null;
+  regiao: string | null;
+  services: string[];
+  observacoes: string[];
+  planPresence: Partial<Record<string, { services: string[] }>>;
+  hitsCount: number;
+};
+
+const normalizeNetworkText = (value?: string | null) => (
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+);
+
+const compareNetworkCompareRows = (left: NetworkCompareRow, right: NetworkCompareRow) => {
+  const cityComparison = left.cidade.localeCompare(right.cidade, 'pt-BR');
+  if (cityComparison !== 0) return cityComparison;
+
+  const bairroComparison = (left.bairro ?? '').localeCompare(right.bairro ?? '', 'pt-BR');
+  if (bairroComparison !== 0) return bairroComparison;
+
+  return left.hospital.localeCompare(right.hospital, 'pt-BR');
+};
+
 export default function CotadorWorkspace({
   quote,
   linkedLeadLabel,
@@ -74,6 +109,10 @@ export default function CotadorWorkspace({
   onEditQuote,
 }: CotadorWorkspaceProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [networkCompareOpen, setNetworkCompareOpen] = useState(false);
+  const [networkCompareSearch, setNetworkCompareSearch] = useState('');
+  const [networkCompareCity, setNetworkCompareCity] = useState('');
+  const [networkCompareMode, setNetworkCompareMode] = useState<NetworkCompareMode>('all');
 
   const filledDistribution = useMemo(
     () => Object.entries(quote.ageDistribution).filter(([, quantity]) => quantity > 0),
@@ -86,27 +125,106 @@ export default function CotadorWorkspace({
     return values.join(' | ');
   }, [selectedItems]);
 
+  const networkPlansHaveData = useMemo(
+    () => selectedItems.some((item) => item.redeHospitalar.length > 0),
+    [selectedItems],
+  );
+
+  const networkComparisonRows = useMemo<NetworkCompareRow[]>(() => {
+    const rows = new Map<string, NetworkCompareRow>();
+
+    selectedItems.forEach((item) => {
+      item.redeHospitalar.forEach((entry) => {
+        const key = [entry.hospital, entry.cidade, entry.bairro, entry.regiao].map(normalizeNetworkText).join('|');
+        const current = rows.get(key) ?? {
+          key,
+          hospital: entry.hospital,
+          cidade: entry.cidade || 'Cidade nao informada',
+          bairro: entry.bairro ?? null,
+          regiao: entry.regiao ?? null,
+          services: [],
+          observacoes: [],
+          planPresence: {},
+          hitsCount: 0,
+        };
+
+        const mergedServices = Array.from(new Set([...(current.planPresence[item.id]?.services ?? []), ...entry.atendimentos.filter(Boolean)]))
+          .sort((left, right) => left.localeCompare(right, 'pt-BR'));
+
+        current.planPresence[item.id] = { services: mergedServices };
+        current.services = Array.from(new Set([...current.services, ...entry.atendimentos.filter(Boolean)]))
+          .sort((left, right) => left.localeCompare(right, 'pt-BR'));
+
+        if (entry.observacoes?.trim()) {
+          current.observacoes = Array.from(new Set([...current.observacoes, entry.observacoes.trim()]));
+        }
+
+        current.hitsCount = Object.keys(current.planPresence).length;
+        rows.set(key, current);
+      });
+    });
+
+    return Array.from(rows.values()).sort(compareNetworkCompareRows);
+  }, [selectedItems]);
+
+  const networkComparisonCityOptions = useMemo(
+    () => Array.from(new Set(networkComparisonRows.map((row) => row.cidade).filter(Boolean)))
+      .sort((left, right) => left.localeCompare(right, 'pt-BR'))
+      .map((city) => ({ value: city, label: city })),
+    [networkComparisonRows],
+  );
+
+  const filteredNetworkComparisonRows = useMemo(() => {
+    const normalizedSearch = networkCompareSearch.trim().toLowerCase();
+
+    return networkComparisonRows.filter((row) => {
+      if (networkCompareCity && row.cidade !== networkCompareCity) return false;
+      if (networkCompareMode === 'shared' && row.hitsCount !== selectedItems.length) return false;
+      if (networkCompareMode === 'differentials' && row.hitsCount === selectedItems.length) return false;
+
+      if (!normalizedSearch) return true;
+
+      const haystack = [
+        row.hospital,
+        row.cidade,
+        row.bairro,
+        row.regiao,
+        row.services.join(' '),
+        row.observacoes.join(' '),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [networkCompareCity, networkCompareMode, networkCompareSearch, networkComparisonRows, selectedItems.length]);
+
+  const networkSharedRowsCount = useMemo(
+    () => networkComparisonRows.filter((row) => row.hitsCount === selectedItems.length).length,
+    [networkComparisonRows, selectedItems.length],
+  );
+
+  const networkExclusiveRowsCount = useMemo(
+    () => networkComparisonRows.filter((row) => row.hitsCount === 1).length,
+    [networkComparisonRows],
+  );
+
+  const networkComparisonMatrixStyle = useMemo(
+    () => ({ gridTemplateColumns: `minmax(300px, 1.6fr) repeat(${Math.max(selectedItems.length, 1)}, minmax(180px, 1fr))` }),
+    [selectedItems.length],
+  );
+
   return (
     <div className="space-y-6">
       <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_74%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_92%,var(--panel-surface-soft,#f4ede3))_48%,color-mix(in_srgb,var(--panel-surface-muted,#f8f2e8)_90%,var(--panel-surface,#fffdfa))_100%)] p-6 shadow-sm md:p-8">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <div className="flex flex-col gap-6">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(255,253,250,0.82)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)] dark:border-[color:rgba(251,191,36,0.2)] dark:bg-[color:rgba(251,191,36,0.12)] dark:text-[color:#fde68a]">
               <Sparkles className="h-3.5 w-3.5" />
               Cotação ativa
             </div>
             <h2 className="mt-3 text-3xl font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.name}</h2>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={onEditQuote}>
-              <Users className="h-4 w-4" />
-              Editar distribuição
-            </Button>
-            <Button onClick={() => setPickerOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Adicionar plano
-            </Button>
           </div>
         </div>
 
@@ -127,6 +245,10 @@ export default function CotadorWorkspace({
               <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{selectedItems.length} plano(s)</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setNetworkCompareOpen(true)} disabled={!networkPlansHaveData}>
+                <MapPin className="h-4 w-4" />
+                Ver rede
+              </Button>
               <Button onClick={() => setPickerOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Adicionar plano
@@ -152,22 +274,27 @@ export default function CotadorWorkspace({
                 <article key={item.id} className="rounded-[24px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
-                        <span>{item.operadora.name ?? 'Operadora'}</span>
-                        {item.linha?.name && <span>:</span>}
-                        {item.linha?.name && <span>{item.linha.name}</span>}
-                        {item.tabelaNome && (
-                          <span className="rounded-full border border-[color:rgba(12,166,120,0.28)] bg-[color:rgba(12,166,120,0.12)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:#0f5132] dark:border-emerald-300/24 dark:bg-emerald-400/12 dark:text-emerald-100">
-                            {item.tabelaNome}
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                        {item.linha?.name ?? item.titulo}
+                      </p>
+                      <h4 className="mt-2 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.operadora.name ?? 'Operadora'}</h4>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {item.perfilEmpresarial && (
+                          <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                            {formatPerfil(item.perfilEmpresarial)}
+                          </span>
+                        )}
+                        {item.coparticipacao && (
+                          <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                            {formatCopart(item.coparticipacao)}
+                          </span>
+                        )}
+                        {(item.vidasMin !== null || item.vidasMax !== null) && (
+                          <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                            {`${item.vidasMin ?? 1} a ${item.vidasMax ?? '...'} vidas`}
                           </span>
                         )}
                       </div>
-                      <h4 className="mt-2 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
-                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
-                        {item.perfilEmpresarial ? formatPerfil(item.perfilEmpresarial) : 'Perfil livre'}
-                        {item.coparticipacao ? ` | ${formatCopart(item.coparticipacao)}` : ''}
-                        {item.vidasMin !== null || item.vidasMax !== null ? ` | ${item.vidasMin ?? 1} a ${item.vidasMax ?? '...'} vidas` : ''}
-                      </p>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => onToggleCatalogItem(item.catalogItemKey)} disabled={busy}>
                       <Trash2 className="h-4 w-4" />
@@ -264,6 +391,198 @@ export default function CotadorWorkspace({
 
         </aside>
       </div>
+
+      <ModalShell
+        isOpen={networkCompareOpen}
+        onClose={() => setNetworkCompareOpen(false)}
+        title="Comparativo de rede"
+        description="Cruze os prestadores de todos os planos selecionados para ver o que se repete e o que muda entre as opções da shortlist."
+        size="xl"
+      >
+        {!networkPlansHaveData ? (
+          <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+            Adicione planos com rede hospitalar cadastrada para comparar os prestadores.
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Prestadores únicos</p>
+                <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkComparisonRows.length}</p>
+              </div>
+              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Em todos os planos</p>
+                <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkSharedRowsCount}</p>
+              </div>
+              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Exclusivos</p>
+                <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkExclusiveRowsCount}</p>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">Planos comparados</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                {selectedItems.map((item) => (
+                  <div key={item.id} className="min-w-[180px] rounded-2xl border border-[color:rgba(111,63,22,0.16)] bg-[var(--panel-surface,#fffdfa)] px-3 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                      {item.operadora.name ?? 'Operadora'}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</p>
+                    <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.redeHospitalar.length} prestador(es)</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <Input
+                value={networkCompareSearch}
+                onChange={(event) => setNetworkCompareSearch(event.target.value)}
+                placeholder="Buscar hospital, bairro, cidade, regiao ou atendimento"
+                leftIcon={Search}
+              />
+              <FilterSingleSelect
+                icon={MapPin}
+                options={networkComparisonCityOptions}
+                placeholder="Todas as cidades"
+                value={networkCompareCity}
+                onChange={setNetworkCompareCity}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'all', label: 'Todos' },
+                { value: 'shared', label: 'Comuns' },
+                { value: 'differentials', label: 'Diferenciais' },
+              ].map((option) => {
+                const isActive = networkCompareMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setNetworkCompareMode(option.value as NetworkCompareMode)}
+                    className={[
+                      'rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors',
+                      isActive
+                        ? 'border-[color:rgba(111,63,22,0.28)] bg-[color:var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)]'
+                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[color:var(--panel-surface,#fffdfa)]',
+                    ].join(' ')}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {filteredNetworkComparisonRows.length === 0 ? (
+              <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                Nenhum prestador encontrado para os filtros aplicados.
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]">
+                <div className="overflow-x-auto">
+                  <div className="min-w-[960px]">
+                    <div className="grid border-b border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]" style={networkComparisonMatrixStyle}>
+                      <div className="px-4 py-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Prestador</p>
+                        <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Comparativo por plano</p>
+                      </div>
+                      {selectedItems.map((item) => (
+                        <div key={item.id} className="border-l border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-4">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                            {item.operadora.name ?? 'Operadora'}
+                          </p>
+                          <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</p>
+                          <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.redeHospitalar.length} prestador(es)</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {filteredNetworkComparisonRows.map((row) => (
+                      <div key={row.key} className="grid" style={networkComparisonMatrixStyle}>
+                        <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-4">
+                          <div className="flex items-start gap-3">
+                            <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
+                              <Building2 className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{row.hospital}</p>
+                                <span className="rounded-full border border-[color:rgba(111,63,22,0.16)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--panel-text-soft,#5b4635)]">
+                                  {row.hitsCount === selectedItems.length ? 'Em todos' : `${row.hitsCount}/${selectedItems.length}`}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                                {[row.bairro, row.regiao, row.cidade].filter(Boolean).join(' | ')}
+                              </p>
+                              {row.services.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  {row.services.slice(0, 6).map((service) => (
+                                    <span key={`${row.key}-${service}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                      {service}
+                                    </span>
+                                  ))}
+                                  {row.services.length > 6 && (
+                                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                      +{row.services.length - 6}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {selectedItems.map((item) => {
+                          const presence = row.planPresence[item.id];
+
+                          return (
+                            <div key={`${row.key}-${item.id}`} className="border-b border-l border-[color:var(--panel-border-subtle,#e7dac8)] p-3">
+                              {presence ? (
+                                <div className="rounded-2xl border border-[color:rgba(111,63,22,0.14)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_72%,var(--panel-surface,#fffdfa))] p-3">
+                                  <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                                    <Check className="h-4 w-4 text-[var(--panel-accent-ink,#6f3f16)]" />
+                                    Na rede
+                                  </div>
+                                  {presence.services.length > 0 ? (
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                      {presence.services.slice(0, 4).map((service) => (
+                                        <span key={`${row.key}-${item.id}-${service}`} className="rounded-full border border-[color:rgba(111,63,22,0.12)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                          {service}
+                                        </span>
+                                      ))}
+                                      {presence.services.length > 4 && (
+                                        <span className="rounded-full border border-[color:rgba(111,63,22,0.12)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                          +{presence.services.length - 4}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="mt-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Sem detalhamento de atendimento.</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="rounded-2xl border border-dashed border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-3">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                    <Minus className="h-4 w-4" />
+                                    Nao consta
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </ModalShell>
 
       <CotadorPlanPickerOverlay
         isOpen={pickerOpen}

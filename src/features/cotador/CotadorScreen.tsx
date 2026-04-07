@@ -617,7 +617,6 @@ export default function CotadorScreen() {
 
     return (
       <CotadorPlanDetailsPage
-        quote={activeQuote}
         item={activePlan}
         onBack={() => navigate(`/painel/cotador/${activeQuote.id}`)}
       />

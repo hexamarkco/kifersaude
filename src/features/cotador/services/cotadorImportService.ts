@@ -13,6 +13,16 @@ export type CotadorImportResult = {
   warnings: string[];
 };
 
+export type CotadorImportPreviewActionKind = 'create' | 'update' | 'ignore' | 'conflict';
+
+export type CotadorImportPreviewAction = {
+  kind: CotadorImportPreviewActionKind;
+  scope: 'operadora' | 'linha' | 'produto' | 'tabela' | 'rede' | 'administradora' | 'entidade';
+  label: string;
+  reason: string;
+  count?: number;
+};
+
 export type CotadorImportPreviewItem = {
   operadora: string;
   linha: string;
@@ -23,6 +33,8 @@ export type CotadorImportPreviewItem = {
   entidadesElegiveis: string[];
   tabelasCount: number;
   networkEntriesCount: number;
+  status: CotadorImportPreviewActionKind;
+  changes: CotadorImportPreviewAction[];
 };
 
 export type CotadorImportPreview = {
@@ -31,6 +43,7 @@ export type CotadorImportPreview = {
   produtosCount: number;
   tabelasCount: number;
   networkEntriesCount: number;
+  actionCounts: Record<CotadorImportPreviewActionKind, number>;
   items: CotadorImportPreviewItem[];
 };
 
@@ -108,6 +121,8 @@ type ImportMutations = {
 };
 
 type CsvRow = Record<string, string>;
+
+const PREVIEW_TIMESTAMP = '1970-01-01T00:00:00.000Z';
 
 const TEMPLATE_JSON_COMPLETO = `{
   "version": 1,
@@ -911,6 +926,12 @@ const buildPreviewFromPayload = (payload: ImportedJsonPayload): CotadorImportPre
   produtosCount: payload.items.length,
   tabelasCount: payload.items.reduce((total, item) => total + (item.tabelas?.reduce((tableTotal, table) => tableTotal + countImportedTableRows(table), 0) ?? 0), 0),
   networkEntriesCount: payload.items.reduce((total, item) => total + (item.redeHospitalar?.length ?? 0), 0),
+  actionCounts: {
+    create: 0,
+    update: 0,
+    ignore: 0,
+    conflict: 0,
+  },
   items: payload.items.map((item) => ({
     operadora: item.operadora,
     linha: item.linha,
@@ -921,8 +942,343 @@ const buildPreviewFromPayload = (payload: ImportedJsonPayload): CotadorImportPre
     entidadesElegiveis: item.entidadesElegiveis ?? [],
     tabelasCount: item.tabelas?.reduce((total, table) => total + countImportedTableRows(table), 0) ?? 0,
     networkEntriesCount: item.redeHospitalar?.length ?? 0,
+    status: 'ignore',
+    changes: [],
   })),
 });
+
+const PREVIEW_ACTION_PRIORITY: Record<CotadorImportPreviewActionKind, number> = {
+  conflict: 4,
+  create: 3,
+  update: 2,
+  ignore: 1,
+};
+
+const createEmptyPreviewActionCounts = (): Record<CotadorImportPreviewActionKind, number> => ({
+  create: 0,
+  update: 0,
+  ignore: 0,
+  conflict: 0,
+});
+
+const getPreviewItemStatus = (changes: CotadorImportPreviewAction[]): CotadorImportPreviewActionKind =>
+  changes.reduce<CotadorImportPreviewActionKind>((current, change) =>
+    PREVIEW_ACTION_PRIORITY[change.kind] > PREVIEW_ACTION_PRIORITY[current] ? change.kind : current,
+  'ignore');
+
+const normalizeStringArray = (values?: string[] | null) =>
+  Array.from(new Set((values ?? []).map((value) => normalizeText(value)).filter(Boolean))).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+
+const sameNormalizedStringArray = (left?: string[] | null, right?: string[] | null) => {
+  const normalizedLeft = normalizeStringArray(left);
+  const normalizedRight = normalizeStringArray(right);
+  if (normalizedLeft.length !== normalizedRight.length) return false;
+  return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+};
+
+const samePriceMap = (left: CotadorPriceRowInput, right: CotadorPriceRowInput) =>
+  COTADOR_AGE_RANGES.every((range) => {
+    const leftValue = left[range] ?? null;
+    const rightValue = right[range] ?? null;
+    return leftValue === rightValue;
+  });
+
+const buildNetworkEntryKey = (entry: CotadorHospitalNetworkEntry) => {
+  const services = normalizeStringArray(entry.atendimentos);
+  return [
+    normalizeText(entry.hospital),
+    normalizeText(entry.cidade),
+    normalizeText(entry.regiao),
+    normalizeText(entry.bairro),
+    services.join(','),
+    normalizeText(entry.observacoes),
+  ].join('|');
+};
+
+const sameNetworkEntries = (left?: CotadorHospitalNetworkEntry[] | null, right?: CotadorHospitalNetworkEntry[] | null) => {
+  const normalizedLeft = (left ?? []).map(buildNetworkEntryKey).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const normalizedRight = (right ?? []).map(buildNetworkEntryKey).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  if (normalizedLeft.length !== normalizedRight.length) return false;
+  return normalizedLeft.every((value, index) => value === normalizedRight[index]);
+};
+
+const buildPreviewId = (...parts: string[]) => `preview:${parts.map((part) => normalizeText(part) || 'item').join(':')}`;
+
+const buildPreviewOperadora = (name: string): Operadora => ({
+  id: buildPreviewId('operadora', name),
+  nome: name.trim(),
+  comissao_padrao: DEFAULT_IMPORTED_OPERADORA.comissao_padrao,
+  prazo_recebimento_dias: DEFAULT_IMPORTED_OPERADORA.prazo_recebimento_dias,
+  bonus_por_vida: DEFAULT_IMPORTED_OPERADORA.bonus_por_vida,
+  bonus_padrao: DEFAULT_IMPORTED_OPERADORA.bonus_padrao,
+  ativo: true,
+  observacoes: DEFAULT_IMPORTED_OPERADORA.observacoes,
+  created_at: PREVIEW_TIMESTAMP,
+  updated_at: PREVIEW_TIMESTAMP,
+});
+
+const buildPreviewLine = (name: string, operadora: Operadora): CotadorLineManagerRecord => ({
+  id: buildPreviewId('linha', operadora.id, name),
+  operadora_id: operadora.id,
+  nome: name.trim(),
+  ativo: true,
+  observacoes: null,
+  created_at: PREVIEW_TIMESTAMP,
+  updated_at: PREVIEW_TIMESTAMP,
+  operadora,
+});
+
+const buildPreviewProduct = (
+  payload: CotadorProductManagerInput,
+  context: ImportLookupContext,
+  operadora: Operadora,
+  line: CotadorLineManagerRecord,
+): CotadorProductManagerRecord => ({
+  id: buildPreviewId('produto', line.id, payload.nome),
+  operadora_id: operadora.id,
+  linha_id: line.id,
+  administradora_id: payload.administradora_id ?? null,
+  legacy_produto_plano_id: null,
+  nome: payload.nome.trim(),
+  modalidade: payload.modalidade ?? null,
+  abrangencia: payload.abrangencia ?? null,
+  acomodacao: payload.acomodacao ?? null,
+  comissao_sugerida: payload.comissao_sugerida ?? null,
+  bonus_por_vida_valor: payload.bonus_por_vida_valor ?? null,
+  carencias: payload.carencias ?? null,
+  documentos_necessarios: payload.documentos_necessarios ?? null,
+  reembolso: payload.reembolso ?? null,
+  informacoes_importantes: payload.informacoes_importantes ?? null,
+  rede_hospitalar: payload.rede_hospitalar ?? [],
+  observacoes: payload.observacoes ?? null,
+  ativo: payload.ativo,
+  created_at: PREVIEW_TIMESTAMP,
+  updated_at: PREVIEW_TIMESTAMP,
+  operadora,
+  linha: line,
+  administradora: payload.administradora_id ? context.administradoras.find((item) => item.id === payload.administradora_id) ?? null : null,
+  entidadesClasse: payload.entidadeIds.map((id) => context.entidades.find((item) => item.id === id)).filter((item): item is CotadorEntidadeClasse => item !== undefined),
+});
+
+const buildPreviewTable = (
+  product: CotadorProductManagerRecord,
+  payload: CotadorTableManagerInput,
+): CotadorTableManagerRecord => ({
+  id: buildPreviewId('tabela', product.id, payload.nome, payload.acomodacao ?? ''),
+  produto_id: product.id,
+  nome: payload.nome,
+  codigo: payload.codigo ?? null,
+  modalidade: payload.modalidade,
+  perfil_empresarial: payload.perfil_empresarial,
+  coparticipacao: payload.coparticipacao,
+  acomodacao: payload.acomodacao ?? null,
+  vidas_min: payload.vidas_min ?? null,
+  vidas_max: payload.vidas_max ?? null,
+  observacoes: payload.observacoes ?? null,
+  ativo: payload.ativo,
+  created_at: PREVIEW_TIMESTAMP,
+  updated_at: PREVIEW_TIMESTAMP,
+  produto: product,
+  pricesByAgeRange: payload.pricesByAgeRange,
+});
+
+const findExistingImportedTableInContext = (
+  tables: CotadorTableManagerRecord[],
+  productId: string,
+  payload: CotadorTableManagerInput,
+) => tables.find((table) => (
+  table.produto_id === productId
+  && normalizeText(table.nome) === normalizeText(payload.nome)
+  && table.modalidade === payload.modalidade
+  && table.perfil_empresarial === payload.perfil_empresarial
+  && table.coparticipacao === payload.coparticipacao
+  && normalizeText(table.acomodacao) === normalizeText(payload.acomodacao)
+  && (table.vidas_min ?? null) === (payload.vidas_min ?? null)
+  && (table.vidas_max ?? null) === (payload.vidas_max ?? null)
+)) ?? null;
+
+const getChangedProductFields = (existingProduct: CotadorProductManagerRecord, payload: CotadorProductManagerInput) => {
+  const changedFields: string[] = [];
+
+  if ((existingProduct.administradora_id ?? null) !== (payload.administradora_id ?? null)) changedFields.push('administradora');
+  if (normalizeText(existingProduct.modalidade) !== normalizeText(payload.modalidade)) changedFields.push('modalidade');
+  if (normalizeText(existingProduct.abrangencia) !== normalizeText(payload.abrangencia)) changedFields.push('abrangencia');
+  if (normalizeText(existingProduct.acomodacao) !== normalizeText(payload.acomodacao)) changedFields.push('acomodacoes');
+  if (!sameNormalizedStringArray(existingProduct.entidadesClasse.map((item) => item.id), payload.entidadeIds)) changedFields.push('entidades');
+  if (normalizeText(existingProduct.carencias) !== normalizeText(payload.carencias)) changedFields.push('carencias');
+  if (normalizeText(existingProduct.documentos_necessarios) !== normalizeText(payload.documentos_necessarios)) changedFields.push('documentos');
+  if (normalizeText(existingProduct.reembolso) !== normalizeText(payload.reembolso)) changedFields.push('reembolso');
+  if (normalizeText(existingProduct.informacoes_importantes) !== normalizeText(payload.informacoes_importantes)) changedFields.push('informacoes importantes');
+
+  return changedFields;
+};
+
+const buildPreviewFromPayloadWithDiff = (payload: ImportedJsonPayload, context: ImportLookupContext): CotadorImportPreview => {
+  const previewContext: ImportLookupContext = {
+    operadoras: [...context.operadoras],
+    linhas: [...context.linhas],
+    administradoras: [...context.administradoras],
+    entidades: [...context.entidades],
+    products: [...context.products],
+    tables: [...context.tables],
+  };
+
+  const items = payload.items.map<CotadorImportPreviewItem>((item) => {
+    const changes: CotadorImportPreviewAction[] = [];
+
+    const administradoraName = cleanText(item.administradora);
+    const administradora = administradoraName ? findByName(previewContext.administradoras, administradoraName) : null;
+    if (administradoraName && !administradora) {
+      changes.push({ kind: 'conflict', scope: 'administradora', label: 'Administradora', reason: `Administradora ${administradoraName} nao encontrada no catalogo.` });
+    }
+
+    const missingEntities = (item.entidadesElegiveis ?? []).filter((name) => !findByName(previewContext.entidades, name));
+    if (missingEntities.length > 0) {
+      changes.push({ kind: 'conflict', scope: 'entidade', label: 'Entidades', reason: `Entidades nao encontradas: ${missingEntities.join(', ')}.` });
+    }
+
+    let operadora = findOperadora(previewContext.operadoras, item.operadora);
+    if (!operadora) {
+      operadora = buildPreviewOperadora(item.operadora);
+      previewContext.operadoras = [...previewContext.operadoras, operadora];
+      changes.push({ kind: 'create', scope: 'operadora', label: 'Operadora', reason: `Operadora ${item.operadora} sera criada.` });
+    } else {
+      changes.push({ kind: 'ignore', scope: 'operadora', label: 'Operadora', reason: `Operadora ${item.operadora} ja existe.` });
+    }
+
+    let line = findLinha(previewContext.linhas, operadora.id, item.linha);
+    if (!line) {
+      line = buildPreviewLine(item.linha, operadora);
+      previewContext.linhas = [...previewContext.linhas, line];
+      changes.push({ kind: 'create', scope: 'linha', label: 'Linha', reason: `Linha ${item.linha} sera criada.` });
+    } else {
+      changes.push({ kind: 'ignore', scope: 'linha', label: 'Linha', reason: `Linha ${item.linha} ja existe na operadora.` });
+    }
+
+    const existingProduct = findProduto(previewContext.products, line.id, item.produto);
+    const payloadForProduct = getProductPayloadFromReference(item, existingProduct, previewContext, operadora, line);
+
+    let resolvedProduct = existingProduct;
+    if (!existingProduct) {
+      resolvedProduct = buildPreviewProduct(payloadForProduct, previewContext, operadora, line);
+      previewContext.products = [...previewContext.products, resolvedProduct];
+      changes.push({ kind: 'create', scope: 'produto', label: 'Produto', reason: `Produto ${item.produto} sera criado.` });
+    } else {
+      const changedFields = getChangedProductFields(existingProduct, payloadForProduct);
+      if (changedFields.length > 0) {
+        resolvedProduct = { ...existingProduct, ...payloadForProduct, operadora, linha: line } as CotadorProductManagerRecord;
+        previewContext.products = previewContext.products.map((product) => (product.id === existingProduct.id ? resolvedProduct as CotadorProductManagerRecord : product));
+        changes.push({ kind: 'update', scope: 'produto', label: 'Produto', reason: `Produto sera atualizado em: ${changedFields.join(', ')}.` });
+      } else {
+        changes.push({ kind: 'ignore', scope: 'produto', label: 'Produto', reason: 'Cadastro base do produto ja esta alinhado.' });
+      }
+    }
+
+    if (item.redeHospitalar !== undefined) {
+      if (!existingProduct) {
+        changes.push({ kind: 'create', scope: 'rede', label: 'Rede hospitalar', reason: `${item.redeHospitalar.length} item(ns) de rede serao criados junto do produto.`, count: item.redeHospitalar.length });
+      } else if (!sameNetworkEntries(existingProduct.rede_hospitalar as CotadorHospitalNetworkEntry[] | null, item.redeHospitalar)) {
+        changes.push({ kind: 'update', scope: 'rede', label: 'Rede hospitalar', reason: `${item.redeHospitalar.length} item(ns) de rede vao substituir a rede atual.`, count: item.redeHospitalar.length });
+      } else {
+        changes.push({ kind: 'ignore', scope: 'rede', label: 'Rede hospitalar', reason: 'Rede hospitalar ja esta sincronizada.' });
+      }
+    } else {
+      changes.push({ kind: 'ignore', scope: 'rede', label: 'Rede hospitalar', reason: 'Arquivo nao trouxe rede hospitalar para este produto.' });
+    }
+
+    const tableDefinitions = item.tabelas ?? [];
+    if (tableDefinitions.length === 0) {
+      changes.push({ kind: 'ignore', scope: 'tabela', label: 'Tabelas', reason: 'Arquivo nao trouxe tabelas para este produto.' });
+    } else {
+      let createCount = 0;
+      let updateCount = 0;
+      let ignoreCount = 0;
+
+      tableDefinitions.forEach((tableDefinition) => {
+        getImportedTableActiveAcomodacoes(tableDefinition).forEach(([acomodacao, pricesByAgeRange]) => {
+          const payloadForTable: CotadorTableManagerInput = {
+            produto_id: resolvedProduct!.id,
+            nome: tableDefinition.nome,
+            codigo: cleanText(tableDefinition.codigo),
+            modalidade: tableDefinition.modalidade,
+            perfil_empresarial: tableDefinition.perfilEmpresarial,
+            coparticipacao: tableDefinition.coparticipacao,
+            acomodacao: cleanText(acomodacao),
+            vidas_min: tableDefinition.vidasMin ?? null,
+            vidas_max: tableDefinition.vidasMax ?? null,
+            observacoes: cleanText(tableDefinition.observacoes),
+            ativo: tableDefinition.ativo ?? true,
+            pricesByAgeRange,
+          };
+
+          const existingTable = findExistingImportedTableInContext(previewContext.tables, resolvedProduct!.id, payloadForTable);
+          if (!existingTable) {
+            createCount += 1;
+            previewContext.tables = [...previewContext.tables, buildPreviewTable(resolvedProduct!, payloadForTable)];
+            return;
+          }
+
+          const tableChanged = !samePriceMap(existingTable.pricesByAgeRange, pricesByAgeRange)
+            || normalizeText(existingTable.codigo) !== normalizeText(payloadForTable.codigo)
+            || normalizeText(existingTable.observacoes) !== normalizeText(payloadForTable.observacoes)
+            || existingTable.ativo !== payloadForTable.ativo;
+
+          if (tableChanged) {
+            updateCount += 1;
+            previewContext.tables = previewContext.tables.map((table) => (
+              table.id === existingTable.id
+                ? { ...existingTable, ...payloadForTable, produto: resolvedProduct!, pricesByAgeRange } as CotadorTableManagerRecord
+                : table
+            ));
+          } else {
+            ignoreCount += 1;
+          }
+        });
+      });
+
+      if (createCount > 0) {
+        changes.push({ kind: 'create', scope: 'tabela', label: 'Tabelas', reason: `${createCount} tabela(s)/acomodacao(oes) serao criadas.`, count: createCount });
+      }
+      if (updateCount > 0) {
+        changes.push({ kind: 'update', scope: 'tabela', label: 'Tabelas', reason: `${updateCount} tabela(s)/acomodacao(oes) serao atualizadas.`, count: updateCount });
+      }
+      if (createCount === 0 && updateCount === 0) {
+        changes.push({ kind: 'ignore', scope: 'tabela', label: 'Tabelas', reason: `${ignoreCount} tabela(s)/acomodacao(oes) ja estao sincronizadas.`, count: ignoreCount });
+      }
+    }
+
+    return {
+      operadora: item.operadora,
+      linha: item.linha,
+      produto: item.produto,
+      modalidadeBase: item.modalidadeBase ?? null,
+      abrangencia: item.abrangencia ?? null,
+      acomodacoes: item.acomodacoes ?? [],
+      entidadesElegiveis: item.entidadesElegiveis ?? [],
+      tabelasCount: item.tabelas?.reduce((total, table) => total + countImportedTableRows(table), 0) ?? 0,
+      networkEntriesCount: item.redeHospitalar?.length ?? 0,
+      status: getPreviewItemStatus(changes),
+      changes,
+    };
+  });
+
+  const actionCounts = items.reduce((accumulator, item) => {
+    item.changes.forEach((change) => {
+      accumulator[change.kind] += 1;
+    });
+    return accumulator;
+  }, createEmptyPreviewActionCounts());
+
+  return {
+    operadorasCount: new Set(payload.items.map((item) => normalizeText(item.operadora)).filter(Boolean)).size,
+    linhasCount: new Set(payload.items.map((item) => `${normalizeText(item.operadora)}::${normalizeText(item.linha)}`).filter(Boolean)).size,
+    produtosCount: payload.items.length,
+    tabelasCount: payload.items.reduce((total, item) => total + (item.tabelas?.reduce((tableTotal, table) => tableTotal + countImportedTableRows(table), 0) ?? 0), 0),
+    networkEntriesCount: payload.items.reduce((total, item) => total + (item.redeHospitalar?.length ?? 0), 0),
+    actionCounts,
+    items,
+  };
+};
 
 const parseCsvTables = (text: string) => {
   const rows = parseCsv(text);
@@ -1227,6 +1583,19 @@ export const cotadorImportService = {
     validateImportedPayload(payload);
     const preview = buildPreviewFromPayload(payload);
     logImportInfo('Preview de import gerado', preview);
+    return preview;
+  },
+
+  async previewDiffFromText(kind: CotadorImportKind, text: string) {
+    if (kind !== 'json-completo') {
+      throw new Error('Preview comparativo disponível apenas para JSON completo.');
+    }
+
+    const payload = parseJsonPayload(text);
+    validateImportedPayload(payload);
+    const context = await loadImportContext();
+    const preview = buildPreviewFromPayloadWithDiff(payload, context);
+    logImportInfo('Preview comparativo de import gerado', preview);
     return preview;
   },
 

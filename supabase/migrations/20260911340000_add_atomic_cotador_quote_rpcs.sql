@@ -152,7 +152,7 @@ BEGIN
     item.administradora_nome_snapshot,
     COALESCE(
       ARRAY(
-        SELECT jsonb_array_elements_text(item.entidade_nomes_snapshot)
+        SELECT jsonb_array_elements_text(COALESCE(item.entidade_nomes_snapshot, '[]'::jsonb))
       ),
       ARRAY[]::text[]
     ),
@@ -320,7 +320,7 @@ BEGIN
     item.administradora_nome_snapshot,
     COALESCE(
       ARRAY(
-        SELECT jsonb_array_elements_text(item.entidade_nomes_snapshot)
+        SELECT jsonb_array_elements_text(COALESCE(item.entidade_nomes_snapshot, '[]'::jsonb))
       ),
       ARRAY[]::text[]
     ),

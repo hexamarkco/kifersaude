@@ -1659,9 +1659,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setImportPreviewError(null);
 
     void importForm.file.text()
-      .then((content) => {
+      .then(async (content) => {
         if (isCancelled) return;
-        const preview = cotadorImportService.previewFromText('json-completo', content);
+        const preview = await cotadorImportService.previewDiffFromText('json-completo', content);
         setImportPreview(preview);
       })
       .catch((error) => {
@@ -1689,6 +1689,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
     if (importPreviewError) {
       showMessage('error', importPreviewError);
+      return;
+    }
+
+    if (importPreview?.actionCounts.conflict) {
+      showMessage('error', 'Resolva os conflitos do preview antes de importar o arquivo.');
       return;
     }
 
@@ -2837,19 +2842,75 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     </div>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">Criar</p>
+                      <p className="mt-1 text-lg font-semibold text-emerald-900">{importPreview.actionCounts.create}</p>
+                    </div>
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">Atualizar</p>
+                      <p className="mt-1 text-lg font-semibold text-amber-900">{importPreview.actionCounts.update}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700">Ignorar</p>
+                      <p className="mt-1 text-lg font-semibold text-slate-900">{importPreview.actionCounts.ignore}</p>
+                    </div>
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-700">Conflitos</p>
+                      <p className="mt-1 text-lg font-semibold text-red-900">{importPreview.actionCounts.conflict}</p>
+                    </div>
+                  </div>
+
+                  {importPreview.actionCounts.conflict > 0 && (
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      O arquivo tem conflitos que precisam ser resolvidos antes da importação. Revise os itens destacados abaixo.
+                    </div>
+                  )}
+
                   <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
                     <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
-                      Itens encontrados
+                      Itens encontrados e impacto previsto
                     </div>
                     <div className="max-h-64 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
                       {importPreview.items.map((item, index) => (
                         <div key={`${item.operadora}-${item.linha}-${item.produto}-${index}`} className="px-4 py-3">
-                          <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.produto}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.produto}</p>
+                            <span className={[
+                              'rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]',
+                              item.status === 'create' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : '',
+                              item.status === 'update' ? 'border-amber-200 bg-amber-50 text-amber-800' : '',
+                              item.status === 'ignore' ? 'border-slate-200 bg-slate-50 text-slate-700' : '',
+                              item.status === 'conflict' ? 'border-red-200 bg-red-50 text-red-800' : '',
+                            ].join(' ')}>
+                              {item.status === 'create' ? 'Criar' : item.status === 'update' ? 'Atualizar' : item.status === 'ignore' ? 'Ignorar' : 'Conflito'}
+                            </span>
+                          </div>
                           <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora} / {item.linha}{item.modalidadeBase ? ` / ${item.modalidadeBase}` : ''}</p>
                           <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                             <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{item.tabelasCount} tabela(s)</span>
                             <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{item.networkEntriesCount} item(ns) de rede</span>
                             {item.acomodacoes.map((acomodacao) => <span key={`${item.produto}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{acomodacao}</span>)}
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            {item.changes.map((change, changeIndex) => (
+                              <div
+                                key={`${item.operadora}-${item.linha}-${item.produto}-${change.scope}-${changeIndex}`}
+                                className={[
+                                  'rounded-2xl border px-3 py-2 text-xs',
+                                  change.kind === 'create' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : '',
+                                  change.kind === 'update' ? 'border-amber-200 bg-amber-50 text-amber-800' : '',
+                                  change.kind === 'ignore' ? 'border-slate-200 bg-slate-50 text-slate-700' : '',
+                                  change.kind === 'conflict' ? 'border-red-200 bg-red-50 text-red-800' : '',
+                                ].join(' ')}
+                              >
+                                <p className="font-semibold">
+                                  {change.label}
+                                  {typeof change.count === 'number' ? ` (${change.count})` : ''}
+                                </p>
+                                <p className="mt-1">{change.reason}</p>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       ))}
@@ -2863,7 +2924,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" loading={submitting} disabled={importPreviewLoading || Boolean(importPreviewError)}><Upload className="h-4 w-4" />Importar arquivo</Button>
+            <Button type="submit" loading={submitting} disabled={importPreviewLoading || Boolean(importPreviewError) || (importPreview?.actionCounts.conflict ?? 0) > 0}><Upload className="h-4 w-4" />Importar arquivo</Button>
             <Button type="button" variant="secondary" onClick={resetImportModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
@@ -40,6 +40,7 @@ type CotadorPlanPickerOverlayProps = {
     entidades: SelectOption[];
     perfisEmpresariais: SelectOption[];
     coparticipacoes: SelectOption[];
+    networkLocations: SelectOption[];
     abrangencias: SelectOption[];
     acomodacoes: SelectOption[];
   };
@@ -140,6 +141,7 @@ export default function CotadorPlanPickerOverlay({
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
   const operatorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const isDarkTheme = isPanelDarkTheme();
+  const networkLocationListId = useId();
 
   useEffect(() => {
     if (!isOpen) {
@@ -621,12 +623,20 @@ export default function CotadorPlanPickerOverlay({
                     onChange={(event) => onUpdateFilters({ networkLocation: event.target.value })}
                     placeholder="Filtrar por cidade ou bairro da rede"
                     leftIcon={MapPin}
+                    list={filterOptions.networkLocations.length > 0 ? networkLocationListId : undefined}
                     className={cx(
                       isDarkTheme
                         ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] !border-[color:rgba(255,255,255,0.1)] !bg-[color:rgba(255,255,255,0.06)] !text-[color:#fff8ef] !shadow-none placeholder:!text-[color:rgba(255,243,209,0.42)] focus:!border-[color:rgba(251,191,36,0.28)] focus:!ring-[color:rgba(251,191,36,0.26)]'
                         : undefined,
                     )}
                   />
+                  {filterOptions.networkLocations.length > 0 && (
+                    <datalist id={networkLocationListId}>
+                      {filterOptions.networkLocations.map((option) => (
+                        <option key={option.value} value={option.value} label={option.label} />
+                      ))}
+                    </datalist>
+                  )}
                   {activeModalityTab === 'ADESAO' && (
                     <>
                       <FilterSingleSelect

@@ -312,6 +312,9 @@ export default function CotadorScreen() {
           .filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value)),
         (value) => (value === 'parcial' ? 'Copart. parcial' : value === 'total' ? 'Copart. total' : 'Sem copart.'),
       ),
+      networkLocations: buildCountedOptions(
+        getOptionScopedItems('networkLocation').flatMap((item) => item.redeHospitalar.flatMap((entry) => [entry.bairro, entry.cidade].filter((value): value is string => Boolean(value)))),
+      ),
       abrangencias: [],
       acomodacoes: buildCountedOptions(
         getOptionScopedItems('acomodacao')

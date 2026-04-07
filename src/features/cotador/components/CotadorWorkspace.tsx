@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Building2, Check, Link2, MapPin, Minus, Plus, Search, Sparkles, Trash2, UserRound, Users } from 'lucide-react';
+import { Building2, Check, Link2, MapPin, Minus, Plus, Search, ShieldCheck, Sparkles, Trash2, UserRound, Users } from 'lucide-react';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -63,6 +63,34 @@ const formatCopart = (value: CotadorQuoteItem['coparticipacao']) => {
   if (value === 'total') return 'Copart. total';
   if (value === 'sem') return 'Sem copart.';
   return 'A definir';
+};
+
+const getRestrictiveScore = (item: CotadorQuoteItem) => {
+  let score = 0;
+
+  if (item.perfilEmpresarial && item.perfilEmpresarial !== 'todos') score += 3;
+  if (item.administradora?.name) score += 2;
+  score += Math.min(item.entidadesClasse.length, 3) * 2;
+
+  if (item.vidasMin !== null || item.vidasMax !== null) {
+    const minLives = item.vidasMin ?? 1;
+    const maxLives = item.vidasMax ?? minLives;
+    const rangeSize = Math.max(maxLives - minLives, 0);
+    score += Math.max(1, 10 - Math.min(rangeSize, 9));
+  }
+
+  return score;
+};
+
+const getRestrictiveReasons = (item: CotadorQuoteItem) => {
+  const reasons: string[] = [];
+
+  if (item.perfilEmpresarial && item.perfilEmpresarial !== 'todos') reasons.push(formatPerfil(item.perfilEmpresarial));
+  if (item.administradora?.name) reasons.push('administradora');
+  if (item.entidadesClasse.length > 0) reasons.push('entidades');
+  if (item.vidasMin !== null || item.vidasMax !== null) reasons.push('faixa de vidas');
+
+  return reasons;
 };
 
 type NetworkCompareMode = 'all' | 'shared' | 'differentials';
@@ -216,6 +244,52 @@ export default function CotadorWorkspace({
     [selectedItems.length],
   );
 
+  const planHighlightsById = useMemo(() => {
+    const highlights = new Map<string, { bestPrice: boolean; largestNetwork: boolean; mostRestrictive: boolean; restrictiveReason: string | null }>();
+
+    if (selectedItems.length <= 1) {
+      selectedItems.forEach((item) => {
+        highlights.set(item.id, {
+          bestPrice: false,
+          largestNetwork: false,
+          mostRestrictive: false,
+          restrictiveReason: null,
+        });
+      });
+      return highlights;
+    }
+
+    const priceValues = selectedItems
+      .map((item) => item.estimatedMonthlyTotal)
+      .filter((value): value is number => value !== null);
+    const lowestPrice = new Set(priceValues).size > 1 ? Math.min(...priceValues) : null;
+
+    const networkCounts = selectedItems.map((item) => item.redeHospitalar.length);
+    const largestNetwork = new Set(networkCounts).size > 1 ? Math.max(...networkCounts) : null;
+
+    const restrictiveScores = selectedItems.map((item) => ({
+      id: item.id,
+      score: getRestrictiveScore(item),
+      reasons: getRestrictiveReasons(item),
+    }));
+    const distinctRestrictiveScores = new Set(restrictiveScores.map((entry) => entry.score));
+    const highestRestrictiveScore = distinctRestrictiveScores.size > 1 ? Math.max(...restrictiveScores.map((entry) => entry.score)) : null;
+
+    selectedItems.forEach((item) => {
+      const restrictiveEntry = restrictiveScores.find((entry) => entry.id === item.id);
+      const restrictiveReason = restrictiveEntry?.reasons.length ? restrictiveEntry.reasons.slice(0, 2).join(' · ') : null;
+
+      highlights.set(item.id, {
+        bestPrice: lowestPrice !== null && item.estimatedMonthlyTotal === lowestPrice,
+        largestNetwork: largestNetwork !== null && item.redeHospitalar.length === largestNetwork,
+        mostRestrictive: highestRestrictiveScore !== null && restrictiveEntry?.score === highestRestrictiveScore,
+        restrictiveReason,
+      });
+    });
+
+    return highlights;
+  }, [selectedItems]);
+
   return (
     <div className="space-y-6">
       <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_74%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_92%,var(--panel-surface-soft,#f4ede3))_48%,color-mix(in_srgb,var(--panel-surface-muted,#f8f2e8)_90%,var(--panel-surface,#fffdfa))_100%)] p-6 shadow-sm md:p-8">
@@ -268,8 +342,24 @@ export default function CotadorWorkspace({
             </button>
           ) : (
             <div className="mt-6 grid gap-3 xl:grid-cols-2">
-              {selectedItems.map((item) => (
-                <article key={item.id} className="rounded-[24px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+              {selectedItems.map((item) => {
+                const highlights = planHighlightsById.get(item.id) ?? {
+                  bestPrice: false,
+                  largestNetwork: false,
+                  mostRestrictive: false,
+                  restrictiveReason: null,
+                };
+
+                return (
+                  <article
+                    key={item.id}
+                    className={[
+                      'rounded-[24px] border bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm transition-colors',
+                      highlights.bestPrice
+                        ? 'border-[color:rgba(184,92,31,0.28)] shadow-[0_12px_28px_rgba(111,63,22,0.08)]'
+                        : 'border-[color:var(--panel-border-subtle,#e7dac8)]',
+                    ].join(' ')}
+                  >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
@@ -277,6 +367,29 @@ export default function CotadorWorkspace({
                       </p>
                       <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.linha?.name ?? 'LINHA'}</p>
                       <h4 className="mt-3 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
+                      {(highlights.bestPrice || highlights.largestNetwork || highlights.mostRestrictive) && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {highlights.bestPrice && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(184,92,31,0.24)] bg-[color:rgba(184,92,31,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-accent-ink,#6f3f16)]">
+                              <Sparkles className="h-3.5 w-3.5" />
+                              Melhor preço
+                            </span>
+                          )}
+                          {highlights.largestNetwork && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                              <MapPin className="h-3.5 w-3.5" />
+                              Maior rede
+                            </span>
+                          )}
+                          {highlights.mostRestrictive && (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(92,53,23,0.2)] bg-[color:rgba(92,53,23,0.08)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text,#1a120d)]">
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Mais restritivo
+                              {highlights.restrictiveReason ? ` · ${highlights.restrictiveReason}` : ''}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <div className="mt-3 flex flex-wrap gap-2">
                         {item.perfilEmpresarial && (
                           <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
@@ -338,8 +451,9 @@ export default function CotadorWorkspace({
                       {item.observacao && <p>{item.observacao}</p>}
                     </div>
                   )}
-                </article>
-              ))}
+                  </article>
+                );
+              })}
 
               <button
                 type="button"

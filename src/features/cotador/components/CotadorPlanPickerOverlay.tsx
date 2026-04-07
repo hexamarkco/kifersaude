@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ArrowLeft,
@@ -119,6 +119,17 @@ const compareOptionalPriceAsc = (left: number | null, right: number | null) => {
   return left - right;
 };
 
+const normalizeAutocompleteTerm = (value: string) => value
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
+const extractOptionCount = (label: string) => {
+  const match = label.match(/\((\d+)\)\s*$/);
+  return match ? Number(match[1]) : null;
+};
+
 export default function CotadorPlanPickerOverlay({
   isOpen,
   quote,
@@ -138,10 +149,11 @@ export default function CotadorPlanPickerOverlay({
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
   const [activeModalityTab, setActiveModalityTab] = useState<CotadorQuoteModality>(quote.modality ?? 'PME');
   const [floatingMenuPosition, setFloatingMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [networkLocationFocused, setNetworkLocationFocused] = useState(false);
+  const [networkLocationSuggestionOpen, setNetworkLocationSuggestionOpen] = useState(false);
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
   const operatorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const isDarkTheme = isPanelDarkTheme();
-  const networkLocationListId = useId();
 
   useEffect(() => {
     if (!isOpen) {
@@ -149,6 +161,8 @@ export default function CotadorPlanPickerOverlay({
       setSelectedLineId(null);
       setSelectedLineScenarioKey(null);
       setSelectedProductKey(null);
+      setNetworkLocationFocused(false);
+      setNetworkLocationSuggestionOpen(false);
       return;
     }
 
@@ -208,6 +222,30 @@ export default function CotadorPlanPickerOverlay({
     () => catalogItems.filter((item) => (item.source === 'cotador_tabela' || item.source === 'cotador_produto') && catalogMatchesQuoteModality(item.modalidade, activeModalityTab)),
     [activeModalityTab, catalogItems],
   );
+
+  const networkLocationSuggestions = useMemo(() => {
+    const search = normalizeAutocompleteTerm(filters.networkLocation);
+    if (!search) return [];
+
+    return filterOptions.networkLocations
+      .filter((option) => normalizeAutocompleteTerm(option.value).includes(search))
+      .sort((left, right) => {
+        const leftValue = normalizeAutocompleteTerm(left.value);
+        const rightValue = normalizeAutocompleteTerm(right.value);
+        const leftStarts = leftValue.startsWith(search) ? 0 : 1;
+        const rightStarts = rightValue.startsWith(search) ? 0 : 1;
+        if (leftStarts !== rightStarts) return leftStarts - rightStarts;
+
+        const leftCount = extractOptionCount(left.label) ?? 0;
+        const rightCount = extractOptionCount(right.label) ?? 0;
+        if (leftCount !== rightCount) return rightCount - leftCount;
+
+        return left.value.localeCompare(right.value, 'pt-BR');
+      })
+      .slice(0, 8);
+  }, [filterOptions.networkLocations, filters.networkLocation]);
+
+  const showNetworkLocationSuggestions = networkLocationFocused && networkLocationSuggestionOpen && filters.networkLocation.trim().length > 0 && networkLocationSuggestions.length > 0;
 
   const operatorCards = useMemo<OperatorCard[]>(() => {
     const grouped = new Map<string, OperatorCard>();
@@ -618,25 +656,73 @@ export default function CotadorPlanPickerOverlay({
                       : undefined,
                     )}
                   />
-                  <Input
-                    value={filters.networkLocation}
-                    onChange={(event) => onUpdateFilters({ networkLocation: event.target.value })}
-                    placeholder="Filtrar por cidade ou bairro da rede"
-                    leftIcon={MapPin}
-                    list={filterOptions.networkLocations.length > 0 ? networkLocationListId : undefined}
-                    className={cx(
-                      isDarkTheme
-                        ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] !border-[color:rgba(255,255,255,0.1)] !bg-[color:rgba(255,255,255,0.06)] !text-[color:#fff8ef] !shadow-none placeholder:!text-[color:rgba(255,243,209,0.42)] focus:!border-[color:rgba(251,191,36,0.28)] focus:!ring-[color:rgba(251,191,36,0.26)]'
-                        : undefined,
+                  <div className="relative">
+                    <Input
+                      value={filters.networkLocation}
+                      onChange={(event) => {
+                        onUpdateFilters({ networkLocation: event.target.value });
+                        setNetworkLocationSuggestionOpen(true);
+                      }}
+                      onFocus={() => setNetworkLocationFocused(true)}
+                      onBlur={() => {
+                        setNetworkLocationFocused(false);
+                        setNetworkLocationSuggestionOpen(false);
+                      }}
+                      placeholder="Filtrar por cidade ou bairro da rede"
+                      leftIcon={MapPin}
+                      autoComplete="off"
+                      className={cx(
+                        isDarkTheme
+                          ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] !border-[color:rgba(255,255,255,0.1)] !bg-[color:rgba(255,255,255,0.06)] !text-[color:#fff8ef] !shadow-none placeholder:!text-[color:rgba(255,243,209,0.42)] focus:!border-[color:rgba(251,191,36,0.28)] focus:!ring-[color:rgba(251,191,36,0.26)]'
+                          : undefined,
+                      )}
+                    />
+
+                    {showNetworkLocationSuggestions && (
+                      <div
+                        className={cx(
+                          'absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-[22px] border shadow-[0_20px_48px_rgba(15,10,6,0.26)]',
+                          isDarkTheme
+                            ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:#201814]'
+                            : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
+                        )}
+                      >
+                        <div className="max-h-64 overflow-y-auto py-2">
+                          {networkLocationSuggestions.map((option) => {
+                            const count = extractOptionCount(option.label);
+
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                  onUpdateFilters({ networkLocation: option.value });
+                                  setNetworkLocationFocused(false);
+                                  setNetworkLocationSuggestionOpen(false);
+                                }}
+                                className={cx(
+                                  'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                                  isDarkTheme
+                                    ? 'hover:bg-[color:rgba(255,255,255,0.06)]'
+                                    : 'hover:bg-[var(--panel-surface-soft,#f4ede3)]',
+                                )}
+                              >
+                                <span className={cx('min-w-0 truncate text-sm font-medium', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
+                                  {option.value}
+                                </span>
+                                {count !== null && (
+                                  <span className={cx('shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:rgba(255,243,209,0.72)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                    {count} plano(s)
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
-                  />
-                  {filterOptions.networkLocations.length > 0 && (
-                    <datalist id={networkLocationListId}>
-                      {filterOptions.networkLocations.map((option) => (
-                        <option key={option.value} value={option.value} label={option.label} />
-                      ))}
-                    </datalist>
-                  )}
+                  </div>
                   {activeModalityTab === 'ADESAO' && (
                     <>
                       <FilterSingleSelect
@@ -688,6 +774,8 @@ export default function CotadorPlanPickerOverlay({
                     setSelectedLineId(null);
                     setSelectedLineScenarioKey(null);
                     setSelectedProductKey(null);
+                    setNetworkLocationFocused(false);
+                    setNetworkLocationSuggestionOpen(false);
                   }}
                   fullWidth
                   className={cx(
@@ -699,21 +787,6 @@ export default function CotadorPlanPickerOverlay({
                   Limpar filtros
                 </Button>
 
-                {(selectedOperator || selectedLine || activeProductGroup) && (
-                  <div className={cx(
-                    'rounded-[24px] border p-4',
-                    isDarkTheme
-                      ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
-                      : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
-                  )}>
-                    <p className={cx('text-[11px] font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:#f3c892]' : 'text-[var(--panel-accent-ink,#6f3f16)]')}>Contexto atual</p>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                      {selectedOperator?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:var(--panel-text,#f8efe3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedOperator.actor.name}</span>}
-                      {selectedLine?.actor.name && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.06)] text-[color:var(--panel-text,#f8efe3)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]')}>{selectedLine.actor.name}</span>}
-                      {activeProductGroup?.title && <span className={cx('rounded-full border px-2.5 py-1', isDarkTheme ? 'border-[color:rgba(251,191,36,0.18)] bg-[color:rgba(251,191,36,0.12)] text-[color:#fde68a]' : 'border-[color:rgba(8,145,178,0.2)] bg-[color:rgba(8,145,178,0.08)] text-[color:var(--panel-text,#1a120d)]')}>{activeProductGroup.title}</span>}
-                    </div>
-                  </div>
-                )}
               </div>
             </aside>
 

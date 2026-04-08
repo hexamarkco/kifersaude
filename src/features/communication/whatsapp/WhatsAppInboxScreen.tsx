@@ -2385,6 +2385,10 @@ export default function WhatsAppInboxScreen() {
   const operationalStateRequestIdRef = useRef(0);
   const autoLinkLookupRequestIdRef = useRef(0);
   const chatIdentityLookupRequestIdRef = useRef(0);
+  const leadPanelRequestIdRef = useRef(0);
+  const leadContractsRequestIdRef = useRef(0);
+  const chatAgendaSummaryRequestIdRef = useRef(0);
+  const followUpGenerationRequestIdRef = useRef(0);
   const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
   const voiceAttachment = useMemo(
     () => pendingAttachments.find((attachment) => attachment.kind === 'voice') ?? null,
@@ -3034,31 +3038,46 @@ export default function WhatsAppInboxScreen() {
   }, [patchMessageLocally]);
 
   const loadLeadContracts = useCallback(async (leadId: string | null) => {
+    const requestId = ++leadContractsRequestIdRef.current;
+
     if (!leadId) {
       setLeadContracts([]);
       setLeadContractsError(null);
+      setLeadContractsLoading(false);
       return;
     }
 
     setLeadContractsLoading(true);
     try {
       const contracts = await commWhatsAppService.listLeadContracts(leadId);
+      if (requestId !== leadContractsRequestIdRef.current) {
+        return;
+      }
       setLeadContracts(contracts);
       setLeadContractsError(null);
     } catch (error) {
+      if (requestId !== leadContractsRequestIdRef.current) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao carregar contratos do lead', error);
       setLeadContracts([]);
       setLeadContractsError(error instanceof Error ? error.message : 'Não foi possível carregar os contratos do lead.');
     } finally {
-      setLeadContractsLoading(false);
+      if (requestId === leadContractsRequestIdRef.current) {
+        setLeadContractsLoading(false);
+      }
     }
   }, []);
 
   const loadLeadPanel = useCallback(async (chat: CommWhatsAppChat | null) => {
+    const requestId = ++leadPanelRequestIdRef.current;
+    const targetChatId = chat?.id ?? null;
+
     if (!chat?.lead_id) {
       setLeadPanel(null);
       setLeadPanelLoading(false);
       setLeadContracts([]);
+      setLeadContractsLoading(false);
       setLeadContractsError(null);
       return;
     }
@@ -3066,6 +3085,9 @@ export default function WhatsAppInboxScreen() {
     setLeadPanelLoading(true);
     try {
       const lead = await commWhatsAppService.getChatLeadPanel(chat.id);
+      if (requestId !== leadPanelRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       setLeadPanel(lead);
       if (lead?.nome_completo && !chat.saved_contact_name && chat.display_name !== lead.nome_completo) {
         upsertChatLocally({
@@ -3075,16 +3097,24 @@ export default function WhatsAppInboxScreen() {
       }
       await loadLeadContracts(lead?.id ?? null);
     } catch (error) {
+      if (requestId !== leadPanelRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao carregar painel do lead', error);
       setLeadPanel(null);
       setLeadContracts([]);
+      setLeadContractsLoading(false);
       setLeadContractsError(null);
     } finally {
-      setLeadPanelLoading(false);
+      if (requestId === leadPanelRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
+        setLeadPanelLoading(false);
+      }
     }
   }, [loadLeadContracts, upsertChatLocally]);
 
   const loadChatAgendaSummary = useCallback(async (leadId: string | null, contractIds: string[] = []) => {
+    const requestId = ++chatAgendaSummaryRequestIdRef.current;
+
     if (!leadId) {
       chatAgendaSummaryLeadIdRef.current = null;
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
@@ -3130,15 +3160,22 @@ export default function WhatsAppInboxScreen() {
         .filter((reminder) => !reminder.lido)
         .sort((left, right) => new Date(left.data_lembrete).getTime() - new Date(right.data_lembrete).getTime());
 
+      if (requestId !== chatAgendaSummaryRequestIdRef.current || chatAgendaSummaryLeadIdRef.current !== leadId) {
+        return;
+      }
+
       setChatAgendaSummary({
         pendingCount: pendingReminders.length,
         nextReminder: pendingReminders[0] ?? null,
       });
     } catch (error) {
+      if (requestId !== chatAgendaSummaryRequestIdRef.current || chatAgendaSummaryLeadIdRef.current !== leadId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao carregar resumo da agenda do chat', error);
       setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
     } finally {
-      if (shouldShowLoading) {
+      if (shouldShowLoading && requestId === chatAgendaSummaryRequestIdRef.current && chatAgendaSummaryLeadIdRef.current === leadId) {
         setChatAgendaSummaryLoading(false);
       }
     }
@@ -3917,6 +3954,11 @@ export default function WhatsAppInboxScreen() {
     selectedChatIdRef.current = selectedChatId;
   }, [selectedChatId]);
 
+  const resetFollowUpComposer = useCallback(() => {
+    setFollowUpDraft('');
+    setFollowUpCustomInstructions('');
+  }, []);
+
   const loadOperationalState = useCallback(async () => {
     const requestId = ++operationalStateRequestIdRef.current;
 
@@ -3953,6 +3995,37 @@ export default function WhatsAppInboxScreen() {
       : null;
     void loadLeadPanel(currentSelectedChat);
   }, [leadDrawerOpen, loadLeadPanel, selectedChat?.lead_id, selectedChatId]);
+
+  useEffect(() => {
+    followUpGenerationRequestIdRef.current += 1;
+    setFollowUpModalOpen(false);
+    setGeneratingFollowUp(false);
+    resetFollowUpComposer();
+
+    if (!selectedChat?.lead_id) {
+      leadPanelRequestIdRef.current += 1;
+      leadContractsRequestIdRef.current += 1;
+      chatAgendaSummaryRequestIdRef.current += 1;
+      chatAgendaSummaryLeadIdRef.current = null;
+      setLeadPanel(null);
+      setLeadPanelLoading(false);
+      setLeadContracts([]);
+      setLeadContractsLoading(false);
+      setLeadContractsError(null);
+      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryLoading(false);
+      return;
+    }
+
+    if (leadPanel?.id !== selectedChat.lead_id) {
+      chatAgendaSummaryLeadIdRef.current = null;
+      setLeadPanel(null);
+      setLeadContracts([]);
+      setLeadContractsError(null);
+      setChatAgendaSummary({ pendingCount: 0, nextReminder: null });
+      setChatAgendaSummaryLoading(true);
+    }
+  }, [leadPanel?.id, resetFollowUpComposer, selectedChat?.id, selectedChat?.lead_id]);
 
   useEffect(() => {
     if (!selectedChat?.lead_id) {
@@ -5977,21 +6050,29 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const requestId = ++followUpGenerationRequestIdRef.current;
+    const targetChatId = selectedChat.id;
     setGeneratingFollowUp(true);
 
     try {
       const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
         customInstructions,
       });
-      setFollowUpDraft(result.text.trim());
-      if (customInstructions) {
-        setFollowUpCustomInstructions(customInstructions);
+      if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
       }
+      setFollowUpDraft(result.text.trim());
+      setFollowUpCustomInstructions(customInstructions);
     } catch (error) {
+      if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        return;
+      }
       console.error('[WhatsAppInbox] erro ao gerar follow-up', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível gerar o follow-up com IA.');
     } finally {
-      setGeneratingFollowUp(false);
+      if (requestId === followUpGenerationRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
+        setGeneratingFollowUp(false);
+      }
     }
   }, [followUpGenerationDisabledReason, selectedChat]);
 
@@ -6214,6 +6295,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       await sendTextSegments(selectedChat, textSegments);
+      resetFollowUpComposer();
       handleCloseFollowUpModal();
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar follow-up', error);
@@ -6221,7 +6303,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setSending(false);
     }
-  }, [followUpDraft, handleCloseFollowUpModal, selectedChat, sendDisabledReason, sendTextSegments]);
+  }, [followUpDraft, handleCloseFollowUpModal, resetFollowUpComposer, selectedChat, sendDisabledReason, sendTextSegments]);
 
   const handleComposerSubmit = () => {
     if (sending || generatingFollowUp) return;

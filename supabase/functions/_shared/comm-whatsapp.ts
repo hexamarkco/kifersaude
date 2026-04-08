@@ -103,6 +103,24 @@ export type CommWhatsAppLinkPreviewMeta = {
   preview: string | null;
 };
 
+export type CommWhatsAppQuotedMessageMeta = {
+  external_message_id: string | null;
+  author_phone: string | null;
+  quoted_type: string | null;
+  preview_text: string | null;
+};
+
+export type CommWhatsAppContactCardMetaItem = {
+  name: string | null;
+  phone_number: string | null;
+};
+
+export type CommWhatsAppContactCardMeta = {
+  kind: 'contact' | 'contact_list';
+  count: number;
+  items: CommWhatsAppContactCardMetaItem[];
+};
+
 export type CommWhatsAppEditedMessageEvent = {
   eventExternalMessageId: string | null;
   targetExternalMessageId: string | null;
@@ -372,7 +390,7 @@ const collectTextFragments = (value: unknown): string[] => {
   }
 
   const fragments: string[] = [];
-  const directFields = ['body', 'text', 'title', 'caption', 'description', 'header', 'footer', 'subtitle'];
+  const directFields = ['body', 'text', 'title', 'caption', 'description', 'header', 'footer', 'subtitle', 'name', 'full_name', 'display_name'];
   for (const key of directFields) {
     const normalized = toTrimmedString(value[key]);
     if (normalized) {
@@ -595,6 +613,9 @@ export const summarizeWhapiMessage = (message: unknown): string => {
   const videoCaption = readNestedBody(message, 'video');
   if (videoCaption) return videoCaption;
 
+  const contactSummary = summarizeWhapiContactCard(extractWhapiContactCardMeta(message));
+  if (contactSummary) return contactSummary;
+
   const reply = isRecord(message.reply) ? message.reply : null;
   if (reply) {
     const buttonsReply = isRecord(reply.buttons_reply) ? reply.buttons_reply : null;
@@ -603,8 +624,10 @@ export const summarizeWhapiMessage = (message: unknown): string => {
     if (replyTitle) return replyTitle;
   }
 
-  const interactiveSummary = summarizeInteractiveLikeMessage(message);
-  if (interactiveSummary) return interactiveSummary;
+  if (type === 'interactive' || type === 'hsm' || type === 'carousel' || type === 'reply') {
+    const interactiveSummary = summarizeInteractiveLikeMessage(message);
+    if (interactiveSummary) return interactiveSummary;
+  }
 
   switch (type) {
     case 'image':
@@ -668,6 +691,115 @@ const firstNonEmpty = (...candidates: unknown[]) => {
   return '';
 };
 
+const extractPhoneFromVcard = (value: unknown): string | null => {
+  const raw = toTrimmedString(value);
+  if (!raw) {
+    return null;
+  }
+
+  const waidMatch = raw.match(/waid=(\d{7,15})/i);
+  if (waidMatch?.[1]) {
+    return normalizeCommWhatsAppPhone(waidMatch[1]) || waidMatch[1];
+  }
+
+  const telMatch = raw.match(/TEL[^:]*:([^\n\r]+)/i);
+  if (!telMatch?.[1]) {
+    return null;
+  }
+
+  const normalizedPhone = normalizeCommWhatsAppPhone(telMatch[1]);
+  return normalizedPhone || null;
+};
+
+const buildWhapiContactCardItem = (value: unknown): CommWhatsAppContactCardMetaItem | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const name = pickHumanName(value.name, value.full_name, value.display_name, value.short_name) || null;
+  const phoneNumber = normalizeCommWhatsAppPhone(
+    firstNonEmpty(
+      value.phone_number,
+      value.phone,
+      value.wa_id,
+      value.id,
+      extractPhoneFromVcard(value.vcard),
+    ),
+  ) || null;
+
+  if (!name && !phoneNumber) {
+    return null;
+  }
+
+  return {
+    name,
+    phone_number: phoneNumber,
+  };
+};
+
+const summarizeWhapiContactCard = (card: CommWhatsAppContactCardMeta | null): string => {
+  if (!card) {
+    return '';
+  }
+
+  const labels = card.items
+    .map((item) => item.name || (item.phone_number ? formatPhoneLabel(item.phone_number) : ''))
+    .filter(Boolean);
+
+  if (card.kind === 'contact') {
+    return labels[0] || '[Contato]';
+  }
+
+  if (labels.length === 0) {
+    return card.count > 1 ? `${card.count} contatos` : '[Contato]';
+  }
+
+  if (card.count > 1) {
+    const prefix = labels.slice(0, 2).join(' • ');
+    const remainder = Math.max(0, card.count - 2);
+    return remainder > 0 ? `${prefix} • +${remainder}` : prefix;
+  }
+
+  return labels[0] || '[Contato]';
+};
+
+export const extractWhapiContactCardMeta = (message: unknown): CommWhatsAppContactCardMeta | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const type = toTrimmedString(message.type).toLowerCase();
+
+  if (type === 'contact') {
+    const item = buildWhapiContactCardItem(isRecord(message.contact) ? message.contact : null);
+    return {
+      kind: 'contact',
+      count: 1,
+      items: item ? [item] : [],
+    };
+  }
+
+  if (type === 'contact_list') {
+    const payload = isRecord(message.contact_list) ? message.contact_list : null;
+    const rawItems = Array.isArray(payload?.list) ? payload.list : [];
+    const items = rawItems
+      .map((entry) => buildWhapiContactCardItem(entry))
+      .filter((entry): entry is CommWhatsAppContactCardMetaItem => Boolean(entry));
+
+    if (rawItems.length === 0 && items.length === 0) {
+      return null;
+    }
+
+    return {
+      kind: 'contact_list',
+      count: rawItems.length || items.length,
+      items,
+    };
+  }
+
+  return null;
+};
+
 const summarizeMessageLikeValue = (value: unknown) => {
   if (!value) {
     return '';
@@ -687,6 +819,50 @@ const summarizeMessageLikeValue = (value: unknown) => {
   }
 
   return pickBestSummary(collectTextFragments(value));
+};
+
+export const extractWhapiQuotedMessageMeta = (message: unknown): CommWhatsAppQuotedMessageMeta | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const context = isRecord(message.context) ? message.context : null;
+  if (!context) {
+    return null;
+  }
+
+  const quotedContent = context.quoted_content;
+  const quotedContentRecord = isRecord(quotedContent) ? quotedContent : null;
+  const quotedType = firstNonEmpty(
+    context.quoted_type,
+    quotedContentRecord?.type,
+    quotedContentRecord?.message_type,
+  ) || null;
+  const previewText = firstNonEmpty(
+    summarizeMessageLikeValue(quotedContent),
+    quotedType ? summarizeWhapiMessage({ type: quotedType }) : null,
+  ) || null;
+  const externalMessageId = firstNonEmpty(
+    context.quoted_id,
+    context.quoted_message_id,
+    context.stanza_id,
+    context.message_id,
+    context.messageId,
+    quotedContentRecord?.id,
+    quotedContentRecord?.message_id,
+  ) || null;
+  const authorPhone = normalizeCommWhatsAppPhone(context.quoted_author) || null;
+
+  if (!externalMessageId && !previewText && !authorPhone && !quotedType) {
+    return null;
+  }
+
+  return {
+    external_message_id: externalMessageId,
+    author_phone: authorPhone,
+    quoted_type: quotedType,
+    preview_text: previewText,
+  };
 };
 
 const isGenericMessageMarker = (value: string) => /^\[[^\]]+\]$/.test(value.trim());

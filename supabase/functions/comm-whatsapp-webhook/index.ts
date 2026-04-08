@@ -7,8 +7,10 @@ import {
   extractWhapiDeletedMessageEvent,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  extractWhapiContactCardMeta,
   extractWhapiEditedMessageEvent,
   extractWhapiLinkPreviewMeta,
+  extractWhapiQuotedMessageMeta,
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
@@ -301,6 +303,8 @@ async function persistMessageFromWebhook(
   const deliveryStatus = toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'pending');
   const mediaMeta = extractWhapiMediaMeta(message);
   const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
+  const quoteMeta = extractWhapiQuotedMessageMeta(message);
+  const contactCardMeta = extractWhapiContactCardMeta(message);
   const summaryText = summarizeWhapiMessage(message);
   const result = await persistCommWhatsAppMessage(supabaseAdmin, {
     channelId: channel.id,
@@ -337,6 +341,8 @@ async function persistMessageFromWebhook(
       from_name: toTrimmedString(message.from_name) || null,
       chat_name: toTrimmedString(message.chat_name) || null,
       link_preview: linkPreviewMeta,
+      ...(quoteMeta ? { quote: quoteMeta } : {}),
+      ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
       edited: editedEvent ? true : false,
       edited_at: editedEvent?.editedAt ?? null,
       original_text_content: editedEvent?.originalText ?? null,

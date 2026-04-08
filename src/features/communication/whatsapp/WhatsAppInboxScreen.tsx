@@ -117,6 +117,22 @@ type LocalOutgoingRetryPayload =
       previewUrl?: string | null;
     };
 
+type MessageQuoteInfo = {
+  externalMessageId: string | null;
+  authorPhone: string | null;
+  quotedType: string | null;
+  previewText: string;
+};
+
+type MessageContactCardInfo = {
+  kind: 'contact' | 'contact_list';
+  count: number;
+  items: Array<{
+    name: string | null;
+    phoneNumber: string | null;
+  }>;
+};
+
 const DEFAULT_QUICK_REPLIES = normalizeWhatsAppQuickRepliesSettings(null).quickReplies;
 
 const normalizeQuickReplyLookup = (value: string) =>
@@ -164,13 +180,18 @@ const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document', cap
 const getMessageSummaryMarker = (messageType: string) => {
   const normalized = messageType.trim().toLowerCase();
 
+  if (normalized === 'text') return '[Mensagem]';
   if (normalized === 'image') return '[Imagem]';
   if (VIDEO_LIKE_MESSAGE_TYPES.has(normalized)) return '[Video]';
   if (normalized === 'audio' || normalized === 'voice') return '[Audio]';
   if (normalized === 'document') return '[Documento]';
+  if (normalized === 'link_preview') return '[Link]';
+  if (normalized === 'location' || normalized === 'live_location') return '[Localizacao]';
   if (normalized === 'sticker') return '[Sticker]';
   if (normalized === 'contact' || normalized === 'contact_list') return '[Contato]';
   if (normalized === 'poll') return '[Enquete]';
+  if (normalized === 'reply') return '[Resposta]';
+  if (normalized === 'interactive' || normalized === 'hsm' || normalized === 'carousel') return '[Mensagem interativa]';
   return getUnknownMessageMarker(normalized);
 };
 
@@ -185,10 +206,14 @@ const isMessageSummaryMarker = (value?: string | null, messageType?: string) => 
     '[Video]',
     '[Documento]',
     '[Audio]',
+    '[Link]',
+    '[Localizacao]',
     '[Sticker]',
     '[Contato]',
     '[Enquete]',
     '[Mensagem]',
+    '[Resposta]',
+    '[Mensagem interativa]',
   ]);
 
   if (messageType?.trim()) {
@@ -390,6 +415,102 @@ function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
   return <p className={className}>{parts}</p>;
 }
 
+const readRecord = (value: unknown): Record<string, unknown> | null => (
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+);
+
+const getMessageMetadataRecord = (message?: CommWhatsAppMessage | null) => readRecord(message?.metadata) ?? {};
+
+const getMessageQuoteInfo = (message?: CommWhatsAppMessage | null): MessageQuoteInfo | null => {
+  if (!message) {
+    return null;
+  }
+
+  const quote = readRecord(getMessageMetadataRecord(message).quote);
+  if (!quote) {
+    return null;
+  }
+
+  const quotedType = String(quote.quoted_type ?? '').trim().toLowerCase() || null;
+  const previewText = String(quote.preview_text ?? '').trim() || getMessageSummaryMarker(quotedType || 'text');
+  const externalMessageId = String(quote.external_message_id ?? '').trim() || null;
+  const authorPhone = String(quote.author_phone ?? '').trim() || null;
+
+  if (!externalMessageId && !previewText && !authorPhone && !quotedType) {
+    return null;
+  }
+
+  return {
+    externalMessageId,
+    authorPhone,
+    quotedType,
+    previewText,
+  };
+};
+
+const hasMessageQuote = (message?: CommWhatsAppMessage | null) => Boolean(getMessageQuoteInfo(message));
+
+const getMessageContactCardInfo = (message?: CommWhatsAppMessage | null): MessageContactCardInfo | null => {
+  if (!message) {
+    return null;
+  }
+
+  const messageType = message.message_type.trim().toLowerCase();
+  const contactCard = readRecord(getMessageMetadataRecord(message).contact_card);
+  const kind = String(contactCard?.kind ?? '').trim().toLowerCase();
+
+  if (kind !== 'contact' && kind !== 'contact_list') {
+    if (messageType !== 'contact' && messageType !== 'contact_list') {
+      return null;
+    }
+
+    const fallbackText = String(message.text_content ?? '').trim();
+    return {
+      kind: messageType as 'contact' | 'contact_list',
+      count: messageType === 'contact' ? 1 : 0,
+      items: fallbackText && !isMessageSummaryMarker(fallbackText, message.message_type)
+        ? [{ name: fallbackText, phoneNumber: null }]
+        : [],
+    };
+  }
+
+  const items = Array.isArray(contactCard?.items)
+    ? contactCard.items
+        .map((item) => {
+          const record = readRecord(item);
+          if (!record) return null;
+
+          const name = String(record.name ?? '').trim() || null;
+          const phoneNumber = String(record.phone_number ?? '').trim() || null;
+          if (!name && !phoneNumber) return null;
+
+          return { name, phoneNumber };
+        })
+        .filter((item): item is { name: string | null; phoneNumber: string | null } => Boolean(item))
+    : [];
+
+  const rawCount = Number(contactCard?.count ?? items.length);
+  const count = Number.isFinite(rawCount)
+    ? Math.max(items.length, Math.max(0, Math.round(rawCount)))
+    : items.length;
+
+  return {
+    kind: kind as 'contact' | 'contact_list',
+    count: count || (kind === 'contact' ? 1 : 0),
+    items,
+  };
+};
+
+const getMessageMetadataSignature = (message: CommWhatsAppMessage) => {
+  const metadata = getMessageMetadataRecord(message);
+  return JSON.stringify({
+    quote: readRecord(metadata.quote),
+    contact_card: readRecord(metadata.contact_card),
+  });
+};
+
 const createVirtualAnchorRect = (anchor: PointerAnchor) => ({
   left: anchor.x,
   right: anchor.x,
@@ -400,9 +521,7 @@ const createVirtualAnchorRect = (anchor: PointerAnchor) => ({
 });
 
 const getMessageLinkPreview = (message: CommWhatsAppMessage) => {
-  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
-    ? message.metadata as Record<string, unknown>
-    : {};
+  const metadata = getMessageMetadataRecord(message);
   const preview = metadata.link_preview;
   if (!preview || typeof preview !== 'object' || Array.isArray(preview)) {
     return null;
@@ -1785,6 +1904,8 @@ function WhatsAppMessageBody({
   const editInfo = useMemo(() => getEditedMessageInfo(message), [message]);
   const deletedInfo = useMemo(() => getDeletedMessageInfo(message), [message]);
   const linkPreview = useMemo(() => getMessageLinkPreview(message), [message]);
+  const quoteInfo = useMemo(() => getMessageQuoteInfo(message), [message]);
+  const contactCardInfo = useMemo(() => getMessageContactCardInfo(message), [message]);
 
   useEffect(() => {
     setShowOriginalText(false);
@@ -1854,6 +1975,54 @@ function WhatsAppMessageBody({
         </div>
       )
     : null;
+  const quotePreviewNode = quoteInfo ? (
+    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-black/10 px-3 py-2.5">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-current/50 opacity-70" />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Resposta</p>
+          <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 opacity-85">{quoteInfo.previewText}</p>
+        </div>
+      </div>
+    </div>
+  ) : null;
+  const visibleContactItems = contactCardInfo?.items.slice(0, 3) ?? [];
+  const hiddenContactCount = contactCardInfo ? Math.max(0, contactCardInfo.count - visibleContactItems.length) : 0;
+  const contactCardNode = contactCardInfo ? (
+    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)] px-3 py-3">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)]">
+          <UserRound className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+            {contactCardInfo.kind === 'contact'
+              ? 'Contato compartilhado'
+              : contactCardInfo.count > 0
+                ? `${contactCardInfo.count} contatos compartilhados`
+                : 'Contatos compartilhados'}
+          </p>
+          {visibleContactItems.length > 0 ? (
+            <div className="space-y-2">
+              {visibleContactItems.map((item, index) => (
+                <div key={`${item.name ?? 'contact'}:${item.phoneNumber ?? index}`} className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2.5">
+                  <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{item.name || 'Contato sem nome'}</p>
+                  {item.phoneNumber ? (
+                    <p className="mt-1 text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm leading-6 text-[var(--panel-text-soft,#5b4635)]">{message.text_content || '[Contato]'}</p>
+          )}
+          {hiddenContactCount > 0 ? (
+            <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">+{hiddenContactCount} contato(s)</p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   if (deletedInfo.deleted) {
     const deletedByLabel = deletedInfo.deletedBy === 'self'
@@ -1877,6 +2046,7 @@ function WhatsAppMessageBody({
   if (kind === 'image') {
     return (
       <div className="space-y-3">
+        {quotePreviewNode}
         {mediaUrl ? (
           <button
             type="button"
@@ -1903,6 +2073,7 @@ function WhatsAppMessageBody({
   if (isVideoLikeMessageType(kind)) {
     return (
       <div className="space-y-3">
+        {quotePreviewNode}
         <div className="whatsapp-inbox-image-card overflow-hidden rounded-2xl border">
           {mediaUrl ? (
             <video controls preload="metadata" className="max-h-[320px] w-full bg-black object-contain">
@@ -1929,6 +2100,7 @@ function WhatsAppMessageBody({
 
     return (
       <div className="space-y-3">
+        {quotePreviewNode}
         <div className="whatsapp-inbox-document-card flex items-center gap-3 rounded-2xl border px-3 py-3">
           <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xs font-semibold tracking-[0.08em]">
             {extension.slice(0, 4)}
@@ -1969,6 +2141,7 @@ function WhatsAppMessageBody({
 
     return (
       <div className="space-y-3">
+        {quotePreviewNode}
         <WhatsAppAudioPlayerCard
           kind={kind}
           mediaUrl={mediaUrl}
@@ -2024,8 +2197,19 @@ function WhatsAppMessageBody({
     );
   }
 
+  if (kind === 'contact' || kind === 'contact_list') {
+    return (
+      <div className="space-y-3">
+        {quotePreviewNode}
+        {contactCardNode || <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={message.text_content || '[Contato]'} />}
+        {editInfoNode}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
+      {quotePreviewNode}
       {linkPreviewNode}
       <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={message.text_content || '[Mensagem sem texto]'} />
       {editInfoNode}
@@ -2288,7 +2472,7 @@ export default function WhatsAppInboxScreen() {
       items
         .map(
           (message) =>
-            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.message_at}:${message.text_content ?? ''}:${message.message_type}:${message.media_id ?? ''}:${message.media_url ?? ''}:${message.media_file_name ?? ''}:${message.media_caption ?? ''}:${message.transcription_text ?? ''}:${message.transcription_status ?? ''}:${message.transcription_error ?? ''}`,
+            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.message_at}:${message.text_content ?? ''}:${message.message_type}:${message.media_id ?? ''}:${message.media_url ?? ''}:${message.media_file_name ?? ''}:${message.media_caption ?? ''}:${message.transcription_text ?? ''}:${message.transcription_status ?? ''}:${message.transcription_error ?? ''}:${getMessageMetadataSignature(message)}`,
         )
         .join('|'),
     [],
@@ -2677,6 +2861,10 @@ export default function WhatsAppInboxScreen() {
       }
 
       if (getMessageVisibleCaption(current) || getMessageVisibleCaption(next)) {
+        return false;
+      }
+
+      if (hasMessageQuote(current) || hasMessageQuote(next)) {
         return false;
       }
 

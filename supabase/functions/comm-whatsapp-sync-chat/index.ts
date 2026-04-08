@@ -6,9 +6,11 @@ import {
   COMM_WHATSAPP_MODULE,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  extractWhapiContactCardMeta,
   extractWhapiDeletedMessageEvent,
   extractWhapiEditedMessageEvent,
   extractWhapiLinkPreviewMeta,
+  extractWhapiQuotedMessageMeta,
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
@@ -300,6 +302,8 @@ Deno.serve(async (req: Request) => {
       const externalMessageId = toTrimmedString(message.id);
       const mediaMeta = extractWhapiMediaMeta(message);
       const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
+      const quoteMeta = extractWhapiQuotedMessageMeta(message);
+      const contactCardMeta = extractWhapiContactCardMeta(message);
       const summaryText = summarizeWhapiMessage(message);
       await persistCommWhatsAppMessage(supabaseAdmin, {
         channelId: channel.id,
@@ -336,6 +340,8 @@ Deno.serve(async (req: Request) => {
           from_name: toTrimmedString(message.from_name) || null,
           chat_name: toTrimmedString(message.chat_name) || null,
           link_preview: linkPreviewMeta,
+          ...(quoteMeta ? { quote: quoteMeta } : {}),
+          ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
         },
       });
     }

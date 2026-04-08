@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cx } from '../../../lib/cx';
 import { isPanelDarkTheme } from '../../../components/ui/dropdownStyles';
+import Pagination from '../../../components/Pagination';
 import { type CotadorQuoteModality } from '../shared/cotadorConstants';
 import { catalogMatchesQuoteModality } from '../shared/cotadorUtils';
 import type { CotadorCatalogActor, CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote } from '../shared/cotadorTypes';
@@ -130,6 +131,10 @@ export default function CotadorPlanPickerOverlay({
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
   const [activeModalityTab, setActiveModalityTab] = useState<CotadorQuoteModality>(quote.modality ?? 'PME');
   const [floatingMenuPosition, setFloatingMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [operatorPage, setOperatorPage] = useState(1);
+  const [operatorPerPage, setOperatorPerPage] = useState(10);
+  const [floatingPanelPage, setFloatingPanelPage] = useState(1);
+  const [floatingPanelPerPage, setFloatingPanelPerPage] = useState(10);
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
   const operatorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const isDarkTheme = isPanelDarkTheme();
@@ -140,6 +145,8 @@ export default function CotadorPlanPickerOverlay({
       setSelectedLineId(null);
       setSelectedLineScenarioKey(null);
       setSelectedProductKey(null);
+      setOperatorPage(1);
+      setFloatingPanelPage(1);
       return;
     }
 
@@ -155,6 +162,8 @@ export default function CotadorPlanPickerOverlay({
   useEffect(() => {
     if (!isOpen) return;
     setSelectedProductKey(null);
+    setOperatorPage(1);
+    setFloatingPanelPage(1);
   }, [filters.search, filters.networkLocation, filters.administradoraId, filters.entidadeId, filters.perfilEmpresarial, filters.coparticipacao, filters.abrangencia, filters.acomodacao, activeModalityTab, isOpen]);
 
   useEffect(() => {
@@ -455,6 +464,8 @@ export default function CotadorPlanPickerOverlay({
     setSelectedLineId(null);
     setSelectedLineScenarioKey(null);
     setSelectedProductKey(null);
+    setOperatorPage(1);
+    setFloatingPanelPage(1);
   }, [activeModalityTab, isOpen]);
 
   const currentStep = !selectedOperatorId
@@ -474,6 +485,59 @@ export default function CotadorPlanPickerOverlay({
     : currentStep === 'table'
       ? activeProductGroup?.title ?? 'Tabelas'
       : selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Produtos';
+
+  const totalOperatorPages = Math.max(1, Math.ceil(operatorCards.length / operatorPerPage));
+
+  useEffect(() => {
+    if (operatorPage > totalOperatorPages) {
+      setOperatorPage(totalOperatorPages);
+    }
+  }, [operatorPage, totalOperatorPages]);
+
+  const paginatedOperatorCards = useMemo(() => {
+    const startIndex = (operatorPage - 1) * operatorPerPage;
+    return operatorCards.slice(startIndex, startIndex + operatorPerPage);
+  }, [operatorCards, operatorPage, operatorPerPage]);
+
+  const activeFloatingPanelTotalItems = currentStep === 'line'
+    ? lineScenarioCards.length
+    : currentStep === 'table'
+      ? tableCandidates.length
+      : usesLineScenarioStep
+        ? productDirectOptions.length
+        : productGroups.length;
+
+  const totalFloatingPanelPages = Math.max(1, Math.ceil(activeFloatingPanelTotalItems / floatingPanelPerPage));
+
+  useEffect(() => {
+    setFloatingPanelPage(1);
+  }, [currentStep, selectedOperatorId, selectedLineId, selectedLineScenarioKey, selectedProductKey]);
+
+  useEffect(() => {
+    if (floatingPanelPage > totalFloatingPanelPages) {
+      setFloatingPanelPage(totalFloatingPanelPages);
+    }
+  }, [floatingPanelPage, totalFloatingPanelPages]);
+
+  const paginatedLineScenarioCards = useMemo(() => {
+    const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
+    return lineScenarioCards.slice(startIndex, startIndex + floatingPanelPerPage);
+  }, [floatingPanelPage, floatingPanelPerPage, lineScenarioCards]);
+
+  const paginatedTableCandidates = useMemo(() => {
+    const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
+    return tableCandidates.slice(startIndex, startIndex + floatingPanelPerPage);
+  }, [floatingPanelPage, floatingPanelPerPage, tableCandidates]);
+
+  const paginatedProductDirectOptions = useMemo(() => {
+    const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
+    return productDirectOptions.slice(startIndex, startIndex + floatingPanelPerPage);
+  }, [floatingPanelPage, floatingPanelPerPage, productDirectOptions]);
+
+  const paginatedProductGroups = useMemo(() => {
+    const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
+    return productGroups.slice(startIndex, startIndex + floatingPanelPerPage);
+  }, [floatingPanelPage, floatingPanelPerPage, productGroups]);
 
   useEffect(() => {
     if (!isOpen || !selectedOperatorId) {
@@ -616,7 +680,7 @@ export default function CotadorPlanPickerOverlay({
                 ) : (
                   <div ref={gridContainerRef} className="relative min-h-[560px] xl:min-h-[640px]">
                     <div className="grid gap-4 transition-all sm:grid-cols-2 xl:grid-cols-5">
-                      {operatorCards.map((card) => {
+                      {paginatedOperatorCards.map((card) => {
                         const isActive = selectedOperatorId === card.actor.id;
                         return (
                           <div key={card.actor.id} className={cx(isActive ? 'z-20' : undefined)}>
@@ -658,6 +722,22 @@ export default function CotadorPlanPickerOverlay({
                         );
                       })}
                     </div>
+
+                    {operatorCards.length > operatorPerPage && (
+                      <div className="mt-4 overflow-hidden rounded-[24px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+                        <Pagination
+                          currentPage={operatorPage}
+                          totalPages={totalOperatorPages}
+                          itemsPerPage={operatorPerPage}
+                          totalItems={operatorCards.length}
+                          onPageChange={setOperatorPage}
+                          onItemsPerPageChange={(value) => {
+                            setOperatorPerPage(value);
+                            setOperatorPage(1);
+                          }}
+                        />
+                      </div>
+                    )}
 
                     {selectedOperatorId && floatingMenuPosition && (
                       <div
@@ -713,7 +793,7 @@ export default function CotadorPlanPickerOverlay({
                                 </div>
                               ) : (
                                 <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                  {lineScenarioCards.map((lineScenario) => (
+                                  {paginatedLineScenarioCards.map((lineScenario) => (
                                     <button
                                       key={lineScenario.key}
                                       type="button"
@@ -747,7 +827,7 @@ export default function CotadorPlanPickerOverlay({
                                 </div>
                               ) : (
                                 <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                  {tableCandidates.map((item) => {
+                                  {paginatedTableCandidates.map((item) => {
                                     const isSelected = selectedIds.has(item.id);
                                     return (
                                       <button
@@ -789,7 +869,7 @@ export default function CotadorPlanPickerOverlay({
                                 </div>
                               ) : (
                                 <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                  {productDirectOptions.map((option) => {
+                                  {paginatedProductDirectOptions.map((option) => {
                                     const isSelected = selectedIds.has(option.item.id);
                                     return (
                                       <button
@@ -833,7 +913,7 @@ export default function CotadorPlanPickerOverlay({
                               </div>
                             ) : (
                               <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                {productGroups.map((group) => (
+                                {paginatedProductGroups.map((group) => (
                                   <button
                                     key={group.key}
                                     type="button"
@@ -850,6 +930,20 @@ export default function CotadorPlanPickerOverlay({
                               </div>
                             )}
                           </div>
+
+                          {activeFloatingPanelTotalItems > floatingPanelPerPage && (
+                            <Pagination
+                              currentPage={floatingPanelPage}
+                              totalPages={totalFloatingPanelPages}
+                              itemsPerPage={floatingPanelPerPage}
+                              totalItems={activeFloatingPanelTotalItems}
+                              onPageChange={setFloatingPanelPage}
+                              onItemsPerPageChange={(value) => {
+                                setFloatingPanelPerPage(value);
+                                setFloatingPanelPage(1);
+                              }}
+                            />
+                          )}
                         </div>
                       </div>
                     )}

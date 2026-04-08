@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, ArrowLeft, Calculator, FileStack, Plus, Settings2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/ui/Button';
+import Pagination from '../../components/Pagination';
 import CotadorCatalogTab from '../../components/config/CotadorCatalogTab';
 import { fetchAllPages, supabase, type Lead } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
@@ -151,6 +152,8 @@ export default function CotadorScreen() {
   });
   const selectionSyncingRef = useRef(false);
   const pendingSelectionRef = useRef<{ quoteId: string; items: CotadorQuote['selectedItems'] } | null>(null);
+  const [quotesPage, setQuotesPage] = useState(1);
+  const [quotesPerPage, setQuotesPerPage] = useState(25);
 
   useEffect(() => {
     let active = true;
@@ -190,6 +193,19 @@ export default function CotadorScreen() {
   useEffect(() => {
     saveCotadorQuotesToStorage(quotes);
   }, [quotes]);
+
+  const totalQuotePages = Math.max(1, Math.ceil(quotes.length / quotesPerPage));
+
+  useEffect(() => {
+    if (quotesPage > totalQuotePages) {
+      setQuotesPage(totalQuotePages);
+    }
+  }, [quotesPage, totalQuotePages]);
+
+  const paginatedQuotes = useMemo(() => {
+    const startIndex = (quotesPage - 1) * quotesPerPage;
+    return quotes.slice(startIndex, startIndex + quotesPerPage);
+  }, [quotes, quotesPage, quotesPerPage]);
 
   useEffect(() => {
     setFilters(DEFAULT_FILTERS);
@@ -547,7 +563,7 @@ export default function CotadorScreen() {
           </div>
 
           <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] dark:divide-[color:rgba(255,255,255,0.08)]">
-            {quotes.map((quote) => (
+            {paginatedQuotes.map((quote) => (
               <button
                 key={quote.id}
                 type="button"
@@ -571,6 +587,20 @@ export default function CotadorScreen() {
               </button>
             ))}
           </div>
+
+          {quotes.length > quotesPerPage && (
+            <Pagination
+              currentPage={quotesPage}
+              totalPages={totalQuotePages}
+              itemsPerPage={quotesPerPage}
+              totalItems={quotes.length}
+              onPageChange={setQuotesPage}
+              onItemsPerPageChange={(value) => {
+                setQuotesPerPage(value);
+                setQuotesPage(1);
+              }}
+            />
+          )}
         </section>
       )}
     </div>

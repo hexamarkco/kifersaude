@@ -830,6 +830,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [productEditingId, setProductEditingId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState<ProductFormState>(DEFAULT_PRODUCT_FORM);
   const [productSearch, setProductSearch] = useState('');
+  const [productPage, setProductPage] = useState(1);
+  const [productPerPage, setProductPerPage] = useState(25);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importForm, setImportForm] = useState<ImportFormState>({ file: null });
   const [importPreview, setImportPreview] = useState<CotadorImportPreview | null>(null);
@@ -885,6 +887,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
   useEffect(() => {
     void loadCatalogData();
+    void loadNetworkHospitals();
   }, []);
 
   useEffect(() => {
@@ -987,6 +990,19 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         return left.linhaNome.localeCompare(right.linhaNome, 'pt-BR');
       });
   }, [filteredProducts]);
+
+  const totalProductPages = Math.max(1, Math.ceil(groupedProducts.length / productPerPage));
+
+  useEffect(() => {
+    if (productPage > totalProductPages) {
+      setProductPage(totalProductPages);
+    }
+  }, [productPage, totalProductPages]);
+
+  const paginatedGroupedProducts = useMemo(() => {
+    const startIndex = (productPage - 1) * productPerPage;
+    return groupedProducts.slice(startIndex, startIndex + productPerPage);
+  }, [groupedProducts, productPage, productPerPage]);
 
   const networkProducts = useMemo(
     () => [...produtos].sort(compareCotadorProducts),
@@ -1426,6 +1442,15 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       })
       .slice(0, 12);
   }, [networkHospitals]);
+
+  const finalCatalogMetrics = useMemo(() => ({
+    ...catalogMetrics,
+    totalHospitals: networkHospitals.length,
+    hospitalsWithoutBairro: networkHospitalQualityCounts['missing-bairro'],
+    hospitalsWithoutRegiao: networkHospitalQualityCounts['missing-regiao'],
+    hospitalsSuspectBairro: networkHospitalQualityCounts['suspect-bairro'],
+    mergeSuggestions: networkHospitalMergeSuggestions.length,
+  }), [catalogMetrics, networkHospitalMergeSuggestions.length, networkHospitalQualityCounts, networkHospitals.length]);
 
   const totalNetworkHospitalPages = Math.max(1, Math.ceil(filteredNetworkHospitals.length / networkHospitalPerPage));
 
@@ -2433,7 +2458,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant="panel" className="mt-6" />
       </div>
 
-      {!loading && !catalogLoadError && <CotadorCatalogMetricsPanel metrics={catalogMetrics} />}
+      {!loading && !catalogLoadError && <CotadorCatalogMetricsPanel metrics={finalCatalogMetrics} />}
 
       {loading ? (
         <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
@@ -2535,7 +2560,10 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 <div className="w-full lg:max-w-sm">
                   <Input
                     value={productSearch}
-                    onChange={(event) => setProductSearch(event.target.value)}
+                    onChange={(event) => {
+                      setProductSearch(event.target.value);
+                      setProductPage(1);
+                    }}
                     placeholder="Buscar produto, linha ou operadora"
                     leftIcon={Search}
                     className="[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef] shadow-none placeholder:text-[color:rgba(255,243,209,0.42)] focus:border-[color:rgba(251,191,36,0.28)] focus:ring-[color:rgba(251,191,36,0.26)]"
@@ -2548,7 +2576,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <EmptyState icon={Search} title="Nenhum produto encontrado" description="Ajuste a busca." />
             ) : (
               <div className="space-y-4">
-                {groupedProducts.map((group) => (
+                {paginatedGroupedProducts.map((group) => (
                   <section key={group.key} className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
                     <div className="flex flex-col gap-3 border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                       <div>
@@ -2616,6 +2644,20 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     </div>
                   </section>
                 ))}
+
+                {groupedProducts.length > productPerPage && (
+                  <Pagination
+                    currentPage={productPage}
+                    totalPages={totalProductPages}
+                    itemsPerPage={productPerPage}
+                    totalItems={groupedProducts.length}
+                    onPageChange={setProductPage}
+                    onItemsPerPageChange={(value) => {
+                      setProductPerPage(value);
+                      setProductPage(1);
+                    }}
+                  />
+                )}
               </div>
             )}
           </div>

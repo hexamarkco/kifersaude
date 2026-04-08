@@ -25,12 +25,14 @@ dist-ssr
 supabase.local.ini
 .deploy-cache/
 local-artifacts/
+cotador-json/
 deploy-functions.bat
 deploy.bat
 supabase/.temp/
 supabase/supabase/.temp/
 .vite/
 
+scripts/
 scripts/.env.local
 scripts/__pycache__/
 scripts/*.pyc

@@ -8,6 +8,7 @@ import {
   BlogTab,
   ConfigPage,
   ContractsManagerWrapper,
+  CotadorSharePage,
   CotadorWrapper,
   DashboardWrapper,
   FinanceiroAgendaTab,
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/como-funciona" element={<Navigate to="/" replace />} />
             <Route path="/depoimentos" element={<Navigate to="/" replace />} />
             <Route path="/faq" element={<Navigate to="/" replace />} />
+            <Route path="/cotador/compartilhar/:shareToken" element={<CotadorSharePage />} />
             <Route path="/planos/*" element={<Navigate to="/" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route

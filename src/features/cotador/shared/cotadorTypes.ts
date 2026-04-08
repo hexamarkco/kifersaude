@@ -33,6 +33,30 @@ export type CotadorQuote = {
   updatedAt: string;
 };
 
+export type CotadorQuoteSharePayload = {
+  version: 1;
+  quote: {
+    id: string;
+    name: string;
+    modality: CotadorQuoteModality;
+    ageDistribution: CotadorAgeDistribution;
+    totalLives: number;
+    createdAt: string;
+    updatedAt: string;
+  };
+  items: CotadorQuoteItem[];
+};
+
+export type CotadorQuoteShare = {
+  id: string;
+  quoteId: string;
+  token: string;
+  includeNetworkComparison: boolean;
+  payload: CotadorQuoteSharePayload;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type CotadorCatalogActor = {
   id: string;
   name: string | null;

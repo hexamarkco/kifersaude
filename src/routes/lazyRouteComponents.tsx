@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 
 export const HomePage = lazy(() => import('../pages/public/HomePage'));
+export const CotadorSharePage = lazy(() => import('../pages/public/CotadorSharePage'));
 export const PlanosPage = lazy(() => import('../pages/public/PlanosPage'));
 export const LandingPage = lazy(() => import('../pages/LandingPage'));
 export const PainelWrapper = lazy(() => import('../pages/PainelWrapper'));

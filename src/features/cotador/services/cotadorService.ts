@@ -14,6 +14,7 @@ import {
   type CotadorQuoteBeneficiaryRecord,
   type CotadorQuoteItemRecord,
   type CotadorQuoteRecord,
+  type CotadorQuoteShareRecord,
   type CotadorTabela,
   type CotadorTabelaFaixaPreco,
   type Operadora,
@@ -21,10 +22,12 @@ import {
 } from '../../../lib/supabase';
 import { COTADOR_AGE_RANGES, type CotadorAgeRange } from '../shared/cotadorConstants';
 import {
+  buildCotadorQuoteSharePayload,
   buildCotadorComparableHospitalKey,
   createEmptyCotadorAgeDistribution,
   getCotadorTotalLives,
   loadCotadorQuotesFromStorage,
+  parseCotadorQuoteSharePayload,
   sanitizeCotadorAgeDistribution,
   sortCotadorQuotesByRecent,
 } from '../shared/cotadorUtils';
@@ -38,6 +41,7 @@ import type {
   CotadorQuote,
   CotadorQuoteInput,
   CotadorQuoteItem,
+  CotadorQuoteShare,
 } from '../shared/cotadorTypes';
 import { DEFAULT_COTADOR_FILTERS } from '../shared/cotadorTypes';
 import {
@@ -405,6 +409,10 @@ type PaginatedRowsResult<T> = {
   error: PostgrestError | null;
 };
 
+type CotadorQuoteShareRpcResult = Pick<CotadorQuoteShareRecord, 'id' | 'quote_id' | 'token' | 'include_network_compare' | 'created_at' | 'updated_at'> & {
+  payload: unknown;
+};
+
 async function fetchAllRows<T>(
   fetchPage: (from: number, to: number) => Promise<PaginatedRowsResult<T>>,
 ): Promise<T[]> {
@@ -423,6 +431,37 @@ async function fetchAllRowsResult<T>(
     return { data: null, error };
   }
 }
+
+const parseCotadorQuoteShare = (value: unknown): CotadorQuoteShare | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Partial<CotadorQuoteShareRpcResult>;
+  const payload = parseCotadorQuoteSharePayload(candidate.payload);
+
+  if (
+    typeof candidate.id !== 'string'
+    || typeof candidate.quote_id !== 'string'
+    || typeof candidate.token !== 'string'
+    || typeof candidate.include_network_compare !== 'boolean'
+    || typeof candidate.created_at !== 'string'
+    || typeof candidate.updated_at !== 'string'
+    || !payload
+  ) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    quoteId: candidate.quote_id,
+    token: candidate.token,
+    includeNetworkComparison: candidate.include_network_compare,
+    payload,
+    createdAt: candidate.created_at,
+    updatedAt: candidate.updated_at,
+  };
+};
 
 const mergeUniqueStrings = (values: Array<string | null | undefined>) =>
   Array.from(new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))));
@@ -2367,6 +2406,53 @@ export const cotadorService = {
     } catch (error) {
       console.error('Error saving cotador quote selection:', error);
       return { error: toPostgrestError(error) };
+    }
+  },
+
+  async upsertQuoteShare(quote: CotadorQuote, includeNetworkComparison: boolean) {
+    try {
+      const payload = buildCotadorQuoteSharePayload(quote, quote.selectedItems);
+      const { data, error } = await supabase.rpc('upsert_cotador_quote_share', {
+        p_quote_id: quote.id,
+        p_include_network_compare: includeNetworkComparison,
+        p_payload: payload,
+      });
+
+      if (error) {
+        return { data: null, error };
+      }
+
+      const parsed = parseCotadorQuoteShare(data);
+      if (!parsed) {
+        return { data: null, error: toPostgrestError(new Error('Share RPC returned invalid response')) };
+      }
+
+      return { data: parsed, error: null };
+    } catch (error) {
+      console.error('Error upserting cotador quote share:', error);
+      return { data: null, error: toPostgrestError(error) };
+    }
+  },
+
+  async getPublicQuoteShare(token: string) {
+    try {
+      const { data, error } = await supabase.rpc('get_public_cotador_quote_share', {
+        p_token: token,
+      });
+
+      if (error) {
+        return { data: null, error };
+      }
+
+      const parsed = parseCotadorQuoteShare(data);
+      if (!parsed) {
+        return { data: null, error: null };
+      }
+
+      return { data: parsed, error: null };
+    } catch (error) {
+      console.error('Error loading public cotador quote share:', error);
+      return { data: null, error: toPostgrestError(error) };
     }
   },
 };

@@ -17,6 +17,7 @@ import type {
   CotadorQuoteDraft,
   CotadorQuoteInput,
   CotadorQuoteItem,
+  CotadorQuoteSharePayload,
 } from './cotadorTypes';
 import { DEFAULT_COTADOR_FILTERS } from './cotadorTypes';
 
@@ -460,6 +461,60 @@ export const updateCotadorQuote = (quote: CotadorQuote, input: CotadorQuoteInput
     totalLives: getCotadorTotalLives(ageDistribution),
     filters: sanitizeCotadorCatalogFilters(quote.filters),
     updatedAt: new Date().toISOString(),
+  };
+};
+
+export const buildCotadorQuoteSharePayload = (
+  quote: CotadorQuote,
+  items: CotadorQuoteItem[] = quote.selectedItems,
+): CotadorQuoteSharePayload => ({
+  version: 1,
+  quote: {
+    id: quote.id,
+    name: quote.name,
+    modality: quote.modality,
+    ageDistribution: sanitizeCotadorAgeDistribution(quote.ageDistribution),
+    totalLives: getCotadorTotalLives(quote.ageDistribution),
+    createdAt: quote.createdAt,
+    updatedAt: quote.updatedAt,
+  },
+  items: items
+    .map((item) => sanitizeQuoteItem(item))
+    .filter((item): item is CotadorQuoteItem => item !== null),
+});
+
+export const parseCotadorQuoteSharePayload = (value: unknown): CotadorQuoteSharePayload | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const candidate = value as Partial<CotadorQuoteSharePayload> & {
+    quote?: Partial<CotadorQuote> & { ageDistribution?: Partial<Record<CotadorAgeRange, unknown>> };
+    items?: unknown;
+  };
+
+  if (candidate.version !== 1 || !candidate.quote || typeof candidate.quote.id !== 'string' || typeof candidate.quote.name !== 'string' || !isCotadorQuoteModality(candidate.quote.modality)) {
+    return null;
+  }
+
+  const items = Array.isArray(candidate.items)
+    ? candidate.items.map((item) => sanitizeQuoteItem(item)).filter((item): item is CotadorQuoteItem => item !== null)
+    : [];
+
+  return {
+    version: 1,
+    quote: {
+      id: candidate.quote.id,
+      name: candidate.quote.name,
+      modality: candidate.quote.modality,
+      ageDistribution: sanitizeCotadorAgeDistribution(candidate.quote.ageDistribution),
+      totalLives: typeof candidate.quote.totalLives === 'number'
+        ? candidate.quote.totalLives
+        : getCotadorTotalLives(candidate.quote.ageDistribution ?? null),
+      createdAt: typeof candidate.quote.createdAt === 'string' ? candidate.quote.createdAt : new Date().toISOString(),
+      updatedAt: typeof candidate.quote.updatedAt === 'string' ? candidate.quote.updatedAt : typeof candidate.quote.createdAt === 'string' ? candidate.quote.createdAt : new Date().toISOString(),
+    },
+    items,
   };
 };
 

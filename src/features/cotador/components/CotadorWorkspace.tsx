@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Building2, Check, Link2, MapPin, Minus, Plus, Search, ShieldCheck, Sparkles, Trash2, UserRound, Users } from 'lucide-react';
+import { Building2, Check, Link2, MapPin, Minus, Plus, Search, Share2, ShieldCheck, Sparkles, Trash2, UserRound, Users } from 'lucide-react';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -13,6 +13,7 @@ import {
 } from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 import CotadorPlanPickerOverlay from './CotadorPlanPickerOverlay';
+import CotadorShareModal from './CotadorShareModal';
 
 type SelectOption = {
   value: string;
@@ -172,6 +173,7 @@ export default function CotadorWorkspace({
 }: CotadorWorkspaceProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [networkCompareOpen, setNetworkCompareOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [networkCompareSearch, setNetworkCompareSearch] = useState('');
   const [networkCompareCity, setNetworkCompareCity] = useState('');
   const [networkCompareMode, setNetworkCompareMode] = useState<NetworkCompareMode>('all');
@@ -357,6 +359,10 @@ export default function CotadorWorkspace({
               <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{selectedItems.length} plano(s)</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => setShareModalOpen(true)} disabled={selectedItems.length === 0}>
+                <Share2 className="h-4 w-4" />
+                Compartilhar
+              </Button>
               <Button variant="secondary" onClick={() => setNetworkCompareOpen(true)} disabled={!networkPlansHaveData}>
                 <MapPin className="h-4 w-4" />
                 Ver rede
@@ -791,6 +797,13 @@ export default function CotadorWorkspace({
         }}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}
+      />
+
+      <CotadorShareModal
+        isOpen={shareModalOpen}
+        quote={quote}
+        selectedItems={selectedItems}
+        onClose={() => setShareModalOpen(false)}
       />
     </div>
   );

@@ -618,6 +618,17 @@ export type LeadStatusConfig = {
   updated_at: string;
 };
 
+export type CotadorQuoteShareRecord = {
+  id: string;
+  quote_id: string;
+  owner_user_id: string;
+  token: string;
+  include_network_compare: boolean;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
 export type LeadOrigem = {
   id: string;
   nome: string;

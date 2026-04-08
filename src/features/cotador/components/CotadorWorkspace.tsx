@@ -411,26 +411,35 @@ export default function CotadorWorkspace({
                       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                         <h4 className="min-w-0 flex-1 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
                         {hasHighlights && (
-                          <div className="flex flex-wrap gap-2 sm:max-w-[58%] sm:justify-end">
+                          <div className="flex flex-wrap gap-1.5 sm:max-w-[58%] sm:justify-end">
                           {highlights.bestPrice && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(184,92,31,0.24)] bg-[color:rgba(184,92,31,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-accent-ink,#6f3f16)]">
+                            <span
+                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:rgba(184,92,31,0.24)] bg-[color:rgba(184,92,31,0.1)] text-[color:var(--panel-accent-ink,#6f3f16)]"
+                              title="Melhor preço"
+                              aria-label="Melhor preço"
+                            >
                               <Sparkles className="h-3.5 w-3.5" />
-                              Melhor preço
+                              <span className="sr-only">Melhor preço</span>
                             </span>
                           )}
                           {highlights.largestNetwork && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                            <span
+                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)]"
+                              title="Maior rede"
+                              aria-label="Maior rede"
+                            >
                               <MapPin className="h-3.5 w-3.5" />
-                              Maior rede
+                              <span className="sr-only">Maior rede</span>
                             </span>
                           )}
                           {highlights.mostRestrictive && (
                             <span
-                              className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(92,53,23,0.2)] bg-[color:rgba(92,53,23,0.08)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text,#1a120d)]"
-                              title={highlights.restrictiveReason ?? undefined}
+                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:rgba(92,53,23,0.2)] bg-[color:rgba(92,53,23,0.08)] text-[color:var(--panel-text,#1a120d)]"
+                              title={highlights.restrictiveReason ? `Mais restritivo: ${highlights.restrictiveReason}` : 'Mais restritivo'}
+                              aria-label="Mais restritivo"
                             >
                               <ShieldCheck className="h-3.5 w-3.5" />
-                              Mais restritivo
+                              <span className="sr-only">Mais restritivo</span>
                             </span>
                           )}
                           </div>

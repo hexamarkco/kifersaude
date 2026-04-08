@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Building2, FileText, MapPin, Search, ShieldCheck, WalletCards } from 'lucide-react';
+import { ArrowLeft, Building2, ChevronRight, FileText, MapPin, Search, ShieldCheck, WalletCards } from 'lucide-react';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -17,6 +17,7 @@ type DetailSection = {
   title: string;
   content: string;
   icon: typeof ShieldCheck;
+  description: string;
 };
 
 type SummaryBlock = {
@@ -24,6 +25,11 @@ type SummaryBlock = {
   value: string;
   helper?: string;
 };
+
+type ParsedDetailBlock =
+  | { type: 'paragraph'; text: string }
+  | { type: 'list'; items: string[] }
+  | { type: 'table'; headers: string[]; rows: string[][] };
 
 const formatPerfil = (value: CotadorQuoteItem['perfilEmpresarial']) => {
   if (value === 'mei') return 'MEI';
@@ -40,6 +46,81 @@ const formatCopart = (value: CotadorQuoteItem['coparticipacao']) => {
 };
 
 const cleanDetailText = (value?: string | null) => value?.trim() ?? '';
+
+const parseTableRow = (line: string) => line
+  .split('|')
+  .map((cell) => cell.trim())
+  .filter(Boolean);
+
+const isMarkdownTableSeparator = (line: string) => {
+  const trimmed = line.trim();
+  return trimmed.includes('|') && /^[:\-|\s]+$/.test(trimmed);
+};
+
+const parseDetailContent = (content: string): ParsedDetailBlock[] => {
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return [];
+
+  const blocks: ParsedDetailBlock[] = [];
+  let paragraphBuffer: string[] = [];
+  let listBuffer: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+    blocks.push({ type: 'paragraph', text: paragraphBuffer.join(' ') });
+    paragraphBuffer = [];
+  };
+
+  const flushList = () => {
+    if (listBuffer.length === 0) return;
+    blocks.push({ type: 'list', items: listBuffer });
+    listBuffer = [];
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const nextLine = lines[index + 1] ?? '';
+
+    if (line.includes('|') && isMarkdownTableSeparator(nextLine)) {
+      flushParagraph();
+      flushList();
+
+      const headers = parseTableRow(line);
+      const rows: string[][] = [];
+      index += 2;
+
+      while (index < lines.length && lines[index].includes('|')) {
+        const row = parseTableRow(lines[index]);
+        if (row.length > 0) rows.push(row);
+        index += 1;
+      }
+
+      index -= 1;
+      if (headers.length > 0 && rows.length > 0) {
+        blocks.push({ type: 'table', headers, rows });
+        continue;
+      }
+    }
+
+    if (/^[-*•]\s+/.test(line)) {
+      flushParagraph();
+      listBuffer.push(line.replace(/^[-*•]\s+/, '').trim());
+      continue;
+    }
+
+    flushList();
+    paragraphBuffer.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+
+  return blocks;
+};
 
 const compareNetworkEntries = (left: CotadorQuoteItem['redeHospitalar'][number], right: CotadorQuoteItem['redeHospitalar'][number]) => {
   const cityComparison = (left.cidade ?? '').localeCompare(right.cidade ?? '', 'pt-BR');
@@ -75,16 +156,16 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
   const sections = useMemo<DetailSection[]>(() => {
     const entries: Array<DetailSection | null> = [
       cleanDetailText(item.carencias)
-        ? { id: 'carencias', title: 'Carencias', content: cleanDetailText(item.carencias), icon: ShieldCheck }
+        ? { id: 'carencias', title: 'Carencias', content: cleanDetailText(item.carencias), icon: ShieldCheck, description: 'Consulte regras, prazos e reducoes aplicadas ao plano.' }
         : null,
       cleanDetailText(item.documentosNecessarios)
-        ? { id: 'documentos', title: 'Documentos necessarios', content: cleanDetailText(item.documentosNecessarios), icon: FileText }
+        ? { id: 'documentos', title: 'Documentos necessarios', content: cleanDetailText(item.documentosNecessarios), icon: FileText, description: 'Veja a documentacao exigida para titular e dependentes.' }
         : null,
       cleanDetailText(item.reembolso)
-        ? { id: 'reembolso', title: 'Reembolso', content: cleanDetailText(item.reembolso), icon: WalletCards }
+        ? { id: 'reembolso', title: 'Reembolso', content: cleanDetailText(item.reembolso), icon: WalletCards, description: 'Limites e observacoes do reembolso informado.' }
         : null,
       cleanDetailText(item.informacoesImportantes)
-        ? { id: 'informacoes', title: 'Informacoes importantes', content: cleanDetailText(item.informacoesImportantes), icon: FileText }
+        ? { id: 'informacoes', title: 'Informacoes importantes', content: cleanDetailText(item.informacoesImportantes), icon: FileText, description: 'Notas operacionais e condicoes adicionais do produto.' }
         : null,
     ];
 
@@ -94,6 +175,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
   const [networkSearch, setNetworkSearch] = useState('');
   const [networkCity, setNetworkCity] = useState('');
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const mergedNetworkEntries = useMemo(
     () => mergeCotadorHospitalNetworkEntries(item.redeHospitalar),
     [item.redeHospitalar],
@@ -105,13 +187,8 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
   );
 
   const summaryBlocks = useMemo<SummaryBlock[]>(() => {
-    const entries: SummaryBlock[] = [
-      { label: 'Perfil', value: formatPerfil(item.perfilEmpresarial) },
+    return [
       { label: 'Coparticipacao', value: formatCopart(item.coparticipacao) },
-      {
-        label: 'Faixa de vidas',
-        value: item.vidasMin !== null || item.vidasMax !== null ? `${item.vidasMin ?? 1} a ${item.vidasMax ?? '...' } vidas` : 'Livre',
-      },
       { label: 'Acomodacao', value: item.acomodacao ?? '-' },
       { label: 'Abrangencia', value: item.abrangencia ?? 'Nao informada' },
       {
@@ -120,24 +197,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
         helper: networkCitiesCount > 0 ? `${networkCitiesCount} cidade(s)` : undefined,
       },
     ];
-
-    if (item.administradora?.name) {
-      entries.push({ label: 'Administradora', value: item.administradora.name });
-    }
-
-    if (item.entidadesClasse.length > 0) {
-      entries.push({
-        label: 'Entidades',
-        value: item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', '),
-      });
-    }
-
-    if (item.comissaoSugerida !== null) {
-      entries.push({ label: 'Comissao sugerida', value: `${item.comissaoSugerida.toFixed(2)}%` });
-    }
-
-    return entries;
-  }, [item.acomodacao, item.abrangencia, item.administradora?.name, item.comissaoSugerida, item.coparticipacao, item.entidadesClasse, item.perfilEmpresarial, item.vidasMax, item.vidasMin, networkCitiesCount, networkEntriesCount]);
+  }, [item.acomodacao, item.abrangencia, item.coparticipacao, networkCitiesCount, networkEntriesCount]);
 
   const commercialNotes = useMemo(() => {
     const notes: string[] = [];
@@ -145,10 +205,26 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
     return notes;
   }, [item.observacao]);
 
+  const pricesByAgeRangeEntries = useMemo(
+    () => Object.entries(item.pricesByAgeRange ?? {}).filter(([, value]) => typeof value === 'number' && Number.isFinite(value)),
+    [item.pricesByAgeRange],
+  );
+
+  const activeSection = useMemo(
+    () => sections.find((section) => section.id === activeSectionId) ?? null,
+    [activeSectionId, sections],
+  );
+
+  const activeSectionBlocks = useMemo(
+    () => (activeSection ? parseDetailContent(activeSection.content) : []),
+    [activeSection],
+  );
+
   useEffect(() => {
     setNetworkSearch('');
     setNetworkCity('');
     setNetworkModalOpen(false);
+    setActiveSectionId(null);
   }, [item.id]);
 
   const sortedNetwork = useMemo(
@@ -239,45 +315,183 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
           <h2 className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Informacoes objetivas para decisao</h2>
         </div>
 
-        {sections.length === 0 && commercialNotes.length === 0 ? (
+        {sections.length === 0 && commercialNotes.length === 0 && pricesByAgeRangeEntries.length === 0 ? (
           <div className="mt-6 rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
             Este produto ainda nao possui informacoes adicionais cadastradas.
           </div>
         ) : (
           <div className="mt-6 grid gap-3 xl:grid-cols-2">
+            {pricesByAgeRangeEntries.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveSectionId('faixas-preco')}
+                className="flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-5 py-5 text-left transition-colors hover:border-[var(--panel-border,#d4c0a7)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))]"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
+                      <WalletCards className="h-4 w-4" />
+                    </span>
+                    <span className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">Mensalidade por faixa etaria</span>
+                  </div>
+                  <p className="mt-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                    Confira todos os valores da tabela comercial por idade antes de comparar o plano.
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--panel-text-muted,#876f5c)]" />
+              </button>
+            )}
+
             {sections.map((section) => {
               const Icon = section.icon;
               return (
-                <article key={section.id} className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
-                  <div className="flex items-center gap-3 border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-5 py-4">
-                    <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{section.title}</span>
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => setActiveSectionId(section.id)}
+                  className="flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-5 py-5 text-left transition-colors hover:border-[var(--panel-border,#d4c0a7)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))]"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{section.title}</span>
+                    </div>
+                    <p className="mt-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{section.description}</p>
                   </div>
-                  <div className="bg-[var(--panel-surface,#fffdfa)] px-5 py-4 text-sm leading-6 text-[color:var(--panel-text-soft,#5b4635)] whitespace-pre-wrap">
-                    {section.content}
-                  </div>
-                </article>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--panel-text-muted,#876f5c)]" />
+                </button>
               );
             })}
 
-            {commercialNotes.map((note, index) => (
-              <article key={`note-${index}`} className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] xl:col-span-2">
-                <div className="flex items-center gap-3 border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-5 py-4">
-                  <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
-                    <FileText className="h-4 w-4" />
-                  </span>
-                  <span className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">Observacoes comerciais</span>
+            {commercialNotes.map((_, index) => (
+              <button
+                key={`note-${index}`}
+                type="button"
+                onClick={() => setActiveSectionId(`nota-${index}`)}
+                className="flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-5 py-5 text-left transition-colors hover:border-[var(--panel-border,#d4c0a7)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] xl:col-span-2"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
+                      <FileText className="h-4 w-4" />
+                    </span>
+                    <span className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">Observacoes comerciais</span>
+                  </div>
+                  <p className="mt-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Abra para ler observacoes e notas complementares do plano.</p>
                 </div>
-                <div className="bg-[var(--panel-surface,#fffdfa)] px-5 py-4 text-sm leading-6 text-[color:var(--panel-text-soft,#5b4635)] whitespace-pre-wrap">
-                  {note}
-                </div>
-              </article>
+                <ChevronRight className="h-5 w-5 shrink-0 text-[color:var(--panel-text-muted,#876f5c)]" />
+              </button>
             ))}
           </div>
         )}
       </section>
+
+      <ModalShell
+        isOpen={activeSectionId !== null}
+        onClose={() => setActiveSectionId(null)}
+        title={
+          activeSectionId === 'faixas-preco'
+            ? 'Mensalidade por faixa etaria'
+            : activeSectionId?.startsWith('nota-')
+              ? 'Observacoes comerciais'
+              : activeSection?.title ?? 'Detalhes do plano'
+        }
+        description={
+          activeSectionId === 'faixas-preco'
+            ? 'Valores base da tabela comercial para cada faixa etaria desta selecao.'
+            : 'Conteudo detalhado do plano em leitura dedicada.'
+        }
+        size="xl"
+      >
+        {activeSectionId === 'faixas-preco' ? (
+          <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]">
+            <div className="grid grid-cols-[minmax(140px,1fr)_minmax(160px,1fr)] border-b border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-5 py-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+              <span>Faixa etaria</span>
+              <span>Valor</span>
+            </div>
+            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+              {pricesByAgeRangeEntries.map(([ageRange, value]) => (
+                <div key={ageRange} className="grid grid-cols-[minmax(140px,1fr)_minmax(160px,1fr)] px-5 py-4 text-sm text-[color:var(--panel-text,#1a120d)]">
+                  <span className="font-semibold">{ageRange}</span>
+                  <span className="font-semibold tabular-nums">{formatCotadorCurrency(value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : activeSectionId?.startsWith('nota-') ? (
+          <div className="space-y-4 text-sm leading-7 text-[color:var(--panel-text-soft,#5b4635)]">
+            {parseDetailContent(commercialNotes[Number(activeSectionId.replace('nota-', ''))] ?? '').map((block, index) => {
+              if (block.type === 'list') {
+                return (
+                  <ul key={`note-list-${index}`} className="list-disc space-y-2 pl-5">
+                    {block.items.map((listItem) => <li key={listItem}>{listItem}</li>)}
+                  </ul>
+                );
+              }
+
+              if (block.type === 'table') {
+                return (
+                  <div key={`note-table-${index}`} className="overflow-auto rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]">
+                        <tr>
+                          {block.headers.map((header) => <th key={header} className="px-4 py-3 font-semibold">{header}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {block.rows.map((row, rowIndex) => (
+                          <tr key={`note-row-${rowIndex}`} className="border-t border-[color:var(--panel-border-subtle,#e7dac8)]">
+                            {row.map((cell, cellIndex) => <td key={`note-cell-${rowIndex}-${cellIndex}`} className="px-4 py-3 align-top">{cell}</td>)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
+
+              return <p key={`note-paragraph-${index}`}>{block.text}</p>;
+            })}
+          </div>
+        ) : (
+          <div className="space-y-4 text-sm leading-7 text-[color:var(--panel-text-soft,#5b4635)]">
+            {activeSectionBlocks.map((block, index) => {
+              if (block.type === 'list') {
+                return (
+                  <ul key={`section-list-${index}`} className="list-disc space-y-2 pl-5">
+                    {block.items.map((listItem) => <li key={listItem}>{listItem}</li>)}
+                  </ul>
+                );
+              }
+
+              if (block.type === 'table') {
+                return (
+                  <div key={`section-table-${index}`} className="overflow-auto rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text,#1a120d)]">
+                        <tr>
+                          {block.headers.map((header) => <th key={header} className="px-4 py-3 font-semibold">{header}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {block.rows.map((row, rowIndex) => (
+                          <tr key={`section-row-${rowIndex}`} className="border-t border-[color:var(--panel-border-subtle,#e7dac8)]">
+                            {row.map((cell, cellIndex) => <td key={`section-cell-${rowIndex}-${cellIndex}`} className="px-4 py-3 align-top">{cell}</td>)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
+
+              return <p key={`section-paragraph-${index}`}>{block.text}</p>;
+            })}
+          </div>
+        )}
+      </ModalShell>
 
       <ModalShell
         isOpen={networkModalOpen}

@@ -490,13 +490,6 @@ export default function CotadorWorkspace({
                       </span>
                     </div>
 
-                  {(item.administradora?.name || item.entidadesClasse.length > 0 || item.observacao) && (
-                    <div className="mt-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_90%,var(--panel-surface,#fffdfa))] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_76%,var(--panel-surface,#1b1611))]">
-                      {item.administradora?.name && <p>Administradora: {item.administradora.name}</p>}
-                      {item.entidadesClasse.length > 0 && <p>Entidades: {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</p>}
-                      {item.observacao && <p>{item.observacao}</p>}
-                    </div>
-                  )}
                   </article>
                 );
               })}

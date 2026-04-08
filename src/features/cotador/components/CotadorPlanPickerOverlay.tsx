@@ -504,6 +504,40 @@ export default function CotadorPlanPickerOverlay({
     });
   }, [adesaoCopartScopedItems, isAdesaoFlow, lineScopedItems]);
 
+  const adesaoProductOptions = useMemo<ProductDirectOption[]>(() => {
+    if (!isAdesaoFlow) return [];
+
+    return productGroups.flatMap((group) => {
+      const selectableItems = getSelectableCatalogItems(group.items)
+        .sort((left, right) => {
+          const priceComparison = compareOptionalPriceAsc(left.estimatedMonthlyTotal, right.estimatedMonthlyTotal);
+          if (priceComparison !== 0) return priceComparison;
+
+          const acomodacaoComparison = (left.acomodacao ?? '').localeCompare(right.acomodacao ?? '', 'pt-BR');
+          if (acomodacaoComparison !== 0) return acomodacaoComparison;
+
+          return (left.tabelaNome ?? left.titulo).localeCompare(right.tabelaNome ?? right.titulo, 'pt-BR');
+        });
+
+      if (selectableItems.length === 1) {
+        const item = selectableItems[0];
+        return [{
+          key: item.id,
+          title: group.title,
+          subtitle: item.acomodacao ?? item.tabelaNome,
+          item,
+        }];
+      }
+
+      return selectableItems.map((item) => ({
+        key: item.id,
+        title: group.title,
+        subtitle: item.acomodacao ?? item.tabelaNome ?? formatCoparticipacao(item.coparticipacao),
+        item,
+      }));
+    });
+  }, [isAdesaoFlow, productGroups]);
+
   const activeProductGroup = useMemo(
     () => productGroups.find((group) => group.key === selectedProductKey) ?? null,
     [productGroups, selectedProductKey],
@@ -644,9 +678,7 @@ export default function CotadorPlanPickerOverlay({
           ? 'adesao-entity'
           : !selectedCoparticipacaoKey
             ? 'adesao-copart'
-            : activeProductGroup
-              ? 'table'
-              : 'product'
+            : 'product'
       : usesLineScenarioStep
         ? !selectedLineScenarioKey
           ? 'line'
@@ -694,7 +726,9 @@ export default function CotadorPlanPickerOverlay({
           ? adesaoCopartCards.length
           : currentStep === 'table'
             ? tableCandidates.length
-            : !isAdesaoFlow && usesLineScenarioStep
+            : isAdesaoFlow
+              ? adesaoProductOptions.length
+              : !isAdesaoFlow && usesLineScenarioStep
               ? productDirectOptions.length
               : productGroups.length;
 
@@ -739,6 +773,11 @@ export default function CotadorPlanPickerOverlay({
     const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
     return productDirectOptions.slice(startIndex, startIndex + floatingPanelPerPage);
   }, [floatingPanelPage, floatingPanelPerPage, productDirectOptions]);
+
+  const paginatedAdesaoProductOptions = useMemo(() => {
+    const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
+    return adesaoProductOptions.slice(startIndex, startIndex + floatingPanelPerPage);
+  }, [adesaoProductOptions, floatingPanelPage, floatingPanelPerPage]);
 
   const paginatedProductGroups = useMemo(() => {
     const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
@@ -837,17 +876,6 @@ export default function CotadorPlanPickerOverlay({
     setSelectedEntityId(null);
     setSelectedCoparticipacaoKey(null);
     setSelectedProductKey(null);
-  };
-
-  const handleProductGroupSelect = (group: ProductGroup) => {
-    const selectableItems = getSelectableCatalogItems(group.items);
-    if (isAdesaoFlow && selectableItems.length === 1) {
-      if (busy) return;
-      onSelectItem(selectableItems[0].id);
-      return;
-    }
-
-    setSelectedProductKey(group.key);
   };
 
   if (!isOpen || typeof document === 'undefined') return null;
@@ -1245,6 +1273,51 @@ export default function CotadorPlanPickerOverlay({
                                   })}
                                 </div>
                               )
+                            ) : isAdesaoFlow ? (
+                              adesaoProductOptions.length === 0 ? (
+                                <div className="px-4 py-6 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {paginatedAdesaoProductOptions.map((option) => {
+                                    const isSelected = selectedIds.has(option.item.id);
+                                    return (
+                                      <button
+                                        key={option.key}
+                                        type="button"
+                                        onClick={() => {
+                                          if (busy) return;
+                                          onSelectItem(option.item.id);
+                                        }}
+                                        disabled={busy}
+                                        className={cx(
+                                          'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
+                                          isSelected
+                                            ? isDarkTheme
+                                              ? 'bg-emerald-500/10'
+                                              : 'bg-emerald-50'
+                                            : isDarkTheme
+                                              ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
+                                              : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        )}
+                                      >
+                                        <div>
+                                          {isSelected ? (
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                          ) : (
+                                            <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                          )}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{option.title}</p>
+                                          {option.subtitle && <p className={cx('mt-0.5 truncate text-xs font-normal', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{option.subtitle}</p>}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )
                             ) : !isAdesaoFlow && usesLineScenarioStep ? (
                               productDirectOptions.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
@@ -1296,26 +1369,21 @@ export default function CotadorPlanPickerOverlay({
                               </div>
                             ) : (
                                 <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                  {paginatedProductGroups.map((group) => (
-                                    <button
-                                      key={group.key}
-                                      type="button"
-                                      onClick={() => handleProductGroupSelect(group)}
-                                      className={cx(
-                                        'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
-                                      )}
-                                    >
-                                      <div className="min-w-0 flex-1">
-                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
-                                        {isAdesaoFlow && (
-                                          <p className={cx('mt-0.5 truncate text-xs font-normal', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                                            {getSelectableCatalogItems(group.items).length === 1 ? 'Seleção direta' : `${getSelectableCatalogItems(group.items).length} tabela(s)`}
-                                          </p>
-                                        )}
-                                      </div>
-                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                                    </button>
+                                {paginatedProductGroups.map((group) => (
+                                  <button
+                                    key={group.key}
+                                    type="button"
+                                    onClick={() => setSelectedProductKey(group.key)}
+                                    className={cx(
+                                      'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                                      isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                    )}
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
+                                    </div>
+                                    <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                  </button>
                                   ))}
                               </div>
                             )}

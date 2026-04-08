@@ -115,6 +115,11 @@ type UpsertImportedTableResult = {
   createdTableIds: string[];
 };
 
+type ImportedTableIdentityPayload = Pick<
+  CotadorTableManagerInput,
+  'nome' | 'modalidade' | 'perfil_empresarial' | 'coparticipacao' | 'acomodacao' | 'vidas_min' | 'vidas_max'
+>;
+
 type ImportMutations = {
   createdOperadoraIds: string[];
   createdLineIds: string[];
@@ -439,48 +444,77 @@ const logImportError = (message: string, payload?: unknown) => {
 
 const waitForImportConsistency = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
-const countPersistedTablesForProduct = async (productId: string) => {
+const loadPersistedTablesForProduct = async (productId: string) => {
   const attempts = 4;
 
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const { count, error } = await supabase
+    const { data, error } = await supabase
       .from('cotador_tabelas')
-      .select('id', { count: 'exact', head: true })
+      .select('*')
       .eq('produto_id', productId);
 
     if (error) {
-      logImportError('Falha ao consultar contagem persistida de tabelas', { productId, attempt, error });
+      logImportError('Falha ao consultar tabelas persistidas do produto', { productId, attempt, error });
       throw error;
     }
 
-    logImportInfo('Contagem persistida consultada', { productId, attempt, count: count ?? 0 });
+    const tables = (data as CotadorTabela[] | null) ?? [];
 
-    if (attempt === attempts || (count ?? 0) > 0) {
-      return count ?? 0;
+    logImportInfo('Tabelas persistidas consultadas', { productId, attempt, count: tables.length });
+
+    if (attempt === attempts || tables.length > 0) {
+      return tables;
     }
 
     await waitForImportConsistency(250 * attempt);
   }
 
-  return 0;
+  return [] as CotadorTabela[];
 };
 
+const canonicalizeTableModalidade = (value?: string | null) => normalizeImportedModalidade(value) ?? (normalizeText(value) || null);
+
+const canonicalizeTableAcomodacao = (value?: string | null) => normalizeImportedAcomodacao(value) ?? cleanText(value);
+
+const canonicalizeTableBusinessProfile = (value?: string | null) => normalizeImportedBusinessProfile(value) ?? (normalizeText(value) || null);
+
+const canonicalizeTableCoparticipacao = (value?: string | null) => normalizeImportedCoparticipacao(value) ?? (normalizeText(value) || null);
+
+const matchesImportedTablePayload = (
+  table: Pick<CotadorTabela, 'produto_id' | 'nome' | 'modalidade' | 'perfil_empresarial' | 'coparticipacao' | 'acomodacao' | 'vidas_min' | 'vidas_max'>,
+  productId: string,
+  payload: ImportedTableIdentityPayload,
+) => (
+  table.produto_id === productId
+  && normalizeText(table.nome) === normalizeText(payload.nome)
+  && canonicalizeTableModalidade(table.modalidade) === canonicalizeTableModalidade(payload.modalidade)
+  && canonicalizeTableBusinessProfile(table.perfil_empresarial) === canonicalizeTableBusinessProfile(payload.perfil_empresarial)
+  && canonicalizeTableCoparticipacao(table.coparticipacao) === canonicalizeTableCoparticipacao(payload.coparticipacao)
+  && normalizeText(canonicalizeTableAcomodacao(table.acomodacao)) === normalizeText(canonicalizeTableAcomodacao(payload.acomodacao))
+  && (table.vidas_min ?? null) === (payload.vidas_min ?? null)
+  && (table.vidas_max ?? null) === (payload.vidas_max ?? null)
+);
+
+const buildImportedTableIdentityPayloads = (tableDefinition: ImportedTableDefinition): ImportedTableIdentityPayload[] =>
+  getImportedTableActiveAcomodacoes(tableDefinition).map(([acomodacao]) => ({
+    nome: tableDefinition.nome,
+    modalidade: tableDefinition.modalidade,
+    perfil_empresarial: tableDefinition.perfilEmpresarial,
+    coparticipacao: tableDefinition.coparticipacao,
+    acomodacao: cleanText(acomodacao),
+    vidas_min: tableDefinition.vidasMin ?? null,
+    vidas_max: tableDefinition.vidasMax ?? null,
+  }));
+
 const findExistingImportedTable = async (productId: string, payload: CotadorTableManagerInput) => {
-  let query = supabase
+  const { data, error } = await supabase
     .from('cotador_tabelas')
     .select('*')
     .eq('produto_id', productId)
     .eq('nome', payload.nome)
-    .eq('modalidade', payload.modalidade)
     .eq('perfil_empresarial', payload.perfil_empresarial)
-    .eq('coparticipacao', payload.coparticipacao)
-    .limit(1);
+    .eq('coparticipacao', payload.coparticipacao);
 
-  query = payload.acomodacao ? query.eq('acomodacao', payload.acomodacao) : query.is('acomodacao', null);
-  query = payload.vidas_min === null || payload.vidas_min === undefined ? query.is('vidas_min', null) : query.eq('vidas_min', payload.vidas_min);
-  query = payload.vidas_max === null || payload.vidas_max === undefined ? query.is('vidas_max', null) : query.eq('vidas_max', payload.vidas_max);
-
-  const { data, error } = await query.maybeSingle();
   if (error) {
     logImportError('Falha ao buscar tabela existente para import', {
       productId,
@@ -491,7 +525,18 @@ const findExistingImportedTable = async (productId: string, payload: CotadorTabl
     throw error;
   }
 
-  return (data as CotadorTabela | null) ?? null;
+  const matches = ((data as CotadorTabela[] | null) ?? []).filter((table) => matchesImportedTablePayload(table, productId, payload));
+
+  if (matches.length > 1) {
+    logImportWarn('Mais de uma tabela correspondente encontrada durante o import', {
+      productId,
+      nome: payload.nome,
+      acomodacao: payload.acomodacao ?? null,
+      matchedIds: matches.map((table) => table.id),
+    });
+  }
+
+  return matches[0] ?? null;
 };
 
 const validateImportedPayload = (payload: ImportedJsonPayload) => {
@@ -1368,14 +1413,7 @@ const findExistingImportedTableInContext = (
   productId: string,
   payload: CotadorTableManagerInput,
 ) => tables.find((table) => (
-  table.produto_id === productId
-  && normalizeText(table.nome) === normalizeText(payload.nome)
-  && table.modalidade === payload.modalidade
-  && table.perfil_empresarial === payload.perfil_empresarial
-  && table.coparticipacao === payload.coparticipacao
-  && normalizeText(table.acomodacao) === normalizeText(payload.acomodacao)
-  && (table.vidas_min ?? null) === (payload.vidas_min ?? null)
-  && (table.vidas_max ?? null) === (payload.vidas_max ?? null)
+  matchesImportedTablePayload(table, productId, payload)
 )) ?? null;
 
 const getChangedProductFields = (existingProduct: CotadorProductManagerRecord, payload: CotadorProductManagerInput) => {
@@ -1711,23 +1749,31 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
         if (!product) continue;
 
         const expectedRows = item.tabelas?.reduce((total, table) => total + countImportedTableRows(table), 0) ?? 0;
-        const actualRows = await countPersistedTablesForProduct(product.id);
+        const expectedPayloads = (item.tabelas ?? []).flatMap((table) => buildImportedTableIdentityPayloads(table));
+        const persistedTables = await loadPersistedTablesForProduct(product.id);
+        const matchedRows = expectedPayloads.filter((payload) => persistedTables.some((table) => matchesImportedTablePayload(table, product.id, payload)));
+        const missingRows = expectedPayloads.filter((payload) => !persistedTables.some((table) => matchesImportedTablePayload(table, product.id, payload)));
+        const actualRows = persistedTables.length;
 
         logImportInfo('Verificacao final do produto importado', {
           alvo: buildImportTargetLabel(item),
           productId: product.id,
           expectedRows,
+          matchedRows: matchedRows.length,
           actualRows,
+          missingRows: missingRows.map((payload) => ({ nome: payload.nome, acomodacao: payload.acomodacao ?? null })),
         });
 
-        if (actualRows !== expectedRows) {
+        if (matchedRows.length !== expectedRows) {
           logImportError('Importacao inconsistente detectada', {
             alvo: buildImportTargetLabel(item),
             productId: product.id,
             expectedRows,
+            matchedRows: matchedRows.length,
             actualRows,
+            missingRows: missingRows.map((payload) => ({ nome: payload.nome, acomodacao: payload.acomodacao ?? null })),
           });
-          throw new Error(`Importacao inconsistente para ${item.produto}: esperado ${expectedRows} tabela(s), encontrado ${actualRows}.`);
+          throw new Error(`Importacao inconsistente para ${item.produto}: esperado ${expectedRows} tabela(s) importada(s), confirmado ${matchedRows.length}.`);
         }
       }
     }

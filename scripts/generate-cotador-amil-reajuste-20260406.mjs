@@ -17,6 +17,7 @@ const env = Object.fromEntries(
 );
 
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_SERVICE_ROLE_KEY);
+const cotadorJsonDir = path.resolve(process.cwd(), 'cotador-json');
 
 const buildPriceRow = (values) => Object.fromEntries(AGE_RANGES.map((range, index) => [range, values[index]]));
 
@@ -490,7 +491,9 @@ for (const item of payload.items) {
   }
 }
 
-const outputPath = path.resolve(process.cwd(), 'amil-reajuste-tabelas-2026-04-06.json');
+fs.mkdirSync(cotadorJsonDir, { recursive: true });
+
+const outputPath = path.resolve(cotadorJsonDir, 'amil-reajuste-tabelas-2026-04-06.json');
 fs.writeFileSync(outputPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 
 console.log(`Arquivo gerado em: ${outputPath}`);

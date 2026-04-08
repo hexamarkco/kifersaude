@@ -24,10 +24,15 @@ dist-ssr
 .env
 supabase.local.ini
 .deploy-cache/
+local-artifacts/
 deploy-functions.bat
 deploy.bat
 supabase/.temp/
 supabase/supabase/.temp/
+.vite/
 
-scripts/
-amil-reajuste*.json
+scripts/.env.local
+scripts/__pycache__/
+scripts/*.pyc
+scripts/hospital_location_report.json
+scripts/hospital_location_report.csv

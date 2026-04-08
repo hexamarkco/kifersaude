@@ -56,15 +56,15 @@ import Tabs from '../ui/Tabs';
 import Textarea from '../ui/Textarea';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Pagination from '../Pagination';
-import CotadorCatalogMetricsPanel from './CotadorCatalogMetricsPanel';
 import CotadorHospitalMergeSuggestionsPanel, { type NetworkHospitalMergeSuggestion } from './CotadorHospitalMergeSuggestionsPanel';
+import CotadorCatalogDashboardTab from './CotadorCatalogDashboardTab';
 import OperadorasTab from './OperadorasTab';
 
 type CotadorCatalogTabProps = {
   embedded?: boolean;
 };
 
-type CatalogTabId = 'operadoras' | 'linhas' | 'produtos' | 'tabelas' | 'redes' | 'administradoras' | 'entidades';
+type CatalogTabId = 'dashboard' | 'operadoras' | 'linhas' | 'produtos' | 'tabelas' | 'redes' | 'administradoras' | 'entidades';
 
 type Message = {
   type: 'success' | 'error';
@@ -173,6 +173,7 @@ type NetworkProductSummary = {
 };
 
 const tabs: Array<{ id: CatalogTabId; label: string }> = [
+  { id: 'dashboard', label: 'Dashboard' },
   { id: 'operadoras', label: 'Operadoras' },
   { id: 'linhas', label: 'Linhas' },
   { id: 'produtos', label: 'Produtos' },
@@ -807,7 +808,7 @@ function InlineCheckboxGroup({
 
 export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTabProps) {
   const { options } = useConfig();
-  const [activeTab, setActiveTab] = useState<CatalogTabId>('operadoras');
+  const [activeTab, setActiveTab] = useState<CatalogTabId>('dashboard');
   const [loading, setLoading] = useState(true);
   const [catalogLoadError, setCatalogLoadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -2458,8 +2459,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant="panel" className="mt-6" />
       </div>
 
-      {!loading && !catalogLoadError && <CotadorCatalogMetricsPanel metrics={finalCatalogMetrics} />}
-
       {loading ? (
         <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
@@ -2471,6 +2470,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           description={catalogLoadError}
           onRetry={() => void loadCatalogData()}
         />
+      ) : activeTab === 'dashboard' ? (
+        <CotadorCatalogDashboardTab metrics={finalCatalogMetrics} />
       ) : activeTab === 'operadoras' ? (
         <OperadorasTab embedded />
       ) : activeTab === 'administradoras' ? (

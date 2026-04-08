@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
   AlertCircle,
   Building2,
   CheckCircle,
   Edit2,
   Plus,
+  Search,
   Save,
   Trash2,
 } from 'lucide-react';
@@ -46,6 +47,7 @@ const DEFAULT_FORM_DATA: OperadoraFormState = {
 export default function OperadorasTab({ embedded = false }: OperadorasTabProps) {
   const [operadoras, setOperadoras] = useState<Operadora[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<OperadoraFormState>(DEFAULT_FORM_DATA);
@@ -154,6 +156,31 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
     ? 'space-y-6'
     : 'panel-page-shell space-y-6';
 
+  const filteredOperadoras = useMemo(() => {
+    const normalizedSearch = search
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    if (!normalizedSearch) return operadoras;
+
+    return operadoras.filter((operadora) => {
+      const haystack = [
+        operadora.nome,
+        operadora.observacoes,
+        operadora.bonus_por_vida ? 'bonus por vida' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [operadoras, search]);
+
   return (
     <PanelAdaptiveLoadingFrame
       loading={loading}
@@ -182,108 +209,97 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
           </div>
         )}
 
-        <div className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-emerald-text)]">
-                <Building2 className="h-3.5 w-3.5" />
-                Operadoras
-              </div>
-              <h3 className="text-2xl font-semibold text-[color:var(--panel-text)]">Configure regras comerciais sem sair das configurações gerais</h3>
-              <p className="mt-2 text-sm text-[color:var(--panel-text-soft)]">
-                Cadastre operadoras, ajuste comissão, prazo e bônus em um fluxo único e mais fácil de revisar.
-              </p>
+        <div className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Organização de operadoras</p>
+              <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text)]">Operadoras</h4>
             </div>
-
-            <Button onClick={handleCreateClick}>
-              <Plus className="h-4 w-4" />
-              <span>Nova operadora</span>
-            </Button>
+            <div className="flex w-full gap-3 lg:w-auto lg:min-w-[460px]">
+              <div className="flex-1 lg:min-w-[300px]">
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar operadora"
+                  leftIcon={Search}
+                />
+              </div>
+              <Button onClick={handleCreateClick}>
+                <Plus className="h-4 w-4" />
+                <span>Nova operadora</span>
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h4 className="text-lg font-semibold text-[color:var(--panel-text)]">Carteira de operadoras</h4>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Revise regras rapidamente e abra a edição certa sem trocar de aba.</p>
-              </div>
-            </div>
-
-            {operadoras.length === 0 ? (
+        <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] shadow-sm">
+            {filteredOperadoras.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[color:var(--panel-border)] bg-[var(--panel-surface-soft)] py-14 text-center">
                 <Building2 className="mx-auto h-12 w-12 text-[color:var(--panel-text-muted)]" />
-                <p className="mt-4 text-sm font-medium text-[color:var(--panel-text)]">Nenhuma operadora cadastrada</p>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Crie a primeira operadora para liberar configurações comerciais.</p>
+                <p className="mt-4 text-sm font-medium text-[color:var(--panel-text)]">{operadoras.length === 0 ? 'Nenhuma operadora cadastrada' : 'Nenhuma operadora encontrada'}</p>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">{operadoras.length === 0 ? 'Crie a primeira operadora para liberar configurações comerciais.' : 'Ajuste a busca para localizar a operadora desejada.'}</p>
               </div>
             ) : (
-              <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-2">
-                {operadoras.map((operadora) => {
+              <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+                {filteredOperadoras.map((operadora) => {
                   const isEditing = operadora.id === editingId;
 
                   return (
-                    <div
+                    <article
                       key={operadora.id}
-                      className={`rounded-2xl border p-4 transition-colors ${
+                      className={`flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between ${
                         isEditing
-                          ? 'border-[color:var(--panel-accent-emerald-border)] bg-[var(--panel-accent-emerald-bg)]'
-                          : 'border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] hover:border-[color:var(--panel-border)] hover:bg-[var(--panel-surface)]'
+                          ? 'bg-[var(--panel-surface-soft)]'
+                          : 'bg-[var(--panel-surface)]'
                       }`}
                     >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h5 className="text-base font-semibold text-[color:var(--panel-text)]">{operadora.nome}</h5>
-                            {!operadora.ativo && (
-                              <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--panel-text-soft)]">
-                                Inativa
-                              </span>
-                            )}
-                            {operadora.bonus_por_vida && (
-                              <span className="rounded-full border border-[color:var(--panel-accent-emerald-border)] bg-[var(--panel-accent-emerald-bg)] px-2.5 py-1 text-xs font-medium text-[var(--panel-accent-emerald-text)]">
-                                Bônus por vida
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft)]">
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1">
-                              Comissão: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.comissao_padrao}%</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h5 className="text-base font-semibold text-[color:var(--panel-text)]">{operadora.nome}</h5>
+                          {!operadora.ativo && (
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--panel-text-soft)]">
+                              Inativa
                             </span>
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1">
-                              Prazo: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.prazo_recebimento_dias} dias</span>
+                          )}
+                          {operadora.bonus_por_vida && (
+                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-2.5 py-1 text-xs font-medium text-[color:var(--panel-text-soft)]">
+                              Bônus por vida
                             </span>
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1">
-                              Bônus: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.bonus_por_vida ? `R$ ${operadora.bonus_padrao.toFixed(2)}` : 'Não possui'}</span>
-                            </span>
-                          </div>
-
-                          {operadora.observacoes && (
-                            <p className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{operadora.observacoes}</p>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <Button
-                            onClick={() => handleEdit(operadora)}
-                            variant="secondary"
-                            className={isEditing ? 'border-emerald-300 bg-white text-emerald-700' : undefined}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                            <span>{isEditing ? 'Editando' : 'Editar'}</span>
-                          </Button>
-                          <Button
-                            onClick={() => void handleDelete(operadora.id)}
-                            variant="icon"
-                            size="icon"
-                            className="h-10 w-10 text-red-600 hover:bg-red-50"
-                            title="Excluir operadora"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft)]">
+                          <span className="rounded-full border border-[color:var(--panel-border-subtle)] px-2.5 py-1">
+                            Comissão: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.comissao_padrao}%</span>
+                          </span>
+                          <span className="rounded-full border border-[color:var(--panel-border-subtle)] px-2.5 py-1">
+                            Prazo: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.prazo_recebimento_dias} dias</span>
+                          </span>
+                          <span className="rounded-full border border-[color:var(--panel-border-subtle)] px-2.5 py-1">
+                            Bônus: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.bonus_por_vida ? `R$ ${operadora.bonus_padrao.toFixed(2)}` : 'Não possui'}</span>
+                          </span>
                         </div>
+
+                        {operadora.observacoes && (
+                          <p className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{operadora.observacoes}</p>
+                        )}
                       </div>
-                    </div>
+
+                      <div className="flex items-center gap-2 self-end lg:self-auto">
+                        <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => handleEdit(operadora)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          onClick={() => void handleDelete(operadora.id)}
+                          variant="icon"
+                          size="icon"
+                          className="h-10 w-10 text-red-600 hover:bg-red-50"
+                          title="Excluir operadora"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </article>
                   );
                 })}
               </div>

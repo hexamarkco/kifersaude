@@ -76,6 +76,21 @@ type ProductDirectOption = {
   item: CotadorCatalogItem;
 };
 
+type EntityCard = {
+  actor: CotadorCatalogActor;
+  itemCount: number;
+  productCount: number;
+  items: CotadorCatalogItem[];
+};
+
+type CopartCard = {
+  key: string;
+  label: string;
+  itemCount: number;
+  productCount: number;
+  items: CotadorCatalogItem[];
+};
+
 type ProductGroup = {
   key: string;
   title: string;
@@ -112,6 +127,28 @@ const compareOptionalPriceAsc = (left: number | null, right: number | null) => {
   return left - right;
 };
 
+const COPARTICIPACAO_ORDER: Record<string, number> = {
+  sem: 0,
+  parcial: 1,
+  total: 2,
+};
+
+const getCatalogProductGroupKey = (item: Pick<CotadorCatalogItem, 'cotadorProdutoId' | 'legacyProdutoPlanoId' | 'linha' | 'titulo'>) =>
+  item.cotadorProdutoId
+  ?? item.legacyProdutoPlanoId
+  ?? `${item.linha?.id ?? 'sem-linha'}:${item.titulo}`;
+
+const getSelectableCatalogItems = (items: CotadorCatalogItem[]) => {
+  const tableItems = items.filter((item) => item.source === 'cotador_tabela');
+  return tableItems.length > 0 ? tableItems : items;
+};
+
+const compareCoparticipacaoValues = (left: string, right: string) => {
+  const orderDiff = (COPARTICIPACAO_ORDER[left] ?? Number.MAX_SAFE_INTEGER) - (COPARTICIPACAO_ORDER[right] ?? Number.MAX_SAFE_INTEGER);
+  if (orderDiff !== 0) return orderDiff;
+  return formatCoparticipacao(left).localeCompare(formatCoparticipacao(right), 'pt-BR');
+};
+
 export default function CotadorPlanPickerOverlay({
   isOpen,
   quote,
@@ -128,6 +165,8 @@ export default function CotadorPlanPickerOverlay({
   const [selectedOperatorId, setSelectedOperatorId] = useState<string | null>(null);
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
   const [selectedLineScenarioKey, setSelectedLineScenarioKey] = useState<string | null>(null);
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
+  const [selectedCoparticipacaoKey, setSelectedCoparticipacaoKey] = useState<string | null>(null);
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
   const [activeModalityTab, setActiveModalityTab] = useState<CotadorQuoteModality>(quote.modality ?? 'PME');
   const [floatingMenuPosition, setFloatingMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
@@ -138,12 +177,15 @@ export default function CotadorPlanPickerOverlay({
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
   const operatorButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const isDarkTheme = isPanelDarkTheme();
+  const isAdesaoFlow = activeModalityTab === 'ADESAO';
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedOperatorId(null);
       setSelectedLineId(null);
       setSelectedLineScenarioKey(null);
+      setSelectedEntityId(null);
+      setSelectedCoparticipacaoKey(null);
       setSelectedProductKey(null);
       setOperatorPage(1);
       setFloatingPanelPage(1);
@@ -274,6 +316,9 @@ export default function CotadorPlanPickerOverlay({
       .sort((left, right) => (left.actor.name ?? '').localeCompare(right.actor.name ?? '', 'pt-BR'));
   }, [operatorScopedItems]);
 
+  const adesaoLineCount = lineCards.length;
+  const shouldSkipAdesaoLineStep = isAdesaoFlow && adesaoLineCount <= 1;
+
   const lineScenarioCards = useMemo<LineScenarioCard[]>(() => {
     const grouped = new Map<string, LineScenarioCard>();
 
@@ -329,12 +374,105 @@ export default function CotadorPlanPickerOverlay({
     [lineScenarioCards, operatorScopedItems, selectedLineId, selectedLineScenarioKey],
   );
 
+  const adesaoLineScopedItems = useMemo(() => {
+    if (!isAdesaoFlow || !selectedOperatorId) return [] as CotadorCatalogItem[];
+
+    if (selectedLineId) {
+      return operatorScopedItems.filter((item) => item.linha?.id === selectedLineId);
+    }
+
+    return shouldSkipAdesaoLineStep ? operatorScopedItems : [];
+  }, [isAdesaoFlow, operatorScopedItems, selectedLineId, selectedOperatorId, shouldSkipAdesaoLineStep]);
+
+  const adesaoEntityCards = useMemo<EntityCard[]>(() => {
+    if (!isAdesaoFlow) return [];
+
+    const grouped = new Map<string, { actor: CotadorCatalogActor; items: CotadorCatalogItem[]; productKeys: Set<string> }>();
+
+    adesaoLineScopedItems.forEach((item) => {
+      const entities = item.entidadesClasse.length > 0
+        ? item.entidadesClasse
+        : [{ id: '__sem-entidade__', name: 'Sem entidade informada', active: true } satisfies CotadorCatalogActor];
+
+      entities.forEach((entity) => {
+        const current = grouped.get(entity.id);
+        if (current) {
+          current.items.push(item);
+          current.productKeys.add(getCatalogProductGroupKey(item));
+          return;
+        }
+
+        grouped.set(entity.id, {
+          actor: entity,
+          items: [item],
+          productKeys: new Set([getCatalogProductGroupKey(item)]),
+        });
+      });
+    });
+
+    return Array.from(grouped.values())
+      .map(({ actor, items, productKeys }) => ({
+        actor,
+        itemCount: items.length,
+        productCount: productKeys.size,
+        items,
+      }))
+      .sort((left, right) => (left.actor.name ?? '').localeCompare(right.actor.name ?? '', 'pt-BR'));
+  }, [adesaoLineScopedItems, isAdesaoFlow]);
+
+  const selectedEntityCard = useMemo(
+    () => adesaoEntityCards.find((card) => card.actor.id === selectedEntityId) ?? null,
+    [adesaoEntityCards, selectedEntityId],
+  );
+
+  const adesaoEntityScopedItems = useMemo(
+    () => selectedEntityCard?.items ?? [],
+    [selectedEntityCard],
+  );
+
+  const adesaoCopartCards = useMemo<CopartCard[]>(() => {
+    if (!isAdesaoFlow) return [];
+
+    const grouped = new Map<string, CopartCard>();
+
+    adesaoEntityScopedItems.forEach((item) => {
+      const key = item.coparticipacao ?? '__sem-copart__';
+      const current = grouped.get(key);
+      if (current) {
+        current.itemCount += 1;
+        current.items.push(item);
+        current.productCount = new Set(current.items.map((candidate) => getCatalogProductGroupKey(candidate))).size;
+        return;
+      }
+
+      grouped.set(key, {
+        key,
+        label: formatCoparticipacao(item.coparticipacao),
+        itemCount: 1,
+        productCount: 1,
+        items: [item],
+      });
+    });
+
+    return Array.from(grouped.values()).sort((left, right) => compareCoparticipacaoValues(left.key, right.key));
+  }, [adesaoEntityScopedItems, isAdesaoFlow]);
+
+  const selectedCoparticipacaoCard = useMemo(
+    () => adesaoCopartCards.find((card) => card.key === selectedCoparticipacaoKey) ?? null,
+    [adesaoCopartCards, selectedCoparticipacaoKey],
+  );
+
+  const adesaoCopartScopedItems = useMemo(
+    () => selectedCoparticipacaoCard?.items ?? [],
+    [selectedCoparticipacaoCard],
+  );
+
   const productGroups = useMemo<ProductGroup[]>(() => {
     const grouped = new Map<string, ProductGroup>();
-    const sourceItems = lineScopedItems;
+    const sourceItems = isAdesaoFlow ? adesaoCopartScopedItems : lineScopedItems;
 
     sourceItems.forEach((item) => {
-      const key = `${item.linha?.id ?? 'sem-linha'}:${item.titulo}`;
+      const key = getCatalogProductGroupKey(item);
       const current = grouped.get(key);
       if (current) {
         current.itemCount += 1;
@@ -364,7 +502,7 @@ export default function CotadorPlanPickerOverlay({
       if (priceComparison !== 0) return priceComparison;
       return left.title.localeCompare(right.title, 'pt-BR');
     });
-  }, [lineScopedItems]);
+  }, [adesaoCopartScopedItems, isAdesaoFlow, lineScopedItems]);
 
   const activeProductGroup = useMemo(
     () => productGroups.find((group) => group.key === selectedProductKey) ?? null,
@@ -374,7 +512,7 @@ export default function CotadorPlanPickerOverlay({
   const tableCandidates = useMemo(() => {
     if (!activeProductGroup) return [];
 
-    return [...activeProductGroup.items].sort((left, right) => {
+    return [...getSelectableCatalogItems(activeProductGroup.items)].sort((left, right) => {
       const priceComparison = compareOptionalPriceAsc(left.estimatedMonthlyTotal, right.estimatedMonthlyTotal);
       if (priceComparison !== 0) return priceComparison;
       return (left.tabelaNome ?? left.titulo).localeCompare(right.tabelaNome ?? right.titulo, 'pt-BR');
@@ -433,6 +571,8 @@ export default function CotadorPlanPickerOverlay({
       setSelectedOperatorId(null);
       setSelectedLineId(null);
       setSelectedLineScenarioKey(null);
+      setSelectedEntityId(null);
+      setSelectedCoparticipacaoKey(null);
       setSelectedProductKey(null);
     }
   }, [operatorCards, selectedOperatorId]);
@@ -441,6 +581,8 @@ export default function CotadorPlanPickerOverlay({
     if (selectedLineId && !lineCards.some((card) => card.actor.id === selectedLineId)) {
       setSelectedLineId(null);
       setSelectedLineScenarioKey(null);
+      setSelectedEntityId(null);
+      setSelectedCoparticipacaoKey(null);
       setSelectedProductKey(null);
     }
   }, [lineCards, selectedLineId]);
@@ -453,6 +595,29 @@ export default function CotadorPlanPickerOverlay({
   }, [lineScenarioCards, selectedLineScenarioKey]);
 
   useEffect(() => {
+    if (!isAdesaoFlow || !selectedOperatorId) return;
+
+    if (lineCards.length === 1 && selectedLineId !== lineCards[0].actor.id) {
+      setSelectedLineId(lineCards[0].actor.id);
+    }
+  }, [isAdesaoFlow, lineCards, selectedLineId, selectedOperatorId]);
+
+  useEffect(() => {
+    if (selectedEntityId && !adesaoEntityCards.some((card) => card.actor.id === selectedEntityId)) {
+      setSelectedEntityId(null);
+      setSelectedCoparticipacaoKey(null);
+      setSelectedProductKey(null);
+    }
+  }, [adesaoEntityCards, selectedEntityId]);
+
+  useEffect(() => {
+    if (selectedCoparticipacaoKey && !adesaoCopartCards.some((card) => card.key === selectedCoparticipacaoKey)) {
+      setSelectedCoparticipacaoKey(null);
+      setSelectedProductKey(null);
+    }
+  }, [adesaoCopartCards, selectedCoparticipacaoKey]);
+
+  useEffect(() => {
     if (selectedProductKey && !productGroups.some((group) => group.key === selectedProductKey)) {
       setSelectedProductKey(null);
     }
@@ -463,6 +628,8 @@ export default function CotadorPlanPickerOverlay({
     setSelectedOperatorId(null);
     setSelectedLineId(null);
     setSelectedLineScenarioKey(null);
+    setSelectedEntityId(null);
+    setSelectedCoparticipacaoKey(null);
     setSelectedProductKey(null);
     setOperatorPage(1);
     setFloatingPanelPage(1);
@@ -470,21 +637,39 @@ export default function CotadorPlanPickerOverlay({
 
   const currentStep = !selectedOperatorId
     ? 'operator'
-    : usesLineScenarioStep
-      ? !selectedLineScenarioKey
-        ? 'line'
-        : 'product'
-      : activeProductGroup
-      ? 'table'
-      : selectedOperatorStructuralLineCount > 1 && !selectedLineId
-        ? 'line'
-        : 'product';
+    : isAdesaoFlow
+      ? !shouldSkipAdesaoLineStep && !selectedLineId
+        ? 'adesao-line'
+        : !selectedEntityId
+          ? 'adesao-entity'
+          : !selectedCoparticipacaoKey
+            ? 'adesao-copart'
+            : activeProductGroup
+              ? 'table'
+              : 'product'
+      : usesLineScenarioStep
+        ? !selectedLineScenarioKey
+          ? 'line'
+          : 'product'
+        : activeProductGroup
+          ? 'table'
+          : selectedOperatorStructuralLineCount > 1 && !selectedLineId
+            ? 'line'
+            : 'product';
 
   const floatingPanelTitle = currentStep === 'line'
     ? selectedOperator?.actor.name ?? 'Linhas'
-    : currentStep === 'table'
-      ? activeProductGroup?.title ?? 'Tabelas'
-      : selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Produtos';
+    : currentStep === 'adesao-line'
+      ? selectedOperator?.actor.name ?? 'Linhas'
+      : currentStep === 'adesao-entity'
+        ? selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Entidades'
+        : currentStep === 'adesao-copart'
+          ? selectedEntityCard?.actor.name ?? 'Coparticipações'
+          : currentStep === 'table'
+            ? activeProductGroup?.title ?? 'Tabelas'
+            : isAdesaoFlow
+              ? selectedCoparticipacaoCard?.label ?? selectedEntityCard?.actor.name ?? 'Produtos'
+              : selectedLine?.actor.name ?? selectedOperator?.actor.name ?? 'Produtos';
 
   const totalOperatorPages = Math.max(1, Math.ceil(operatorCards.length / operatorPerPage));
 
@@ -501,17 +686,23 @@ export default function CotadorPlanPickerOverlay({
 
   const activeFloatingPanelTotalItems = currentStep === 'line'
     ? lineScenarioCards.length
-    : currentStep === 'table'
-      ? tableCandidates.length
-      : usesLineScenarioStep
-        ? productDirectOptions.length
-        : productGroups.length;
+    : currentStep === 'adesao-line'
+      ? lineCards.length
+      : currentStep === 'adesao-entity'
+        ? adesaoEntityCards.length
+        : currentStep === 'adesao-copart'
+          ? adesaoCopartCards.length
+          : currentStep === 'table'
+            ? tableCandidates.length
+            : !isAdesaoFlow && usesLineScenarioStep
+              ? productDirectOptions.length
+              : productGroups.length;
 
   const totalFloatingPanelPages = Math.max(1, Math.ceil(activeFloatingPanelTotalItems / floatingPanelPerPage));
 
   useEffect(() => {
     setFloatingPanelPage(1);
-  }, [currentStep, selectedOperatorId, selectedLineId, selectedLineScenarioKey, selectedProductKey]);
+  }, [currentStep, selectedCoparticipacaoKey, selectedEntityId, selectedOperatorId, selectedLineId, selectedLineScenarioKey, selectedProductKey]);
 
   useEffect(() => {
     if (floatingPanelPage > totalFloatingPanelPages) {
@@ -523,6 +714,21 @@ export default function CotadorPlanPickerOverlay({
     const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
     return lineScenarioCards.slice(startIndex, startIndex + floatingPanelPerPage);
   }, [floatingPanelPage, floatingPanelPerPage, lineScenarioCards]);
+
+  const paginatedAdesaoLineCards = useMemo(() => {
+    const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
+    return lineCards.slice(startIndex, startIndex + floatingPanelPerPage);
+  }, [floatingPanelPage, floatingPanelPerPage, lineCards]);
+
+  const paginatedAdesaoEntityCards = useMemo(() => {
+    const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
+    return adesaoEntityCards.slice(startIndex, startIndex + floatingPanelPerPage);
+  }, [adesaoEntityCards, floatingPanelPage, floatingPanelPerPage]);
+
+  const paginatedAdesaoCopartCards = useMemo(() => {
+    const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
+    return adesaoCopartCards.slice(startIndex, startIndex + floatingPanelPerPage);
+  }, [adesaoCopartCards, floatingPanelPage, floatingPanelPerPage]);
 
   const paginatedTableCandidates = useMemo(() => {
     const startIndex = (floatingPanelPage - 1) * floatingPanelPerPage;
@@ -577,6 +783,73 @@ export default function CotadorPlanPickerOverlay({
     return () => window.removeEventListener('resize', updateFloatingMenuPosition);
   }, [currentStep, isOpen, selectedOperatorId]);
 
+  const handleFloatingBack = () => {
+    if (currentStep === 'table') {
+      setSelectedProductKey(null);
+      return;
+    }
+
+    if (currentStep === 'adesao-copart') {
+      setSelectedEntityId(null);
+      setSelectedCoparticipacaoKey(null);
+      setSelectedProductKey(null);
+      return;
+    }
+
+    if (currentStep === 'adesao-entity') {
+      if (shouldSkipAdesaoLineStep) {
+        setSelectedOperatorId(null);
+        setSelectedLineId(null);
+      } else {
+        setSelectedLineId(null);
+      }
+      setSelectedEntityId(null);
+      setSelectedCoparticipacaoKey(null);
+      setSelectedProductKey(null);
+      return;
+    }
+
+    if (currentStep === 'adesao-line') {
+      setSelectedOperatorId(null);
+      setSelectedLineId(null);
+      setSelectedEntityId(null);
+      setSelectedCoparticipacaoKey(null);
+      setSelectedProductKey(null);
+      return;
+    }
+
+    if (currentStep === 'product' && isAdesaoFlow) {
+      setSelectedCoparticipacaoKey(null);
+      setSelectedProductKey(null);
+      return;
+    }
+
+    if (currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)) {
+      setSelectedLineId(null);
+      setSelectedLineScenarioKey(null);
+      setSelectedProductKey(null);
+      return;
+    }
+
+    setSelectedOperatorId(null);
+    setSelectedLineId(null);
+    setSelectedLineScenarioKey(null);
+    setSelectedEntityId(null);
+    setSelectedCoparticipacaoKey(null);
+    setSelectedProductKey(null);
+  };
+
+  const handleProductGroupSelect = (group: ProductGroup) => {
+    const selectableItems = getSelectableCatalogItems(group.items);
+    if (isAdesaoFlow && selectableItems.length === 1) {
+      if (busy) return;
+      onSelectItem(selectableItems[0].id);
+      return;
+    }
+
+    setSelectedProductKey(group.key);
+  };
+
   if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
@@ -597,11 +870,21 @@ export default function CotadorPlanPickerOverlay({
               <h3 className={cx('mt-2 text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
                 {!selectedOperatorId
                   ? 'Escolha a operadora'
-                  : !selectedLineScenarioKey && selectedOperatorStructuralLineCount > 1
-                    ? `Escolha a linha em ${selectedOperator?.actor.name ?? 'operadora'}`
-                  : activeProductGroup
-                      ? 'Escolha a tabela comercial'
-                      : 'Escolha o produto'}
+                  : isAdesaoFlow
+                    ? !shouldSkipAdesaoLineStep && !selectedLineId
+                      ? `Escolha a linha em ${selectedOperator?.actor.name ?? 'operadora'}`
+                      : !selectedEntityId
+                        ? 'Escolha a entidade'
+                        : !selectedCoparticipacaoKey
+                          ? 'Escolha o tipo de coparticipação'
+                          : activeProductGroup
+                            ? 'Escolha a tabela comercial'
+                            : 'Escolha o produto'
+                    : !selectedLineScenarioKey && selectedOperatorStructuralLineCount > 1
+                      ? `Escolha a linha em ${selectedOperator?.actor.name ?? 'operadora'}`
+                      : activeProductGroup
+                        ? 'Escolha a tabela comercial'
+                        : 'Escolha o produto'}
               </h3>
               <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{quote.name}</p>
             </div>
@@ -633,6 +916,8 @@ export default function CotadorPlanPickerOverlay({
                 setSelectedOperatorId(null);
                 setSelectedLineId(null);
                 setSelectedLineScenarioKey(null);
+                setSelectedEntityId(null);
+                setSelectedCoparticipacaoKey(null);
                 setSelectedProductKey(null);
               }}
             />
@@ -643,7 +928,9 @@ export default function CotadorPlanPickerOverlay({
                   <div>
                     <h4 className={cx('text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>Quais planos deseja comparar?</h4>
                     <p className={cx('mt-2 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
-                      Escolha a operadora e avance por linha, produto e tabela sem perder o contexto da cotação.
+                      {isAdesaoFlow
+                        ? 'Escolha a operadora e avance por linha, entidade, coparticipação e produto sem perder o contexto da cotação.'
+                        : 'Escolha a operadora e avance por linha, produto e tabela sem perder o contexto da cotação.'}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-sm">
@@ -693,6 +980,8 @@ export default function CotadorPlanPickerOverlay({
                                 setSelectedOperatorId(card.actor.id);
                                 setSelectedLineId(null);
                                 setSelectedLineScenarioKey(null);
+                                setSelectedEntityId(null);
+                                setSelectedCoparticipacaoKey(null);
                                 setSelectedProductKey(null);
                               }}
                               className={cx(
@@ -752,22 +1041,7 @@ export default function CotadorPlanPickerOverlay({
                           <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3">
                             <button
                               type="button"
-                              onClick={() => {
-                                if (currentStep === 'table') {
-                                  setSelectedProductKey(null);
-                                  return;
-                                }
-                                if (currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)) {
-                                  setSelectedLineId(null);
-                                  setSelectedLineScenarioKey(null);
-                                  setSelectedProductKey(null);
-                                  return;
-                                }
-                                setSelectedOperatorId(null);
-                                setSelectedLineId(null);
-                                setSelectedLineScenarioKey(null);
-                                setSelectedProductKey(null);
-                              }}
+                              onClick={handleFloatingBack}
                               className={cx(
                                 'inline-flex items-center gap-2 text-xs font-medium transition-colors',
                                 isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)] hover:text-white' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]',
@@ -776,9 +1050,19 @@ export default function CotadorPlanPickerOverlay({
                               <ArrowLeft className="h-4 w-4" />
                               {currentStep === 'table'
                                 ? 'Voltar aos produtos'
-                                : currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)
-                                  ? 'Voltar às linhas'
-                                  : 'Voltar às operadoras'}
+                                : currentStep === 'adesao-copart'
+                                  ? 'Voltar às entidades'
+                                  : currentStep === 'adesao-entity'
+                                    ? shouldSkipAdesaoLineStep
+                                      ? 'Voltar às operadoras'
+                                      : 'Voltar às linhas'
+                                    : currentStep === 'adesao-line'
+                                      ? 'Voltar às operadoras'
+                                      : currentStep === 'product' && isAdesaoFlow
+                                        ? 'Voltar aos tipos de coparticipação'
+                                        : currentStep === 'product' && (selectedLineId || selectedLineScenarioKey)
+                                          ? 'Voltar às linhas'
+                                          : 'Voltar às operadoras'}
                             </button>
                             <div className="mt-3 min-w-0">
                               <p className={cx('truncate text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</p>
@@ -786,7 +1070,106 @@ export default function CotadorPlanPickerOverlay({
                           </div>
 
                           <div className="max-h-[320px] overflow-y-auto">
-                            {currentStep === 'line' ? (
+                            {currentStep === 'adesao-line' ? (
+                              lineCards.length === 0 ? (
+                                <div className="px-4 py-6 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {paginatedAdesaoLineCards.map((line) => (
+                                    <button
+                                      key={line.actor.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedLineId(line.actor.id);
+                                        setSelectedEntityId(null);
+                                        setSelectedCoparticipacaoKey(null);
+                                        setSelectedProductKey(null);
+                                      }}
+                                      className={cx(
+                                        'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                      )}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{line.actor.name}</p>
+                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                          <span>{line.productCount} produto(s)</span>
+                                          <span>{line.tableCount} tabela(s)</span>
+                                        </div>
+                                      </div>
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                    </button>
+                                  ))}
+                                </div>
+                              )
+                            ) : currentStep === 'adesao-entity' ? (
+                              adesaoEntityCards.length === 0 ? (
+                                <div className="px-4 py-6 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma entidade disponível.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {paginatedAdesaoEntityCards.map((entity) => (
+                                    <button
+                                      key={entity.actor.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedEntityId(entity.actor.id);
+                                        setSelectedCoparticipacaoKey(null);
+                                        setSelectedProductKey(null);
+                                      }}
+                                      className={cx(
+                                        'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                      )}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{entity.actor.name}</p>
+                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                          <span>{entity.productCount} produto(s)</span>
+                                          <span>{entity.itemCount} opção(ões)</span>
+                                        </div>
+                                      </div>
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                    </button>
+                                  ))}
+                                </div>
+                              )
+                            ) : currentStep === 'adesao-copart' ? (
+                              adesaoCopartCards.length === 0 ? (
+                                <div className="px-4 py-6 text-center">
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum tipo de coparticipação disponível.</p>
+                                </div>
+                              ) : (
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {paginatedAdesaoCopartCards.map((copart) => (
+                                    <button
+                                      key={copart.key}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedCoparticipacaoKey(copart.key);
+                                        setSelectedProductKey(null);
+                                      }}
+                                      className={cx(
+                                        'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                      )}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{copart.label}</p>
+                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                          <span>{copart.productCount} produto(s)</span>
+                                          <span>{copart.itemCount} opção(ões)</span>
+                                        </div>
+                                      </div>
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                    </button>
+                                  ))}
+                                </div>
+                              )
+                            ) : currentStep === 'line' ? (
                               lineScenarioCards.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
                                   <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível.</p>
@@ -862,7 +1245,7 @@ export default function CotadorPlanPickerOverlay({
                                   })}
                                 </div>
                               )
-                            ) : usesLineScenarioStep ? (
+                            ) : !isAdesaoFlow && usesLineScenarioStep ? (
                               productDirectOptions.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
                                   <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
@@ -912,21 +1295,28 @@ export default function CotadorPlanPickerOverlay({
                                 <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
                               </div>
                             ) : (
-                              <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
-                                {paginatedProductGroups.map((group) => (
-                                  <button
-                                    key={group.key}
-                                    type="button"
-                                    onClick={() => setSelectedProductKey(group.key)}
-                                    className={cx(
-                                      'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                      isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
-                                    )}
-                                  >
-                                    <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
-                                    <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                                  </button>
-                                ))}
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                  {paginatedProductGroups.map((group) => (
+                                    <button
+                                      key={group.key}
+                                      type="button"
+                                      onClick={() => handleProductGroupSelect(group)}
+                                      className={cx(
+                                        'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
+                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                      )}
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
+                                        {isAdesaoFlow && (
+                                          <p className={cx('mt-0.5 truncate text-xs font-normal', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                            {getSelectableCatalogItems(group.items).length === 1 ? 'Seleção direta' : `${getSelectableCatalogItems(group.items).length} tabela(s)`}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                    </button>
+                                  ))}
                               </div>
                             )}
                           </div>

@@ -104,6 +104,7 @@ export type CommWhatsAppLinkPreviewMeta = {
 };
 
 export type CommWhatsAppEditedMessageEvent = {
+  eventExternalMessageId: string | null;
   targetExternalMessageId: string | null;
   editedText: string | null;
   originalText: string | null;
@@ -813,12 +814,16 @@ export const extractWhapiEditedMessageEvent = (
   ) || null;
 
   const editedAt = unixTimestampToIso(message.timestamp) || stringTimestampToIso(message.timestamp) || getNowIso();
+  const eventExternalMessageId = toTrimmedString(message.type).toLowerCase() === 'action'
+    ? toTrimmedString(message.id) || null
+    : null;
 
   if (!targetExternalMessageId && !editedText) {
     return null;
   }
 
   return {
+    eventExternalMessageId,
     targetExternalMessageId,
     editedText,
     originalText,
@@ -1049,6 +1054,7 @@ export async function applyCommWhatsAppMessageEdit(
   supabaseAdmin: SupabaseClient,
   input: {
     channelId: string;
+    eventExternalMessageId?: string | null;
     targetExternalMessageId: string;
     editedText: string;
     editedAt: string;
@@ -1110,6 +1116,19 @@ export async function applyCommWhatsAppMessageEdit(
 
   if (updateMessageError) {
     throw new Error(`Erro ao atualizar mensagem editada: ${updateMessageError.message}`);
+  }
+
+  if (input.eventExternalMessageId && input.eventExternalMessageId !== input.targetExternalMessageId) {
+    const { error: cleanupError } = await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .delete()
+      .eq('channel_id', input.channelId)
+      .eq('external_message_id', input.eventExternalMessageId)
+      .eq('message_type', 'action');
+
+    if (cleanupError) {
+      throw new Error(`Erro ao limpar evento auxiliar de edicao: ${cleanupError.message}`);
+    }
   }
 
   const { error: updateChatError } = await supabaseAdmin

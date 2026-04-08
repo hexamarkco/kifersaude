@@ -282,6 +282,7 @@ Deno.serve(async (req: Request) => {
       if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
         const editedTarget = await applyCommWhatsAppMessageEdit(supabaseAdmin, {
           channelId: channel.id,
+          eventExternalMessageId: editedEvent.eventExternalMessageId,
           targetExternalMessageId: editedEvent.targetExternalMessageId,
           editedText: editedEvent.editedText,
           editedAt: editedEvent.editedAt || getNowIso(),

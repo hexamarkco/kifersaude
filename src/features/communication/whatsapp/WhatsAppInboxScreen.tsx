@@ -877,6 +877,26 @@ const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMe
   return Array.from(map.values()).sort(compareMessageChronology);
 };
 
+const REDUNDANT_ACTION_MESSAGE_MARKERS = new Set([
+  '[acao]',
+  '[ação]',
+  '[reacao]',
+  '[reação]',
+  '[mensagem apagada]',
+  '[atualizacao de midia]',
+  '[atualização de mídia]',
+  '[voto em enquete]',
+]);
+
+const shouldHideRedundantActionMessage = (message: CommWhatsAppMessage) => {
+  if (message.message_type.trim().toLowerCase() !== 'action') {
+    return false;
+  }
+
+  const normalizedText = normalizeQuickReplyLookup(String(message.text_content ?? '')).replace(/\s+/g, ' ').trim();
+  return !normalizedText || REDUNDANT_ACTION_MESSAGE_MARKERS.has(normalizedText);
+};
+
 const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
   if (a.is_pinned !== b.is_pinned) {
     return a.is_pinned ? -1 : 1;
@@ -2577,17 +2597,19 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const visibleMessages = useMemo(() => {
+    const filteredMessages = messages.filter((message) => !shouldHideRedundantActionMessage(message));
+
     if (!selectedChatId) {
-      return messages;
+      return filteredMessages;
     }
 
     const localForChat = localOutgoingMessages.filter((message) => message.chat_id === selectedChatId);
     if (localForChat.length === 0) {
-      return messages;
+      return filteredMessages;
     }
 
     const serverExternalIds = new Set(
-      messages
+      filteredMessages
         .map((message) => String(message.external_message_id ?? '').trim())
         .filter(Boolean),
     );
@@ -2596,7 +2618,7 @@ export default function WhatsAppInboxScreen() {
       return !externalId || !serverExternalIds.has(externalId);
     });
 
-    return mergeMessages(messages, localVisible);
+    return mergeMessages(filteredMessages, localVisible);
   }, [localOutgoingMessages, messages, selectedChatId]);
 
   const applyOptimisticChatSummary = useCallback((chat: CommWhatsAppChat, summaryText: string, messageAt: string) => {

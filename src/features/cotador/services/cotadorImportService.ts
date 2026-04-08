@@ -106,6 +106,8 @@ type ResolveProductResult = {
   product: CotadorProductManagerRecord;
   createdOperadoraId: string | null;
   createdLineId: string | null;
+  createdAdministradoraId: string | null;
+  createdEntidadeIds: string[];
   createdProductId: string | null;
 };
 
@@ -116,6 +118,8 @@ type UpsertImportedTableResult = {
 type ImportMutations = {
   createdOperadoraIds: string[];
   createdLineIds: string[];
+  createdAdministradoraIds: string[];
+  createdEntidadeIds: string[];
   createdProductIds: string[];
   createdTableIds: string[];
 };
@@ -199,11 +203,90 @@ const cleanText = (value?: string | null) => {
   return trimmed ? trimmed : null;
 };
 
+const normalizeImportComparableText = (value?: string | null) =>
+  normalizeText(value)
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const IMPORTED_MODALITY_ALIASES: Array<{ canonical: ImportedTableDefinition['modalidade']; aliases: string[] }> = [
+  { canonical: 'PF', aliases: ['pf', 'pessoa fisica', 'individual', 'familiar', 'individual familiar'] },
+  { canonical: 'ADESAO', aliases: ['adesao', 'adesao coletiva', 'coletivo por adesao', 'coletivo adesao', 'coletivo por associacao', 'associacao', 'sindicato', 'entidade de classe'] },
+  { canonical: 'PME', aliases: ['pme', 'empresarial', 'coletivo empresarial', 'empresa', 'pj', 'pessoa juridica', 'mei'] },
+];
+
+const IMPORTED_ACOMODACAO_ALIASES: Array<{ canonical: string; aliases: string[] }> = [
+  { canonical: 'Enfermaria', aliases: ['enfermaria', 'enf', 'coletivo', 'quarto coletivo', 'qc'] },
+  { canonical: 'Apartamento', aliases: ['apartamento', 'apart', 'apto', 'particular', 'quarto particular', 'qp', 'privativo', 'quarto privativo'] },
+];
+
+const BRAZILIAN_STATE_ALIASES = new Set([
+  'ac', 'acre', 'al', 'alagoas', 'am', 'amazonas', 'ap', 'amapa', 'ba', 'bahia', 'ce', 'ceara', 'df', 'distrito federal',
+  'es', 'espirito santo', 'go', 'goias', 'ma', 'maranhao', 'mg', 'minas gerais', 'ms', 'mato grosso do sul', 'mt', 'mato grosso',
+  'pa', 'para', 'pb', 'paraiba', 'pe', 'pernambuco', 'pi', 'piaui', 'pr', 'parana', 'rj', 'rio de janeiro', 'rn', 'rio grande do norte',
+  'ro', 'rondonia', 'rr', 'roraima', 'rs', 'rio grande do sul', 'sc', 'santa catarina', 'se', 'sergipe', 'sp', 'sao paulo', 'to', 'tocantins',
+]);
+
+const normalizeImportedModalidade = (value?: string | null) => {
+  const cleaned = cleanText(value);
+  const normalized = normalizeImportComparableText(cleaned);
+  if (!normalized) return null;
+
+  const matched = IMPORTED_MODALITY_ALIASES.find((entry) => entry.aliases.some((alias) => normalized === alias || normalized.includes(alias)));
+  return matched?.canonical ?? null;
+};
+
+const normalizeImportedAcomodacao = (value?: string | null) => {
+  const cleaned = cleanText(value);
+  const normalized = normalizeImportComparableText(cleaned);
+  if (!cleaned || !normalized) return null;
+
+  const matched = IMPORTED_ACOMODACAO_ALIASES.find((entry) => entry.aliases.includes(normalized));
+  return matched?.canonical ?? cleaned;
+};
+
 const normalizeImportedAabrangencia = (value?: string | null) => {
   const cleaned = cleanText(value);
-  const normalized = normalizeText(cleaned);
+  const normalized = normalizeImportComparableText(cleaned);
   if (!normalized) return null;
-  if (normalized === 'rio de janeiro' || normalized === 'rj') return null;
+
+  if (
+    normalized.includes('nacional')
+    || normalized.includes('brasil')
+    || normalized.includes('todo pais')
+    || normalized.includes('pais inteiro')
+  ) {
+    return 'Nacional';
+  }
+
+  if (
+    normalized.includes('grupo de municipios')
+    || normalized.includes('grupo municipios')
+    || normalized.includes('municipios')
+    || normalized.includes('municipio')
+    || normalized.includes('cidades')
+    || normalized.includes('cidade')
+    || normalized.includes('intermunicipal')
+    || normalized.includes('regional')
+    || normalized.includes('metropolitana')
+    || normalized.includes('metropolitano')
+    || normalized.includes('local')
+    || normalized.includes('grupo de estados')
+    || normalized.includes('grupo estados')
+  ) {
+    return 'Regional';
+  }
+
+  if (
+    normalized.includes('estadual')
+    || normalized.includes('estado inteiro')
+    || normalized.includes('todo estado')
+    || normalized.includes('cobertura estadual')
+    || BRAZILIAN_STATE_ALIASES.has(normalized)
+  ) {
+    return 'Estadual';
+  }
+
   return cleaned;
 };
 
@@ -263,8 +346,31 @@ const IMPORTED_TABLE_MODALITIES = new Set<ImportedTableDefinition['modalidade']>
 const IMPORTED_BUSINESS_PROFILES = new Set<ImportedTableDefinition['perfilEmpresarial']>(['todos', 'mei', 'nao_mei']);
 const IMPORTED_COPART_OPTIONS = new Set<ImportedTableDefinition['coparticipacao']>(['sem', 'parcial', 'total']);
 
+const normalizeImportedBusinessProfile = (value?: string | null): ImportedTableDefinition['perfilEmpresarial'] | null => {
+  const normalized = normalizeImportComparableText(value);
+  if (!normalized) return null;
+  if (normalized === 'mei' || normalized.includes('microempreendedor')) return 'mei';
+  if (normalized === 'nao mei' || normalized.includes('nao mei') || normalized.includes('nao-mei')) return 'nao_mei';
+  if (normalized === 'todos' || normalized === 'all' || normalized === 'geral' || normalized === 'livre') return 'todos';
+  return null;
+};
+
+const normalizeImportedCoparticipacao = (value?: string | null): ImportedTableDefinition['coparticipacao'] | null => {
+  const normalized = normalizeImportComparableText(value);
+  if (!normalized) return null;
+  if (normalized === 'sem' || normalized.includes('sem copart')) return 'sem';
+  if (normalized === 'parcial' || normalized.includes('copart parcial') || normalized.includes('parcial com copart')) return 'parcial';
+  if (normalized === 'total' || normalized.includes('copart total') || normalized.includes('completa')) return 'total';
+  return null;
+};
+
 const normalizeImportedAcomodacoes = (value?: string[] | null) =>
-  Array.from(new Set((value ?? []).map((item) => item.trim()).filter(Boolean)));
+  Array.from(new Map(
+    (value ?? [])
+      .map((item) => normalizeImportedAcomodacao(item))
+      .filter((item): item is string => Boolean(item))
+      .map((item) => [normalizeImportComparableText(item), item]),
+  ).values());
 
 const parseImportedPriceRow = (values?: Record<string, unknown> | null) =>
   COTADOR_AGE_RANGES.reduce((accumulator, range) => {
@@ -281,12 +387,15 @@ const parseImportedPricesByAcomodacao = (value: unknown) => {
   }
 
   return Object.entries(value as Record<string, Record<string, unknown>>).reduce((accumulator, [acomodacao, prices]) => {
-    const normalizedAcomodacao = acomodacao.trim();
+    const normalizedAcomodacao = normalizeImportedAcomodacao(acomodacao);
     if (!normalizedAcomodacao) {
       return accumulator;
     }
 
-    accumulator[normalizedAcomodacao] = parseImportedPriceRow(prices);
+    accumulator[normalizedAcomodacao] = {
+      ...(accumulator[normalizedAcomodacao] ?? {}),
+      ...parseImportedPriceRow(prices),
+    };
     return accumulator;
   }, {} as Record<string, CotadorPriceRowInput>);
 };
@@ -519,6 +628,10 @@ const buildLinhaRecord = (line: CotadorLineManagerRecord, operadora: Operadora):
   operadora,
 });
 
+const buildAdministradoraRecord = (administradora: CotadorAdministradora): CotadorAdministradora => administradora;
+
+const buildEntidadeRecord = (entidade: CotadorEntidadeClasse): CotadorEntidadeClasse => entidade;
+
 const ensureOperadora = async (
   context: ImportLookupContext,
   operadoraName: string,
@@ -570,6 +683,97 @@ const ensureLinha = async (
 
   context.linhas = [...context.linhas, created];
   return { line: created, createdLineId: created.id };
+};
+
+const ensureAdministradora = async (
+  context: ImportLookupContext,
+  administradoraName?: string | null,
+) => {
+  const normalizedName = cleanText(administradoraName);
+  if (!normalizedName) {
+    return { administradora: null, createdAdministradoraId: null };
+  }
+
+  const existing = findByName(context.administradoras, normalizedName);
+  if (existing) {
+    return { administradora: existing, createdAdministradoraId: null };
+  }
+
+  const createResult = await cotadorService.createAdministradora({
+    nome: normalizedName,
+    ativo: true,
+    observacoes: null,
+  });
+
+  if (createResult.error || !createResult.data) {
+    throw new Error(`Erro ao criar administradora ${normalizedName}: ${String((createResult.error as { message?: string } | null)?.message ?? 'desconhecido')}`);
+  }
+
+  const created = buildAdministradoraRecord(createResult.data);
+  context.administradoras = [...context.administradoras, created];
+  return { administradora: created, createdAdministradoraId: created.id };
+};
+
+const ensureEntidadeClasse = async (
+  context: ImportLookupContext,
+  entidadeName: string,
+) => {
+  const normalizedName = cleanText(entidadeName);
+  if (!normalizedName) {
+    return { entidade: null, createdEntidadeId: null };
+  }
+
+  const existing = findByName(context.entidades, normalizedName);
+  if (existing) {
+    return { entidade: existing, createdEntidadeId: null };
+  }
+
+  const createResult = await cotadorService.createEntidadeClasse({
+    nome: normalizedName,
+    ativo: true,
+    observacoes: null,
+  });
+
+  if (createResult.error || !createResult.data) {
+    throw new Error(`Erro ao criar entidade ${normalizedName}: ${String((createResult.error as { message?: string } | null)?.message ?? 'desconhecido')}`);
+  }
+
+  const created = buildEntidadeRecord(createResult.data);
+  context.entidades = [...context.entidades, created];
+  return { entidade: created, createdEntidadeId: created.id };
+};
+
+const getUniqueImportedNames = (values?: string[] | null) => {
+  const unique = new Map<string, string>();
+
+  (values ?? []).forEach((value) => {
+    const cleaned = cleanText(value);
+    const normalized = normalizeText(cleaned);
+    if (!cleaned || !normalized || unique.has(normalized)) return;
+    unique.set(normalized, cleaned);
+  });
+
+  return Array.from(unique.values());
+};
+
+const ensureReferenceCatalogDependencies = async (
+  context: ImportLookupContext,
+  reference: ProductReference,
+) => {
+  const { createdAdministradoraId } = await ensureAdministradora(context, reference.administradora);
+  const createdEntidadeIds: string[] = [];
+
+  for (const entidadeName of getUniqueImportedNames(reference.entidadesElegiveis)) {
+    const { createdEntidadeId } = await ensureEntidadeClasse(context, entidadeName);
+    if (createdEntidadeId) {
+      createdEntidadeIds.push(createdEntidadeId);
+    }
+  }
+
+  return {
+    createdAdministradoraId,
+    createdEntidadeIds,
+  };
 };
 
 const findProduto = (products: CotadorProductManagerRecord[], lineId: string, productName: string) => {
@@ -638,6 +842,58 @@ const getProductPayloadFromReference = (
   };
 };
 
+const buildPreviewAdministradora = (name: string): CotadorAdministradora => ({
+  id: buildPreviewId('administradora', name),
+  nome: name.trim(),
+  ativo: true,
+  observacoes: null,
+  created_at: PREVIEW_TIMESTAMP,
+  updated_at: PREVIEW_TIMESTAMP,
+});
+
+const buildPreviewEntidade = (name: string): CotadorEntidadeClasse => ({
+  id: buildPreviewId('entidade', name),
+  nome: name.trim(),
+  ativo: true,
+  observacoes: null,
+  created_at: PREVIEW_TIMESTAMP,
+  updated_at: PREVIEW_TIMESTAMP,
+});
+
+const ensurePreviewReferenceCatalogDependencies = (
+  previewContext: ImportLookupContext,
+  item: ProductReference,
+  changes: CotadorImportPreviewAction[],
+) => {
+  const administradoraName = cleanText(item.administradora);
+  if (administradoraName) {
+    const administradora = findByName(previewContext.administradoras, administradoraName);
+    if (!administradora) {
+      previewContext.administradoras = [...previewContext.administradoras, buildPreviewAdministradora(administradoraName)];
+      changes.push({ kind: 'create', scope: 'administradora', label: 'Administradora', reason: `Administradora ${administradoraName} sera criada.` });
+    } else {
+      changes.push({ kind: 'ignore', scope: 'administradora', label: 'Administradora', reason: `Administradora ${administradoraName} ja existe.` });
+    }
+  }
+
+  const entityNames = getUniqueImportedNames(item.entidadesElegiveis);
+  if (entityNames.length === 0) {
+    return;
+  }
+
+  const missingEntities = entityNames.filter((name) => !findByName(previewContext.entidades, name));
+  if (missingEntities.length > 0) {
+    previewContext.entidades = [
+      ...previewContext.entidades,
+      ...missingEntities.map((name) => buildPreviewEntidade(name)),
+    ];
+    changes.push({ kind: 'create', scope: 'entidade', label: 'Entidades', reason: `Entidades serao criadas: ${missingEntities.join(', ')}.` });
+    return;
+  }
+
+  changes.push({ kind: 'ignore', scope: 'entidade', label: 'Entidades', reason: 'Entidades elegiveis ja existem no catalogo.' });
+};
+
 const resolveProduct = async (
   reference: ProductReference,
   context: ImportLookupContext,
@@ -652,6 +908,7 @@ const resolveProduct = async (
 
   const { operadora, createdOperadoraId } = await ensureOperadora(context, reference.operadora);
   const { line, createdLineId } = await ensureLinha(context, operadora, reference.linha);
+  const { createdAdministradoraId, createdEntidadeIds } = await ensureReferenceCatalogDependencies(context, reference);
 
   const existingProduct = findProduto(context.products, line.id, reference.produto);
   const payload = getProductPayloadFromReference(reference, existingProduct, context, operadora, line);
@@ -698,6 +955,8 @@ const resolveProduct = async (
         product: nextProduct,
         createdOperadoraId,
         createdLineId,
+        createdAdministradoraId,
+        createdEntidadeIds,
         createdProductId: null,
       };
     }
@@ -725,6 +984,8 @@ const resolveProduct = async (
     product: created,
     createdOperadoraId,
     createdLineId,
+    createdAdministradoraId,
+    createdEntidadeIds,
     createdProductId: created.id,
   };
 };
@@ -843,6 +1104,8 @@ const rollbackImportMutations = async (mutations: ImportMutations) => {
   const uniqueTableIds = Array.from(new Set(mutations.createdTableIds)).reverse();
   const uniqueProductIds = Array.from(new Set(mutations.createdProductIds)).reverse();
   const uniqueLineIds = Array.from(new Set(mutations.createdLineIds)).reverse();
+  const uniqueEntidadeIds = Array.from(new Set(mutations.createdEntidadeIds)).reverse();
+  const uniqueAdministradoraIds = Array.from(new Set(mutations.createdAdministradoraIds)).reverse();
   const uniqueOperadoraIds = Array.from(new Set(mutations.createdOperadoraIds)).reverse();
 
   for (const tableId of uniqueTableIds) {
@@ -858,6 +1121,16 @@ const rollbackImportMutations = async (mutations: ImportMutations) => {
   for (const lineId of uniqueLineIds) {
     const { error } = await cotadorService.deleteLinha(lineId);
     if (error) warnings.push(`nao foi possivel reverter a linha ${lineId}`);
+  }
+
+  for (const entidadeId of uniqueEntidadeIds) {
+    const { error } = await cotadorService.deleteEntidadeClasse(entidadeId);
+    if (error) warnings.push(`nao foi possivel reverter a entidade ${entidadeId}`);
+  }
+
+  for (const administradoraId of uniqueAdministradoraIds) {
+    const { error } = await cotadorService.deleteAdministradora(administradoraId);
+    if (error) warnings.push(`nao foi possivel reverter a administradora ${administradoraId}`);
   }
 
   for (const operadoraId of uniqueOperadoraIds) {
@@ -886,29 +1159,37 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
       linha: String(item.linha ?? '').trim(),
       produto: productName,
       administradora: cleanText(typeof item.administradora === 'string' ? item.administradora : null),
-      modalidadeBase: cleanText(typeof item.modalidadeBase === 'string' ? item.modalidadeBase : typeof item.modalidade_base === 'string' ? item.modalidade_base : null),
+      modalidadeBase: normalizeImportedModalidade(typeof item.modalidadeBase === 'string' ? item.modalidadeBase : typeof item.modalidade_base === 'string' ? item.modalidade_base : null),
       abrangencia: normalizeImportedAabrangencia(typeof item.abrangencia === 'string' ? item.abrangencia : null),
       acomodacoes: normalizeImportedAcomodacoes(Array.isArray(item.acomodacoes) ? item.acomodacoes.map((value) => String(value)) : []),
-      entidadesElegiveis: Array.isArray(item.entidadesElegiveis) ? item.entidadesElegiveis.map((value) => String(value).trim()).filter(Boolean) : [],
+      entidadesElegiveis: Array.isArray(item.entidadesElegiveis)
+        ? item.entidadesElegiveis.map((value) => String(value).trim()).filter(Boolean)
+        : Array.isArray(item.entidades_elegiveis)
+          ? item.entidades_elegiveis.map((value) => String(value).trim()).filter(Boolean)
+          : [],
       detalhes: {
         carencias: cleanText(typeof details.carencias === 'string' ? details.carencias : null),
-        documentosNecessarios: cleanText(typeof details.documentosNecessarios === 'string' ? details.documentosNecessarios : null),
+        documentosNecessarios: cleanText(typeof details.documentosNecessarios === 'string' ? details.documentosNecessarios : typeof details.documentos_necessarios === 'string' ? details.documentos_necessarios : null),
         reembolso: cleanText(typeof details.reembolso === 'string' ? details.reembolso : null),
-        informacoesImportantes: cleanText(typeof details.informacoesImportantes === 'string' ? details.informacoesImportantes : null),
+        informacoesImportantes: cleanText(typeof details.informacoesImportantes === 'string' ? details.informacoesImportantes : typeof details.informacoes_importantes === 'string' ? details.informacoes_importantes : null),
       },
-      redeHospitalar: Array.isArray(item.redeHospitalar) ? item.redeHospitalar as CotadorHospitalNetworkEntry[] : undefined,
+      redeHospitalar: Array.isArray(item.redeHospitalar)
+        ? item.redeHospitalar as CotadorHospitalNetworkEntry[]
+        : Array.isArray(item.rede_hospitalar)
+          ? item.rede_hospitalar as CotadorHospitalNetworkEntry[]
+          : undefined,
       tabelas: tabelas.map((table) => {
         const candidate = table as Record<string, unknown>;
-        const parsedPrices = parseImportedPricesByAcomodacao(candidate.precosPorAcomodacao);
+        const parsedPrices = parseImportedPricesByAcomodacao(candidate.precosPorAcomodacao ?? candidate.precos_por_acomodacao);
 
         return {
           nome: String(candidate.nome ?? ''),
           codigo: cleanText(typeof candidate.codigo === 'string' ? candidate.codigo : null),
-          modalidade: String(candidate.modalidade ?? 'PME') as ImportedTableDefinition['modalidade'],
-          perfilEmpresarial: String(candidate.perfilEmpresarial ?? 'todos') as ImportedTableDefinition['perfilEmpresarial'],
-          coparticipacao: String(candidate.coparticipacao ?? 'sem') as ImportedTableDefinition['coparticipacao'],
-          vidasMin: parseInteger(candidate.vidasMin as string | number | null),
-          vidasMax: parseInteger(candidate.vidasMax as string | number | null),
+          modalidade: normalizeImportedModalidade(String(candidate.modalidade ?? candidate.modalidade_tabela ?? 'PME')) ?? 'PME',
+          perfilEmpresarial: normalizeImportedBusinessProfile(String(candidate.perfilEmpresarial ?? candidate.perfil_empresarial ?? 'todos')) ?? 'todos',
+          coparticipacao: normalizeImportedCoparticipacao(String(candidate.coparticipacao ?? 'sem')) ?? 'sem',
+          vidasMin: parseInteger((candidate.vidasMin ?? candidate.vidas_min) as string | number | null),
+          vidasMax: parseInteger((candidate.vidasMax ?? candidate.vidas_max) as string | number | null),
           observacoes: cleanText(typeof candidate.observacoes === 'string' ? candidate.observacoes : null),
           ativo: typeof candidate.ativo === 'boolean' ? candidate.ativo : true,
           precosPorAcomodacao: parsedPrices,
@@ -1125,17 +1406,7 @@ const buildPreviewFromPayloadWithDiff = (payload: ImportedJsonPayload, context: 
 
   const items = payload.items.map<CotadorImportPreviewItem>((item) => {
     const changes: CotadorImportPreviewAction[] = [];
-
-    const administradoraName = cleanText(item.administradora);
-    const administradora = administradoraName ? findByName(previewContext.administradoras, administradoraName) : null;
-    if (administradoraName && !administradora) {
-      changes.push({ kind: 'conflict', scope: 'administradora', label: 'Administradora', reason: `Administradora ${administradoraName} nao encontrada no catalogo.` });
-    }
-
-    const missingEntities = (item.entidadesElegiveis ?? []).filter((name) => !findByName(previewContext.entidades, name));
-    if (missingEntities.length > 0) {
-      changes.push({ kind: 'conflict', scope: 'entidade', label: 'Entidades', reason: `Entidades nao encontradas: ${missingEntities.join(', ')}.` });
-    }
+    ensurePreviewReferenceCatalogDependencies(previewContext, item, changes);
 
     let operadora = findOperadora(previewContext.operadoras, item.operadora);
     if (!operadora) {
@@ -1294,31 +1565,31 @@ const parseCsvTables = (text: string) => {
     }, {} as CotadorPriceRowInput);
 
     return {
-      product: {
-        operadora: row.operadora,
-        linha: row.linha,
-        produto: row.produto,
-        administradora: cleanText(row.administradora),
-        modalidadeBase: cleanText(row.modalidade_base),
-        abrangencia: cleanText(row.abrangencia),
-        acomodacoes: splitList(row.acomodacoes).length > 0 ? splitList(row.acomodacoes) : splitList(acomodacao),
-        entidadesElegiveis: splitList(row.entidades_elegiveis),
-      } as ProductReference,
-      table: {
-        nome: row.nome_tabela,
-        codigo: cleanText(row.codigo_tabela),
-        modalidade: (row.modalidade_tabela || 'PME') as ImportedTableDefinition['modalidade'],
-        perfilEmpresarial: (row.perfil_empresarial || 'todos') as ImportedTableDefinition['perfilEmpresarial'],
-        coparticipacao: (row.coparticipacao || 'sem') as ImportedTableDefinition['coparticipacao'],
-        vidasMin: parseInteger(row.vidas_min),
-        vidasMax: parseInteger(row.vidas_max),
-        observacoes: cleanText(row.observacoes),
-        ativo: parseBoolean(row.ativo, true),
-        precosPorAcomodacao: {
-          [acomodacao || 'Padrao']: prices,
-        },
-      } as ImportedTableDefinition,
-    };
+        product: {
+          operadora: row.operadora,
+          linha: row.linha,
+          produto: row.produto,
+          administradora: cleanText(row.administradora),
+          modalidadeBase: normalizeImportedModalidade(row.modalidade_base),
+          abrangencia: normalizeImportedAabrangencia(row.abrangencia),
+          acomodacoes: normalizeImportedAcomodacoes(splitList(row.acomodacoes).length > 0 ? splitList(row.acomodacoes) : splitList(acomodacao)),
+          entidadesElegiveis: splitList(row.entidades_elegiveis),
+        } as ProductReference,
+        table: {
+          nome: row.nome_tabela,
+          codigo: cleanText(row.codigo_tabela),
+          modalidade: normalizeImportedModalidade(row.modalidade_tabela || 'PME') ?? 'PME',
+          perfilEmpresarial: normalizeImportedBusinessProfile(row.perfil_empresarial || 'todos') ?? 'todos',
+          coparticipacao: normalizeImportedCoparticipacao(row.coparticipacao || 'sem') ?? 'sem',
+          vidasMin: parseInteger(row.vidas_min),
+          vidasMax: parseInteger(row.vidas_max),
+          observacoes: cleanText(row.observacoes),
+          ativo: parseBoolean(row.ativo, true),
+          precosPorAcomodacao: {
+            [normalizeImportedAcomodacao(acomodacao) || 'Padrao']: prices,
+          },
+        } as ImportedTableDefinition,
+      };
   }).filter((item) => item.product.operadora && item.product.linha && item.product.produto && item.table.nome);
 };
 
@@ -1329,9 +1600,9 @@ const parseCsvNetwork = (text: string): ImportedNetworkCsvRow[] =>
       linha: row.linha,
       produto: row.produto,
       administradora: cleanText(row.administradora),
-      modalidadeBase: cleanText(row.modalidade_base),
-      abrangencia: cleanText(row.abrangencia),
-      acomodacoes: splitList(row.acomodacoes),
+      modalidadeBase: normalizeImportedModalidade(row.modalidade_base),
+      abrangencia: normalizeImportedAabrangencia(row.abrangencia),
+      acomodacoes: normalizeImportedAcomodacoes(splitList(row.acomodacoes)),
       cidade: row.cidade,
       regiao: cleanText(row.regiao),
       hospital: row.hospital,
@@ -1369,6 +1640,8 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
   const mutations: ImportMutations = {
     createdOperadoraIds: [],
     createdLineIds: [],
+    createdAdministradoraIds: [],
+    createdEntidadeIds: [],
     createdProductIds: [],
     createdTableIds: [],
   };
@@ -1391,6 +1664,8 @@ const importJsonCompleto = async (text: string, context: ImportLookupContext): P
       const resolvedProduct = await resolveProduct(item, context, result);
       if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
       if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
+      if (resolvedProduct.createdAdministradoraId) mutations.createdAdministradoraIds.push(resolvedProduct.createdAdministradoraId);
+      if (resolvedProduct.createdEntidadeIds.length > 0) mutations.createdEntidadeIds.push(...resolvedProduct.createdEntidadeIds);
       if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
 
       if (item.redeHospitalar !== undefined) {
@@ -1476,6 +1751,8 @@ const importCsvTabelas = async (text: string, context: ImportLookupContext): Pro
   const mutations: ImportMutations = {
     createdOperadoraIds: [],
     createdLineIds: [],
+    createdAdministradoraIds: [],
+    createdEntidadeIds: [],
     createdProductIds: [],
     createdTableIds: [],
   };
@@ -1485,6 +1762,8 @@ const importCsvTabelas = async (text: string, context: ImportLookupContext): Pro
       const resolvedProduct = await resolveProduct(row.product, context, result);
       if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
       if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
+      if (resolvedProduct.createdAdministradoraId) mutations.createdAdministradoraIds.push(resolvedProduct.createdAdministradoraId);
+      if (resolvedProduct.createdEntidadeIds.length > 0) mutations.createdEntidadeIds.push(...resolvedProduct.createdEntidadeIds);
       if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
 
       const tableResult = await upsertImportedTable(resolvedProduct.product, row.table, context, result);
@@ -1508,6 +1787,8 @@ const importCsvRede = async (text: string, context: ImportLookupContext): Promis
   const mutations: ImportMutations = {
     createdOperadoraIds: [],
     createdLineIds: [],
+    createdAdministradoraIds: [],
+    createdEntidadeIds: [],
     createdProductIds: [],
     createdTableIds: [],
   };
@@ -1545,6 +1826,8 @@ const importCsvRede = async (text: string, context: ImportLookupContext): Promis
 
       if (resolvedProduct.createdOperadoraId) mutations.createdOperadoraIds.push(resolvedProduct.createdOperadoraId);
       if (resolvedProduct.createdLineId) mutations.createdLineIds.push(resolvedProduct.createdLineId);
+      if (resolvedProduct.createdAdministradoraId) mutations.createdAdministradoraIds.push(resolvedProduct.createdAdministradoraId);
+      if (resolvedProduct.createdEntidadeIds.length > 0) mutations.createdEntidadeIds.push(...resolvedProduct.createdEntidadeIds);
       if (resolvedProduct.createdProductId) mutations.createdProductIds.push(resolvedProduct.createdProductId);
 
       const networkResult = await cotadorService.updateProdutoRedeHospitalar(resolvedProduct.product.id, network);

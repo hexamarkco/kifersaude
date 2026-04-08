@@ -10,6 +10,7 @@ import type {
   CotadorAgeDistribution,
   CotadorCatalogActor,
   CotadorCatalogItem,
+  CotadorCatalogFilters,
   CotadorHospitalNetworkEntry,
   CotadorPriceByAgeRange,
   CotadorQuote,
@@ -17,6 +18,7 @@ import type {
   CotadorQuoteInput,
   CotadorQuoteItem,
 } from './cotadorTypes';
+import { DEFAULT_COTADOR_FILTERS } from './cotadorTypes';
 
 const modalityLabelMap = new Map(COTADOR_MODALITY_OPTIONS.map((option) => [option.value, option.label]));
 
@@ -26,6 +28,25 @@ const normalizeCotadorText = (value?: string | null) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim();
+
+const COTADOR_HOSPITAL_NAME_NOISE_TOKENS = new Set([
+  'a',
+  'da',
+  'das',
+  'de',
+  'do',
+  'dos',
+  'e',
+  'eireli',
+  'epp',
+  'limitada',
+  'ltda',
+  'me',
+  'mei',
+  's',
+  'sa',
+  'ss',
+]);
 
 const toNonNegativeInt = (value: unknown) => {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
@@ -100,6 +121,141 @@ const sanitizePriceByAgeRange = (value: unknown): CotadorPriceByAgeRange => {
     return accumulator;
   }, {} as CotadorPriceByAgeRange);
 };
+
+const sanitizeCotadorCatalogFilters = (value: unknown): CotadorCatalogFilters => {
+  if (!value || typeof value !== 'object') {
+    return { ...DEFAULT_COTADOR_FILTERS };
+  }
+
+  const candidate = value as Partial<CotadorCatalogFilters>;
+
+  return {
+    search: typeof candidate.search === 'string' ? candidate.search : DEFAULT_COTADOR_FILTERS.search,
+    networkLocation: typeof candidate.networkLocation === 'string' ? candidate.networkLocation : DEFAULT_COTADOR_FILTERS.networkLocation,
+    operadoraId: typeof candidate.operadoraId === 'string' ? candidate.operadoraId : DEFAULT_COTADOR_FILTERS.operadoraId,
+    linhaId: typeof candidate.linhaId === 'string' ? candidate.linhaId : DEFAULT_COTADOR_FILTERS.linhaId,
+    administradoraId: typeof candidate.administradoraId === 'string' ? candidate.administradoraId : DEFAULT_COTADOR_FILTERS.administradoraId,
+    entidadeId: typeof candidate.entidadeId === 'string' ? candidate.entidadeId : DEFAULT_COTADOR_FILTERS.entidadeId,
+    perfilEmpresarial:
+      candidate.perfilEmpresarial === 'todos' || candidate.perfilEmpresarial === 'mei' || candidate.perfilEmpresarial === 'nao_mei'
+        ? candidate.perfilEmpresarial
+        : DEFAULT_COTADOR_FILTERS.perfilEmpresarial,
+    coparticipacao:
+      candidate.coparticipacao === 'sem' || candidate.coparticipacao === 'parcial' || candidate.coparticipacao === 'total'
+        ? candidate.coparticipacao
+        : DEFAULT_COTADOR_FILTERS.coparticipacao,
+    abrangencia: typeof candidate.abrangencia === 'string' ? candidate.abrangencia : DEFAULT_COTADOR_FILTERS.abrangencia,
+    acomodacao: typeof candidate.acomodacao === 'string' ? candidate.acomodacao : DEFAULT_COTADOR_FILTERS.acomodacao,
+    selectedOnly: candidate.selectedOnly === true,
+  };
+};
+
+const collectUniqueDisplayValues = (values: Array<string | null | undefined>) => {
+  const unique = new Map<string, string>();
+
+  values.forEach((value) => {
+    if (typeof value !== 'string') return;
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    const key = normalizeCotadorText(trimmed);
+    if (!key || unique.has(key)) return;
+    unique.set(key, trimmed);
+  });
+
+  return Array.from(unique.values());
+};
+
+const mergeDisplayValues = (
+  values: Array<string | null | undefined>,
+  separator = ' / ',
+) => {
+  const unique = collectUniqueDisplayValues(values);
+
+  if (unique.length === 0) return null;
+  if (unique.length === 1) return unique[0];
+  return unique.join(separator);
+};
+
+export const getCotadorComparableHospitalName = (value?: string | null) => {
+  const normalized = normalizeCotadorText(value).replace(/[^a-z0-9]+/g, ' ').trim();
+  if (!normalized) return '';
+
+  const filteredTokens = normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((token) => !COTADOR_HOSPITAL_NAME_NOISE_TOKENS.has(token));
+
+  return filteredTokens.join(' ') || normalized;
+};
+
+export const buildCotadorComparableHospitalKey = (
+  entry: Pick<CotadorHospitalNetworkEntry, 'hospital' | 'cidade'>,
+) => [
+  getCotadorComparableHospitalName(entry.hospital),
+  normalizeCotadorText(entry.cidade),
+].join('|');
+
+const pickPreferredHospitalDisplayName = (values: Array<string | null | undefined>) => {
+  const unique = collectUniqueDisplayValues(values);
+  if (unique.length === 0) return '';
+
+  return [...unique].sort((left, right) => {
+    const comparableLengthDifference = getCotadorComparableHospitalName(left).length - getCotadorComparableHospitalName(right).length;
+    if (comparableLengthDifference !== 0) return comparableLengthDifference;
+
+    const rawLengthDifference = left.length - right.length;
+    if (rawLengthDifference !== 0) return rawLengthDifference;
+
+    return left.localeCompare(right, 'pt-BR');
+  })[0];
+};
+
+export const mergeCotadorHospitalNetworkEntries = (entries: CotadorHospitalNetworkEntry[]) => {
+  const grouped = new Map<string, {
+    hospitalNames: string[];
+    cidades: string[];
+    bairros: string[];
+    regioes: string[];
+    atendimentos: string[];
+    observacoes: string[];
+  }>();
+
+  entries.forEach((entry) => {
+    const key = buildCotadorComparableHospitalKey(entry);
+    if (!key) return;
+
+    const current = grouped.get(key) ?? {
+      hospitalNames: [],
+      cidades: [],
+      bairros: [],
+      regioes: [],
+      atendimentos: [],
+      observacoes: [],
+    };
+
+    current.hospitalNames.push(entry.hospital);
+    current.cidades.push(entry.cidade);
+    if (entry.bairro) current.bairros.push(entry.bairro);
+    if (entry.regiao) current.regioes.push(entry.regiao);
+    current.atendimentos.push(...entry.atendimentos.filter(Boolean));
+    if (entry.observacoes?.trim()) current.observacoes.push(entry.observacoes.trim());
+
+    grouped.set(key, current);
+  });
+
+  return Array.from(grouped.values()).map((group) => ({
+    hospital: pickPreferredHospitalDisplayName(group.hospitalNames),
+    cidade: mergeDisplayValues(group.cidades, ' / ') ?? '',
+    bairro: mergeDisplayValues(group.bairros, ' / '),
+    regiao: mergeDisplayValues(group.regioes, ' / '),
+    atendimentos: collectUniqueDisplayValues(group.atendimentos).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+    observacoes: mergeDisplayValues(group.observacoes, ' | '),
+  })).filter((entry) => entry.hospital && entry.cidade);
+};
+
+export const countCotadorUniqueNetworkProviders = (entries: CotadorHospitalNetworkEntry[]) =>
+  mergeCotadorHospitalNetworkEntries(entries).length;
 
 export const calculateCotadorEstimatedMonthlyTotal = (
   ageDistribution: CotadorAgeDistribution,
@@ -285,6 +441,7 @@ export const createCotadorQuote = (input: CotadorQuoteInput): CotadorQuote => {
     leadId: input.leadId ?? null,
     ageDistribution,
     totalLives: getCotadorTotalLives(ageDistribution),
+    filters: { ...DEFAULT_COTADOR_FILTERS },
     selectedItems: [],
     createdAt: now,
     updatedAt: now,
@@ -301,6 +458,7 @@ export const updateCotadorQuote = (quote: CotadorQuote, input: CotadorQuoteInput
     leadId: input.leadId ?? null,
     ageDistribution,
     totalLives: getCotadorTotalLives(ageDistribution),
+    filters: sanitizeCotadorCatalogFilters(quote.filters),
     updatedAt: new Date().toISOString(),
   };
 };
@@ -333,6 +491,7 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
     : [];
   const createdAt = typeof candidate.createdAt === 'string' ? candidate.createdAt : new Date().toISOString();
   const updatedAt = typeof candidate.updatedAt === 'string' ? candidate.updatedAt : createdAt;
+  const filters = sanitizeCotadorCatalogFilters(candidate.filters);
 
   return {
     id: candidate.id,
@@ -341,6 +500,7 @@ const parseStoredQuote = (value: unknown): CotadorQuote | null => {
     leadId: typeof candidate.leadId === 'string' ? candidate.leadId : null,
     ageDistribution,
     totalLives: getCotadorTotalLives(ageDistribution),
+    filters,
     selectedItems: selectedItems.length
       ? selectedItems
       : legacySelectedIds.map((catalogItemKey) => ({

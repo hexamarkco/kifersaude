@@ -4,7 +4,7 @@ import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ModalShell from '../../../components/ui/ModalShell';
-import { formatCotadorCurrency } from '../shared/cotadorUtils';
+import { formatCotadorCurrency, mergeCotadorHospitalNetworkEntries } from '../shared/cotadorUtils';
 import type { CotadorQuoteItem } from '../shared/cotadorTypes';
 
 type CotadorPlanDetailsPageProps = {
@@ -94,10 +94,14 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
   const [networkSearch, setNetworkSearch] = useState('');
   const [networkCity, setNetworkCity] = useState('');
   const [networkModalOpen, setNetworkModalOpen] = useState(false);
-  const networkEntriesCount = item.redeHospitalar.length;
-  const networkCitiesCount = useMemo(
-    () => new Set(item.redeHospitalar.map((entry) => entry.cidade).filter(Boolean)).size,
+  const mergedNetworkEntries = useMemo(
+    () => mergeCotadorHospitalNetworkEntries(item.redeHospitalar),
     [item.redeHospitalar],
+  );
+  const networkEntriesCount = mergedNetworkEntries.length;
+  const networkCitiesCount = useMemo(
+    () => new Set(mergedNetworkEntries.map((entry) => entry.cidade).filter(Boolean)).size,
+    [mergedNetworkEntries],
   );
 
   const summaryBlocks = useMemo<SummaryBlock[]>(() => {
@@ -148,8 +152,8 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
   }, [item.id]);
 
   const sortedNetwork = useMemo(
-    () => [...item.redeHospitalar].sort(compareNetworkEntries),
-    [item.redeHospitalar],
+    () => [...mergedNetworkEntries].sort(compareNetworkEntries),
+    [mergedNetworkEntries],
   );
 
   const cityOptions = useMemo(

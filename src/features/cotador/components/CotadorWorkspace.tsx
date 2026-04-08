@@ -4,7 +4,13 @@ import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ModalShell from '../../../components/ui/ModalShell';
-import { formatCotadorCurrency, formatCotadorDateTime } from '../shared/cotadorUtils';
+import {
+  buildCotadorComparableHospitalKey,
+  countCotadorUniqueNetworkProviders,
+  formatCotadorCurrency,
+  formatCotadorDateTime,
+  mergeCotadorHospitalNetworkEntries,
+} from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 import CotadorPlanPickerOverlay from './CotadorPlanPickerOverlay';
 
@@ -125,6 +131,27 @@ const compareNetworkCompareRows = (left: NetworkCompareRow, right: NetworkCompar
   return left.hospital.localeCompare(right.hospital, 'pt-BR');
 };
 
+const mergeCompareLabel = (current?: string | null, next?: string | null) => {
+  const values = Array.from(new Map([current, next]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .map((value) => [normalizeNetworkText(value), value.trim()])).values());
+
+  if (values.length === 0) return null;
+  if (values.length === 1) return values[0];
+  return values.join(' / ');
+};
+
+const preferHospitalLabel = (current: string, next: string) => {
+  if (!current) return next;
+  if (!next) return current;
+
+  if (next.trim().length !== current.trim().length) {
+    return next.trim().length < current.trim().length ? next : current;
+  }
+
+  return next.localeCompare(current, 'pt-BR') < 0 ? next : current;
+};
+
 export default function CotadorWorkspace({
   quote,
   linkedLeadLabel,
@@ -155,7 +182,15 @@ export default function CotadorWorkspace({
   );
 
   const networkPlansHaveData = useMemo(
-    () => selectedItems.some((item) => item.redeHospitalar.length > 0),
+    () => selectedItems.some((item) => countCotadorUniqueNetworkProviders(item.redeHospitalar) > 0),
+    [selectedItems],
+  );
+
+  const networkSummaryByItemId = useMemo(
+    () => new Map(selectedItems.map((item) => {
+      const entries = mergeCotadorHospitalNetworkEntries(item.redeHospitalar);
+      return [item.id, { entries, count: entries.length }] as const;
+    })),
     [selectedItems],
   );
 
@@ -163,8 +198,10 @@ export default function CotadorWorkspace({
     const rows = new Map<string, NetworkCompareRow>();
 
     selectedItems.forEach((item) => {
-      item.redeHospitalar.forEach((entry) => {
-        const key = [entry.hospital, entry.cidade, entry.regiao, entry.bairro].map(normalizeNetworkText).join('|');
+      const networkEntries = networkSummaryByItemId.get(item.id)?.entries ?? [];
+
+      networkEntries.forEach((entry) => {
+        const key = buildCotadorComparableHospitalKey(entry);
         const current = rows.get(key) ?? {
           key,
           hospital: entry.hospital,
@@ -180,6 +217,9 @@ export default function CotadorWorkspace({
         const mergedServices = Array.from(new Set([...(current.planPresence[item.id]?.services ?? []), ...entry.atendimentos.filter(Boolean)]))
           .sort((left, right) => left.localeCompare(right, 'pt-BR'));
 
+        current.hospital = preferHospitalLabel(current.hospital, entry.hospital);
+        current.bairro = mergeCompareLabel(current.bairro, entry.bairro);
+        current.regiao = mergeCompareLabel(current.regiao, entry.regiao);
         current.planPresence[item.id] = { services: mergedServices };
         current.services = Array.from(new Set([...current.services, ...entry.atendimentos.filter(Boolean)]))
           .sort((left, right) => left.localeCompare(right, 'pt-BR'));
@@ -194,7 +234,7 @@ export default function CotadorWorkspace({
     });
 
     return Array.from(rows.values()).sort(compareNetworkCompareRows);
-  }, [selectedItems]);
+  }, [networkSummaryByItemId, selectedItems]);
 
   const networkComparisonCityOptions = useMemo(
     () => Array.from(new Set(networkComparisonRows.map((row) => row.cidade).filter(Boolean)))
@@ -264,7 +304,7 @@ export default function CotadorWorkspace({
       .filter((value): value is number => value !== null);
     const lowestPrice = new Set(priceValues).size > 1 ? Math.min(...priceValues) : null;
 
-    const networkCounts = selectedItems.map((item) => item.redeHospitalar.length);
+    const networkCounts = selectedItems.map((item) => networkSummaryByItemId.get(item.id)?.count ?? 0);
     const largestNetwork = new Set(networkCounts).size > 1 ? Math.max(...networkCounts) : null;
 
     const restrictiveScores = selectedItems.map((item) => ({
@@ -281,14 +321,14 @@ export default function CotadorWorkspace({
 
       highlights.set(item.id, {
         bestPrice: lowestPrice !== null && item.estimatedMonthlyTotal === lowestPrice,
-        largestNetwork: largestNetwork !== null && item.redeHospitalar.length === largestNetwork,
+        largestNetwork: largestNetwork !== null && (networkSummaryByItemId.get(item.id)?.count ?? 0) === largestNetwork,
         mostRestrictive: highestRestrictiveScore !== null && restrictiveEntry?.score === highestRestrictiveScore,
         restrictiveReason,
       });
     });
 
     return highlights;
-  }, [selectedItems]);
+  }, [networkSummaryByItemId, selectedItems]);
 
   return (
     <div className="space-y-6">
@@ -349,6 +389,7 @@ export default function CotadorWorkspace({
                   mostRestrictive: false,
                   restrictiveReason: null,
                 };
+                const networkCount = networkSummaryByItemId.get(item.id)?.count ?? 0;
 
                 return (
                   <article
@@ -367,8 +408,8 @@ export default function CotadorWorkspace({
                       </p>
                       <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.linha?.name ?? 'LINHA'}</p>
                       <h4 className="mt-3 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
-                      {(highlights.bestPrice || highlights.largestNetwork || highlights.mostRestrictive) && (
-                        <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 min-h-[2.25rem]">
+                        <div className="flex flex-wrap gap-2">
                           {highlights.bestPrice && (
                             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(184,92,31,0.24)] bg-[color:rgba(184,92,31,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-accent-ink,#6f3f16)]">
                               <Sparkles className="h-3.5 w-3.5" />
@@ -382,14 +423,16 @@ export default function CotadorWorkspace({
                             </span>
                           )}
                           {highlights.mostRestrictive && (
-                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(92,53,23,0.2)] bg-[color:rgba(92,53,23,0.08)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text,#1a120d)]">
+                            <span
+                              className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(92,53,23,0.2)] bg-[color:rgba(92,53,23,0.08)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text,#1a120d)]"
+                              title={highlights.restrictiveReason ?? undefined}
+                            >
                               <ShieldCheck className="h-3.5 w-3.5" />
                               Mais restritivo
-                              {highlights.restrictiveReason ? ` · ${highlights.restrictiveReason}` : ''}
                             </span>
                           )}
                         </div>
-                      )}
+                      </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {item.perfilEmpresarial && (
                           <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
@@ -438,8 +481,8 @@ export default function CotadorWorkspace({
                   <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                       <MapPin className="h-3.5 w-3.5" />
                       <span>
-                        {item.redeHospitalar.length > 0
-                          ? `${item.redeHospitalar.length} prestador(es) na rede`
+                        {networkCount > 0
+                          ? `${networkCount} prestador(es) na rede`
                           : 'Rede hospitalar ainda nao cadastrada'}
                       </span>
                     </div>
@@ -574,7 +617,7 @@ export default function CotadorWorkspace({
                       {item.operadora.name ?? 'Operadora'}
                     </p>
                     <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</p>
-                    <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.redeHospitalar.length} prestador(es)</p>
+                    <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{networkSummaryByItemId.get(item.id)?.count ?? 0} prestador(es)</p>
                   </div>
                 ))}
               </div>
@@ -640,7 +683,7 @@ export default function CotadorWorkspace({
                             {item.operadora.name ?? 'Operadora'}
                           </p>
                           <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</p>
-                          <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.redeHospitalar.length} prestador(es)</p>
+                          <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{networkSummaryByItemId.get(item.id)?.count ?? 0} prestador(es)</p>
                         </div>
                       ))}
                     </div>

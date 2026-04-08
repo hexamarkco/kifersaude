@@ -26,6 +26,7 @@ export type CotadorQuote = {
   modality: CotadorQuoteModality;
   ageDistribution: CotadorAgeDistribution;
   totalLives: number;
+  filters: CotadorCatalogFilters;
   selectedItems: CotadorQuoteItem[];
   leadId?: string | null;
   createdAt: string;
@@ -132,4 +133,18 @@ export type CotadorCatalogFilters = {
   abrangencia: string;
   acomodacao: string;
   selectedOnly: boolean;
+};
+
+export const DEFAULT_COTADOR_FILTERS: CotadorCatalogFilters = {
+  search: '',
+  networkLocation: '',
+  operadoraId: '',
+  linhaId: '',
+  administradoraId: '',
+  entidadeId: '',
+  perfilEmpresarial: '',
+  coparticipacao: '',
+  abrangencia: '',
+  acomodacao: '',
+  selectedOnly: false,
 };

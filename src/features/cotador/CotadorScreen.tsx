@@ -26,20 +26,7 @@ import type {
   CotadorQuoteDraft,
   CotadorQuoteInput,
 } from './shared/cotadorTypes';
-
-const DEFAULT_FILTERS: CotadorCatalogFilters = {
-  search: '',
-  networkLocation: '',
-  operadoraId: '',
-  linhaId: '',
-  administradoraId: '',
-  entidadeId: '',
-  perfilEmpresarial: '',
-  coparticipacao: '',
-  abrangencia: '',
-  acomodacao: '',
-  selectedOnly: false,
-};
+import { DEFAULT_COTADOR_FILTERS } from './shared/cotadorTypes';
 
 const createWizardState = (mode: 'create' | 'edit', draft: CotadorQuoteDraft) => ({
   isOpen: true,
@@ -113,6 +100,20 @@ const normalizeFilterTerm = (value?: string | null) =>
     .toLowerCase()
     .trim();
 
+const areFiltersEqual = (left: CotadorCatalogFilters, right: CotadorCatalogFilters) => (
+  left.search === right.search
+  && left.networkLocation === right.networkLocation
+  && left.operadoraId === right.operadoraId
+  && left.linhaId === right.linhaId
+  && left.administradoraId === right.administradoraId
+  && left.entidadeId === right.entidadeId
+  && left.perfilEmpresarial === right.perfilEmpresarial
+  && left.coparticipacao === right.coparticipacao
+  && left.abrangencia === right.abrangencia
+  && left.acomodacao === right.acomodacao
+  && left.selectedOnly === right.selectedOnly
+);
+
 const matchesNetworkLocation = (item: CotadorCatalogItem, networkLocation: string) => {
   const normalizedLocation = normalizeFilterTerm(networkLocation);
   if (!normalizedLocation) return true;
@@ -137,7 +138,7 @@ export default function CotadorScreen() {
   const [catalogItems, setCatalogItems] = useState<CotadorCatalogItem[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [quotes, setQuotes] = useState<CotadorQuote[]>([]);
-  const [filters, setFilters] = useState<CotadorCatalogFilters>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<CotadorCatalogFilters>({ ...DEFAULT_COTADOR_FILTERS });
   const [loading, setLoading] = useState(true);
   const [wizardBusy, setWizardBusy] = useState(false);
   const [leadBusy, setLeadBusy] = useState(false);
@@ -207,10 +208,6 @@ export default function CotadorScreen() {
     return quotes.slice(startIndex, startIndex + quotesPerPage);
   }, [quotes, quotesPage, quotesPerPage]);
 
-  useEffect(() => {
-    setFilters(DEFAULT_FILTERS);
-  }, [quoteId]);
-
   const activeQuote = useMemo(() => {
     const baseQuote = quoteId ? quotes.find((quote) => quote.id === quoteId) ?? null : null;
     if (!baseQuote) return null;
@@ -229,6 +226,11 @@ export default function CotadorScreen() {
 
     return { ...baseQuote, selectedItems: recalculatedItems };
   }, [quoteId, quotes, catalogItems]);
+
+  useEffect(() => {
+    const nextFilters = activeQuote?.filters ?? DEFAULT_COTADOR_FILTERS;
+    setFilters((current) => (areFiltersEqual(current, nextFilters) ? current : { ...nextFilters }));
+  }, [activeQuote]);
 
   const activePlanCatalogKey = useMemo(
     () => (catalogItemKey ? decodeURIComponent(catalogItemKey) : null),
@@ -389,6 +391,30 @@ export default function CotadorScreen() {
 
   const openCreateQuote = () => setWizardState(createWizardState('create', buildCotadorQuoteDraft()));
 
+  const updateQuoteFilters = useCallback((updater: (current: CotadorCatalogFilters) => CotadorCatalogFilters) => {
+    setFilters((current) => {
+      const next = updater(current);
+
+      if (activeQuote) {
+        setQuotes((quotesCurrent) => quotesCurrent.map((quote) => (
+          quote.id === activeQuote.id && !areFiltersEqual(quote.filters, next)
+            ? { ...quote, filters: { ...next } }
+            : quote
+        )));
+      }
+
+      return areFiltersEqual(current, next) ? current : next;
+    });
+  }, [activeQuote]);
+
+  const handleUpdateFilters = useCallback((updates: Partial<CotadorCatalogFilters>) => {
+    updateQuoteFilters((current) => ({ ...current, ...updates }));
+  }, [updateQuoteFilters]);
+
+  const handleResetFilters = useCallback(() => {
+    updateQuoteFilters(() => ({ ...DEFAULT_COTADOR_FILTERS }));
+  }, [updateQuoteFilters]);
+
   const openEditQuote = () => {
     if (!activeQuote) return;
     setWizardState(createWizardState('edit', buildCotadorQuoteDraft(activeQuote)));
@@ -439,6 +465,7 @@ export default function CotadorScreen() {
 
     const nextQuote: CotadorQuote = {
       ...data,
+      filters: activeQuote.filters,
       selectedItems: nextSelectedItems,
     };
 
@@ -501,6 +528,7 @@ export default function CotadorScreen() {
 
     const nextQuote: CotadorQuote = {
       ...data,
+      filters: activeQuote.filters,
       selectedItems: activeQuote.selectedItems,
     };
 
@@ -669,8 +697,8 @@ export default function CotadorScreen() {
           selectedItems={activeQuote.selectedItems}
           filterOptions={filterOptions}
           filters={filters}
-          onUpdateFilters={(updates) => setFilters((current) => ({ ...current, ...updates }))}
-          onResetFilters={() => setFilters(DEFAULT_FILTERS)}
+          onUpdateFilters={handleUpdateFilters}
+          onResetFilters={handleResetFilters}
           onToggleCatalogItem={(itemId) => {
             void handleToggleCatalogItem(itemId);
           }}

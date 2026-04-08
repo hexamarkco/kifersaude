@@ -21,6 +21,7 @@ import {
 } from '../../../lib/supabase';
 import { COTADOR_AGE_RANGES, type CotadorAgeRange } from '../shared/cotadorConstants';
 import {
+  buildCotadorComparableHospitalKey,
   createEmptyCotadorAgeDistribution,
   getCotadorTotalLives,
   loadCotadorQuotesFromStorage,
@@ -38,6 +39,7 @@ import type {
   CotadorQuoteInput,
   CotadorQuoteItem,
 } from '../shared/cotadorTypes';
+import { DEFAULT_COTADOR_FILTERS } from '../shared/cotadorTypes';
 import {
   formatCotadorLocationText,
   formatCotadorOptionalLocationText,
@@ -421,6 +423,71 @@ async function fetchAllRowsResult<T>(
     return { data: null, error };
   }
 }
+
+const mergeUniqueStrings = (values: Array<string | null | undefined>) =>
+  Array.from(new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))));
+
+const mergeOptionalNotes = (values: Array<string | null | undefined>) => {
+  const unique = mergeUniqueStrings(values);
+  return unique.length > 0 ? unique.join(' | ') : null;
+};
+
+const buildComparableHospitalKeyFromHospital = (hospital: Pick<CotadorHospital, 'nome' | 'cidade'>) =>
+  buildCotadorComparableHospitalKey({ hospital: hospital.nome, cidade: hospital.cidade });
+
+const buildHospitalLookupByComparableKey = (
+  hospitals: CotadorHospital[],
+  aliasesByHospitalId: Map<string, CotadorHospitalAlias[]>,
+) => {
+  const lookup = new Map<string, string>();
+
+  hospitals.forEach((hospital) => {
+    const comparableKey = buildComparableHospitalKeyFromHospital(hospital);
+    if (comparableKey) {
+      lookup.set(comparableKey, hospital.id);
+    }
+
+    (aliasesByHospitalId.get(hospital.id) ?? []).forEach((alias) => {
+      const aliasKey = buildCotadorComparableHospitalKey({ hospital: alias.alias_nome, cidade: hospital.cidade });
+      if (aliasKey && !lookup.has(aliasKey)) {
+        lookup.set(aliasKey, hospital.id);
+      }
+    });
+  });
+
+  return lookup;
+};
+
+const upsertFallbackLinkedProductRecord = (
+  records: CotadorHospitalLinkedProductRecord[],
+  hospitalId: string,
+  product: CotadorProductManagerRecord,
+  entry: CotadorHospitalNetworkEntry,
+  ordem: number,
+) => {
+  const existing = records.find((record) => record.produto_id === product.id);
+
+  if (existing) {
+    existing.atendimentos = mergeUniqueStrings([...existing.atendimentos, ...entry.atendimentos]).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+    existing.observacoes = mergeOptionalNotes([existing.observacoes, entry.observacoes]);
+    existing.ordem = Math.min(existing.ordem, ordem);
+    return;
+  }
+
+  records.push({
+    link_id: `fallback:${product.id}:${hospitalId}:${ordem}`,
+    hospital_id: hospitalId,
+    produto_id: product.id,
+    produto_nome: product.nome,
+    produto_acomodacao: cleanOptionalText(product.acomodacao),
+    produto_abrangencia: cleanOptionalText(product.abrangencia),
+    operadora: product.operadora ?? null,
+    linha: product.linha ?? null,
+    atendimentos: mergeUniqueStrings(entry.atendimentos).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+    observacoes: cleanOptionalText(entry.observacoes),
+    ordem,
+  });
+};
 
 async function loadNormalizedProductNetworkMap() {
   const { data: linksData, error: linksError } = await fetchAllRowsResult<CotadorProdutoHospital>(async (from, to) => {
@@ -941,6 +1008,7 @@ const buildQuoteFromRows = (
     modality: quoteRow.modalidade,
     ageDistribution,
     totalLives: quoteRow.total_vidas || getCotadorTotalLives(ageDistribution),
+    filters: { ...DEFAULT_COTADOR_FILTERS },
     selectedItems,
     leadId: quoteRow.lead_id ?? null,
     createdAt: quoteRow.created_at,
@@ -1496,37 +1564,27 @@ export const cotadorService = {
 
   async getProdutoRedeHospitalarDetalhada(produtoId: string): Promise<CotadorProductNetworkManagerRecord[]> {
     try {
-      const { data: linksData, error: linksError } = await fetchAllRowsResult<CotadorProdutoHospital>(async (from, to) => {
-        const response = await supabase
-          .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
-          .select('*')
-          .eq('produto_id', produtoId)
-          .order('ordem', { ascending: true })
-          .order('id', { ascending: true })
-          .range(from, to);
+      const [{ data: linksData, error: linksError }, { data: productData, error: productError }, { data: hospitalsData, error: hospitalsError }, { data: aliasesData, error: aliasesError }] = await Promise.all([
+        fetchAllRowsResult<CotadorProdutoHospital>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
+            .select('*')
+            .eq('produto_id', produtoId)
+            .order('ordem', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
 
-        return { data: response.data as CotadorProdutoHospital[] | null, error: response.error };
-      });
-
-      if (linksError) {
-        if (isMissingTableError(linksError, COTADOR_PRODUTO_HOSPITAIS_TABLE)) {
-          return [];
-        }
-        throw linksError;
-      }
-
-      const links = (linksData as CotadorProdutoHospital[] | null) ?? [];
-      if (links.length === 0) {
-        return [];
-      }
-
-      const hospitalIds = Array.from(new Set(links.map((link) => link.hospital_id).filter(Boolean)));
-      const [{ data: hospitalsData, error: hospitalsError }, { data: aliasesData, error: aliasesError }] = await Promise.all([
+          return { data: response.data as CotadorProdutoHospital[] | null, error: response.error };
+        }),
+        supabase
+          .from(COTADOR_PRODUTOS_TABLE)
+          .select('rede_hospitalar')
+          .eq('id', produtoId)
+          .maybeSingle(),
         fetchAllRowsResult<CotadorHospital>(async (from, to) => {
           const response = await supabase
             .from(COTADOR_HOSPITAIS_TABLE)
             .select('*')
-            .in('id', hospitalIds)
             .order('id', { ascending: true })
             .range(from, to);
 
@@ -1536,7 +1594,6 @@ export const cotadorService = {
           const response = await supabase
             .from(COTADOR_HOSPITAL_ALIASES_TABLE)
             .select('*')
-            .in('hospital_id', hospitalIds)
             .order('hospital_id', { ascending: true })
             .order('alias_nome_normalizado', { ascending: true })
             .order('id', { ascending: true })
@@ -1546,7 +1603,15 @@ export const cotadorService = {
         }),
       ]);
 
-      if (hospitalsError) {
+      if (linksError && !isMissingTableError(linksError, COTADOR_PRODUTO_HOSPITAIS_TABLE)) {
+        throw linksError;
+      }
+
+      if (productError && !isMissingTableError(productError, COTADOR_PRODUTOS_TABLE)) {
+        throw productError;
+      }
+
+      if (hospitalsError && !isMissingTableError(hospitalsError, COTADOR_HOSPITAIS_TABLE)) {
         throw hospitalsError;
       }
 
@@ -1554,21 +1619,70 @@ export const cotadorService = {
         throw aliasesError;
       }
 
-      const hospitalById = new Map(((hospitalsData as CotadorHospital[] | null) ?? []).map((hospital) => [hospital.id, hospital]));
+      const links = (linksData as CotadorProdutoHospital[] | null) ?? [];
+      const rawEntries = sanitizeHospitalNetwork((productData as Pick<CotadorProduto, 'rede_hospitalar'> | null)?.rede_hospitalar);
+
+      if (links.length === 0 && rawEntries.length === 0) {
+        return [];
+      }
+
+      const hospitals = (hospitalsData as CotadorHospital[] | null) ?? [];
+      const aliases = (aliasesData as CotadorHospitalAlias[] | null) ?? [];
+      const hospitalById = new Map(hospitals.map((hospital) => [hospital.id, hospital]));
       const aliasesByHospitalId = new Map<string, CotadorHospitalAlias[]>();
 
-      ((aliasesData as CotadorHospitalAlias[] | null) ?? []).forEach((alias) => {
+      aliases.forEach((alias) => {
         const current = aliasesByHospitalId.get(alias.hospital_id) ?? [];
         current.push(alias);
         aliasesByHospitalId.set(alias.hospital_id, current);
       });
 
-      return links.reduce<CotadorProductNetworkManagerRecord[]>((accumulator, link) => {
+      const hospitalIdByComparableKey = buildHospitalLookupByComparableKey(hospitals, aliasesByHospitalId);
+      const normalizedRecords = links.reduce<CotadorProductNetworkManagerRecord[]>((accumulator, link) => {
         const hospital = hospitalById.get(link.hospital_id);
         if (!hospital) return accumulator;
         accumulator.push(buildNormalizedProductNetworkEntry(hospital, link, aliasesByHospitalId.get(link.hospital_id) ?? []));
         return accumulator;
       }, []);
+      const normalizedComparableKeys = new Set(
+        normalizedRecords.map((record) => buildCotadorComparableHospitalKey(record)).filter(Boolean),
+      );
+      const fallbackByComparableKey = new Map<string, CotadorProductNetworkManagerRecord>();
+
+      rawEntries.forEach((entry, index) => {
+        const comparableKey = buildCotadorComparableHospitalKey(entry);
+        if (!comparableKey || normalizedComparableKeys.has(comparableKey)) return;
+
+        const hospitalId = hospitalIdByComparableKey.get(comparableKey) ?? null;
+        const hospital = hospitalId ? hospitalById.get(hospitalId) ?? null : null;
+        const fallbackRecord = fallbackByComparableKey.get(comparableKey);
+        const aliasNames = hospitalId
+          ? sanitizeHospitalAliases((aliasesByHospitalId.get(hospitalId) ?? []).map((alias) => alias.alias_nome).filter((name) => normalizeText(name) !== normalizeText(hospital?.nome)))
+          : [];
+
+        if (fallbackRecord) {
+          fallbackRecord.aliases = sanitizeHospitalAliases([...fallbackRecord.aliases, ...aliasNames]);
+          fallbackRecord.atendimentos = mergeUniqueStrings([...fallbackRecord.atendimentos, ...entry.atendimentos]).sort((left, right) => left.localeCompare(right, 'pt-BR'));
+          fallbackRecord.observacoes = mergeOptionalNotes([fallbackRecord.observacoes, entry.observacoes]);
+          fallbackRecord.bairro = cleanOptionalText(fallbackRecord.bairro ?? hospital?.bairro ?? null) ?? cleanOptionalText(entry.bairro);
+          fallbackRecord.regiao = cleanOptionalText(fallbackRecord.regiao ?? hospital?.regiao ?? null) ?? cleanOptionalText(entry.regiao);
+          return;
+        }
+
+        fallbackByComparableKey.set(comparableKey, {
+          link_id: `fallback:${produtoId}:${comparableKey}:${index}`,
+          hospital_id: hospital?.id ?? null,
+          hospital: hospital?.nome ?? entry.hospital,
+          cidade: hospital?.cidade ?? entry.cidade,
+          regiao: cleanOptionalText(hospital?.regiao) ?? cleanOptionalText(entry.regiao),
+          bairro: cleanOptionalText(hospital?.bairro) ?? cleanOptionalText(entry.bairro),
+          atendimentos: mergeUniqueStrings(entry.atendimentos).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+          observacoes: cleanOptionalText(entry.observacoes),
+          aliases: aliasNames,
+        });
+      });
+
+      return [...normalizedRecords, ...fallbackByComparableKey.values()].sort(compareHospitalNetworkEntries);
     } catch (error) {
       console.error('Error loading detailed cotador product network:', error);
       return [];
@@ -1685,6 +1799,7 @@ export const cotadorService = {
       const aliases = (aliasesData as CotadorHospitalAlias[] | null) ?? [];
       const links = (linksData as CotadorProdutoHospital[] | null) ?? [];
       const productById = new Map(products.map((product) => [product.id, product]));
+      const hospitalById = new Map(hospitals.map((hospital) => [hospital.id, hospital]));
       const aliasesByHospitalId = new Map<string, CotadorHospitalAlias[]>();
       const linksByHospitalId = new Map<string, CotadorProdutoHospital[]>();
 
@@ -1700,14 +1815,73 @@ export const cotadorService = {
         linksByHospitalId.set(link.hospital_id, current);
       });
 
-      return hospitals
+      const hospitalIdByComparableKey = buildHospitalLookupByComparableKey(hospitals, aliasesByHospitalId);
+      const normalizedComparableLinkKeys = new Set(
+        links
+          .map((link) => {
+            const hospital = hospitalById.get(link.hospital_id);
+            if (!hospital) return null;
+            const comparableKey = buildComparableHospitalKeyFromHospital(hospital);
+            return comparableKey ? `${link.produto_id}::${comparableKey}` : null;
+          })
+          .filter((value): value is string => Boolean(value)),
+      );
+      const fallbackLinkedProductsByHospitalId = new Map<string, CotadorHospitalLinkedProductRecord[]>();
+      const syntheticHospitalsByComparableKey = new Map<string, CotadorHospitalManagerRecord>();
+
+      products.forEach((product) => {
+        sanitizeHospitalNetwork(product.rede_hospitalar).forEach((entry, index) => {
+          const comparableKey = buildCotadorComparableHospitalKey(entry);
+          if (!comparableKey) return;
+
+          const normalizedLinkKey = `${product.id}::${comparableKey}`;
+          if (normalizedComparableLinkKeys.has(normalizedLinkKey)) {
+            return;
+          }
+
+          const matchedHospitalId = hospitalIdByComparableKey.get(comparableKey) ?? null;
+
+          if (matchedHospitalId) {
+            const current = fallbackLinkedProductsByHospitalId.get(matchedHospitalId) ?? [];
+            upsertFallbackLinkedProductRecord(current, matchedHospitalId, product, entry, index);
+            fallbackLinkedProductsByHospitalId.set(matchedHospitalId, current);
+            return;
+          }
+
+          const currentHospital = syntheticHospitalsByComparableKey.get(comparableKey) ?? {
+            id: `fallback:${comparableKey}`,
+            nome: entry.hospital,
+            nome_normalizado: normalizeText(entry.hospital),
+            cidade: entry.cidade,
+            cidade_normalizada: normalizeText(entry.cidade),
+            regiao: entry.regiao,
+            regiao_normalizada: normalizeText(entry.regiao),
+            bairro: entry.bairro,
+            bairro_normalizado: normalizeText(entry.bairro),
+            ativo: true,
+            created_at: '',
+            updated_at: '',
+            aliases: [],
+            linkedProducts: [],
+          } satisfies CotadorHospitalManagerRecord;
+
+          upsertFallbackLinkedProductRecord(currentHospital.linkedProducts, currentHospital.id, product, entry, index);
+          syntheticHospitalsByComparableKey.set(comparableKey, currentHospital);
+        });
+      });
+
+      return [...hospitals
         .map<CotadorHospitalManagerRecord>((hospital) => ({
           ...hospital,
           aliases: sanitizeHospitalAliases((aliasesByHospitalId.get(hospital.id) ?? []).map((alias) => alias.alias_nome).filter((name) => normalizeText(name) !== normalizeText(hospital.nome))),
-          linkedProducts: (linksByHospitalId.get(hospital.id) ?? [])
-            .map((link) => buildHospitalLinkedProductRecord(link, productById.get(link.produto_id) ?? null))
+          linkedProducts: [
+            ...(linksByHospitalId.get(hospital.id) ?? [])
+              .map((link) => buildHospitalLinkedProductRecord(link, productById.get(link.produto_id) ?? null)),
+            ...(fallbackLinkedProductsByHospitalId.get(hospital.id) ?? []),
+          ]
             .sort(compareHospitalLinkedProducts),
         }))
+        , ...Array.from(syntheticHospitalsByComparableKey.values())]
         .sort(compareHospitals);
     } catch (error) {
       console.error('Error loading cotador hospitals network:', error);
@@ -2075,14 +2249,17 @@ export const cotadorService = {
         throw itemsError;
       }
 
+      const storedQuoteById = new Map(loadCotadorQuotesFromStorage().map((quote) => [quote.id, quote]));
+
       return sortCotadorQuotesByRecent(
-        quotes.map((quoteRow) =>
-          buildQuoteFromRows(
+        quotes.map((quoteRow) => ({
+          ...buildQuoteFromRows(
             quoteRow,
             (beneficiariesRows as CotadorQuoteBeneficiaryRecord[] | null) ?? [],
             (itemRows as CotadorQuoteItemRecord[] | null) ?? [],
           ),
-        ),
+          filters: storedQuoteById.get(quoteRow.id)?.filters ?? { ...DEFAULT_COTADOR_FILTERS },
+        })),
       );
     } catch (error) {
       console.error('Error loading cotador quotes:', error);
@@ -2121,6 +2298,7 @@ export const cotadorService = {
           leadId: quoteRecord.lead_id ?? null,
           ageDistribution,
           totalLives,
+          filters: { ...DEFAULT_COTADOR_FILTERS },
           selectedItems: items,
           createdAt: quoteRecord.created_at,
           updatedAt: quoteRecord.updated_at,
@@ -2165,6 +2343,7 @@ export const cotadorService = {
           leadId: quoteRecord.lead_id ?? null,
           ageDistribution,
           totalLives,
+          filters: quote.filters,
           selectedItems: items,
           createdAt: quoteRecord.created_at,
           updatedAt: quoteRecord.updated_at,

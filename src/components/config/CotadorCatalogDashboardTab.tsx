@@ -113,7 +113,7 @@ export default function CotadorCatalogDashboardTab({ metrics }: CotadorCatalogDa
 
           <div className="mt-5 space-y-4">
             <MetricBar label="Rede" value={networkCoverage} helper={`${metrics.withoutNetwork} produto(s) sem rede`} accent="bg-[linear-gradient(90deg,#8b5e34,#c9873f)]" />
-            <MetricBar label="Preço" value={priceCoverage} helper={`${metrics.withoutPrice} produto(s) sem preço`} accent="bg-[linear-gradient(90deg,#a0642b,#d08d41)]" />
+            <MetricBar label="Preço" value={priceCoverage} helper={`${metrics.withoutPrice} produto(s) sem cobertura de preco esperada`} accent="bg-[linear-gradient(90deg,#a0642b,#d08d41)]" />
             <MetricBar label="Carência" value={carenciaCoverage} helper={`${metrics.withoutCarencias} produto(s) sem carência`} accent="bg-[linear-gradient(90deg,#8f5b24,#bb7b2d)]" />
             <MetricBar label="Documentos" value={documentsCoverage} helper={`${metrics.withoutDocuments} produto(s) sem documentos`} accent="bg-[linear-gradient(90deg,#7e4a1a,#b16d28)]" />
             <MetricBar label="Reembolso" value={reembolsoCoverage} helper={`${metrics.withoutReembolso} produto(s) sem reembolso`} accent="bg-[linear-gradient(90deg,#6e4217,#a66222)]" />

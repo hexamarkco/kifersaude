@@ -131,6 +131,8 @@ type GroupedTableEntry = {
 type ProductCompletenessStatus = {
   missingNetwork: boolean;
   missingPrice: boolean;
+  partialPrice: boolean;
+  missingExpectedAcomodacoes: string[];
   missingCarencias: boolean;
   missingDocuments: boolean;
   missingReembolso: boolean;
@@ -649,9 +651,53 @@ const serializeProductAcomodacoes = (values: string[]) =>
   Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).join(PRODUCT_ACOMODACAO_SEPARATOR);
 
 const formatProductAcomodacoesLabel = (values: string[]) => {
-  if (values.length === 0) return '';
+  if (values.length === 0) return 'AMBULATORIAL / SEM INTERNACAO';
   if (values.length === 1) return values[0];
   return values.join(' + ');
+};
+
+const hasAnyTablePrice = (table: Pick<CotadorTableManagerRecord, 'pricesByAgeRange'>) =>
+  Object.keys(table.pricesByAgeRange).length > 0;
+
+const getProductPriceCompleteness = (
+  product: Pick<CotadorProductManagerRecord, 'acomodacao'>,
+  activeTables: CotadorTableManagerRecord[],
+  allowedAcomodacoes: string[],
+) => {
+  const expectedAcomodacoes = parseProductAcomodacoes(product.acomodacao, allowedAcomodacoes);
+  const pricedTables = activeTables.filter(hasAnyTablePrice);
+
+  if (pricedTables.length === 0) {
+    return {
+      hasPrice: false,
+      partialPrice: false,
+      missingExpectedAcomodacoes: expectedAcomodacoes,
+    };
+  }
+
+  if (expectedAcomodacoes.length === 0) {
+    return {
+      hasPrice: true,
+      partialPrice: false,
+      missingExpectedAcomodacoes: [] as string[],
+    };
+  }
+
+  const coveredAcomodacoes = new Set(
+    pricedTables
+      .map((table) => normalizeSortText(table.acomodacao))
+      .filter(Boolean),
+  );
+
+  const missingExpectedAcomodacoes = expectedAcomodacoes.filter(
+    (acomodacao) => !coveredAcomodacoes.has(normalizeSortText(acomodacao)),
+  );
+
+  return {
+    hasPrice: missingExpectedAcomodacoes.length === 0,
+    partialPrice: missingExpectedAcomodacoes.length > 0 && coveredAcomodacoes.size > 0,
+    missingExpectedAcomodacoes,
+  };
 };
 
 const stripTableAcomodacaoSuffix = (name: string, acomodacao?: string | null) => {
@@ -1200,25 +1246,27 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     produtos.forEach((product) => {
       const activeTables = activeTablesByProductId.get(product.id) ?? [];
       const hasNetwork = sanitizeNetworkEntries(product.rede_hospitalar).length > 0;
-      const hasPrice = activeTables.some((table) => Object.keys(table.pricesByAgeRange).length > 0);
+      const priceCompleteness = getProductPriceCompleteness(product, activeTables, acomodacaoOptions.map((option) => option.value));
       const hasCarencias = Boolean(product.carencias?.trim());
       const hasDocuments = Boolean(product.documentos_necessarios?.trim());
       const hasReembolso = Boolean(product.reembolso?.trim());
 
       const status: ProductCompletenessStatus = {
         missingNetwork: !hasNetwork,
-        missingPrice: !hasPrice,
+        missingPrice: !priceCompleteness.hasPrice,
+        partialPrice: priceCompleteness.partialPrice,
+        missingExpectedAcomodacoes: priceCompleteness.missingExpectedAcomodacoes,
         missingCarencias: !hasCarencias,
         missingDocuments: !hasDocuments,
         missingReembolso: !hasReembolso,
-        complete: hasNetwork && hasPrice && hasCarencias && hasDocuments && hasReembolso,
+        complete: hasNetwork && priceCompleteness.hasPrice && hasCarencias && hasDocuments && hasReembolso,
       };
 
       next.set(product.id, status);
     });
 
     return next;
-  }, [activeTablesByProductId, produtos]);
+  }, [activeTablesByProductId, acomodacaoOptions, produtos]);
 
   const activeCatalogKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -2616,15 +2664,15 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                                {product.administradora?.nome && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.administradora.nome}</span>}
                        {product.entidadesClasse.length > 0 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
                                {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
-                               {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
-                             </div>
-                             {completeness && !completeness.complete && (
-                               <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                                 {completeness.missingNetwork && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem rede</span>}
-                                 {completeness.missingPrice && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem preco</span>}
-                                 {completeness.missingCarencias && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem carencia</span>}
-                                 {completeness.missingDocuments && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem documentos</span>}
-                                 {completeness.missingReembolso && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem reembolso</span>}
+                                <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>
+                              </div>
+                              {completeness && !completeness.complete && (
+                                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                                  {completeness.missingNetwork && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem rede</span>}
+                                  {completeness.missingPrice && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">{completeness.partialPrice ? `Preco incompleto${completeness.missingExpectedAcomodacoes.length > 0 ? ` (${completeness.missingExpectedAcomodacoes.join(', ')})` : ''}` : 'Sem preco'}</span>}
+                                  {completeness.missingCarencias && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem carencia</span>}
+                                  {completeness.missingDocuments && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem documentos</span>}
+                                  {completeness.missingReembolso && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem reembolso</span>}
                                </div>
                              )}
                                 </>
@@ -2892,7 +2940,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                             </p>
                             <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                               {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
-                              {product.acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>}
+                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>
                               {cities.slice(0, 4).map((city) => <span key={`${product.id}-${city}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{city}</span>)}
                               {cities.length > 4 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{cities.length - 4} cidade(s)</span>}
                             </div>
@@ -3023,7 +3071,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     {entry.records.map((record) => record.acomodacao).filter(Boolean).map((acomodacao) => <span key={`${entry.key}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{acomodacao}</span>)}
                     {(entry.vidasMin || entry.vidasMax) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">Vidas: {entry.vidasMin ?? 1} a {entry.vidasMax ?? '...'}</span>}
                     {!entry.records.every((record) => record.ativo) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5 font-medium text-[color:var(--panel-text-muted,#876f5c)]">Inativo</span>}
-                    {entry.records.some((record) => Object.keys(record.pricesByAgeRange).length === 0) && <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Sem preco</span>}
+                    {entry.product && productCompletenessById.get(entry.product.id)?.missingPrice && (
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+                        {productCompletenessById.get(entry.product.id)?.partialPrice ? 'Preco incompleto' : 'Sem preco'}
+                      </span>
+                    )}
                     {entry.product && !productCompletenessById.get(entry.product.id)?.complete && <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Produto incompleto</span>}
                   </div>
                 </div>

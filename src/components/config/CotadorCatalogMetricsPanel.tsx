@@ -42,7 +42,7 @@ export default function CotadorCatalogMetricsPanel({ metrics }: CotadorCatalogMe
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       <MetricCard title="Produtos sem rede" value={metrics.withoutNetwork} helper={`de ${metrics.totalProducts} produto(s)`} />
-      <MetricCard title="Produtos sem preco" value={metrics.withoutPrice} helper="sem tabela ativa com valor" />
+      <MetricCard title="Produtos sem preco" value={metrics.withoutPrice} helper="sem cobertura de preco nas acomodacoes esperadas" />
       <MetricCard title="Produtos sem carencia" value={metrics.withoutCarencias} helper="informacao comercial pendente" />
       <MetricCard title="Documentacao" value={metrics.withoutDocuments} helper="produto(s) sem documentos" />
       <MetricCard title="Produtos sem reembolso" value={metrics.withoutReembolso} helper="politica de reembolso pendente" />

@@ -23,7 +23,7 @@ import {
   type CommWhatsAppRewriteTone,
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
-import { formatDateTimeFullBR, isOverdue } from '../../../lib/dateUtils';
+import { formatDateTimeFullBR, getDateKey, isOverdue, SAO_PAULO_TIMEZONE } from '../../../lib/dateUtils';
 import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
@@ -282,7 +282,7 @@ const getMessageTimestampMs = (value?: string | null) => {
     return null;
   }
 
-  const timestamp = new Date(value).getTime();
+  const timestamp = parseCommMessageDate(value).getTime();
   return Number.isFinite(timestamp) ? timestamp : null;
 };
 
@@ -532,17 +532,47 @@ const getActiveQuickReplyMatch = (value: string, selection: ComposerSelection): 
 };
 
 const formatMessageTime = (value?: string | null) => {
-  if (!value) return '';
-
-  const date = new Date(value);
+  const date = parseCommMessageDate(value);
   if (Number.isNaN(date.getTime())) return '';
 
   return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: SAO_PAULO_TIMEZONE,
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   }).format(date);
+};
+
+const parseCommMessageDate = (value?: string | null) => {
+  if (!value) return new Date(Number.NaN);
+
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) {
+    return direct;
+  }
+
+  const normalized = String(value).trim();
+  const withoutTimezone = normalized.match(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/);
+  if (withoutTimezone) {
+    const fallback = new Date(`${normalized.replace(' ', 'T')}Z`);
+    if (!Number.isNaN(fallback.getTime())) {
+      return fallback;
+    }
+  }
+
+  return new Date(Number.NaN);
+};
+
+const getComparableMessageTimestampMs = (message: Pick<CommWhatsAppMessage, 'message_at' | 'created_at'>) => {
+  const messageTimestamp = getMessageTimestampMs(message.message_at);
+  const createdTimestamp = getMessageTimestampMs(message.created_at);
+
+  if (messageTimestamp === null) return createdTimestamp;
+  if (createdTimestamp === null) return messageTimestamp;
+
+  return Math.max(messageTimestamp, createdTimestamp);
 };
 
 const normalizeSystemTimeZone = (value: unknown) => {
@@ -710,36 +740,41 @@ const buildTranscriptLine = (message: CommWhatsAppMessage, leadLabel: string, ti
 const getMessageDayKey = (value?: string | null) => {
   if (!value) return '';
 
-  const date = new Date(value);
+  const date = parseCommMessageDate(value);
   if (Number.isNaN(date.getTime())) return '';
 
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  return getDateKey(date, SAO_PAULO_TIMEZONE);
 };
 
 const formatMessageDaySeparatorLabel = (value?: string | null) => {
   if (!value) return '';
 
-  const date = new Date(value);
+  const date = parseCommMessageDate(value);
   if (Number.isNaN(date.getTime())) return '';
 
-  const targetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const today = new Date();
-  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const diffDays = Math.round((todayStart.getTime() - targetDay.getTime()) / (24 * 60 * 60 * 1000));
+  const todayKey = getDateKey(today, SAO_PAULO_TIMEZONE);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = getDateKey(yesterday, SAO_PAULO_TIMEZONE);
+  const targetKey = getDateKey(date, SAO_PAULO_TIMEZONE);
 
-  if (diffDays === 0) {
+  if (targetKey === todayKey) {
     return 'Hoje';
   }
 
-  if (diffDays === 1) {
+  if (targetKey === yesterdayKey) {
     return 'Ontem';
   }
 
+  const diffDays = Math.round((today.getTime() - date.getTime()) / (24 * 60 * 60 * 1000));
+
   if (diffDays > 1 && diffDays < 7) {
-    return new Intl.DateTimeFormat('pt-BR', { weekday: 'long' }).format(date);
+    return new Intl.DateTimeFormat('pt-BR', { weekday: 'long', timeZone: SAO_PAULO_TIMEZONE }).format(date);
   }
 
   return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: SAO_PAULO_TIMEZONE,
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -788,7 +823,9 @@ const inboxInlineActionClassName = getPanelButtonClass({
 });
 
 const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage) => {
-  const timeDiff = new Date(a.message_at).getTime() - new Date(b.message_at).getTime();
+  const aTime = getComparableMessageTimestampMs(a) ?? 0;
+  const bTime = getComparableMessageTimestampMs(b) ?? 0;
+  const timeDiff = aTime - bTime;
   if (timeDiff !== 0) {
     return timeDiff;
   }
@@ -847,8 +884,8 @@ const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
     }
   }
 
-  const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
-  const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+  const aTime = getMessageTimestampMs(a.last_message_at) ?? 0;
+  const bTime = getMessageTimestampMs(b.last_message_at) ?? 0;
   return bTime - aTime;
 };
 

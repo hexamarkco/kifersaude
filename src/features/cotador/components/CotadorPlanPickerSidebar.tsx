@@ -192,7 +192,7 @@ export default function CotadorPlanPickerSidebar({
                         </span>
                         {count !== null && (
                           <span className={cx('shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:rgba(255,243,209,0.72)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)]')}>
-                            {count} plano(s)
+                            {count} produto(s)
                           </span>
                         )}
                       </button>

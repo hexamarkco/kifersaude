@@ -70,6 +70,39 @@ const buildCountedActorOptions = (actors: CotadorCatalogActor[]) => {
     }));
 };
 
+const buildScopedCountedOptions = (
+  entries: Array<{ value: string; scopeKey: string }>,
+  formatLabel?: (value: string) => string,
+) => {
+  const counts = new Map<string, { value: string; keys: Set<string> }>();
+
+  entries.forEach(({ value, scopeKey }) => {
+    const trimmedValue = value.trim();
+    const trimmedScopeKey = scopeKey.trim();
+    if (!trimmedValue || !trimmedScopeKey) return;
+
+    const normalizedValue = normalizeFilterTerm(trimmedValue);
+    const current = counts.get(normalizedValue);
+
+    if (current) {
+      current.keys.add(trimmedScopeKey);
+      return;
+    }
+
+    counts.set(normalizedValue, {
+      value: trimmedValue,
+      keys: new Set([trimmedScopeKey]),
+    });
+  });
+
+  return Array.from(counts.values())
+    .sort((left, right) => left.value.localeCompare(right.value, 'pt-BR'))
+    .map(({ value, keys }) => ({
+      value,
+      label: `${formatLabel ? formatLabel(value) : value} (${keys.size})`,
+    }));
+};
+
 const matchesSearch = (item: CotadorCatalogItem, search: string) => {
   const normalizedSearch = search.trim().toLowerCase();
   if (!normalizedSearch) return true;
@@ -331,8 +364,23 @@ export default function CotadorScreen() {
           .filter((value): value is 'sem' | 'parcial' | 'total' => Boolean(value)),
         (value) => (value === 'parcial' ? 'Copart. parcial' : value === 'total' ? 'Copart. total' : 'Sem copart.'),
       ),
-      networkLocations: buildCountedOptions(
-        getOptionScopedItems('networkLocation').flatMap((item) => item.redeHospitalar.flatMap((entry) => [entry.bairro, entry.cidade].filter((value): value is string => Boolean(value)))),
+      networkLocations: buildScopedCountedOptions(
+        getOptionScopedItems('networkLocation').flatMap((item) => {
+          const scopeKey = item.cotadorProdutoId ?? item.legacyProdutoPlanoId ?? item.id;
+          const uniqueLocations = new Map<string, string>();
+
+          item.redeHospitalar.forEach((entry) => {
+            [entry.bairro, entry.cidade]
+              .filter((value): value is string => Boolean(value))
+              .forEach((value) => {
+                const normalizedValue = normalizeFilterTerm(value);
+                if (!normalizedValue || uniqueLocations.has(normalizedValue)) return;
+                uniqueLocations.set(normalizedValue, value);
+              });
+          });
+
+          return Array.from(uniqueLocations.values()).map((value) => ({ value, scopeKey }));
+        }),
       ),
       abrangencias: [],
       acomodacoes: buildCountedOptions(

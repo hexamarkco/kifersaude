@@ -389,6 +389,7 @@ export default function CotadorWorkspace({
                   mostRestrictive: false,
                   restrictiveReason: null,
                 };
+                const hasHighlights = highlights.bestPrice || highlights.largestNetwork || highlights.mostRestrictive;
                 const networkCount = networkSummaryByItemId.get(item.id)?.count ?? 0;
 
                 return (
@@ -407,9 +408,10 @@ export default function CotadorWorkspace({
                         {item.operadora.name ?? 'OPERADORA'}
                       </p>
                       <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.linha?.name ?? 'LINHA'}</p>
-                      <h4 className="mt-3 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
-                      <div className="mt-3 min-h-[2.25rem]">
-                        <div className="flex flex-wrap gap-2">
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                        <h4 className="min-w-0 flex-1 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
+                        {hasHighlights && (
+                          <div className="flex flex-wrap gap-2 sm:max-w-[58%] sm:justify-end">
                           {highlights.bestPrice && (
                             <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:rgba(184,92,31,0.24)] bg-[color:rgba(184,92,31,0.1)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-accent-ink,#6f3f16)]">
                               <Sparkles className="h-3.5 w-3.5" />
@@ -431,7 +433,8 @@ export default function CotadorWorkspace({
                               Mais restritivo
                             </span>
                           )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {item.perfilEmpresarial && (

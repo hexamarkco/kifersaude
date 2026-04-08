@@ -1,6 +1,7 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 import { configService } from '../../../lib/configService';
 import {
+  fetchAllPages,
   supabase,
   type CotadorAdministradora,
   type CotadorEntidadeClasse,
@@ -397,11 +398,41 @@ const compareHospitals = (left: CotadorHospitalManagerRecord, right: CotadorHosp
   return normalizeText(left.nome).localeCompare(normalizeText(right.nome), 'pt-BR');
 };
 
+type PaginatedRowsResult<T> = {
+  data: T[] | null;
+  error: PostgrestError | null;
+};
+
+async function fetchAllRows<T>(
+  fetchPage: (from: number, to: number) => Promise<PaginatedRowsResult<T>>,
+): Promise<T[]> {
+  return fetchAllPages<T>(async (from, to) => {
+    const { data, error } = await fetchPage(from, to);
+    return { data, error };
+  });
+}
+
+async function fetchAllRowsResult<T>(
+  fetchPage: (from: number, to: number) => Promise<PaginatedRowsResult<T>>,
+): Promise<{ data: T[] | null; error: unknown }> {
+  try {
+    return { data: await fetchAllRows(fetchPage), error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
 async function loadNormalizedProductNetworkMap() {
-  const { data: linksData, error: linksError } = await supabase
-    .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
-    .select('*')
-    .order('ordem', { ascending: true });
+  const { data: linksData, error: linksError } = await fetchAllRowsResult<CotadorProdutoHospital>(async (from, to) => {
+    const response = await supabase
+      .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
+      .select('*')
+      .order('ordem', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to);
+
+    return { data: response.data as CotadorProdutoHospital[] | null, error: response.error };
+  });
 
   if (linksError) {
     if (isMissingTableError(linksError, COTADOR_PRODUTO_HOSPITAIS_TABLE)) {
@@ -420,10 +451,16 @@ async function loadNormalizedProductNetworkMap() {
     return new Map<string, CotadorHospitalNetworkEntry[]>();
   }
 
-  const { data: hospitalsData, error: hospitalsError } = await supabase
-    .from(COTADOR_HOSPITAIS_TABLE)
-    .select('*')
-    .in('id', hospitalIds);
+  const { data: hospitalsData, error: hospitalsError } = await fetchAllRowsResult<CotadorHospital>(async (from, to) => {
+    const response = await supabase
+      .from(COTADOR_HOSPITAIS_TABLE)
+      .select('*')
+      .in('id', hospitalIds)
+      .order('id', { ascending: true })
+      .range(from, to);
+
+    return { data: response.data as CotadorHospital[] | null, error: response.error };
+  });
 
   if (hospitalsError) {
     if (isMissingTableError(hospitalsError, COTADOR_HOSPITAIS_TABLE)) {
@@ -974,10 +1011,16 @@ async function syncTablePrices(tableId: string, pricesByAgeRange: CotadorPriceRo
 export const cotadorService = {
   async getAdministradoras(throwOnError = false): Promise<CotadorAdministradora[]> {
     try {
-      const { data, error } = await supabase
-        .from(COTADOR_ADMINISTRADORAS_TABLE)
-        .select('*')
-        .order('nome', { ascending: true });
+      const { data, error } = await fetchAllRowsResult<CotadorAdministradora>(async (from, to) => {
+        const response = await supabase
+          .from(COTADOR_ADMINISTRADORAS_TABLE)
+          .select('*')
+          .order('nome', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to);
+
+        return { data: response.data as CotadorAdministradora[] | null, error: response.error };
+      });
 
       if (error) {
         if (isMissingTableError(error, COTADOR_ADMINISTRADORAS_TABLE)) {
@@ -1041,10 +1084,16 @@ export const cotadorService = {
 
   async getEntidadesClasse(throwOnError = false): Promise<CotadorEntidadeClasse[]> {
     try {
-      const { data, error } = await supabase
-        .from(COTADOR_ENTIDADES_TABLE)
-        .select('*')
-        .order('nome', { ascending: true });
+      const { data, error } = await fetchAllRowsResult<CotadorEntidadeClasse>(async (from, to) => {
+        const response = await supabase
+          .from(COTADOR_ENTIDADES_TABLE)
+          .select('*')
+          .order('nome', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to);
+
+        return { data: response.data as CotadorEntidadeClasse[] | null, error: response.error };
+      });
 
       if (error) {
         if (isMissingTableError(error, COTADOR_ENTIDADES_TABLE)) {
@@ -1109,10 +1158,16 @@ export const cotadorService = {
   async getLinhas(throwOnError = false): Promise<CotadorLineManagerRecord[]> {
     try {
       const [{ data: linesData, error: linesError }, operadoras] = await Promise.all([
-        supabase
-          .from(COTADOR_LINHAS_TABLE)
-          .select('*')
-          .order('nome', { ascending: true }),
+        fetchAllRowsResult<CotadorLinhaProduto>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_LINHAS_TABLE)
+            .select('*')
+            .order('nome', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorLinhaProduto[] | null, error: response.error };
+        }),
         configService.getOperadoras(throwOnError),
       ]);
 
@@ -1189,17 +1244,30 @@ export const cotadorService = {
   async getProdutos(throwOnError = false): Promise<CotadorProductManagerRecord[]> {
     try {
       const [{ data: productsData, error: productsError }, operadoras, lines, administradoras, entidades, linksData, normalizedNetworkByProduct] = await Promise.all([
-        supabase
-          .from(COTADOR_PRODUTOS_TABLE)
-          .select('*')
-          .order('nome', { ascending: true }),
+        fetchAllRowsResult<CotadorProduto>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_PRODUTOS_TABLE)
+            .select('*')
+            .order('nome', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorProduto[] | null, error: response.error };
+        }),
         configService.getOperadoras(throwOnError),
         cotadorService.getLinhas(throwOnError),
         cotadorService.getAdministradoras(throwOnError),
         cotadorService.getEntidadesClasse(throwOnError),
-        supabase
-          .from(COTADOR_PRODUTO_ENTIDADES_TABLE)
-          .select('*'),
+        fetchAllRowsResult<CotadorProdutoEntidade>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_PRODUTO_ENTIDADES_TABLE)
+            .select('*')
+            .order('produto_id', { ascending: true })
+            .order('entidade_id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorProdutoEntidade[] | null, error: response.error };
+        }),
         loadNormalizedProductNetworkMap(),
       ]);
 
@@ -1428,11 +1496,17 @@ export const cotadorService = {
 
   async getProdutoRedeHospitalarDetalhada(produtoId: string): Promise<CotadorProductNetworkManagerRecord[]> {
     try {
-      const { data: linksData, error: linksError } = await supabase
-        .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
-        .select('*')
-        .eq('produto_id', produtoId)
-        .order('ordem', { ascending: true });
+      const { data: linksData, error: linksError } = await fetchAllRowsResult<CotadorProdutoHospital>(async (from, to) => {
+        const response = await supabase
+          .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
+          .select('*')
+          .eq('produto_id', produtoId)
+          .order('ordem', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to);
+
+        return { data: response.data as CotadorProdutoHospital[] | null, error: response.error };
+      });
 
       if (linksError) {
         if (isMissingTableError(linksError, COTADOR_PRODUTO_HOSPITAIS_TABLE)) {
@@ -1448,14 +1522,28 @@ export const cotadorService = {
 
       const hospitalIds = Array.from(new Set(links.map((link) => link.hospital_id).filter(Boolean)));
       const [{ data: hospitalsData, error: hospitalsError }, { data: aliasesData, error: aliasesError }] = await Promise.all([
-        supabase
-          .from(COTADOR_HOSPITAIS_TABLE)
-          .select('*')
-          .in('id', hospitalIds),
-        supabase
-          .from(COTADOR_HOSPITAL_ALIASES_TABLE)
-          .select('*')
-          .in('hospital_id', hospitalIds),
+        fetchAllRowsResult<CotadorHospital>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_HOSPITAIS_TABLE)
+            .select('*')
+            .in('id', hospitalIds)
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorHospital[] | null, error: response.error };
+        }),
+        fetchAllRowsResult<CotadorHospitalAlias>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_HOSPITAL_ALIASES_TABLE)
+            .select('*')
+            .in('hospital_id', hospitalIds)
+            .order('hospital_id', { ascending: true })
+            .order('alias_nome_normalizado', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorHospitalAlias[] | null, error: response.error };
+        }),
       ]);
 
       if (hospitalsError) {
@@ -1541,19 +1629,39 @@ export const cotadorService = {
   async getHospitaisRedeDetalhados(throwOnError = false): Promise<CotadorHospitalManagerRecord[]> {
     try {
       const [{ data: hospitalsData, error: hospitalsError }, { data: aliasesData, error: aliasesError }, { data: linksData, error: linksError }, products] = await Promise.all([
-        supabase
-          .from(COTADOR_HOSPITAIS_TABLE)
-          .select('*')
-          .order('cidade_normalizada', { ascending: true })
-          .order('regiao_normalizada', { ascending: true })
-          .order('nome_normalizado', { ascending: true }),
-        supabase
-          .from(COTADOR_HOSPITAL_ALIASES_TABLE)
-          .select('*'),
-        supabase
-          .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
-          .select('*')
-          .order('ordem', { ascending: true }),
+        fetchAllRowsResult<CotadorHospital>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_HOSPITAIS_TABLE)
+            .select('*')
+            .order('cidade_normalizada', { ascending: true })
+            .order('regiao_normalizada', { ascending: true })
+            .order('nome_normalizado', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorHospital[] | null, error: response.error };
+        }),
+        fetchAllRowsResult<CotadorHospitalAlias>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_HOSPITAL_ALIASES_TABLE)
+            .select('*')
+            .order('hospital_id', { ascending: true })
+            .order('alias_nome_normalizado', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorHospitalAlias[] | null, error: response.error };
+        }),
+        fetchAllRowsResult<CotadorProdutoHospital>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_PRODUTO_HOSPITAIS_TABLE)
+            .select('*')
+            .order('ordem', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorProdutoHospital[] | null, error: response.error };
+        }),
         cotadorService.getProdutos(throwOnError),
       ]);
 
@@ -1668,13 +1776,27 @@ export const cotadorService = {
   async getTabelas(throwOnError = false): Promise<CotadorTableManagerRecord[]> {
     try {
       const [{ data: tablesData, error: tablesError }, { data: priceData, error: priceError }, products] = await Promise.all([
-        supabase
-          .from(COTADOR_TABELAS_TABLE)
-          .select('*')
-          .order('nome', { ascending: true }),
-        supabase
-          .from(COTADOR_TABELA_PRECOS_TABLE)
-          .select('*'),
+        fetchAllRowsResult<CotadorTabela>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_TABELAS_TABLE)
+            .select('*')
+            .order('nome', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorTabela[] | null, error: response.error };
+        }),
+        fetchAllRowsResult<CotadorTabelaFaixaPreco>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_TABELA_PRECOS_TABLE)
+            .select('*')
+            .order('tabela_id', { ascending: true })
+            .order('age_range', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorTabelaFaixaPreco[] | null, error: response.error };
+        }),
         cotadorService.getProdutos(throwOnError),
       ]);
 
@@ -1897,10 +2019,16 @@ export const cotadorService = {
 
   async getQuotes(): Promise<CotadorQuote[]> {
     try {
-      const { data: quoteRows, error: quotesError } = await supabase
-        .from(COTADOR_QUOTES_TABLE)
-        .select('*')
-        .order('updated_at', { ascending: false });
+      const { data: quoteRows, error: quotesError } = await fetchAllRowsResult<CotadorQuoteRecord>(async (from, to) => {
+        const response = await supabase
+          .from(COTADOR_QUOTES_TABLE)
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to);
+
+        return { data: response.data as CotadorQuoteRecord[] | null, error: response.error };
+      });
 
       if (quotesError) {
         if (isMissingTableError(quotesError, COTADOR_QUOTES_TABLE)) {
@@ -1914,16 +2042,29 @@ export const cotadorService = {
         return [];
       }
 
-      const quoteIds = quotes.map((quote) => quote.id);
       const [{ data: beneficiariesRows, error: beneficiariesError }, { data: itemRows, error: itemsError }] = await Promise.all([
-        supabase
-          .from(COTADOR_QUOTE_BENEFICIARIES_TABLE)
-          .select('*')
-          .in('quote_id', quoteIds),
-        supabase
-          .from(COTADOR_QUOTE_ITEMS_TABLE)
-          .select('*')
-          .in('quote_id', quoteIds),
+        fetchAllRowsResult<CotadorQuoteBeneficiaryRecord>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_QUOTE_BENEFICIARIES_TABLE)
+            .select('*')
+            .order('quote_id', { ascending: true })
+            .order('ordem', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorQuoteBeneficiaryRecord[] | null, error: response.error };
+        }),
+        fetchAllRowsResult<CotadorQuoteItemRecord>(async (from, to) => {
+          const response = await supabase
+            .from(COTADOR_QUOTE_ITEMS_TABLE)
+            .select('*')
+            .order('quote_id', { ascending: true })
+            .order('ordem', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, to);
+
+          return { data: response.data as CotadorQuoteItemRecord[] | null, error: response.error };
+        }),
       ]);
 
       if (beneficiariesError) {

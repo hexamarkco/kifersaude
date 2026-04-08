@@ -1,6 +1,7 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
 import {
+  fetchAllPages,
   supabase,
   SystemSettings,
   Operadora,
@@ -519,12 +520,17 @@ export const configService = {
 
   async getOperadoras(throwOnError = false): Promise<Operadora[]> {
     try {
-      const { data, error } = await supabase
-        .from('operadoras')
-        .select('*')
-        .order('nome', { ascending: true });
+      const data = await fetchAllPages<Operadora>(async (from, to) => {
+        const response = await supabase
+          .from('operadoras')
+          .select('*')
+          .order('nome', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to);
 
-      if (error) throw error;
+        return { data: response.data as Operadora[] | null, error: response.error };
+      });
+
       return data || [];
     } catch (error) {
       console.error('Error loading operadoras:', error);
@@ -580,12 +586,17 @@ export const configService = {
 
   async getProdutosPlanos(): Promise<ProdutoPlano[]> {
     try {
-      const { data, error } = await supabase
-        .from('produtos_planos')
-        .select('*')
-        .order('nome', { ascending: true });
+      const data = await fetchAllPages<ProdutoPlano>(async (from, to) => {
+        const response = await supabase
+          .from('produtos_planos')
+          .select('*')
+          .order('nome', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to);
 
-      if (error) throw error;
+        return { data: response.data as ProdutoPlano[] | null, error: response.error };
+      });
+
       return data || [];
     } catch (error) {
       console.error('Error loading produtos:', error);

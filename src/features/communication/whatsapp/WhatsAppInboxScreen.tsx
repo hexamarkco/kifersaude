@@ -567,12 +567,11 @@ const parseCommMessageDate = (value?: string | null) => {
 
 const getComparableMessageTimestampMs = (message: Pick<CommWhatsAppMessage, 'message_at' | 'created_at'>) => {
   const messageTimestamp = getMessageTimestampMs(message.message_at);
-  const createdTimestamp = getMessageTimestampMs(message.created_at);
+  if (messageTimestamp !== null) {
+    return messageTimestamp;
+  }
 
-  if (messageTimestamp === null) return createdTimestamp;
-  if (createdTimestamp === null) return messageTimestamp;
-
-  return Math.max(messageTimestamp, createdTimestamp);
+  return getMessageTimestampMs(message.created_at);
 };
 
 const normalizeSystemTimeZone = (value: unknown) => {
@@ -828,6 +827,13 @@ const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage
   const timeDiff = aTime - bTime;
   if (timeDiff !== 0) {
     return timeDiff;
+  }
+
+  const aCreatedTime = getMessageTimestampMs(a.created_at) ?? 0;
+  const bCreatedTime = getMessageTimestampMs(b.created_at) ?? 0;
+  const createdDiff = aCreatedTime - bCreatedTime;
+  if (createdDiff !== 0) {
+    return createdDiff;
   }
 
   return a.id.localeCompare(b.id);

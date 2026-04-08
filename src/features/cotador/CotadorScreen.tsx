@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Button from '../../components/ui/Button';
 import Pagination from '../../components/Pagination';
 import CotadorCatalogTab from '../../components/config/CotadorCatalogTab';
-import { fetchAllPages, supabase, type Lead } from '../../lib/supabase';
+import { fetchAllPages, getSupabaseErrorMessage, supabase, type Lead } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
 import CotadorCreateQuoteModal from './components/CotadorCreateQuoteModal';
 import CotadorPlanDetailsPage from './components/CotadorPlanDetailsPage';
@@ -425,7 +425,7 @@ export default function CotadorScreen() {
 
         const { error } = await cotadorService.saveQuoteSelection(pending.quoteId, pending.items);
         if (error) {
-          toast.error('Não foi possível sincronizar a shortlist. Recarregando os planos da cotação.');
+          toast.error(getSupabaseErrorMessage(error, 'Não foi possível sincronizar a shortlist. Recarregando os planos da cotação.'));
           const refreshedQuotes = await cotadorService.getQuotes();
           setQuotes(refreshedQuotes);
           pendingSelectionRef.current = null;

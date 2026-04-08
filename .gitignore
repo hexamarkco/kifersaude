@@ -32,7 +32,6 @@ supabase/.temp/
 supabase/supabase/.temp/
 .vite/
 
-scripts/
 scripts/.env.local
 scripts/__pycache__/
 scripts/*.pyc

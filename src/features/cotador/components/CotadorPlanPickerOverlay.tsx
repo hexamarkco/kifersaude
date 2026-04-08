@@ -1264,7 +1264,7 @@ export default function CotadorPlanPickerOverlay({
                                           {isSelected ? (
                                             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                                           ) : (
-                                            <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:rgba(255,243,209,0.34)]' : 'border-[color:var(--panel-text-muted,#876f5c)]')} />
                                           )}
                                         </div>
                                         <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
@@ -1306,7 +1306,7 @@ export default function CotadorPlanPickerOverlay({
                                           {isSelected ? (
                                             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                                           ) : (
-                                            <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:rgba(255,243,209,0.34)]' : 'border-[color:var(--panel-text-muted,#876f5c)]')} />
                                           )}
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -1351,7 +1351,7 @@ export default function CotadorPlanPickerOverlay({
                                           {isSelected ? (
                                             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                                           ) : (
-                                            <div className={cx('h-2 w-2 rounded-full', isDarkTheme ? 'bg-[color:rgba(255,243,209,0.34)]' : 'bg-[color:var(--panel-text-muted,#876f5c)]')} />
+                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:rgba(255,243,209,0.34)]' : 'border-[color:var(--panel-text-muted,#876f5c)]')} />
                                           )}
                                         </div>
                                         <div className="min-w-0 flex-1">

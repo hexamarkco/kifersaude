@@ -1890,11 +1890,17 @@ function WhatsAppMessageBody({
   message,
   onOpenImage,
   onTranscribe,
+  onOpenSharedContactChat,
+  onSaveSharedContact,
+  sharedContactActionKey,
   transcribing,
 }: {
   message: CommWhatsAppMessage;
   onOpenImage: (payload: { src: string; name: string }) => void;
   onTranscribe: (message: CommWhatsAppMessage) => void;
+  onOpenSharedContactChat: (contact: { name: string | null; phoneNumber: string | null }) => void;
+  onSaveSharedContact: (contact: { name: string | null; phoneNumber: string | null }) => void;
+  sharedContactActionKey: string | null;
   transcribing: boolean;
 }) {
   const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
@@ -2009,6 +2015,27 @@ function WhatsAppMessageBody({
                   <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{item.name || 'Contato sem nome'}</p>
                   {item.phoneNumber ? (
                     <p className="mt-1 text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</p>
+                  ) : null}
+                  {item.phoneNumber ? (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onOpenSharedContactChat(item)}
+                        disabled={sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
+                        className={inboxInlineActionClassName}
+                      >
+                        {sharedContactActionKey === `open:${item.phoneNumber}` ? 'Abrindo...' : 'Abrir chat'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSaveSharedContact(item)}
+                        disabled={!item.name || sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
+                        className={inboxInlineActionClassName}
+                        title={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
+                      >
+                        {sharedContactActionKey === `save:${item.phoneNumber}` ? 'Salvando...' : 'Salvar contato'}
+                      </button>
+                    </div>
                   ) : null}
                 </div>
               ))}
@@ -2325,6 +2352,7 @@ export default function WhatsAppInboxScreen() {
   const [crmStartLoading, setCrmStartLoading] = useState(false);
   const [manualStartPhone, setManualStartPhone] = useState('');
   const [startingChatKey, setStartingChatKey] = useState<string | null>(null);
+  const [sharedContactActionKey, setSharedContactActionKey] = useState<string | null>(null);
   const [isDocumentVisible, setIsDocumentVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
   const [isWindowFocused, setIsWindowFocused] = useState(() => (typeof document === 'undefined' ? true : document.hasFocus()));
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
@@ -5835,6 +5863,92 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
+  const handleOpenSharedContactChat = useCallback(async (contact: { name: string | null; phoneNumber: string | null }) => {
+    const phoneNumber = contact.phoneNumber?.trim() ?? '';
+    if (!phoneNumber) {
+      toast.error('Este contato compartilhado não possui telefone válido.');
+      return;
+    }
+
+    const phoneKeys = collectPhoneLookupKeys(phoneNumber);
+    if (phoneKeys.length === 0) {
+      toast.error('Este contato compartilhado não possui telefone válido.');
+      return;
+    }
+
+    const actionKey = `open:${phoneNumber}`;
+    setSharedContactActionKey(actionKey);
+
+    try {
+      const localExistingChat = chats.find((chat) => {
+        const chatPhoneKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
+        return chatPhoneKeys.some((key) => phoneKeys.includes(key));
+      }) ?? null;
+
+      if (localExistingChat) {
+        setSelectedChatId(localExistingChat.id);
+        return;
+      }
+
+      const persistedExistingChat = await commWhatsAppService.findExistingChat({ phoneDigits: phoneKeys });
+      if (persistedExistingChat) {
+        upsertChatLocally(persistedExistingChat);
+        setSelectedChatId(persistedExistingChat.id);
+        return;
+      }
+
+      const result = await commWhatsAppService.startChat({
+        source: 'manual',
+        phoneNumber,
+      });
+
+      setSearchDraft('');
+      setSearch('');
+      upsertChatLocally(result.chat);
+      setSelectedChatId(result.chat.id);
+      toast.success('Conversa aberta com o contato compartilhado.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao abrir contato compartilhado', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível abrir a conversa do contato compartilhado.');
+    } finally {
+      setSharedContactActionKey((current) => (current === actionKey ? null : current));
+    }
+  }, [chats, upsertChatLocally]);
+
+  const handleSaveSharedContact = useCallback(async (contact: { name: string | null; phoneNumber: string | null }) => {
+    const displayName = contact.name?.trim() ?? '';
+    const phoneNumber = contact.phoneNumber?.trim() ?? '';
+
+    if (!displayName) {
+      toast.error('O contato compartilhado precisa de um nome para ser salvo.');
+      return;
+    }
+
+    if (!phoneNumber) {
+      toast.error('Este contato compartilhado não possui telefone válido.');
+      return;
+    }
+
+    const actionKey = `save:${phoneNumber}`;
+    setSharedContactActionKey(actionKey);
+
+    try {
+      await commWhatsAppService.saveContact({
+        phoneNumber,
+        displayName,
+      });
+
+      void refreshStartChatSources(startChatQuery, 1, false);
+      void loadChats();
+      toast.success('Contato salvo com sucesso.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao salvar contato compartilhado', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o contato compartilhado.');
+    } finally {
+      setSharedContactActionKey((current) => (current === actionKey ? null : current));
+    }
+  }, [loadChats, refreshStartChatSources, startChatQuery]);
+
   const syncComposerSelection = useCallback((target: HTMLTextAreaElement | null) => {
     if (!target) {
       return;
@@ -6797,6 +6911,9 @@ export default function WhatsAppInboxScreen() {
                               message={message}
                               onOpenImage={setLightboxMedia}
                               onTranscribe={(target) => void handleTranscribeMessage(target)}
+                              onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}
+                              onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
+                              sharedContactActionKey={sharedContactActionKey}
                               transcribing={transcribingMessageId === message.id}
                             />
                             <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-medium">

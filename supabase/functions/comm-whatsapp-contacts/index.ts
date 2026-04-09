@@ -27,7 +27,7 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
-type ContactsAction = 'listContacts' | 'startChat';
+type ContactsAction = 'listContacts' | 'startChat' | 'saveContact';
 
 type ContactsRequestBody = {
   action?: ContactsAction;
@@ -138,7 +138,8 @@ async function syncContactsToCache(params: {
   let cleanupQuery = params.supabaseAdmin
     .from('comm_whatsapp_phone_contacts_cache')
     .delete()
-    .eq('channel_id', params.channelId);
+    .eq('channel_id', params.channelId)
+    .not('contact_id', 'like', 'manual:%');
 
   if (syncedContactIds.length > 0) {
     cleanupQuery = cleanupQuery.not('contact_id', 'in', `(${syncedContactIds.map((id) => `"${id}"`).join(',')})`);
@@ -221,6 +222,57 @@ async function findCachedContactByPhone(params: {
   return (data as SavedContactRow | null | undefined) ?? null;
 }
 
+async function saveContactToCache(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  channelId: string;
+  phoneNumber: string;
+  displayName: string;
+}) {
+  const normalizedPhone = normalizeCommWhatsAppPhone(params.phoneNumber);
+  const displayName = toTrimmedString(params.displayName);
+
+  if (!normalizedPhone) {
+    throw new Error('Numero invalido para salvar o contato.');
+  }
+
+  if (!displayName) {
+    throw new Error('Nome invalido para salvar o contato.');
+  }
+
+  const existing = await findCachedContactByPhone({
+    supabaseAdmin: params.supabaseAdmin,
+    channelId: params.channelId,
+    phoneNumber: normalizedPhone,
+  });
+
+  const nowIso = getNowIso();
+  const row = {
+    channel_id: params.channelId,
+    contact_id: existing?.contact_id || `manual:${normalizedPhone}`,
+    phone_number: normalizedPhone,
+    phone_digits: normalizedPhone,
+    display_name: displayName,
+    short_name: displayName.split(/\s+/).filter(Boolean).slice(0, 2).join(' ') || null,
+    saved: true,
+    last_synced_at: nowIso,
+    updated_at: nowIso,
+  };
+
+  const { error } = await params.supabaseAdmin
+    .from('comm_whatsapp_phone_contacts_cache')
+    .upsert(row, { onConflict: 'channel_id,contact_id' });
+
+  if (error) {
+    throw new Error(`Erro ao salvar contato no cache do WhatsApp: ${error.message}`);
+  }
+
+  await params.supabaseAdmin.rpc('comm_whatsapp_refresh_channel_chat_identities', {
+    p_channel_id: params.channelId,
+  });
+
+  return row;
+}
+
 async function resolveLeadStartContext(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   leadId: string;
@@ -267,7 +319,7 @@ Deno.serve(async (req: Request) => {
       supabaseAnonKey,
       supabaseAdmin,
       module: COMM_WHATSAPP_MODULE,
-      requiredPermission: action === 'startChat' ? 'edit' : 'view',
+      requiredPermission: action === 'listContacts' ? 'view' : 'edit',
     });
 
     if (!authResult.authorized) {
@@ -400,6 +452,37 @@ Deno.serve(async (req: Request) => {
       }
 
       return new Response(JSON.stringify({ success: true, chat }), {
+        status: 200,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (action === 'saveContact') {
+      const phoneNumber = normalizeCommWhatsAppPhone(body.phoneNumber);
+      const displayName = toTrimmedString(body.displayName);
+
+      if (!phoneNumber) {
+        return new Response(JSON.stringify({ error: 'Numero invalido para salvar o contato.' }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      if (!displayName) {
+        return new Response(JSON.stringify({ error: 'Informe um nome para salvar o contato.' }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      const savedContact = await saveContactToCache({
+        supabaseAdmin,
+        channelId: channel.id,
+        phoneNumber,
+        displayName,
+      });
+
+      return new Response(JSON.stringify({ success: true, contact: savedContact }), {
         status: 200,
         headers: jsonHeaders,
       });

@@ -77,6 +77,19 @@ export type CommWhatsAppSavedContactsPage = {
   hasMore: boolean;
 };
 
+export type CommWhatsAppSavedContactResult = {
+  id: string;
+  channel_id: string;
+  contact_id: string;
+  phone_number: string;
+  phone_digits: string;
+  display_name: string;
+  short_name: string | null;
+  saved: boolean;
+  last_synced_at: string;
+  updated_at: string;
+};
+
 export type CommWhatsAppTranscriptionResult = {
   transcription_text: string;
   transcription_status: 'completed';
@@ -440,6 +453,27 @@ export const commWhatsAppService = {
     }
 
     return { chat: payload.chat };
+  },
+
+  async saveContact(params: { phoneNumber: string; displayName: string }): Promise<CommWhatsAppSavedContactResult> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-contacts', {
+      body: {
+        action: 'saveContact',
+        phoneNumber: params.phoneNumber,
+        displayName: params.displayName,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel salvar o contato do WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { contact?: CommWhatsAppSavedContactResult };
+    if (!payload.contact) {
+      throw new Error('O contato salvo nao retornou dados suficientes.');
+    }
+
+    return payload.contact;
   },
 
   async findExistingChat(params: { leadId?: string | null; phoneDigits?: string[] }): Promise<CommWhatsAppChat | null> {

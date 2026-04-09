@@ -367,6 +367,19 @@ export const formatCotadorAgeSummary = (distribution: CotadorAgeDistribution) =>
 
 export const formatCotadorModality = (modality: CotadorQuoteModality) => modalityLabelMap.get(modality) ?? modality;
 
+export const formatCotadorSelectedModalities = (
+  items: Array<Pick<CotadorQuoteItem, 'modalidade'>>,
+) => {
+  const uniqueLabels = Array.from(new Set(
+    items
+      .map((item) => item.modalidade?.trim())
+      .filter((value): value is string => Boolean(value))
+      .map((value) => (isCotadorQuoteModality(value) ? formatCotadorModality(value) : value)),
+  ));
+
+  return uniqueLabels.length > 0 ? uniqueLabels.join(' | ') : null;
+};
+
 export const formatCotadorCurrency = (value: number | null | undefined) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return '-';

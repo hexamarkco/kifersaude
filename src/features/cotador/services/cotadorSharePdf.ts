@@ -1,13 +1,13 @@
 import jsPDF from 'jspdf';
+import type { CotadorAgeDistribution, CotadorQuoteItem, CotadorQuoteSharePayload } from '../shared/cotadorTypes';
 import {
   buildCotadorComparableHospitalKey,
   countCotadorUniqueNetworkProviders,
   formatCotadorCurrency,
   formatCotadorDateTime,
-  formatCotadorModality,
+  formatCotadorSelectedModalities,
   mergeCotadorHospitalNetworkEntries,
 } from '../shared/cotadorUtils';
-import type { CotadorQuoteItem, CotadorQuoteSharePayload } from '../shared/cotadorTypes';
 
 type ExportCotadorQuotePdfInput = {
   payload: CotadorQuoteSharePayload;
@@ -217,11 +217,20 @@ const drawSummaryCards = (doc: jsPDF, cards: Array<{ label: string; value: strin
   return currentY + Math.ceil(cards.length / 2) * (cardHeight + CARD_GAP);
 };
 
-const drawPlanCard = (doc: jsPDF, item: CotadorQuoteItem, startY: number) => {
+const getQuotedAgeRows = (item: CotadorQuoteItem, distribution: CotadorAgeDistribution) =>
+  Object.entries(distribution)
+    .filter(([, quantity]) => quantity > 0)
+    .map(([ageRange, quantity]) => ({
+      ageRange,
+      quantity,
+      value: item.pricesByAgeRange[ageRange as keyof typeof item.pricesByAgeRange] ?? null,
+    }));
+
+const drawPlanCard = (doc: jsPDF, item: CotadorQuoteItem, distribution: CotadorAgeDistribution, startY: number) => {
   const pageWidth = doc.internal.pageSize.getWidth();
   const cardX = PAGE_MARGIN;
   const cardWidth = pageWidth - PAGE_MARGIN * 2;
-  const priceRows = Object.entries(item.pricesByAgeRange).filter(([, value]) => typeof value === 'number' && Number.isFinite(value));
+  const priceRows = getQuotedAgeRows(item, distribution);
   const entityText = item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ');
   const entityLines = entityText ? getWrappedLines(doc, entityText, 184) : [];
   const detailRowCount = 5 + (item.administradora?.name ? 1 : 0);
@@ -296,26 +305,28 @@ const drawPlanCard = (doc: jsPDF, item: CotadorQuoteItem, startY: number) => {
   const priceTableX = cardX + cardWidth - 216;
   const priceTableY = y + 72;
   const priceTableWidth = 200;
+  const priceTableHeight = Math.max(96, priceBlockHeight + 12);
 
   setDrawColor(doc, COLORS.border);
-  doc.roundedRect(priceTableX, priceTableY, priceTableWidth, 160, 12, 12, 'FD');
+  doc.roundedRect(priceTableX, priceTableY, priceTableWidth, priceTableHeight, 12, 12, 'FD');
 
   doc.setFont(FONT_FAMILY, 'bold');
   doc.setFontSize(10);
   setTextColor(doc, COLORS.text);
-  doc.text('Preço por faixa etária', priceTableX + 12, priceTableY + 16);
+  doc.text('Faixas cotadas', priceTableX + 12, priceTableY + 16);
 
   let rowY = priceTableY + 32;
   doc.setFont(FONT_FAMILY, 'normal');
   doc.setFontSize(10);
   if (priceRows.length === 0) {
     setTextColor(doc, COLORS.muted);
-    doc.text('Sem tabela de preços cadastrada.', priceTableX + 12, rowY);
+    doc.text('Nenhuma faixa etária foi preenchida.', priceTableX + 12, rowY);
   }
-  priceRows.forEach(([ageRange, value]) => {
+  priceRows.forEach(({ ageRange, quantity, value }) => {
     doc.line(priceTableX + 12, rowY - 8, priceTableX + priceTableWidth - 12, rowY - 8);
     setTextColor(doc, COLORS.muted);
     doc.text(ageRange, priceTableX + 12, rowY);
+    doc.text(`${quantity}x`, priceTableX + 96, rowY, { align: 'center' });
     setTextColor(doc, COLORS.text);
     doc.text(formatCotadorCurrency(value), priceTableX + priceTableWidth - 12, rowY, { align: 'right' });
     rowY += 14;
@@ -326,6 +337,12 @@ const drawPlanCard = (doc: jsPDF, item: CotadorQuoteItem, startY: number) => {
 
 const drawHeader = (doc: jsPDF, payload: CotadorQuoteSharePayload) => {
   const pageWidth = doc.internal.pageSize.getWidth();
+  const modalitiesSummary = formatCotadorSelectedModalities(payload.items);
+  const infoX = pageWidth - PAGE_MARGIN - 132;
+  const modalityLines = modalitiesSummary ? getWrappedLines(doc, `Modalidades: ${modalitiesSummary}`, 118) : [];
+  const infoStartY = PAGE_MARGIN + 50;
+  const vidasY = infoStartY + Math.max(modalityLines.length, 1) * 10 + 2;
+  const updatedY = vidasY + 12;
 
   setFillColor(doc, COLORS.white);
   setDrawColor(doc, COLORS.border);
@@ -365,9 +382,11 @@ const drawHeader = (doc: jsPDF, payload: CotadorQuoteSharePayload) => {
   doc.setFont(FONT_FAMILY, 'normal');
   doc.setFontSize(9);
   setTextColor(doc, COLORS.muted);
-  doc.text(`Modalidade: ${formatCotadorModality(payload.quote.modality)}`, pageWidth - PAGE_MARGIN - 132, PAGE_MARGIN + 50);
-  doc.text(`Vidas: ${payload.quote.totalLives}`, pageWidth - PAGE_MARGIN - 132, PAGE_MARGIN + 62);
-  doc.text(`Atualizada: ${formatCotadorDateTime(payload.quote.updatedAt)}`, pageWidth - PAGE_MARGIN - 132, PAGE_MARGIN + 74);
+  if (modalitiesSummary) {
+    doc.text(modalityLines, infoX, infoStartY);
+  }
+  doc.text(`Vidas: ${payload.quote.totalLives}`, infoX, vidasY);
+  doc.text(`Atualizada: ${formatCotadorDateTime(payload.quote.updatedAt)}`, infoX, updatedY);
 
   return PAGE_MARGIN + 110;
 };
@@ -485,7 +504,7 @@ export async function exportCotadorQuotePdf({
   y = drawSectionTitle(doc, 'Planos cotados', y + 8, 'Resumo das opções') + 6;
 
   payload.items.forEach((item) => {
-    y = drawPlanCard(doc, item, y);
+    y = drawPlanCard(doc, item, payload.quote.ageDistribution, y);
   });
 
   if (includeNetworkComparison) {

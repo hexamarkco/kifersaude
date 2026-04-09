@@ -554,14 +554,52 @@ const hasSuspectHospitalBairro = (hospital: Pick<CotadorHospitalManagerRecord, '
 const buildHospitalAliasSet = (hospital: Pick<CotadorHospitalManagerRecord, 'nome' | 'aliases'>) =>
   Array.from(new Set([hospital.nome, ...hospital.aliases].map((value) => normalizeSortText(value)).filter(Boolean)));
 
-const HOSPITAL_MERGE_NOISE_TOKENS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
+const HOSPITAL_MERGE_NOISE_TOKENS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'amil']);
+
+const HOSPITAL_MERGE_WEAK_TOKENS = new Set(['hospital', 'clinica', 'clinicas', 'instituto', 'centro', 'casa', 'saude']);
+
+const HOSPITAL_MERGE_TOKEN_ALIASES: Record<string, string> = {
+  assoc: 'associacao',
+  clin: 'clinica',
+  hosp: 'hospital',
+  inst: 'instituto',
+  mater: 'maternidade',
+  mat: 'maternidade',
+  miserc: 'misericordia',
+  sta: 'santa',
+  sto: 'santo',
+};
+
+const GENERIC_HOSPITAL_LOCATION_TOKENS = new Set([
+  'brasil',
+  'diversas cidades',
+  'estado do rio de janeiro',
+  'interior',
+  'rj',
+  'rio de janeiro',
+]);
+
+const normalizeHospitalMergeToken = (token: string) => HOSPITAL_MERGE_TOKEN_ALIASES[token] ?? token;
+
+const isGenericHospitalLocationValue = (value?: string | null) => {
+  const normalized = normalizeSortText(value);
+  if (!normalized) return false;
+  if (GENERIC_HOSPITAL_LOCATION_TOKENS.has(normalized)) return true;
+  return normalized.length <= 2;
+};
+
+const isFallbackHospitalId = (value: string) => value.startsWith('fallback:');
 
 const tokenizeHospitalMergeName = (value: string) =>
   normalizeSortText(value)
     .replace(/[^a-z0-9\s]+/g, ' ')
     .split(/\s+/)
     .filter((token) => token.length > 2)
+    .map((token) => normalizeHospitalMergeToken(token))
     .filter((token) => !HOSPITAL_MERGE_NOISE_TOKENS.has(token));
+
+const tokenizeHospitalMergeCoreName = (value: string) =>
+  tokenizeHospitalMergeName(value).filter((token) => !HOSPITAL_MERGE_WEAK_TOKENS.has(token));
 
 const hospitalTokensLookEquivalent = (left: string, right: string) => {
   if (left === right) return true;
@@ -593,13 +631,40 @@ const getTokenOverlapRatio = (left: string, right: string) => {
   return shared / Math.max(leftTokens.length, rightTokens.length);
 };
 
+const getHospitalNameSpecificityScore = (hospital: Pick<CotadorHospitalManagerRecord, 'nome'>) => {
+  const tokens = tokenizeHospitalMergeCoreName(hospital.nome);
+  if (tokens.length === 0) {
+    return tokenizeHospitalMergeName(hospital.nome).join(' ').length;
+  }
+
+  return tokens.join(' ').length + (tokens.length * 4);
+};
+
+const getHospitalCanonicalStrength = (hospital: Pick<CotadorHospitalManagerRecord, 'id' | 'nome' | 'bairro' | 'regiao' | 'cidade' | 'aliases' | 'linkedProducts'>) => {
+  const hasSpecificCity = Boolean(normalizeSortText(hospital.cidade)) && !isGenericHospitalLocationValue(hospital.cidade);
+  const hasSpecificBairro = Boolean(normalizeSortText(hospital.bairro)) && !hasSuspectHospitalBairro(hospital);
+  const hasSpecificRegiao = Boolean(normalizeSortText(hospital.regiao)) && !isGenericHospitalLocationValue(hospital.regiao);
+
+  return (
+    (isFallbackHospitalId(hospital.id) ? 0 : 1000)
+    + getHospitalNameSpecificityScore(hospital)
+    + (hasSpecificCity ? 120 : 0)
+    + (hasSpecificBairro ? 90 : 0)
+    + (hasSpecificRegiao ? 30 : 0)
+    + (hospital.aliases.length * 4)
+    + (hospital.linkedProducts.length * 2)
+  );
+};
+
 const getHospitalMergeCandidate = (
   left: CotadorHospitalManagerRecord,
   right: CotadorHospitalManagerRecord,
 ): NetworkHospitalMergeSuggestion | null => {
   const leftCity = normalizeSortText(left.cidade);
   const rightCity = normalizeSortText(right.cidade);
-  if (!leftCity || leftCity !== rightCity) return null;
+  const sameCity = Boolean(leftCity) && leftCity === rightCity;
+  const genericCityFallback = isGenericHospitalLocationValue(left.cidade) || isGenericHospitalLocationValue(right.cidade);
+  if (!sameCity && !genericCityFallback) return null;
 
   const leftBairro = normalizeSortText(left.bairro);
   const rightBairro = normalizeSortText(right.bairro);
@@ -622,6 +687,7 @@ const getHospitalMergeCandidate = (
   const sharedAliases = leftAliases.filter((alias) => rightAliases.includes(alias));
   const exactNameMatch = normalizeSortText(left.nome) === normalizeSortText(right.nome);
   const similarName = getTokenOverlapRatio(normalizeSortText(left.nome), normalizeSortText(right.nome));
+  const coreSimilarName = getTokenOverlapRatio(tokenizeHospitalMergeCoreName(left.nome).join(' '), tokenizeHospitalMergeCoreName(right.nome).join(' '));
   const sharedLinkedProducts = left.linkedProducts.filter((link) => right.linkedProducts.some((candidate) => candidate.produto_id === link.produto_id)).length;
 
   const reasons: string[] = [];
@@ -637,12 +703,17 @@ const getHospitalMergeCandidate = (
     reasons.push(`Alias em comum: ${sharedAliases.slice(0, 2).join(', ')}`);
   }
 
+  if (!confidence && coreSimilarName >= 0.95 && (sameBairro || oneMissingBairro || genericCityFallback)) {
+    confidence = 'high';
+    reasons.push('Nome essencialmente igual, mesmo com variacao de abreviacao/prefixo');
+  }
+
   if (!confidence && sameBairro && similarName >= 0.75) {
     confidence = 'medium';
     reasons.push('Mesmo bairro e nome muito parecido');
   }
 
-  if (!confidence && oneMissingBairro && similarName >= 0.82) {
+  if (!confidence && oneMissingBairro && (similarName >= 0.82 || coreSimilarName >= 0.9)) {
     confidence = 'medium';
     reasons.push('Mesmo nome/cidade com um bairro ainda ausente');
   }
@@ -652,20 +723,20 @@ const getHospitalMergeCandidate = (
     reasons.push('Mesmo nome na mesma cidade com bairro suspeito ou inconsistente');
   }
 
-  if (!confidence && sharedLinkedProducts > 0 && (exactNameMatch || similarName >= 0.85) && (sameBairro || oneMissingBairro)) {
+  if (!confidence && sharedLinkedProducts > 0 && (exactNameMatch || similarName >= 0.75 || coreSimilarName >= 0.85) && (sameBairro || oneMissingBairro || genericCityFallback)) {
     confidence = 'medium';
     reasons.push(`Ja aparecem juntos em ${sharedLinkedProducts} plano(s)`);
   }
 
-  if (!confidence && sharedLinkedProducts > 0 && similarName >= 0.96 && bothBairrosDefined && !sameBairro) {
+  if (!confidence && sharedLinkedProducts > 0 && (similarName >= 0.96 || coreSimilarName >= 0.92) && bothBairrosDefined && !sameBairro) {
     confidence = 'medium';
     reasons.push(`Nome praticamente igual na mesma cidade, apesar do bairro divergente, e ${sharedLinkedProducts} plano(s) em comum`);
   }
 
   if (!confidence) return null;
 
-  const leftStrength = (left.linkedProducts.length * 10) + (left.aliases.length * 2) + (left.bairro ? 3 : 0) + (left.regiao ? 2 : 0);
-  const rightStrength = (right.linkedProducts.length * 10) + (right.aliases.length * 2) + (right.bairro ? 3 : 0) + (right.regiao ? 2 : 0);
+  const leftStrength = getHospitalCanonicalStrength(left);
+  const rightStrength = getHospitalCanonicalStrength(right);
   const target = leftStrength >= rightStrength ? left : right;
   const source = target.id === left.id ? right : left;
 

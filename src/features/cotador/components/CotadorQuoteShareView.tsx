@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { Building2, Check, WalletCards } from 'lucide-react';
 import PublicBrandMark from '../../../components/public/PublicBrandMark';
+import type { CotadorAgeRange } from '../shared/cotadorConstants';
 import {
   buildCotadorComparableHospitalKey,
   countCotadorUniqueNetworkProviders,
   formatCotadorCurrency,
   formatCotadorDateTime,
-  formatCotadorModality,
+  formatCotadorSelectedModalities,
   mergeCotadorHospitalNetworkEntries,
 } from '../shared/cotadorUtils';
 import type { CotadorQuoteItem, CotadorQuoteSharePayload } from '../shared/cotadorTypes';
@@ -152,6 +153,11 @@ export default function CotadorQuoteShareView({
     [selectedItems.length],
   );
 
+  const modalitiesSummary = useMemo(
+    () => formatCotadorSelectedModalities(selectedItems),
+    [selectedItems],
+  );
+
   return (
     <div className={[
       'min-h-full bg-[linear-gradient(180deg,#fffaf4_0%,#f7efe3_100%)] p-8 text-[color:#23160e]',
@@ -174,7 +180,7 @@ export default function CotadorQuoteShareView({
             <div className="rounded-[28px] border border-[color:#e8d7c1] bg-white/90 px-5 py-4 shadow-[0_18px_40px_rgba(40,22,10,0.06)]">
               <PublicBrandMark className="h-8 w-auto text-[color:#7a3f18]" />
               <div className="mt-4 space-y-2 text-sm text-[color:#6d5544]">
-                <p><span className="font-semibold text-[color:#23160e]">Modalidade:</span> {formatCotadorModality(payload.quote.modality)}</p>
+                {modalitiesSummary ? <p><span className="font-semibold text-[color:#23160e]">Modalidades:</span> {modalitiesSummary}</p> : null}
                 <p><span className="font-semibold text-[color:#23160e]">Vidas:</span> {payload.quote.totalLives}</p>
                 <p><span className="font-semibold text-[color:#23160e]">Atualizada em:</span> {formatCotadorDateTime(sharedAt ?? payload.quote.updatedAt)}</p>
               </div>
@@ -192,8 +198,13 @@ export default function CotadorQuoteShareView({
           <div className="grid gap-4 lg:grid-cols-2">
             {selectedItems.map((item) => {
               const networkCount = countCotadorUniqueNetworkProviders(item.redeHospitalar);
-              const priceRows = Object.entries(item.pricesByAgeRange)
-                .filter(([, value]) => typeof value === 'number' && Number.isFinite(value));
+              const quotedAgeRows = Object.entries(payload.quote.ageDistribution)
+                .filter(([, quantity]) => quantity > 0)
+                .map(([ageRange, quantity]) => ({
+                  ageRange,
+                  quantity,
+                  value: item.pricesByAgeRange[ageRange as CotadorAgeRange] ?? null,
+                }));
 
               return (
                 <article key={item.id} className="overflow-hidden rounded-[28px] border border-[color:#e8d7c1] bg-white shadow-[0_18px_50px_rgba(44,25,13,0.06)]">
@@ -225,18 +236,19 @@ export default function CotadorQuoteShareView({
                     </div>
 
                     <div className="rounded-3xl border border-[color:#f0e4d4] bg-[color:#fffaf4] p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:#8d6f57]">Preço por faixa etária</p>
-                      {priceRows.length > 0 ? (
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:#8d6f57]">Faixas cotadas</p>
+                      {quotedAgeRows.length > 0 ? (
                         <div className="mt-3 space-y-2 text-sm">
-                          {priceRows.map(([ageRange, value]) => (
-                            <div key={`${item.id}-${ageRange}`} className="flex items-center justify-between gap-3 border-b border-[color:#f3e8da] pb-2 last:border-b-0 last:pb-0">
+                          {quotedAgeRows.map(({ ageRange, quantity, value }) => (
+                            <div key={`${item.id}-${ageRange}`} className="grid grid-cols-[minmax(0,1fr)_56px_minmax(88px,auto)] items-center gap-3 border-b border-[color:#f3e8da] pb-2 last:border-b-0 last:pb-0">
                               <span className="font-medium text-[color:#6d5544]">{ageRange}</span>
-                              <span className="font-semibold text-[color:#23160e]">{formatCotadorCurrency(value)}</span>
+                              <span className="text-center font-medium text-[color:#6d5544]">{quantity}x</span>
+                              <span className="text-right font-semibold text-[color:#23160e]">{formatCotadorCurrency(value)}</span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="mt-3 text-sm text-[color:#6d5544]">Tabela sem valores por faixa etária cadastrados.</p>
+                        <p className="mt-3 text-sm text-[color:#6d5544]">Nenhuma faixa etária foi preenchida nesta cotação.</p>
                       )}
                     </div>
                   </div>

@@ -7,6 +7,7 @@ import {
   Download,
   Edit2,
   FileJson,
+  GitMerge,
   Layers3,
   MapPin,
   Network,
@@ -557,7 +558,7 @@ const buildHospitalAliasSet = (hospital: Pick<CotadorHospitalManagerRecord, 'nom
 
 const HOSPITAL_MERGE_NOISE_TOKENS = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'amil']);
 
-const HOSPITAL_MERGE_WEAK_TOKENS = new Set(['hospital', 'clinica', 'clinicas', 'instituto', 'centro', 'casa', 'saude']);
+const HOSPITAL_MERGE_WEAK_TOKENS = new Set(['hospital', 'clinica', 'clinicas', 'instituto', 'centro', 'casa', 'saude', 'sao', 'santa', 'santo']);
 
 const HOSPITAL_MERGE_TOKEN_ALIASES: Record<string, string> = {
   assoc: 'associacao',
@@ -571,22 +572,45 @@ const HOSPITAL_MERGE_TOKEN_ALIASES: Record<string, string> = {
   sto: 'santo',
 };
 
-const GENERIC_HOSPITAL_LOCATION_TOKENS = new Set([
+const GENERIC_HOSPITAL_CITY_TOKENS = new Set([
   'brasil',
   'diversas cidades',
   'estado do rio de janeiro',
   'interior',
   'rj',
-  'rio de janeiro',
+]);
+
+const GENERIC_HOSPITAL_REGION_TOKENS = new Set([
+  'brasil',
+  'diversas cidades',
+  'estado do rio de janeiro',
+  'interior',
+  'rj',
 ]);
 
 const normalizeHospitalMergeToken = (token: string) => HOSPITAL_MERGE_TOKEN_ALIASES[token] ?? token;
 
-const isGenericHospitalLocationValue = (value?: string | null) => {
+const isGenericHospitalCityValue = (value?: string | null) => {
   const normalized = normalizeSortText(value);
   if (!normalized) return false;
-  if (GENERIC_HOSPITAL_LOCATION_TOKENS.has(normalized)) return true;
+  if (GENERIC_HOSPITAL_CITY_TOKENS.has(normalized)) return true;
   return normalized.length <= 2;
+};
+
+const isGenericHospitalRegionValue = (value?: string | null) => {
+  const normalized = normalizeSortText(value);
+  if (!normalized) return false;
+  if (GENERIC_HOSPITAL_REGION_TOKENS.has(normalized)) return true;
+  return normalized.length <= 2;
+};
+
+const hasStrongHospitalCoreIdentity = (name: string) => {
+  const tokens = tokenizeHospitalMergeCoreName(name);
+  if (tokens.length >= 2) {
+    return true;
+  }
+
+  return tokens.join(' ').length >= 12;
 };
 
 const isFallbackHospitalId = (value: string) => value.startsWith('fallback:');
@@ -642,9 +666,9 @@ const getHospitalNameSpecificityScore = (hospital: Pick<CotadorHospitalManagerRe
 };
 
 const getHospitalCanonicalStrength = (hospital: Pick<CotadorHospitalManagerRecord, 'id' | 'nome' | 'bairro' | 'regiao' | 'cidade' | 'aliases' | 'linkedProducts'>) => {
-  const hasSpecificCity = Boolean(normalizeSortText(hospital.cidade)) && !isGenericHospitalLocationValue(hospital.cidade);
+  const hasSpecificCity = Boolean(normalizeSortText(hospital.cidade)) && !isGenericHospitalCityValue(hospital.cidade);
   const hasSpecificBairro = Boolean(normalizeSortText(hospital.bairro)) && !hasSuspectHospitalBairro(hospital);
-  const hasSpecificRegiao = Boolean(normalizeSortText(hospital.regiao)) && !isGenericHospitalLocationValue(hospital.regiao);
+  const hasSpecificRegiao = Boolean(normalizeSortText(hospital.regiao)) && !isGenericHospitalRegionValue(hospital.regiao);
 
   return (
     (isFallbackHospitalId(hospital.id) ? 0 : 1000)
@@ -664,7 +688,9 @@ const getHospitalMergeCandidate = (
   const leftCity = normalizeSortText(left.cidade);
   const rightCity = normalizeSortText(right.cidade);
   const sameCity = Boolean(leftCity) && leftCity === rightCity;
-  const genericCityFallback = isGenericHospitalLocationValue(left.cidade) || isGenericHospitalLocationValue(right.cidade);
+  const genericCityFallback = (isGenericHospitalCityValue(left.cidade) || isGenericHospitalCityValue(right.cidade))
+    && hasStrongHospitalCoreIdentity(left.nome)
+    && hasStrongHospitalCoreIdentity(right.nome);
   if (!sameCity && !genericCityFallback) return null;
 
   const leftBairro = normalizeSortText(left.bairro);
@@ -1039,6 +1065,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
   const [networkHospitalModalOpen, setNetworkHospitalModalOpen] = useState(false);
   const [networkHospitalEditingId, setNetworkHospitalEditingId] = useState<string | null>(null);
   const [networkHospitalForm, setNetworkHospitalForm] = useState<NetworkHospitalFormState>(DEFAULT_NETWORK_HOSPITAL_FORM);
+  const [manualMergeModalOpen, setManualMergeModalOpen] = useState(false);
+  const [manualMergeTargetId, setManualMergeTargetId] = useState('');
+  const [manualMergeSourceId, setManualMergeSourceId] = useState('');
   const [networkImportModalOpen, setNetworkImportModalOpen] = useState(false);
   const [networkImportForm, setNetworkImportForm] = useState<ImportFormState>({ file: null });
   const [networkImportPreview, setNetworkImportPreview] = useState<CotadorImportPreview | null>(null);
@@ -1500,6 +1529,14 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     [networkHospitalEditingId, networkHospitals],
   );
 
+  const manualMergeHospitalOptions = useMemo(
+    () => networkHospitals.map((hospital) => ({
+      value: hospital.id,
+      label: `${hospital.nome} · ${formatNetworkLocation(hospital)}${hospital.id.startsWith('fallback:') ? ' · bruto' : ''}`,
+    })),
+    [networkHospitals],
+  );
+
   const networkHospitalCityOptions = useMemo(
     () => Array.from(new Set(networkHospitals.map((hospital) => hospital.cidade).filter(Boolean)))
       .sort((left, right) => left.localeCompare(right, 'pt-BR'))
@@ -1657,6 +1694,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setNetworkHospitalForm(DEFAULT_NETWORK_HOSPITAL_FORM);
   };
 
+  const resetManualMergeModal = () => {
+    setManualMergeModalOpen(false);
+    setManualMergeTargetId('');
+    setManualMergeSourceId('');
+  };
+
   const openNetworkHospitalModal = (hospital: CotadorHospitalManagerRecord) => {
     setNetworkHospitalEditingId(hospital.id);
     setNetworkHospitalForm(buildNetworkHospitalFormFromValue(hospital));
@@ -1683,7 +1726,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
     const result = await cotadorService.updateHospitalRede(selectedNetworkHospital.id, payload);
     if (result.error) {
-      toast.error('Nao foi possivel salvar o hospital compartilhado.');
+      toast.error(getSupabaseErrorMessage(result.error, 'Nao foi possivel salvar o hospital compartilhado.'));
       setSubmitting(false);
       return;
     }
@@ -1717,6 +1760,52 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     if (networkHospitalEditingId === suggestion.sourceId) {
       resetNetworkHospitalModal();
     }
+    toast.success('Hospitais mesclados com sucesso.');
+    setMergingHospitalKey(null);
+  };
+
+  const handleManualMergeHospitals = async () => {
+    if (!manualMergeTargetId || !manualMergeSourceId) {
+      toast.error('Selecione o hospital a manter e o hospital que sera mesclado.');
+      return;
+    }
+
+    if (manualMergeTargetId === manualMergeSourceId) {
+      toast.error('Escolha hospitais diferentes para realizar o merge manual.');
+      return;
+    }
+
+    const targetHospital = networkHospitals.find((hospital) => hospital.id === manualMergeTargetId) ?? null;
+    const sourceHospital = networkHospitals.find((hospital) => hospital.id === manualMergeSourceId) ?? null;
+    if (!targetHospital || !sourceHospital) {
+      toast.error('Nao foi possivel localizar os hospitais selecionados para o merge manual.');
+      return;
+    }
+
+    const confirmed = await requestConfirmation({
+      title: 'Mesclar hospitais manualmente',
+      description: `O cadastro ${sourceHospital.nome} sera consolidado em ${targetHospital.nome}. Os aliases e vinculos de planos serao preservados.`,
+      confirmLabel: 'Mesclar',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    const mergeKey = `${manualMergeTargetId}::${manualMergeSourceId}`;
+    setMergingHospitalKey(mergeKey);
+    const result = await cotadorService.mergeHospitaisRede(manualMergeTargetId, manualMergeSourceId);
+    if (result.error) {
+      toast.error(getSupabaseErrorMessage(result.error, 'Nao foi possivel mesclar os hospitais selecionados.'));
+      setMergingHospitalKey(null);
+      return;
+    }
+
+    await Promise.all([loadCatalogData(), loadNetworkHospitals()]);
+    if (networkHospitalEditingId === manualMergeSourceId) {
+      resetNetworkHospitalModal();
+    }
+    resetManualMergeModal();
     toast.success('Hospitais mesclados com sucesso.');
     setMergingHospitalKey(null);
   };
@@ -3019,6 +3108,13 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                       mergingHospitalKey={mergingHospitalKey}
                       onMerge={(suggestion) => void handleMergeNetworkHospitals(suggestion)}
                     />
+
+                    <div className="flex justify-end">
+                      <Button variant="secondary" onClick={() => setManualMergeModalOpen(true)} disabled={networkHospitals.length < 2}>
+                        <Network className="h-4 w-4" />
+                        Mesclar manualmente
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -3731,6 +3827,59 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               {networkEditingIndex === null ? 'Adicionar hospital' : 'Atualizar hospital'}
             </Button>
             <Button type="button" variant="secondary" onClick={resetNetworkEntryForm}>Cancelar</Button>
+          </div>
+        </div>
+      </ModalShell>
+
+      <ModalShell
+        isOpen={manualMergeModalOpen}
+        onClose={resetManualMergeModal}
+        title="Mesclar hospitais manualmente"
+        description="Escolha qual cadastro deve permanecer como canônico e qual será consolidado nele."
+        size="lg"
+      >
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Manter</label>
+              <FilterSingleSelect
+                icon={Building2}
+                options={manualMergeHospitalOptions.filter((option) => option.value !== manualMergeSourceId)}
+                placeholder="Selecione o hospital canônico"
+                value={manualMergeTargetId}
+                onChange={setManualMergeTargetId}
+                searchable
+                searchPlaceholder="Buscar hospital para manter..."
+                emptyMessage="Nenhum hospital disponível."
+              />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Mesclar de</label>
+              <FilterSingleSelect
+                icon={GitMerge}
+                options={manualMergeHospitalOptions.filter((option) => option.value !== manualMergeTargetId)}
+                placeholder="Selecione o hospital de origem"
+                value={manualMergeSourceId}
+                onChange={setManualMergeSourceId}
+                searchable
+                searchPlaceholder="Buscar hospital para mesclar..."
+                emptyMessage="Nenhum hospital disponível."
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+            Use este fluxo quando a sugestão automática não aparecer ou quando você quiser escolher manualmente qual cadastro deve sobreviver.
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" loading={Boolean(mergingHospitalKey)} onClick={() => void handleManualMergeHospitals()}>
+              <GitMerge className="h-4 w-4" />
+              Mesclar hospitais
+            </Button>
+            <Button type="button" variant="secondary" onClick={resetManualMergeModal} disabled={Boolean(mergingHospitalKey)}>
+              Cancelar
+            </Button>
           </div>
         </div>
       </ModalShell>

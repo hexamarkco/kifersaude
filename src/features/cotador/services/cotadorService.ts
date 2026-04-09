@@ -1949,6 +1949,129 @@ export const cotadorService = {
         updated_at: new Date().toISOString(),
       };
 
+      if (!isUuidLike(id)) {
+        const hospitals = await cotadorService.getHospitaisRedeDetalhados(true);
+        const sourceHospital = hospitals.find((hospital) => hospital.id === id) ?? null;
+
+        if (!sourceHospital) {
+          return { error: toPostgrestError(new Error('Hospital sintetico nao encontrado para edicao')) };
+        }
+
+        const exactExistingHospital = hospitals.find((hospital) => (
+          hospital.id !== sourceHospital.id
+          && isUuidLike(hospital.id)
+          && normalizeText(hospital.nome) === normalizeText(nome)
+          && normalizeText(hospital.cidade) === normalizeText(cidade)
+          && normalizeText(hospital.regiao) === normalizeText(regiao)
+          && normalizeText(hospital.bairro) === normalizeText(bairro)
+        )) ?? null;
+
+        let canonicalHospitalId = exactExistingHospital?.id ?? null;
+
+        if (!canonicalHospitalId) {
+          const { data: insertedHospital, error: insertError } = await supabase
+            .from(COTADOR_HOSPITAIS_TABLE)
+            .insert({
+              nome,
+              cidade,
+              regiao,
+              bairro,
+              ativo: input.ativo,
+            })
+            .select('id')
+            .single();
+
+          if (insertError || !insertedHospital?.id) {
+            return { error: insertError ?? toPostgrestError(new Error('Nao foi possivel criar o hospital canonico')) };
+          }
+
+          canonicalHospitalId = insertedHospital.id;
+        } else {
+          const { error: existingUpdateError } = await supabase
+            .from(COTADOR_HOSPITAIS_TABLE)
+            .update(payload)
+            .eq('id', canonicalHospitalId);
+
+          if (existingUpdateError) {
+            return { error: existingUpdateError };
+          }
+        }
+
+        if (!canonicalHospitalId) {
+          return { error: toPostgrestError(new Error('Nao foi possivel definir o hospital canonico para salvar as alteracoes')) };
+        }
+
+        await syncHospitalAliases(canonicalHospitalId, sanitizeHospitalAliases([
+          ...sourceHospital.aliases,
+          sourceHospital.nome,
+          ...input.aliases,
+        ]));
+
+        const sourceComparableKey = buildCotadorComparableHospitalKey({ hospital: sourceHospital.nome, cidade: sourceHospital.cidade });
+        const targetComparableKey = buildCotadorComparableHospitalKey({ hospital: nome, cidade });
+        const affectedProductIds = Array.from(new Set(sourceHospital.linkedProducts.map((link) => link.produto_id))).filter(Boolean);
+
+        for (const productId of affectedProductIds) {
+          const currentNetwork = await cotadorService.getProdutoRedeHospitalarDetalhada(productId);
+          const entryIndexesToMerge = currentNetwork.reduce<number[]>((accumulator, entry, index) => {
+            const comparableKey = buildCotadorComparableHospitalKey(entry);
+            const matchesSource = comparableKey === sourceComparableKey;
+            const matchesTarget = entry.hospital_id === canonicalHospitalId || comparableKey === targetComparableKey;
+
+            if (matchesSource || matchesTarget) {
+              accumulator.push(index);
+            }
+
+            return accumulator;
+          }, []);
+
+          if (entryIndexesToMerge.length === 0) {
+            continue;
+          }
+
+          const entriesToMerge = entryIndexesToMerge.map((index) => currentNetwork[index]);
+          const insertAt = Math.min(...entryIndexesToMerge);
+          const mergedEntry: CotadorProductNetworkManagerInput = {
+            hospitalId: canonicalHospitalId,
+            linkId: entriesToMerge.find((entry) => entry.hospital_id === canonicalHospitalId)?.link_id ?? null,
+            hospital: nome,
+            cidade,
+            regiao,
+            bairro,
+            aliases: sanitizeHospitalAliases([
+              ...entriesToMerge.flatMap((entry) => entry.aliases),
+              sourceHospital.nome,
+              ...input.aliases,
+            ]),
+            atendimentos: mergeUniqueStrings(entriesToMerge.flatMap((entry) => entry.atendimentos)).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+            observacoes: mergeOptionalNotes(entriesToMerge.map((entry) => entry.observacoes)),
+          };
+
+          const nextNetwork: CotadorProductNetworkManagerInput[] = currentNetwork
+            .filter((_, index) => !entryIndexesToMerge.includes(index))
+            .map((entry) => ({
+              hospitalId: entry.hospital_id ?? null,
+              linkId: entry.link_id ?? null,
+              hospital: entry.hospital,
+              cidade: entry.cidade,
+              regiao: entry.regiao,
+              bairro: entry.bairro,
+              atendimentos: entry.atendimentos,
+              observacoes: entry.observacoes,
+              aliases: entry.aliases,
+            }));
+
+          nextNetwork.splice(insertAt, 0, mergedEntry);
+
+          const { error } = await cotadorService.replaceProdutoRedeHospitalarDetalhada(productId, nextNetwork);
+          if (error) {
+            return { error };
+          }
+        }
+
+        return { error: null };
+      }
+
       const { error } = await supabase
         .from(COTADOR_HOSPITAIS_TABLE)
         .update(payload)

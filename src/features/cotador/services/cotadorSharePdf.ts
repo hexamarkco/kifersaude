@@ -7,6 +7,7 @@ import {
   formatCotadorDateTime,
   formatCotadorSelectedModalities,
   mergeCotadorHospitalNetworkEntries,
+  summarizeCotadorNetworkServices,
 } from '../shared/cotadorUtils';
 
 type ExportCotadorQuotePdfInput = {
@@ -432,8 +433,13 @@ const drawNetworkComparison = (doc: jsPDF, items: CotadorQuoteItem[], rows: Netw
 
     const cellHeights = items.map((item) => {
       const presence = row.planPresence[item.id];
+      const serviceSummary = summarizeCotadorNetworkServices(presence?.services ?? []);
       const statusLines = getWrappedLines(doc, presence ? 'Na rede' : 'Não consta', planColWidth - 20);
-      const serviceText = presence?.services.length ? presence.services.join(' · ') : '';
+      const serviceText = presence
+        ? serviceSummary.hasStructuredInfo
+          ? serviceSummary.badges.join(' · ')
+          : serviceSummary.fallbackNote
+        : '';
       const serviceLines = serviceText ? getWrappedLines(doc, serviceText, planColWidth - 20) : [];
       return 10 + statusLines.length * 11 + (serviceLines.length > 0 ? serviceLines.length * 10 + 6 : 0);
     });
@@ -466,8 +472,13 @@ const drawNetworkComparison = (doc: jsPDF, items: CotadorQuoteItem[], rows: Netw
     items.forEach((item, index) => {
       const cellX = PAGE_MARGIN + leftColWidth + planColWidth * index;
       const presence = row.planPresence[item.id];
+      const serviceSummary = summarizeCotadorNetworkServices(presence?.services ?? []);
       const statusLines = getWrappedLines(doc, presence ? 'Na rede' : 'Não consta', planColWidth - 20);
-      const serviceText = presence?.services.length ? presence.services.join(' · ') : '';
+      const serviceText = presence
+        ? serviceSummary.hasStructuredInfo
+          ? serviceSummary.badges.join(' · ')
+          : serviceSummary.fallbackNote
+        : '';
       const serviceLines = serviceText ? getWrappedLines(doc, serviceText, planColWidth - 20) : [];
 
       setDrawColor(doc, COLORS.border);

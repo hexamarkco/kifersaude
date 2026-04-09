@@ -380,6 +380,76 @@ export const formatCotadorSelectedModalities = (
   return uniqueLabels.length > 0 ? uniqueLabels.join(' | ') : null;
 };
 
+const normalizeCotadorNetworkServiceLabel = (value?: string | null) =>
+  (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .trim();
+
+const COTADOR_NETWORK_H_LABELS = new Set([
+  'H',
+  'H CARD',
+  'H ORT',
+  'HD',
+  'HP',
+  'HOSPITAL CARDIOLOGICO',
+  'HOSPITAL CIRURGIA ORTOPEDICA',
+  'HOSPITAL DIA',
+  'HOSPITAL ELETIVO',
+  'HOSPITAL PEDIATRICO',
+  'INTERNACAO',
+  'INTERNACAO HOSPITALAR',
+]);
+
+const COTADOR_NETWORK_M_LABELS = new Set([
+  'M',
+  'MATERNIDADE',
+]);
+
+const COTADOR_NETWORK_PS_LABELS = new Set([
+  'PA',
+  'PRONTO ATENDIMENTO',
+  'PRONTO SOCORRO',
+  'PS',
+  'PS CARD',
+  'PS OBST',
+  'PSI',
+  'PSO',
+]);
+
+export const summarizeCotadorNetworkServices = (services: string[]) => {
+  const badges = new Set<'H' | 'M' | 'PS'>();
+
+  services.forEach((service) => {
+    const normalized = normalizeCotadorNetworkServiceLabel(service);
+    if (!normalized) return;
+
+    if (COTADOR_NETWORK_H_LABELS.has(normalized)) {
+      badges.add('H');
+      return;
+    }
+
+    if (COTADOR_NETWORK_M_LABELS.has(normalized)) {
+      badges.add('M');
+      return;
+    }
+
+    if (COTADOR_NETWORK_PS_LABELS.has(normalized) || normalized.startsWith('PS ')) {
+      badges.add('PS');
+    }
+  });
+
+  const orderedBadges = (['H', 'M', 'PS'] as const).filter((badge) => badges.has(badge));
+
+  return {
+    badges: orderedBadges,
+    hasStructuredInfo: orderedBadges.length > 0,
+    fallbackNote: 'Consulte a rede da operadora para detalhes do atendimento.',
+  };
+};
+
 export const formatCotadorCurrency = (value: number | null | undefined) => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return '-';

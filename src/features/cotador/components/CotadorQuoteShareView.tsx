@@ -9,6 +9,7 @@ import {
   formatCotadorDateTime,
   formatCotadorSelectedModalities,
   mergeCotadorHospitalNetworkEntries,
+  summarizeCotadorNetworkServices,
 } from '../shared/cotadorUtils';
 import type { CotadorQuoteItem, CotadorQuoteSharePayload } from '../shared/cotadorTypes';
 
@@ -312,21 +313,27 @@ export default function CotadorQuoteShareView({
                         return (
                           <div key={`${row.key}-${item.id}`} className="border-b border-l border-[color:#f0e4d4] p-4">
                             {presence ? (
+                              (() => {
+                                const serviceSummary = summarizeCotadorNetworkServices(presence.services);
+
+                                return (
                               <div className="rounded-2xl border border-[color:#e7d7c2] bg-[color:#fffaf4] p-3">
                                 <div className="flex items-center gap-2 text-sm font-semibold text-[color:#23160e]">
                                   <Check className="h-4 w-4 text-[color:#9b5d14]" />
                                   Na rede
                                 </div>
-                                {presence.services.length > 0 ? (
+                                {serviceSummary.hasStructuredInfo ? (
                                   <div className="mt-2 flex flex-wrap gap-1.5">
-                                    {presence.services.slice(0, 4).map((service) => (
+                                    {serviceSummary.badges.map((service) => (
                                       <span key={`${row.key}-${item.id}-${service}`} className="rounded-full border border-[color:#eadbc7] bg-white px-2 py-0.5 text-[10px] font-medium text-[color:#6d5544]">
                                         {service}
                                       </span>
                                     ))}
                                   </div>
-                                ) : null}
+                                ) : <p className="mt-2 text-xs text-[color:#6d5544]">{serviceSummary.fallbackNote}</p>}
                               </div>
+                                );
+                              })()
                             ) : (
                               <div className="rounded-2xl border border-dashed border-[color:#eadbc7] bg-[color:#fbf4ea] p-3 text-sm font-medium text-[color:#8a6d57]">
                                 Não consta

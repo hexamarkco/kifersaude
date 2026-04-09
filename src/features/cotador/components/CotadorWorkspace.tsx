@@ -10,6 +10,7 @@ import {
   formatCotadorCurrency,
   formatCotadorDateTime,
   mergeCotadorHospitalNetworkEntries,
+  summarizeCotadorNetworkServices,
 } from '../shared/cotadorUtils';
 import type { CotadorCatalogFilters, CotadorCatalogItem, CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
 import CotadorPlanPickerOverlay from './CotadorPlanPickerOverlay';
@@ -731,21 +732,16 @@ export default function CotadorWorkspace({
                                     <Check className="h-4 w-4 text-[var(--panel-accent-ink,#6f3f16)]" />
                                     Na rede
                                   </div>
-                                  {presence.services.length > 0 ? (
+                                  {summarizeCotadorNetworkServices(presence.services).hasStructuredInfo ? (
                                     <div className="mt-2 flex flex-wrap gap-1.5">
-                                      {presence.services.slice(0, 4).map((service) => (
+                                      {summarizeCotadorNetworkServices(presence.services).badges.map((service) => (
                                         <span key={`${row.key}-${item.id}-${service}`} className="rounded-full border border-[color:rgba(111,63,22,0.12)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
                                           {service}
                                         </span>
                                       ))}
-                                      {presence.services.length > 4 && (
-                                        <span className="rounded-full border border-[color:rgba(111,63,22,0.12)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
-                                          +{presence.services.length - 4}
-                                        </span>
-                                      )}
                                     </div>
                                   ) : (
-                                    <p className="mt-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Sem detalhamento de atendimento.</p>
+                                    <p className="mt-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{summarizeCotadorNetworkServices(presence.services).fallbackNote}</p>
                                   )}
                                 </div>
                               ) : (

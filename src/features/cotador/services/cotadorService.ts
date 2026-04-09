@@ -1352,6 +1352,25 @@ export const cotadorService = {
     }
   },
 
+  async deleteLinhaCascade(id: string) {
+    try {
+      const { error: productsError } = await supabase
+        .from(COTADOR_PRODUTOS_TABLE)
+        .delete()
+        .eq('linha_id', id);
+
+      if (productsError) {
+        return { error: productsError };
+      }
+
+      const { error } = await supabase.from(COTADOR_LINHAS_TABLE).delete().eq('id', id);
+      return { error };
+    } catch (error) {
+      console.error('Error deleting cotador line cascade:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
   async getProdutos(throwOnError = false): Promise<CotadorProductManagerRecord[]> {
     try {
       const [{ data: productsData, error: productsError }, operadoras, lines, administradoras, entidades, linksData, normalizedNetworkByProduct] = await Promise.all([
@@ -2262,6 +2281,24 @@ export const cotadorService = {
       return { error };
     } catch (error) {
       console.error('Error deleting cotador product:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
+  async deleteOperadoraCascade(id: string) {
+    try {
+      const { error: productsError } = await supabase
+        .from(COTADOR_PRODUTOS_TABLE)
+        .delete()
+        .eq('operadora_id', id);
+
+      if (productsError) {
+        return { error: productsError };
+      }
+
+      return await configService.deleteOperadora(id);
+    } catch (error) {
+      console.error('Error deleting cotador operadora cascade:', error);
       return { error: toPostgrestError(error) };
     }
   },

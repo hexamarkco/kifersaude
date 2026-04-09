@@ -2648,13 +2648,13 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         : kind === 'entidades'
           ? await cotadorService.deleteEntidadeClasse(id)
           : kind === 'linhas'
-            ? await cotadorService.deleteLinha(id)
+            ? await cotadorService.deleteLinhaCascade(id)
             : kind === 'produtos'
               ? await cotadorService.deleteProduto(id)
               : await cotadorService.deleteTabela(id);
 
     if (result.error) {
-      showMessage('error', 'Erro ao excluir item do catálogo.');
+      showMessage('error', getSupabaseErrorMessage(result.error, 'Erro ao excluir item do catálogo.'));
       return;
     }
 
@@ -2829,7 +2829,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openLineModal(line)}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('linhas', line.id, 'Excluir linha', 'Essa ação remove a linha e pode impactar os produtos vinculados.') }><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('linhas', line.id, 'Excluir linha', 'Essa ação remove a linha e todos os produtos, tabelas, faixas de preço, entidades e vínculos de rede ligados a ela. Snapshots já usados em cotações permanecem preservados.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </article>
               ))}
@@ -2925,7 +2925,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                             <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openProductModal(product)}>
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('produtos', product.id, 'Excluir produto', 'Essa ação remove o produto do catálogo do Cotador, mas snapshots de cotações permanecem preservados.') }>
+                            <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('produtos', product.id, 'Excluir produto', 'Essa ação remove o produto e todas as tabelas, faixas de preço, entidades e vínculos de rede ligados a ele. Snapshots já usados em cotações permanecem preservados.') }>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>

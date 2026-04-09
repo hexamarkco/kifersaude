@@ -10,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { configService } from '../../lib/configService';
+import { cotadorService } from '../../features/cotador/services/cotadorService';
 import { type Operadora } from '../../lib/supabase';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
@@ -130,7 +131,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
   const handleDelete = async (id: string) => {
     const confirmed = await requestConfirmation({
       title: 'Excluir operadora',
-      description: 'Tem certeza que deseja excluir esta operadora? Esta ação não pode ser desfeita.',
+      description: 'Tem certeza que deseja excluir esta operadora? A exclusão remove também linhas, produtos, tabelas, faixas de preço, entidades vinculadas por produto e redes associadas no Cotador. Esta ação não pode ser desfeita.',
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       tone: 'danger',
@@ -140,10 +141,10 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
       return;
     }
 
-    const { error } = await configService.deleteOperadora(id);
+    const { error } = await cotadorService.deleteOperadoraCascade(id);
 
     if (error) {
-      showMessage('error', 'Erro ao excluir operadora.');
+      showMessage('error', 'Erro ao excluir operadora em cascata.');
       return;
     }
 

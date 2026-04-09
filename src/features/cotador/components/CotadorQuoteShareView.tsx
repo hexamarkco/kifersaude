@@ -302,15 +302,6 @@ export default function CotadorQuoteShareView({
                               </span>
                             </div>
                             <p className="mt-1 text-xs text-[color:#6d5544]">{[row.bairro, row.regiao, row.cidade].filter(Boolean).join(' | ')}</p>
-                            {row.services.length > 0 ? (
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                {row.services.slice(0, 5).map((service) => (
-                                  <span key={`${row.key}-${service}`} className="rounded-full border border-[color:#eadbc7] bg-[color:#fffaf4] px-2 py-0.5 text-[10px] font-medium text-[color:#6d5544]">
-                                    {service}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
                           </div>
                         </div>
                       </div>

@@ -716,20 +716,6 @@ export default function CotadorWorkspace({
                               <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
                                 {[row.bairro, row.regiao, row.cidade].filter(Boolean).join(' | ')}
                               </p>
-                              {row.services.length > 0 && (
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                  {row.services.slice(0, 6).map((service) => (
-                                    <span key={`${row.key}-${service}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
-                                      {service}
-                                    </span>
-                                  ))}
-                                  {row.services.length > 6 && (
-                                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
-                                      +{row.services.length - 6}
-                                    </span>
-                                  )}
-                                </div>
-                              )}
                             </div>
                           </div>
                         </div>

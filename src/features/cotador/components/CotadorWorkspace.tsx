@@ -145,6 +145,12 @@ const compareNetworkCompareRows = (left: NetworkCompareRow, right: NetworkCompar
   return left.hospital.localeCompare(right.hospital, 'pt-BR');
 };
 
+const NETWORK_COMPARE_LEGEND = [
+  { label: 'H', description: 'Atende internacao' },
+  { label: 'M', description: 'Atende maternidade' },
+  { label: 'PS', description: 'Atende pronto socorro' },
+];
+
 const mergeCompareLabel = (current?: string | null, next?: string | null) => {
   const values = Array.from(new Map([current, next]
     .filter((value): value is string => Boolean(value?.trim()))
@@ -664,6 +670,22 @@ export default function CotadorWorkspace({
               />
             </div>
 
+            <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {NETWORK_COMPARE_LEGEND.map((item) => (
+                  <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(111,63,22,0.16)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-1 text-[10px] text-[color:var(--panel-text,#1a120d)]">
+                      {item.label}
+                    </span>
+                    {item.description}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                Quando o plano nao detalhar o tipo de atendimento, considere apenas que o hospital esta na rede e consulte a rede oficial da operadora.
+              </p>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               {[
                 { value: 'all', label: 'Todos' },
@@ -736,6 +758,7 @@ export default function CotadorWorkspace({
 
                         {selectedItems.map((item) => {
                           const presence = row.planPresence[item.id];
+                          const serviceSummary = summarizeCotadorNetworkServices(presence?.services ?? []);
 
                           return (
                             <div key={`${row.key}-${item.id}`} className="border-b border-l border-[color:var(--panel-border-subtle,#e7dac8)] p-3">
@@ -745,17 +768,15 @@ export default function CotadorWorkspace({
                                     <Check className="h-4 w-4 text-[var(--panel-accent-ink,#6f3f16)]" />
                                     Na rede
                                   </div>
-                                  {summarizeCotadorNetworkServices(presence.services).hasStructuredInfo ? (
+                                  {serviceSummary.hasStructuredInfo ? (
                                     <div className="mt-2 flex flex-wrap gap-1.5">
-                                      {summarizeCotadorNetworkServices(presence.services).badges.map((service) => (
+                                      {serviceSummary.badges.map((service) => (
                                         <span key={`${row.key}-${item.id}-${service}`} className="rounded-full border border-[color:rgba(111,63,22,0.12)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
                                           {service}
                                         </span>
                                       ))}
                                     </div>
-                                  ) : (
-                                    <p className="mt-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{summarizeCotadorNetworkServices(presence.services).fallbackNote}</p>
-                                  )}
+                                  ) : null}
                                 </div>
                               ) : (
                                 <div className="rounded-2xl border border-dashed border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-3">

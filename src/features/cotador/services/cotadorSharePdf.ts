@@ -42,6 +42,12 @@ const COLORS = {
   success: [22, 101, 52] as const,
 };
 
+const NETWORK_COMPARE_LEGEND = [
+  { label: 'H', description: 'Atende internacao' },
+  { label: 'M', description: 'Atende maternidade' },
+  { label: 'PS', description: 'Atende pronto socorro' },
+];
+
 const formatCopart = (value: CotadorQuoteItem['coparticipacao']) => {
   if (value === 'parcial') return 'Copart. parcial';
   if (value === 'total') return 'Copart. total';
@@ -423,6 +429,19 @@ const drawNetworkComparison = (doc: jsPDF, items: CotadorQuoteItem[], rows: Netw
     { label: 'Exclusivos', value: `${rows.filter((row) => row.hitsCount === 1).length}` },
   ], y);
   y += 6;
+
+  doc.setFont(FONT_FAMILY, 'bold');
+  doc.setFontSize(9);
+  setTextColor(doc, COLORS.muted);
+  doc.text(
+    NETWORK_COMPARE_LEGEND.map((item) => `${item.label}: ${item.description}`).join('   |   '),
+    PAGE_MARGIN,
+    y + 12,
+  );
+  doc.setFont(FONT_FAMILY, 'normal');
+  doc.setFontSize(8);
+  doc.text('Sem sigla detalhada: considere apenas que o hospital esta na rede e consulte a rede oficial da operadora.', PAGE_MARGIN, y + 24);
+  y += 34;
   drawTableHeader(y);
   y += 34;
 
@@ -438,7 +457,7 @@ const drawNetworkComparison = (doc: jsPDF, items: CotadorQuoteItem[], rows: Netw
       const serviceText = presence
         ? serviceSummary.hasStructuredInfo
           ? serviceSummary.badges.join(' · ')
-          : serviceSummary.fallbackNote
+          : ''
         : '';
       const serviceLines = serviceText ? getWrappedLines(doc, serviceText, planColWidth - 20) : [];
       return 10 + statusLines.length * 11 + (serviceLines.length > 0 ? serviceLines.length * 10 + 6 : 0);
@@ -477,7 +496,7 @@ const drawNetworkComparison = (doc: jsPDF, items: CotadorQuoteItem[], rows: Netw
       const serviceText = presence
         ? serviceSummary.hasStructuredInfo
           ? serviceSummary.badges.join(' · ')
-          : serviceSummary.fallbackNote
+          : ''
         : '';
       const serviceLines = serviceText ? getWrappedLines(doc, serviceText, planColWidth - 20) : [];
 

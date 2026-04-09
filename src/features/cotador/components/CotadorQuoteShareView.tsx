@@ -77,6 +77,12 @@ const compareNetworkCompareRows = (left: NetworkCompareRow, right: NetworkCompar
   return left.hospital.localeCompare(right.hospital, 'pt-BR');
 };
 
+const NETWORK_COMPARE_LEGEND = [
+  { label: 'H', description: 'Atende internacao' },
+  { label: 'M', description: 'Atende maternidade' },
+  { label: 'PS', description: 'Atende pronto socorro' },
+];
+
 function SummaryCard({ label, value, helper }: { label: string; value: string; helper?: string }) {
   return (
     <div className="rounded-3xl border border-[color:#e8d7c1] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(40,22,10,0.05)]">
@@ -272,6 +278,22 @@ export default function CotadorQuoteShareView({
               <SummaryCard label="Exclusivos" value={`${networkExclusiveRowsCount}`} />
             </div>
 
+            <div className="rounded-[24px] border border-[color:#e8d7c1] bg-[color:#fbf4ea] px-5 py-4 text-[color:#6d5544]">
+              <div className="flex flex-wrap items-center gap-2">
+                {NETWORK_COMPARE_LEGEND.map((item) => (
+                  <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[color:#eadbc7] bg-white px-2.5 py-1 text-[11px] font-semibold">
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[color:#eadbc7] bg-[color:#fffaf4] px-1 text-[10px] text-[color:#23160e]">
+                      {item.label}
+                    </span>
+                    {item.description}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-2 text-xs">
+                Quando o plano nao detalhar o tipo de atendimento, considere apenas que o hospital esta na rede e consulte a rede oficial da operadora.
+              </p>
+            </div>
+
             <div className="overflow-hidden rounded-[32px] border border-[color:#e8d7c1] bg-white shadow-[0_18px_50px_rgba(44,25,13,0.06)]">
               <div className="overflow-x-auto">
                 <div className="min-w-[980px]">
@@ -330,7 +352,7 @@ export default function CotadorQuoteShareView({
                                       </span>
                                     ))}
                                   </div>
-                                ) : <p className="mt-2 text-xs text-[color:#6d5544]">{serviceSummary.fallbackNote}</p>}
+                                ) : null}
                               </div>
                                 );
                               })()

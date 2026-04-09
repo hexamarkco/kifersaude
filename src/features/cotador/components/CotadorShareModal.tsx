@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, Download, ExternalLink, Link2 } from 'lucide-react';
+import { Copy, Download, ExternalLink } from 'lucide-react';
 import Checkbox from '../../../components/ui/Checkbox';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -46,6 +46,8 @@ export default function CotadorShareModal({
     selectedItems,
   }, selectedItems), [quote, selectedItems]);
 
+  const effectiveIncludeNetworkComparison = includeNetworkComparison && hasNetworkComparison;
+
   useEffect(() => {
     if (!isOpen) {
       setShareLink('');
@@ -55,14 +57,60 @@ export default function CotadorShareModal({
     setIncludeNetworkComparison(hasNetworkComparison);
   }, [hasNetworkComparison, isOpen, quote.id]);
 
-  const handleCreateLink = async () => {
+  useEffect(() => {
+    if (!isOpen || selectedItems.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const ensureShareLink = async () => {
+      setCreatingShareLink(true);
+
+      try {
+        const { data, error } = await cotadorService.upsertQuoteShare({
+          ...quote,
+          selectedItems,
+        }, effectiveIncludeNetworkComparison);
+
+        if (cancelled) {
+          return;
+        }
+
+        if (error || !data) {
+          throw error ?? new Error('Nao foi possivel preparar o link da cotacao.');
+        }
+
+        setShareLink(`${window.location.origin}/cotador/compartilhar/${data.token}`);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        setShareLink('');
+        toast.error(getSupabaseErrorMessage(error, 'Nao foi possivel preparar o link da cotacao.'));
+      } finally {
+        if (!cancelled) {
+          setCreatingShareLink(false);
+        }
+      }
+    };
+
+    void ensureShareLink();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveIncludeNetworkComparison, isOpen, quote, selectedItems]);
+
+  const handleRefreshLink = async () => {
     setCreatingShareLink(true);
 
     try {
       const { data, error } = await cotadorService.upsertQuoteShare({
         ...quote,
         selectedItems,
-      }, includeNetworkComparison && hasNetworkComparison);
+      }, effectiveIncludeNetworkComparison);
 
       if (error || !data) {
         throw error ?? new Error('Nao foi possivel gerar o link da cotacao.');
@@ -70,13 +118,7 @@ export default function CotadorShareModal({
 
       const nextLink = `${window.location.origin}/cotador/compartilhar/${data.token}`;
       setShareLink(nextLink);
-
-      try {
-        await navigator.clipboard.writeText(nextLink);
-        toast.success('Link da cotação copiado para a área de transferência.');
-      } catch {
-        toast.success('Link da cotação gerado com sucesso.');
-      }
+      toast.success('Link da cotação atualizado com sucesso.');
     } catch (error) {
       toast.error(getSupabaseErrorMessage(error, 'Nao foi possivel gerar o link da cotacao.'));
     } finally {
@@ -130,10 +172,6 @@ export default function CotadorShareModal({
               {!exportingPdf && <Download className="h-4 w-4" />}
               Gerar PDF
             </Button>
-            <Button onClick={handleCreateLink} loading={creatingShareLink} disabled={exportingPdf || selectedItems.length === 0}>
-              {!creatingShareLink && <Link2 className="h-4 w-4" />}
-              Gerar link
-            </Button>
           </div>
         )}
       >
@@ -165,18 +203,21 @@ export default function CotadorShareModal({
                   value={shareLink}
                   onChange={() => undefined}
                   readOnly
-                  placeholder="Clique em gerar link para criar uma URL pública da cotação."
+                  placeholder={creatingShareLink ? 'Preparando link público da cotação...' : 'O link público será exibido automaticamente aqui.'}
                 />
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={handleCopyLink} disabled={!shareLink}>
+              <Button variant="secondary" onClick={handleCopyLink} disabled={!shareLink || creatingShareLink}>
                 <Copy className="h-4 w-4" />
                 Copiar
               </Button>
-              <Button variant="secondary" onClick={() => window.open(shareLink, '_blank', 'noopener,noreferrer')} disabled={!shareLink}>
+              <Button variant="secondary" onClick={() => window.open(shareLink, '_blank', 'noopener,noreferrer')} disabled={!shareLink || creatingShareLink}>
                 <ExternalLink className="h-4 w-4" />
                 Abrir
+              </Button>
+              <Button variant="secondary" onClick={handleRefreshLink} loading={creatingShareLink} disabled={exportingPdf || selectedItems.length === 0}>
+                Atualizar link
               </Button>
             </div>
           </div>

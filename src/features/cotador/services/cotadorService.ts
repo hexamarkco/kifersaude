@@ -471,6 +471,10 @@ const mergeOptionalNotes = (values: Array<string | null | undefined>) => {
   return unique.length > 0 ? unique.join(' | ') : null;
 };
 
+const isFallbackHospitalRecordId = (value: string) => value.startsWith('fallback:');
+
+const isUuidLike = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
 const buildComparableHospitalKeyFromHospital = (hospital: Pick<CotadorHospital, 'nome' | 'cidade'>) =>
   buildCotadorComparableHospitalKey({ hospital: hospital.nome, cidade: hospital.cidade });
 
@@ -1964,6 +1968,92 @@ export const cotadorService = {
 
   async mergeHospitaisRede(targetId: string, sourceId: string) {
     try {
+      if (!isUuidLike(targetId) || !isUuidLike(sourceId)) {
+        const hospitals = await cotadorService.getHospitaisRedeDetalhados(true);
+        const rawTarget = hospitals.find((hospital) => hospital.id === targetId) ?? null;
+        const rawSource = hospitals.find((hospital) => hospital.id === sourceId) ?? null;
+
+        if (!rawTarget || !rawSource) {
+          return { data: null, error: toPostgrestError(new Error('Hospitais sugeridos nao encontrados para merge')) };
+        }
+
+        const targetHospital = isFallbackHospitalRecordId(rawTarget.id) && !isFallbackHospitalRecordId(rawSource.id)
+          ? rawSource
+          : rawTarget;
+        const sourceHospital = targetHospital.id === rawTarget.id ? rawSource : rawTarget;
+
+        const targetComparableKey = buildCotadorComparableHospitalKey({ hospital: targetHospital.nome, cidade: targetHospital.cidade });
+        const sourceComparableKey = buildCotadorComparableHospitalKey({ hospital: sourceHospital.nome, cidade: sourceHospital.cidade });
+        const affectedProductIds = Array.from(new Set([
+          ...targetHospital.linkedProducts.map((link) => link.produto_id),
+          ...sourceHospital.linkedProducts.map((link) => link.produto_id),
+        ])).filter(Boolean);
+
+        if (!isUuidLike(targetHospital.id)) {
+          return { data: null, error: toPostgrestError(new Error('Merge com hospitais sinteticos requer um hospital real/completo como destino')) };
+        }
+
+        for (const productId of affectedProductIds) {
+          const currentNetwork = await cotadorService.getProdutoRedeHospitalarDetalhada(productId);
+          const entryIndexesToMerge = currentNetwork.reduce<number[]>((accumulator, entry, index) => {
+            const comparableKey = buildCotadorComparableHospitalKey(entry);
+            const matchesTarget = entry.hospital_id === targetHospital.id || comparableKey === targetComparableKey;
+            const matchesSource = entry.hospital_id === sourceHospital.id || comparableKey === sourceComparableKey;
+
+            if (matchesTarget || matchesSource) {
+              accumulator.push(index);
+            }
+
+            return accumulator;
+          }, []);
+
+          if (entryIndexesToMerge.length === 0) {
+            continue;
+          }
+
+          const entriesToMerge = entryIndexesToMerge.map((index) => currentNetwork[index]);
+          const insertAt = Math.min(...entryIndexesToMerge);
+          const mergedEntry: CotadorProductNetworkManagerInput = {
+            hospitalId: targetHospital.id,
+            linkId: entriesToMerge.find((entry) => entry.hospital_id === targetHospital.id)?.link_id ?? null,
+            hospital: targetHospital.nome,
+            cidade: targetHospital.cidade,
+            regiao: cleanOptionalText(targetHospital.regiao),
+            bairro: cleanOptionalText(targetHospital.bairro),
+            aliases: sanitizeHospitalAliases([
+              ...targetHospital.aliases,
+              ...sourceHospital.aliases,
+              sourceHospital.nome,
+            ]),
+            atendimentos: mergeUniqueStrings(entriesToMerge.flatMap((entry) => entry.atendimentos)).sort((left, right) => left.localeCompare(right, 'pt-BR')),
+            observacoes: mergeOptionalNotes(entriesToMerge.map((entry) => entry.observacoes)),
+          };
+
+          const nextNetwork: CotadorProductNetworkManagerInput[] = currentNetwork
+            .filter((_, index) => !entryIndexesToMerge.includes(index))
+            .map((entry) => ({
+              hospitalId: entry.hospital_id ?? null,
+              linkId: entry.link_id ?? null,
+              hospital: entry.hospital,
+              cidade: entry.cidade,
+              regiao: entry.regiao,
+              bairro: entry.bairro,
+              atendimentos: entry.atendimentos,
+              observacoes: entry.observacoes,
+              aliases: entry.aliases,
+            }));
+          nextNetwork.splice(insertAt, 0, mergedEntry);
+
+          const { error } = await cotadorService.replaceProdutoRedeHospitalarDetalhada(productId, nextNetwork);
+
+          if (error) {
+            return { data: null, error };
+          }
+        }
+
+        return { data: targetHospital.id, error: null };
+      }
+
       const { data, error } = await supabase.rpc('merge_cotador_hospitais', {
         p_target_id: targetId,
         p_source_id: sourceId,

@@ -22,6 +22,7 @@ import {
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { formatCurrencyFromNumber, parseFormattedNumber } from '../../lib/inputFormatters';
+import { getSupabaseErrorMessage } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
 import type { CotadorAgeRange } from '../../features/cotador/shared/cotadorConstants';
 import { COTADOR_AGE_RANGES } from '../../features/cotador/shared/cotadorConstants';
@@ -1707,7 +1708,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setMergingHospitalKey(suggestion.key);
     const result = await cotadorService.mergeHospitaisRede(suggestion.targetId, suggestion.sourceId);
     if (result.error) {
-      toast.error('Nao foi possivel mesclar os hospitais sugeridos.');
+      toast.error(getSupabaseErrorMessage(result.error, 'Nao foi possivel mesclar os hospitais sugeridos.'));
       setMergingHospitalKey(null);
       return;
     }

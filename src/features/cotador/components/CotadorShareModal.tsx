@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Copy, Download, ExternalLink, Link2 } from 'lucide-react';
-import { toCanvas } from 'html-to-image';
-import jsPDF from 'jspdf';
 import Checkbox from '../../../components/ui/Checkbox';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
@@ -9,9 +7,9 @@ import ModalShell from '../../../components/ui/ModalShell';
 import { toast } from '../../../lib/toast';
 import { getSupabaseErrorMessage } from '../../../lib/supabase';
 import { cotadorService } from '../services/cotadorService';
+import { exportCotadorQuotePdf } from '../services/cotadorSharePdf';
 import { buildCotadorQuoteSharePayload } from '../shared/cotadorUtils';
 import type { CotadorQuote, CotadorQuoteItem } from '../shared/cotadorTypes';
-import CotadorQuoteShareView from './CotadorQuoteShareView';
 
 type CotadorShareModalProps = {
   isOpen: boolean;
@@ -19,12 +17,6 @@ type CotadorShareModalProps = {
   selectedItems: CotadorQuoteItem[];
   onClose: () => void;
 };
-
-const waitForNextPaint = () => new Promise<void>((resolve) => {
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => resolve());
-  });
-});
 
 const buildPdfFileName = (quoteName: string) => {
   const base = quoteName
@@ -47,7 +39,6 @@ export default function CotadorShareModal({
   const [shareLink, setShareLink] = useState('');
   const [creatingShareLink, setCreatingShareLink] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const exportRef = useRef<HTMLDivElement | null>(null);
   const hasNetworkComparison = selectedItems.some((item) => item.redeHospitalar.length > 0);
 
   const sharePayload = useMemo(() => buildCotadorQuoteSharePayload({
@@ -105,42 +96,14 @@ export default function CotadorShareModal({
   };
 
   const handleExportPdf = async () => {
-    if (!exportRef.current) {
-      toast.error('Nao foi possivel preparar a visualização para o PDF.');
-      return;
-    }
-
     setExportingPdf(true);
 
     try {
-      await waitForNextPaint();
-      const canvas = await toCanvas(exportRef.current, {
-        pixelRatio: 2,
-        backgroundColor: '#fffaf4',
-        cacheBust: true,
+      await exportCotadorQuotePdf({
+        payload: sharePayload,
+        includeNetworkComparison: includeNetworkComparison && hasNetworkComparison,
+        fileName: buildPdfFileName(quote.name),
       });
-
-      const imageData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 24;
-      const renderWidth = pageWidth - margin * 2;
-      const renderHeight = (canvas.height * renderWidth) / canvas.width;
-      let heightLeft = renderHeight;
-      let position = margin;
-
-      pdf.addImage(imageData, 'PNG', margin, position, renderWidth, renderHeight, undefined, 'FAST');
-      heightLeft -= pageHeight - margin * 2;
-
-      while (heightLeft > 0) {
-        position = margin - (renderHeight - heightLeft);
-        pdf.addPage();
-        pdf.addImage(imageData, 'PNG', margin, position, renderWidth, renderHeight, undefined, 'FAST');
-        heightLeft -= pageHeight - margin * 2;
-      }
-
-      pdf.save(buildPdfFileName(quote.name));
       toast.success('PDF da cotação gerado com sucesso.');
     } catch (error) {
       console.error('[Cotador] erro ao gerar PDF da cotação', error);
@@ -226,17 +189,6 @@ export default function CotadorShareModal({
           </div>
         </div>
       </ModalShell>
-
-      {isOpen ? (
-        <div className="pointer-events-none fixed left-[-200vw] top-0 z-[-1] w-[1120px] opacity-0">
-          <div ref={exportRef}>
-            <CotadorQuoteShareView
-              payload={sharePayload}
-              includeNetworkComparison={includeNetworkComparison && hasNetworkComparison}
-            />
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }

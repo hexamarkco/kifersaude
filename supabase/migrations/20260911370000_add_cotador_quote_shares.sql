@@ -116,7 +116,7 @@ BEGIN
   VALUES (
     p_quote_id,
     auth.uid(),
-    encode(gen_random_bytes(18), 'hex'),
+    replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', ''),
     COALESCE(p_include_network_compare, true),
     COALESCE(p_payload, '{}'::jsonb)
   )

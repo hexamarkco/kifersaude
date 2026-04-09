@@ -4,7 +4,6 @@ import PublicBrandMark from '../../../components/public/PublicBrandMark';
 import {
   buildCotadorComparableHospitalKey,
   countCotadorUniqueNetworkProviders,
-  formatCotadorAgeSummary,
   formatCotadorCurrency,
   formatCotadorDateTime,
   formatCotadorModality,
@@ -182,12 +181,6 @@ export default function CotadorQuoteShareView({
             </div>
           </div>
 
-          <div className="grid gap-3 border-t border-[color:#eadbc7] bg-[color:rgba(255,252,247,0.86)] px-8 py-6 md:grid-cols-2 xl:grid-cols-4">
-            <SummaryCard label="Planos" value={`${selectedItems.length}`} helper="opções na shortlist" />
-            <SummaryCard label="Modalidade" value={formatCotadorModality(payload.quote.modality)} />
-            <SummaryCard label="Faixas preenchidas" value={formatCotadorAgeSummary(payload.quote.ageDistribution)} />
-            <SummaryCard label="Comparativo de rede" value={includeNetworkComparison ? 'Incluído' : 'Oculto'} />
-          </div>
         </section>
 
         <section className="space-y-4">

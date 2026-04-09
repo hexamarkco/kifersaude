@@ -2,7 +2,6 @@ import jsPDF from 'jspdf';
 import {
   buildCotadorComparableHospitalKey,
   countCotadorUniqueNetworkProviders,
-  formatCotadorAgeSummary,
   formatCotadorCurrency,
   formatCotadorDateTime,
   formatCotadorModality,
@@ -325,7 +324,7 @@ const drawPlanCard = (doc: jsPDF, item: CotadorQuoteItem, startY: number) => {
   return y + cardHeight + 14;
 };
 
-const drawHeader = (doc: jsPDF, payload: CotadorQuoteSharePayload, includeNetworkComparison: boolean) => {
+const drawHeader = (doc: jsPDF, payload: CotadorQuoteSharePayload) => {
   const pageWidth = doc.internal.pageSize.getWidth();
 
   setFillColor(doc, COLORS.white);
@@ -370,13 +369,7 @@ const drawHeader = (doc: jsPDF, payload: CotadorQuoteSharePayload, includeNetwor
   doc.text(`Vidas: ${payload.quote.totalLives}`, pageWidth - PAGE_MARGIN - 132, PAGE_MARGIN + 62);
   doc.text(`Atualizada: ${formatCotadorDateTime(payload.quote.updatedAt)}`, pageWidth - PAGE_MARGIN - 132, PAGE_MARGIN + 74);
 
-  const cardsY = PAGE_MARGIN + 126;
-  return drawSummaryCards(doc, [
-    { label: 'Planos', value: `${payload.items.length}`, helper: 'opções na shortlist' },
-    { label: 'Modalidade', value: formatCotadorModality(payload.quote.modality) },
-    { label: 'Faixas preenchidas', value: formatCotadorAgeSummary(payload.quote.ageDistribution) },
-    { label: 'Comparativo de rede', value: includeNetworkComparison ? 'Incluído' : 'Oculto' },
-  ], cardsY);
+  return PAGE_MARGIN + 110;
 };
 
 const drawNetworkComparison = (doc: jsPDF, items: CotadorQuoteItem[], rows: NetworkCompareRow[]) => {
@@ -488,7 +481,7 @@ export async function exportCotadorQuotePdf({
 }: ExportCotadorQuotePdfInput) {
   const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-  let y = drawHeader(doc, payload, includeNetworkComparison);
+  let y = drawHeader(doc, payload);
   y = drawSectionTitle(doc, 'Planos cotados', y + 8, 'Resumo das opções') + 6;
 
   payload.items.forEach((item) => {

@@ -554,17 +554,43 @@ const hasSuspectHospitalBairro = (hospital: Pick<CotadorHospitalManagerRecord, '
 const buildHospitalAliasSet = (hospital: Pick<CotadorHospitalManagerRecord, 'nome' | 'aliases'>) =>
   Array.from(new Set([hospital.nome, ...hospital.aliases].map((value) => normalizeSortText(value)).filter(Boolean)));
 
-const getTokenOverlapRatio = (left: string, right: string) => {
-  const leftTokens = new Set(left.split(' ').filter((token) => token.length > 2));
-  const rightTokens = new Set(right.split(' ').filter((token) => token.length > 2));
-  if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
+const HOSPITAL_MERGE_NOISE_TOKENS = new Set(['de', 'da', 'do', 'das', 'dos', 'e']);
 
+const tokenizeHospitalMergeName = (value: string) =>
+  normalizeSortText(value)
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length > 2)
+    .filter((token) => !HOSPITAL_MERGE_NOISE_TOKENS.has(token));
+
+const hospitalTokensLookEquivalent = (left: string, right: string) => {
+  if (left === right) return true;
+
+  const minLength = Math.min(left.length, right.length);
+  if (minLength < 5) return false;
+
+  return left.startsWith(right) || right.startsWith(left);
+};
+
+const getTokenOverlapRatio = (left: string, right: string) => {
+  const leftTokens = Array.from(new Set(tokenizeHospitalMergeName(left)));
+  const rightTokens = Array.from(new Set(tokenizeHospitalMergeName(right)));
+  if (leftTokens.length === 0 || rightTokens.length === 0) return 0;
+
+  const usedRightIndexes = new Set<number>();
   let shared = 0;
-  leftTokens.forEach((token) => {
-    if (rightTokens.has(token)) shared += 1;
+  leftTokens.forEach((leftToken) => {
+    const matchedIndex = rightTokens.findIndex((rightToken, index) => (
+      !usedRightIndexes.has(index) && hospitalTokensLookEquivalent(leftToken, rightToken)
+    ));
+
+    if (matchedIndex >= 0) {
+      usedRightIndexes.add(matchedIndex);
+      shared += 1;
+    }
   });
 
-  return shared / Math.max(leftTokens.size, rightTokens.size);
+  return shared / Math.max(leftTokens.length, rightTokens.length);
 };
 
 const getHospitalMergeCandidate = (
@@ -580,8 +606,15 @@ const getHospitalMergeCandidate = (
   const bothBairrosDefined = Boolean(leftBairro && rightBairro);
   const sameBairro = bothBairrosDefined && leftBairro === rightBairro;
   const oneMissingBairro = !leftBairro || !rightBairro;
+  const leftSuspectBairro = hasSuspectHospitalBairro(left);
+  const rightSuspectBairro = hasSuspectHospitalBairro(right);
   if (bothBairrosDefined && !sameBairro) {
-    return null;
+    const similarNameWithDivergentBairro = getTokenOverlapRatio(normalizeSortText(left.nome), normalizeSortText(right.nome));
+    const canIgnoreBairroMismatch = similarNameWithDivergentBairro >= 0.96 && (leftSuspectBairro || rightSuspectBairro);
+
+    if (!canIgnoreBairroMismatch) {
+      return null;
+    }
   }
 
   const leftAliases = buildHospitalAliasSet(left);
@@ -609,14 +642,24 @@ const getHospitalMergeCandidate = (
     reasons.push('Mesmo bairro e nome muito parecido');
   }
 
-  if (!confidence && oneMissingBairro && similarName >= 0.9) {
+  if (!confidence && oneMissingBairro && similarName >= 0.82) {
     confidence = 'medium';
     reasons.push('Mesmo nome/cidade com um bairro ainda ausente');
+  }
+
+  if (!confidence && bothBairrosDefined && !sameBairro && similarName >= 0.96 && (leftSuspectBairro || rightSuspectBairro)) {
+    confidence = 'medium';
+    reasons.push('Mesmo nome na mesma cidade com bairro suspeito ou inconsistente');
   }
 
   if (!confidence && sharedLinkedProducts > 0 && (exactNameMatch || similarName >= 0.85) && (sameBairro || oneMissingBairro)) {
     confidence = 'medium';
     reasons.push(`Ja aparecem juntos em ${sharedLinkedProducts} plano(s)`);
+  }
+
+  if (!confidence && sharedLinkedProducts > 0 && similarName >= 0.96 && bothBairrosDefined && !sameBairro) {
+    confidence = 'medium';
+    reasons.push(`Nome praticamente igual na mesma cidade, apesar do bairro divergente, e ${sharedLinkedProducts} plano(s) em comum`);
   }
 
   if (!confidence) return null;

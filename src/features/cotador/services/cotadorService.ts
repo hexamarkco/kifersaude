@@ -2089,6 +2089,73 @@ export const cotadorService = {
     }
   },
 
+  async deleteHospitalRede(id: string) {
+    try {
+      const hospitals = await cotadorService.getHospitaisRedeDetalhados(true);
+      const targetHospital = hospitals.find((hospital) => hospital.id === id) ?? null;
+
+      if (!targetHospital) {
+        return { error: toPostgrestError(new Error('Hospital nao encontrado para exclusao')) };
+      }
+
+      const targetComparableKey = buildCotadorComparableHospitalKey({ hospital: targetHospital.nome, cidade: targetHospital.cidade });
+      const affectedProductIds = Array.from(new Set(targetHospital.linkedProducts.map((link) => link.produto_id))).filter(Boolean);
+
+      for (const productId of affectedProductIds) {
+        const currentNetwork = await cotadorService.getProdutoRedeHospitalarDetalhada(productId);
+        const nextNetwork: CotadorProductNetworkManagerInput[] = currentNetwork
+          .filter((entry) => {
+            const comparableKey = buildCotadorComparableHospitalKey(entry);
+            const matchesTarget = entry.hospital_id === targetHospital.id || comparableKey === targetComparableKey;
+            return !matchesTarget;
+          })
+          .map((entry) => ({
+            hospitalId: entry.hospital_id ?? null,
+            linkId: entry.link_id ?? null,
+            hospital: entry.hospital,
+            cidade: entry.cidade,
+            regiao: entry.regiao,
+            bairro: entry.bairro,
+            atendimentos: entry.atendimentos,
+            observacoes: entry.observacoes,
+            aliases: entry.aliases,
+          }));
+
+        const { error } = await cotadorService.replaceProdutoRedeHospitalarDetalhada(productId, nextNetwork);
+        if (error) {
+          return { error };
+        }
+      }
+
+      if (!isUuidLike(targetHospital.id)) {
+        return { error: null };
+      }
+
+      const { error: aliasesDeleteError } = await supabase
+        .from(COTADOR_HOSPITAL_ALIASES_TABLE)
+        .delete()
+        .eq('hospital_id', targetHospital.id);
+
+      if (aliasesDeleteError) {
+        return { error: aliasesDeleteError };
+      }
+
+      const { error: hospitalDeleteError } = await supabase
+        .from(COTADOR_HOSPITAIS_TABLE)
+        .delete()
+        .eq('id', targetHospital.id);
+
+      if (hospitalDeleteError) {
+        return { error: hospitalDeleteError };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Error deleting cotador hospital network:', error);
+      return { error: toPostgrestError(error) };
+    }
+  },
+
   async mergeHospitaisRede(targetId: string, sourceId: string) {
     try {
       if (!isUuidLike(targetId) || !isUuidLike(sourceId)) {

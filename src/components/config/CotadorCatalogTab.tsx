@@ -1700,6 +1700,16 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     setManualMergeSourceId('');
   };
 
+  const openManualMergeModal = (targetId?: string | null, options?: { closeHospitalModal?: boolean }) => {
+    setManualMergeTargetId(targetId ?? '');
+    setManualMergeSourceId('');
+    setManualMergeModalOpen(true);
+
+    if (options?.closeHospitalModal) {
+      resetNetworkHospitalModal();
+    }
+  };
+
   const openNetworkHospitalModal = (hospital: CotadorHospitalManagerRecord) => {
     setNetworkHospitalEditingId(hospital.id);
     setNetworkHospitalForm(buildNetworkHospitalFormFromValue(hospital));
@@ -1733,6 +1743,33 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
     await Promise.all([loadCatalogData(), loadNetworkHospitals()]);
     toast.success('Hospital compartilhado atualizado com sucesso.');
+    setSubmitting(false);
+    resetNetworkHospitalModal();
+  };
+
+  const handleDeleteNetworkHospital = async () => {
+    if (!selectedNetworkHospital) return;
+
+    const confirmed = await requestConfirmation({
+      title: 'Excluir hospital compartilhado',
+      description: `O hospital ${selectedNetworkHospital.nome} sera removido dos produtos vinculados${selectedNetworkHospital.id.startsWith('fallback:') ? '' : ' e excluido do cadastro canônico'}. Esta ação não pode ser desfeita automaticamente.`,
+      confirmLabel: 'Excluir hospital',
+      cancelLabel: 'Cancelar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    setSubmitting(true);
+    const result = await cotadorService.deleteHospitalRede(selectedNetworkHospital.id);
+    if (result.error) {
+      toast.error(getSupabaseErrorMessage(result.error, 'Nao foi possivel excluir o hospital compartilhado.'));
+      setSubmitting(false);
+      return;
+    }
+
+    await Promise.all([loadCatalogData(), loadNetworkHospitals()]);
+    toast.success('Hospital compartilhado excluido com sucesso.');
     setSubmitting(false);
     resetNetworkHospitalModal();
   };
@@ -3110,7 +3147,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     />
 
                     <div className="flex justify-end">
-                      <Button variant="secondary" onClick={() => setManualMergeModalOpen(true)} disabled={networkHospitals.length < 2}>
+                      <Button variant="secondary" onClick={() => openManualMergeModal()} disabled={networkHospitals.length < 2}>
                         <Network className="h-4 w-4" />
                         Mesclar manualmente
                       </Button>
@@ -3954,6 +3991,19 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => openManualMergeModal(selectedNetworkHospital.id, { closeHospitalModal: true })}
+                disabled={networkHospitals.length < 2 || submitting}
+              >
+                <GitMerge className="h-4 w-4" />
+                Mesclar com outro hospital
+              </Button>
+              <Button type="button" variant="danger" loading={submitting} onClick={() => void handleDeleteNetworkHospital()}>
+                <Trash2 className="h-4 w-4" />
+                Excluir hospital
+              </Button>
               <Button type="button" loading={submitting} onClick={() => void handleNetworkHospitalSubmit()}>
                 <Save className="h-4 w-4" />
                 Salvar hospital

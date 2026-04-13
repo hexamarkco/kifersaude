@@ -598,11 +598,14 @@ export const summarizeWhapiMessage = (message: unknown): string => {
   if (!isRecord(message)) return '[Mensagem]';
 
   const type = toTrimmedString(message.type).toLowerCase();
+  const mediaMeta = extractWhapiMediaMeta(message);
   const textBody = readNestedBody(message, 'text');
   if (textBody) return textBody;
 
   const linkPreviewBody = readNestedBody(message, 'link_preview');
   if (linkPreviewBody) return linkPreviewBody;
+
+  if (mediaMeta.mediaCaption) return mediaMeta.mediaCaption;
 
   const documentCaption = readNestedBody(message, 'document');
   if (documentCaption) return documentCaption;

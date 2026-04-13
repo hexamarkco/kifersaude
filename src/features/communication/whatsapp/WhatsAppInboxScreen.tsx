@@ -1080,6 +1080,7 @@ const getEditedMessageInfo = (message?: CommWhatsAppMessage | null) => {
   const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
     ? message.metadata as Record<string, unknown>
     : {};
+  const messageType = message.message_type.trim().toLowerCase();
   const currentText = getMessageEditableText(message) || normalizeComparableMessageText(message.message_type, message.text_content);
   const originalText = normalizeComparableMessageText(message.message_type, metadata.original_text_content);
   const editHistory = Array.isArray(metadata.edit_history)
@@ -1089,7 +1090,8 @@ const getEditedMessageInfo = (message?: CommWhatsAppMessage | null) => {
   const previousText = normalizeComparableMessageText(message.message_type, lastEdit?.previous_text) || originalText || null;
   const visibleCurrentText = getMessageEditableText(message) || currentText || null;
   const editedAt = String(metadata.edited_at ?? '').trim() || null;
-  const edited = metadata.edited === true || Boolean(editedAt) || editHistory.length > 0 || Boolean(originalText && originalText !== visibleCurrentText);
+  const inferredTextEdit = messageType === 'text' && Boolean(originalText && originalText !== visibleCurrentText);
+  const edited = metadata.edited === true || Boolean(editedAt) || editHistory.length > 0 || inferredTextEdit;
 
   return {
     edited,

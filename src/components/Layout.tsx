@@ -47,6 +47,7 @@ type LayoutProps = {
   useFullBleedContent?: boolean;
   onTabChange: (tab: string, options?: TabNavigationOptions) => void;
   unreadReminders: number;
+  unreadInboxChats?: number;
   hasActiveNotification?: boolean;
   newLeadsCount?: number;
 };
@@ -74,6 +75,7 @@ export default function Layout({
   useFullBleedContent = false,
   onTabChange,
   unreadReminders,
+  unreadInboxChats = 0,
   hasActiveNotification,
   newLeadsCount = 0,
 }: LayoutProps) {
@@ -143,7 +145,7 @@ export default function Layout({
   ].filter(child => canView(child.id));
 
   const comunicacaoChildren = [
-    { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle },
+    { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle, badge: unreadInboxChats, badgeColor: 'bg-orange-500' },
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));
 
@@ -918,7 +920,7 @@ export default function Layout({
                           child.badgeColor || 'bg-orange-500'
                         } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
                            child.id === 'agenda' && hasActiveNotification ? 'animate-pulse' : ''
-                        } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
+                         } ${(child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0 ? 'animate-pulse' : ''}`}
                       >
                         {child.badge > 9 ? '9+' : child.badge}
                       </span>
@@ -1214,7 +1216,7 @@ export default function Layout({
                         child.badgeColor || 'bg-orange-500'
                       } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
                         child.id === 'agenda' && hasActiveNotification ? 'animate-pulse' : ''
-                      } ${child.id === 'leads' && child.badge > 0 ? 'animate-pulse' : ''}`}
+                      } ${(child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0 ? 'animate-pulse' : ''}`}
                     >
                       {child.badge > 9 ? '9+' : child.badge}
                     </span>

@@ -140,6 +140,25 @@ export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
 };
 
 export const commWhatsAppService = {
+  async getUnreadChatsCount(params: { includeArchived?: boolean } = {}): Promise<number> {
+    let query = supabase
+      .from('comm_whatsapp_chats')
+      .select('*', { count: 'exact', head: true })
+      .or('unread_count.gt.0,manual_unread.eq.true');
+
+    if (!params.includeArchived) {
+      query = query.eq('is_archived', false);
+    }
+
+    const { count, error } = await query;
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a contagem de conversas nao lidas do WhatsApp.'));
+    }
+
+    return count ?? 0;
+  },
+
   rememberLocalMediaPreview(messageId: string, objectUrl: string) {
     if (!messageId || !objectUrl) return;
     localMediaPreviewByMessageId.set(messageId, objectUrl);

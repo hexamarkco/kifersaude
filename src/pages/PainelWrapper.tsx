@@ -43,6 +43,7 @@ export default function PainelWrapper() {
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadReminders, setUnreadReminders] = useState(0);
+  const [unreadInboxChats, setUnreadInboxChats] = useState(0);
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
   const [activeNotifications, setActiveNotifications] = useState<Reminder[]>([]);
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
@@ -97,6 +98,7 @@ export default function PainelWrapper() {
 
   useEffect(() => {
     const unsubscribeUnreadCount = notificationService.subscribeToUnreadCount(setUnreadReminders);
+    const unsubscribeInboxUnreadCount = notificationService.subscribeToInboxUnreadCount(setUnreadInboxChats);
     notificationService.start(30000);
 
     const unsubscribe = notificationService.subscribe((reminder) => {
@@ -109,6 +111,7 @@ export default function PainelWrapper() {
       notificationService.stop();
       unsubscribe();
       unsubscribeUnreadCount();
+      unsubscribeInboxUnreadCount();
     };
   }, []);
 
@@ -217,6 +220,7 @@ export default function PainelWrapper() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         unreadReminders={unreadReminders}
+        unreadInboxChats={unreadInboxChats}
         hasActiveNotification={hasActiveNotification}
         newLeadsCount={newLeadsCount}
         useFullBleedContent={activeTab === 'whatsapp-inbox'}

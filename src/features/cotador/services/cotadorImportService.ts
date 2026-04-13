@@ -56,6 +56,12 @@ type ImportLookupContext = {
   tables: CotadorTableManagerRecord[];
 };
 
+type ProductNetworkReference = {
+  produto?: string | null;
+  linha?: string | null;
+  modalidade?: string | null;
+};
+
 type ProductReference = {
   operadora: string;
   linha: string;
@@ -71,6 +77,7 @@ type ProductReference = {
     reembolso?: string | null;
     informacoesImportantes?: string | null;
   };
+  redeReferencia?: ProductNetworkReference | null;
   redeHospitalar?: CotadorHospitalNetworkEntry[];
 };
 
@@ -826,6 +833,60 @@ const findProduto = (products: CotadorProductManagerRecord[], lineId: string, pr
   return products.find((item) => item.linha_id === lineId && normalizeText(item.nome) === normalized) ?? null;
 };
 
+const getProductNetworkEntries = (product?: Pick<CotadorProductManagerRecord, 'rede_hospitalar'> | null) =>
+  Array.isArray(product?.rede_hospitalar) ? product.rede_hospitalar as CotadorHospitalNetworkEntry[] : [];
+
+const findReferencedNetworkProduct = (
+  reference: ProductReference,
+  context: ImportLookupContext,
+  operadora: Operadora,
+  targetLine: CotadorLineManagerRecord,
+) => {
+  const networkReference = reference.redeReferencia;
+  if (!networkReference) return null;
+
+  const referenceProductName = cleanText(networkReference.produto) ?? reference.produto;
+  const referenceLineName = cleanText(networkReference.linha);
+  const referenceModality = normalizeImportedModalidade(networkReference.modalidade);
+  const referenceAcomodacoes = new Set(
+    (reference.acomodacoes ?? [])
+      .map((item) => normalizeText(normalizeImportedAcomodacao(item) ?? item))
+      .filter(Boolean),
+  );
+  const referenceAbrangencia = normalizeText(normalizeImportedAabrangencia(reference.abrangencia));
+
+  const candidates = context.products.filter((candidate) => {
+    if (candidate.operadora_id !== operadora.id) return false;
+    if (candidate.linha_id === targetLine.id && normalizeText(candidate.nome) === normalizeText(reference.produto)) return false;
+    if (normalizeText(candidate.nome) !== normalizeText(referenceProductName)) return false;
+    if (referenceLineName && normalizeText(candidate.linha?.nome) !== normalizeText(referenceLineName)) return false;
+    if (referenceModality && normalizeImportedModalidade(candidate.modalidade) !== referenceModality) return false;
+    return getProductNetworkEntries(candidate).length > 0;
+  });
+
+  const scoreCandidate = (candidate: CotadorProductManagerRecord) => {
+    let score = 0;
+    if (referenceLineName && normalizeText(candidate.linha?.nome) === normalizeText(referenceLineName)) score += 5;
+    if (referenceModality && normalizeImportedModalidade(candidate.modalidade) === referenceModality) score += 4;
+    if (referenceAbrangencia && normalizeText(candidate.abrangencia) === referenceAbrangencia) score += 2;
+
+    const candidateAcomodacoes = new Set(
+      (candidate.acomodacao ?? '')
+        .split(/\s*\|\s*|\s*\/\s*|\s*,\s*|\s*;\s*|\s*\+\s*|\s+e\s+/i)
+        .map((item) => normalizeText(normalizeImportedAcomodacao(item) ?? item))
+        .filter(Boolean),
+    );
+
+    referenceAcomodacoes.forEach((acomodacao) => {
+      if (candidateAcomodacoes.has(acomodacao)) score += 1;
+    });
+
+    return score;
+  };
+
+  return candidates.sort((left, right) => scoreCandidate(right) - scoreCandidate(left))[0] ?? null;
+};
+
 const createProductRecordFromRaw = (
   product: CotadorProduto,
   context: ImportLookupContext,
@@ -866,6 +927,10 @@ const getProductPayloadFromReference = (
         .map((item) => item.id)
     : existingProduct?.entidadesClasse.map((item) => item.id) ?? [];
 
+  const existingNetwork = getProductNetworkEntries(existingProduct);
+  const referencedNetworkProduct = findReferencedNetworkProduct(reference, context, operadora, line);
+  const referencedNetwork = getProductNetworkEntries(referencedNetworkProduct);
+
   return {
     operadora_id: operadora.id,
     linha_id: line.id,
@@ -881,7 +946,7 @@ const getProductPayloadFromReference = (
     documentos_necessarios: reference.detalhes?.documentosNecessarios ?? existingProduct?.documentos_necessarios ?? null,
     reembolso: reference.detalhes?.reembolso ?? existingProduct?.reembolso ?? null,
     informacoes_importantes: reference.detalhes?.informacoesImportantes ?? existingProduct?.informacoes_importantes ?? null,
-    rede_hospitalar: reference.redeHospitalar ?? (Array.isArray(existingProduct?.rede_hospitalar) ? existingProduct.rede_hospitalar as CotadorHospitalNetworkEntry[] : []),
+    rede_hospitalar: reference.redeHospitalar ?? (existingNetwork.length > 0 ? existingNetwork : referencedNetwork),
     observacoes: existingProduct?.observacoes ?? null,
     ativo: existingProduct?.ativo ?? true,
   };
@@ -1193,6 +1258,7 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
   const items = rawItems.flatMap((rawItem) => {
     const item = rawItem as Record<string, unknown>;
     const details = (item.detalhes ?? {}) as Record<string, unknown>;
+    const networkReference = ((item.redeReferencia ?? item.rede_referencia) ?? null) as Record<string, unknown> | null;
     const tabelas = Array.isArray(item.tabelas) ? item.tabelas : [];
 
     const productNames = Array.isArray(item.produtos)
@@ -1218,6 +1284,13 @@ const parseJsonPayload = (text: string): ImportedJsonPayload => {
         reembolso: cleanText(typeof details.reembolso === 'string' ? details.reembolso : null),
         informacoesImportantes: cleanText(typeof details.informacoesImportantes === 'string' ? details.informacoesImportantes : typeof details.informacoes_importantes === 'string' ? details.informacoes_importantes : null),
       },
+      redeReferencia: networkReference && typeof networkReference === 'object'
+        ? {
+            produto: cleanText(typeof networkReference.produto === 'string' ? networkReference.produto : typeof networkReference.product === 'string' ? networkReference.product : null),
+            linha: cleanText(typeof networkReference.linha === 'string' ? networkReference.linha : typeof networkReference.line === 'string' ? networkReference.line : null),
+            modalidade: cleanText(typeof networkReference.modalidade === 'string' ? networkReference.modalidade : typeof networkReference.modality === 'string' ? networkReference.modality : null),
+          }
+        : null,
       redeHospitalar: Array.isArray(item.redeHospitalar)
         ? item.redeHospitalar as CotadorHospitalNetworkEntry[]
         : Array.isArray(item.rede_hospitalar)

@@ -1,21 +1,25 @@
 import { supabase, Reminder, Lead } from './supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { isReminderDue } from './dateUtils';
+import { commWhatsAppService } from './commWhatsAppService';
 
 export type NotificationCallback = (reminder: Reminder) => void;
 export type LeadNotificationCallback = (lead: Lead) => void;
 export type UnreadCountCallback = (count: number) => void;
+export type InboxUnreadCountCallback = (count: number) => void;
 
 class NotificationService {
   private callbacks: NotificationCallback[] = [];
   private leadCallbacks: LeadNotificationCallback[] = [];
   private unreadCountCallbacks: UnreadCountCallback[] = [];
+  private inboxUnreadCountCallbacks: InboxUnreadCountCallback[] = [];
   private notifiedReminders: Set<string> = new Set();
   private notifiedLeads: Set<string> = new Set();
   private intervalId: number | null = null;
   private isChecking = false;
   private leadChannelSubscription: RealtimeChannel | null = null;
   private lastUnreadCount = 0;
+  private lastInboxUnreadCount = 0;
 
   start(intervalMs: number = 30000) {
     if (this.intervalId !== null) {
@@ -57,6 +61,14 @@ class NotificationService {
     };
   }
 
+  subscribeToInboxUnreadCount(callback: InboxUnreadCountCallback) {
+    this.inboxUnreadCountCallbacks.push(callback);
+    callback(this.lastInboxUnreadCount);
+    return () => {
+      this.inboxUnreadCountCallbacks = this.inboxUnreadCountCallbacks.filter(cb => cb !== callback);
+    };
+  }
+
   private startLeadNotifications() {
     if (this.leadChannelSubscription !== null) {
       return;
@@ -95,13 +107,22 @@ class NotificationService {
     this.isChecking = true;
 
     try {
-      const { data: reminders, error } = await supabase
-        .from('reminders')
-        .select('*')
-        .eq('lido', false)
-        .order('data_lembrete', { ascending: true });
+      const [
+        { data: reminders, error },
+        inboxUnreadCount,
+      ] = await Promise.all([
+        supabase
+          .from('reminders')
+          .select('*')
+          .eq('lido', false)
+          .order('data_lembrete', { ascending: true }),
+        commWhatsAppService.getUnreadChatsCount(),
+      ]);
 
       if (error) throw error;
+
+      this.lastInboxUnreadCount = inboxUnreadCount;
+      this.inboxUnreadCountCallbacks.forEach(callback => callback(inboxUnreadCount));
 
       if (reminders) {
         const unreadCount = reminders.length;

@@ -158,6 +158,10 @@ const summarizeQuickReplyPreview = (value: string) => {
 };
 
 const createPendingAttachmentId = () => `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const MEDIA_ATTACHMENT_ACCEPT = 'image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.heic,.heif,video/*,.mp4,.mov,.avi,.mkv,.webm';
+const DOCUMENT_ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv';
+const AUDIO_ATTACHMENT_ACCEPT = 'audio/*,.mp3,.wav,.ogg,.m4a,.aac';
+const DEFAULT_ATTACHMENT_ACCEPT = `${MEDIA_ATTACHMENT_ACCEPT},${DOCUMENT_ATTACHMENT_ACCEPT},${AUDIO_ATTACHMENT_ACCEPT}`;
 const createLocalOutgoingMessageId = () => `local-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const VIDEO_LIKE_MESSAGE_TYPES = new Set(['video', 'gif', 'short']);
 const GALLERY_MESSAGE_TYPES = new Set(['image', 'video', 'gif', 'short']);
@@ -2262,7 +2266,7 @@ export default function WhatsAppInboxScreen() {
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
-  const [attachmentInputAccept, setAttachmentInputAccept] = useState('image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,audio/*');
+  const [attachmentInputAccept, setAttachmentInputAccept] = useState(DEFAULT_ATTACHMENT_ACCEPT);
   const [chats, setChats] = useState<CommWhatsAppChat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommWhatsAppMessage[]>([]);
@@ -4649,15 +4653,18 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    if (action === 'document') {
-      setAttachmentInputAccept('.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv');
-    } else if (action === 'audio') {
-      setAttachmentInputAccept('audio/*');
-    } else {
-      setAttachmentInputAccept('image/*,video/*');
-    }
+    const nextAccept = action === 'document'
+      ? DOCUMENT_ATTACHMENT_ACCEPT
+      : action === 'audio'
+        ? AUDIO_ATTACHMENT_ACCEPT
+        : MEDIA_ATTACHMENT_ACCEPT;
+
+    setAttachmentInputAccept(nextAccept);
 
     setAttachmentMenuOpen(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = nextAccept;
+    }
     fileInputRef.current?.click();
   };
 
@@ -7094,48 +7101,77 @@ export default function WhatsAppInboxScreen() {
                   ) : null}
 
                   {nonVoiceAttachments.length > 0 && (
-                    <div className="mb-3 space-y-2">
-                      {nonVoiceAttachments.length > 1 ? (
-                        <div className="flex items-center justify-between rounded-2xl border px-3 py-2 text-xs font-semibold text-[var(--panel-text-soft,#5b4635)]">
-                          <span>{nonVoiceAttachments.length} anexos prontos para envio</span>
-                          <span className="text-[var(--panel-text-muted,#6b7280)]">Serão enviados em sequência</span>
+                    <div className="whatsapp-inbox-attachment-tray mb-3 max-h-[min(42vh,22rem)] space-y-2 overflow-y-auto pr-1">
+                      <div className="whatsapp-inbox-attachment-tray-header flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3 py-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="whatsapp-inbox-attachment-tray-count inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[11px] font-semibold">
+                            {nonVoiceAttachments.length}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-semibold text-[var(--panel-text-soft,#5b4635)]">
+                              {nonVoiceAttachments.length === 1 ? '1 anexo pronto para envio' : `${nonVoiceAttachments.length} anexos prontos para envio`}
+                            </p>
+                            <p className="text-[11px] text-[var(--panel-text-muted,#6b7280)]">Serão enviados em sequência</p>
+                          </div>
                         </div>
-                      ) : null}
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleClearAttachment()}
+                          disabled={sending}
+                          className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Limpar
+                        </Button>
+                      </div>
+                      <div className={nonVoiceAttachments.length > 1 ? 'grid grid-cols-2 gap-2 xl:grid-cols-3' : 'space-y-2'}>
                       {nonVoiceAttachments.map((attachment) => {
                         const isUploadingThisAttachment = sending && mediaUploadProgress?.attachmentId === attachment.id;
+                        const compactCard = nonVoiceAttachments.length > 1;
+                        const attachmentLabel = attachment.kind === 'image' ? 'Imagem' : attachment.kind === 'video' ? 'Vídeo' : attachment.kind === 'audio' ? 'Áudio' : 'Documento';
 
                         return (
-                          <div key={attachment.id} className="whatsapp-inbox-attachment-card rounded-2xl border px-3 py-3">
-                            <div className="flex items-start gap-3">
-                              {attachment.kind === 'image' ? (
-                                <FileImage className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                              ) : attachment.kind === 'video' ? (
-                                <Images className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                              ) : attachment.kind === 'audio' ? (
-                                <FileAudio className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                              ) : (
-                                <FileText className="mt-0.5 h-4 w-4 shrink-0 opacity-80" />
-                              )}
-                              <div className="min-w-0 flex-1 space-y-3">
-                                <div>
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                      <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{attachment.file.name}</p>
-                                      <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">{formatFileSize(attachment.file.size)}</p>
-                                    </div>
-                                    <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-soft,#5b4635)]">
-                                      {attachment.kind === 'image' ? 'Imagem' : attachment.kind === 'video' ? 'Vídeo' : attachment.kind === 'audio' ? 'Áudio' : 'Documento'}
-                                    </span>
-                                  </div>
+                          <div key={attachment.id} className={cx('whatsapp-inbox-attachment-card rounded-2xl border px-3 py-3', compactCard && 'whatsapp-inbox-attachment-card-compact p-2.5')}>
+                            <div className={cx('flex items-start gap-3', compactCard && 'flex-col gap-2')}>
+                              <div className={cx('relative overflow-hidden rounded-2xl', compactCard ? 'w-full' : 'shrink-0')}>
+                                <div className={cx('whatsapp-inbox-attachment-preview flex items-center justify-center overflow-hidden rounded-2xl', compactCard ? 'h-28 w-full' : 'max-h-[220px] min-h-[140px] min-w-[140px]')}>
+                                  {attachment.kind === 'image' && attachment.previewUrl ? (
+                                    <img src={attachment.previewUrl} alt={attachment.file.name} className="h-full w-full object-cover" />
+                                  ) : attachment.kind === 'video' && attachment.previewUrl ? (
+                                    <video controls preload="metadata" className="h-full w-full bg-black object-cover">
+                                      <source src={attachment.previewUrl} type={attachment.file.type || undefined} />
+                                    </video>
+                                  ) : attachment.kind === 'audio' ? (
+                                    <FileAudio className="h-7 w-7 opacity-80" />
+                                  ) : attachment.kind === 'image' ? (
+                                    <FileImage className="h-7 w-7 opacity-80" />
+                                  ) : attachment.kind === 'video' ? (
+                                    <Images className="h-7 w-7 opacity-80" />
+                                  ) : (
+                                    <FileText className="h-7 w-7 opacity-80" />
+                                  )}
                                 </div>
+                                <span className="whatsapp-inbox-attachment-kind-badge absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]">
+                                  {attachmentLabel}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleClearAttachment(attachment.id)}
+                                  disabled={sending}
+                                  className="whatsapp-inbox-attachment-dismiss absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full transition"
+                                  aria-label="Remover anexo"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
 
-                                {attachment.kind === 'image' && attachment.previewUrl ? (
-                                  <img src={attachment.previewUrl} alt={attachment.file.name} className="max-h-[180px] rounded-2xl object-cover" />
-                                ) : attachment.kind === 'video' && attachment.previewUrl ? (
-                                  <video controls preload="metadata" className="max-h-[220px] rounded-2xl bg-black">
-                                    <source src={attachment.previewUrl} type={attachment.file.type || undefined} />
-                                  </video>
-                                ) : null}
+                              <div className="min-w-0 flex-1 space-y-2">
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{attachment.file.name}</p>
+                                  <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">{formatFileSize(attachment.file.size)}</p>
+                                </div>
 
                                 {isUploadingThisAttachment ? (
                                   <div className="space-y-1.5">
@@ -7148,8 +7184,8 @@ export default function WhatsAppInboxScreen() {
                                   </div>
                                 ) : null}
 
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {isUploadingThisAttachment ? (
+                                {isUploadingThisAttachment ? (
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <Button
                                       type="button"
                                       variant="secondary"
@@ -7160,25 +7196,14 @@ export default function WhatsAppInboxScreen() {
                                       <X className="h-3.5 w-3.5" />
                                       Cancelar upload
                                     </Button>
-                                  ) : null}
-                                  <Button
-                                    type="button"
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => handleClearAttachment(attachment.id)}
-                                    disabled={sending}
-                                    className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
-                                    aria-label="Remover anexo"
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                    Remover
-                                  </Button>
-                                </div>
+                                  </div>
+                                ) : null}
                               </div>
                             </div>
                           </div>
                         );
                       })}
+                      </div>
                     </div>
                   )}
 

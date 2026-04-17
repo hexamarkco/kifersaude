@@ -973,7 +973,8 @@ const getChatPreviewPrefix = (
     case 'inbound': {
       const displayName = getSafeChatDisplayName(chat, connectedUserName);
       const phoneLabel = formatCommWhatsAppPhoneLabel(chat.phone_number);
-      return `${displayName === phoneLabel ? 'Contato' : displayName}:`;
+      const firstName = displayName.split(/\s+/)[0]?.trim() || '';
+      return `${displayName === phoneLabel ? 'Contato' : firstName || displayName}:`;
     }
     case 'system':
       return 'Sistema:';
@@ -1856,7 +1857,7 @@ function InboxChatListItem({
               </span>
             </div>
           </div>
-          <p className="mt-1 truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
+          <p className="mt-0.5 truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
             {draftPreview ? (
               <>
                 <span className="mr-1 font-semibold text-[var(--panel-accent-red-text,#d9776b)]">Rascunho:</span>

@@ -962,12 +962,19 @@ const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage
   return a.id.localeCompare(b.id);
 };
 
-const getChatPreviewPrefix = (direction: CommWhatsAppChat['last_message_direction']) => {
+const getChatPreviewPrefix = (
+  chat: CommWhatsAppChat,
+  connectedUserName?: string | null,
+) => {
+  const direction = chat.last_message_direction;
   switch (direction) {
     case 'outbound':
       return 'Você:';
-    case 'inbound':
-      return 'Contato:';
+    case 'inbound': {
+      const displayName = getSafeChatDisplayName(chat, connectedUserName);
+      const phoneLabel = formatCommWhatsAppPhoneLabel(chat.phone_number);
+      return `${displayName === phoneLabel ? 'Contato' : displayName}:`;
+    }
     case 'system':
       return 'Sistema:';
     default:
@@ -1841,7 +1848,6 @@ function InboxChatListItem({
                 {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--panel-text-muted,#8a735f)]" /> : null}
                 {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--panel-text-muted,#8a735f)]" /> : null}
               </div>
-              <p className="truncate text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
             </div>
             <div className="flex h-10 shrink-0 flex-col items-end justify-between">
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
@@ -1850,7 +1856,7 @@ function InboxChatListItem({
               </span>
             </div>
           </div>
-          <p className="mt-3 truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
+          <p className="mt-1 truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
             {draftPreview ? (
               <>
                 <span className="mr-1 font-semibold text-[var(--panel-accent-red-text,#d9776b)]">Rascunho:</span>
@@ -1859,7 +1865,7 @@ function InboxChatListItem({
             ) : chat.last_message_text ? (
               <>
                 <span className={`mr-1 font-semibold ${getChatPreviewPrefixClassName(chat.last_message_direction)}`}>
-                  {getChatPreviewPrefix(chat.last_message_direction)}
+                  {getChatPreviewPrefix(chat, connectedUserName)}
                 </span>
                 <span>{chat.last_message_text}</span>
               </>

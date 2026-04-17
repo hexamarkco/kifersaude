@@ -1850,14 +1850,14 @@ function InboxChatListItem({
                 {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--panel-text-muted,#8a735f)]" /> : null}
               </div>
             </div>
-            <div className="flex h-10 shrink-0 flex-col items-end justify-between">
+            <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
               <span className={`whatsapp-inbox-unread-badge inline-flex min-h-5 min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold transition-opacity ${(chat.unread_count > 0 || chat.manual_unread) ? 'opacity-100' : 'opacity-0'}`} aria-hidden={chat.unread_count > 0 || chat.manual_unread ? undefined : true}>
                 {chat.unread_count > 0 ? chat.unread_count : chat.manual_unread ? '•' : ''}
               </span>
             </div>
           </div>
-          <p className="mt-0.5 truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
+          <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
             {draftPreview ? (
               <>
                 <span className="mr-1 font-semibold text-[var(--panel-accent-red-text,#d9776b)]">Rascunho:</span>

@@ -18,6 +18,7 @@ import {
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppLeadSearchResult,
+  type CommWhatsAppMessageSearchResult,
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
   type CommWhatsAppRewriteTone,
@@ -282,6 +283,11 @@ const normalizeComparableMessageText = (messageType: string, value: unknown) => 
   }
 
   return text;
+};
+
+const getMessageSearchPreviewText = (message: CommWhatsAppMessage) => {
+  const text = getMessageEditableText(message);
+  return text || getMessageSummaryMarker(message.message_type) || '[Mensagem]';
 };
 
 const canEditOutboundMessage = (message: CommWhatsAppMessage) => {
@@ -1957,6 +1963,40 @@ function InboxChatListItem({
   );
 }
 
+function InboxMessageSearchListItem({
+  result,
+  selected,
+  connectedUserName,
+  onSelect,
+}: {
+  result: CommWhatsAppMessageSearchResult;
+  selected: boolean;
+  connectedUserName?: string | null;
+  onSelect: (chatId: string) => void;
+}) {
+  return (
+    <div className={`relative border-b transition ${selected ? 'is-active' : ''}`}>
+      <div className="px-4 py-3">
+        <button type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">
+                {getSafeChatDisplayName(result.chat, connectedUserName)}
+              </p>
+              <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
+                {getMessageSearchPreviewText(result.message)}
+              </p>
+            </div>
+            <span className="whatsapp-inbox-chat-meta shrink-0 pt-0.5 text-[11px] font-medium leading-none">
+              {formatMessageTime(result.message.message_at)}
+            </span>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function WhatsAppMessageBody({
   message,
   onOpenImage,
@@ -2326,6 +2366,8 @@ export default function WhatsAppInboxScreen() {
   const [loading, setLoading] = useState(true);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
+  const [messageSearchResults, setMessageSearchResults] = useState<CommWhatsAppMessageSearchResult[]>([]);
+  const [searchingMessages, setSearchingMessages] = useState(false);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
   const [chatActivityFilter, setChatActivityFilter] = useState<ChatActivityFilter>('all');
@@ -2480,6 +2522,7 @@ export default function WhatsAppInboxScreen() {
   const isNearBottomRef = useRef(true);
   const selectedChatIdRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
+  const messageSearchRequestIdRef = useRef(0);
   const messagesRequestIdRef = useRef(0);
   const olderMessagesRequestIdRef = useRef(0);
   const operationalStateRequestIdRef = useRef(0);
@@ -2600,16 +2643,22 @@ export default function WhatsAppInboxScreen() {
     return () => window.clearTimeout(timeoutId);
   }, [searchDraft]);
 
+  const archivedChatsCount = useMemo(() => chats.filter((chat) => chat.is_archived).length, [chats]);
+
   const selectedChat = useMemo(
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+  const scopedChats = useMemo(
+    () => sortChatsByInboxOrder(chats.filter((chat) => archivedSectionOpen ? chat.is_archived : !chat.is_archived)),
+    [archivedSectionOpen, chats],
+  );
   const visibleChats = useMemo(() => {
     if (!search) {
-      return chats;
+      return scopedChats;
     }
 
-    return chats
+    return scopedChats
       .map((chat) => ({
         chat,
         rank: getChatSearchRank(chat, search, operationalState?.channel?.connected_user_name ?? null),
@@ -2623,10 +2672,57 @@ export default function WhatsAppInboxScreen() {
         return compareChatsByInboxOrder(a.chat, b.chat);
       })
       .map((item) => item.chat);
-  }, [chats, operationalState?.channel?.connected_user_name, search]);
-  const activeChats = useMemo(() => sortChatsByInboxOrder(visibleChats.filter((chat) => !chat.is_archived)), [visibleChats]);
-  const archivedChats = useMemo(() => sortChatsByInboxOrder(visibleChats.filter((chat) => chat.is_archived)), [visibleChats]);
-  const sidebarChats = archivedSectionOpen ? archivedChats : activeChats;
+  }, [operationalState?.channel?.connected_user_name, scopedChats, search]);
+  const sidebarChats = visibleChats;
+  const searchScopeChatIds = useMemo(() => scopedChats.map((chat) => chat.id), [scopedChats]);
+
+  useEffect(() => {
+    if (!search) {
+      setMessageSearchResults([]);
+      setSearchingMessages(false);
+      return;
+    }
+
+    if (searchScopeChatIds.length === 0) {
+      setMessageSearchResults([]);
+      setSearchingMessages(false);
+      return;
+    }
+
+    const requestId = ++messageSearchRequestIdRef.current;
+    setSearchingMessages(true);
+
+    void commWhatsAppService.searchMessages({
+      search,
+      chatIds: searchScopeChatIds,
+      limit: 30,
+    }).then((results) => {
+      if (requestId !== messageSearchRequestIdRef.current) {
+        return;
+      }
+
+      const seen = new Set<string>();
+      setMessageSearchResults(results.filter((result) => {
+        if (seen.has(result.message.id)) {
+          return false;
+        }
+
+        seen.add(result.message.id);
+        return true;
+      }));
+    }).catch((error) => {
+      if (requestId !== messageSearchRequestIdRef.current) {
+        return;
+      }
+
+      console.error('[WhatsAppInbox] erro ao buscar mensagens', error);
+      setMessageSearchResults([]);
+    }).finally(() => {
+      if (requestId === messageSearchRequestIdRef.current) {
+        setSearchingMessages(false);
+      }
+    });
+  }, [search, searchScopeChatIds]);
   const selectedChatTranscriptLabel = useMemo(
     () => {
       if (!selectedChat) {
@@ -6601,17 +6697,17 @@ export default function WhatsAppInboxScreen() {
                     onClick={() => setArchivedSectionOpen((current) => !current)}
                     className="rounded-xl"
                     aria-label="Chats arquivados"
-                    title={archivedChats.length > 0 ? `Chats arquivados (${archivedChats.length})` : 'Chats arquivados'}
+                    title={archivedChatsCount > 0 ? `Chats arquivados (${archivedChatsCount})` : 'Chats arquivados'}
                   >
                     <span className="relative inline-flex">
                       <Archive className="h-4 w-4" />
-                      {archivedChats.length > 0 ? (
+                      {archivedChatsCount > 0 ? (
                         <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
                           borderColor: 'rgba(212, 192, 167, 0.56)',
                           background: 'var(--panel-accent-strong,#c86f1d)',
                           color: '#fff8f0',
                         }}>
-                          {archivedChats.length > 99 ? '99+' : archivedChats.length}
+                          {archivedChatsCount > 99 ? '99+' : archivedChatsCount}
                         </span>
                       ) : null}
                     </span>
@@ -6691,23 +6787,86 @@ export default function WhatsAppInboxScreen() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Carregando conversas...
               </div>
-            ) : sidebarChats.length === 0 ? (
+            ) : search ? (sidebarChats.length === 0 && messageSearchResults.length === 0 && !searchingMessages ? (
+              <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
+                <Search className="h-8 w-8 whatsapp-inbox-empty-icon" />
+                <div className="space-y-1">
+                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--panel-text,#1f2937)]">
+                    Nenhum resultado encontrado
+                  </p>
+                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">
+                    Busque pelo nome do contato, telefone ou trecho de mensagem.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {sidebarChats.length > 0 ? (
+                  <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                    Conversas
+                  </div>
+                ) : null}
+                {sidebarChats.map((chat) => (
+                  <InboxChatListItem
+                    key={chat.id}
+                    chat={chat}
+                    selected={chat.id === selectedChatId}
+                    connectedUserName={channelState?.connected_user_name ?? null}
+                    draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
+                    onSelect={(chatId) => {
+                      setChatMenuPointerAnchor(null);
+                      setOpenChatMenuChatId(null);
+                      setSelectedChatId(chatId);
+                    }}
+                    menuOpen={openChatMenuChatId === chat.id}
+                    menuBusy={updatingChatStateId === chat.id}
+                    onToggleMenu={handleToggleChatMenu}
+                    onOpenContextMenu={handleOpenChatMenuFromContext}
+                    menuTriggerRef={(node) => {
+                      if (node) {
+                        chatMenuTriggerRefs.current[chat.id] = node;
+                      } else {
+                        delete chatMenuTriggerRefs.current[chat.id];
+                      }
+                    }}
+                  />
+                ))}
+                {messageSearchResults.length > 0 || searchingMessages ? (
+                  <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                    Mensagens
+                  </div>
+                ) : null}
+                {searchingMessages ? (
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Buscando mensagens...
+                  </div>
+                ) : null}
+                {messageSearchResults.map((result) => (
+                  <InboxMessageSearchListItem
+                    key={result.message.id}
+                    result={result}
+                    selected={result.chat.id === selectedChatId}
+                    connectedUserName={channelState?.connected_user_name ?? null}
+                    onSelect={(chatId) => {
+                      setChatMenuPointerAnchor(null);
+                      setOpenChatMenuChatId(null);
+                      setSelectedChatId(chatId);
+                    }}
+                  />
+                ))}
+              </>
+            )) : sidebarChats.length === 0 ? (
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
                 {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
                 <div className="space-y-1">
                   <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--panel-text,#1f2937)]">
-                    {search
-                      ? 'Nenhum resultado encontrado'
-                      : archivedSectionOpen
-                        ? 'Nenhum chat arquivado'
-                        : 'Nenhuma conversa ainda'}
+                    {archivedSectionOpen ? 'Nenhum chat arquivado' : 'Nenhuma conversa ainda'}
                   </p>
                   <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">
-                    {search
-                      ? 'Busque pelo nome exibido ou pelo telefone da conversa.'
-                      : archivedSectionOpen
-                        ? 'Arquive uma conversa para ela aparecer nesta lista separada.'
-                        : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}
+                    {archivedSectionOpen
+                      ? 'Arquive uma conversa para ela aparecer nesta lista separada.'
+                      : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}
                   </p>
                 </div>
               </div>

@@ -36,9 +36,20 @@ type ListMessagesPageParams = {
   before?: MessageCursor | null;
 };
 
+type SearchMessagesParams = {
+  search: string;
+  chatIds?: string[];
+  limit?: number;
+};
+
 export type CommWhatsAppMessagesPage = {
   messages: CommWhatsAppMessage[];
   hasMore: boolean;
+};
+
+export type CommWhatsAppMessageSearchResult = {
+  message: CommWhatsAppMessage;
+  chat: CommWhatsAppChat;
 };
 
 export type CommWhatsAppLeadSearchResult = {
@@ -327,6 +338,64 @@ export const commWhatsAppService = {
     }
 
     return row;
+  },
+
+  async searchMessages(params: SearchMessagesParams): Promise<CommWhatsAppMessageSearchResult[]> {
+    const search = sanitizeSearch(params.search ?? '');
+    if (!search) {
+      return [];
+    }
+
+    const limit = Math.min(Math.max(params.limit ?? 30, 1), 100);
+    const chatIds = Array.from(new Set((params.chatIds ?? []).filter(Boolean)));
+    if (params.chatIds && chatIds.length === 0) {
+      return [];
+    }
+
+    let query = supabase
+      .from('comm_whatsapp_messages')
+      .select('*')
+      .or([
+        `text_content.ilike.%${search}%`,
+        `media_caption.ilike.%${search}%`,
+        `transcription_text.ilike.%${search}%`,
+      ].join(','))
+      .order('message_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (chatIds.length > 0) {
+      query = query.in('chat_id', chatIds);
+    }
+
+    const { data: messages, error: messagesError } = await query;
+
+    if (messagesError) {
+      throw new Error(getSupabaseErrorMessage(messagesError, 'Nao foi possivel buscar mensagens do WhatsApp.'));
+    }
+
+    const typedMessages = (messages ?? []) as CommWhatsAppMessage[];
+    const resultChatIds = Array.from(new Set(typedMessages.map((message) => message.chat_id).filter(Boolean)));
+
+    if (resultChatIds.length === 0) {
+      return [];
+    }
+
+    const { data: chats, error: chatsError } = await supabase
+      .from('comm_whatsapp_chats')
+      .select('*')
+      .in('id', resultChatIds);
+
+    if (chatsError) {
+      throw new Error(getSupabaseErrorMessage(chatsError, 'Nao foi possivel carregar as conversas dos resultados de busca.'));
+    }
+
+    const chatById = new Map(((chats ?? []) as CommWhatsAppChat[]).map((chat) => [chat.id, chat]));
+
+    return typedMessages.flatMap((message) => {
+      const chat = chatById.get(message.chat_id);
+      return chat ? [{ message, chat }] : [];
+    });
   },
 
   async searchCrmLeads(params: { query?: string; phoneNumbers?: string[]; limit?: number } = {}): Promise<CommWhatsAppLeadSearchResult[]> {

@@ -1048,6 +1048,64 @@ const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
 
 const sortChatsByInboxOrder = (items: CommWhatsAppChat[]) => [...items].sort(compareChatsByInboxOrder);
 
+type PendingChatInboxStatePatch = Partial<Pick<CommWhatsAppChat,
+  'is_archived'
+  | 'archived_at'
+  | 'is_muted'
+  | 'muted_at'
+  | 'is_pinned'
+  | 'pinned_at'
+  | 'manual_unread'
+  | 'manual_unread_at'
+  | 'unread_count'
+>>;
+
+const applyPendingChatInboxState = (
+  items: CommWhatsAppChat[],
+  pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
+) => items.map((chat) => {
+  const pendingState = pendingStateByChatId.get(chat.id);
+  return pendingState ? { ...chat, ...pendingState } : chat;
+});
+
+const buildPendingChatInboxStatePatch = (
+  chat: CommWhatsAppChat,
+  options: {
+    isArchived?: boolean | null;
+    isMuted?: boolean | null;
+    isPinned?: boolean | null;
+    markAsUnread?: boolean | null;
+  },
+): PendingChatInboxStatePatch => {
+  const now = new Date().toISOString();
+  const patch: PendingChatInboxStatePatch = {};
+
+  if (typeof options.isArchived === 'boolean') {
+    patch.is_archived = options.isArchived;
+    patch.archived_at = options.isArchived ? (chat.archived_at ?? now) : null;
+  }
+
+  if (typeof options.isMuted === 'boolean') {
+    patch.is_muted = options.isMuted;
+    patch.muted_at = options.isMuted ? (chat.muted_at ?? now) : null;
+  }
+
+  if (typeof options.isPinned === 'boolean') {
+    patch.is_pinned = options.isPinned;
+    patch.pinned_at = options.isPinned ? (chat.pinned_at ?? now) : null;
+  }
+
+  if (typeof options.markAsUnread === 'boolean') {
+    patch.manual_unread = options.markAsUnread && chat.unread_count <= 0;
+    patch.manual_unread_at = patch.manual_unread ? (chat.manual_unread_at ?? now) : null;
+    if (options.markAsUnread === false) {
+      patch.unread_count = 0;
+    }
+  }
+
+  return patch;
+};
+
 const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
   if (file.type.startsWith('image/')) {
     return 'image';
@@ -2406,6 +2464,7 @@ export default function WhatsAppInboxScreen() {
   const autoLinkedLeadKeyRef = useRef<string | null>(null);
   const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
   const restoringArchivedChatIdsRef = useRef<Set<string>>(new Set());
+  const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
   const resolvedIdentityPhoneKeysRef = useRef<Set<string>>(new Set());
@@ -4190,7 +4249,12 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      let hydratedData = sortChatsByInboxOrder(preserveSelectedChatInList(applyPrefetchedLeadNames(data)));
+      let hydratedData = sortChatsByInboxOrder(
+        applyPendingChatInboxState(
+          preserveSelectedChatInList(applyPrefetchedLeadNames(data)),
+          pendingChatInboxStateRef.current,
+        ),
+      );
 
       const selectedId = selectedChatIdRef.current;
       const optimisticSelectedChat = selectedId
@@ -6291,12 +6355,19 @@ export default function WhatsAppInboxScreen() {
   ) => {
     setUpdatingChatStateId(chat.id);
 
+    const pendingPatch = buildPendingChatInboxStatePatch(chat, options);
+    if (Object.keys(pendingPatch).length > 0) {
+      pendingChatInboxStateRef.current.set(chat.id, pendingPatch);
+      upsertChatLocally({ ...chat, ...pendingPatch });
+    }
+
     if (options.markAsUnread === true && selectedChatIdRef.current === chat.id) {
       manualUnreadSkipReadChatIdRef.current = chat.id;
     }
 
     try {
       const updatedChat = await commWhatsAppService.updateChatInboxState(chat.id, options);
+      pendingChatInboxStateRef.current.delete(chat.id);
       upsertChatLocally(updatedChat);
 
       if (selectedChatIdRef.current === updatedChat.id) {
@@ -6313,6 +6384,10 @@ export default function WhatsAppInboxScreen() {
         toast.success(options.markAsUnread ? 'Conversa marcada como nao lida.' : 'Conversa marcada como lida.');
       }
     } catch (error) {
+      pendingChatInboxStateRef.current.delete(chat.id);
+      if (Object.keys(pendingPatch).length > 0) {
+        upsertChatLocally(chat);
+      }
       console.error('[WhatsAppInbox] erro ao atualizar estado do chat', error);
       if (options.markAsUnread === true && manualUnreadSkipReadChatIdRef.current === chat.id) {
         manualUnreadSkipReadChatIdRef.current = null;

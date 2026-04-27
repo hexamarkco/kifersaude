@@ -2866,10 +2866,6 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const preserveSelectedChatInList = useCallback((items: CommWhatsAppChat[]) => {
-    if (hasActiveChatFilters) {
-      return items;
-    }
-
     const selectedId = selectedChatIdRef.current;
     if (!selectedId) {
       return items;
@@ -2897,7 +2893,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     return sortChatsByInboxOrder([...items, optimisticSelectedChat]);
-  }, [hasActiveChatFilters]);
+  }, []);
 
   const patchLocalOutgoingMessage = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
     setLocalOutgoingMessages((current) => current.map((message) => (

@@ -222,7 +222,7 @@ export const commWhatsAppService = {
   },
 
   async listChats(params: ListChatsParams = {}): Promise<CommWhatsAppChat[]> {
-    const limit = Math.min(Math.max(params.limit ?? 80, 1), 200);
+    const limit = Math.min(Math.max(params.limit ?? 80, 1), 500);
     const activityFilter = params.activityFilter ?? (params.onlyUnread ? 'unread' : 'all');
     const leadFilter = params.leadFilter ?? 'all';
     const savedFilter = params.savedFilter ?? 'all';
@@ -262,11 +262,14 @@ export const commWhatsAppService = {
 
     const search = sanitizeSearch(params.search ?? '');
     if (search) {
+      const searchDigits = search.replace(/\D/g, '');
       query = query.or(
         [
           `display_name.ilike.%${search}%`,
+          `saved_contact_name.ilike.%${search}%`,
           `push_name.ilike.%${search}%`,
           `phone_number.ilike.%${search}%`,
+          ...(searchDigits ? [`phone_digits.ilike.%${searchDigits}%`] : []),
         ].join(','),
       );
     }

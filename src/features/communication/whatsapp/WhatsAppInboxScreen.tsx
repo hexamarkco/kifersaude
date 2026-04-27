@@ -1296,15 +1296,40 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
     return 'Conversa';
   }
 
+  const savedContactName = String(chat.saved_contact_name ?? '').trim();
+  if (savedContactName) {
+    return savedContactName;
+  }
+
   const displayName = String(chat.display_name ?? '').trim();
+  const pushName = String(chat.push_name ?? '').trim();
   const ownName = String(connectedUserName ?? '').trim().toLowerCase();
   const isOwnNameLeak = !chat.saved_contact_name && !chat.lead_id && displayName && ownName && displayName.toLowerCase() === ownName;
 
   if (isOwnNameLeak) {
-    return formatCommWhatsAppPhoneLabel(chat.phone_number);
+    return pushName || formatCommWhatsAppPhoneLabel(chat.phone_number);
   }
 
-  return displayName || formatCommWhatsAppPhoneLabel(chat.phone_number);
+  return displayName || pushName || formatCommWhatsAppPhoneLabel(chat.phone_number);
+};
+
+const getChatSearchCandidates = (chat: CommWhatsAppChat, connectedUserName?: string | null) => {
+  const values = [
+    getSafeChatDisplayName(chat, connectedUserName),
+    chat.saved_contact_name,
+    chat.display_name,
+    chat.push_name,
+  ];
+
+  const uniqueValues = new Set<string>();
+  values.forEach((value) => {
+    const normalized = normalizeInboxSearch(String(value ?? ''));
+    if (normalized) {
+      uniqueValues.add(normalized);
+    }
+  });
+
+  return Array.from(uniqueValues);
 };
 
 const getChatSearchRank = (chat: CommWhatsAppChat, query: string, connectedUserName?: string | null) => {
@@ -1315,14 +1340,14 @@ const getChatSearchRank = (chat: CommWhatsAppChat, query: string, connectedUserN
     return 0;
   }
 
-  const displayName = normalizeInboxSearch(getSafeChatDisplayName(chat, connectedUserName));
+  const nameCandidates = getChatSearchCandidates(chat, connectedUserName);
   const phoneLabel = normalizeInboxSearch(formatCommWhatsAppPhoneLabel(chat.phone_number));
   const phoneDigits = String(chat.phone_digits || chat.phone_number || '').replace(/\D/g, '');
 
   if (normalizedQuery) {
-    if (displayName.startsWith(normalizedQuery)) return 0;
-    if (displayName.split(/\s+/).some((part) => part.startsWith(normalizedQuery))) return 1;
-    if (displayName.includes(normalizedQuery)) return 2;
+    if (nameCandidates.some((candidate) => candidate.startsWith(normalizedQuery))) return 0;
+    if (nameCandidates.some((candidate) => candidate.split(/\s+/).some((part) => part.startsWith(normalizedQuery)))) return 1;
+    if (nameCandidates.some((candidate) => candidate.includes(normalizedQuery))) return 2;
     if (phoneLabel.includes(normalizedQuery)) return 5;
   }
 
@@ -1332,6 +1357,34 @@ const getChatSearchRank = (chat: CommWhatsAppChat, query: string, connectedUserN
   }
 
   return null;
+};
+
+const rankChatsBySearch = (items: CommWhatsAppChat[], query: string, connectedUserName?: string | null) => items
+  .map((chat) => ({
+    chat,
+    rank: getChatSearchRank(chat, query, connectedUserName),
+  }))
+  .filter((item): item is { chat: CommWhatsAppChat; rank: number } => item.rank !== null)
+  .sort((a, b) => {
+    if (a.rank !== b.rank) {
+      return a.rank - b.rank;
+    }
+
+    return compareChatsByInboxOrder(a.chat, b.chat);
+  })
+  .map((item) => item.chat);
+
+const mergeUniqueChats = (...collections: CommWhatsAppChat[][]) => {
+  const chatsById = new Map<string, CommWhatsAppChat>();
+  collections.forEach((items) => {
+    items.forEach((chat) => {
+      if (!chatsById.has(chat.id)) {
+        chatsById.set(chat.id, chat);
+      }
+    });
+  });
+
+  return Array.from(chatsById.values());
 };
 
 const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => {
@@ -2371,7 +2424,9 @@ export default function WhatsAppInboxScreen() {
   const [loading, setLoading] = useState(true);
   const [searchDraft, setSearchDraft] = useState('');
   const [search, setSearch] = useState('');
+  const [chatSearchResults, setChatSearchResults] = useState<CommWhatsAppChat[]>([]);
   const [messageSearchResults, setMessageSearchResults] = useState<CommWhatsAppMessageSearchResult[]>([]);
+  const [searchingChats, setSearchingChats] = useState(false);
   const [searchingMessages, setSearchingMessages] = useState(false);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
@@ -2528,6 +2583,7 @@ export default function WhatsAppInboxScreen() {
   const isNearBottomRef = useRef(true);
   const selectedChatIdRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
+  const chatSearchRequestIdRef = useRef(0);
   const messageSearchRequestIdRef = useRef(0);
   const messagesRequestIdRef = useRef(0);
   const olderMessagesRequestIdRef = useRef(0);
@@ -2659,28 +2715,59 @@ export default function WhatsAppInboxScreen() {
     () => sortChatsByInboxOrder(chats.filter((chat) => archivedSectionOpen ? chat.is_archived : !chat.is_archived)),
     [archivedSectionOpen, chats],
   );
-  const visibleChats = useMemo(() => {
+  const localChatSearchResults = useMemo(
+    () => (search ? rankChatsBySearch(chats, search, operationalState?.channel?.connected_user_name ?? null) : []),
+    [chats, operationalState?.channel?.connected_user_name, search],
+  );
+  const remoteChatSearchResults = useMemo(
+    () => (search ? rankChatsBySearch(chatSearchResults, search, operationalState?.channel?.connected_user_name ?? null) : []),
+    [chatSearchResults, operationalState?.channel?.connected_user_name, search],
+  );
+  const sidebarChats = useMemo(
+    () => (search ? mergeUniqueChats(remoteChatSearchResults, localChatSearchResults) : scopedChats),
+    [localChatSearchResults, remoteChatSearchResults, scopedChats, search],
+  );
+  const searchScopeChatIds = useMemo(
+    () => (search ? chats.map((chat) => chat.id) : scopedChats.map((chat) => chat.id)),
+    [chats, scopedChats, search],
+  );
+
+  useEffect(() => {
     if (!search) {
-      return scopedChats;
+      setChatSearchResults([]);
+      setSearchingChats(false);
+      return;
     }
 
-    return scopedChats
-      .map((chat) => ({
-        chat,
-        rank: getChatSearchRank(chat, search, operationalState?.channel?.connected_user_name ?? null),
-      }))
-      .filter((item): item is { chat: CommWhatsAppChat; rank: number } => item.rank !== null)
-      .sort((a, b) => {
-        if (a.rank !== b.rank) {
-          return a.rank - b.rank;
-        }
+    const requestId = ++chatSearchRequestIdRef.current;
+    setSearchingChats(true);
 
-        return compareChatsByInboxOrder(a.chat, b.chat);
-      })
-      .map((item) => item.chat);
-  }, [operationalState?.channel?.connected_user_name, scopedChats, search]);
-  const sidebarChats = visibleChats;
-  const searchScopeChatIds = useMemo(() => scopedChats.map((chat) => chat.id), [scopedChats]);
+    void commWhatsAppService.listChats({
+      search,
+      activityFilter: chatActivityFilter,
+      leadStatusFilters,
+      archivedFilter: 'all',
+      limit: 500,
+    }).then((results) => {
+      if (requestId !== chatSearchRequestIdRef.current) {
+        return;
+      }
+
+      const hydratedResults = sortChatsByInboxOrder(applyPendingChatInboxState(results, pendingChatInboxStateRef.current));
+      setChatSearchResults(hydratedResults);
+    }).catch((error) => {
+      if (requestId !== chatSearchRequestIdRef.current) {
+        return;
+      }
+
+      console.error('[WhatsAppInbox] erro ao buscar conversas', error);
+      setChatSearchResults([]);
+    }).finally(() => {
+      if (requestId === chatSearchRequestIdRef.current) {
+        setSearchingChats(false);
+      }
+    });
+  }, [chatActivityFilter, leadStatusFilters, search]);
 
   useEffect(() => {
     if (!search) {
@@ -6838,7 +6925,7 @@ export default function WhatsAppInboxScreen() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Carregando conversas...
               </div>
-            ) : search ? (sidebarChats.length === 0 && messageSearchResults.length === 0 && !searchingMessages ? (
+            ) : search ? (sidebarChats.length === 0 && messageSearchResults.length === 0 && !searchingChats && !searchingMessages ? (
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
                 <Search className="h-8 w-8 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
@@ -6857,6 +6944,12 @@ export default function WhatsAppInboxScreen() {
                     Conversas
                   </div>
                 ) : null}
+                {searchingChats && sidebarChats.length === 0 ? (
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Buscando conversas...
+                  </div>
+                ) : null}
                 {sidebarChats.map((chat) => (
                   <InboxChatListItem
                     key={chat.id}
@@ -6867,6 +6960,7 @@ export default function WhatsAppInboxScreen() {
                     onSelect={(chatId) => {
                       setChatMenuPointerAnchor(null);
                       setOpenChatMenuChatId(null);
+                      upsertChatLocally(chat);
                       setSelectedChatId(chatId);
                     }}
                     menuOpen={openChatMenuChatId === chat.id}
@@ -6902,6 +6996,7 @@ export default function WhatsAppInboxScreen() {
                     onSelect={(chatId) => {
                       setChatMenuPointerAnchor(null);
                       setOpenChatMenuChatId(null);
+                      upsertChatLocally(result.chat);
                       setSelectedChatId(chatId);
                     }}
                   />

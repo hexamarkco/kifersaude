@@ -1,11 +1,11 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import {
+  Briefcase,
   CheckCircle,
   ChevronDown,
   ChevronRight,
   Heart,
   Instagram,
-  Mail,
   MapPin,
   MessageCircle,
   Phone,
@@ -14,10 +14,10 @@ import {
   Sparkles,
   Star,
   ThumbsUp,
-  TrendingUp,
+  UserRound,
   X,
-  Zap,
 } from 'lucide-react';
+
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import { formatPhoneInput } from '../../lib/inputFormatters';
@@ -57,18 +57,19 @@ type Testimonial = {
   detail: string;
 };
 
-type Review = {
-  name: string;
-  age: number;
-  rating: number;
-  date: string;
-  review: string;
-};
-
-type ValueCard = {
+type AudienceCard = {
   title: string;
   description: string;
-  icon: typeof Heart;
+  eyebrow: string;
+  ctaLabel: string;
+  contractKind: ContractKind;
+  icon: typeof Briefcase;
+};
+
+type PublicMetric = {
+  value: string;
+  label: string;
+  detail: string;
 };
 
 type OverlayModalProps = {
@@ -82,51 +83,37 @@ type OverlayModalProps = {
 const AGE_RANGES = ['00 - 18', '19 - 23', '24 - 28', '29 - 33', '34 - 38', '39 - 43', '44 - 48', '49 - 53', '54 - 58', '59+'] as const;
 const WHATSAPP_PHONE = '5521979302389';
 const WHATSAPP_DEFAULT_MESSAGE = 'Olá! Quero uma cotação de plano de saúde com a Kifer.';
+const WHATSAPP_SUPPORT_MESSAGE = 'Olá! Já sou cliente da Kifer Saúde e preciso de suporte.';
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(WHATSAPP_DEFAULT_MESSAGE)}`;
-const EMAIL = 'contato@kifersaude.com.br';
 const CNPJ = '46.423.078/0001-10';
 const INSTAGRAM_URL = 'https://instagram.com/souluizakifer';
+const GOOGLE_REVIEWS_URL = 'https://www.google.com/search?q=kifer+saude';
 
 const faqItems: PublicFaqItem[] = [
   {
-    question: 'Qual a diferença entre pessoa física e MEI?',
+    question: 'MEI pode contratar plano empresarial?',
     answer:
-      'Planos para pessoa física são individuais ou familiares contratados em seu nome. Já planos MEI ou empresariais são contratados com CNPJ e podem trazer melhor custo-benefício quando existe elegibilidade correta.',
+      'Sim. Quando existe CNPJ ativo e enquadramento aceito pela operadora, o MEI pode acessar produtos empresariais com condição mais competitiva do que muitos planos individuais.',
   },
   {
-    question: 'Quanto tempo demora para o plano ser ativado?',
+    question: 'Qual a diferença entre plano por adesão e empresarial?',
     answer:
-      'Depois da aprovação da proposta, o prazo costuma variar conforme a operadora e a análise documental. Em muitos casos o retorno acontece em poucos dias úteis.',
+      'O empresarial depende de CNPJ e costuma seguir regras de elegibilidade da empresa. O plano por adesão depende de vínculo com entidade de classe e pode ter outra estrutura de preço, carência e reajuste.',
   },
   {
-    question: 'Posso incluir minha família no plano?',
+    question: 'Tem carência?',
     answer:
-      'Sim. Dependendo da modalidade, é possível incluir cônjuge, filhos e dependentes permitidos pela operadora. A Kifer orienta a melhor composição para o seu caso.',
+      'Tem, e ela varia conforme a operadora, o tipo de contratação e a regra do produto. Antes da contratação, a Kifer explica o que muda para consultas, exames, internações e urgência.',
   },
   {
-    question: 'Existe carência para usar o plano?',
+    question: 'Cobre qual área do RJ?',
     answer:
-      'Sim. A carência muda conforme o procedimento e as regras do produto. Urgências, consultas, exames e internações podem ter prazos diferentes.',
+      'A análise é feita de acordo com a cidade, os bairros de uso e a rede credenciada que realmente faz sentido para sua rotina no Rio de Janeiro e Grande Rio.',
   },
   {
-    question: 'Posso escolher meus médicos e hospitais?',
+    question: 'Como faço para contratar?',
     answer:
-      'Isso depende da rede credenciada de cada plano. A análise correta considera hospitais, laboratórios e bairros que fazem sentido para sua rotina.',
-  },
-  {
-    question: 'O que é coparticipação?',
-    answer:
-      'Coparticipação é quando a mensalidade tende a ser menor, mas parte do valor de consultas ou exames é cobrada quando há utilização. Pode valer a pena para perfis de baixo uso.',
-  },
-  {
-    question: 'Posso cancelar o plano quando quiser?',
-    answer:
-      'As regras de cancelamento variam conforme o contrato e a modalidade. Antes da assinatura, a Kifer explica as condições e pontos de atenção de cada proposta.',
-  },
-  {
-    question: 'Qual a diferença entre abrangência estadual e nacional?',
-    answer:
-      'Planos estaduais costumam atender melhor quem concentra uso em uma região específica. Já os nacionais fazem mais sentido para quem viaja ou precisa de rede ampla fora do estado.',
+      'Você envia seus dados pelo formulário ou WhatsApp, recebe as opções comparadas para o seu perfil e, depois da escolha, a Kifer acompanha documentação, proposta e ativação até a contratação ficar de pé.',
   },
 ];
 
@@ -154,103 +141,56 @@ const testimonials: Testimonial[] = [
     quote: 'Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede D\'Or. Atendimento nota 10!',
     initial: 'R',
     name: 'Regina',
-    detail: '44 anos',
+    detail: '44 anos, Rio de Janeiro',
   },
   {
     quote: 'Atendimento super rápido pelo WhatsApp. Em menos de 1 hora já tinha minha cotação com várias opções.',
     initial: 'M',
     name: 'Marcelo',
-    detail: '38 anos',
+    detail: '38 anos, Niterói',
   },
   {
     quote: 'Excelente suporte durante todo o processo. A Kifer Saúde realmente se importa com o cliente!',
     initial: 'A',
     name: 'Ana Paula',
-    detail: '52 anos',
+    detail: '52 anos, Nova Iguaçu',
   },
 ];
 
-const valueCards: ValueCard[] = [
+const audienceCards: AudienceCard[] = [
   {
-    title: 'Atendimento humanizado',
-    description: 'Tratamos cada cliente com cuidado e atenção personalizada.',
-    icon: Heart,
+    eyebrow: 'MEI / Empresa pequena',
+    title: 'Plano empresarial com entrada mais inteligente para quem tem CNPJ.',
+    description: 'Sabia que como MEI você pode acessar plano empresarial com melhor custo-benefício? A Kifer compara opções e explica a elegibilidade certa para o seu caso.',
+    ctaLabel: 'Quero cotar para empresa',
+    contractKind: 'MEI',
+    icon: Briefcase,
   },
   {
-    title: 'Resposta rápida via WhatsApp',
-    description: 'Atendimento ágil e eficiente pelo canal que você prefere.',
-    icon: Zap,
-  },
-  {
-    title: 'Suporte durante toda a vigência',
-    description: 'Acompanhamos você do primeiro contato ao pós-venda.',
-    icon: Phone,
-  },
-  {
-    title: 'Cotações personalizadas',
-    description: 'Sem custo e montadas de acordo com seu perfil real de uso.',
-    icon: Search,
-  },
-  {
-    title: 'Comparativo claro',
-    description: 'Explicamos carências, rede, coparticipação e custo com linguagem simples.',
-    icon: CheckCircle,
-  },
-  {
-    title: 'Operadoras regulamentadas',
-    description: 'Trabalhamos com parceiros certificados e opções validadas para o RJ.',
-    icon: Shield,
+    eyebrow: 'Pessoa Física',
+    title: 'Comparativo para quem quer sair do caro pelo mais coerente.',
+    description: 'Está pagando caro no seu plano atual? A gente compara operadoras, rede, carência e custo real para mostrar o que faz sentido para a sua rotina.',
+    ctaLabel: 'Quero cotar para pessoa física',
+    contractKind: 'PF',
+    icon: UserRound,
   },
 ];
 
-const reviewItems: Review[] = [
+const fallbackPublicMetrics: PublicMetric[] = [
   {
-    name: 'Regina Silva',
-    age: 44,
-    rating: 5,
-    date: 'Há 2 semanas',
-    review:
-      'Eu achava que plano bom era caro, mas com a Luiza consegui pagar menos e ainda ter Rede D\'Or. Atendimento nota 10! Ela explicou cada detalhe e me ajudou a escolher o melhor custo-benefício.',
+    value: '+500',
+    label: 'clientes atendidos',
+    detail: 'histórico comercial da operação',
   },
   {
-    name: 'Marcelo Santos',
-    age: 38,
-    rating: 5,
-    date: 'Há 1 mês',
-    review:
-      'Atendimento super rápido pelo WhatsApp. Em menos de 1 hora já tinha minha cotação com várias opções. A Luiza é muito atenciosa e profissional!',
+    value: String(partnerLogos.length),
+    label: 'operadoras comparadas',
+    detail: 'parceiras exibidas no site',
   },
   {
-    name: 'Ana Paula Ferreira',
-    age: 52,
-    rating: 5,
-    date: 'Há 1 mês',
-    review:
-      'Excelente suporte durante todo o processo. A Kifer Saúde realmente se importa com o cliente! Tirou todas as minhas dúvidas e ainda me ligou depois para saber se estava tudo certo.',
-  },
-  {
-    name: 'Carlos Eduardo',
-    age: 29,
-    rating: 5,
-    date: 'Há 2 meses',
-    review:
-      'Como MEI, consegui economizar muito no plano empresarial. A Luiza me mostrou opções que eu nem sabia que existiam. Recomendo demais!',
-  },
-  {
-    name: 'Juliana Oliveira',
-    age: 35,
-    rating: 5,
-    date: 'Há 2 meses',
-    review:
-      'Contratei plano para toda minha família e foi super tranquilo. A Luiza tem um conhecimento incrível sobre as operadoras e me ajudou a escolher o melhor.',
-  },
-  {
-    name: 'Roberto Alves',
-    age: 47,
-    rating: 5,
-    date: 'Há 3 meses',
-    review:
-      'Precisava migrar de operadora com urgência e a Kifer Saúde resolveu tudo rapidinho. Atendimento excepcional e muito profissional!',
+    value: '4.9',
+    label: 'avaliação média percebida',
+    detail: 'fallback visual até a leitura protegida carregar',
   },
 ];
 
@@ -309,6 +249,27 @@ const resolveContractTypeId = (rows: ContractTypeRow[], contractKind: ContractKi
   return match?.id ?? null;
 };
 
+const normalizePublicMetric = (value: unknown): PublicMetric | null => {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const metricValue = typeof record.value === 'string' ? record.value.trim() : '';
+  const label = typeof record.label === 'string' ? record.label.trim() : '';
+  const detail = typeof record.detail === 'string' ? record.detail.trim() : '';
+
+  if (!metricValue || !label || !detail) {
+    return null;
+  }
+
+  return {
+    value: metricValue,
+    label,
+    detail,
+  };
+};
+
 function OverlayModal({ title, subtitle, maxWidthClass = 'max-w-3xl', onClose, children }: OverlayModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -349,10 +310,9 @@ export default function HomePage() {
   const [origins, setOrigins] = useState<LeadOrigem[]>([]);
   const [statuses, setStatuses] = useState<LeadStatusConfig[]>([]);
   const [contractTypeRows, setContractTypeRows] = useState<ContractTypeRow[]>([]);
+  const [publicMetrics, setPublicMetrics] = useState<PublicMetric[]>(fallbackPublicMetrics);
   const [submitting, setSubmitting] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
-  const [showStoryModal, setShowStoryModal] = useState(false);
-  const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -402,17 +362,42 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const hasOpenModal = showQuoteModal || showStoryModal || showReviewsModal;
+    let active = true;
+
+    const loadPublicMetrics = async () => {
+      const { data, error } = await supabase.functions.invoke('public-home-metrics');
+
+      if (!active || error || !data || !Array.isArray(data.metrics)) {
+        return;
+      }
+
+      const metrics = data.metrics
+        .map(normalizePublicMetric)
+        .filter((metric: PublicMetric | null): metric is PublicMetric => Boolean(metric));
+
+      if (metrics.length === 3) {
+        setPublicMetrics(metrics);
+      }
+    };
+
+    void loadPublicMetrics();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     const previousOverflow = document.body.style.overflow;
 
-    if (hasOpenModal) {
+    if (showQuoteModal) {
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [showQuoteModal, showReviewsModal, showStoryModal]);
+  }, [showQuoteModal]);
 
   const updateAgeRangeCount = (range: (typeof AGE_RANGES)[number], value: string) => {
     const numericValue = value.replace(/\D/g, '');
@@ -423,8 +408,17 @@ export default function HomePage() {
     window.open(buildWhatsAppUrl(message), '_blank', 'noopener,noreferrer');
   };
 
-  const scrollToForm = () => {
-    document.getElementById('cotacao')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const scrollToForm = (contractKind?: ContractKind) => {
+    if (contractKind) {
+      setFormData((current) => ({
+        ...current,
+        tipoContratacao: contractKind,
+      }));
+    }
+
+    window.requestAnimationFrame(() => {
+      document.getElementById('cotacao')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const resetForm = () => {
@@ -666,8 +660,8 @@ export default function HomePage() {
   return (
     <>
       <PublicSeo
-        title="Kifer Saúde | Planos de saúde no RJ"
-        description="Volta ao visual clássico da Kifer com atendimento humano, cotação personalizada e suporte consultivo para planos de saúde no Rio de Janeiro."
+        title="Kifer Saúde | Plano de saúde no RJ com atendimento humano"
+        description="Plano de saúde no RJ com atendimento humano, cotação gratuita e suporte consultivo pelo WhatsApp para pessoa física, MEI e empresa pequena."
         canonicalPath="/"
         faqItems={faqItems}
       />
@@ -765,20 +759,20 @@ export default function HomePage() {
             </a>
 
             <div className="hidden flex-1 items-center justify-center space-x-6 md:flex">
-              <a href="#quem-somos" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
-                Quem somos
+              <a href="#prova-social" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
+                Operadoras
+              </a>
+              <a href="#para-quem" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
+                Para quem é
               </a>
               <a href="#como-funciona" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
                 Como funciona
               </a>
-              <a href="#planos" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
-                Planos
+              <a href="#depoimentos" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
+                Depoimentos
               </a>
               <a href="#faq" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
                 FAQ
-              </a>
-              <a href="#contato" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
-                Contato
               </a>
             </div>
 
@@ -854,6 +848,15 @@ export default function HomePage() {
                     Falar no WhatsApp
                   </button>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => openWhatsApp(WHATSAPP_SUPPORT_MESSAGE)}
+                  className="mt-4 inline-flex items-center text-sm font-semibold text-slate-700 transition-colors hover:text-orange-700"
+                >
+                  Já sou cliente e preciso de suporte
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </button>
               </div>
 
               <div className="order-1 flex justify-center lg:order-2">
@@ -903,370 +906,399 @@ export default function HomePage() {
           </div>
         </div>
 
-        <section id="quem-somos" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">
-            <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
-              <div className="relative">
-                <div className="h-[500px] w-full overflow-hidden rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 shadow-2xl">
-                  <img
-                    src="/freepik__portrait-of-a-natural-redhaired-woman-about-158-me__96601.png"
-                      alt="Luiza Kifer - especialista em planos de saúde"
-                    className="h-full w-full object-cover object-[center_20%]"
-                  />
-                </div>
+        <section id="prova-social" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">prova social rápida</p>
+              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Confiança construída no atendimento real.</h2>
+              <p className="mt-4 text-lg leading-relaxed text-slate-600">
+                A Kifer cruza cenário de uso, operadora e custo com linguagem simples. O foco não é empurrar plano, é ajudar você a decidir melhor.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-5 md:grid-cols-3">
+              {publicMetrics.map((metric) => (
+                <article key={metric.label} className="rounded-3xl border border-orange-100 bg-orange-50/60 p-8 shadow-[0_24px_50px_-40px_rgba(122,62,22,0.35)]">
+                  <p className="text-4xl font-black text-slate-900 md:text-5xl">{metric.value}</p>
+                  <p className="mt-3 text-lg font-semibold text-orange-700">{metric.label}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{metric.detail}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-12 rounded-[2rem] border border-slate-200 bg-slate-50 px-6 py-8 shadow-sm">
+              <div className="mb-6 flex flex-col gap-2 text-center">
+                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">operadoras parceiras</p>
+                <p className="text-base text-slate-600">Trabalhamos com marcas relevantes para comparar cenário real de contratação no RJ.</p>
               </div>
 
-              <div>
-                <h2 className="mb-6 text-4xl font-bold text-slate-900 md:text-5xl">Quem somos</h2>
-                <div className="mb-6 rounded-r-xl border-l-4 border-orange-500 bg-orange-50 p-6">
-                  <p className="mb-4 text-lg italic text-slate-700">
-                      "Sou a Luiza Kifer, especialista em planos de saúde. Acredito que contratar um plano não é só uma escolha financeira — é uma decisão sobre cuidado, segurança e tranquilidade."
-                  </p>
-                  <p className="text-sm font-semibold text-slate-600">— Luiza Kifer, fundadora</p>
+              <div className="partner-logos-marquee py-2">
+                <div className="partner-logos-track items-center gap-12 sm:gap-16">
+                  {loopedPartnerLogos.map((logo, index) => (
+                    <div
+                      key={`${logo.alt}-${index}`}
+                      className="partner-logos-card group flex h-20 items-center justify-center"
+                      aria-hidden={index >= partnerLogos.length}
+                    >
+                      <img
+                        src={logo.src}
+                        alt={logo.alt}
+                        className="max-h-9 w-auto max-w-full object-contain grayscale opacity-65 transition duration-300 group-hover:grayscale-0 group-hover:opacity-100 sm:max-h-11"
+                      />
+                    </div>
+                  ))}
                 </div>
-                <p className="mb-6 text-lg text-slate-700">
-                  A Kifer Saúde nasceu para simplificar o acesso aos melhores planos, com atendimento humano e soluções que cabem no seu bolso.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="para-quem" className="scroll-mt-32 bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">para quem é</p>
+              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">A home te leva para o próximo passo certo.</h2>
+              <p className="mt-4 text-lg leading-relaxed text-slate-600">
+                Se você quer cotar como pessoa física ou entender se existe uma via mais inteligente via CNPJ, a Kifer orienta o caminho sem enrolação.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-6 lg:grid-cols-2">
+              {audienceCards.map((card) => (
+                <article key={card.eyebrow} className="rounded-[2rem] border border-white/70 bg-white p-8 shadow-[0_26px_50px_-42px_rgba(15,23,42,0.28)]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-black uppercase tracking-[0.18em] text-orange-700">{card.eyebrow}</p>
+                      <h3 className="mt-4 text-3xl font-bold leading-tight text-slate-900">{card.title}</h3>
+                    </div>
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+                      <card.icon className="h-7 w-7" />
+                    </span>
+                  </div>
+
+                  <p className="mt-5 text-base leading-relaxed text-slate-600">{card.description}</p>
+
+                  <button
+                    type="button"
+                    onClick={() => scrollToForm(card.contractKind)}
+                    className="mt-8 inline-flex items-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:from-orange-600 hover:to-orange-700"
+                  >
+                    {card.ctaLabel}
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </button>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="como-funciona" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">como funciona</p>
+              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Três passos para sair da dúvida com mais clareza.</h2>
+            </div>
+
+            <div className="mt-14 grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  step: '1',
+                  title: 'Você me conta o que precisa',
+                  text: 'Cidade, idade, rede desejada e perfil de contratação entram primeiro para a análise nascer certa.',
+                  icon: MessageCircle,
+                },
+                {
+                  step: '2',
+                  title: 'Eu comparo as melhores opções',
+                  text: 'A comparação considera operadora, custo, carência, coparticipação e rede funcional para sua rotina.',
+                  icon: Search,
+                },
+                {
+                  step: '3',
+                  title: 'Você escolhe e eu cuido do resto',
+                  text: 'A Kifer acompanha a contratação até a ativação para você não ficar sozinho no meio do processo.',
+                  icon: CheckCircle,
+                },
+              ].map((item) => (
+                <article key={item.step} className="relative rounded-[2rem] border border-slate-200 bg-slate-50 p-8 shadow-sm">
+                  <div className="absolute -left-3 top-8 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-xl font-bold text-white shadow-lg">
+                    {item.step}
+                  </div>
+                  <div className="ml-6">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-orange-700 shadow-sm">
+                      <item.icon className="h-8 w-8" />
+                    </div>
+                    <h3 className="mt-6 text-2xl font-bold text-slate-900">{item.title}</h3>
+                    <p className="mt-4 text-base leading-relaxed text-slate-600">{item.text}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="depoimentos" className="scroll-mt-32 bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">depoimentos</p>
+              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Clientes que saíram da cotação com mais segurança.</h2>
+            </div>
+
+            <div className="mt-12 grid gap-6 md:grid-cols-3">
+              {testimonials.map((testimonial) => (
+                <article key={testimonial.name} className="rounded-[2rem] border border-white/80 bg-white p-8 shadow-[0_26px_50px_-42px_rgba(15,23,42,0.28)]">
+                  <div className="mb-5 flex items-center gap-1 text-yellow-400">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <Star key={`${testimonial.name}-${index}`} className="h-5 w-5 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-lg leading-relaxed text-slate-700">&quot;{testimonial.quote}&quot;</p>
+                  <div className="mt-8 flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-lg font-bold text-orange-700">
+                      {testimonial.initial}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-900">{testimonial.name}</p>
+                      <p className="text-sm text-slate-500">{testimonial.detail}</p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-10 text-center">
+              <a
+                href={GOOGLE_REVIEWS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center font-semibold text-orange-700 transition-colors hover:text-orange-800"
+              >
+                Ver mais avaliações no Google
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section id="quem-somos" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <div className="relative overflow-hidden rounded-[2.4rem] bg-gradient-to-br from-orange-100 via-orange-50 to-amber-100 p-4 shadow-[0_34px_70px_-48px_rgba(122,62,22,0.45)]">
+              <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white">
+                <img
+                  src="/image.png"
+                  alt="Luiza Kifer, corretora independente de planos de saúde no Rio de Janeiro"
+                  className="h-full min-h-[420px] w-full object-cover object-[center_28%]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">sobre a Luiza</p>
+              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Uma pessoa real te acompanha do início até a ativação.</h2>
+              <p className="mt-6 text-lg leading-relaxed text-slate-600">
+                Sou corretora independente no Rio de Janeiro. Trabalho com as principais operadoras e cuido de cada cliente com o mesmo cuidado que eu teria ao orientar alguém da minha família.
+              </p>
+              <p className="mt-4 text-lg leading-relaxed text-slate-600">
+                O foco da Kifer é deixar a contratação mais clara, comparando custo, rede e regras com linguagem simples para você decidir sem pressão e sem surpresa depois.
+              </p>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                {[
+                  {
+                    title: 'Corretora independente',
+                    description: 'Comparação com visão consultiva, sem discurso engessado de operadora única.',
+                    icon: Heart,
+                  },
+                  {
+                    title: 'Especialista no RJ',
+                    description: 'Leitura prática de bairros, cidades e rede credenciada que fazem sentido para a rotina local.',
+                    icon: MapPin,
+                  },
+                  {
+                    title: 'Atendimento via WhatsApp',
+                    description: 'Velocidade para esclarecer dúvidas e tocar a contratação sem burocracia desnecessária.',
+                    icon: MessageCircle,
+                  },
+                  {
+                    title: 'Acompanhamento até o pós-venda',
+                    description: 'Você não recebe só a cotação. Recebe suporte até a ativação ficar resolvida.',
+                    icon: Phone,
+                  },
+                ].map((item) => (
+                  <article key={item.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+                    <item.icon className="h-8 w-8 text-orange-700" />
+                    <h3 className="mt-4 text-lg font-bold text-slate-900">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.description}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="faq" className="scroll-mt-32 bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-4xl">
+            <div className="text-center">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">faq rápido</p>
+              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Perguntas frequentes antes de contratar.</h2>
+            </div>
+
+            <div className="mt-12 space-y-4">
+              {faqItems.map((faq, index) => (
+                <div key={faq.question} className="overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
+                    className="flex w-full items-center justify-between gap-5 px-6 py-5 text-left transition-colors hover:bg-slate-50 sm:px-8 sm:py-6"
+                    aria-expanded={openFaqIndex === index}
+                  >
+                    <span className="text-lg font-semibold leading-relaxed text-slate-900">{faq.question}</span>
+                    <ChevronDown
+                      className={`h-6 w-6 shrink-0 text-orange-600 transition-transform ${openFaqIndex === index ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {openFaqIndex === index ? (
+                    <div className="px-6 pb-6 sm:px-8">
+                      <p className="leading-relaxed text-slate-600">{faq.answer}</p>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="cotacao" className="scroll-mt-32 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
+            <div className="text-white">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-100">cotação gratuita</p>
+              <h2 className="mt-4 text-4xl font-bold md:text-5xl">Receba um comparativo coerente com o seu perfil.</h2>
+              <p className="mt-5 text-lg leading-relaxed text-orange-50">
+                Preencha o formulário e receba orientação para pessoa física, MEI ou empresa pequena com foco em rede, custo e contratação sem complicação.
+              </p>
+
+              <div className="mt-8 space-y-4 rounded-[2rem] border border-white/15 bg-white/10 p-6 backdrop-blur-sm">
+                {[
+                  'Atendimento sem custo e sem compromisso.',
+                  'Análise prática da sua cidade, faixa etária e número de vidas.',
+                  'Contato direto pelo WhatsApp para agilizar a resposta.',
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-3 text-sm leading-relaxed text-white/90">
+                    <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-white" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="rounded-[2rem] bg-white p-8 shadow-2xl md:p-10">
+              <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg transition-all hover:scale-[1.01] hover:from-orange-600 hover:to-orange-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
+                <ChevronRight className="ml-2 inline-block h-5 w-5" />
+              </button>
+
+              <p className="mt-4 text-center text-sm text-slate-500">Seu contato é usado apenas para montar a melhor cotação para o seu perfil.</p>
+            </form>
+          </div>
+        </section>
+
+        <section className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl rounded-[2.4rem] border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#172033] to-[#1e293b] p-8 shadow-[0_38px_80px_-52px_rgba(15,23,42,0.7)] md:p-12">
+            <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-200">cta final</p>
+                <h2 className="mt-4 text-4xl font-bold md:text-5xl">Quer resolver isso hoje pelo WhatsApp?</h2>
+                <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-300">
+                  Se preferir, pule direto para a conversa. A Kifer entende seu cenário, compara as opções e te acompanha até a contratação acontecer de verdade.
                 </p>
+              </div>
+
+              <div className="flex flex-col gap-4 lg:items-end">
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-2xl bg-green-600 px-8 py-4 text-base font-bold text-white shadow-xl transition-all hover:-translate-y-0.5 hover:bg-green-700"
+                >
+                  <MessageCircle className="mr-2 h-5 w-5" />
+                  Quero falar agora no WhatsApp
+                </a>
                 <button
                   type="button"
-                  onClick={() => setShowStoryModal(true)}
-                  className="inline-flex items-center font-semibold text-orange-600 transition-colors hover:text-orange-700"
+                  onClick={() => setShowQuoteModal(true)}
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-8 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10"
                 >
-                  Conheça nossa história completa
-                  <ChevronRight className="ml-1 h-4 w-4" />
+                  Prefiro preencher a cotação
                 </button>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="como-funciona" className="scroll-mt-32 bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
+        <footer className="bg-slate-950 px-4 py-14 text-white sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Como funciona</h2>
-              <p className="text-xl text-slate-600">Simples, rápido e sem burocracia</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              {[
-                {
-                  step: '1',
-                  title: 'Conte sobre você',
-                  text: 'Informe idade, cidade e quem deseja incluir no plano.',
-                  icon: MessageCircle,
-                },
-                {
-                  step: '2',
-                  title: 'Receba as opções',
-                  text: 'Comparativos claros com valores e coberturas personalizadas.',
-                  icon: Search,
-                },
-                {
-                  step: '3',
-                  title: 'Escolha e ative',
-                  text: 'Sem burocracia, com acompanhamento até a carteirinha.',
-                  icon: CheckCircle,
-                },
-              ].map((item) => (
-                <article key={item.step} className="relative rounded-2xl bg-white p-8 shadow-lg transition-shadow hover:shadow-xl">
-                  <div className="absolute -left-4 -top-4 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-xl font-bold text-white shadow-lg">
-                    {item.step}
-                  </div>
-                  <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-100">
-                    <item.icon className="h-8 w-8 text-orange-600" />
-                  </div>
-                  <h3 className="mb-4 text-center text-2xl font-bold text-slate-900">{item.title}</h3>
-                  <p className="text-center text-slate-600">{item.text}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="planos" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Operadoras parceiras</h2>
-              <p className="text-xl text-slate-600">Trabalhamos com as principais operadoras do mercado</p>
-            </div>
-
-            <div className="partner-logos-marquee py-3">
-              <div className="partner-logos-track items-center gap-12 sm:gap-16">
-                {loopedPartnerLogos.map((logo, index) => (
-                  <div
-                    key={`${logo.alt}-${index}`}
-                    className="partner-logos-card group flex h-20 items-center justify-center"
-                    aria-hidden={index >= partnerLogos.length}
-                  >
-                    <img
-                      src={logo.src}
-                      alt={logo.alt}
-                      className="max-h-9 w-auto max-w-full object-contain grayscale opacity-65 transition duration-300 group-hover:grayscale-0 group-hover:opacity-100 sm:max-h-11"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-12 text-center">
-              <div className="inline-flex items-center justify-center rounded-2xl border-2 border-orange-200 bg-orange-50 px-6 py-4">
-                <CheckCircle className="mr-3 h-6 w-6 flex-shrink-0 text-orange-600" />
-                <p className="text-lg text-slate-700">
-                  <span className="font-semibold text-slate-900">E muitas outras operadoras.</span> Trabalhamos com várias opções para encontrar o plano ideal para você.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Depoimentos reais</h2>
-              <p className="text-xl text-slate-600">O que nossos clientes dizem sobre nós</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              {testimonials.map((testimonial) => (
-                <article key={testimonial.name} className="rounded-2xl bg-slate-50 p-8 shadow-lg transition-shadow hover:shadow-xl">
-                  <div className="mb-4 flex items-center">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Star key={`${testimonial.name}-${index}`} className="h-5 w-5 fill-current text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="mb-6 italic text-slate-700">"{testimonial.quote}"</p>
-                  <div className="flex items-center">
-                    <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-200">
-                      <span className="font-bold text-orange-700">{testimonial.initial}</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">{testimonial.name}</p>
-                      <p className="text-sm text-slate-600">{testimonial.detail}</p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className="mt-8 text-center">
-              <button
-                type="button"
-                onClick={() => setShowReviewsModal(true)}
-                className="inline-flex items-center font-semibold text-orange-600 transition-colors hover:text-orange-700"
-              >
-                Mais avaliações no Google
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-gradient-to-br from-orange-500 to-amber-600 px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl text-center">
-            <div className="rounded-3xl bg-white p-12 shadow-2xl">
-              <TrendingUp className="mx-auto mb-6 h-16 w-16 text-orange-600" />
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Planos para empresas e MEI</h2>
-              <p className="mb-8 text-xl text-slate-700">Tem CNPJ ou MEI? Você pode economizar até 40% no plano de saúde.</p>
-              <button
-                type="button"
-                onClick={scrollToForm}
-                className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-10 py-4 text-lg font-bold text-white shadow-lg transition-all hover:from-orange-600 hover:to-orange-700"
-              >
-                Ver planos empresariais
-              </button>
-              <p className="mt-6 text-sm font-semibold text-slate-600">Mais vendidos para MEI</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Por que escolher a Kifer Saúde</h2>
-              <p className="text-xl text-slate-600">O que nos torna diferentes</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {valueCards.map((card) => (
-                <article key={card.title} className="rounded-xl bg-white p-6 shadow-lg transition-shadow hover:shadow-xl">
-                  <card.icon className="mb-4 h-12 w-12 text-orange-600" />
-                  <h3 className="mb-2 text-xl font-bold text-slate-900">{card.title}</h3>
-                  <p className="text-slate-600">{card.description}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="faq" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-16 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-slate-900 md:text-5xl">Perguntas frequentes</h2>
-              <p className="text-xl text-slate-600">Tire suas dúvidas sobre planos de saúde</p>
-            </div>
-
-            <div className="mx-auto max-w-4xl space-y-4">
-              {faqItems.map((faq, index) => (
-                <div key={faq.question} className="overflow-hidden rounded-2xl bg-slate-50 shadow-sm transition-shadow hover:shadow-md">
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
-                    className="flex w-full items-center justify-between px-8 py-6 text-left transition-colors hover:bg-slate-100"
-                    aria-expanded={openFaqIndex === index}
-                  >
-                    <span className="pr-8 text-lg font-semibold text-slate-900">{faq.question}</span>
-                    <ChevronDown
-                      className={`h-6 w-6 flex-shrink-0 text-orange-600 transition-transform ${openFaqIndex === index ? 'rotate-180' : ''}`}
-                    />
-                  </button>
-                  {openFaqIndex === index ? (
-                    <div className="px-8 pb-6">
-                      <p className="leading-relaxed text-slate-700">{faq.answer}</p>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-12 text-center">
-              <p className="mb-4 text-slate-600">Não encontrou sua resposta?</p>
-              <button
-                type="button"
-                onClick={() => setShowQuoteModal(true)}
-                className="rounded-xl bg-orange-600 px-8 py-3 font-semibold text-white transition-colors hover:bg-orange-700"
-              >
-                Fale com um especialista
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section id="cotacao" className="scroll-mt-32 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl">
-            <div className="mb-12 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Faça sua cotação personalizada</h2>
-              <p className="text-xl text-orange-50">Prometemos zero spam. Seu contato é usado apenas para montar as melhores opções.</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="rounded-3xl bg-white p-8 shadow-2xl md:p-12">
-              <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
-
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg transition-all hover:scale-[1.02] hover:from-orange-600 hover:to-orange-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
-                <ChevronRight className="ml-2 inline-block h-5 w-5" />
-              </button>
-
-              <p className="mt-4 text-center text-sm text-slate-500">Resposta em até 10 minutos</p>
-            </form>
-          </div>
-        </section>
-
-        <section id="contato" className="scroll-mt-32 bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-12 text-center">
-              <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Entre em contato</h2>
-              <p className="text-xl text-slate-300">Estamos prontos para te ajudar a encontrar o plano ideal</p>
-            </div>
-
-            <div className="mb-12 grid grid-cols-1 gap-8 md:grid-cols-3">
-              <a href={`tel:+${WHATSAPP_PHONE}`} className="group rounded-2xl bg-slate-800 p-8 transition-all hover:bg-slate-700">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500 transition-transform group-hover:scale-110">
-                  <Phone className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="mb-2 text-center text-xl font-bold text-white">Telefone</h3>
-                <p className="text-center text-slate-300">(21) 97930-2389</p>
-              </a>
-
-              <a href={`mailto:${EMAIL}`} className="group rounded-2xl bg-slate-800 p-8 transition-all hover:bg-slate-700">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500 transition-transform group-hover:scale-110">
-                  <Mail className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="mb-2 text-center text-xl font-bold text-white">E-mail</h3>
-                <p className="text-center text-slate-300">{EMAIL}</p>
-              </a>
-
-              <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="group rounded-2xl bg-slate-800 p-8 transition-all hover:bg-slate-700">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-500 transition-transform group-hover:scale-110">
-                  <MessageCircle className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="mb-2 text-center text-xl font-bold text-white">WhatsApp</h3>
-                <p className="text-center text-slate-300">Atendimento rápido</p>
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <footer className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-12 grid grid-cols-1 gap-12 md:grid-cols-4">
+            <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
               <div>
-                <div className="mb-4 flex items-center space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600">
                     <PublicBrandMark className="h-6 w-auto text-white" />
                   </div>
                   <span className="text-2xl font-bold">Kifer Saúde</span>
                 </div>
-                <p className="leading-relaxed text-slate-400">Corretora especializada em planos de saúde para todo o estado do Rio de Janeiro.</p>
+                <p className="mt-5 max-w-md text-sm leading-relaxed text-slate-400">
+                  Corretora especializada em planos de saúde no Rio de Janeiro, com atendimento humano, comparação consultiva e suporte até o pós-venda.
+                </p>
               </div>
 
               <div>
-                <h3 className="mb-4 text-lg font-bold">Links úteis</h3>
-                <ul className="space-y-3 text-slate-400">
-                  <li>
-                    <a href="#quem-somos" className="transition-colors hover:text-orange-400">
-                      Sobre nós
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#cotacao" className="transition-colors hover:text-orange-400">
-                      Cotação
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#faq" className="transition-colors hover:text-orange-400">
-                      FAQ
-                    </a>
-                  </li>
-                  <li>
-                    <a href="#contato" className="transition-colors hover:text-orange-400">
-                      Contato
-                    </a>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="mb-4 text-lg font-bold">Contato</h3>
-                <div className="space-y-3 text-slate-400">
-                  <div className="flex items-start">
-                    <MapPin className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-orange-500" />
-                    <span>Rio de Janeiro, RJ</span>
-                  </div>
-                  <a href={`mailto:${EMAIL}`} className="flex items-start transition-colors hover:text-orange-400">
-                    <Mail className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-orange-500" />
-                    <span>{EMAIL}</span>
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-orange-200">Links rápidos</h3>
+                <div className="mt-5 space-y-3 text-sm text-slate-400">
+                  <a href="#para-quem" className="block transition-colors hover:text-white">
+                    Para quem é
                   </a>
-                  <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="flex items-start transition-colors hover:text-orange-400">
-                    <Instagram className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-orange-500" />
-                    <span>@souluizakifer</span>
+                  <a href="#como-funciona" className="block transition-colors hover:text-white">
+                    Como funciona
+                  </a>
+                  <a href="#faq" className="block transition-colors hover:text-white">
+                    FAQ
+                  </a>
+                  <a href="#cotacao" className="block transition-colors hover:text-white">
+                    Cotação gratuita
                   </a>
                 </div>
               </div>
 
               <div>
-                <h3 className="mb-4 text-lg font-bold">Legal</h3>
-                <div className="space-y-2 text-slate-400">
-                  <p className="text-sm">CNPJ: {CNPJ}</p>
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-orange-200">Contato</h3>
+                <div className="mt-5 space-y-3 text-sm text-slate-400">
+                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-white">
+                    <MessageCircle className="h-4 w-4 text-green-400" />
+                    WhatsApp
+                  </a>
+                  <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-white">
+                    <Instagram className="h-4 w-4 text-orange-300" />
+                    @souluizakifer
+                  </a>
+                  <span className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-orange-300" />
+                    Rio de Janeiro, RJ
+                  </span>
                 </div>
               </div>
-            </div>
 
-            <div className="border-t border-slate-800 pt-8 text-center text-slate-400">
-              <p>Kifer Saúde. Todos os direitos reservados.</p>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-orange-200">Legal</h3>
+                <div className="mt-5 space-y-3 text-sm text-slate-400">
+                  <p>CNPJ: {CNPJ}</p>
+                  <p>Desenvolvido por Kifer Saúde</p>
+                </div>
+              </div>
             </div>
           </div>
         </footer>
@@ -1298,119 +1330,6 @@ export default function HomePage() {
 
               <p className="mt-4 text-center text-sm text-slate-500">Resposta em até 10 minutos</p>
             </form>
-          </OverlayModal>
-        ) : null}
-
-        {showStoryModal ? (
-          <OverlayModal title="Nossa história" maxWidthClass="max-w-4xl" onClose={() => setShowStoryModal(false)}>
-            <div className="space-y-6">
-              <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Como tudo começou</h3>
-                <p className="mb-4 leading-relaxed text-slate-700">
-                  A Kifer Saúde nasceu da visão de tornar o acesso a planos de saúde mais simples, transparente e humano. Percebemos que muitas pessoas se sentiam perdidas em meio a tantas opções, termos técnicos e processos burocráticos no mercado de saúde suplementar.
-                </p>
-                <p className="leading-relaxed text-slate-700">
-                  Por isso, criamos uma consultoria que não vende apenas planos: orienta, compara, explica riscos e acompanha cada etapa da jornada do cliente com proximidade real.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossa missão</h3>
-                <p className="leading-relaxed text-slate-700">
-                  Contratar um plano de saúde não deve ser complicado. Nossa missão é traduzir o contrato para a linguagem do dia a dia, comparar as melhores opções do mercado e encontrar o plano que realmente faz sentido para cada pessoa, família ou empresa.
-                </p>
-              </div>
-
-              <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Por que somos diferentes</h3>
-                <div className="rounded-r-xl border-l-4 border-orange-500 bg-orange-50 p-6">
-                  <ul className="space-y-3 text-slate-700">
-                    {[
-                      'Atendimento humanizado para entender contexto, urgência e rotina.',
-                      'Transparência total sobre rede, carências e custo real.',
-                      'Acompanhamento contínuo, inclusive depois da contratação.',
-                      'Especialização regional com leitura prática do mercado no RJ.',
-                    ].map((item) => (
-                      <li key={item} className="flex items-start">
-                        <CheckCircle className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="mb-4 text-2xl font-bold text-slate-900">Nossos valores</h3>
-                <p className="leading-relaxed text-slate-700">
-                  Construímos nossa empresa sobre três pilares: confiança, transparência e compromisso. Cada cliente que atendemos representa uma relação de longo prazo baseada em respeito, clareza e cuidado genuíno.
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 p-8 text-white">
-                <h3 className="mb-4 text-2xl font-bold">Mais de 500 clientes satisfeitos</h3>
-                <p className="mb-4 leading-relaxed text-white/90">
-                  Já ajudamos centenas de famílias a encontrarem o plano certo. Nossa taxa de satisfação reflete o compromisso que temos com cada pessoa que confia no nosso trabalho.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowStoryModal(false);
-                    setShowQuoteModal(true);
-                  }}
-                  className="rounded-xl bg-white px-6 py-3 font-bold text-orange-600 transition-all hover:bg-orange-50"
-                >
-                  Faça parte dessa história
-                </button>
-              </div>
-            </div>
-          </OverlayModal>
-        ) : null}
-
-        {showReviewsModal ? (
-          <OverlayModal
-            title="Avaliações de clientes"
-            subtitle="Nota média: 4.9 estrelas"
-            maxWidthClass="max-w-5xl"
-            onClose={() => setShowReviewsModal(false)}
-          >
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {reviewItems.map((review) => (
-                <article key={`${review.name}-${review.date}`} className="rounded-2xl bg-slate-50 p-6 shadow-sm transition-shadow hover:shadow-md">
-                  <div className="mb-3 flex items-start justify-between gap-4">
-                    <div className="flex items-center">
-                      <div className="mr-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-200">
-                        <span className="text-lg font-bold text-orange-700">{review.name[0]}</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-900">{review.name}</p>
-                        <p className="text-sm text-slate-600">{review.age} anos</p>
-                      </div>
-                    </div>
-                    <span className="text-sm text-slate-500">{review.date}</span>
-                  </div>
-                  <div className="mb-3 flex items-center">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Star key={`${review.name}-${index}`} className={`h-5 w-5 ${index < review.rating ? 'fill-current text-yellow-400' : 'text-slate-300'}`} />
-                    ))}
-                  </div>
-                  <p className="leading-relaxed text-slate-700">{review.review}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="mt-8 rounded-2xl border-2 border-orange-200 bg-orange-50 p-6 text-center">
-              <p className="mb-4 text-slate-700">Quer ver mais avaliações ou deixar a sua opinião?</p>
-              <a
-                href="https://www.google.com/search?q=kifer+saude"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center rounded-xl bg-orange-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-700"
-              >
-                Ver no Google
-                <ChevronRight className="ml-2 h-5 w-5" />
-              </a>
-            </div>
           </OverlayModal>
         ) : null}
       </div>

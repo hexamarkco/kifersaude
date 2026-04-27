@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
+import LeadForm from '../../../components/LeadForm';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
 import ReminderSchedulerModal from '../../../components/ReminderSchedulerModal';
@@ -95,6 +96,10 @@ type QuickReplyOption = {
 type ChatAgendaSummary = {
   pendingCount: number;
   nextReminder: Reminder | null;
+};
+type CreateLeadDraft = {
+  chatId: string;
+  initialValues: Partial<Lead>;
 };
 type LocalOutgoingRetryPayload =
   | { kind: 'text'; text: string }
@@ -2453,6 +2458,7 @@ export default function WhatsAppInboxScreen() {
   const [leadSearchResults, setLeadSearchResults] = useState<CommWhatsAppLeadSearchResult[]>([]);
   const [leadSearchLoading, setLeadSearchLoading] = useState(false);
   const [linkLoadingLeadId, setLinkLoadingLeadId] = useState<string | null>(null);
+  const [createLeadDraft, setCreateLeadDraft] = useState<CreateLeadDraft | null>(null);
   const [startChatModalOpen, setStartChatModalOpen] = useState(false);
   const [startChatQuery, setStartChatQuery] = useState('');
   const [savedContacts, setSavedContacts] = useState<CommWhatsAppPhoneContact[]>([]);
@@ -5640,6 +5646,55 @@ export default function WhatsAppInboxScreen() {
     setLeadDrawerOpen(false);
   };
 
+  const handleOpenCreateLeadFromChat = useCallback(() => {
+    if (!selectedChat) {
+      return;
+    }
+
+    setCreateLeadDraft({
+      chatId: selectedChat.id,
+      initialValues: {
+        nome_completo: selectedChatDisplayName,
+        telefone: selectedChat.phone_number || selectedChat.phone_digits || '',
+      },
+    });
+  }, [selectedChat, selectedChatDisplayName]);
+
+  const handleCloseCreateLeadFromChat = useCallback(() => {
+    setCreateLeadDraft(null);
+  }, []);
+
+  const handleCreateLeadFromChatSaved = useCallback(async (lead: Lead) => {
+    const targetChatId = createLeadDraft?.chatId;
+    setCreateLeadDraft(null);
+
+    if (!targetChatId) {
+      return;
+    }
+
+    try {
+      const updatedChat = await commWhatsAppService.linkChatLead(targetChatId, lead.id);
+      autoLinkSuppressedChatIdRef.current = null;
+      autoLinkedLeadKeyRef.current = `${updatedChat.id}:${lead.id}`;
+      setAutoLinkedChatIds((current) => {
+        if (!current[updatedChat.id]) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[updatedChat.id];
+        return next;
+      });
+      upsertChatLocally(updatedChat);
+      setSelectedChatId(updatedChat.id);
+      await Promise.all([loadLeadPanel(updatedChat), loadChats()]);
+      toast.success('Lead criado e vinculado a conversa.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao vincular lead criado no chat', error);
+      toast.error('Lead criado, mas nao foi possivel vincula-lo ao chat.');
+    }
+  }, [createLeadDraft?.chatId, loadChats, loadLeadPanel, upsertChatLocally]);
+
   const handleLinkLead = useCallback(async (leadId: string, options: { silent?: boolean; autoLinked?: boolean } = {}) => {
     if (!selectedChat) {
       return;
@@ -7799,11 +7854,21 @@ export default function WhatsAppInboxScreen() {
           searchResults={leadSearchResults}
           suggestedLead={suggestedLead}
           searchLoading={leadSearchLoading}
+          onCreateLead={selectedChat && !selectedChat.lead_id ? handleOpenCreateLeadFromChat : undefined}
           onLinkLead={(leadId) => void handleLinkLead(leadId)}
           linkLoadingLeadId={linkLoadingLeadId}
           canViewAgenda={canViewAgenda}
           canEditAgenda={canEditAgenda}
         />
+
+        {createLeadDraft ? (
+          <LeadForm
+            lead={null}
+            initialValues={createLeadDraft.initialValues}
+            onClose={handleCloseCreateLeadFromChat}
+            onSave={(lead) => void handleCreateLeadFromChatSaved(lead)}
+          />
+        ) : null}
 
         <WhatsAppStartChatModal
           isOpen={startChatModalOpen}

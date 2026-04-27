@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowUpRight, Bell, CalendarPlus, Check, Clock3, Loader2, RefreshCw, Sparkles, Unlink, Info, Link2 } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Bell, CalendarPlus, Check, Clock3, Loader2, RefreshCw, Sparkles, Unlink, Info, Link2, Plus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
@@ -40,6 +40,7 @@ type WhatsAppLeadDrawerProps = {
   searchResults: CommWhatsAppLeadSearchResult[];
   suggestedLead: CommWhatsAppLeadSearchResult | null;
   searchLoading: boolean;
+  onCreateLead: (() => void) | undefined;
   onLinkLead: (leadId: string) => void;
   linkLoadingLeadId: string | null;
   canViewAgenda: boolean;
@@ -84,6 +85,7 @@ export default function WhatsAppLeadDrawer({
   searchResults,
   suggestedLead,
   searchLoading,
+  onCreateLead,
   onLinkLead,
   linkLoadingLeadId,
   canViewAgenda,
@@ -536,6 +538,13 @@ export default function WhatsAppLeadDrawer({
               </div>
 
               <div className="space-y-3">
+                {onCreateLead ? (
+                  <Button variant="primary" size="sm" className="w-full justify-center" onClick={onCreateLead}>
+                    <Plus className="h-4 w-4" />
+                    Criar novo lead
+                  </Button>
+                ) : null}
+
                 <Input
                   value={searchQuery}
                   onChange={(event: ChangeEvent<HTMLInputElement>) => onSearchQueryChange(event.target.value)}

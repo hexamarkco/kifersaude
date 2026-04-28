@@ -75,8 +75,6 @@ type WhatsAppAgendaCacheSnapshot = {
   updatedAt: string;
 };
 
-let whatsAppAgendaCacheSnapshot: WhatsAppAgendaCacheSnapshot | null = null;
-
 const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
   if (items.length === 0 || batchSize <= 0) {
     return [];
@@ -199,6 +197,7 @@ export default function WhatsAppAgendaModal({
   const [onlyCurrentLead, setOnlyCurrentLead] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
+  const loadRemindersRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const applyAgendaSnapshot = useCallback((snapshot: WhatsAppAgendaCacheSnapshot) => {
@@ -274,6 +273,7 @@ export default function WhatsAppAgendaModal({
   }, [quickScheduleDropdown]);
 
   const loadReminders = useCallback(async (options?: { showLoading?: boolean }) => {
+    const requestId = ++loadRemindersRequestIdRef.current;
     const showLoading = options?.showLoading ?? false;
 
     if (showLoading) {
@@ -313,13 +313,20 @@ export default function WhatsAppAgendaModal({
         updatedAt: new Date().toISOString(),
       };
 
-      whatsAppAgendaCacheSnapshot = snapshot;
+      if (requestId !== loadRemindersRequestIdRef.current) {
+        return;
+      }
+
       applyAgendaSnapshot(snapshot);
     } catch (loadError) {
+      if (requestId !== loadRemindersRequestIdRef.current) {
+        return;
+      }
+
       console.error('[WhatsAppAgendaModal] erro ao carregar agenda', loadError);
       setError('Nao foi possivel carregar a agenda agora.');
     } finally {
-      if (showLoading) {
+      if (showLoading && requestId === loadRemindersRequestIdRef.current) {
         setLoading(false);
       }
     }
@@ -327,20 +334,22 @@ export default function WhatsAppAgendaModal({
 
   useEffect(() => {
     if (!isOpen) {
+      loadRemindersRequestIdRef.current += 1;
       return;
     }
 
     setSelectedDate(getDefaultSelectedDate());
+    setSearchQuery('');
+    setTypeFilter('all');
     setOnlyCurrentLead(false);
     setShowCompleted(false);
-
-    if (whatsAppAgendaCacheSnapshot) {
-      applyAgendaSnapshot(whatsAppAgendaCacheSnapshot);
-      setLoading(false);
-      void loadReminders();
-    } else {
-      void loadReminders({ showLoading: true });
-    }
+    setError(null);
+    setLastUpdated(null);
+    setReminders([]);
+    setLeadsMap(new Map());
+    setContractsMap(new Map());
+    pendingRefreshIdsRef.current.clear();
+    void loadReminders({ showLoading: true });
 
     const channel = supabase
       .channel(`whatsapp-agenda-reminders-${Math.random().toString(36).slice(2)}`)
@@ -369,7 +378,7 @@ export default function WhatsAppAgendaModal({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [applyAgendaSnapshot, isOpen, loadReminders]);
+  }, [isOpen, loadReminders]);
 
   useEffect(() => {
     if (currentLead) {

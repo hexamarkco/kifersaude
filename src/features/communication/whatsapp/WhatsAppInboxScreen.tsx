@@ -102,7 +102,7 @@ type CreateLeadDraft = {
   initialValues: Partial<Lead>;
 };
 type LocalOutgoingRetryPayload =
-  | { kind: 'text'; text: string }
+  | { kind: 'text'; text: string; clientRequestId?: string }
   | {
       kind: 'media';
       mediaKind: CommWhatsAppMediaSendKind;
@@ -112,6 +112,7 @@ type LocalOutgoingRetryPayload =
       waveform?: string;
       fileName?: string;
       previewUrl?: string | null;
+      clientRequestId?: string;
     }
   | {
       kind: 'remote_media';
@@ -121,7 +122,14 @@ type LocalOutgoingRetryPayload =
       fileName?: string;
       caption?: string;
       previewUrl?: string | null;
+      clientRequestId?: string;
     };
+
+type QueuedTextMessage = {
+  segment: string;
+  optimisticMessage: CommWhatsAppMessage;
+  clientRequestId: string;
+};
 
 type MessageQuoteInfo = {
   externalMessageId: string | null;
@@ -169,6 +177,7 @@ const DOCUMENT_ATTACHMENT_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.
 const AUDIO_ATTACHMENT_ACCEPT = 'audio/*,.mp3,.wav,.ogg,.m4a,.aac';
 const DEFAULT_ATTACHMENT_ACCEPT = `${MEDIA_ATTACHMENT_ACCEPT},${DOCUMENT_ATTACHMENT_ACCEPT},${AUDIO_ATTACHMENT_ACCEPT}`;
 const createLocalOutgoingMessageId = () => `local-message-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const createClientRequestId = () => `client-request-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 const VIDEO_LIKE_MESSAGE_TYPES = new Set(['video', 'gif', 'short']);
 const GALLERY_MESSAGE_TYPES = new Set(['image', 'video', 'gif', 'short']);
 const GALLERY_GROUP_MAX_GAP_MS = 2 * 60 * 1000;
@@ -185,6 +194,14 @@ const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document', cap
   if (kind === 'video') return '[Video]';
   if (kind === 'audio' || kind === 'voice') return '[Audio]';
   return '[Documento]';
+};
+
+const buildComposerQueueSnapshotKey = (chatId: string, text: string, attachments: PendingAttachment[]) => {
+  const attachmentKey = attachments
+    .map((attachment) => `${attachment.id}:${attachment.file.name}:${attachment.file.size}:${attachment.kind}`)
+    .join('|');
+
+  return `${chatId}:${text}:${attachmentKey}`;
 };
 
 const getMessageSummaryMarker = (messageType: string) => {
@@ -2563,6 +2580,10 @@ export default function WhatsAppInboxScreen() {
   const attachmentPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const localOutgoingRetryPayloadRef = useRef<Map<string, LocalOutgoingRetryPayload>>(new Map());
   const localOutgoingMediaPreviewUrlsRef = useRef<Map<string, string>>(new Map());
+  const sendQueueByChatIdRef = useRef<Map<string, Promise<void>>>(new Map());
+  const activeSendOperationsRef = useRef(0);
+  const composerQueueSnapshotKeysRef = useRef<Set<string>>(new Set());
+  const retryingMessageIdsRef = useRef<Set<string>>(new Set());
   const autoSendVoiceRef = useRef(false);
   const autoLinkedLeadKeyRef = useRef<string | null>(null);
   const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
@@ -2664,6 +2685,55 @@ export default function WhatsAppInboxScreen() {
   const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
   const pollingEnabled = isDocumentVisible && isWindowFocused;
   const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
+
+  const beginSendOperation = useCallback(() => {
+    activeSendOperationsRef.current += 1;
+    setSending(true);
+
+    let released = false;
+    return () => {
+      if (released) {
+        return;
+      }
+
+      released = true;
+      activeSendOperationsRef.current = Math.max(0, activeSendOperationsRef.current - 1);
+      setSending(activeSendOperationsRef.current > 0);
+    };
+  }, []);
+
+  const enqueueChatSend = useCallback((chatId: string, task: () => Promise<void>) => {
+    const previous = sendQueueByChatIdRef.current.get(chatId) ?? Promise.resolve();
+    const next = previous
+      .catch(() => undefined)
+      .then(async () => {
+        const release = beginSendOperation();
+        try {
+          await task();
+        } finally {
+          release();
+        }
+      });
+
+    sendQueueByChatIdRef.current.set(chatId, next);
+    void next
+      .catch((error) => {
+        console.error('[WhatsAppInbox] erro na fila de envio', error);
+      })
+      .finally(() => {
+        if (sendQueueByChatIdRef.current.get(chatId) === next) {
+          sendQueueByChatIdRef.current.delete(chatId);
+        }
+      });
+
+    return next;
+  }, [beginSendOperation]);
+
+  const releaseComposerQueueSnapshotKeySoon = useCallback((key: string) => {
+    window.setTimeout(() => {
+      composerQueueSnapshotKeysRef.current.delete(key);
+    }, 250);
+  }, []);
 
   const buildChatsSignature = useCallback(
     (items: CommWhatsAppChat[]) =>
@@ -3596,10 +3666,6 @@ export default function WhatsAppInboxScreen() {
       return 'Digite uma mensagem no composer para usar a IA.';
     }
 
-    if (sending) {
-      return 'Aguarde o envio atual terminar para reescrever a mensagem.';
-    }
-
     if (voiceRecordingState !== 'idle') {
       return 'Finalize a gravacao de audio antes de reescrever a mensagem.';
     }
@@ -3609,7 +3675,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     return null;
-  }, [messageDraft, rewritingComposer, selectedChat, sending, voiceRecordingState]);
+  }, [messageDraft, rewritingComposer, selectedChat, voiceRecordingState]);
   const historyRecoveryDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para recuperar mensagens antigas.';
@@ -4900,7 +4966,7 @@ export default function WhatsAppInboxScreen() {
   }, [messageDraft, pendingAttachments.length, voiceAttachment?.id, selectedChatId]);
 
   const handleAttachmentMenuAction = (action: AttachmentMenuAction) => {
-    if (voiceRecordingState !== 'idle' || sending) {
+    if (voiceRecordingState !== 'idle') {
       return;
     }
 
@@ -4925,7 +4991,7 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleAttachmentInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (voiceRecordingState !== 'idle' || sending) {
+    if (voiceRecordingState !== 'idle') {
       event.target.value = '';
       return;
     }
@@ -5207,14 +5273,13 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const sendTextSegments = useCallback(async (chat: CommWhatsAppChat, textSegments: string[]) => {
+  const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[]) => {
     if (textSegments.length === 0) {
       return;
     }
 
-    let hadSuccessfulSend = false;
-
-    for (const segment of textSegments) {
+    const queuedMessages: QueuedTextMessage[] = textSegments.map((segment) => {
+      const clientRequestId = createClientRequestId();
       const optimisticMessage = buildOptimisticOutgoingMessage({
         chat,
         messageType: 'text',
@@ -5224,36 +5289,49 @@ export default function WhatsAppInboxScreen() {
       appendLocalOutgoingMessage(optimisticMessage, {
         kind: 'text',
         text: segment,
+        clientRequestId,
       });
       applyOptimisticChatSummary(chat, segment, optimisticMessage.message_at);
 
-      try {
-        const sendResult = await commWhatsAppService.sendTextMessage(chat.external_chat_id, segment);
-        hadSuccessfulSend = true;
-        patchLocalOutgoingMessage(optimisticMessage.id, {
-          external_message_id: sendResult.messageId,
-          delivery_status: sendResult.status,
-          status_updated_at: new Date().toISOString(),
-          error_message: null,
-        });
-        localOutgoingRetryPayloadRef.current.delete(optimisticMessage.id);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
-        patchLocalOutgoingMessage(optimisticMessage.id, {
-          delivery_status: 'failed',
-          status_updated_at: new Date().toISOString(),
-          error_message: message,
+      return { segment, optimisticMessage, clientRequestId };
+    });
+
+    enqueueChatSend(chat.id, async () => {
+      let hadSuccessfulSend = false;
+
+      for (const queued of queuedMessages) {
+        try {
+          const sendResult = await commWhatsAppService.sendTextMessage(chat.external_chat_id, queued.segment, {
+            clientRequestId: queued.clientRequestId,
+          });
+          hadSuccessfulSend = true;
+          patchLocalOutgoingMessage(queued.optimisticMessage.id, {
+            external_message_id: sendResult.messageId,
+            delivery_status: sendResult.status,
+            status_updated_at: new Date().toISOString(),
+            error_message: null,
+          });
+          localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
+          patchLocalOutgoingMessage(queued.optimisticMessage.id, {
+            delivery_status: 'failed',
+            status_updated_at: new Date().toISOString(),
+            error_message: message,
+          });
+        }
+      }
+
+      if (hadSuccessfulSend) {
+        hydratedChatsRef.current.add(chat.external_chat_id);
+        void Promise.all([loadMessages(chat, 'send'), loadChats()]).catch((error) => {
+          console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de texto', error);
         });
       }
-    }
+    });
+  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage]);
 
-    if (hadSuccessfulSend) {
-      hydratedChatsRef.current.add(chat.external_chat_id);
-      await Promise.all([loadMessages(chat, 'send'), loadChats()]);
-    }
-  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, loadChats, loadMessages, patchLocalOutgoingMessage]);
-
-  const handleSendMessage = useCallback(async () => {
+  const handleSendMessage = useCallback(() => {
     if (!selectedChat) return;
 
     const text = messageDraft.trim();
@@ -5266,10 +5344,13 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const shouldLockComposer = attachmentsSnapshot.length > 0;
-    if (shouldLockComposer) {
-      setSending(true);
+    const snapshotKey = buildComposerQueueSnapshotKey(selectedChat.id, messageDraft, attachmentsSnapshot);
+    if (composerQueueSnapshotKeysRef.current.has(snapshotKey)) {
+      return;
     }
+
+    composerQueueSnapshotKeysRef.current.add(snapshotKey);
+    releaseComposerQueueSnapshotKeySoon(snapshotKey);
 
     resetComposerAfterQueue();
 
@@ -5277,6 +5358,7 @@ export default function WhatsAppInboxScreen() {
       if (attachmentsSnapshot.length > 0) {
         const attachmentsToSend = attachmentsSnapshot.map((attachment, index) => {
           const caption = index === 0 && attachment.kind !== 'voice' ? text || undefined : undefined;
+          const clientRequestId = createClientRequestId();
           const localPreviewUrl = attachment.previewUrl?.startsWith('blob:') ? URL.createObjectURL(attachment.file) : attachment.previewUrl ?? null;
           const optimisticMessage = buildOptimisticOutgoingMessage({
             chat: selectedChat,
@@ -5299,105 +5381,112 @@ export default function WhatsAppInboxScreen() {
             waveform: attachment.waveformPayload || undefined,
             fileName: attachment.file.name,
             previewUrl: localPreviewUrl,
+            clientRequestId,
           });
           applyOptimisticChatSummary(selectedChat, optimisticMessage.text_content ?? '', optimisticMessage.message_at);
 
-          return { attachment, caption, optimisticMessage };
+          return { attachment, caption, optimisticMessage, clientRequestId };
         });
 
-        let shouldStopQueue = false;
-        let hadSuccessfulSend = false;
-        let firstErrorMessage = '';
-
-        for (let index = 0; index < attachmentsToSend.length; index += 1) {
-          const queued = attachmentsToSend[index];
-
-          if (shouldStopQueue) {
-            patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-              delivery_status: 'failed',
-              status_updated_at: new Date().toISOString(),
-              error_message: 'Envio interrompido antes deste item. Toque em reenviar para tentar novamente.',
-            });
-            continue;
-          }
-
-          setMediaUploadProgress({
-            attachmentId: queued.optimisticMessage.id,
-            currentIndex: index + 1,
-            total: attachmentsToSend.length,
-            progress: 0,
-            fileName: queued.attachment.file.name,
-          });
-          mediaUploadAbortControllerRef.current = new AbortController();
+        enqueueChatSend(selectedChat.id, async () => {
+          let shouldStopQueue = false;
+          let hadSuccessfulSend = false;
+          let firstErrorMessage = '';
 
           try {
-            const sendResult = await commWhatsAppService.sendMediaMessage({
-              chatId: selectedChat.external_chat_id,
-              kind: queued.attachment.kind,
-              file: queued.attachment.file,
-              caption: queued.caption,
-              durationSeconds: queued.attachment.durationSeconds,
-              waveform: queued.attachment.kind === 'voice' ? queued.attachment.waveformPayload || undefined : undefined,
-              onUploadProgress: (progress) => {
-                setMediaUploadProgress((current) => current && current.currentIndex === index + 1
-                  ? { ...current, progress }
-                  : current);
-              },
-              signal: mediaUploadAbortControllerRef.current.signal,
-            });
+            for (let index = 0; index < attachmentsToSend.length; index += 1) {
+              const queued = attachmentsToSend[index];
 
-            if (queued.optimisticMessage.media_url && sendResult.messageId) {
-              commWhatsAppService.rememberLocalMediaPreview(sendResult.messageId, queued.optimisticMessage.media_url);
+              if (shouldStopQueue) {
+                patchLocalOutgoingMessage(queued.optimisticMessage.id, {
+                  delivery_status: 'failed',
+                  status_updated_at: new Date().toISOString(),
+                  error_message: 'Envio interrompido antes deste item. Toque em reenviar para tentar novamente.',
+                });
+                continue;
+              }
+
+              setMediaUploadProgress({
+                attachmentId: queued.optimisticMessage.id,
+                currentIndex: index + 1,
+                total: attachmentsToSend.length,
+                progress: 0,
+                fileName: queued.attachment.file.name,
+              });
+              mediaUploadAbortControllerRef.current = new AbortController();
+
+              try {
+                const sendResult = await commWhatsAppService.sendMediaMessage({
+                  chatId: selectedChat.external_chat_id,
+                  kind: queued.attachment.kind,
+                  file: queued.attachment.file,
+                  caption: queued.caption,
+                  durationSeconds: queued.attachment.durationSeconds,
+                  waveform: queued.attachment.kind === 'voice' ? queued.attachment.waveformPayload || undefined : undefined,
+                  clientRequestId: queued.clientRequestId,
+                  onUploadProgress: (progress) => {
+                    setMediaUploadProgress((current) => current?.attachmentId === queued.optimisticMessage.id
+                      ? { ...current, progress }
+                      : current);
+                  },
+                  signal: mediaUploadAbortControllerRef.current.signal,
+                });
+
+                if (queued.optimisticMessage.media_url && sendResult.messageId) {
+                  commWhatsAppService.rememberLocalMediaPreview(sendResult.messageId, queued.optimisticMessage.media_url);
+                }
+
+                hadSuccessfulSend = true;
+                patchLocalOutgoingMessage(queued.optimisticMessage.id, {
+                  external_message_id: sendResult.messageId,
+                  delivery_status: sendResult.status,
+                  status_updated_at: new Date().toISOString(),
+                  error_message: null,
+                });
+                localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
+              } catch (error) {
+                const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia.';
+                firstErrorMessage = firstErrorMessage || message;
+                patchLocalOutgoingMessage(queued.optimisticMessage.id, {
+                  delivery_status: 'failed',
+                  status_updated_at: new Date().toISOString(),
+                  error_message: message,
+                });
+                shouldStopQueue = true;
+              }
             }
-
-            hadSuccessfulSend = true;
-            patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-              external_message_id: sendResult.messageId,
-              delivery_status: sendResult.status,
-              status_updated_at: new Date().toISOString(),
-              error_message: null,
-            });
-            localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
-          } catch (error) {
-            const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia.';
-            firstErrorMessage = firstErrorMessage || message;
-            patchLocalOutgoingMessage(queued.optimisticMessage.id, {
-              delivery_status: 'failed',
-              status_updated_at: new Date().toISOString(),
-              error_message: message,
-            });
-            shouldStopQueue = true;
+          } finally {
+            setMediaUploadProgress(null);
+            mediaUploadAbortControllerRef.current = null;
           }
-        }
 
-        if (hadSuccessfulSend) {
-          await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
-          hydratedChatsRef.current.add(selectedChat.external_chat_id);
-          await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
-        }
-
-        if (firstErrorMessage) {
-          if (firstErrorMessage === 'Envio de mídia cancelado.') {
-            toast.info('Upload interrompido. As mensagens que falharam permaneceram no chat para reenvio.');
-          } else {
-            toast.error(firstErrorMessage);
+          if (hadSuccessfulSend) {
+            void (async () => {
+              await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
+              hydratedChatsRef.current.add(selectedChat.external_chat_id);
+              await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
+            })().catch((error) => {
+              console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de midia', error);
+            });
           }
-        }
+
+          if (firstErrorMessage) {
+            if (firstErrorMessage === 'Envio de mídia cancelado.') {
+              toast.info('Upload interrompido. As mensagens que falharam permaneceram no chat para reenvio.');
+            } else {
+              toast.error(firstErrorMessage);
+            }
+          }
+        });
       } else {
-        await sendTextSegments(selectedChat, textSegments);
+        sendTextSegments(selectedChat, textSegments);
       }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
       const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
       toast.error(message);
-    } finally {
-      if (shouldLockComposer) {
-        setSending(false);
-      }
-      setMediaUploadProgress(null);
-      mediaUploadAbortControllerRef.current = null;
     }
-  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, messageDraft, patchLocalOutgoingMessage, pendingAttachments, resetComposerAfterQueue, selectedChat, sendDisabledReason, sendTextSegments]);
+  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, resetComposerAfterQueue, selectedChat, sendDisabledReason, sendTextSegments]);
 
   useEffect(() => {
     if (!voiceAttachment) {
@@ -5418,6 +5507,11 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleRetryMediaMessage = async (message: CommWhatsAppMessage) => {
+    if (retryingMessageIdsRef.current.has(message.id)) {
+      return;
+    }
+
+    retryingMessageIdsRef.current.add(message.id);
     setRetryingMessageId(message.id);
 
     try {
@@ -5430,8 +5524,18 @@ export default function WhatsAppInboxScreen() {
           error_message: null,
         });
 
+        const retryClientRequestId = localRetryPayload.clientRequestId || createClientRequestId();
+        if (!localRetryPayload.clientRequestId) {
+          localOutgoingRetryPayloadRef.current.set(message.id, {
+            ...localRetryPayload,
+            clientRequestId: retryClientRequestId,
+          } as LocalOutgoingRetryPayload);
+        }
+
         if (localRetryPayload.kind === 'text') {
-          const sendResult = await commWhatsAppService.sendTextMessage(selectedChat?.external_chat_id || '', localRetryPayload.text);
+          const sendResult = await commWhatsAppService.sendTextMessage(selectedChat?.external_chat_id || '', localRetryPayload.text, {
+            clientRequestId: retryClientRequestId,
+          });
           patchLocalOutgoingMessage(message.id, {
             external_message_id: sendResult.messageId,
             delivery_status: sendResult.status,
@@ -5446,6 +5550,7 @@ export default function WhatsAppInboxScreen() {
             caption: localRetryPayload.caption,
             durationSeconds: localRetryPayload.durationSeconds,
             waveform: localRetryPayload.waveform,
+            clientRequestId: retryClientRequestId,
           });
           if (message.media_url && sendResult.messageId) {
             commWhatsAppService.rememberLocalMediaPreview(sendResult.messageId, message.media_url);
@@ -5464,6 +5569,7 @@ export default function WhatsAppInboxScreen() {
             fileName: localRetryPayload.fileName,
             mimeType: localRetryPayload.mimeType,
             caption: localRetryPayload.caption,
+            clientRequestId: retryClientRequestId,
           });
           patchLocalOutgoingMessage(message.id, {
             external_message_id: sendResult.messageId,
@@ -5487,7 +5593,9 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      await commWhatsAppService.retryMediaMessage(message.id);
+      await commWhatsAppService.retryMediaMessage(message.id, {
+        clientRequestId: createClientRequestId(),
+      });
       if (selectedChat) {
         await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
       }
@@ -5504,7 +5612,8 @@ export default function WhatsAppInboxScreen() {
         toast.error(messageText);
       }
     } finally {
-      setRetryingMessageId(null);
+      retryingMessageIdsRef.current.delete(message.id);
+      setRetryingMessageId((current) => (current === message.id ? null : current));
     }
   };
 
@@ -6653,6 +6762,7 @@ export default function WhatsAppInboxScreen() {
       throw new Error(mediaDrawerSendDisabledReason);
     }
 
+    const clientRequestId = createClientRequestId();
     const optimisticMessage = buildOptimisticOutgoingMessage({
       chat: selectedChat,
       messageType: item.sendKind,
@@ -6672,44 +6782,52 @@ export default function WhatsAppInboxScreen() {
       mimeType: item.mimeType,
       fileName: item.title,
       previewUrl: item.previewUrl ?? item.sendUrl,
+      clientRequestId,
     });
     applyOptimisticChatSummary(selectedChat, optimisticMessage.text_content ?? '', optimisticMessage.message_at);
 
-    setSendingDrawerMedia(true);
+    return enqueueChatSend(selectedChat.id, async () => {
+      setSendingDrawerMedia(true);
 
-    try {
-      const sendResult = await commWhatsAppService.sendRemoteMediaMessage({
-        chatId: selectedChat.external_chat_id,
-        kind: item.sendKind,
-        remoteUrl: item.sendUrl,
-        fileName: item.title,
-        mimeType: item.mimeType,
-      });
+      try {
+        const sendResult = await commWhatsAppService.sendRemoteMediaMessage({
+          chatId: selectedChat.external_chat_id,
+          kind: item.sendKind,
+          remoteUrl: item.sendUrl,
+          fileName: item.title,
+          mimeType: item.mimeType,
+          clientRequestId,
+        });
 
-      patchLocalOutgoingMessage(optimisticMessage.id, {
-        external_message_id: sendResult.messageId,
-        delivery_status: sendResult.status,
-        status_updated_at: new Date().toISOString(),
-        error_message: null,
-      });
-      localOutgoingRetryPayloadRef.current.delete(optimisticMessage.id);
+        patchLocalOutgoingMessage(optimisticMessage.id, {
+          external_message_id: sendResult.messageId,
+          delivery_status: sendResult.status,
+          status_updated_at: new Date().toISOString(),
+          error_message: null,
+        });
+        localOutgoingRetryPayloadRef.current.delete(optimisticMessage.id);
 
-      await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
-      hydratedChatsRef.current.add(selectedChat.external_chat_id);
-      await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
-    } catch (error) {
-      console.error('[WhatsAppInbox] erro ao enviar mídia da gaveta', error);
-      const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia agora.';
-      patchLocalOutgoingMessage(optimisticMessage.id, {
-        delivery_status: 'failed',
-        status_updated_at: new Date().toISOString(),
-        error_message: message,
-      });
-      throw error instanceof Error ? error : new Error(message);
-    } finally {
-      setSendingDrawerMedia(false);
-    }
-  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
+        void (async () => {
+          await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
+          hydratedChatsRef.current.add(selectedChat.external_chat_id);
+          await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
+        })().catch((error) => {
+          console.error('[WhatsAppInbox] erro ao atualizar conversa apos midia da gaveta', error);
+        });
+      } catch (error) {
+        console.error('[WhatsAppInbox] erro ao enviar mídia da gaveta', error);
+        const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia agora.';
+        patchLocalOutgoingMessage(optimisticMessage.id, {
+          delivery_status: 'failed',
+          status_updated_at: new Date().toISOString(),
+          error_message: message,
+        });
+        throw error instanceof Error ? error : new Error(message);
+      } finally {
+        setSendingDrawerMedia(false);
+      }
+    });
+  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
 
   const handleRegenerateFollowUp = useCallback(() => {
     void handleGenerateFollowUp(followUpCustomInstructions);
@@ -6730,22 +6848,18 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    setSending(true);
-
     try {
-      await sendTextSegments(selectedChat, textSegments);
+      sendTextSegments(selectedChat, textSegments);
       resetFollowUpComposer();
       handleCloseFollowUpModal();
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar follow-up', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o follow-up.');
-    } finally {
-      setSending(false);
     }
   }, [followUpDraft, handleCloseFollowUpModal, resetFollowUpComposer, selectedChat, sendDisabledReason, sendTextSegments]);
 
   const handleComposerSubmit = () => {
-    if (sending || generatingFollowUp) return;
+    if (generatingFollowUp) return;
 
     if (voiceRecordingState === 'recording') {
       handleStopVoiceRecording();
@@ -7339,6 +7453,21 @@ export default function WhatsAppInboxScreen() {
                               ) : null}
                               <span>{formatMessageTime(message.message_at)}</span>
                               {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
+                              {message.direction === 'outbound' && mediaUploadProgress?.attachmentId === message.id ? (
+                                <>
+                                  <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <span>{mediaUploadProgress.progress === null ? 'Enviando' : `${mediaUploadProgress.progress}%`}</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={handleCancelMediaUpload}
+                                    className="whatsapp-inbox-retry-button h-8 rounded-xl px-3 text-[11px]"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </>
+                              ) : null}
                               {message.direction === 'outbound' && message.delivery_status === 'failed' && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
                                 <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
                               ) : null}
@@ -7387,7 +7516,6 @@ export default function WhatsAppInboxScreen() {
                         <button
                           type="button"
                           onClick={() => handleClearAttachment()}
-                          disabled={sending}
                           className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
                           aria-label="Descartar nota de voz"
                         >
@@ -7397,7 +7525,6 @@ export default function WhatsAppInboxScreen() {
                           <button
                             type="button"
                             onClick={handleToggleVoicePreviewPlayback}
-                            disabled={sending}
                             className="whatsapp-inbox-voice-play inline-flex items-center justify-center rounded-full transition"
                             aria-label={voicePreviewPlaying ? 'Pausar nota de voz' : 'Ouvir nota de voz'}
                           >
@@ -7423,7 +7550,6 @@ export default function WhatsAppInboxScreen() {
                               handleClearAttachment();
                               void handleStartVoiceRecording();
                             }}
-                            disabled={sending}
                             className="whatsapp-inbox-voice-side-action is-accent inline-flex items-center justify-center rounded-full transition"
                             aria-label="Regravar nota de voz"
                           >
@@ -7434,11 +7560,11 @@ export default function WhatsAppInboxScreen() {
                           <button
                             type="button"
                             onClick={handleSendCurrentVoiceRecording}
-                            disabled={sending || Boolean(sendDisabledReason)}
-                            className={`whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition ${sending ? 'opacity-70' : ''}`}
+                            disabled={Boolean(sendDisabledReason)}
+                            className="whatsapp-inbox-voice-send inline-flex items-center justify-center rounded-full transition"
                             aria-label="Enviar nota de voz"
                           >
-                            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
+                            <SendHorizontal className="h-5 w-5" />
                           </button>
                       </div>
                     </>
@@ -7506,7 +7632,6 @@ export default function WhatsAppInboxScreen() {
                           variant="secondary"
                           size="sm"
                           onClick={() => handleClearAttachment()}
-                          disabled={sending}
                           className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -7546,7 +7671,6 @@ export default function WhatsAppInboxScreen() {
                                 <button
                                   type="button"
                                   onClick={() => handleClearAttachment(attachment.id)}
-                                  disabled={sending}
                                   className="whatsapp-inbox-attachment-dismiss absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full transition"
                                   aria-label="Remover anexo"
                                 >
@@ -7646,7 +7770,7 @@ export default function WhatsAppInboxScreen() {
                       <button
                           type="button"
                           onClick={() => setAttachmentMenuOpen((current) => !current)}
-                          disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
+                          disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
                           className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${attachmentMenuOpen ? 'is-open' : ''}`}
                           aria-label="Anexar"
                           aria-expanded={attachmentMenuOpen}
@@ -7754,7 +7878,7 @@ export default function WhatsAppInboxScreen() {
                         }}
                         onBlur={() => setComposerFocused(false)}
                         placeholder="Digite uma mensagem"
-                        disabled={sending || generatingFollowUp}
+                        disabled={generatingFollowUp}
                         className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-sm leading-6 focus:outline-none"
                       />
                     </div>
@@ -7763,14 +7887,12 @@ export default function WhatsAppInboxScreen() {
                       <button
                         type="button"
                         onClick={handleComposerSubmit}
-                        disabled={sending || generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
-                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-xl transition ${hasSendPayload ? 'is-active' : ''} ${sending || generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
+                        disabled={generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
+                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-xl transition ${hasSendPayload ? 'is-active' : ''} ${generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
                         aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar áudio'}
                         title={sendDisabledReason ?? undefined}
                       >
-                        {sending ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : voiceRecordingState === 'requesting' ? (
+                        {voiceRecordingState === 'requesting' ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
                         ) : hasSendPayload ? (
                           <SendHorizontal className="h-5 w-5" />

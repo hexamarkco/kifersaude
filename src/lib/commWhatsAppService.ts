@@ -689,9 +689,9 @@ export const commWhatsAppService = {
     }
   },
 
-  async sendTextMessage(chatId: string, text: string): Promise<{ messageId: string | null; status: string }> {
+  async sendTextMessage(chatId: string, text: string, options: { clientRequestId?: string } = {}): Promise<{ messageId: string | null; status: string }> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-send', {
-      body: { chatId, text },
+      body: { chatId, text, clientRequestId: options.clientRequestId?.trim() || '' },
     });
 
     if (error) {
@@ -780,9 +780,9 @@ export const commWhatsAppService = {
     };
   },
 
-  async retryMediaMessage(messageId: string): Promise<{ messageId: string | null; status: string }> {
+  async retryMediaMessage(messageId: string, options: { clientRequestId?: string } = {}): Promise<{ messageId: string | null; status: string }> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-retry-message', {
-      body: { messageId },
+      body: { messageId, clientRequestId: options.clientRequestId?.trim() || '' },
     });
 
     if (error) {
@@ -803,6 +803,7 @@ export const commWhatsAppService = {
     caption?: string;
     durationSeconds?: number;
     waveform?: string;
+    clientRequestId?: string;
     onUploadProgress?: (progress: number | null) => void;
     signal?: AbortSignal;
   }): Promise<{ messageId: string | null; status: string }> {
@@ -822,6 +823,7 @@ export const commWhatsAppService = {
     const form = new FormData();
     form.append('chatId', params.chatId);
     form.append('type', params.kind);
+    form.append('clientRequestId', params.clientRequestId?.trim() || '');
     form.append('caption', params.caption?.trim() || '');
     if (typeof params.durationSeconds === 'number' && Number.isFinite(params.durationSeconds)) {
       form.append('durationSeconds', String(Math.max(0, Math.round(params.durationSeconds))));
@@ -922,6 +924,7 @@ export const commWhatsAppService = {
     fileName?: string;
     mimeType?: string;
     caption?: string;
+    clientRequestId?: string;
   }): Promise<{ messageId: string | null; status: string }> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-send', {
       body: {
@@ -931,6 +934,7 @@ export const commWhatsAppService = {
         remoteUrl: params.remoteUrl,
         fileName: params.fileName?.trim() || '',
         mimeType: params.mimeType?.trim() || '',
+        clientRequestId: params.clientRequestId?.trim() || '',
       },
     });
 

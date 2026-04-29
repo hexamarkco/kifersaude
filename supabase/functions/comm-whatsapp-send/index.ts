@@ -40,9 +40,18 @@ type SendMessageBody = {
   remoteUrl?: string;
   fileName?: string;
   mimeType?: string;
+  clientRequestId?: string;
 };
 
 type MediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
+
+type SendRequestRow = {
+  id: string;
+  status: string;
+  external_message_id: string | null;
+  delivery_status: string | null;
+  error_message: string | null;
+};
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
@@ -168,6 +177,137 @@ const fetchRemoteMediaFile = async (params: {
 
   return new File([bytes], fileName, { type: contentType });
 };
+
+const sanitizeClientRequestId = (value: unknown) => {
+  const normalized = toTrimmedString(value).replace(/[^a-zA-Z0-9:_-]/g, '');
+  return normalized.slice(0, 128);
+};
+
+async function reserveSendRequest(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: {
+    channelId: string;
+    clientRequestId: string;
+    requestKind: string;
+    payload: Record<string, unknown>;
+  },
+): Promise<{ reserved: boolean; row: SendRequestRow | null }> {
+  if (!params.clientRequestId) {
+    return { reserved: true, row: null };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_send_requests')
+    .insert({
+      channel_id: params.channelId,
+      client_request_id: params.clientRequestId,
+      request_kind: params.requestKind,
+      payload: params.payload,
+      status: 'sending',
+    })
+    .select('id,status,external_message_id,delivery_status,error_message')
+    .maybeSingle();
+
+  if (!error) {
+    return { reserved: true, row: data as SendRequestRow | null };
+  }
+
+  const errorCode = typeof (error as { code?: unknown }).code === 'string' ? (error as { code: string }).code : '';
+  if (errorCode !== '23505') {
+    throw new Error(`Erro ao reservar envio do WhatsApp: ${error.message}`);
+  }
+
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from('comm_whatsapp_send_requests')
+    .select('id,status,external_message_id,delivery_status,error_message')
+    .eq('channel_id', params.channelId)
+    .eq('client_request_id', params.clientRequestId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(`Erro ao consultar envio duplicado do WhatsApp: ${existingError.message}`);
+  }
+
+  const existingRow = existing as SendRequestRow | null;
+  if (existingRow?.status === 'failed') {
+    const { data: retryRow, error: retryError } = await supabaseAdmin
+      .from('comm_whatsapp_send_requests')
+      .update({
+        request_kind: params.requestKind,
+        payload: params.payload,
+        status: 'sending',
+        external_message_id: null,
+        delivery_status: null,
+        error_message: null,
+        updated_at: getNowIso(),
+      })
+      .eq('id', existingRow.id)
+      .select('id,status,external_message_id,delivery_status,error_message')
+      .maybeSingle();
+
+    if (retryError) {
+      throw new Error(`Erro ao reabrir envio do WhatsApp: ${retryError.message}`);
+    }
+
+    return { reserved: true, row: retryRow as SendRequestRow | null };
+  }
+
+  return { reserved: false, row: existingRow };
+}
+
+async function completeSendRequest(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  requestId: string | null | undefined,
+  params: { externalMessageId: string | null; deliveryStatus: string },
+) {
+  if (!requestId) {
+    return;
+  }
+
+  await supabaseAdmin
+    .from('comm_whatsapp_send_requests')
+    .update({
+      status: 'completed',
+      external_message_id: params.externalMessageId,
+      delivery_status: params.deliveryStatus,
+      error_message: null,
+      updated_at: getNowIso(),
+    })
+    .eq('id', requestId);
+}
+
+async function failSendRequest(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  requestId: string | null | undefined,
+  errorMessage: string,
+) {
+  if (!requestId) {
+    return;
+  }
+
+  await supabaseAdmin
+    .from('comm_whatsapp_send_requests')
+    .update({
+      status: 'failed',
+      error_message: errorMessage,
+      updated_at: getNowIso(),
+    })
+    .eq('id', requestId);
+}
+
+const buildDuplicateSendResponse = (row: SendRequestRow | null) => new Response(
+  JSON.stringify({
+    success: true,
+    duplicate: true,
+    messageId: row?.external_message_id ?? null,
+    status: row?.delivery_status || row?.status || 'pending',
+    error: row?.status === 'failed' ? row.error_message : undefined,
+  }),
+  {
+    status: row?.status === 'failed' ? 409 : 202,
+    headers: jsonHeaders,
+  },
+);
 
 const deriveVoiceFileName = (mimeType: string, originalName: string) => {
   const safeName = sanitizeFileName(originalName, 'voice-note');
@@ -369,11 +509,13 @@ Deno.serve(async (req: Request) => {
     let mediaDurationSeconds: number | null = null;
     let mediaWaveform = '';
     let remoteUrl = '';
+    let clientRequestId = '';
 
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData();
       chatId = normalizeWhapiChatId(form.get('chatId'));
       text = toTrimmedString(form.get('caption'));
+      clientRequestId = sanitizeClientRequestId(form.get('clientRequestId'));
       const uploaded = form.get('file');
 
       if (!(uploaded instanceof File)) {
@@ -392,6 +534,7 @@ Deno.serve(async (req: Request) => {
       const body = (await req.json().catch(() => ({}))) as SendMessageBody;
       chatId = normalizeWhapiChatId(body.chatId);
       text = toTrimmedString(body.text) || toTrimmedString(body.caption);
+      clientRequestId = sanitizeClientRequestId(body.clientRequestId);
       remoteUrl = toTrimmedString(body.remoteUrl);
       if (remoteUrl) {
         mediaFile = await fetchRemoteMediaFile({
@@ -428,6 +571,24 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const sendRequest = await reserveSendRequest(supabaseAdmin, {
+      channelId: channel.id,
+      clientRequestId,
+      requestKind: mediaFile ? 'media' : 'text',
+      payload: {
+        chatId,
+        type: mediaKind || 'text',
+        textLength: text.length,
+        fileName: mediaFile?.name || null,
+        fileSize: mediaFile?.size || null,
+        remoteUrl: remoteUrl || null,
+      },
+    });
+
+    if (!sendRequest.reserved) {
+      return buildDuplicateSendResponse(sendRequest.row);
+    }
+
     let whapiResponse: Response;
     let uploadedMediaId = '';
 
@@ -448,6 +609,7 @@ Deno.serve(async (req: Request) => {
 
         if (!whapiResponse.ok) {
           const errorMessage = parseWhapiError(whapiPayload);
+          await failSendRequest(supabaseAdmin, sendRequest.row?.id, errorMessage || 'Falha ao enviar mensagem na Whapi.');
 
           return new Response(JSON.stringify({ error: errorMessage || 'Falha ao enviar mensagem na Whapi.' }), {
             status: whapiResponse.status,
@@ -492,7 +654,13 @@ Deno.serve(async (req: Request) => {
           mediaCaption: mediaKind === 'voice' ? null : text || null,
           metadata: {
             provider: 'whapi',
+            ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
           },
+        });
+
+        await completeSendRequest(supabaseAdmin, sendRequest.row?.id, {
+          externalMessageId: externalMessageId || null,
+          deliveryStatus,
         });
 
         return new Response(
@@ -542,6 +710,7 @@ Deno.serve(async (req: Request) => {
 
     if (!whapiResponse.ok) {
       const errorMessage = parseWhapiError(whapiPayload);
+      await failSendRequest(supabaseAdmin, sendRequest.row?.id, errorMessage || 'Falha ao enviar mensagem na Whapi.');
 
       return new Response(JSON.stringify({ error: errorMessage || 'Falha ao enviar mensagem na Whapi.' }), {
         status: whapiResponse.status,
@@ -552,6 +721,7 @@ Deno.serve(async (req: Request) => {
     if (whapiPayload && typeof whapiPayload === 'object' && !Array.isArray(whapiPayload)) {
       const sent = (whapiPayload as Record<string, unknown>).sent;
       if (sent === false) {
+        await failSendRequest(supabaseAdmin, sendRequest.row?.id, 'A Whapi nao confirmou o envio da mensagem.');
         return new Response(JSON.stringify({ error: 'A Whapi nao confirmou o envio da mensagem.' }), {
           status: 400,
           headers: jsonHeaders,
@@ -598,7 +768,13 @@ Deno.serve(async (req: Request) => {
       mediaCaption: mediaKind === 'voice' ? null : text || null,
       metadata: {
         provider: 'whapi',
+        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
       },
+    });
+
+    await completeSendRequest(supabaseAdmin, sendRequest.row?.id, {
+      externalMessageId: externalMessageId || null,
+      deliveryStatus,
     });
 
     return new Response(

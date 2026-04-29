@@ -26,6 +26,15 @@ declare const Deno: {
 
 type RetryBody = {
   messageId?: string;
+  clientRequestId?: string;
+};
+
+type SendRequestRow = {
+  id: string;
+  status: string;
+  external_message_id: string | null;
+  delivery_status: string | null;
+  error_message: string | null;
 };
 
 type RetryTargetRow = {
@@ -69,6 +78,136 @@ const buildMediaSummary = (kind: string, caption: string) => {
   return '[Documento]';
 };
 
+const sanitizeClientRequestId = (value: unknown) => {
+  const normalized = toTrimmedString(value).replace(/[^a-zA-Z0-9:_-]/g, '');
+  return normalized.slice(0, 128);
+};
+
+async function reserveRetryRequest(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: {
+    channelId: string;
+    clientRequestId: string;
+    messageId: string;
+  },
+): Promise<{ reserved: boolean; row: SendRequestRow | null }> {
+  if (!params.clientRequestId) {
+    return { reserved: true, row: null };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_send_requests')
+    .insert({
+      channel_id: params.channelId,
+      client_request_id: params.clientRequestId,
+      request_kind: 'retry',
+      payload: { messageId: params.messageId },
+      status: 'sending',
+    })
+    .select('id,status,external_message_id,delivery_status,error_message')
+    .maybeSingle();
+
+  if (!error) {
+    return { reserved: true, row: data as SendRequestRow | null };
+  }
+
+  const errorCode = typeof (error as { code?: unknown }).code === 'string' ? (error as { code: string }).code : '';
+  if (errorCode !== '23505') {
+    throw new Error(`Erro ao reservar retry do WhatsApp: ${error.message}`);
+  }
+
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from('comm_whatsapp_send_requests')
+    .select('id,status,external_message_id,delivery_status,error_message')
+    .eq('channel_id', params.channelId)
+    .eq('client_request_id', params.clientRequestId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(`Erro ao consultar retry duplicado do WhatsApp: ${existingError.message}`);
+  }
+
+  const existingRow = existing as SendRequestRow | null;
+  if (existingRow?.status === 'failed') {
+    const { data: retryRow, error: retryError } = await supabaseAdmin
+      .from('comm_whatsapp_send_requests')
+      .update({
+        request_kind: 'retry',
+        payload: { messageId: params.messageId },
+        status: 'sending',
+        external_message_id: null,
+        delivery_status: null,
+        error_message: null,
+        updated_at: getNowIso(),
+      })
+      .eq('id', existingRow.id)
+      .select('id,status,external_message_id,delivery_status,error_message')
+      .maybeSingle();
+
+    if (retryError) {
+      throw new Error(`Erro ao reabrir retry do WhatsApp: ${retryError.message}`);
+    }
+
+    return { reserved: true, row: retryRow as SendRequestRow | null };
+  }
+
+  return { reserved: false, row: existingRow };
+}
+
+async function completeRetryRequest(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  requestId: string | null | undefined,
+  params: { externalMessageId: string | null; deliveryStatus: string },
+) {
+  if (!requestId) {
+    return;
+  }
+
+  await supabaseAdmin
+    .from('comm_whatsapp_send_requests')
+    .update({
+      status: 'completed',
+      external_message_id: params.externalMessageId,
+      delivery_status: params.deliveryStatus,
+      error_message: null,
+      updated_at: getNowIso(),
+    })
+    .eq('id', requestId);
+}
+
+async function failRetryRequest(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  requestId: string | null | undefined,
+  errorMessage: string,
+) {
+  if (!requestId) {
+    return;
+  }
+
+  await supabaseAdmin
+    .from('comm_whatsapp_send_requests')
+    .update({
+      status: 'failed',
+      error_message: errorMessage,
+      updated_at: getNowIso(),
+    })
+    .eq('id', requestId);
+}
+
+const buildDuplicateRetryResponse = (row: SendRequestRow | null) => new Response(
+  JSON.stringify({
+    success: true,
+    duplicate: true,
+    messageId: row?.external_message_id ?? null,
+    status: row?.delivery_status || row?.status || 'pending',
+    error: row?.status === 'failed' ? row.error_message : undefined,
+  }),
+  {
+    status: row?.status === 'failed' ? 409 : 202,
+    headers: jsonHeaders,
+  },
+);
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: jsonHeaders });
@@ -104,6 +243,7 @@ Deno.serve(async (req: Request) => {
 
     const body = (await req.json().catch(() => ({}))) as RetryBody;
     const messageId = toTrimmedString(body.messageId);
+    const clientRequestId = sanitizeClientRequestId(body.clientRequestId);
 
     if (!messageId) {
       return new Response(JSON.stringify({ error: 'Mensagem obrigatoria para reenvio.' }), {
@@ -189,6 +329,16 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const retryRequest = await reserveRetryRequest(supabaseAdmin, {
+      channelId: channel.id,
+      clientRequestId,
+      messageId,
+    });
+
+    if (!retryRequest.reserved) {
+      return buildDuplicateRetryResponse(retryRequest.row);
+    }
+
     const caption = retryTarget.media_caption || (retryTarget.text_content?.startsWith('[') ? '' : retryTarget.text_content || '');
     const response = await fetch(`${WHAPI_BASE_URL}/messages/${retryTarget.message_type}`, {
       method: 'POST',
@@ -208,6 +358,7 @@ Deno.serve(async (req: Request) => {
 
     if (!response.ok) {
       const errorMessage = parseWhapiError(whapiPayload);
+      await failRetryRequest(supabaseAdmin, retryRequest.row?.id, errorMessage || 'Nao foi possivel reenviar a midia.');
       return new Response(JSON.stringify({ error: errorMessage || 'Nao foi possivel reenviar a midia.' }), {
         status: response.status,
         headers: jsonHeaders,
@@ -250,7 +401,13 @@ Deno.serve(async (req: Request) => {
       metadata: {
         provider: 'whapi',
         retry_of: retryTarget.id,
+        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
       },
+    });
+
+    await completeRetryRequest(supabaseAdmin, retryRequest.row?.id, {
+      externalMessageId: externalMessageId || null,
+      deliveryStatus,
     });
 
     return new Response(

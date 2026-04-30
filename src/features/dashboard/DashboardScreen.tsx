@@ -16,7 +16,7 @@ import ContractDetails from "../../components/ContractDetails";
 import LeadDetails from "../../components/LeadDetails";
 import LeadForm from "../../components/LeadForm";
 import { toast } from "../../lib/toast";
-import Button from "../../components/ui/Button";
+import { ActionSurface, Button, Surface } from "../../design-system";
 import {
   calculateConversionRate,
   getLeadStatusDistribution,
@@ -36,10 +36,7 @@ import { DashboardSummaryCards } from "./components/DashboardSummaryCards";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
 import {
   CALENDAR_LEGEND_STYLES,
-  DASHBOARD_INSET_STYLE,
-  DASHBOARD_MUTED_INSET_STYLE,
   DASHBOARD_PILL_STYLE,
-  DASHBOARD_SECTION_STYLE,
   mapOperadoraChartData,
 } from "./shared/dashboardConstants";
 import {
@@ -1987,20 +1984,15 @@ export default function DashboardScreen({
       const kinds = Array.from(new Set(dayEvents.map((event) => event.kind)));
 
       cells.push(
-        <button
+        <ActionSurface
           key={day}
-          type="button"
           onClick={() => setSelectedCalendarDate(date)}
-          className="group relative aspect-square rounded-2xl border p-2 transition-all duration-200 hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel-bg,#f8f5ef)]"
+          padding="none"
+          selected={isSelected}
+          className="group relative aspect-square rounded-2xl p-2 transition-all duration-200 hover:-translate-y-px"
           style={
             isSelected
-              ? {
-                  borderColor: "var(--panel-accent-border,#d5a25c)",
-                  background:
-                    "linear-gradient(180deg, var(--panel-accent-soft,#f6e4c7) 0%, color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 70%, var(--panel-surface,#fffdfa)) 100%)",
-                  color: "var(--panel-accent-ink-strong,#4a2411)",
-                  boxShadow: "0 18px 30px -26px rgba(184, 92, 31, 0.55)",
-                }
+              ? undefined
               : isToday
                 ? {
                     borderColor: "var(--panel-border-strong,#9d7f5a)",
@@ -2041,7 +2033,7 @@ export default function DashboardScreen({
               ))}
             </div>
           )}
-        </button>,
+        </ActionSurface>,
       );
     }
 
@@ -2303,11 +2295,7 @@ export default function DashboardScreen({
 
         {!isObserver && (
           <>
-            <div
-              className="panel-glass-panel rounded-[2rem] border p-6 sm:p-7"
-              style={DASHBOARD_SECTION_STYLE}
-              data-panel-animate
-            >
+            <Surface className="panel-glass-panel" data-panel-animate>
               <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                 <div>
                   <div
@@ -2384,10 +2372,7 @@ export default function DashboardScreen({
               </div>
 
               <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-stretch">
-                <div
-                  className="rounded-[1.75rem] border p-4 sm:p-5"
-                  style={DASHBOARD_INSET_STYLE}
-                >
+                <Surface variant="muted" padding="sm" className="rounded-[1.75rem] sm:p-5">
                   <div className="flex items-center justify-between mb-4">
                     <Button
                       type="button"
@@ -2505,12 +2490,9 @@ export default function DashboardScreen({
                     ))}
                     {calendarDays.cells}
                   </div>
-                </div>
+                </Surface>
 
-                <div
-                  className="flex flex-col rounded-[1.75rem] border p-4 sm:p-5"
-                  style={DASHBOARD_MUTED_INSET_STYLE}
-                >
+                <Surface variant="muted" padding="sm" className="flex flex-col rounded-[1.75rem] sm:p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <div
@@ -2918,9 +2900,9 @@ export default function DashboardScreen({
                       })}
                     </div>
                   )}
-                </div>
+                </Surface>
               </div>
-            </div>
+            </Surface>
           </>
         )}
         <DashboardHeroCard />

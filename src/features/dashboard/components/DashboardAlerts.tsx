@@ -1,6 +1,6 @@
 import { Calendar } from 'lucide-react';
 
-import Button from '../../../components/ui/Button';
+import { Alert, Button } from '../../../design-system';
 
 type DashboardAlertsProps = {
   error: string | null;
@@ -18,12 +18,13 @@ export function DashboardAlerts({
   return (
     <>
       {error && (
-        <div
-          className="flex flex-col gap-3 rounded-[1.6rem] border p-4 sm:flex-row sm:items-center sm:justify-between"
-          style={{
-            borderColor: 'var(--panel-accent-red-border,#d79a8f)',
-            background: 'var(--panel-accent-red-bg,#faecea)',
-          }}
+        <Alert
+          tone="danger"
+          action={(
+            <Button type="button" onClick={onRetry} variant="danger" disabled={loading}>
+              Tentar novamente
+            </Button>
+          )}
         >
           <div className="flex items-start space-x-3">
             <div
@@ -34,25 +35,18 @@ export function DashboardAlerts({
               {error}
             </p>
           </div>
-          <Button type="button" onClick={onRetry} variant="danger" disabled={loading}>
-            Tentar novamente
-          </Button>
-        </div>
+        </Alert>
       )}
 
       {!isCustomPeriodValid && (
-        <div
-          className="flex items-center space-x-2 rounded-[1.4rem] border p-3"
-          style={{
-            borderColor: 'var(--panel-accent-border,#d5a25c)',
-            background: 'var(--panel-accent-soft,#f6e4c7)',
-          }}
-        >
-          <Calendar className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }} />
-          <p className="text-sm" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }}>
-            Por favor, preencha as datas de inicio e fim no formato DD/MM/AAAA para visualizar o periodo personalizado.
-          </p>
-        </div>
+        <Alert tone="warning" className="items-start sm:items-center">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }} />
+            <p className="text-sm" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }}>
+              Por favor, preencha as datas de inicio e fim no formato DD/MM/AAAA para visualizar o periodo personalizado.
+            </p>
+          </div>
+        </Alert>
       )}
     </>
   );

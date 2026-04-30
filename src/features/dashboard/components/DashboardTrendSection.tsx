@@ -2,14 +2,12 @@ import { BadgePercent, Calendar, Clock, Filter, TrendingUp } from 'lucide-react'
 
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import MonthlyTrendChart from '../../../components/charts/MonthlyTrendChart';
-import Tabs from '../../../components/ui/Tabs';
+import { Surface, Tabs } from '../../../design-system';
 import {
   DASHBOARD_CHART_RANGE_OPTIONS,
-  DASHBOARD_INSET_STYLE,
   DASHBOARD_METRIC_COLORS,
   DASHBOARD_METRIC_TABS,
   DASHBOARD_PERIOD_OPTIONS,
-  DASHBOARD_SECTION_STYLE,
 } from '../shared/dashboardConstants';
 import { formatDashboardMetricValue, resolveDashboardVariationTone } from '../shared/dashboardUtils';
 import type {
@@ -50,7 +48,7 @@ export function DashboardTrendSection({
   const formatSelectedMetricValue = (value: number) => formatDashboardMetricValue(value, selectedMetric);
 
   return (
-    <div className="panel-glass-panel rounded-[2rem] border p-6 sm:p-7" style={DASHBOARD_SECTION_STYLE} data-panel-animate>
+    <Surface className="panel-glass-panel" data-panel-animate>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
@@ -102,13 +100,7 @@ export function DashboardTrendSection({
 
       <div className="mt-4 space-y-6">
         <div className="grid gap-3 md:grid-cols-3">
-          <div
-            className="rounded-[1.6rem] border p-4"
-            style={{
-              ...DASHBOARD_INSET_STYLE,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
-            }}
-          >
+          <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
                 <TrendingUp className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
@@ -128,9 +120,9 @@ export function DashboardTrendSection({
                   }`
                 : 'Primeiro mes exibido no recorte'}
             </p>
-          </div>
+          </Surface>
 
-          <div className="rounded-[1.6rem] border p-4" style={DASHBOARD_INSET_STYLE}>
+          <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
             <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
               <BadgePercent className="h-4 w-4" style={{ color: 'var(--panel-border-strong,#9d7f5a)' }} />
               <span>Media do periodo</span>
@@ -141,9 +133,9 @@ export function DashboardTrendSection({
             <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted)' }}>
               Baseado nos ultimos {displayedMonthlySeries.length} meses exibidos
             </p>
-          </div>
+          </Surface>
 
-          <div className="rounded-[1.6rem] border p-4" style={DASHBOARD_INSET_STYLE}>
+          <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
             <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
               <Calendar className="h-4 w-4" style={{ color: 'var(--panel-border-strong,#9d7f5a)' }} />
               <span>Pico do periodo</span>
@@ -154,7 +146,7 @@ export function DashboardTrendSection({
             <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted)' }}>
               {highestMonthlyPoint ? `${highestMonthlyPoint.label} foi o melhor mes do recorte` : 'Aguardando historico suficiente'}
             </p>
-          </div>
+          </Surface>
         </div>
 
         <MonthlyTrendChart
@@ -167,6 +159,6 @@ export function DashboardTrendSection({
           height={210}
         />
       </div>
-    </div>
+    </Surface>
   );
 }

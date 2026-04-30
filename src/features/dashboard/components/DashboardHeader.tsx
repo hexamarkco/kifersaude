@@ -1,9 +1,8 @@
 import { Clock, Filter, RefreshCw, Target, Users } from 'lucide-react';
 
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
-import Button from '../../../components/ui/Button';
-import Input from '../../../components/ui/Input';
-import { DASHBOARD_PERIOD_OPTIONS, DASHBOARD_PILL_STYLE } from '../shared/dashboardConstants';
+import { Badge, Button, Input, PageHeader } from '../../../design-system';
+import { DASHBOARD_PERIOD_OPTIONS } from '../shared/dashboardConstants';
 import type { DashboardPeriodFilter } from '../shared/dashboardTypes';
 
 type OriginOption = {
@@ -55,22 +54,12 @@ export function DashboardHeader({
   isCustomEndInvalid,
 }: DashboardHeaderProps) {
   return (
-    <div className="flex flex-col gap-4" data-panel-animate>
-      <div>
-        <p
-          className="text-[11px] font-black uppercase tracking-[0.24em]"
-          style={{ color: 'var(--panel-text-muted,#876f5c)' }}
-        >
-          Visao geral
-        </p>
-        <h2 className="mt-3 text-2xl font-bold sm:text-3xl" style={{ color: 'var(--panel-text,#1c1917)' }}>
-          Dashboard
-        </h2>
-        <p className="mt-1 text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-          Visao geral do seu negocio em tempo real
-        </p>
-      </div>
-
+    <PageHeader
+      eyebrow="Visao geral"
+      title="Dashboard"
+      description="Visao geral do seu negocio em tempo real"
+      data-panel-animate
+    >
       <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <div className="w-full sm:w-56">
@@ -146,16 +135,10 @@ export function DashboardHeader({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <div
-            className="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm"
-            style={{
-              ...DASHBOARD_PILL_STYLE,
-              color: 'var(--panel-text-soft,#5b4635)',
-            }}
-          >
+          <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
             <Clock className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
             <span>{lastUpdatedLabel || 'Aguardando atualizacao...'}</span>
-          </div>
+          </Badge>
 
           <Button type="button" onClick={onRefresh} disabled={loading} size="lg">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -163,6 +146,6 @@ export function DashboardHeader({
           </Button>
         </div>
       </div>
-    </div>
+    </PageHeader>
   );
 }

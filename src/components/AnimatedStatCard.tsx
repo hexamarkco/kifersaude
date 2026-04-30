@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { gsap } from 'gsap';
 import { usePanelMotion } from '../hooks/usePanelMotion';
+import { ActionSurface, Surface } from '../design-system';
 
 type AnimatedStatCardTone = 'brand' | 'earth' | 'forest' | 'plum' | 'copper';
 
@@ -300,29 +301,20 @@ export default function AnimatedStatCard({
 
   if (onClick) {
     return (
-      <button
+      <ActionSurface
         type="button"
         onClick={onClick}
-        className="panel-glass-panel panel-interactive-glass group relative h-full w-full overflow-hidden rounded-[2rem] border text-left shadow-[0_26px_50px_-38px_rgba(26,18,13,0.38)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_30px_54px_-36px_rgba(26,18,13,0.46)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel-bg,#f8f5ef)]"
-        style={{
-          borderColor: 'var(--panel-border,#d4c0a7)',
-          background: 'var(--panel-surface,#fffdfa)',
-        }}
+        padding="none"
+        className="panel-glass-panel panel-interactive-glass group relative h-full overflow-hidden"
       >
         {cardContent}
-      </button>
+      </ActionSurface>
     );
   }
 
   return (
-    <div
-      className="panel-glass-panel group relative h-full overflow-hidden rounded-[2rem] border shadow-[0_26px_50px_-38px_rgba(26,18,13,0.38)] transition-all duration-300"
-      style={{
-        borderColor: 'var(--panel-border,#d4c0a7)',
-        background: 'var(--panel-surface,#fffdfa)',
-      }}
-    >
+    <Surface padding="none" className="panel-glass-panel group relative h-full overflow-hidden transition-all duration-300">
       {cardContent}
-    </div>
+    </Surface>
   );
 }

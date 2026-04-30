@@ -1,7 +1,7 @@
 import DonutChart from '../../../components/charts/DonutChart';
+import { Surface } from '../../../design-system';
 import {
   DASHBOARD_EMPTY_DONUT_STATE_STYLE,
-  DASHBOARD_SECTION_STYLE,
 } from '../shared/dashboardConstants';
 import type { DashboardChartDatum, DashboardStatusDistributionItem } from '../shared/dashboardTypes';
 
@@ -22,7 +22,7 @@ export function DashboardDistributionSection({
 }: DashboardDistributionSectionProps) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-panel-animate>
-      <div className="panel-glass-panel rounded-[2rem] border p-6 sm:p-7" style={DASHBOARD_SECTION_STYLE}>
+      <Surface className="panel-glass-panel">
         <h3 className="mb-5 text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
           Distribuicao de Leads por Status
         </h3>
@@ -41,9 +41,9 @@ export function DashboardDistributionSection({
             Nenhum lead ativo
           </div>
         )}
-      </div>
+      </Surface>
 
-      <div className="panel-glass-panel rounded-[2rem] border p-6 sm:p-7" style={DASHBOARD_SECTION_STYLE}>
+      <Surface className="panel-glass-panel">
         <h3 className="mb-5 text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
           Contratos por Operadora
         </h3>
@@ -62,7 +62,7 @@ export function DashboardDistributionSection({
             Nenhum contrato ativo
           </div>
         )}
-      </div>
+      </Surface>
     </div>
   );
 }

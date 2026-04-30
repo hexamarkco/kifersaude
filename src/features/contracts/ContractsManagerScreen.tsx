@@ -21,20 +21,12 @@ import ContractForm from "../../components/ContractForm";
 import ContractDetails from "../../components/ContractDetails";
 import FilterSingleSelect from "../../components/FilterSingleSelect";
 import Pagination from "../../components/Pagination";
-import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
+import { Badge, Button, Field, Input, PageHeader, Surface, type PanelTone } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
 import { ContractsPageSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
-import {
-  PANEL_EMPTY_STATE_STYLE,
-  PANEL_INSET_STYLE,
-  PANEL_PILL_STYLE,
-  PANEL_SECTION_STYLE,
-  getPanelToneStyle,
-} from "../../components/ui/panelStyles";
 import { toast } from "../../lib/toast";
 import { getContractBonusSummary } from "../../lib/contractBonus";
 import { normalizeTitleCase } from "../../lib/textNormalization";
@@ -411,13 +403,14 @@ export default function ContractsManager({
     ];
     const badges = getContractManagerHighlightBadges(contract, participants).map(
       (badge) => (
-        <span
+        <Badge
           key={`${contract.id}-${badge.key}`}
-          className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold"
-          style={getPanelToneStyle(badge.tone)}
+          tone={badge.tone}
+          size="sm"
+          className="px-3 py-1 text-xs"
         >
           {badge.label}
-        </span>
+        </Badge>
       ),
     );
 
@@ -449,8 +442,8 @@ export default function ContractsManager({
     setCurrentPage(1);
   };
 
-  const getStatusColor = (status: string) => {
-    const tones = {
+  const getStatusTone = (status: string): PanelTone => {
+    const tones: Record<string, PanelTone> = {
       Rascunho: "neutral",
       "Em análise": "info",
       "Documentos pendentes": "warning",
@@ -461,9 +454,9 @@ export default function ContractsManager({
       Suspenso: "danger",
       Cancelado: "danger",
       Encerrado: "neutral",
-    } as const;
+    };
 
-    return getPanelToneStyle(tones[status as keyof typeof tones] ?? "neutral");
+    return tones[status] ?? "neutral";
   };
 
   useEffect(() => {
@@ -544,96 +537,38 @@ export default function ContractsManager({
         ref={contractsRootRef}
         className="panel-dashboard-immersive panel-page-shell space-y-5"
       >
-        <div className="flex flex-col gap-3" data-panel-animate>
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-              <p
-                className="text-[11px] font-black uppercase tracking-[0.24em]"
-                style={{ color: "var(--panel-text-muted,#876f5c)" }}
-              >
-                Operação contratual
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <h2
-                  className="text-2xl font-bold sm:text-3xl"
-                  style={{ color: "var(--panel-text,#1c1917)" }}
-                >
-                  Gestão de Contratos
-                </h2>
-              </div>
-              <p
-                className="mt-1 max-w-3xl text-sm"
-                style={{ color: "var(--panel-text-muted,#876f5c)" }}
-              >
-                Organize contratos ativos, datas críticas e responsáveis com a
-                mesma leitura operacional do dashboard comercial.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>
-                  {filteredContracts.length}
-                </span>
+        <PageHeader
+          eyebrow="Operação contratual"
+          title="Gestão de Contratos"
+          description="Organize contratos ativos, datas críticas e responsáveis com a mesma leitura operacional do dashboard comercial."
+          data-panel-animate
+          actions={(
+            <>
+              <Badge tone="neutral" className="gap-2">
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>{filteredContracts.length}</span>
                 <span>contratos no recorte</span>
-              </span>
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <AlertCircle
-                  className="h-3.5 w-3.5"
-                  style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
-                />
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>
-                  {upcomingImportantCount}
-                </span>
+              </Badge>
+              <Badge tone={upcomingImportantCount > 0 ? "warning" : "neutral"} className="gap-2">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>{upcomingImportantCount}</span>
                 <span>com data sensível</span>
-              </span>
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <Layers
-                  className="h-3.5 w-3.5"
-                  style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
-                />
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>
-                  {activeFilterCount}
-                </span>
-                <span>
-                  {activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}
-                </span>
-              </span>
-            </div>
-          </div>
-
+              </Badge>
+              <Badge tone={activeFilterCount > 0 ? "accent" : "neutral"} className="gap-2">
+                <Layers className="h-3.5 w-3.5" />
+                <span style={{ color: "var(--panel-text,#1c1917)" }}>{activeFilterCount}</span>
+                <span>{activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}</span>
+              </Badge>
+            </>
+          )}
+        >
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-            <div
-              className="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm"
-              style={{
-                ...PANEL_PILL_STYLE,
-                color: "var(--panel-text-soft,#5b4635)",
-              }}
-            >
+            <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
               <Clock3
                 className="h-4 w-4"
                 style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
               />
               <span>{lastUpdatedLabel}</span>
-            </div>
+            </Badge>
 
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
@@ -660,17 +595,10 @@ export default function ContractsManager({
               )}
             </div>
           </div>
-        </div>
+        </PageHeader>
 
-        <div
-          className="panel-glass-panel space-y-5 rounded-[2rem] border p-5 sm:p-6"
-          style={PANEL_SECTION_STYLE}
-          data-panel-animate
-        >
-          <div
-            className="flex flex-col gap-3 rounded-[1.7rem] border p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
-            style={PANEL_INSET_STYLE}
-          >
+        <Surface className="panel-glass-panel space-y-5" data-panel-animate>
+          <Surface variant="muted" padding="sm" className="flex flex-col gap-3 rounded-[1.7rem] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-2xl">
               <Input
                 type="text"
@@ -690,23 +618,14 @@ export default function ContractsManager({
                 <Filter className="h-4 w-4" />
                 Limpar
               </Button>
-              <div
-                className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-sm"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span
-                  className="font-semibold"
-                  style={{ color: "var(--panel-text,#1c1917)" }}
-                >
+              <Badge tone="neutral" className="h-10 gap-1.5 px-3 text-sm normal-case tracking-normal">
+                <span className="font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
                   {filteredContracts.length}
                 </span>
                 <span>contratos</span>
-              </div>
+              </Badge>
             </div>
-          </div>
+          </Surface>
 
           <div>
             <h4
@@ -716,13 +635,7 @@ export default function ContractsManager({
               Filtros principais
             </h4>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="flex flex-col gap-1.5">
-                <label
-                  className="text-xs font-medium"
-                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                >
-                  Status
-                </label>
+              <Field label="Status">
                 <FilterSingleSelect
                   icon={Filter}
                   value={filterStatus}
@@ -749,15 +662,9 @@ export default function ContractsManager({
                     { value: "Encerrado", label: "Encerrado" },
                   ]}
                 />
-              </div>
+              </Field>
 
-              <div className="flex flex-col gap-1.5">
-                <label
-                  className="text-xs font-medium"
-                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                >
-                  Responsável
-                </label>
+              <Field label="Responsável">
                 <FilterSingleSelect
                   icon={Users}
                   value={filterResponsavel}
@@ -772,15 +679,9 @@ export default function ContractsManager({
                     })),
                   ]}
                 />
-              </div>
+              </Field>
 
-              <div className="flex flex-col gap-1.5">
-                <label
-                  className="text-xs font-medium"
-                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                >
-                  Operadora
-                </label>
+              <Field label="Operadora">
                 <FilterSingleSelect
                   icon={FileText}
                   value={filterOperadora}
@@ -795,15 +696,9 @@ export default function ContractsManager({
                     })),
                   ]}
                 />
-              </div>
+              </Field>
 
-              <div className="flex flex-col gap-1.5">
-                <label
-                  className="text-xs font-medium"
-                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                >
-                  Datas importantes
-                </label>
+              <Field label="Datas importantes">
                 <FilterSingleSelect
                   icon={Calendar}
                   value={dateProximityFilter}
@@ -817,16 +712,12 @@ export default function ContractsManager({
                     { value: "proximos-30", label: "Próximos 30 dias" },
                   ]}
                 />
-              </div>
+              </Field>
             </div>
           </div>
-        </div>
+        </Surface>
 
-        <div
-          className="panel-glass-panel rounded-[2rem] border p-5 sm:p-6"
-          style={PANEL_SECTION_STYLE}
-          data-panel-animate
-        >
+        <Surface className="panel-glass-panel" data-panel-animate>
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p
@@ -851,30 +742,18 @@ export default function ContractsManager({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
+              <Badge tone="neutral" className="gap-2">
                 <span style={{ color: "var(--panel-text,#1c1917)" }}>
                   {filteredContracts.length}
                 </span>
                 <span>resultados</span>
-              </span>
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
+              </Badge>
+              <Badge tone="neutral" className="gap-2">
                 <span style={{ color: "var(--panel-text,#1c1917)" }}>
                   {currentPage}/{totalPages}
                 </span>
                 <span>páginas</span>
-              </span>
+              </Badge>
             </div>
           </div>
 
@@ -883,10 +762,11 @@ export default function ContractsManager({
               const bonusValue = getBonusValue(contract);
 
               return (
-                <div
+                <Surface
                   key={contract.id}
-                  className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] border p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
-                  style={PANEL_INSET_STYLE}
+                  variant="muted"
+                  padding="sm"
+                  className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] transition-all sm:p-6"
                 >
                   <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">
@@ -897,27 +777,18 @@ export default function ContractsManager({
                         >
                           {contract.codigo_contrato}
                         </h3>
-                        <span
-                          className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold"
-                          style={getStatusColor(contract.status)}
-                        >
+                        <Badge tone={getStatusTone(contract.status)} size="sm" className="px-3 py-1 text-xs">
                           {contract.status}
-                        </span>
-                        <span
-                          className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold"
-                          style={getPanelToneStyle("neutral")}
-                        >
+                        </Badge>
+                        <Badge tone="neutral" size="sm" className="px-3 py-1 text-xs">
                           {contract.modalidade}
-                        </span>
+                        </Badge>
                         {contract.comissao_multiplicador &&
                           contract.comissao_multiplicador !== 2.8 && (
-                            <span
-                              className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-semibold"
-                              style={getPanelToneStyle("warning")}
-                            >
+                            <Badge tone="warning" size="sm" className="gap-1 px-3 py-1 text-xs">
                               <AlertCircle className="h-3 w-3" />
                               <span>{contract.comissao_multiplicador}x</span>
-                            </span>
+                            </Badge>
                           )}
                         {renderDateBadges(contract)}
                       </div>
@@ -962,19 +833,13 @@ export default function ContractsManager({
                             </span>
                             {contract.comissao_recebimento_adiantado ===
                             false ? (
-                              <span
-                                className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                                style={getPanelToneStyle("warning")}
-                              >
+                              <Badge tone="warning" size="sm">
                                 Parcelada
-                              </span>
+                              </Badge>
                             ) : contract.comissao_recebimento_adiantado ? (
-                              <span
-                                className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                                style={getPanelToneStyle("success")}
-                              >
+                              <Badge tone="success" size="sm">
                                 Adiantada
-                              </span>
+                              </Badge>
                             ) : null}
                           </div>
                         )}
@@ -1062,16 +927,12 @@ export default function ContractsManager({
                       </Button>
                     )}
                   </div>
-                </div>
+                </Surface>
               );
             })}
 
             {filteredContracts.length === 0 && (
-              <div
-                className="panel-glass-panel rounded-[1.7rem] border py-12 text-center shadow-sm"
-                style={PANEL_EMPTY_STATE_STYLE}
-                data-panel-animate
-              >
+              <Surface variant="muted" className="panel-glass-panel rounded-[1.7rem] py-12 text-center" data-panel-animate>
                 <FileText
                   className="mx-auto mb-4 h-16 w-16"
                   style={{ color: "var(--panel-text-muted,#876f5c)" }}
@@ -1085,7 +946,7 @@ export default function ContractsManager({
                 <p style={{ color: "var(--panel-text-soft,#5b4635)" }}>
                   Tente ajustar os filtros ou adicione um novo contrato.
                 </p>
-              </div>
+              </Surface>
             )}
           </div>
 
@@ -1099,7 +960,7 @@ export default function ContractsManager({
               onItemsPerPageChange={handleItemsPerPageChange}
             />
           )}
-        </div>
+        </Surface>
 
         {showForm && (
           <ContractForm

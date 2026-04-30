@@ -25,6 +25,7 @@ import { supabase, Reminder, Contract } from '../lib/supabase';
 import { formatDateTimeFullBR } from '../lib/dateUtils';
 import { getContractBonusSummary } from '../lib/contractBonus';
 import { getCommissionInstallmentSummary } from '../lib/contractCommission';
+import { cx } from '../lib/cx';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import { useNavigate } from 'react-router-dom';
@@ -37,7 +38,6 @@ type TabConfig = {
   label: string;
   icon: LucideIcon;
   badge?: number;
-  badgeColor?: string;
   children?: TabConfig[];
 };
 
@@ -137,19 +137,19 @@ export default function Layout({
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
 
-  const crmChildren = [
-    { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount, badgeColor: 'bg-orange-500' },
+  const crmChildren: TabConfig[] = [
+    { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount },
     { id: 'cotador', label: 'Cotador', icon: Calculator },
     { id: 'contracts', label: 'Contratos', icon: FileText },
     { id: 'agenda', label: 'Agenda', icon: Calendar, badge: unreadReminders },
   ].filter(child => canView(child.id));
 
-  const comunicacaoChildren = [
-    { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle, badge: unreadInboxChats, badgeColor: 'bg-orange-500' },
+  const comunicacaoChildren: TabConfig[] = [
+    { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle, badge: unreadInboxChats },
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));
 
-  const financeiroChildren = [
+  const financeiroChildren: TabConfig[] = [
     { id: 'financeiro-comissoes', label: 'Comissões', icon: DollarSign },
   ].filter(child => canView(child.id));
 
@@ -839,6 +839,12 @@ export default function Layout({
     setThemeMode((currentMode) => (currentMode === 'dark' ? 'light' : 'dark'));
   };
 
+  const renderSidebarBadge = (count: number, options: { floating?: boolean; pulse?: boolean } = {}) => (
+    <span className={cx('kds-sidebar-badge', options.floating && 'absolute -right-1 -top-1', options.pulse && 'animate-pulse')}>
+      {count > 9 ? '9+' : count}
+    </span>
+  );
+
   const renderSidebarItem = (tab: TabConfig) => {
     const Icon = tab.icon;
     const isActive = isParentActive(tab);
@@ -852,26 +858,23 @@ export default function Layout({
             ref={(el) => { menuItemRefs.current[tab.id] = el; }}
             onClick={(event) => handleTabClick(tab, event.currentTarget)}
             data-sidebar-item
-            className={`relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200 ${
-              isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
-            } ${isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
+            className={cx(
+              'kds-sidebar-item relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200',
+              isActive && 'is-active',
+              isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3',
+            )}
             title={isMenuCollapsed ? tab.label : undefined}
           >
             <div className={`flex items-center transition-all duration-200 ${isMenuCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
               <div className="relative flex h-5 w-5 items-center justify-center">
                 <Icon className="h-5 w-5 flex-shrink-0" />
                 {totalBadge > 0 && isMenuCollapsed && (
-                  <span
-                    className={`${
-                      tab.badgeColor || 'bg-orange-500'
-                    } absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                       hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda') ? 'animate-pulse' : ''
-                    } ${
-                      (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
-                    }`}
-                  >
-                    {totalBadge > 9 ? '9+' : totalBadge}
-                  </span>
+                  renderSidebarBadge(totalBadge, {
+                    floating: true,
+                    pulse:
+                      Boolean(hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda')) ||
+                      Boolean((tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0),
+                  })
                 )}
               </div>
               <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
@@ -880,17 +883,12 @@ export default function Layout({
               <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
             )}
             {totalBadge > 0 && !isMenuCollapsed && (
-              <span
-                className={`${
-                  tab.badgeColor || 'bg-orange-500'
-                } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                   hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda') ? 'animate-pulse' : ''
-                } ${
-                  (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
-                } absolute -right-1 -top-1`}
-              >
-                {totalBadge > 9 ? '9+' : totalBadge}
-              </span>
+              renderSidebarBadge(totalBadge, {
+                floating: true,
+                pulse:
+                  Boolean(hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda')) ||
+                  Boolean((tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0),
+              })
             )}
           </button>
 
@@ -906,24 +904,21 @@ export default function Layout({
                       onTabChange(child.id);
                       setExpandedParent(null);
                     }}
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-                      isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
-                    }`}
+                    className={cx(
+                      'kds-sidebar-item flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
+                      isChildActive && 'is-active',
+                    )}
                   >
                     <div className="flex items-center gap-3">
                       <ChildIcon className="h-4 w-4" />
                       <span>{child.label}</span>
                     </div>
                     {child.badge !== undefined && child.badge > 0 && (
-                      <span
-                        className={`${
-                          child.badgeColor || 'bg-orange-500'
-                        } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                           child.id === 'agenda' && hasActiveNotification ? 'animate-pulse' : ''
-                         } ${(child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0 ? 'animate-pulse' : ''}`}
-                      >
-                        {child.badge > 9 ? '9+' : child.badge}
-                      </span>
+                      renderSidebarBadge(child.badge, {
+                        pulse:
+                          Boolean(child.id === 'agenda' && hasActiveNotification) ||
+                          Boolean((child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0),
+                      })
                     )}
                   </button>
                 );
@@ -939,9 +934,11 @@ export default function Layout({
         key={tab.id}
         onClick={() => handleTabClick(tab)}
         data-sidebar-item
-        className={`relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-colors ${
-          isActive ? 'bg-orange-50 text-orange-700' : 'text-slate-600 hover:bg-slate-100'
-        } ${isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3'}`}
+        className={cx(
+          'kds-sidebar-item relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-colors',
+          isActive && 'is-active',
+          isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3',
+        )}
         title={isMenuCollapsed ? tab.label : undefined}
       >
         <div className={`flex items-center transition-all duration-200 ${isMenuCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
@@ -949,17 +946,11 @@ export default function Layout({
           <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
         </div>
         {totalBadge > 0 && !isMenuCollapsed && (
-          <span
-            className={`${
-              tab.badgeColor || 'bg-orange-500'
-            } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-               hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda') ? 'animate-pulse' : ''
-            } ${
-              (tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0 ? 'animate-pulse' : ''
-            }`}
-          >
-            {totalBadge > 9 ? '9+' : totalBadge}
-          </span>
+          renderSidebarBadge(totalBadge, {
+            pulse:
+              Boolean(hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda')) ||
+              Boolean((tab.id === 'crm' || activeTab === 'leads') && newLeadsCount > 0),
+          })
         )}
       </button>
     );
@@ -972,7 +963,7 @@ export default function Layout({
 
   return (
     <div
-      className={`painel-theme kifer-ds kifer-panel-theme theme-${themeMode} ${ambientMotionEnabled ? 'panel-ambient-full' : 'panel-ambient-reduced'} relative isolate flex min-h-screen bg-slate-50`}
+      className={`painel-theme kifer-ds kifer-panel-theme kds-app-shell theme-${themeMode} ${ambientMotionEnabled ? 'panel-ambient-full' : 'panel-ambient-reduced'} relative isolate flex min-h-screen`}
     >
       <div className="panel-shell-bg" aria-hidden="true">
         <div ref={auroraPrimaryRef} className="panel-aurora panel-aurora-primary" />
@@ -981,20 +972,20 @@ export default function Layout({
       </div>
       <aside
         ref={sidebarRef}
-        className={`panel-glass-strong fixed left-0 top-0 z-40 h-screen border-r border-slate-200 bg-white transition-[width] duration-300 ease-in-out ${
+        className={`kds-sidebar panel-glass-strong fixed left-0 top-0 z-40 h-screen border-r transition-[width] duration-300 ease-in-out ${
           isMenuCollapsed ? 'w-16' : 'w-64'
         }`}
       >
         <div className="flex h-full flex-col">
-          <div className={`flex h-16 items-center border-b border-slate-200 px-4 transition-all duration-300 ${isMenuCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <div className={`kds-sidebar-divider flex h-16 items-center border-b px-4 transition-all duration-300 ${isMenuCollapsed ? 'justify-center' : 'justify-between'}`}>
             <div className={`flex items-center gap-3 transition-all duration-300 ${isMenuCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+              <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                 <span className="text-base font-bold text-white">K</span>
               </div>
-              <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">KS Workspace</span>
+              <span className="whitespace-nowrap text-sm font-semibold text-[var(--panel-text,#1c1917)]">KS Workspace</span>
             </div>
             {isMenuCollapsed && (
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
+              <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                 <span className="text-base font-bold text-white">K</span>
               </div>
             )}
@@ -1006,11 +997,11 @@ export default function Layout({
             </div>
           </nav>
 
-          <div className={`border-t border-slate-200 p-2 space-y-1 ${isMenuCollapsed ? 'px-1' : ''}`}>
+          <div className={`kds-sidebar-divider space-y-1 border-t p-2 ${isMenuCollapsed ? 'px-1' : ''}`}>
             <button
               onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
               data-sidebar-item
-              className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
+              className={`kds-sidebar-item flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
                 isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={isMenuCollapsed ? 'Expandir menu' : 'Recolher menu'}
@@ -1023,7 +1014,7 @@ export default function Layout({
                 ref={notificationsButtonRef}
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
                 data-sidebar-item
-                className={`flex items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-orange-50 hover:text-orange-600 ${
+                className={`kds-sidebar-item flex items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
                   isMenuCollapsed ? 'w-full justify-center px-2 gap-0' : 'gap-3 px-3'
                 }`}
                 title="Notificações"
@@ -1033,13 +1024,10 @@ export default function Layout({
                 <div className="relative flex h-5 w-5 items-center justify-center">
                   <BellRing className="h-5 w-5" />
                   {unreadReminders > 0 && (
-                      <span
-                        className={`absolute -right-1 -top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                          hasActiveNotification ? 'bg-orange-500 animate-pulse' : 'bg-orange-500'
-                        }`}
-                      >
-                        {unreadReminders > 9 ? '9+' : unreadReminders}
-                      </span>
+                      renderSidebarBadge(unreadReminders, {
+                        floating: true,
+                        pulse: Boolean(hasActiveNotification),
+                      })
                     )}
                   </div>
                   <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notificações</span>
@@ -1047,88 +1035,88 @@ export default function Layout({
                 {showNotificationsDropdown && (
                   <div
                     ref={notificationsDropdownRef}
-                    className={`panel-glass-panel absolute z-50 w-96 rounded-2xl border border-slate-200 bg-white shadow-xl ${
+                    className={`panel-glass-panel absolute z-50 w-96 rounded-2xl border shadow-xl ${
                       isMenuCollapsed
                         ? 'left-full bottom-0 ml-2 max-w-[calc(100vw-5rem)]'
                         : 'left-0 bottom-full mb-2 max-w-[calc(100vw-1rem)]'
                     }`}
                   >
-                    <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                    <div className="kds-popover-section flex items-center justify-between border-b px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">Central do dia</p>
-                        <p className="text-xs text-slate-500">Resumo de hoje</p>
+                        <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">Central do dia</p>
+                        <p className="text-xs text-[var(--panel-text-muted,#876f5c)]">Resumo de hoje</p>
                       </div>
                       <button
                         onClick={() => {
                           onTabChange('agenda');
                           setShowNotificationsDropdown(false);
                         }}
-                        className="text-xs font-semibold text-orange-600 hover:text-orange-700"
+                        className="text-xs font-semibold text-[var(--panel-accent-strong,#b85c1f)] hover:text-[var(--panel-accent-ink,#6f3f16)]"
                       >
                         Ver tudo
                       </button>
                     </div>
 
                     {notificationsLoading ? (
-                      <div className="px-4 py-6 text-sm text-slate-500">Carregando...</div>
+                      <div className="px-4 py-6 text-sm text-[var(--panel-text-muted,#876f5c)]">Carregando...</div>
                     ) : notificationsError ? (
-                      <div className="px-4 py-6 text-sm text-red-600">{notificationsError}</div>
+                      <div className="px-4 py-6 text-sm text-[var(--panel-accent-red-text,#8a3128)]">{notificationsError}</div>
                     ) : (
                       <div className="max-h-[70vh] overflow-y-auto">
                         <div className="px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Lembretes do dia</p>
-                            <span className="text-xs text-slate-500">{todayReminders.length}</span>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Lembretes do dia</p>
+                            <span className="text-xs text-[var(--panel-text-muted,#876f5c)]">{todayReminders.length}</span>
                           </div>
                           {todayReminders.length === 0 ? (
-                            <p className="mt-2 text-sm text-slate-500">Nenhum lembrete para hoje.</p>
+                            <p className="mt-2 text-sm text-[var(--panel-text-muted,#876f5c)]">Nenhum lembrete para hoje.</p>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayReminders.slice(0, 5).map((reminder) => (
-                                <div key={reminder.id} className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2">
-                                  <p className="text-sm font-semibold text-slate-800">{reminder.titulo}</p>
-                                  <p className="text-xs text-slate-500">{formatDateTimeFullBR(reminder.data_lembrete)}</p>
+                                <div key={reminder.id} className="kds-list-item">
+                                  <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">{reminder.titulo}</p>
+                                  <p className="text-xs text-[var(--panel-text-muted,#876f5c)]">{formatDateTimeFullBR(reminder.data_lembrete)}</p>
                                 </div>
                               ))}
                             </div>
                           )}
                         </div>
 
-                        <div className="border-t border-slate-100 px-4 py-3">
+                        <div className="kds-popover-section border-t px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pagamentos do dia</p>
-                            <span className="text-xs text-slate-500">{todayPayments.length}</span>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Pagamentos do dia</p>
+                            <span className="text-xs text-[var(--panel-text-muted,#876f5c)]">{todayPayments.length}</span>
                           </div>
                           {todayPayments.length === 0 ? (
-                            <p className="mt-2 text-sm text-slate-500">Nenhum pagamento previsto para hoje.</p>
+                            <p className="mt-2 text-sm text-[var(--panel-text-muted,#876f5c)]">Nenhum pagamento previsto para hoje.</p>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayPayments.slice(0, 5).map((payment) => (
-                                <div key={payment.id} className="rounded-lg border border-slate-100 bg-emerald-50 px-3 py-2">
-                                  <p className="text-sm font-semibold text-slate-800">
+                                <div key={payment.id} className="kds-list-item kds-list-item-success">
+                                  <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">
                                     {payment.type === 'comissao' ? 'Comissão' : 'Bonificação'}
                                     {payment.installmentLabel ? ` (${payment.installmentLabel})` : ''}
                                   </p>
-                                  <p className="text-xs text-slate-600">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</p>
+                                  <p className="text-xs text-[var(--panel-text-soft,#5b4635)]">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</p>
                                 </div>
                               ))}
                             </div>
                           )}
                         </div>
 
-                        <div className="border-t border-slate-100 px-4 py-3">
+                        <div className="kds-popover-section border-t px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Aniversariantes</p>
-                            <span className="text-xs text-slate-500">{todayBirthdays.length}</span>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Aniversariantes</p>
+                            <span className="text-xs text-[var(--panel-text-muted,#876f5c)]">{todayBirthdays.length}</span>
                           </div>
                           {todayBirthdays.length === 0 ? (
-                            <p className="mt-2 text-sm text-slate-500">Nenhum aniversariante hoje.</p>
+                            <p className="mt-2 text-sm text-[var(--panel-text-muted,#876f5c)]">Nenhum aniversariante hoje.</p>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayBirthdays.slice(0, 5).map((birthday) => (
-                                <div key={birthday.id} className="rounded-lg border border-slate-100 bg-pink-50 px-3 py-2">
-                                  <p className="text-sm font-semibold text-slate-800">{birthday.name}</p>
-                                  <p className="text-xs text-slate-600">
+                                <div key={birthday.id} className="kds-list-item kds-list-item-warning">
+                                  <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">{birthday.name}</p>
+                                  <p className="text-xs text-[var(--panel-text-soft,#5b4635)]">
                                     {birthday.role}
                                     {birthday.holderName ? ` • Titular: ${birthday.holderName}` : ''}
                                   </p>
@@ -1146,7 +1134,7 @@ export default function Layout({
               type="button"
               onClick={toggleThemeMode}
               data-sidebar-item
-              className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-100 ${
+              className={`kds-sidebar-item flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
                 isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
@@ -1158,7 +1146,7 @@ export default function Layout({
             <button
               onClick={handleLogout}
               data-sidebar-item
-              className={`flex w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${
+              className={`kds-sidebar-item kds-sidebar-item-danger flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
                 isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={isMenuCollapsed ? 'Sair' : undefined}
@@ -1174,7 +1162,7 @@ export default function Layout({
         <div
           id="collapsed-menu-dropdown"
           ref={collapsedDropdownRef}
-          className="panel-glass-panel fixed z-[60] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-lg border border-slate-200 bg-white p-1.5 shadow-2xl"
+          className="panel-glass-panel fixed z-[60] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-lg border p-1.5 shadow-2xl"
           style={{
             left: collapsedDropdownPosition.left,
             top: collapsedDropdownPosition.top,
@@ -1182,7 +1170,7 @@ export default function Layout({
         >
           <div
             aria-hidden="true"
-            className={`pointer-events-none absolute h-3 w-3 rotate-45 border border-slate-200 bg-white shadow-[0_10px_22px_-14px_rgba(15,23,42,0.8)] ${
+            className={`pointer-events-none absolute h-3 w-3 rotate-45 border border-[var(--panel-border-subtle,#e4d5c0)] bg-[var(--panel-surface,#fffdfa)] shadow-[0_10px_22px_-14px_rgba(15,23,42,0.8)] ${
               collapsedDropdownPosition.side === 'right'
                 ? '-left-1.5 border-b-0 border-r-0'
                 : '-right-1.5 border-l-0 border-t-0'
@@ -1202,24 +1190,21 @@ export default function Layout({
                     setActiveDropdownTab(null);
                     setCollapsedDropdownPosition(null);
                   }}
-                  className={`flex min-w-[156px] items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors ${
-                    isChildActive ? 'bg-orange-100 text-orange-700' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
+                  className={cx(
+                    'kds-sidebar-item flex min-w-[156px] items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
+                    isChildActive && 'is-active',
+                  )}
                 >
                   <div className="flex items-center gap-3">
                     <ChildIcon className="h-4 w-4" />
                     <span>{child.label}</span>
                   </div>
                   {child.badge !== undefined && child.badge > 0 && (
-                    <span
-                      className={`${
-                        child.badgeColor || 'bg-orange-500'
-                      } flex h-4 min-w-[16px] items-center justify-center rounded-full px-0.5 text-[10px] font-semibold text-white ${
-                        child.id === 'agenda' && hasActiveNotification ? 'animate-pulse' : ''
-                      } ${(child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0 ? 'animate-pulse' : ''}`}
-                    >
-                      {child.badge > 9 ? '9+' : child.badge}
-                    </span>
+                    renderSidebarBadge(child.badge, {
+                      pulse:
+                        Boolean(child.id === 'agenda' && hasActiveNotification) ||
+                        Boolean((child.id === 'leads' || child.id === 'whatsapp-inbox') && child.badge > 0),
+                    })
                   )}
                 </button>
               );

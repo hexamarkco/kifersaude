@@ -4,6 +4,7 @@ import path from 'node:path';
 const projectRoot = process.cwd();
 const targetRoot = path.join(projectRoot, 'src');
 const fileExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.css']);
+const includeDesignSystem = process.argv.includes('--include-design-system');
 
 const patternDefinitions = [
   {
@@ -54,6 +55,13 @@ const files = await collectFiles(targetRoot);
 const results = [];
 
 for (const filePath of files) {
+  const relativePath = path.relative(projectRoot, filePath);
+  const pathParts = relativePath.split(path.sep);
+
+  if (!includeDesignSystem && pathParts.includes('design-system')) {
+    continue;
+  }
+
   const matches = await auditFile(filePath);
   if (matches.length === 0) continue;
 
@@ -73,7 +81,9 @@ results.sort((left, right) => right.total - left.total || left.filePath.localeCo
 
 const totalMatches = results.reduce((sum, item) => sum + item.total, 0);
 
-console.log(`Visual hardcode audit: ${totalMatches} matches across ${results.length} files in src`);
+const scopeLabel = includeDesignSystem ? 'src' : 'src excluding design-system';
+
+console.log(`Visual hardcode audit: ${totalMatches} matches across ${results.length} files in ${scopeLabel}`);
 
 if (results.length === 0) {
   process.exit(0);

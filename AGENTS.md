@@ -2,11 +2,11 @@
 
 Este projeto adota, como referencia operacional permanente, os seguintes frameworks e colecoes de praticas:
 
-- `ui-ux-pro-max-skill`
 - `claude-mem`
 - `get-shit-done`
 - `superpowers`
 - `awesome-claude-code`
+- design system proprio Kifer Saude
 
 ## Default workflow
 
@@ -65,7 +65,7 @@ Ao implementar ou corrigir:
 
 ## Project memory
 
-- 2026-03-10: Este repositorio passou a adotar como referencia permanente os frameworks `ui-ux-pro-max-skill`, `claude-mem`, `get-shit-done`, `superpowers` e `awesome-claude-code` para comportamento, planejamento e execucao.
+- 2026-03-10: Este repositorio passou a adotar como referencia permanente os frameworks `claude-mem`, `get-shit-done`, `superpowers` e `awesome-claude-code` para comportamento, planejamento e execucao.
 - 2026-03-11: A paleta institucional padrao do front passa a priorizar marrom, laranja, preto e branco, com cinzas apenas como apoio neutro. Cores semanticas como verde, vermelho e azul devem ficar restritas a feedback funcional e status.
 - 2026-03-11: Superficies de comunicacao/WhatsApp devem priorizar classes semanticas compartilhadas `.comm-*` e o comando `npm run audit:visual` passa a ser a referencia para rastrear hardcodes visuais remanescentes no `src`.
 - 2026-03-22: O hot path de nao lidas do WhatsApp passa a priorizar cursores compartilhados por chat (`whatsapp_chat_read_cursors`) e a inbox deve evitar cargas globais antecipadas de fotos fallback e syncs agressivos quando o chat ainda esta fresco.
@@ -76,3 +76,4 @@ Ao implementar ou corrigir:
 - 2026-04-04: O catalogo do `Cotador` passa a suportar hierarquia `operadora -> linha -> produto -> tabela -> precos por faixa etaria`, com tabelas variando por `PF/ADESAO/PME`, `MEI/nao MEI`, coparticipacao e faixas de vidas.
 - 2026-04-04: A entrada principal de `/painel/cotador` passa a ser a lista de cotacoes salvas, com detalhe por rota dedicada (`/painel/cotador/:quoteId`) e configuracao propria do modulo em `/painel/cotador/configuracoes`.
 - 2026-04-04: A manutencao administrativa de `operadoras` deixa de viver em `/painel/config` e passa a ser centralizada em `/painel/cotador/configuracoes`, preservando a tabela compartilhada `operadoras` por compatibilidade com contratos e com o catalogo do Cotador.
+- 2026-04-29: O projeto deixa de usar `ui-ux-pro-max-skill` como referencia de UI e passa a adotar o design system proprio Kifer Saude. Novas interfaces de `/painel` devem priorizar `src/design-system` e tratar `src/components/ui` como camada de compatibilidade temporaria durante a migracao.

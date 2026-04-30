@@ -34,6 +34,7 @@ const META_PIXEL_SLUG = "meta_pixel";
 const GTM_SLUG = "google_tag_manager";
 
 const OPENAI_DEFAULT_TEXT_MODEL = "gpt-4o-mini";
+const OPENAI_DEFAULT_TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
 const GEMINI_DEFAULT_TEXT_MODEL = "gemini-2.0-flash";
 const CLAUDE_DEFAULT_TEXT_MODEL = "claude-3-5-sonnet-latest";
 
@@ -43,6 +44,7 @@ type AiTaskKey =
   | "rewrite_message"
   | "follow_up_generation"
   | "whatsapp_audio_transcription";
+type AiTaskKind = "text" | "transcription";
 type ModelOption = { value: string; label: string };
 
 type AiProviderFormState = {
@@ -91,23 +93,26 @@ const AI_PROVIDER_META: Record<AiProvider, AiProviderMeta> = {
   },
 };
 
-const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string }> =
+const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string; kind: AiTaskKind }> =
   [
     {
       key: "rewrite_message",
       label: "Reescrita de mensagem",
       description:
         "Usado no WhatsApp para reescrever mensagens antes de enviar.",
+      kind: "text",
     },
     {
       key: "follow_up_generation",
       label: "Geração de follow-up",
       description: "Usado em lembretes para sugerir mensagens de follow-up.",
+      kind: "text",
     },
     {
       key: "whatsapp_audio_transcription",
       label: "Transcrição de áudio do WhatsApp",
       description: "Usado no inbox para transcrever notas de voz e áudios sob demanda.",
+      kind: "transcription",
     },
   ];
 
@@ -124,6 +129,21 @@ const toTrimmedString = (value: unknown) =>
 
 const isAiProvider = (value: string): value is AiProvider =>
   value === "openai" || value === "gemini" || value === "claude";
+
+const getTaskKind = (taskKey: AiTaskKey): AiTaskKind =>
+  AI_TASKS.find((task) => task.key === taskKey)?.kind ?? "text";
+
+const normalizeModelName = (value: string) => value.trim().toLowerCase();
+
+const isOpenAiTranscriptionModel = (model: string): boolean => {
+  const normalized = normalizeModelName(model);
+  return normalized === "whisper-1" || normalized.includes("transcribe");
+};
+
+const isOpenAiTextModel = (model: string): boolean => {
+  const normalized = normalizeModelName(model);
+  return Boolean(normalized) && !isOpenAiTranscriptionModel(normalized);
+};
 
 const normalizeModelOptions = (value: unknown): ModelOption[] => {
   if (!Array.isArray(value)) return [];
@@ -182,8 +202,12 @@ const createDefaultProviderModelsState = (): Record<
   },
 });
 
-const getDefaultTaskModel = (provider: AiProvider): string => {
+const getDefaultTaskModel = (provider: AiProvider, taskKey?: AiTaskKey): string => {
   if (provider === "openai") {
+    if (taskKey && getTaskKind(taskKey) === "transcription") {
+      return OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
+    }
+
     return OPENAI_DEFAULT_TEXT_MODEL;
   }
 
@@ -195,16 +219,76 @@ const getDefaultTaskModel = (provider: AiProvider): string => {
 };
 
 const getPreferredTaskModel = (
+  taskKey: AiTaskKey,
   provider: AiProvider,
   providerOptions: ModelOption[],
 ): string => {
-  const defaultModel = getDefaultTaskModel(provider);
+  const defaultModel = getDefaultTaskModel(provider, taskKey);
+  const compatibleOptions = getCompatibleModelOptions(taskKey, provider, providerOptions);
 
-  if (providerOptions.some((option) => option.value === defaultModel)) {
+  if (compatibleOptions.some((option) => option.value === defaultModel)) {
     return defaultModel;
   }
 
-  return providerOptions[0]?.value ?? defaultModel;
+  return compatibleOptions[0]?.value ?? defaultModel;
+};
+
+function getCompatibleModelOptions(
+  taskKey: AiTaskKey,
+  provider: AiProvider,
+  providerOptions: ModelOption[],
+): ModelOption[] {
+  const taskKind = getTaskKind(taskKey);
+
+  if (taskKind === "transcription") {
+    if (provider !== "openai") {
+      return [];
+    }
+
+    const transcriptionOptions = providerOptions.filter((option) => isOpenAiTranscriptionModel(option.value));
+    const hasDefault = transcriptionOptions.some((option) => option.value === OPENAI_DEFAULT_TRANSCRIPTION_MODEL);
+    const hasWhisper = transcriptionOptions.some((option) => option.value === "whisper-1");
+
+    return [
+      ...(hasDefault ? [] : [{ value: OPENAI_DEFAULT_TRANSCRIPTION_MODEL, label: OPENAI_DEFAULT_TRANSCRIPTION_MODEL }]),
+      ...transcriptionOptions,
+      ...(hasWhisper ? [] : [{ value: "whisper-1", label: "whisper-1" }]),
+    ];
+  }
+
+  if (provider === "openai") {
+    return providerOptions.filter((option) => isOpenAiTextModel(option.value));
+  }
+
+  return providerOptions;
+}
+
+const getProviderOptionsForTask = (taskKey: AiTaskKey) => {
+  if (getTaskKind(taskKey) === "transcription") {
+    return AI_PROVIDER_OPTIONS.filter((option) => option.value === "openai");
+  }
+
+  return AI_PROVIDER_OPTIONS;
+};
+
+const getTaskRouteError = (taskKey: AiTaskKey, route: AiTaskRouteState): string | null => {
+  const taskKind = getTaskKind(taskKey);
+
+  if (taskKind === "transcription") {
+    if (route.provider !== "openai") {
+      return "Transcrição de áudio só é suportada com OpenAI no momento.";
+    }
+
+    if (!isOpenAiTranscriptionModel(route.model)) {
+      return "Transcrição precisa usar um modelo de áudio, como gpt-4o-mini-transcribe, gpt-4o-transcribe ou whisper-1.";
+    }
+  }
+
+  if (route.provider === "openai" && taskKind === "text" && isOpenAiTranscriptionModel(route.model)) {
+    return "Reescrita e follow-up precisam usar modelos de texto, não modelos de transcrição.";
+  }
+
+  return null;
 };
 
 const createDefaultProviderForms = (): Record<
@@ -228,17 +312,17 @@ const createDefaultProviderForms = (): Record<
 const createDefaultRoutingForm = (): AiRoutingFormState => ({
   rewrite_message: {
     provider: "openai",
-    model: getDefaultTaskModel("openai"),
+    model: getDefaultTaskModel("openai", "rewrite_message"),
     fallbackToOpenAi: true,
   },
   follow_up_generation: {
     provider: "openai",
-    model: getDefaultTaskModel("openai"),
+    model: getDefaultTaskModel("openai", "follow_up_generation"),
     fallbackToOpenAi: true,
   },
   whatsapp_audio_transcription: {
     provider: "openai",
-    model: getDefaultTaskModel("openai"),
+    model: getDefaultTaskModel("openai", "whatsapp_audio_transcription"),
     fallbackToOpenAi: true,
   },
 });
@@ -290,7 +374,7 @@ const normalizeRoutingSettings = (
     const model =
       toTrimmedString(rawTask.model) ||
       toTrimmedString(rawTask.textModel) ||
-      getDefaultTaskModel(provider);
+      getDefaultTaskModel(provider, task.key);
 
     const fallbackToOpenAi =
       typeof rawTask.fallbackToOpenAi === "boolean"
@@ -608,11 +692,21 @@ export default function IntegrationsScreen() {
     setSavingAiRouting(true);
     setAiMessage(null);
 
+    const invalidTask = AI_TASKS.find((task) => getTaskRouteError(task.key, aiRoutingForm[task.key]));
+    if (invalidTask) {
+      setAiMessage({
+        type: "error",
+        text: `${invalidTask.label}: ${getTaskRouteError(invalidTask.key, aiRoutingForm[invalidTask.key])}`,
+      });
+      setSavingAiRouting(false);
+      return;
+    }
+
     const tasksPayload = AI_TASKS.reduce(
       (accumulator, task) => {
         const route = aiRoutingForm[task.key];
         const model =
-          route.model.trim() || getDefaultTaskModel(route.provider);
+          route.model.trim() || getDefaultTaskModel(route.provider, task.key);
 
         accumulator[task.key] = {
           provider: route.provider,
@@ -1006,10 +1100,15 @@ export default function IntegrationsScreen() {
                     aiProviderModels[routeState.provider];
                   const providerApiKey =
                     aiProviderForms[routeState.provider].apiKey.trim();
-                  const providerModelOptions = providerModelsState.options;
+                  const providerModelOptions = getCompatibleModelOptions(
+                    task.key,
+                    routeState.provider,
+                    providerModelsState.options,
+                  );
                   const routeModelInOptions = providerModelOptions.some(
                     (option) => option.value === routeState.model,
                   );
+                  const routeError = getTaskRouteError(task.key, routeState);
                   const modelOptions =
                     providerModelOptions.length > 0
                       ? [
@@ -1017,7 +1116,9 @@ export default function IntegrationsScreen() {
                             ? [
                                 {
                                   value: routeState.model,
-                                  label: routeState.model,
+                                  label: routeError
+                                    ? `${routeState.model} (incompatível)`
+                                    : routeState.model,
                                 },
                               ]
                             : []),
@@ -1076,6 +1177,7 @@ export default function IntegrationsScreen() {
                               }
 
                               const nextModel = getPreferredTaskModel(
+                                task.key,
                                 nextProvider,
                                 nextProviderModelsState.options,
                               );
@@ -1091,7 +1193,7 @@ export default function IntegrationsScreen() {
                             }}
                             placeholder="Selecione o provedor"
                             includePlaceholderOption={false}
-                            options={AI_PROVIDER_OPTIONS}
+                            options={getProviderOptionsForTask(task.key)}
                             size="compact"
                           />
                         </div>
@@ -1122,7 +1224,9 @@ export default function IntegrationsScreen() {
                             }
                           />
                           <p className="mt-1 text-[11px] text-[var(--panel-text-muted)]">
-                            {providerModelsState.loading
+                            {routeError
+                              ? routeError
+                              : providerModelsState.loading
                               ? "Consultando modelos na API do provedor..."
                               : !providerApiKey
                                 ? "Configure e salve a API key deste provedor para carregar os modelos."

@@ -105,6 +105,18 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const toTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+const normalizeModelName = (value: string): string => value.trim().toLowerCase();
+
+const isOpenAiTranscriptionModel = (model: string): boolean => {
+  const normalized = normalizeModelName(model);
+  return normalized === 'whisper-1' || normalized.includes('transcribe');
+};
+
+const isOpenAiTextModel = (model: string): boolean => {
+  const normalized = normalizeModelName(model);
+  return Boolean(normalized) && !isOpenAiTranscriptionModel(normalized);
+};
+
 const toBoolean = (value: unknown, fallback = false): boolean => {
   if (typeof value === 'boolean') {
     return value;
@@ -131,6 +143,25 @@ const getTaskDefaultModel = (task: AiTask, provider: AiProvider, settings: Provi
   }
 
   return settings.defaultModelText;
+};
+
+const getCompatibleTaskModel = (
+  task: AiTask,
+  provider: AiProvider,
+  settings: ProviderSettings,
+  model: string,
+): string => {
+  const candidate = toTrimmedString(model) || getTaskDefaultModel(task, provider, settings);
+
+  if (provider !== 'openai') {
+    return candidate;
+  }
+
+  if (task === 'whatsapp_audio_transcription') {
+    return isOpenAiTranscriptionModel(candidate) ? candidate : OPENAI_DEFAULT_TRANSCRIPTION_MODEL;
+  }
+
+  return isOpenAiTextModel(candidate) ? candidate : OPENAI_DEFAULT_TEXT_MODEL;
 };
 
 const normalizeProviderSettings = (
@@ -630,19 +661,39 @@ export const generateTextWithRouting = async (
 
   const preferredProvider = taskRoute.provider;
   const preferredProviderSettings = runtime.providers[preferredProvider];
-  const preferredModel = taskRoute.model || getTaskDefaultModel(options.task, preferredProvider, preferredProviderSettings);
+  const preferredModel = getCompatibleTaskModel(
+    options.task,
+    preferredProvider,
+    preferredProviderSettings,
+    taskRoute.model,
+  );
+  const preferredDefaultModel = getTaskDefaultModel(options.task, preferredProvider, preferredProviderSettings);
 
   const attempts: Array<{ provider: AiProvider; model: string }> = [
     { provider: preferredProvider, model: preferredModel },
   ];
 
+  if (
+    preferredProvider === 'openai' &&
+    preferredModel !== preferredDefaultModel &&
+    isOpenAiTextModel(preferredDefaultModel)
+  ) {
+    attempts.push({ provider: preferredProvider, model: preferredDefaultModel });
+  }
+
   const allowFallback = taskRoute.fallbackToOpenAi;
   const fallbackProvider = runtime.fallbackProvider;
   if (allowFallback && fallbackProvider !== preferredProvider) {
     const fallbackSettings = runtime.providers[fallbackProvider];
+    const fallbackModel = getCompatibleTaskModel(
+      options.task,
+      fallbackProvider,
+      fallbackSettings,
+      getTaskDefaultModel(options.task, fallbackProvider, fallbackSettings),
+    );
     attempts.push({
       provider: fallbackProvider,
-      model: getTaskDefaultModel(options.task, fallbackProvider, fallbackSettings),
+      model: fallbackModel,
     });
   }
 
@@ -690,19 +741,38 @@ export const transcribeAudioWithRouting = async (
 
   const preferredProvider = taskRoute.provider;
   const preferredProviderSettings = runtime.providers[preferredProvider];
-  const preferredModel =
-    taskRoute.model || getTaskDefaultModel('whatsapp_audio_transcription', preferredProvider, preferredProviderSettings);
+  const preferredModel = getCompatibleTaskModel(
+    'whatsapp_audio_transcription',
+    preferredProvider,
+    preferredProviderSettings,
+    taskRoute.model,
+  );
+  const preferredDefaultModel = getTaskDefaultModel('whatsapp_audio_transcription', preferredProvider, preferredProviderSettings);
 
   const attempts: Array<{ provider: AiProvider; model: string }> = [
     { provider: preferredProvider, model: preferredModel },
   ];
 
+  if (
+    preferredProvider === 'openai' &&
+    preferredModel !== preferredDefaultModel &&
+    isOpenAiTranscriptionModel(preferredDefaultModel)
+  ) {
+    attempts.push({ provider: preferredProvider, model: preferredDefaultModel });
+  }
+
   if (taskRoute.fallbackToOpenAi && runtime.fallbackProvider !== preferredProvider) {
     const fallbackProvider = runtime.fallbackProvider;
     const fallbackSettings = runtime.providers[fallbackProvider];
+    const fallbackModel = getCompatibleTaskModel(
+      'whatsapp_audio_transcription',
+      fallbackProvider,
+      fallbackSettings,
+      getTaskDefaultModel('whatsapp_audio_transcription', fallbackProvider, fallbackSettings),
+    );
     attempts.push({
       provider: fallbackProvider,
-      model: getTaskDefaultModel('whatsapp_audio_transcription', fallbackProvider, fallbackSettings),
+      model: fallbackModel,
     });
   }
 

@@ -1,10 +1,9 @@
 import { AlertCircle } from "lucide-react";
 import { useState } from "react";
 
-import Card from "../../components/ui/Card";
-import Tabs, { type TabItem } from "../../components/ui/Tabs";
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfig } from "../../contexts/ConfigContext";
+import { Alert, PageHeader, Surface, Tabs, type TabItem } from "../../design-system";
 import AutomationSettingsScreen from "./automation/AutomationSettingsScreen";
 import SystemSettingsScreen from "./general/SystemSettingsScreen";
 import IntegrationsScreen from "./integrations/IntegrationsScreen";
@@ -24,18 +23,10 @@ export default function ConfigPageScreen() {
   if (allowedTabs.length === 0) {
     return (
       <div className="w-full">
-        <Card
-          variant="glass"
-          className="border-red-200 bg-red-50 p-8 text-center"
-        >
-          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-600" />
-          <h2 className="mb-2 text-2xl font-bold text-red-900">
-            Acesso Negado
-          </h2>
-          <p className="text-red-700">
-            Você não tem permissão para acessar esta página.
-          </p>
-        </Card>
+        <Alert tone="danger" title="Acesso Negado" className="p-8 text-center">
+          <AlertCircle className="mx-auto mb-4 h-12 w-12" />
+          Você não tem permissão para acessar esta página.
+        </Alert>
       </div>
     );
   }
@@ -46,16 +37,14 @@ export default function ConfigPageScreen() {
 
   return (
     <div className="config-transparent-buttons panel-page-shell w-full">
-      <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold text-slate-900">
-          Configurações
-        </h1>
-        <p className="text-slate-600">
-          Centralize regras do sistema, operadoras, acessos e integrações
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Administracao"
+        title="Configurações"
+        description="Centralize regras do sistema, acessos, automações e integrações."
+        className="mb-8"
+      />
 
-      <Card variant="glass" padding="none" className="mb-6 overflow-hidden">
+      <Surface padding="none" className="mb-6 overflow-hidden">
         <Tabs
           items={allowedTabs}
           value={activeAllowedTab}
@@ -70,7 +59,7 @@ export default function ConfigPageScreen() {
           {activeAllowedTab === "automation" && <AutomationSettingsScreen />}
           {activeAllowedTab === "integrations" && <IntegrationsScreen />}
         </div>
-      </Card>
+      </Surface>
     </div>
   );
 }

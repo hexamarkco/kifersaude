@@ -3,6 +3,7 @@ import { useMemo, type ChangeEvent } from "react";
 import ReactQuill from "react-quill";
 
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
+import { Button, Checkbox, Field, Input, Surface, Textarea } from "../../../design-system";
 import {
   BLOG_CATEGORY_OPTIONS,
   BLOG_EDITOR_FORMATS,
@@ -45,57 +46,45 @@ export default function BlogEditor({
   );
 
   return (
-    <div className="panel-page-shell rounded-xl bg-white p-6 shadow-sm">
+    <Surface className="panel-page-shell space-y-6">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-slate-900">
+        <h2 className="text-2xl font-bold" style={{ color: "var(--panel-text)" }}>
           {editingPost ? "Editar Post" : "Novo Post"}
         </h2>
-        <button
+        <Button
           type="button"
           onClick={onClose}
-          className="p-2 text-slate-400 transition-colors hover:text-slate-600"
+          variant="icon"
+          size="icon"
+          aria-label="Fechar editor"
         >
           <X className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
 
       <div className="space-y-6">
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
-            Titulo *
-          </label>
-          <input
+        <Field label="Titulo *">
+          <Input
             type="text"
             value={formData.title}
             onChange={(event) => onTitleChange(event.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-orange-500"
             placeholder="Digite o titulo do post"
           />
-        </div>
+        </Field>
 
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
-            Slug (URL) *
-          </label>
-          <input
+        <Field label="Slug (URL) *" description={`URL: /blog/${formData.slug || "slug-do-post"}`}>
+          <Input
             type="text"
             value={formData.slug}
             onChange={(event) =>
               onFormDataChange({ ...formData, slug: event.target.value })
             }
-            className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-orange-500"
             placeholder="url-amigavel-do-post"
           />
-          <p className="mt-1 text-xs text-slate-500">
-            URL: /blog/{formData.slug || "slug-do-post"}
-          </p>
-        </div>
+        </Field>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Categoria *
-            </label>
+          <Field label="Categoria *">
             <FilterSingleSelect
               icon={Tag}
               value={formData.category}
@@ -106,32 +95,25 @@ export default function BlogEditor({
               includePlaceholderOption={false}
               options={[...BLOG_CATEGORY_OPTIONS]}
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">
-              Tempo de leitura *
-            </label>
-            <input
+          <Field label="Tempo de leitura *">
+            <Input
               type="text"
               value={formData.read_time}
               onChange={(event) =>
                 onFormDataChange({ ...formData, read_time: event.target.value })
               }
-              className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-orange-500"
               placeholder="5 min"
             />
-          </div>
+          </Field>
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
-            Imagem de capa
-          </label>
+        <Field label="Imagem de capa">
           <div className="space-y-3">
             <div className="flex gap-2">
               <div className="flex-1">
-                <input
+                <Input
                   type="text"
                   value={formData.cover_image_url}
                   onChange={(event) =>
@@ -140,25 +122,26 @@ export default function BlogEditor({
                       cover_image_url: event.target.value,
                     })
                   }
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-orange-500"
                   placeholder="https://exemplo.com/imagem.jpg ou faca upload"
                 />
               </div>
               {formData.cover_image_url && (
-                <button
+                <Button
                   type="button"
                   onClick={() =>
                     window.open(formData.cover_image_url, "_blank")
                   }
-                  className="rounded-lg bg-slate-100 px-4 py-2 text-slate-700 transition-colors hover:bg-slate-200"
+                  variant="secondary"
+                  size="icon"
+                  aria-label="Abrir imagem de capa"
                 >
                   <ImageIcon className="h-5 w-5" />
-                </button>
+                </Button>
               )}
             </div>
 
             <div>
-              <label className="flex cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-orange-300 bg-orange-50 px-4 py-3 transition-colors hover:bg-orange-100">
+              <label className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center rounded-lg border-dashed px-4 py-3 transition-colors">
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
@@ -167,17 +150,17 @@ export default function BlogEditor({
                   disabled={uploadingCover}
                 />
                 {uploadingCover ? (
-                  <div className="flex items-center gap-2 text-orange-700">
+                  <div className="flex items-center gap-2" style={{ color: "var(--panel-accent-ink)" }}>
                     <Loader className="h-5 w-5 animate-spin" />
                     <span className="font-semibold">Fazendo upload...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-orange-700">
+                  <div className="flex items-center gap-2" style={{ color: "var(--panel-accent-ink)" }}>
                     <Upload className="h-5 w-5" />
                     <span className="font-semibold">
                       Fazer upload da imagem de capa
                     </span>
-                    <span className="text-sm text-orange-600">
+                    <span className="text-sm" style={{ color: "var(--panel-accent-ink)" }}>
                       (JPG, PNG, WEBP, GIF - max 5MB)
                     </span>
                   </div>
@@ -195,13 +178,10 @@ export default function BlogEditor({
               </div>
             )}
           </div>
-        </div>
+        </Field>
 
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
-            Resumo (descricao curta) *
-          </label>
-          <textarea
+        <Field label="Resumo (descricao curta) *" description={`${formData.excerpt.length}/160 caracteres (ideal para SEO)`}>
+          <Textarea
             value={formData.excerpt}
             onChange={(event) =>
               onFormDataChange({
@@ -210,22 +190,15 @@ export default function BlogEditor({
                 meta_description: event.target.value,
               })
             }
-            className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-orange-500"
             rows={3}
             placeholder="Breve descricao do post (aparece na listagem e no Google)"
             maxLength={160}
           />
-          <p className="mt-1 text-xs text-slate-500">
-            {formData.excerpt.length}/160 caracteres (ideal para SEO)
-          </p>
-        </div>
+        </Field>
 
-        <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700">
-            Conteudo do artigo *
-          </label>
+        <Field label="Conteudo do artigo *">
           <div className="mb-3">
-            <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-300 bg-slate-100 px-4 py-2 transition-colors hover:bg-slate-200">
+            <label className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center rounded-lg px-4 py-2 transition-colors">
               <input
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
@@ -234,14 +207,14 @@ export default function BlogEditor({
                 disabled={uploadingContent}
               />
               {uploadingContent ? (
-                <div className="flex items-center gap-2 text-slate-700">
+                <div className="flex items-center gap-2" style={{ color: "var(--panel-text-soft)" }}>
                   <Loader className="h-4 w-4 animate-spin" />
                   <span className="text-sm font-semibold">
                     Fazendo upload...
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 text-slate-700">
+                <div className="flex items-center gap-2" style={{ color: "var(--panel-text-soft)" }}>
                   <Upload className="h-4 w-4" />
                   <span className="text-sm font-semibold">
                     Adicionar imagem ao conteudo
@@ -249,13 +222,13 @@ export default function BlogEditor({
                 </div>
               )}
             </label>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs" style={{ color: "var(--panel-text-muted)" }}>
               Faca upload de imagens que serao inseridas no final do editor.
               Voce pode move-las depois.
             </p>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-slate-300">
+          <Surface variant="default" padding="none" className="overflow-hidden rounded-lg">
             <ReactQuill
               theme="snow"
               value={formData.content}
@@ -263,27 +236,23 @@ export default function BlogEditor({
               modules={modules}
               formats={BLOG_EDITOR_FORMATS}
               placeholder="Escreva o conteudo do artigo aqui..."
-              className="bg-white"
               style={{ height: "400px", marginBottom: "50px" }}
             />
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
+          </Surface>
+          <p className="mt-1 text-xs" style={{ color: "var(--panel-text-muted)" }}>
             Use o editor para formatar o texto. Adicione titulos (H2, H3),
             listas, links e imagens.
           </p>
-        </div>
+        </Field>
 
-        <div className="border-t border-slate-200 pt-6">
-          <h3 className="mb-4 text-lg font-semibold text-slate-900">
+        <Surface variant="muted" className="pt-6">
+          <h3 className="mb-4 text-lg font-semibold" style={{ color: "var(--panel-text)" }}>
             SEO (otimizacao para Google)
           </h3>
 
           <div className="space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Meta titulo (Google)
-              </label>
-              <input
+            <Field label="Meta titulo (Google)" description={`${formData.meta_title.length}/60 caracteres`}>
+              <Input
                 type="text"
                 value={formData.meta_title}
                 onChange={(event) =>
@@ -292,20 +261,13 @@ export default function BlogEditor({
                     meta_title: event.target.value,
                   })
                 }
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-orange-500"
                 placeholder="Titulo que aparece no Google"
                 maxLength={60}
               />
-              <p className="mt-1 text-xs text-slate-500">
-                {formData.meta_title.length}/60 caracteres
-              </p>
-            </div>
+            </Field>
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                Meta descricao (Google)
-              </label>
-              <textarea
+            <Field label="Meta descricao (Google)" description={`${formData.meta_description.length}/160 caracteres`}>
+              <Textarea
                 value={formData.meta_description}
                 onChange={(event) =>
                   onFormDataChange({
@@ -313,54 +275,51 @@ export default function BlogEditor({
                     meta_description: event.target.value,
                   })
                 }
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-orange-500"
                 rows={2}
                 placeholder="Descricao que aparece no Google"
                 maxLength={160}
               />
-              <p className="mt-1 text-xs text-slate-500">
-                {formData.meta_description.length}/160 caracteres
-              </p>
-            </div>
+            </Field>
           </div>
-        </div>
+        </Surface>
 
         <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
+          <Checkbox
             id="published"
             checked={formData.published}
             onChange={(event) =>
               onFormDataChange({ ...formData, published: event.target.checked })
             }
-            className="h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
           />
           <label
             htmlFor="published"
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium"
+            style={{ color: "var(--panel-text-soft)" }}
           >
             Publicar imediatamente (visivel no site e Google)
           </label>
         </div>
 
-        <div className="flex gap-3 border-t pt-4">
-          <button
+        <div className="flex gap-3 border-t pt-4" style={{ borderColor: "var(--panel-border-subtle)" }}>
+          <Button
             type="button"
             onClick={onSave}
-            className="inline-flex flex-1 items-center justify-center rounded-xl bg-orange-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-orange-700"
+            fullWidth
+            size="lg"
           >
-            <Save className="mr-2 h-5 w-5" />
+            <Save className="h-5 w-5" />
             {editingPost ? "Atualizar Post" : "Criar Post"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-slate-100 px-6 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-200"
+            variant="secondary"
+            size="lg"
           >
             Cancelar
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Surface>
   );
 }

@@ -43,9 +43,7 @@ import {
 import { syncLeadNextReturnFromUpcomingReminder } from "../../lib/leadReminderUtils";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
-import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
-import Textarea from "../../components/ui/Textarea";
+import { Badge, Button, Field, Input, Surface, Textarea } from "../../design-system";
 import ModalShell from "../../components/ui/ModalShell";
 import FilterSingleSelect from "../../components/FilterSingleSelect";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
@@ -53,11 +51,8 @@ import LeadForm from "../../components/LeadForm";
 import {
   PANEL_EMPTY_STATE_STYLE,
   PANEL_INSET_STYLE,
-  PANEL_MUTED_INSET_STYLE,
-  PANEL_PILL_STYLE,
-  PANEL_SECTION_STYLE,
   getPanelToneStyle,
-} from "../../components/ui/panelStyles";
+} from "../../design-system";
 import { TodoCalendarSkeleton } from "../../components/ui/panelSkeletons";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import PanelPopoverShell from "../../components/ui/PanelPopoverShell";
@@ -1106,39 +1101,39 @@ export default function AgendaScreen() {
   }) => {
     const baseCellStyle = {
       ...PANEL_INSET_STYLE,
-      color: "var(--panel-text,#1c1917)",
+      color: "var(--panel-text)",
     };
 
     if (isSelected) {
       return {
         ...baseCellStyle,
-        borderColor: "var(--panel-accent-strong,#b85c1f)",
-        background: "var(--panel-accent-soft,#f6e4c7)",
-        color: "var(--panel-accent-ink-strong,#4a2411)",
-        boxShadow: "0 18px 34px -26px rgba(26,18,13,0.34)",
+        borderColor: "var(--panel-accent-strong)",
+        background: "var(--panel-accent-soft)",
+        color: "var(--panel-accent-ink-strong)",
+        boxShadow: "var(--kds-shadow-card)",
       };
     }
 
     if (isToday) {
       return {
         ...getPanelToneStyle("accent"),
-        boxShadow: "0 14px 28px -24px rgba(26,18,13,0.18)",
+        boxShadow: "var(--kds-shadow-card)",
       };
     }
 
     if (hasItems) {
       return {
         ...baseCellStyle,
-        borderColor: "var(--panel-accent-border,#d5a25c)",
+        borderColor: "var(--panel-accent-border)",
         background:
-          "linear-gradient(180deg, color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 52%, transparent) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)",
+          "linear-gradient(180deg, color-mix(in srgb, var(--panel-accent-soft) 52%, transparent) 0%, color-mix(in srgb, var(--panel-surface) 96%, transparent) 100%)",
       };
     }
 
     if (isRescheduling) {
       return {
         ...baseCellStyle,
-        borderColor: "var(--panel-accent-border,#d5a25c)",
+        borderColor: "var(--panel-accent-border)",
       };
     }
 
@@ -1198,8 +1193,8 @@ export default function AgendaScreen() {
     if (isOverdue(reminder.data_lembrete)) {
       return {
         ...PANEL_INSET_STYLE,
-        borderColor: "var(--panel-accent-red-border,#d79a8f)",
-        boxShadow: "0 0 0 1px var(--panel-accent-red-border,#d79a8f), 0 18px 34px -28px rgba(138,49,40,0.22)",
+        borderColor: "var(--panel-accent-red-border)",
+        boxShadow: "0 0 0 1px var(--panel-accent-red-border), var(--kds-shadow-card)",
       };
     }
 
@@ -1244,29 +1239,30 @@ export default function AgendaScreen() {
           className={baseClasses}
           style={{
             ...stateStyle,
-            outlineColor: "var(--panel-focus,#c86f1d)",
+            outlineColor: "var(--panel-focus)",
           }}
         >
           <div className="flex items-start justify-between gap-2">
             <span className="text-sm font-semibold">{day}</span>
             {totalCount > 0 && (
-              <span
-                className="rounded-full border px-2 py-0.5 text-[10px] font-semibold"
+              <Badge
+                size="sm"
+                className="px-2 py-0.5 text-[10px]"
                 style={isSelected ? getPanelToneStyle("neutral") : getPanelToneStyle("accent")}
               >
                 {totalCount}
-              </span>
+              </Badge>
             )}
           </div>
           <div className="mt-auto space-y-1 text-[10px] font-semibold">
             {pendingCount > 0 && (
-              <div className="flex items-center gap-1" style={{ color: "var(--panel-accent-ink,#6f3f16)" }}>
+              <div className="flex items-center gap-1" style={{ color: "var(--panel-accent-ink)" }}>
                 <Circle className="h-3 w-3" />
                 <span>{pendingCount} aberto(s)</span>
               </div>
             )}
             {doneCount > 0 && (
-              <div className="flex items-center gap-1" style={{ color: "var(--panel-accent-green-text,#275c39)" }}>
+              <div className="flex items-center gap-1" style={{ color: "var(--panel-accent-green-text)" }}>
                 <CheckCircle2 className="h-3 w-3" />
                 <span>{doneCount} concluido(s)</span>
               </div>
@@ -1282,7 +1278,7 @@ export default function AgendaScreen() {
           <div
             key={day}
             className="text-center text-xs font-semibold uppercase tracking-wide"
-            style={{ color: "var(--panel-text-muted,#876f5c)" }}
+            style={{ color: "var(--panel-text-muted)" }}
           >
             {day}
           </div>
@@ -1356,13 +1352,13 @@ export default function AgendaScreen() {
             <div className="space-y-3">
               <div>
                 <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-3">
-                  <h3 className="text-base font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
+                  <h3 className="text-base font-semibold" style={{ color: "var(--panel-text)" }}>
                     {reminder.titulo}
                   </h3>
                   {contextBadge && <div className="hidden xl:flex xl:items-center">{contextBadge}</div>}
                 </div>
                 {reminder.descricao && (
-                  <p className="mt-1 text-sm" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+                  <p className="mt-1 text-sm" style={{ color: "var(--panel-text-soft)" }}>
                     {reminder.descricao}
                   </p>
                 )}
@@ -1370,48 +1366,45 @@ export default function AgendaScreen() {
 
               <div className="flex flex-wrap items-center gap-2">
                 {contextBadge && <div className="xl:hidden">{contextBadge}</div>}
-                <span
-                  className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                <Badge
                   style={getReminderPriorityStyle(reminder.prioridade)}
                 >
                   {reminder.prioridade}
-                </span>
-                <span
-                  className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                </Badge>
+                <Badge
                   style={getReminderTypeStyle(reminder.tipo)}
                 >
                   {reminder.tipo}
-                </span>
+                </Badge>
                 {reminder.tempo_estimado_minutos && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold"
+                  <Badge
+                    className="gap-1"
                     style={getPanelToneStyle("info")}
                   >
                     <Timer className="h-3 w-3" />
                     <span>{formatEstimatedTime(reminder.tempo_estimado_minutos)}</span>
-                  </span>
+                  </Badge>
                 )}
                 {overdue && !reminder.lido && (
-                  <span
-                    className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                  <Badge
                     style={getPanelToneStyle("danger")}
                   >
                     Atrasado
-                  </span>
+                  </Badge>
                 )}
                 {reminder.tags?.map((tag, index) => (
-                  <span
+                  <Badge
                     key={`${tag}-${index}`}
-                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium"
+                    className="gap-1 font-medium"
                     style={getPanelToneStyle("info")}
                   >
                     <Tag className="h-3 w-3" />
                     <span>{tag}</span>
-                  </span>
+                  </Badge>
                 ))}
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: "var(--panel-text-muted)" }}>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
                   <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
@@ -1478,12 +1471,12 @@ export default function AgendaScreen() {
                           position={quickScheduleDropdown.position}
                           onClose={() => setQuickScheduleDropdown(null)}
                           ariaLabel="Selecionar dias para agendar"
-                          className="rounded-xl border-[rgba(212,192,167,0.18)] bg-[var(--panel-bg,#fdfbf7)] p-1 shadow-xl"
+                          className="rounded-xl border-[var(--panel-border-subtle)] bg-[var(--panel-bg)] p-1 shadow-xl"
                           style={{ width: 140, zIndex: 9999 }}
                         >
                           <div className="flex flex-col gap-1">
                             {[1, 2, 3, 4, 5].map((days) => (
-                              <button
+                              <Button
                                 key={days}
                                 type="button"
                                 onClick={handleCardAction(() => {
@@ -1491,11 +1484,13 @@ export default function AgendaScreen() {
                                   handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
                                 })}
                                 disabled={isQuickSchedulingCurrentReminder}
-                                className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--panel-text,#594d3e)] transition hover:bg-[rgba(212,192,167,0.12)] disabled:opacity-60"
+                                variant="ghost"
+                                size="sm"
+                                className="h-auto w-full justify-start px-3 py-2 text-left"
                               >
                                 <CalendarPlus className="h-4 w-4" />
                                 <span>+{days} dia{days > 1 ? "s" : ""}</span>
-                              </button>
+                              </Button>
                             ))}
                           </div>
                         </PanelPopoverShell>
@@ -1575,51 +1570,33 @@ export default function AgendaScreen() {
       stageClassName="panel-dashboard-immersive"
     >
       <div className="panel-dashboard-immersive panel-page-shell space-y-6">
-        <section className="panel-glass-panel space-y-6 rounded-[2rem] border p-5 sm:p-6" style={PANEL_SECTION_STYLE}>
+        <Surface className="space-y-6 p-5 sm:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--panel-text-muted)" }}>
                 Rotina operacional
               </p>
-              <h2 className="mt-3 text-2xl font-bold sm:text-3xl" style={{ color: "var(--panel-text,#1c1917)" }}>
+              <h2 className="mt-3 text-2xl font-bold sm:text-3xl" style={{ color: "var(--panel-text)" }}>
                 Agenda unificada
               </h2>
-              <p className="mt-1 max-w-3xl text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+              <p className="mt-1 max-w-3xl text-sm" style={{ color: "var(--panel-text-muted)" }}>
                 Tarefas e lembretes agora compartilham o mesmo calendario, com filtros, contexto do lead e acoes rapidas no mesmo fluxo.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>{filteredMonthReminders.length}</span>
+              <Badge tone="neutral" className="gap-2">
+                <span style={{ color: "var(--panel-text)" }}>{filteredMonthReminders.length}</span>
                 <span>itens no mes</span>
-              </span>
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>{pendingFilteredCount}</span>
+              </Badge>
+              <Badge tone="neutral" className="gap-2">
+                <span style={{ color: "var(--panel-text)" }}>{pendingFilteredCount}</span>
                 <span>pendentes</span>
-              </span>
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>{overdueFilteredCount}</span>
+              </Badge>
+              <Badge tone="danger" className="gap-2">
+                <span>{overdueFilteredCount}</span>
                 <span>atrasados</span>
-              </span>
+              </Badge>
             </div>
           </div>
 
@@ -1630,18 +1607,18 @@ export default function AgendaScreen() {
               { label: "Atrasados", value: overdueFilteredCount, tone: "danger" as const },
               { label: "Tarefas", value: taskFilteredCount, tone: "neutral" as const },
             ].map((item) => (
-              <div key={item.label} className="rounded-[1.35rem] border p-4" style={PANEL_INSET_STYLE}>
-                <div className="text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+              <Surface key={item.label} variant="muted" padding="sm" className="rounded-[1.35rem] p-4">
+                <div className="text-sm" style={{ color: "var(--panel-text-muted)" }}>
                   {item.label}
                 </div>
                 <div className="mt-2 text-3xl font-bold" style={{ color: getPanelToneStyle(item.tone).color }}>
                   {item.value}
                 </div>
-              </div>
+              </Surface>
             ))}
           </div>
 
-          <div className="flex flex-col gap-3 rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+          <Surface variant="muted" className="flex flex-col gap-3 rounded-[1.7rem] p-4 sm:p-5">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div className="relative flex-1">
                 <Input
@@ -1745,51 +1722,51 @@ export default function AgendaScreen() {
                 )}
               </div>
             </div>
-          </div>
+          </Surface>
 
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm" style={{ ...PANEL_PILL_STYLE, color: "var(--panel-text-soft,#5b4635)" }}>
-              <Clock3 className="h-4 w-4" style={{ color: "var(--panel-accent-strong,#b85c1f)" }} />
+            <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
+              <Clock3 className="h-4 w-4" style={{ color: "var(--panel-accent-strong)" }} />
               <span>{lastUpdatedLabel}</span>
-            </div>
+            </Badge>
 
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5" style={getPanelToneStyle("accent")}>
+              <Badge className="gap-2" style={getPanelToneStyle("accent")}>
                 <Circle className="h-3 w-3" />
                 <span>Itens pendentes</span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5" style={getPanelToneStyle("success")}>
+              </Badge>
+              <Badge className="gap-2" style={getPanelToneStyle("success")}>
                 <CheckCircle2 className="h-3 w-3" />
                 <span>Itens concluidos</span>
-              </div>
+              </Badge>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.9fr)]">
-            <div className="overflow-hidden rounded-[1.7rem] border" style={PANEL_INSET_STYLE}>
-              <div className="flex items-center justify-between gap-2 px-4 py-3" style={PANEL_MUTED_INSET_STYLE}>
+            <Surface variant="muted" padding="none" className="overflow-hidden rounded-[1.7rem]">
+              <Surface variant="muted" padding="sm" className="flex items-center justify-between gap-2 rounded-none border-x-0 border-t-0 px-4 py-3">
                 <Button onClick={goToPreviousMonth} variant="icon" size="icon" aria-label="Mes anterior">
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
-                <h3 className="text-lg font-semibold capitalize" style={{ color: "var(--panel-text,#1c1917)" }}>
+                <h3 className="text-lg font-semibold capitalize" style={{ color: "var(--panel-text)" }}>
                   {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
                 </h3>
                 <Button onClick={goToNextMonth} variant="icon" size="icon" aria-label="Proximo mes">
                   <ChevronRight className="h-5 w-5" />
                 </Button>
-              </div>
+              </Surface>
               <div className="p-4">{renderCalendar()}</div>
-            </div>
+            </Surface>
 
             <div className="space-y-4">
               <div className="space-y-1 px-1">
-                <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--panel-text-muted)" }}>
                   Dia selecionado
                 </p>
-                <h3 className="text-xl font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
+                <h3 className="text-xl font-semibold" style={{ color: "var(--panel-text)" }}>
                   {selectedDateLabel}
                 </h3>
-                <p className="text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                <p className="text-sm" style={{ color: "var(--panel-text-muted)" }}>
                   {selectedDateReminders.length > 0
                     ? `${selectedDateReminders.length} item(ns) ao todo - ${pendingSelectedReminders.length} pendente(s) e ${completedSelectedReminders.length} concluido(s).`
                     : "Nenhum item encontrado para este dia com os filtros atuais."}
@@ -1812,12 +1789,12 @@ export default function AgendaScreen() {
                 </div>
               )}
 
-              <div className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+              <Surface variant="muted" className="rounded-[1.7rem] p-4 sm:p-5">
                 <div className="mb-4 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+                  <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-soft)" }}>
                     Pendentes
                   </h4>
-                  <span className="text-xs font-semibold" style={{ color: "var(--panel-accent-ink,#6f3f16)" }}>
+                  <span className="text-xs font-semibold" style={{ color: "var(--panel-accent-ink)" }}>
                     {pendingSelectedReminders.length}
                   </span>
                 </div>
@@ -1825,18 +1802,18 @@ export default function AgendaScreen() {
                 {pendingSelectedReminders.length > 0 ? (
                   <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">{pendingSelectedReminders.map(renderReminderCard)}</div>
                 ) : (
-                  <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                  <Surface variant="muted" className="rounded-[1.3rem] py-8 text-center text-sm">
                     Nenhum item pendente neste dia.
-                  </div>
+                  </Surface>
                 )}
-              </div>
+              </Surface>
 
-              <div className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+              <Surface variant="muted" className="rounded-[1.7rem] p-4 sm:p-5">
                 <div className="mb-4 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+                  <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-soft)" }}>
                     Concluidos
                   </h4>
-                  <span className="text-xs font-semibold" style={{ color: "var(--panel-accent-green-text,#275c39)" }}>
+                  <span className="text-xs font-semibold" style={{ color: "var(--panel-accent-green-text)" }}>
                     {completedSelectedReminders.length}
                   </span>
                 </div>
@@ -1844,26 +1821,26 @@ export default function AgendaScreen() {
                 {completedSelectedReminders.length > 0 ? (
                   <div className="space-y-3">{completedSelectedReminders.map(renderReminderCard)}</div>
                 ) : (
-                  <div className="rounded-[1.3rem] border py-8 text-center text-sm" style={PANEL_MUTED_INSET_STYLE}>
+                  <Surface variant="muted" className="rounded-[1.3rem] py-8 text-center text-sm">
                     Nenhum item concluido neste dia.
-                  </div>
+                  </Surface>
                 )}
-              </div>
+              </Surface>
             </div>
           </div>
 
           {filteredReminders.length === 0 && (
-            <div className="rounded-[1.7rem] border py-12 text-center" style={PANEL_EMPTY_STATE_STYLE}>
-              <Bell className="mx-auto mb-4 h-14 w-14" style={{ color: "var(--panel-text-muted,#876f5c)" }} />
-              <h3 className="text-lg font-medium" style={{ color: "var(--panel-text,#1c1917)" }}>
+            <Surface variant="muted" className="rounded-[1.7rem] py-12 text-center" style={PANEL_EMPTY_STATE_STYLE}>
+              <Bell className="mx-auto mb-4 h-14 w-14" style={{ color: "var(--panel-text-muted)" }} />
+              <h3 className="text-lg font-medium" style={{ color: "var(--panel-text)" }}>
                 Nenhum item encontrado
               </h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+              <p className="mt-2 text-sm" style={{ color: "var(--panel-text-soft)" }}>
                 Ajuste os filtros ou crie uma nova tarefa para voltar a preencher a agenda.
               </p>
-            </div>
+            </Surface>
           )}
-        </section>
+        </Surface>
 
         {reminderPendingDeletion && (
           <ModalShell
@@ -1884,19 +1861,19 @@ export default function AgendaScreen() {
             }
           >
             <div className="flex items-start gap-3">
-              <div className="rounded-full border p-3" style={getPanelToneStyle("danger")}>
+              <Surface variant="danger" padding="sm" className="rounded-full p-3">
                 <Trash2 className="h-6 w-6" />
-              </div>
+              </Surface>
               <div>
-                <p className="mt-1 text-sm" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+                <p className="mt-1 text-sm" style={{ color: "var(--panel-text-soft)" }}>
                   Tem certeza que deseja remover o item
-                  <span className="font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
+                  <span className="font-semibold" style={{ color: "var(--panel-text)" }}>
                     {` "${reminderPendingDeletion.titulo}"`}
                   </span>
                   ? Esta acao nao pode ser desfeita.
                 </p>
                 {reminderPendingDeletion.descricao && (
-                  <p className="mt-2 break-words text-xs" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                  <p className="mt-2 break-words text-xs" style={{ color: "var(--panel-text-muted)" }}>
                     {reminderPendingDeletion.descricao}
                   </p>
                 )}
@@ -1915,10 +1892,7 @@ export default function AgendaScreen() {
             panelClassName="max-w-md"
           >
             <form onSubmit={(event) => void handleAddTask(event)} className="space-y-4">
-              <div className="space-y-1">
-                <label htmlFor="agenda-task-title" className="text-sm font-medium" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
-                  Tarefa
-                </label>
+              <Field label="Tarefa">
                 <Input
                   id="agenda-task-title"
                   type="text"
@@ -1928,12 +1902,9 @@ export default function AgendaScreen() {
                   required
                   disabled={savingTask}
                 />
-              </div>
+              </Field>
 
-              <div className="space-y-1">
-                <label htmlFor="agenda-task-description" className="text-sm font-medium" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
-                  Descricao (opcional)
-                </label>
+              <Field label="Descricao (opcional)">
                 <Textarea
                   id="agenda-task-description"
                   value={newTaskDescription}
@@ -1942,7 +1913,7 @@ export default function AgendaScreen() {
                   className="min-h-[96px]"
                   disabled={savingTask}
                 />
-              </div>
+              </Field>
 
               <div className="flex items-center justify-end gap-3">
                 <Button type="button" onClick={closeAddTaskModal} variant="secondary" size="md">
@@ -1987,12 +1958,12 @@ export default function AgendaScreen() {
             showCloseButton={false}
             bodyClassName="flex min-h-[180px] items-center justify-center"
           >
-            <div className="panel-glass-strong flex items-center gap-2 rounded-[1.1rem] border px-4 py-3 shadow-lg" style={PANEL_INSET_STYLE}>
-              <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--panel-accent-strong,#b85c1f)" }} />
-              <span className="text-sm font-medium" style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+            <Surface variant="strong" padding="sm" className="flex items-center gap-2 rounded-[1.1rem] px-4 py-3">
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--panel-accent-strong)" }} />
+              <span className="text-sm font-medium" style={{ color: "var(--panel-text-soft)" }}>
                 Carregando lead...
               </span>
-            </div>
+            </Surface>
           </ModalShell>
         )}
 
@@ -2072,9 +2043,9 @@ function AgendaReminderContextLink({
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium" style={getPanelToneStyle("neutral")}>
+    <Badge className="gap-1 font-medium" style={getPanelToneStyle("neutral")}>
       {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3 w-3" />}
       <span>{contextInfo.label}</span>
-    </span>
+    </Badge>
   );
 }

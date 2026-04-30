@@ -1,12 +1,8 @@
 import { DollarSign, Gift } from "lucide-react";
 
+import { Badge } from "../../../design-system";
 import { cx } from "../../../lib/cx";
-import {
-  BONUS_BADGE_CLASS,
-  COMMISSION_BADGE_CLASS,
-  COMMISSION_CALENDAR_LABEL_CLASS,
-  COMMISSION_WEEK_DAYS,
-} from "../shared/commissionCalendarConstants";
+import { COMMISSION_WEEK_DAYS } from "../shared/commissionCalendarConstants";
 import {
   getCommissionDateKey,
   isCommissionSameDay,
@@ -28,17 +24,17 @@ const getDayCellClass = ({
   hasEvents: boolean;
   isSelected: boolean;
   isToday: boolean;
-}) =>
+  }) =>
   cx(
-    "aspect-square rounded-xl border p-2 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel-surface,#fffdfa)]",
+    "aspect-square rounded-xl border p-2 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel-surface)]",
     "flex flex-col items-start justify-between",
     isSelected
-      ? "border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-hover,#e8c089)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm"
+      ? "border-[var(--panel-accent-border)] bg-[color:var(--panel-accent-hover)] text-[var(--panel-accent-ink-strong)] shadow-sm"
       : isToday
-        ? "border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink,#6f3f16)]"
+        ? "border-[var(--panel-accent-border)] bg-[color:var(--panel-accent-soft)] text-[var(--panel-accent-ink)]"
         : hasEvents
-          ? "border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-surface-soft,#efe6d8)] text-[var(--panel-text,#1c1917)] hover:bg-[color:var(--panel-accent-soft,#f6e4c7)]"
-          : "border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-text,#1c1917)] hover:bg-[color:var(--panel-surface-soft,#efe6d8)]",
+          ? "border-[var(--panel-accent-border)] bg-[color:var(--panel-surface-soft)] text-[var(--panel-text)] hover:bg-[color:var(--panel-accent-soft)]"
+          : "border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] text-[var(--panel-text)] hover:bg-[color:var(--panel-surface-soft)]",
   );
 
 export default function CommissionMonthGrid({
@@ -94,22 +90,22 @@ export default function CommissionMonthGrid({
         <span className="text-sm font-semibold">{day}</span>
         <div className="mt-auto flex flex-wrap gap-1">
           {hasCommission && (
-            <span className={COMMISSION_BADGE_CLASS}>
+            <Badge tone="accent" size="sm" className="px-2 py-0.5 text-[10px]">
               <DollarSign className="mr-1 h-3 w-3" />
               {dayEvents
                 .filter((event) => event.type === "comissao")
                 .reduce((sum, event) => sum + event.value, 0)
                 .toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-            </span>
+            </Badge>
           )}
           {hasBonus && (
-            <span className={BONUS_BADGE_CLASS}>
+            <Badge tone="neutral" size="sm" className="px-2 py-0.5 text-[10px]">
               <Gift className="mr-1 h-3 w-3" />
               {dayEvents
                 .filter((event) => event.type === "bonificacao")
                 .reduce((sum, event) => sum + event.value, 0)
                 .toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-            </span>
+            </Badge>
           )}
         </div>
       </button>,
@@ -121,7 +117,7 @@ export default function CommissionMonthGrid({
       {COMMISSION_WEEK_DAYS.map((day) => (
         <div
           key={day}
-          className={cx("text-center", COMMISSION_CALENDAR_LABEL_CLASS)}
+          className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-text-muted)]"
         >
           {day}
         </div>

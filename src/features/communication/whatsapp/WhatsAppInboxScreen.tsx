@@ -3092,6 +3092,7 @@ export default function WhatsAppInboxScreen() {
     chat: CommWhatsAppChat;
     messageType: CommWhatsAppMediaSendKind | 'text' | 'document';
     textContent: string;
+    messageAt?: string;
     mediaUrl?: string | null;
     mediaMimeType?: string | null;
     mediaFileName?: string | null;
@@ -3100,7 +3101,7 @@ export default function WhatsAppInboxScreen() {
     mediaCaption?: string | null;
     metadata?: Record<string, unknown>;
   }): CommWhatsAppMessage => {
-    const nowIso = new Date().toISOString();
+    const nowIso = params.messageAt ?? new Date().toISOString();
 
     return {
       id: createLocalOutgoingMessageId(),
@@ -5278,12 +5279,14 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const queuedMessages: QueuedTextMessage[] = textSegments.map((segment) => {
+    const optimisticBaseTimestampMs = Date.now();
+    const queuedMessages: QueuedTextMessage[] = textSegments.map((segment, index) => {
       const clientRequestId = createClientRequestId();
       const optimisticMessage = buildOptimisticOutgoingMessage({
         chat,
         messageType: 'text',
         textContent: segment,
+        messageAt: new Date(optimisticBaseTimestampMs + index).toISOString(),
       });
 
       appendLocalOutgoingMessage(optimisticMessage, {
@@ -5356,6 +5359,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       if (attachmentsSnapshot.length > 0) {
+        const optimisticBaseTimestampMs = Date.now();
         const attachmentsToSend = attachmentsSnapshot.map((attachment, index) => {
           const caption = index === 0 && attachment.kind !== 'voice' ? text || undefined : undefined;
           const clientRequestId = createClientRequestId();
@@ -5364,6 +5368,7 @@ export default function WhatsAppInboxScreen() {
             chat: selectedChat,
             messageType: attachment.kind,
             textContent: buildMediaSummaryText(attachment.kind, caption),
+            messageAt: new Date(optimisticBaseTimestampMs + index).toISOString(),
             mediaUrl: localPreviewUrl,
             mediaMimeType: attachment.file.type || null,
             mediaFileName: attachment.file.name,

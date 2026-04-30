@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, Mail, Phone, Users } from "lucide-react";
 
-import Button from "../../../components/ui/Button";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
+import { Badge, Button, Input, Surface } from "../../../design-system";
 import { formatDateTimeFullBR } from "../../../lib/dateUtils";
 import { supabase, Lead, fetchAllPages } from "../../../lib/supabase";
 import { toast } from "../../../lib/toast";
-import {
-  LEADS_EMPTY_STATE_STYLE,
-  LEADS_INSET_STYLE,
-  LEADS_MUTED_INSET_STYLE,
-  LEADS_PILL_STYLE,
-  LEADS_SECTION_STYLE,
-} from "../shared/leadsManagerStyles";
 
 type LeadKanbanBoardProps = {
   onLeadClick?: (lead: Lead) => void;
@@ -264,37 +257,31 @@ export default function LeadKanbanBoard({
 
   if (loading) {
     return (
-      <div
-        className="panel-glass-panel rounded-[2rem] border p-12"
-        style={LEADS_SECTION_STYLE}
-      >
+      <Surface className="py-12">
         <div className="flex items-center justify-center">
           <div
             className="h-12 w-12 animate-spin rounded-full border-4 border-t-transparent"
             style={{
-              borderColor: "var(--panel-accent-strong,#b85c1f)",
+              borderColor: "var(--panel-accent-strong)",
               borderTopColor: "transparent",
             }}
           />
         </div>
-      </div>
+      </Surface>
     );
   }
 
   if (statusColumns.length === 0) {
     return (
-      <div
-        className="panel-glass-panel rounded-[2rem] border p-12 text-center"
-        style={LEADS_SECTION_STYLE}
-      >
-        <div
-          className="mx-auto flex max-w-xl flex-col items-center rounded-[1.6rem] border border-dashed px-6 py-10 text-center"
-          style={LEADS_EMPTY_STATE_STYLE}
+      <Surface className="py-12 text-center">
+        <Surface
+          variant="muted"
+          className="mx-auto flex max-w-xl flex-col items-center border-dashed px-6 py-10 text-center"
         >
           <Users className="mb-4 h-12 w-12" />
           <h3
             className="text-lg font-semibold"
-            style={{ color: "var(--panel-text,#1c1917)" }}
+            style={{ color: "var(--panel-text)" }}
           >
             Configure os status do funil
           </h3>
@@ -302,33 +289,30 @@ export default function LeadKanbanBoard({
             Adicione status ativos para visualizar o Kanban e distribuir a
             operacao por etapa.
           </p>
-        </div>
-      </div>
+        </Surface>
+      </Surface>
     );
   }
 
   return (
-    <div
-      className="panel-glass-panel rounded-[2rem] border p-5 sm:p-6"
-      style={LEADS_SECTION_STYLE}
-    >
+    <Surface className="p-5 sm:p-6">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p
             className="text-[11px] font-black uppercase tracking-[0.24em]"
-            style={{ color: "var(--panel-text-muted,#876f5c)" }}
+            style={{ color: "var(--panel-text-muted)" }}
           >
             Funil visual
           </p>
           <h3
             className="mt-2 text-xl font-semibold"
-            style={{ color: "var(--panel-text,#1c1917)" }}
+            style={{ color: "var(--panel-text)" }}
           >
             Pipeline por status
           </h3>
           <p
             className="mt-1 text-sm"
-            style={{ color: "var(--panel-text-muted,#876f5c)" }}
+            style={{ color: "var(--panel-text-muted)" }}
           >
             Arraste cards entre colunas para atualizar o status sem sair da
             visao do funil.
@@ -336,58 +320,36 @@ export default function LeadKanbanBoard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-            style={{
-              ...LEADS_PILL_STYLE,
-              color: "var(--panel-text-soft,#5b4635)",
-            }}
-          >
-            <span style={{ color: "var(--panel-text,#1c1917)" }}>
+          <Badge tone="neutral" className="gap-2">
+            <span style={{ color: "var(--panel-text)" }}>
               {statusColumns.length}
             </span>
             <span>etapas ativas</span>
-          </span>
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-            style={{
-              ...LEADS_PILL_STYLE,
-              color: "var(--panel-text-soft,#5b4635)",
-            }}
-          >
-            <span style={{ color: "var(--panel-text,#1c1917)" }}>
+          </Badge>
+          <Badge tone="neutral" className="gap-2">
+            <span style={{ color: "var(--panel-text)" }}>
               {localLeads.length}
             </span>
             <span>leads visiveis</span>
-          </span>
+          </Badge>
         </div>
       </div>
 
-      <div
-        className="rounded-[1.75rem] border p-3 sm:p-4"
-        style={LEADS_INSET_STYLE}
-      >
+      <Surface variant="muted" padding="sm" className="p-3 sm:p-4">
         <div className="overflow-x-auto pb-4 snap-x snap-mandatory">
           <div className="flex min-w-max gap-4">
             {statusColumns.map((column) => {
               const columnLeads = leadsByStatusName.get(column.nome) ?? [];
-              const chipColor = column.cor || "#b85c1f";
+              const chipColor = column.cor || "var(--panel-accent-strong)";
               const wipLimit = getWipLimit(column.id);
               const isOverLimit = wipLimit > 0 && columnLeads.length > wipLimit;
 
               return (
-                <div
+                <Surface
                   key={column.id}
+                  variant={isOverLimit ? "danger" : "muted"}
+                  padding="sm"
                   className="w-80 flex-shrink-0 snap-start rounded-[1.6rem] border p-4"
-                  style={{
-                    ...LEADS_MUTED_INSET_STYLE,
-                    boxShadow: isOverLimit
-                      ? "0 0 0 1px rgba(138,49,40,0.18)"
-                      : "none",
-                    borderColor: isOverLimit
-                      ? "rgba(138,49,40,0.32)"
-                      : LEADS_MUTED_INSET_STYLE.borderColor,
-                  }}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={() => void handleDrop(column.id)}
                 >
@@ -400,7 +362,7 @@ export default function LeadKanbanBoard({
                         />
                         <h4
                           className="truncate text-sm font-semibold"
-                          style={{ color: "var(--panel-text,#1c1917)" }}
+                          style={{ color: "var(--panel-text)" }}
                         >
                           {column.nome}
                         </h4>
@@ -410,8 +372,8 @@ export default function LeadKanbanBoard({
                           className="mt-1 text-xs font-medium"
                           style={{
                             color: isOverLimit
-                              ? "var(--panel-accent-red-text,#8a3128)"
-                              : "var(--panel-text-muted,#876f5c)",
+                              ? "var(--panel-accent-red-text)"
+                              : "var(--panel-text-muted)",
                           }}
                         >
                           Limite WIP: {wipLimit}
@@ -419,57 +381,40 @@ export default function LeadKanbanBoard({
                       )}
                     </div>
 
-                    <span
-                      className="inline-flex min-h-[30px] items-center rounded-full border px-3 py-1 text-xs font-semibold"
-                      style={{
-                        borderColor: isOverLimit
-                          ? "var(--panel-accent-red-border,#d79a8f)"
-                          : "var(--panel-border-subtle,#e4d5c0)",
-                        background: isOverLimit
-                          ? "var(--panel-accent-red-bg,#faecea)"
-                          : "color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 70%, transparent)",
-                        color: isOverLimit
-                          ? "var(--panel-accent-red-text,#8a3128)"
-                          : "var(--panel-text-soft,#5b4635)",
-                      }}
-                    >
+                    <Badge tone={isOverLimit ? "danger" : "neutral"}>
                       {columnLeads.length}
-                    </span>
+                    </Badge>
                   </div>
 
                   <label
-                    className="mb-4 flex items-center justify-between gap-3 rounded-[1.15rem] border px-3 py-2 text-xs font-medium"
-                    style={LEADS_INSET_STYLE}
+                    className="kds-surface kds-surface-default mb-4 flex items-center justify-between gap-3 rounded-[1.15rem] px-3 py-2 text-xs font-medium"
                   >
-                    <span style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                    <span style={{ color: "var(--panel-text-muted)" }}>
                       Limite WIP
                     </span>
-                    <input
-                      type="number"
-                      min={0}
-                      value={wipLimit}
-                      onChange={(event) =>
-                        updateWipLimit(column.id, Number(event.target.value))
-                      }
-                      className="h-9 w-20 rounded-lg border px-3 text-right text-xs shadow-sm focus:border-transparent focus:outline-none focus:ring-2"
-                      style={{
-                        borderColor: "var(--panel-border,#d4c0a7)",
-                        background: "var(--panel-surface,#fffdfa)",
-                        color: "var(--panel-text-soft,#5b4635)",
-                        boxShadow: "var(--panel-glass-shadow-lite)",
-                      }}
-                    />
+                    <div className="w-20">
+                      <Input
+                        type="number"
+                        min={0}
+                        value={wipLimit}
+                        onChange={(event) =>
+                          updateWipLimit(column.id, Number(event.target.value))
+                        }
+                        size="compact"
+                        className="text-right"
+                      />
+                    </div>
                   </label>
 
                   <div className="max-h-[calc(100vh-320px)] space-y-3 overflow-y-auto pr-1">
                     {columnLeads.length === 0 ? (
-                      <div
-                        className="rounded-[1.3rem] border border-dashed px-4 py-8 text-center"
-                        style={LEADS_EMPTY_STATE_STYLE}
+                      <Surface
+                        variant="muted"
+                        className="border-dashed px-4 py-8 text-center"
                       >
                         <Users className="mx-auto mb-2 h-8 w-8 opacity-70" />
                         <p className="text-sm font-medium">Nenhum lead</p>
-                      </div>
+                      </Surface>
                     ) : (
                       columnLeads.map((lead) => {
                         const responsavelLabel = getResponsavelLabel(lead);
@@ -480,13 +425,12 @@ export default function LeadKanbanBoard({
                             draggable
                             onDragStart={() => setDraggedLead(lead)}
                             onClick={() => onLeadClick?.(lead)}
-                            className="panel-glass-panel panel-interactive-glass cursor-move rounded-[1.35rem] border p-4 transition-all hover:-translate-y-0.5"
-                            style={LEADS_INSET_STYLE}
+                            className="kds-surface kds-surface-default kds-action-surface cursor-move rounded-[1.35rem] p-4 transition-all"
                           >
                             <div className="mb-3">
                               <h5
                                 className="truncate text-base font-semibold"
-                                style={{ color: "var(--panel-text,#1c1917)" }}
+                                style={{ color: "var(--panel-text)" }}
                               >
                                 {lead.nome_completo}
                               </h5>
@@ -494,7 +438,7 @@ export default function LeadKanbanBoard({
 
                             <div
                               className="space-y-2 text-sm"
-                              style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                              style={{ color: "var(--panel-text-soft)" }}
                             >
                               <div className="flex items-center gap-2">
                                 <Phone className="h-3.5 w-3.5 flex-shrink-0" />
@@ -510,7 +454,7 @@ export default function LeadKanbanBoard({
                                 <div
                                   className="flex items-center gap-2"
                                   style={{
-                                    color: "var(--panel-accent-ink,#6f3f16)",
+                                    color: "var(--panel-accent-ink)",
                                   }}
                                 >
                                   <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
@@ -523,15 +467,15 @@ export default function LeadKanbanBoard({
                               className="mt-4 flex items-center justify-between gap-3 border-t pt-3 text-xs"
                               style={{
                                 borderColor:
-                                  "var(--panel-border-subtle,#e4d5c0)",
-                                color: "var(--panel-text-muted,#876f5c)",
+                                  "var(--panel-border-subtle)",
+                                color: "var(--panel-text-muted)",
                               }}
                             >
                               <span>
                                 Responsavel:{" "}
                                 <strong
                                   style={{
-                                    color: "var(--panel-text-soft,#5b4635)",
+                                    color: "var(--panel-text-soft)",
                                   }}
                                 >
                                   {responsavelLabel}
@@ -565,12 +509,12 @@ export default function LeadKanbanBoard({
                       })
                     )}
                   </div>
-                </div>
+                </Surface>
               );
             })}
           </div>
         </div>
-      </div>
-    </div>
+      </Surface>
+    </Surface>
   );
 }

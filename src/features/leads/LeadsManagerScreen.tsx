@@ -42,10 +42,8 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import FilterMultiSelect from "../../components/FilterMultiSelect";
 import FilterDateRange from "../../components/FilterDateRange";
 import FilterSingleSelect from "../../components/FilterSingleSelect";
-import Checkbox from "../../components/ui/Checkbox";
 import DateTimePicker from "../../components/ui/DateTimePicker";
-import Button from "../../components/ui/Button";
-import Input from "../../components/ui/Input";
+import { Badge, Button, Checkbox, Field, Input, Surface } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
 import { getBadgeStyle } from "../../lib/colorUtils";
@@ -61,13 +59,6 @@ import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { SORT_OPTIONS, STATUS_REMINDER_RULES } from "./shared/leadsManagerConfig";
 import LeadKanbanBoard from "./components/LeadKanbanBoard";
 import { LeadsHeader } from "./components/LeadsHeader";
-import {
-  LEADS_EMPTY_STATE_STYLE,
-  LEADS_INSET_STYLE,
-  LEADS_MUTED_INSET_STYLE,
-  LEADS_PILL_STYLE,
-  LEADS_SECTION_STYLE,
-} from "./shared/leadsManagerStyles";
 import {
   getLeadFirstName,
   getWhatsappLink,
@@ -1109,9 +1100,9 @@ export default function LeadsManager({
 
       if (!statusConfig) {
         return {
-          backgroundColor: "rgba(148, 163, 184, 0.15)",
-          color: "#475569",
-          borderColor: "rgba(148, 163, 184, 0.35)",
+          backgroundColor: "var(--panel-surface-soft)",
+          color: "var(--panel-text-soft)",
+          borderColor: "var(--panel-border-subtle)",
         } as const;
       }
 
@@ -1566,15 +1557,8 @@ export default function LeadsManager({
           onToggleArchived={() => setShowArchived((current) => !current)}
           onCreateLead={handleCreateLead}
         />
-        <div
-          className="panel-glass-panel space-y-5 rounded-[2rem] border p-5 sm:p-6"
-          style={LEADS_SECTION_STYLE}
-          data-panel-animate
-        >
-          <div
-            className="flex flex-col gap-3 rounded-[1.7rem] border p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
-            style={LEADS_INSET_STYLE}
-          >
+        <Surface className="panel-glass-panel space-y-5" data-panel-animate>
+          <Surface variant="muted" padding="sm" className="flex flex-col gap-3 rounded-[1.7rem] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-2xl">
               <Input
                 type="text"
@@ -1612,27 +1596,18 @@ export default function LeadsManager({
                 <Download className="h-4 w-4" />
                 Página
               </Button>
-              <div
-                className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-sm"
-                style={{
-                  ...LEADS_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span
-                  className="font-semibold"
-                  style={{ color: "var(--panel-text,#1c1917)" }}
-                >
+              <Badge tone="neutral" className="h-10 gap-1.5 px-3 text-sm normal-case tracking-normal">
+                <span className="font-semibold" style={{ color: "var(--panel-text)" }}>
                   {filteredLeads.length}
                 </span>
                 <span>leads</span>
-              </div>
+              </Badge>
             </div>
-          </div>
+          </Surface>
 
           <div className="space-y-4">
             <div>
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-muted)" }}>
                 Filtros Principais
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -1678,19 +1653,19 @@ export default function LeadsManager({
 
             <details className="group">
               <summary className="cursor-pointer list-none">
-                <div className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200">
-                  <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide flex items-center gap-2">
+                <Surface variant="muted" padding="sm" className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors">
+                  <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-soft)" }}>
                     <Filter className="w-4 h-4" />
                     Filtros Avançados
                   </h4>
-                  <span className="text-xs text-slate-500 group-open:rotate-180 transition-transform">
+                  <span className="text-xs transition-transform group-open:rotate-180" style={{ color: "var(--panel-text-muted)" }}>
                     ▼
                   </span>
-                </div>
+                </Surface>
               </summary>
-              <div className="mt-3 space-y-4 p-4 bg-slate-50/50 rounded-lg border border-slate-100">
+              <Surface variant="muted" padding="sm" className="mt-3 space-y-4 rounded-lg p-4">
                 <div>
-                  <h5 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  <h5 className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--panel-text-muted)" }}>
                     Tags e Canais
                   </h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1719,7 +1694,7 @@ export default function LeadsManager({
                 </div>
 
                 <div>
-                  <h5 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                  <h5 className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--panel-text-muted)" }}>
                     Filtros de Data
                   </h5>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -1760,18 +1735,15 @@ export default function LeadsManager({
                     })}
                   </div>
                 </div>
-              </div>
+              </Surface>
             </details>
 
             <div>
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-muted)" }}>
                 Ordenação
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-slate-600">
-                    Ordenar por
-                  </label>
+                <Field label="Ordenar por">
                   <FilterSingleSelect
                     icon={Filter}
                     value={sortField}
@@ -1783,11 +1755,8 @@ export default function LeadsManager({
                       label: option.label,
                     }))}
                   />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-slate-600">
-                    Direção
-                  </label>
+                </Field>
+                <Field label="Direção">
                   <FilterSingleSelect
                     icon={ArrowUpDown}
                     value={sortDirection}
@@ -1801,11 +1770,11 @@ export default function LeadsManager({
                       { value: "desc", label: "Decrescente" },
                     ]}
                   />
-                </div>
+                </Field>
               </div>
             </div>
           </div>
-        </div>
+        </Surface>
 
         {viewMode === "kanban" ? (
           <div data-panel-animate>
@@ -1816,65 +1785,45 @@ export default function LeadsManager({
             />
           </div>
         ) : (
-          <div
-            className="panel-glass-panel rounded-[2rem] border p-5 sm:p-6"
-            style={LEADS_SECTION_STYLE}
-            data-panel-animate
-          >
+          <Surface className="panel-glass-panel" data-panel-animate>
             <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p
                   className="text-[11px] font-black uppercase tracking-[0.24em]"
-                  style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                  style={{ color: "var(--panel-text-muted)" }}
                 >
                   Carteira em foco
                 </p>
                 <h3
                   className="mt-2 text-xl font-semibold"
-                  style={{ color: "var(--panel-text,#1c1917)" }}
+                  style={{ color: "var(--panel-text)" }}
                 >
                   {contentSectionTitle}
                 </h3>
                 <p
                   className="mt-1 max-w-3xl text-sm"
-                  style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                  style={{ color: "var(--panel-text-muted)" }}
                 >
                   {contentSectionDescription}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <span
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                  style={{
-                    ...LEADS_PILL_STYLE,
-                    color: "var(--panel-text-soft,#5b4635)",
-                  }}
-                >
-                  <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                <Badge tone="neutral" className="gap-2">
+                  <span style={{ color: "var(--panel-text)" }}>
                     {filteredLeads.length}
                   </span>
                   <span>resultados</span>
-                </span>
-                <span
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                  style={{
-                    ...LEADS_PILL_STYLE,
-                    color: "var(--panel-text-soft,#5b4635)",
-                  }}
-                >
-                  <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                </Badge>
+                <Badge tone="neutral" className="gap-2">
+                  <span style={{ color: "var(--panel-text)" }}>
                     {currentPage}/{totalPages}
                   </span>
                   <span>paginas</span>
-                </span>
+                </Badge>
                 {canSelectLeads && paginatedLeads.length > 0 && (
                   <label
-                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                    style={{
-                      ...LEADS_PILL_STYLE,
-                      color: "var(--panel-text-soft,#5b4635)",
-                    }}
+                    className="kds-badge kds-badge-neutral cursor-pointer gap-2 px-3 py-1.5 text-xs"
                   >
                     <Checkbox
                       checked={areAllPageLeadsSelected}
@@ -1888,30 +1837,21 @@ export default function LeadsManager({
                   </label>
                 )}
                 {selectedLeadIds.length > 0 && (
-                  <span
-                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                    style={{
-                      ...LEADS_PILL_STYLE,
-                      color: "var(--panel-accent-ink,#6f3f16)",
-                    }}
-                  >
-                    <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                  <Badge tone="accent" className="gap-2">
+                    <span style={{ color: "var(--panel-text)" }}>
                       {selectedLeadIds.length}
                     </span>
                     <span>selecionados</span>
-                  </span>
+                  </Badge>
                 )}
               </div>
             </div>
 
             {selectedLeadIds.length > 0 && (
-                <div
-                  className="rounded-[1.4rem] border px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between"
-                  style={LEADS_MUTED_INSET_STYLE}
-                >
+                <Surface variant="muted" padding="sm" className="rounded-[1.4rem] px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between">
                   <span
                     className="text-sm font-medium"
-                    style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+                    style={{ color: "var(--panel-accent-ink)" }}
                   >
                     {selectedLeadIds.length} lead(s) selecionado(s)
                   </span>
@@ -1955,7 +1895,7 @@ export default function LeadsManager({
                       value={bulkProximoRetorno}
                       onChange={setBulkProximoRetorno}
                       className="w-full xl:w-56"
-                      triggerClassName="h-10 border-[var(--panel-border,#d4c0a7)]"
+                      triggerClassName="h-10 border-[var(--panel-border)]"
                       disabled={isBulkUpdating}
                       placeholder="Proximo retorno"
                     />
@@ -2028,14 +1968,15 @@ export default function LeadsManager({
                       </Button>
                     </div>
                   </div>
-                </div>
+                </Surface>
             )}
             <div className="grid grid-cols-1 gap-4 p-4 sm:p-5">
               {paginatedLeads.map((lead) => (
-                <div
+                <Surface
                   key={lead.id}
-                  className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] border p-4 shadow-sm transition-all hover:shadow-md sm:p-6"
-                  style={LEADS_INSET_STYLE}
+                  variant="muted"
+                  padding="sm"
+                  className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] transition-all sm:p-6"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">
@@ -2049,7 +1990,7 @@ export default function LeadsManager({
                                 aria-label={`Selecionar lead ${lead.nome_completo}`}
                               />
                             )}
-                            <h3 className="text-lg font-semibold text-slate-900">
+                            <h3 className="text-lg font-semibold" style={{ color: "var(--panel-text)" }}>
                               {lead.nome_completo}
                             </h3>
                             {leadContractIds.has(lead.id) && (
@@ -2070,15 +2011,17 @@ export default function LeadsManager({
                                 statusOptions={activeLeadStatuses}
                               />
                             ) : (
-                              <span
-                                className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold"
+                              <Badge
+                                tone="neutral"
+                                size="sm"
+                                className="px-2 py-1 text-xs"
                                 style={getStatusBadgeStyles(lead.status)}
                               >
                                 {lead.status ?? "Sem status"}
-                              </span>
+                              </Badge>
                             )}
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 text-sm text-slate-600">
+                          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4" style={{ color: "var(--panel-text-soft)" }}>
                             <div className="flex items-center gap-2 break-words">
                               {lead.telefone && (
                                 <a
@@ -2121,7 +2064,7 @@ export default function LeadsManager({
                             </div>
                           </div>
                           {lead.cidade && (
-                            <div className="mt-2 text-sm text-slate-600">
+                            <div className="mt-2 text-sm" style={{ color: "var(--panel-text-soft)" }}>
                               <span className="font-medium">Cidade:</span>{" "}
                               {lead.cidade}
                             </div>
@@ -2129,7 +2072,7 @@ export default function LeadsManager({
                           {nextReminderByLeadId.get(lead.id) && (
                             <div
                               className="mt-2 flex items-center space-x-2 text-sm"
-                              style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
+                              style={{ color: "var(--panel-accent-ink)" }}
                             >
                               <Calendar className="h-4 w-4" />
                               <span className="font-medium">
@@ -2141,10 +2084,10 @@ export default function LeadsManager({
                             </div>
                           )}
                         </div>
-                        <div className="text-sm text-slate-500 lg:text-right">
+                        <div className="text-sm lg:text-right" style={{ color: "var(--panel-text-muted)" }}>
                           <div>
                             Responsável:{" "}
-                            <span className="font-medium text-slate-700">
+                            <span className="font-medium" style={{ color: "var(--panel-text-soft)" }}>
                               {lead.responsavel}
                             </span>
                           </div>
@@ -2160,7 +2103,7 @@ export default function LeadsManager({
                   </div>
                   <div
                     className="mt-3 flex flex-wrap items-center gap-1.5 border-t pt-3"
-                    style={{ borderColor: "var(--panel-border-subtle,#e4d5c0)" }}
+                    style={{ borderColor: "var(--panel-border-subtle)" }}
                   >
                     <Button
                       onClick={() => setSelectedLead(lead)}
@@ -2239,29 +2182,25 @@ export default function LeadsManager({
                       </>
                     )}
                   </div>
-                </div>
+                </Surface>
               ))}
 
               {filteredLeads.length === 0 && (
-                <div
-                  className="panel-glass-panel rounded-[1.7rem] border py-12 text-center shadow-sm"
-                  style={LEADS_EMPTY_STATE_STYLE}
-                  data-panel-animate
-                >
+                <Surface variant="muted" className="panel-glass-panel rounded-[1.7rem] py-12 text-center" data-panel-animate>
                   <Users
                     className="mx-auto mb-4 h-16 w-16"
-                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                    style={{ color: "var(--panel-text-muted)" }}
                   />
                   <h3
                     className="mb-2 text-lg font-medium"
-                    style={{ color: "var(--panel-text,#1c1917)" }}
+                    style={{ color: "var(--panel-text)" }}
                   >
                     Nenhum lead encontrado
                   </h3>
-                  <p style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+                  <p style={{ color: "var(--panel-text-soft)" }}>
                     Tente ajustar os filtros ou adicione um novo lead.
                   </p>
-                </div>
+                </Surface>
               )}
             </div>
 
@@ -2275,7 +2214,7 @@ export default function LeadsManager({
                 onItemsPerPageChange={handleItemsPerPageChange}
               />
             )}
-          </div>
+          </Surface>
         )}
 
         {showForm && (

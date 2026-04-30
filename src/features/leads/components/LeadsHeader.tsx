@@ -1,10 +1,7 @@
 import { Archive, BookOpen, Clock3, Plus, RefreshCw } from "lucide-react";
 
-import Button from "../../../components/ui/Button";
-import Tabs from "../../../components/ui/Tabs";
-import { getPanelButtonClass } from "../../../components/ui/standards";
+import { Badge, Button, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
 import { VIEW_MODE_TABS } from "../shared/leadsManagerConfig";
-import { LEADS_PILL_STYLE } from "../shared/leadsManagerStyles";
 import type { LeadsViewMode } from "../shared/leadsManagerTypes";
 
 type LeadsHeaderProps = {
@@ -35,83 +32,31 @@ export function LeadsHeader({
   onCreateLead,
 }: LeadsHeaderProps) {
   return (
-    <div className="flex flex-col gap-3" data-panel-animate>
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div>
-          <p
-            className="text-[11px] font-black uppercase tracking-[0.24em]"
-            style={{ color: "var(--panel-text-muted,#876f5c)" }}
-          >
-            Operacao comercial
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <h2
-              className="text-2xl font-bold sm:text-3xl"
-              style={{ color: "var(--panel-text,#1c1917)" }}
-            >
-              Gestao de Leads
-            </h2>
-            {showArchived && (
-              <span
-                className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...LEADS_PILL_STYLE,
-                  color: "var(--panel-accent-ink,#6f3f16)",
-                }}
-              >
-                Arquivados
-              </span>
-            )}
-          </div>
-          <p
-            className="mt-1 text-sm"
-            style={{ color: "var(--panel-text-muted,#876f5c)" }}
-          >
-            Acompanhe a carteira, priorize retornos e mantenha o funil em ritmo
-            constante.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-            style={{
-              ...LEADS_PILL_STYLE,
-              color: "var(--panel-text-soft,#5b4635)",
-            }}
-          >
-            <span style={{ color: "var(--panel-text,#1c1917)" }}>
-              {filteredLeadCount}
-            </span>
+    <PageHeader
+      eyebrow="Operacao comercial"
+      title="Gestao de Leads"
+      description="Acompanhe a carteira, priorize retornos e mantenha o funil em ritmo constante."
+      data-panel-animate
+      actions={(
+        <>
+          {showArchived && <Badge tone="accent">Arquivados</Badge>}
+          <Badge tone="neutral" className="gap-2">
+            <span style={{ color: "var(--panel-text)" }}>{filteredLeadCount}</span>
             <span>leads no recorte</span>
-          </span>
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-            style={{
-              ...LEADS_PILL_STYLE,
-              color: "var(--panel-text-soft,#5b4635)",
-            }}
-          >
-            <span style={{ color: "var(--panel-text,#1c1917)" }}>
-              {activeFilterCount}
-            </span>
+          </Badge>
+          <Badge tone={activeFilterCount > 0 ? "accent" : "neutral"} className="gap-2">
+            <span style={{ color: "var(--panel-text)" }}>{activeFilterCount}</span>
             <span>{activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}</span>
-          </span>
-          <span
-            className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-            style={{
-              ...LEADS_PILL_STYLE,
-              color: "var(--panel-text-soft,#5b4635)",
-            }}
-          >
-            <span style={{ color: "var(--panel-text,#1c1917)" }}>
+          </Badge>
+          <Badge tone="neutral" className="gap-2">
+            <span style={{ color: "var(--panel-text)" }}>
               {viewMode === "kanban" ? "Kanban" : "Lista"}
             </span>
             <span>modo atual</span>
-          </span>
-        </div>
-      </div>
-
+          </Badge>
+        </>
+      )}
+    >
       <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <Tabs
@@ -123,19 +68,13 @@ export function LeadsHeader({
             triggerClassName="flex-1 sm:flex-initial"
           />
 
-          <div
-            className="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm"
-            style={{
-              ...LEADS_PILL_STYLE,
-              color: "var(--panel-text-soft,#5b4635)",
-            }}
-          >
+          <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
             <Clock3
               className="h-4 w-4"
-              style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
+              style={{ color: "var(--panel-accent-strong)" }}
             />
             <span>{lastUpdatedLabel || "Aguardando atualizacao..."}</span>
-          </div>
+          </Badge>
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -192,6 +131,6 @@ export function LeadsHeader({
           </Button>
         </div>
       </div>
-    </div>
+    </PageHeader>
   );
 }

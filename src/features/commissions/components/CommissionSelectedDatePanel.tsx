@@ -1,15 +1,6 @@
-import { cx } from "../../../lib/cx";
-import {
-  COMMISSION_CALENDAR_BODY_CLASS,
-  COMMISSION_CALENDAR_CARD_CLASS,
-  COMMISSION_CALENDAR_LABEL_CLASS,
-  COMMISSION_CALENDAR_MUTED_CARD_CLASS,
-  COMMISSION_CALENDAR_MUTED_TEXT_CLASS,
-  COMMISSION_EMPTY_STATE_CLASS,
-} from "../shared/commissionCalendarConstants";
+import { Surface } from "../../../design-system";
 import {
   formatCommissionCurrency,
-  getCommissionEventTone,
 } from "../shared/commissionCalendarUtils";
 import type { CommissionEvent } from "../shared/commissionCalendarTypes";
 
@@ -25,8 +16,8 @@ export default function CommissionSelectedDatePanel({
   selectedDateLabel,
 }: CommissionSelectedDatePanelProps) {
   return (
-    <div className={COMMISSION_CALENDAR_CARD_CLASS}>
-      <h4 className={cx("mb-3", COMMISSION_CALENDAR_LABEL_CLASS)}>
+    <Surface variant="muted" padding="sm" className="p-4">
+      <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-text-muted)]">
         {selectedDateLabel
           ? `Eventos de ${selectedDateLabel}`
           : "Escolha um dia"}
@@ -36,39 +27,32 @@ export default function CommissionSelectedDatePanel({
         selectedDateEvents.length > 0 ? (
           <div className="max-h-[260px] space-y-3 overflow-y-auto pr-2">
             {selectedDateEvents.map((event) => {
-              const tone = getCommissionEventTone(event.type);
+              const isCommission = event.type === "comissao";
 
               return (
-                <div
+                <Surface
                   key={event.id}
-                  className={cx("rounded-xl border p-3", tone.cardClass)}
+                  variant={isCommission ? "warning" : "default"}
+                  padding="sm"
+                  className="rounded-xl p-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p
-                        className={cx("text-sm font-semibold", tone.titleClass)}
+                        className="text-sm font-semibold"
+                        style={{ color: isCommission ? "var(--panel-accent-ink-strong)" : "var(--panel-text)" }}
                       >
-                        {event.type === "comissao"
+                        {isCommission
                           ? "Recebimento de comissao"
                           : "Pagamento de bonificacao"}
                       </p>
-                      <p
-                        className={cx(
-                          "mt-1 text-xs",
-                          COMMISSION_CALENDAR_BODY_CLASS,
-                        )}
-                      >
+                      <p className="mt-1 text-xs text-[var(--panel-text-soft)]">
                         Contrato{" "}
                         {event.contract.codigo_contrato || "Sem codigo"} -{" "}
                         {event.contract.operadora || "Operadora nao informada"}
                       </p>
                       {event.installmentCount && event.installmentIndex && (
-                        <p
-                          className={cx(
-                            "mt-1 text-[11px]",
-                            COMMISSION_CALENDAR_MUTED_TEXT_CLASS,
-                          )}
-                        >
+                        <p className="mt-1 text-[11px] text-[var(--panel-text-muted)]">
                           Parcela {event.installmentIndex} de{" "}
                           {event.installmentCount}
                         </p>
@@ -76,33 +60,26 @@ export default function CommissionSelectedDatePanel({
                     </div>
 
                     <span
-                      className={cx(
-                        "shrink-0 text-sm font-semibold",
-                        tone.valueClass,
-                      )}
+                      className="shrink-0 text-sm font-semibold"
+                      style={{ color: isCommission ? "var(--panel-accent-ink-strong)" : "var(--panel-text)" }}
                     >
                       {formatCommissionCurrency(event.value)}
                     </span>
                   </div>
-                </div>
+                </Surface>
               );
             })}
           </div>
         ) : (
-          <div className={COMMISSION_EMPTY_STATE_CLASS}>
+          <div className="py-10 text-center text-sm text-[var(--panel-text-muted)]">
             Nenhum lancamento previsto para este dia.
           </div>
         )
       ) : (
-        <div
-          className={cx(
-            COMMISSION_EMPTY_STATE_CLASS,
-            COMMISSION_CALENDAR_MUTED_CARD_CLASS,
-          )}
-        >
+        <Surface variant="muted" className="py-10 text-center text-sm text-[var(--panel-text-muted)]">
           Escolha um dia para visualizar os detalhes.
-        </div>
+        </Surface>
       )}
-    </div>
+    </Surface>
   );
 }

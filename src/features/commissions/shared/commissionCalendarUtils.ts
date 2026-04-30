@@ -1,10 +1,7 @@
 import type { Contract } from "../../../lib/supabase";
 import { getContractBonusSummary } from "../../../lib/contractBonus";
 import { getCommissionInstallmentSummary } from "../../../lib/contractCommission";
-import type {
-  CommissionEvent,
-  CommissionEventType,
-} from "./commissionCalendarTypes";
+import type { CommissionEvent } from "./commissionCalendarTypes";
 
 export const getCommissionDateKey = (date: Date) => {
   const year = date.getFullYear();
@@ -209,24 +206,3 @@ export const sumCommissionTotals = (events: CommissionEvent[]) =>
     },
     { bonus: 0, commission: 0 },
   );
-
-export const getCommissionEventTone = (type: CommissionEventType) =>
-  type === "comissao"
-    ? {
-        badgeClass:
-          "inline-flex items-center rounded-full border border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)] px-2 py-0.5 text-[10px] font-semibold text-[var(--panel-accent-ink,#6f3f16)]",
-        iconClass: "text-[var(--panel-accent-ink,#6f3f16)]",
-        cardClass:
-          "border-[var(--panel-accent-border,#d5a25c)] bg-[color:var(--panel-accent-soft,#f6e4c7)]",
-        titleClass: "text-[var(--panel-accent-ink-strong,#4a2411)]",
-        valueClass: "text-[var(--panel-accent-ink-strong,#4a2411)]",
-      }
-    : {
-        badgeClass:
-          "inline-flex items-center rounded-full border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-muted,#f8f2e8)] px-2 py-0.5 text-[10px] font-semibold text-[var(--panel-text-soft,#5b4635)]",
-        iconClass: "text-[var(--panel-text-soft,#5b4635)]",
-        cardClass:
-          "border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-muted,#f8f2e8)]",
-        titleClass: "text-[var(--panel-text,#1c1917)]",
-        valueClass: "text-[var(--panel-text,#1c1917)]",
-      };

@@ -564,6 +564,13 @@ Deno.serve(async (req: Request) => {
     const channel = await ensurePrimaryChannel(supabaseAdmin);
     const token = sanitizeWhapiToken(settings.token);
 
+    if (!settings.enabled) {
+      return new Response(JSON.stringify({ error: 'Integração WhatsApp desabilitada.' }), {
+        status: 403,
+        headers: jsonHeaders,
+      });
+    }
+
     if (!token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
         status: 400,

@@ -132,6 +132,23 @@ async function recordEventReceipt(
   return true;
 }
 
+async function hasEventReceipt(
+  supabaseAdmin: SupabaseClient,
+  eventKey: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_event_receipts')
+    .select('id')
+    .eq('event_key', eventKey)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Erro ao verificar dedupe do webhook: ${error.message}`);
+  }
+
+  return Boolean(data);
+}
+
 async function findExistingChat(
   supabaseAdmin: SupabaseClient,
   channelId: string,
@@ -500,7 +517,12 @@ Deno.serve(async (req: Request) => {
         if (!chatId || !isDirectWhapiChatId(chatId)) continue;
 
         const eventKey = buildMessageEventKey(eventAction, item);
-        const accepted = await recordEventReceipt(
+        if (await hasEventReceipt(supabaseAdmin, eventKey)) continue;
+
+        const chat = await persistMessageFromWebhook(supabaseAdmin, channel, item, whapiToken, eventAction);
+        if (!chat) continue;
+
+        await recordEventReceipt(
           supabaseAdmin,
           channel.id,
           eventKey,
@@ -512,11 +534,6 @@ Deno.serve(async (req: Request) => {
             from_me: item.from_me === true,
           },
         );
-
-        if (!accepted) continue;
-
-        const chat = await persistMessageFromWebhook(supabaseAdmin, channel, item, whapiToken, eventAction);
-        if (!chat) continue;
       }
     }
 
@@ -525,7 +542,11 @@ Deno.serve(async (req: Request) => {
         if (!isRecord(item)) continue;
 
         const eventKey = buildStatusEventKey(eventAction, item);
-        const accepted = await recordEventReceipt(
+        if (await hasEventReceipt(supabaseAdmin, eventKey)) continue;
+
+        await applyMessageStatus(supabaseAdmin, channel.id, item);
+
+        await recordEventReceipt(
           supabaseAdmin,
           channel.id,
           eventKey,
@@ -537,9 +558,6 @@ Deno.serve(async (req: Request) => {
             recipient_id: normalizeWhapiChatId(item.recipient_id),
           },
         );
-
-        if (!accepted) continue;
-        await applyMessageStatus(supabaseAdmin, channel.id, item);
       }
     }
 

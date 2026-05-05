@@ -53,6 +53,7 @@ const CHAT_POLL_INTERVAL_MS = 8000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
 const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
 const MESSAGE_PAGE_SIZE = 50;
+const CHAT_PAGE_SIZE = 250;
 const SCROLL_BOTTOM_THRESHOLD_PX = 96;
 const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 const CHAT_IDENTITY_LOOKUP_BATCH_SIZE = 25;
@@ -2615,6 +2616,8 @@ export default function WhatsAppInboxScreen() {
   const leadContractsRequestIdRef = useRef(0);
   const chatAgendaSummaryRequestIdRef = useRef(0);
   const followUpGenerationRequestIdRef = useRef(0);
+  const leadSearchRequestIdRef = useRef(0);
+  const startChatSourcesRequestIdRef = useRef(0);
   const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
   const voiceAttachment = useMemo(
     () => pendingAttachments.find((attachment) => attachment.kind === 'voice') ?? null,
@@ -2797,11 +2800,6 @@ export default function WhatsAppInboxScreen() {
     () => (search ? mergeUniqueChats(remoteChatSearchResults, localChatSearchResults) : scopedChats),
     [localChatSearchResults, remoteChatSearchResults, scopedChats, search],
   );
-  const searchScopeChatIds = useMemo(
-    () => (search ? chats.map((chat) => chat.id) : scopedChats.map((chat) => chat.id)),
-    [chats, scopedChats, search],
-  );
-
   useEffect(() => {
     if (!search) {
       setChatSearchResults([]);
@@ -2846,18 +2844,12 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    if (searchScopeChatIds.length === 0) {
-      setMessageSearchResults([]);
-      setSearchingMessages(false);
-      return;
-    }
-
     const requestId = ++messageSearchRequestIdRef.current;
     setSearchingMessages(true);
 
     void commWhatsAppService.searchMessages({
       search,
-      chatIds: searchScopeChatIds,
+      archivedFilter: 'all',
       limit: 30,
     }).then((results) => {
       if (requestId !== messageSearchRequestIdRef.current) {
@@ -2885,7 +2877,7 @@ export default function WhatsAppInboxScreen() {
         setSearchingMessages(false);
       }
     });
-  }, [search, searchScopeChatIds]);
+  }, [search]);
   const selectedChatTranscriptLabel = useMemo(
     () => {
       if (!selectedChat) {
@@ -3538,23 +3530,41 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const refreshDrawerSearch = useCallback(async (query: string, phoneNumber?: string | null) => {
+    const requestId = ++leadSearchRequestIdRef.current;
+    const normalizedQuery = query.trim();
+    const normalizedPhone = phoneNumber?.trim() || null;
+
     setLeadSearchLoading(true);
     try {
       const results = await commWhatsAppService.searchCrmLeads({
-        query,
-        phoneNumbers: phoneNumber ? [phoneNumber] : undefined,
+        query: normalizedQuery,
+        phoneNumbers: normalizedPhone ? [normalizedPhone] : undefined,
         limit: 20,
       });
+
+      if (requestId !== leadSearchRequestIdRef.current) {
+        return;
+      }
+
       setLeadSearchResults(results);
     } catch (error) {
+      if (requestId !== leadSearchRequestIdRef.current) {
+        return;
+      }
+
       console.error('[WhatsAppInbox] erro ao buscar leads para o drawer', error);
       setLeadSearchResults([]);
     } finally {
-      setLeadSearchLoading(false);
+      if (requestId === leadSearchRequestIdRef.current) {
+        setLeadSearchLoading(false);
+      }
     }
   }, []);
 
   const refreshStartChatSources = useCallback(async (query: string, page: number = 1, appendSavedContacts: boolean = false) => {
+    const requestId = ++startChatSourcesRequestIdRef.current;
+    const normalizedQuery = query.trim();
+
     if (appendSavedContacts) {
       setSavedContactsLoadingMore(true);
     } else {
@@ -3563,18 +3573,27 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      const contactsPagePromise = commWhatsAppService.listSavedContacts({ query, page, pageSize: 50 });
+      const contactsPagePromise = commWhatsAppService.listSavedContacts({ query: normalizedQuery, page, pageSize: 50 });
       const leadsPromise = appendSavedContacts
         ? Promise.resolve(latestCrmStartResultsRef.current)
-        : commWhatsAppService.searchCrmLeads({ query, limit: 20 });
+        : commWhatsAppService.searchCrmLeads({ query: normalizedQuery, limit: 20 });
 
       const [contactsPage, leads] = await Promise.all([contactsPagePromise, leadsPromise]);
+
+      if (requestId !== startChatSourcesRequestIdRef.current) {
+        return;
+      }
+
       setSavedContacts((current) => (appendSavedContacts ? [...current, ...contactsPage.contacts] : contactsPage.contacts));
       setSavedContactsTotal(contactsPage.total);
       setSavedContactsHasMore(contactsPage.hasMore);
       setSavedContactsPage(page);
       setCrmStartResults(leads);
     } catch (error) {
+      if (requestId !== startChatSourcesRequestIdRef.current) {
+        return;
+      }
+
       console.error('[WhatsAppInbox] erro ao carregar fontes para novo chat', error);
       if (!appendSavedContacts) {
         setSavedContacts([]);
@@ -3583,6 +3602,10 @@ export default function WhatsAppInboxScreen() {
         setCrmStartResults([]);
       }
     } finally {
+      if (requestId !== startChatSourcesRequestIdRef.current) {
+        return;
+      }
+
       if (appendSavedContacts) {
         setSavedContactsLoadingMore(false);
       } else {
@@ -4490,12 +4513,36 @@ export default function WhatsAppInboxScreen() {
     const requestId = ++chatsRequestIdRef.current;
 
     try {
-      const data = await commWhatsAppService.listChats({
-        activityFilter: chatActivityFilter,
-        leadStatusFilters,
-        archivedFilter: 'all',
-        limit: 500,
-      });
+      const fetchChatSection = async (archivedFilter: 'active' | 'archived') => {
+        const all: CommWhatsAppChat[] = [];
+        let offset = 0;
+
+        while (true) {
+          const page = await commWhatsAppService.listChats({
+            activityFilter: chatActivityFilter,
+            leadStatusFilters,
+            archivedFilter,
+            limit: CHAT_PAGE_SIZE,
+            offset,
+          });
+
+          all.push(...page);
+
+          if (page.length < CHAT_PAGE_SIZE) {
+            break;
+          }
+
+          offset += page.length;
+        }
+
+        return all;
+      };
+
+      const [activeChats, archivedChats] = await Promise.all([
+        fetchChatSection('active'),
+        fetchChatSection('archived'),
+      ]);
+      const data = [...activeChats, ...archivedChats];
 
       if (requestId !== chatsRequestIdRef.current) {
         return;
@@ -4582,9 +4629,10 @@ export default function WhatsAppInboxScreen() {
       let data = page.messages;
       let hasMore = page.hasMore;
 
-      if (data.length === 0 && !hydratedChatsRef.current.has(chat.external_chat_id)) {
-        hydratedChatsRef.current.add(chat.external_chat_id);
-        await commWhatsAppService.syncChatHistory(chat.external_chat_id);
+      const externalChatId = chat.external_chat_id?.trim();
+      if (data.length === 0 && externalChatId && !hydratedChatsRef.current.has(externalChatId)) {
+        hydratedChatsRef.current.add(externalChatId);
+        await commWhatsAppService.syncChatHistory(externalChatId);
         page = await commWhatsAppService.listMessagesPage(chat.id, {
           limit: MESSAGE_PAGE_SIZE,
         });
@@ -4811,7 +4859,9 @@ export default function WhatsAppInboxScreen() {
       manualUnreadSkipReadChatIdRef.current = null;
     }
 
-    void commWhatsAppService.markChatRead(selectedChat.id).catch((error) => {
+    void commWhatsAppService.markChatRead(selectedChat.id, {
+      messageAt: selectedChat.last_message_at ?? null,
+    }).catch((error) => {
       console.error('[WhatsAppInbox] erro ao marcar chat como lido', error);
     });
   }, [selectedChat]);
@@ -6161,7 +6211,12 @@ export default function WhatsAppInboxScreen() {
   }, [applyPrefetchedLeadNames, chats]);
 
   const handleStartChatFromSavedContact = async (contact: CommWhatsAppPhoneContact) => {
-    setStartingChatKey(`saved:${contact.phone_digits}`);
+    if (startingChatKey) {
+      return;
+    }
+
+    const actionKey = `saved:${contact.phone_digits}`;
+    setStartingChatKey(actionKey);
     try {
       const result = await commWhatsAppService.startChat({
         source: 'saved_contact',
@@ -6180,12 +6235,17 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao iniciar chat por contato salvo', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa a partir do contato salvo.');
     } finally {
-      setStartingChatKey(null);
+      setStartingChatKey((current) => (current === actionKey ? null : current));
     }
   };
 
   const handleStartChatFromLead = async (lead: CommWhatsAppLeadSearchResult) => {
-    setStartingChatKey(`crm:${lead.id}`);
+    if (startingChatKey) {
+      return;
+    }
+
+    const actionKey = `crm:${lead.id}`;
+    setStartingChatKey(actionKey);
     try {
       const result = await commWhatsAppService.startChat({
         source: 'crm',
@@ -6202,11 +6262,15 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao iniciar chat por lead do CRM', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa a partir do lead do CRM.');
     } finally {
-      setStartingChatKey(null);
+      setStartingChatKey((current) => (current === actionKey ? null : current));
     }
   };
 
   const handleOpenAgendaLeadChat = useCallback(async (lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone'>) => {
+    if (startingChatKey) {
+      return;
+    }
+
     const phoneKeys = collectPhoneLookupKeys(lead.telefone);
     const localExistingChat = latestChatsRef.current.find((chat) => {
       if (lead.id && chat.lead_id === lead.id) {
@@ -6266,10 +6330,15 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setStartingChatKey((current) => (current === openingKey ? null : current));
     }
-  }, [upsertChatLocally]);
+  }, [startingChatKey, upsertChatLocally]);
 
   const handleStartChatFromManual = async () => {
-    setStartingChatKey('manual');
+    if (startingChatKey) {
+      return;
+    }
+
+    const actionKey = 'manual';
+    setStartingChatKey(actionKey);
     try {
       const result = await commWhatsAppService.startChat({
         source: 'manual',
@@ -6287,7 +6356,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao iniciar chat manual', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa pelo número informado.');
     } finally {
-      setStartingChatKey(null);
+      setStartingChatKey((current) => (current === actionKey ? null : current));
     }
   };
 

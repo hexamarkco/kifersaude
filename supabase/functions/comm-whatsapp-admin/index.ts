@@ -98,6 +98,10 @@ async function refreshHealth(supabaseAdmin: ReturnType<typeof createAdminClient>
   const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
   const token = sanitizeWhapiToken(settings.token);
 
+  if (!settings.enabled) {
+    throw new Error('Integração WhatsApp desabilitada.');
+  }
+
   if (!token) {
     throw new Error('Token da Whapi nao configurado.');
   }

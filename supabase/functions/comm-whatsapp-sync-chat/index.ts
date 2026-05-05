@@ -135,6 +135,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
+    if (!settings.enabled) {
+      return new Response(JSON.stringify({ error: 'Integração WhatsApp desabilitada.' }), {
+        status: 403,
+        headers: jsonHeaders,
+      });
+    }
+
     if (!settings.token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
         status: 400,
@@ -196,6 +203,9 @@ Deno.serve(async (req: Request) => {
       const bTime = Number(b.timestamp ?? 0);
       return aTime - bTime;
     });
+
+    let insertedCount = 0;
+    let updatedCount = 0;
 
     for (const message of orderedMessages) {
       const reactionEvent = extractWhapiReactionEvent(message, 'messages');
@@ -305,7 +315,7 @@ Deno.serve(async (req: Request) => {
       const quoteMeta = extractWhapiQuotedMessageMeta(message);
       const contactCardMeta = extractWhapiContactCardMeta(message);
       const summaryText = summarizeWhapiMessage(message);
-      await persistCommWhatsAppMessage(supabaseAdmin, {
+      const persisted = await persistCommWhatsAppMessage(supabaseAdmin, {
         channelId: channel.id,
         externalChatId,
         phoneNumber: phoneDigits,
@@ -344,9 +354,15 @@ Deno.serve(async (req: Request) => {
           ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
         },
       });
+
+      if (persisted.inserted) {
+        insertedCount += 1;
+      } else {
+        updatedCount += 1;
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, imported: orderedMessages.length }), {
+    return new Response(JSON.stringify({ success: true, fetched: orderedMessages.length, imported: insertedCount, inserted: insertedCount, updated: updatedCount }), {
       status: 200,
       headers: jsonHeaders,
     });

@@ -137,6 +137,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
+    if (!settings.enabled) {
+      return new Response(JSON.stringify({ error: 'Integração WhatsApp desabilitada.' }), {
+        status: 403,
+        headers: jsonHeaders,
+      });
+    }
+
     if (!settings.token) {
       return new Response(JSON.stringify({ error: 'Token da Whapi nao configurado.' }), {
         status: 400,

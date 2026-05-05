@@ -24,6 +24,7 @@ type ListChatsParams = {
   leadStatusFilters?: string[];
   onlyUnread?: boolean;
   limit?: number;
+  offset?: number;
 };
 
 type MessageCursor = {
@@ -39,6 +40,7 @@ type ListMessagesPageParams = {
 type SearchMessagesParams = {
   search: string;
   chatIds?: string[];
+  archivedFilter?: 'all' | 'active' | 'archived';
   limit?: number;
 };
 
@@ -223,97 +225,31 @@ export const commWhatsAppService = {
 
   async listChats(params: ListChatsParams = {}): Promise<CommWhatsAppChat[]> {
     const limit = Math.min(Math.max(params.limit ?? 80, 1), 500);
+    const offset = Math.max(params.offset ?? 0, 0);
     const activityFilter = params.activityFilter ?? (params.onlyUnread ? 'unread' : 'all');
     const leadFilter = params.leadFilter ?? 'all';
     const savedFilter = params.savedFilter ?? 'all';
     const archivedFilter = params.archivedFilter ?? 'all';
     const leadStatusFilters = (params.leadStatusFilters ?? []).map((value) => value.trim()).filter(Boolean);
 
-    let query = supabase
-      .from('comm_whatsapp_chats')
-      .select('*')
-      .order('is_pinned', { ascending: false })
-      .order('pinned_at', { ascending: false, nullsFirst: false })
-      .order('last_message_at', { ascending: false, nullsFirst: false })
-      .order('updated_at', { ascending: false })
-      .limit(limit);
-
-    if (activityFilter === 'unread') {
-      query = query.or('unread_count.gt.0,manual_unread.eq.true');
-    }
-
-    if (leadFilter === 'with_lead') {
-      query = query.not('lead_id', 'is', null);
-    } else if (leadFilter === 'without_lead') {
-      query = query.is('lead_id', null);
-    }
-
-    if (savedFilter === 'saved') {
-      query = query.not('saved_contact_name', 'is', null);
-    } else if (savedFilter === 'unsaved') {
-      query = query.is('saved_contact_name', null);
-    }
-
-    if (archivedFilter === 'active') {
-      query = query.eq('is_archived', false);
-    } else if (archivedFilter === 'archived') {
-      query = query.eq('is_archived', true);
-    }
-
     const search = sanitizeSearch(params.search ?? '');
-    if (search) {
-      const searchDigits = search.replace(/\D/g, '');
-      query = query.or(
-        [
-          `display_name.ilike.%${search}%`,
-          `saved_contact_name.ilike.%${search}%`,
-          `push_name.ilike.%${search}%`,
-          `phone_number.ilike.%${search}%`,
-          ...(searchDigits ? [`phone_digits.ilike.%${searchDigits}%`] : []),
-        ].join(','),
-      );
-    }
 
-    const { data, error } = await query;
+    const { data, error } = await supabase.rpc('comm_whatsapp_list_chats', {
+      p_search: search || null,
+      p_activity_filter: activityFilter,
+      p_lead_filter: leadFilter,
+      p_saved_filter: savedFilter,
+      p_archived_filter: archivedFilter,
+      p_lead_status_filters: leadStatusFilters.length > 0 ? leadStatusFilters : null,
+      p_limit: limit,
+      p_offset: offset,
+    });
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as conversas do WhatsApp.'));
     }
 
-    let chats = (data ?? []) as CommWhatsAppChat[];
-
-    const leadIds = chats.map((chat) => chat.lead_id).filter((leadId): leadId is string => Boolean(leadId));
-    if (leadIds.length > 0) {
-      const uniqueLeadIds = Array.from(new Set(leadIds));
-      const { data: leads, error: leadsError } = await supabase
-        .from('leads')
-        .select('id, status')
-        .in('id', uniqueLeadIds);
-
-      if (leadsError) {
-        throw new Error(getSupabaseErrorMessage(leadsError, 'Nao foi possivel carregar os status dos leads vinculados.'));
-      }
-
-      const leadStatusById = new Map<string, string | null>();
-      for (const lead of leads ?? []) {
-        leadStatusById.set(String(lead.id), typeof lead.status === 'string' ? lead.status : null);
-      }
-
-      chats = chats.map((chat) => ({
-        ...chat,
-        lead_status: chat.lead_id ? (leadStatusById.get(chat.lead_id) ?? null) : null,
-      }));
-    }
-
-    if (leadStatusFilters.length > 0) {
-      const allowedStatuses = new Set(leadStatusFilters.map((status) => status.toLowerCase()));
-      chats = chats.filter((chat) => {
-        const status = chat.lead_status?.trim().toLowerCase();
-        return status ? allowedStatuses.has(status) : false;
-      });
-    }
-
-    return chats;
+    return (Array.isArray(data) ? data : []) as CommWhatsAppChat[];
   },
 
   async updateChatInboxState(chatId: string, options: {
@@ -355,49 +291,27 @@ export const commWhatsAppService = {
       return [];
     }
 
-    let query = supabase
-      .from('comm_whatsapp_messages')
-      .select('*')
-      .or([
-        `text_content.ilike.%${search}%`,
-        `media_caption.ilike.%${search}%`,
-        `transcription_text.ilike.%${search}%`,
-      ].join(','))
-      .order('message_at', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const { data, error } = await supabase.rpc('comm_whatsapp_search_messages', {
+      p_search: search,
+      p_chat_ids: chatIds.length > 0 ? chatIds : null,
+      p_archived_filter: params.archivedFilter ?? 'all',
+      p_limit: limit,
+    });
 
-    if (chatIds.length > 0) {
-      query = query.in('chat_id', chatIds);
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel buscar mensagens do WhatsApp.'));
     }
 
-    const { data: messages, error: messagesError } = await query;
+    return (Array.isArray(data) ? data : []).flatMap((row) => {
+      const candidate = row as { message?: unknown; chat?: unknown };
+      if (!candidate.message || !candidate.chat) {
+        return [];
+      }
 
-    if (messagesError) {
-      throw new Error(getSupabaseErrorMessage(messagesError, 'Nao foi possivel buscar mensagens do WhatsApp.'));
-    }
-
-    const typedMessages = (messages ?? []) as CommWhatsAppMessage[];
-    const resultChatIds = Array.from(new Set(typedMessages.map((message) => message.chat_id).filter(Boolean)));
-
-    if (resultChatIds.length === 0) {
-      return [];
-    }
-
-    const { data: chats, error: chatsError } = await supabase
-      .from('comm_whatsapp_chats')
-      .select('*')
-      .in('id', resultChatIds);
-
-    if (chatsError) {
-      throw new Error(getSupabaseErrorMessage(chatsError, 'Nao foi possivel carregar as conversas dos resultados de busca.'));
-    }
-
-    const chatById = new Map(((chats ?? []) as CommWhatsAppChat[]).map((chat) => [chat.id, chat]));
-
-    return typedMessages.flatMap((message) => {
-      const chat = chatById.get(message.chat_id);
-      return chat ? [{ message, chat }] : [];
+      return [{
+        message: candidate.message as CommWhatsAppMessage,
+        chat: candidate.chat as CommWhatsAppChat,
+      }];
     });
   },
 
@@ -664,7 +578,7 @@ export const commWhatsAppService = {
     return messages;
   },
 
-  async syncChatHistory(chatId: string): Promise<{ imported: number }> {
+  async syncChatHistory(chatId: string): Promise<{ imported: number; fetched: number; inserted: number; updated: number }> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-sync-chat', {
       body: { chatId },
     });
@@ -673,15 +587,20 @@ export const commWhatsAppService = {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar o historico da conversa.'));
     }
 
-    const payload = (data ?? {}) as { imported?: number };
+    const payload = (data ?? {}) as { imported?: number; fetched?: number; inserted?: number; updated?: number };
     return {
       imported: typeof payload.imported === 'number' ? payload.imported : 0,
+      fetched: typeof payload.fetched === 'number' ? payload.fetched : 0,
+      inserted: typeof payload.inserted === 'number' ? payload.inserted : typeof payload.imported === 'number' ? payload.imported : 0,
+      updated: typeof payload.updated === 'number' ? payload.updated : 0,
     };
   },
 
-  async markChatRead(chatId: string): Promise<void> {
+  async markChatRead(chatId: string, cursor: { messageAt?: string | null; messageId?: string | null } = {}): Promise<void> {
     const { error } = await supabase.rpc('comm_whatsapp_mark_chat_read', {
       p_chat_id: chatId,
+      p_last_seen_message_at: cursor.messageAt ?? null,
+      p_last_seen_message_id: cursor.messageId ?? null,
     });
 
     if (error) {

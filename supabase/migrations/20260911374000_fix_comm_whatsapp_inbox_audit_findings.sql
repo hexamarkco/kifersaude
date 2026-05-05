@@ -507,11 +507,25 @@ BEGIN
       ELSE public.comm_whatsapp_chats.unread_count
     END,
     is_archived = CASE
-      WHEN v_inserted AND NOT public.comm_whatsapp_chats.is_muted THEN false
+      WHEN v_inserted
+        AND v_direction = 'inbound'
+        AND NOT public.comm_whatsapp_chats.is_muted
+        AND (
+          NOT public.comm_whatsapp_chats.is_archived
+          OR public.comm_whatsapp_chats.archived_at IS NULL
+          OR v_message_at > public.comm_whatsapp_chats.archived_at
+        ) THEN false
       ELSE public.comm_whatsapp_chats.is_archived
     END,
     archived_at = CASE
-      WHEN v_inserted AND NOT public.comm_whatsapp_chats.is_muted THEN NULL
+      WHEN v_inserted
+        AND v_direction = 'inbound'
+        AND NOT public.comm_whatsapp_chats.is_muted
+        AND (
+          NOT public.comm_whatsapp_chats.is_archived
+          OR public.comm_whatsapp_chats.archived_at IS NULL
+          OR v_message_at > public.comm_whatsapp_chats.archived_at
+        ) THEN NULL
       ELSE public.comm_whatsapp_chats.archived_at
     END,
     updated_at = now()
@@ -523,6 +537,76 @@ BEGIN
   FROM public.comm_whatsapp_refresh_chat_identity(v_chat.id);
 
   RETURN QUERY SELECT v_chat.id, v_message_id, v_inserted, v_chat.unread_count, v_summary_updated;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.comm_whatsapp_update_chat_inbox_state(
+  p_chat_id uuid,
+  p_is_archived boolean DEFAULT NULL,
+  p_is_muted boolean DEFAULT NULL,
+  p_is_pinned boolean DEFAULT NULL,
+  p_mark_as_unread boolean DEFAULT NULL
+)
+RETURNS SETOF public.comm_whatsapp_chats
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_chat public.comm_whatsapp_chats%ROWTYPE;
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.current_user_can_edit_comm_whatsapp() THEN
+    RAISE EXCEPTION 'Permissao insuficiente para atualizar conversa.';
+  END IF;
+
+  UPDATE public.comm_whatsapp_chats
+  SET
+    is_archived = COALESCE(p_is_archived, public.comm_whatsapp_chats.is_archived),
+    archived_at = CASE
+      WHEN p_is_archived IS NULL THEN public.comm_whatsapp_chats.archived_at
+      WHEN p_is_archived THEN now()
+      ELSE NULL
+    END,
+    is_muted = COALESCE(p_is_muted, public.comm_whatsapp_chats.is_muted),
+    muted_at = CASE
+      WHEN p_is_muted IS NULL THEN public.comm_whatsapp_chats.muted_at
+      WHEN p_is_muted THEN COALESCE(public.comm_whatsapp_chats.muted_at, now())
+      ELSE NULL
+    END,
+    is_pinned = COALESCE(p_is_pinned, public.comm_whatsapp_chats.is_pinned),
+    pinned_at = CASE
+      WHEN p_is_pinned IS NULL THEN public.comm_whatsapp_chats.pinned_at
+      WHEN p_is_pinned THEN COALESCE(public.comm_whatsapp_chats.pinned_at, now())
+      ELSE NULL
+    END,
+    manual_unread = CASE
+      WHEN p_mark_as_unread IS NULL THEN public.comm_whatsapp_chats.manual_unread
+      WHEN p_mark_as_unread AND public.comm_whatsapp_chats.unread_count = 0 THEN true
+      ELSE false
+    END,
+    manual_unread_at = CASE
+      WHEN p_mark_as_unread IS NULL THEN public.comm_whatsapp_chats.manual_unread_at
+      WHEN p_mark_as_unread AND public.comm_whatsapp_chats.unread_count = 0 THEN COALESCE(public.comm_whatsapp_chats.manual_unread_at, now())
+      ELSE NULL
+    END,
+    last_read_at = CASE
+      WHEN p_mark_as_unread THEN NULL
+      WHEN p_mark_as_unread = false THEN now()
+      ELSE public.comm_whatsapp_chats.last_read_at
+    END,
+    unread_count = CASE
+      WHEN p_mark_as_unread = false THEN 0
+      ELSE public.comm_whatsapp_chats.unread_count
+    END,
+    updated_at = now()
+  WHERE public.comm_whatsapp_chats.id = p_chat_id
+  RETURNING * INTO v_chat;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Conversa do WhatsApp nao encontrada.';
+  END IF;
+
+  RETURN QUERY SELECT v_chat.*;
 END;
 $$;
 
@@ -900,6 +984,9 @@ GRANT EXECUTE ON FUNCTION public.comm_whatsapp_list_chats(text, text, text, text
 
 REVOKE ALL ON FUNCTION public.comm_whatsapp_search_messages(text, uuid[], text, integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.comm_whatsapp_search_messages(text, uuid[], text, integer) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.comm_whatsapp_update_chat_inbox_state(uuid, boolean, boolean, boolean, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.comm_whatsapp_update_chat_inbox_state(uuid, boolean, boolean, boolean, boolean) TO authenticated;
 
 REVOKE ALL ON FUNCTION public.comm_whatsapp_mark_chat_read(uuid, timestamptz, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.comm_whatsapp_mark_chat_read(uuid, timestamptz, uuid) TO authenticated;

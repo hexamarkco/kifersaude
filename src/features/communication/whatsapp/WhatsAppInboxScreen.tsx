@@ -1087,6 +1087,7 @@ type PendingChatInboxStatePatch = Partial<Pick<CommWhatsAppChat,
   | 'manual_unread'
   | 'manual_unread_at'
   | 'unread_count'
+  | 'last_read_at'
 >>;
 
 const applyPendingChatInboxState = (
@@ -1094,7 +1095,27 @@ const applyPendingChatInboxState = (
   pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
 ) => items.map((chat) => {
   const pendingState = pendingStateByChatId.get(chat.id);
-  return pendingState ? { ...chat, ...pendingState } : chat;
+  if (!pendingState) {
+    return chat;
+  }
+
+  if (pendingState.last_read_at) {
+    const pendingReadAt = getMessageTimestampMs(pendingState.last_read_at);
+    const serverReadAt = getMessageTimestampMs(chat.last_read_at);
+    const lastMessageAt = getMessageTimestampMs(chat.last_message_at);
+
+    if (serverReadAt !== null && pendingReadAt !== null && serverReadAt >= pendingReadAt && chat.unread_count <= 0 && !chat.manual_unread) {
+      pendingStateByChatId.delete(chat.id);
+      return chat;
+    }
+
+    if (lastMessageAt !== null && pendingReadAt !== null && lastMessageAt > pendingReadAt && (chat.unread_count > 0 || chat.manual_unread)) {
+      pendingStateByChatId.delete(chat.id);
+      return chat;
+    }
+  }
+
+  return { ...chat, ...pendingState };
 });
 
 const buildPendingChatInboxStatePatch = (
@@ -2588,7 +2609,6 @@ export default function WhatsAppInboxScreen() {
   const autoSendVoiceRef = useRef(false);
   const autoLinkedLeadKeyRef = useRef<string | null>(null);
   const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
-  const restoringArchivedChatIdsRef = useRef<Set<string>>(new Set());
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
@@ -3012,36 +3032,6 @@ export default function WhatsAppInboxScreen() {
 
       return sortChatsByInboxOrder(updated);
     });
-  }, []);
-
-  const preserveSelectedChatInList = useCallback((items: CommWhatsAppChat[]) => {
-    const selectedId = selectedChatIdRef.current;
-    if (!selectedId) {
-      return items;
-    }
-
-    const optimisticSelectedChat = latestChatsRef.current.find((chat) => chat.id === selectedId);
-    if (!optimisticSelectedChat) {
-      return items;
-    }
-
-    const existingIndex = items.findIndex((chat) => chat.id === selectedId);
-    if (existingIndex >= 0) {
-      const existingChat = items[existingIndex];
-      if (!optimisticSelectedChat.is_archived || existingChat.is_archived) {
-        return items;
-      }
-
-      const next = [...items];
-      next[existingIndex] = {
-        ...existingChat,
-        is_archived: true,
-        archived_at: optimisticSelectedChat.archived_at ?? existingChat.archived_at ?? new Date().toISOString(),
-      };
-      return next;
-    }
-
-    return sortChatsByInboxOrder([...items, optimisticSelectedChat]);
   }, []);
 
   const patchLocalOutgoingMessage = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
@@ -4550,37 +4540,10 @@ export default function WhatsAppInboxScreen() {
 
       let hydratedData = sortChatsByInboxOrder(
         applyPendingChatInboxState(
-          preserveSelectedChatInList(applyPrefetchedLeadNames(data)),
+          applyPrefetchedLeadNames(data),
           pendingChatInboxStateRef.current,
         ),
       );
-
-      const selectedId = selectedChatIdRef.current;
-      const optimisticSelectedChat = selectedId
-        ? latestChatsRef.current.find((chat) => chat.id === selectedId) ?? null
-        : null;
-      const fetchedSelectedChat = selectedId
-        ? hydratedData.find((chat) => chat.id === selectedId) ?? null
-        : null;
-
-      if (selectedId && optimisticSelectedChat?.is_archived && fetchedSelectedChat && !fetchedSelectedChat.is_archived) {
-        hydratedData = sortChatsByInboxOrder(hydratedData.map((chat) => chat.id === selectedId
-          ? {
-              ...chat,
-              is_archived: true,
-              archived_at: optimisticSelectedChat.archived_at ?? chat.archived_at ?? new Date().toISOString(),
-            }
-          : chat));
-
-        if (!restoringArchivedChatIdsRef.current.has(selectedId)) {
-          restoringArchivedChatIdsRef.current.add(selectedId);
-          void commWhatsAppService.updateChatInboxState(selectedId, { isArchived: true }).catch((error) => {
-            console.error('[WhatsAppInbox] erro ao preservar chat arquivado selecionado', error);
-          }).finally(() => {
-            restoringArchivedChatIdsRef.current.delete(selectedId);
-          });
-        }
-      }
 
       const nextSignature = buildChatsSignature(hydratedData);
 
@@ -4604,7 +4567,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
     }
-  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters, preserveSelectedChatInList]);
+  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters]);
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
@@ -4843,14 +4806,25 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const renderedMessagesForChat = latestMessagesRef.current
+      .filter((message) => message.chat_id === selectedChat.id)
+      .sort(compareMessageChronology);
+    const latestRenderedMessage = renderedMessagesForChat[renderedMessagesForChat.length - 1];
+    const readAt = latestRenderedMessage?.message_at ?? selectedChat.last_message_at ?? new Date().toISOString();
+    const readPatch: PendingChatInboxStatePatch = {
+      unread_count: 0,
+      manual_unread: false,
+      manual_unread_at: null,
+      last_read_at: readAt,
+    };
+
+    pendingChatInboxStateRef.current.set(selectedChat.id, readPatch);
+
     setChats((current) =>
       current.map((chat) => (chat.id === selectedChat.id
         ? {
             ...chat,
-            unread_count: 0,
-            manual_unread: false,
-            manual_unread_at: null,
-            last_read_at: new Date().toISOString(),
+            ...readPatch,
           }
         : chat)),
     );
@@ -4860,8 +4834,9 @@ export default function WhatsAppInboxScreen() {
     }
 
     void commWhatsAppService.markChatRead(selectedChat.id, {
-      messageAt: selectedChat.last_message_at ?? null,
+      messageAt: readAt,
     }).catch((error) => {
+      pendingChatInboxStateRef.current.delete(selectedChat.id);
       console.error('[WhatsAppInbox] erro ao marcar chat como lido', error);
     });
   }, [selectedChat]);

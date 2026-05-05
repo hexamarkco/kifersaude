@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowUpRight, Bell, CalendarPlus, Check, Clock3, Loader2, RefreshCw, Sparkles, Unlink, Info, Link2, Plus } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
@@ -91,6 +91,7 @@ export default function WhatsAppLeadDrawer({
   canViewAgenda,
   canEditAgenda,
 }: WhatsAppLeadDrawerProps) {
+  const agendaRequestIdRef = useRef(0);
   const [agendaReminders, setAgendaReminders] = useState<Reminder[]>([]);
   const [agendaLoading, setAgendaLoading] = useState(false);
   const [agendaError, setAgendaError] = useState<string | null>(null);
@@ -141,23 +142,27 @@ export default function WhatsAppLeadDrawer({
 
   const loadAgendaReminders = useCallback(async () => {
     if (!linkedLead || !canViewAgenda) {
+      agendaRequestIdRef.current += 1;
       setAgendaReminders([]);
       setAgendaError(null);
       return;
     }
 
+    const requestId = ++agendaRequestIdRef.current;
+    const leadId = linkedLead.id;
+    const contractIds = contracts.map((contract) => contract.id).filter(Boolean);
+
     setAgendaLoading(true);
     setAgendaError(null);
 
     try {
-      const contractIds = contracts.map((contract) => contract.id).filter(Boolean);
       const [leadReminders, contractReminders] = await Promise.all([
         fetchAllPages<Reminder>(
           (from, to) =>
             supabase
               .from('reminders')
               .select('*')
-              .eq('lead_id', linkedLead.id)
+              .eq('lead_id', leadId)
               .order('data_lembrete', { ascending: true })
               .order('id', { ascending: true })
               .range(from, to) as unknown as Promise<{ data: Reminder[] | null; error: unknown }>,
@@ -180,12 +185,23 @@ export default function WhatsAppLeadDrawer({
       [...leadReminders, ...contractReminders].forEach((reminder) => {
         next.set(reminder.id, reminder);
       });
+
+      if (requestId !== agendaRequestIdRef.current) {
+        return;
+      }
+
       setAgendaReminders(Array.from(next.values()));
     } catch (error) {
+      if (requestId !== agendaRequestIdRef.current) {
+        return;
+      }
+
       console.error('[WhatsAppLeadDrawer] erro ao carregar agenda do chat', error);
       setAgendaError('Não foi possível carregar a agenda deste chat agora.');
     } finally {
-      setAgendaLoading(false);
+      if (requestId === agendaRequestIdRef.current) {
+        setAgendaLoading(false);
+      }
     }
   }, [canViewAgenda, contracts, linkedLead]);
 

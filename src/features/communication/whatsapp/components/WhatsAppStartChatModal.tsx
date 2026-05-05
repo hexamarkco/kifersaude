@@ -58,6 +58,7 @@ export default function WhatsAppStartChatModal({
   startingKey,
 }: WhatsAppStartChatModalProps) {
   const [source, setSource] = useState<StartChatSource>('saved');
+  const starting = Boolean(startingKey);
 
   const sourceTitle = useMemo(() => {
     switch (source) {
@@ -98,8 +99,8 @@ export default function WhatsAppStartChatModal({
               <p className="mt-1 text-sm text-[var(--panel-text-muted,#8a735f)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} />
-              <Button onClick={onStartFromManual} loading={startingKey === 'manual'}>
+              <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
+              <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting}>
                 {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
                 Iniciar chat
               </Button>
@@ -107,7 +108,7 @@ export default function WhatsAppStartChatModal({
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
-            <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} />
+            <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} disabled={starting} />
             <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
               {source === 'saved' && (
                 <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
@@ -131,6 +132,7 @@ export default function WhatsAppStartChatModal({
                         key={contact.id}
                         type="button"
                         onClick={() => onStartFromSavedContact(contact)}
+                        disabled={starting}
                         className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-white px-4 py-3 text-left transition hover:border-[var(--panel-accent-border,#d2ab85)]"
                       >
                         <div className="min-w-0">
@@ -143,7 +145,7 @@ export default function WhatsAppStartChatModal({
 
                     {contactsHasMore && (
                       <div className="pt-2">
-                        <Button variant="secondary" className="w-full" onClick={onLoadMoreContacts} loading={contactsLoadingMore}>
+                        <Button variant="secondary" className="w-full" onClick={onLoadMoreContacts} loading={contactsLoadingMore} disabled={starting}>
                           Carregar mais contatos
                         </Button>
                       </div>
@@ -161,6 +163,7 @@ export default function WhatsAppStartChatModal({
                       key={lead.id}
                       type="button"
                       onClick={() => onStartFromLead(lead)}
+                      disabled={starting}
                       className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-white px-4 py-3 text-left transition hover:border-[var(--panel-accent-border,#d2ab85)]"
                     >
                       <div className="min-w-0">

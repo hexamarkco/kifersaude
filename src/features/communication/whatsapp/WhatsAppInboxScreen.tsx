@@ -4610,11 +4610,21 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
+      const refreshedChats = applyPendingChatInboxState(
+        applyPrefetchedLeadNames(data),
+        pendingChatInboxStateRef.current,
+      );
+      const currentSelectedChatId = selectedChatIdRef.current;
+      const preservedSelectedChat = currentSelectedChatId
+        ? latestChatsRef.current.find((chat) => chat.id === currentSelectedChatId) ?? null
+        : null;
+      const shouldPreserveSelectedChat = Boolean(
+        preservedSelectedChat && !refreshedChats.some((chat) => chat.id === preservedSelectedChat.id),
+      );
       const hydratedData = sortChatsByInboxOrder(
-        applyPendingChatInboxState(
-          applyPrefetchedLeadNames(data),
-          pendingChatInboxStateRef.current,
-        ),
+        shouldPreserveSelectedChat && preservedSelectedChat
+          ? [...refreshedChats, preservedSelectedChat]
+          : refreshedChats,
       );
 
       const nextSignature = buildChatsSignature(hydratedData);

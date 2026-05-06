@@ -251,6 +251,40 @@ const isMessageSummaryMarker = (value?: string | null, messageType?: string) => 
   return markers.has(normalized);
 };
 
+type ChatPreviewMediaIconType = 'image' | 'video' | 'audio' | 'document';
+
+const getChatPreviewMediaIconType = (value: string | null | undefined): ChatPreviewMediaIconType | null => {
+  const normalized = String(value ?? '').trim();
+
+  if (normalized === '[Imagem]') return 'image';
+  if (normalized === '[Video]') return 'video';
+  if (normalized === '[Audio]') return 'audio';
+  if (normalized === '[Documento]') return 'document';
+  return null;
+};
+
+const CHAT_PREVIEW_MEDIA_ICON_CONFIG: Record<ChatPreviewMediaIconType, { label: string; Icon: typeof FileImage }> = {
+  image: { label: 'Imagem', Icon: FileImage },
+  video: { label: 'Vídeo', Icon: Images },
+  audio: { label: 'Áudio', Icon: FileAudio },
+  document: { label: 'Documento', Icon: FileText },
+};
+
+function ChatPreviewMediaIcon({ type }: { type: ChatPreviewMediaIconType }) {
+  const { label, Icon } = CHAT_PREVIEW_MEDIA_ICON_CONFIG[type];
+
+  return (
+    <span
+      aria-label={label}
+      className="inline-flex align-middle text-[var(--panel-text-muted,#8a735f)]"
+      role="img"
+      title={label}
+    >
+      <Icon aria-hidden="true" className="h-4 w-4" />
+    </span>
+  );
+}
+
 const isVideoLikeMessageType = (messageType: string) => VIDEO_LIKE_MESSAGE_TYPES.has(messageType.trim().toLowerCase());
 
 const isGalleryMediaMessage = (message: CommWhatsAppMessage) => GALLERY_MESSAGE_TYPES.has(message.message_type.trim().toLowerCase());
@@ -1990,6 +2024,8 @@ function InboxChatListItem({
   onOpenContextMenu: (chatId: string, anchor: PointerAnchor) => void;
   menuTriggerRef: (node: HTMLButtonElement | null) => void;
 }) {
+  const previewMediaIconType = getChatPreviewMediaIconType(chat.last_message_text);
+
   return (
     <div
       className={`group/chat relative whatsapp-inbox-chat-card border-b transition ${selected ? 'is-active' : ''}`}
@@ -2029,7 +2065,11 @@ function InboxChatListItem({
                 <span className={`mr-1 font-semibold ${getChatPreviewPrefixClassName(chat.last_message_direction)}`}>
                   {getChatPreviewPrefix(chat, connectedUserName)}
                 </span>
-                <span>{chat.last_message_text}</span>
+                {previewMediaIconType ? (
+                  <ChatPreviewMediaIcon type={previewMediaIconType} />
+                ) : (
+                  <span>{chat.last_message_text}</span>
+                )}
               </>
             ) : (
               'Sem mensagens ainda'
@@ -2071,6 +2111,9 @@ function InboxMessageSearchListItem({
   connectedUserName?: string | null;
   onSelect: (chatId: string) => void;
 }) {
+  const messagePreviewText = getMessageSearchPreviewText(result.message);
+  const messagePreviewMediaIconType = getChatPreviewMediaIconType(messagePreviewText);
+
   return (
     <div className={`relative border-b transition ${selected ? 'is-active' : ''}`}>
       <div className="px-4 py-3">
@@ -2081,7 +2124,11 @@ function InboxMessageSearchListItem({
                 {getSafeChatDisplayName(result.chat, connectedUserName)}
               </p>
               <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
-                {getMessageSearchPreviewText(result.message)}
+                {messagePreviewMediaIconType ? (
+                  <ChatPreviewMediaIcon type={messagePreviewMediaIconType} />
+                ) : (
+                  messagePreviewText
+                )}
               </p>
             </div>
             <span className="whatsapp-inbox-chat-meta shrink-0 pt-0.5 text-[11px] font-medium leading-none">

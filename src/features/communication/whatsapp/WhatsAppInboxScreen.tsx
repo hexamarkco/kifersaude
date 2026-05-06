@@ -223,33 +223,80 @@ const getMessageSummaryMarker = (messageType: string) => {
   return getUnknownMessageMarker(normalized);
 };
 
-const isMessageSummaryMarker = (value?: string | null, messageType?: string) => {
-  const normalized = String(value ?? '').trim();
+const normalizeTechnicalMarker = (value?: string | null) => String(value ?? '')
+  .trim()
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/\s+/g, ' ');
+
+const VISIBLE_SUMMARY_MARKERS = new Set([
+  '[imagem]',
+  '[video]',
+  '[documento]',
+  '[audio]',
+  '[link]',
+  '[localizacao]',
+  '[sticker]',
+  '[contato]',
+  '[enquete]',
+  '[resposta]',
+  '[mensagem interativa]',
+]);
+
+const HIDDEN_TECHNICAL_MESSAGE_MARKERS = new Set([
+  '[mensagem]',
+  '[mensagem sem texto]',
+  '[mensagem sem conteudo]',
+  '[payload invalido]',
+  '[acao]',
+  '[action]',
+  '[reacao]',
+  '[reaction]',
+  '[atualizacao de midia]',
+  '[media update]',
+  '[voto em enquete]',
+]);
+
+const isBracketOnlyMarker = (value?: string | null) => /^\[[^\]]+\]$/.test(String(value ?? '').trim());
+
+const isHiddenTechnicalMessageMarker = (value?: string | null, messageType?: string) => {
+  const normalized = normalizeTechnicalMarker(value);
   if (!normalized) {
     return false;
   }
 
-  const markers = new Set([
-    '[Imagem]',
-    '[Video]',
-    '[Documento]',
-    '[Audio]',
-    '[Link]',
-    '[Localizacao]',
-    '[Sticker]',
-    '[Contato]',
-    '[Enquete]',
-    '[Mensagem]',
-    '[Resposta]',
-    '[Mensagem interativa]',
-  ]);
-
-  if (messageType?.trim()) {
-    markers.add(getMessageSummaryMarker(messageType));
+  if (HIDDEN_TECHNICAL_MESSAGE_MARKERS.has(normalized)) {
+    return true;
   }
 
-  return markers.has(normalized);
+  if (messageType?.trim() && normalized === normalizeTechnicalMarker(getMessageSummaryMarker(messageType))) {
+    return !VISIBLE_SUMMARY_MARKERS.has(normalized);
+  }
+
+  return isBracketOnlyMarker(value) && !VISIBLE_SUMMARY_MARKERS.has(normalized);
 };
+
+const isMessageSummaryMarker = (value?: string | null, messageType?: string) => {
+  const normalized = normalizeTechnicalMarker(value);
+  if (!normalized) {
+    return false;
+  }
+
+  if (VISIBLE_SUMMARY_MARKERS.has(normalized) || HIDDEN_TECHNICAL_MESSAGE_MARKERS.has(normalized)) {
+    return true;
+  }
+
+  if (messageType?.trim()) {
+    return normalized === normalizeTechnicalMarker(getMessageSummaryMarker(messageType));
+  }
+
+  return false;
+};
+
+const getVisiblePreviewText = (value?: string | null, messageType?: string) => (
+  isHiddenTechnicalMessageMarker(value, messageType) ? '' : String(value ?? '').trim()
+);
 
 type ChatPreviewMediaIconType = 'image' | 'video' | 'audio' | 'document';
 
@@ -291,12 +338,12 @@ const isGalleryMediaMessage = (message: CommWhatsAppMessage) => GALLERY_MESSAGE_
 
 const getMessageVisibleCaption = (message: CommWhatsAppMessage) => {
   const directCaption = String(message.media_caption ?? '').trim();
-  if (directCaption && !isMessageSummaryMarker(directCaption, message.message_type)) {
+  if (directCaption && !isMessageSummaryMarker(directCaption, message.message_type) && !isHiddenTechnicalMessageMarker(directCaption, message.message_type)) {
     return directCaption;
   }
 
   const fallbackText = String(message.text_content ?? '').trim();
-  if (!fallbackText || isMessageSummaryMarker(fallbackText, message.message_type)) {
+  if (!fallbackText || isMessageSummaryMarker(fallbackText, message.message_type) || isHiddenTechnicalMessageMarker(fallbackText, message.message_type)) {
     return '';
   }
 
@@ -343,8 +390,9 @@ const normalizeComparableMessageText = (messageType: string, value: unknown) => 
 };
 
 const getMessageSearchPreviewText = (message: CommWhatsAppMessage) => {
-  const text = getMessageEditableText(message);
-  return text || getMessageSummaryMarker(message.message_type) || '[Mensagem]';
+  const text = getVisiblePreviewText(getMessageEditableText(message), message.message_type);
+  const marker = getVisiblePreviewText(getMessageSummaryMarker(message.message_type), message.message_type);
+  return text || marker;
 };
 
 const canEditOutboundMessage = (message: CommWhatsAppMessage) => {
@@ -1082,13 +1130,24 @@ const REDUNDANT_ACTION_MESSAGE_MARKERS = new Set([
   '[voto em enquete]',
 ]);
 
-const shouldHideRedundantActionMessage = (message: CommWhatsAppMessage) => {
-  if (message.message_type.trim().toLowerCase() !== 'action') {
+const shouldHideTechnicalMessage = (message: CommWhatsAppMessage) => {
+  const messageType = message.message_type.trim().toLowerCase();
+  const textContent = String(message.text_content ?? '').trim();
+
+  if (messageType === 'action') {
+    const normalizedText = normalizeQuickReplyLookup(textContent).replace(/\s+/g, ' ').trim();
+    return !normalizedText || REDUNDANT_ACTION_MESSAGE_MARKERS.has(normalizedText) || isHiddenTechnicalMessageMarker(textContent, message.message_type);
+  }
+
+  if (!isHiddenTechnicalMessageMarker(textContent, message.message_type)) {
     return false;
   }
 
-  const normalizedText = normalizeQuickReplyLookup(String(message.text_content ?? '')).replace(/\s+/g, ' ').trim();
-  return !normalizedText || REDUNDANT_ACTION_MESSAGE_MARKERS.has(normalizedText);
+  const hasRenderableMedia = Boolean(message.media_id || message.media_url);
+  const hasVisibleCaption = Boolean(getMessageVisibleCaption(message));
+  const hasStructuredPreview = Boolean(getMessageLinkPreview(message) || getMessageContactCardInfo(message) || hasMessageQuote(message));
+
+  return !hasRenderableMedia && !hasVisibleCaption && !hasStructuredPreview;
 };
 
 const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
@@ -2030,7 +2089,9 @@ function InboxChatListItem({
   onOpenContextMenu: (chatId: string, anchor: PointerAnchor) => void;
   menuTriggerRef: (node: HTMLButtonElement | null) => void;
 }) {
-  const previewMediaIconType = getChatPreviewMediaIconType(chat.last_message_text);
+  const rawLastMessageText = String(chat.last_message_text ?? '').trim();
+  const visibleLastMessageText = getVisiblePreviewText(chat.last_message_text);
+  const previewMediaIconType = getChatPreviewMediaIconType(visibleLastMessageText);
 
   return (
     <div
@@ -2066,7 +2127,7 @@ function InboxChatListItem({
                 <span className="mr-1 font-semibold text-[var(--panel-accent-red-text,#d9776b)]">Rascunho:</span>
                 <span>{draftPreview}</span>
               </>
-            ) : chat.last_message_text ? (
+            ) : visibleLastMessageText ? (
               <>
                 <span className={`mr-1 font-semibold ${getChatPreviewPrefixClassName(chat.last_message_direction)}`}>
                   {getChatPreviewPrefix(chat, connectedUserName)}
@@ -2074,10 +2135,10 @@ function InboxChatListItem({
                 {previewMediaIconType ? (
                   <ChatPreviewMediaIcon type={previewMediaIconType} />
                 ) : (
-                  <span>{chat.last_message_text}</span>
+                  <span>{visibleLastMessageText}</span>
                 )}
               </>
-            ) : (
+            ) : rawLastMessageText ? null : (
               'Sem mensagens ainda'
             )}
           </p>
@@ -2120,6 +2181,10 @@ function InboxMessageSearchListItem({
   const messagePreviewText = getMessageSearchPreviewText(result.message);
   const messagePreviewMediaIconType = getChatPreviewMediaIconType(messagePreviewText);
 
+  if (!messagePreviewText) {
+    return null;
+  }
+
   return (
     <div className={`relative border-b transition ${selected ? 'is-active' : ''}`}>
       <div className="px-4 py-3">
@@ -2129,13 +2194,15 @@ function InboxMessageSearchListItem({
               <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">
                 {getSafeChatDisplayName(result.chat, connectedUserName)}
               </p>
-              <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
-                {messagePreviewMediaIconType ? (
-                  <ChatPreviewMediaIcon type={messagePreviewMediaIconType} />
-                ) : (
-                  messagePreviewText
-                )}
-              </p>
+              {messagePreviewText ? (
+                <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  {messagePreviewMediaIconType ? (
+                    <ChatPreviewMediaIcon type={messagePreviewMediaIconType} />
+                  ) : (
+                    messagePreviewText
+                  )}
+                </p>
+              ) : null}
             </div>
             <span className="whatsapp-inbox-chat-meta shrink-0 pt-0.5 text-[11px] font-medium leading-none">
               {formatMessageTime(result.message.message_at)}
@@ -2173,6 +2240,7 @@ function WhatsAppMessageBody({
   const linkPreview = useMemo(() => getMessageLinkPreview(message), [message]);
   const quoteInfo = useMemo(() => getMessageQuoteInfo(message), [message]);
   const contactCardInfo = useMemo(() => getMessageContactCardInfo(message), [message]);
+  const visibleTextContent = getVisiblePreviewText(message.text_content, message.message_type);
 
   useEffect(() => {
     setShowOriginalText(false);
@@ -2499,7 +2567,7 @@ function WhatsAppMessageBody({
     <div className="space-y-3">
       {quotePreviewNode}
       {linkPreviewNode}
-      <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={message.text_content || '[Mensagem sem texto]'} />
+      {visibleTextContent ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={visibleTextContent} /> : null}
       {editInfoNode}
     </div>
   );
@@ -3176,7 +3244,7 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const visibleMessages = useMemo(() => {
-    const filteredMessages = messages.filter((message) => !shouldHideRedundantActionMessage(message));
+    const filteredMessages = messages.filter((message) => !shouldHideTechnicalMessage(message));
 
     if (!selectedChatId) {
       return filteredMessages;

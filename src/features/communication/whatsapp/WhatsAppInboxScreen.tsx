@@ -1143,7 +1143,13 @@ const applyPendingChatInboxState = (
       return chat;
     }
 
-    if (lastMessageAt !== null && pendingReadAt !== null && lastMessageAt > pendingReadAt && (chat.unread_count > 0 || chat.manual_unread)) {
+    const pendingReadWasInvalidatedByInbound = chat.last_message_direction === 'inbound'
+      && lastMessageAt !== null
+      && pendingReadAt !== null
+      && lastMessageAt > pendingReadAt
+      && (chat.unread_count > 0 || chat.manual_unread);
+
+    if (pendingReadWasInvalidatedByInbound) {
       pendingStateByChatId.delete(chat.id);
       return chat;
     }
@@ -3195,12 +3201,31 @@ export default function WhatsAppInboxScreen() {
   }, [localOutgoingMessages, messages, selectedChatId]);
 
   const applyOptimisticChatSummary = useCallback((chat: CommWhatsAppChat, summaryText: string, messageAt: string) => {
+    const readPatch: PendingChatInboxStatePatch = {
+      unread_count: 0,
+      manual_unread: false,
+      manual_unread_at: null,
+      last_read_at: messageAt,
+    };
+
+    pendingChatInboxStateRef.current.set(chat.id, {
+      ...pendingChatInboxStateRef.current.get(chat.id),
+      ...readPatch,
+    });
+
     upsertChatLocally({
       ...chat,
+      ...readPatch,
       last_message_text: summaryText,
       last_message_direction: 'outbound',
       last_message_at: messageAt,
       updated_at: messageAt,
+    });
+
+    void commWhatsAppService.markChatRead(chat.id, {
+      messageAt,
+    }).catch((error) => {
+      console.error('[WhatsAppInbox] erro ao avancar leitura apos envio', error);
     });
   }, [upsertChatLocally]);
 
@@ -4585,7 +4610,7 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      let hydratedData = sortChatsByInboxOrder(
+      const hydratedData = sortChatsByInboxOrder(
         applyPendingChatInboxState(
           applyPrefetchedLeadNames(data),
           pendingChatInboxStateRef.current,

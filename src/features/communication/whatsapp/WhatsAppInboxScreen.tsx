@@ -16,13 +16,14 @@ import { cx } from '../../../lib/cx';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
-  type CommWhatsAppFollowUpIntensity,
+  type CommWhatsAppFollowUpVariation,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppLeadSearchResult,
   type CommWhatsAppMessageSearchResult,
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
+  type CommWhatsAppFollowUpTone,
   type CommWhatsAppRewriteTone,
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
@@ -45,6 +46,7 @@ import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteMo
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
+import { followUpSalesTechniqueOptions } from './components/followUpSalesTechniques';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
@@ -2623,7 +2625,7 @@ export default function WhatsAppInboxScreen() {
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
-  const [followUpIntensity, setFollowUpIntensity] = useState<CommWhatsAppFollowUpIntensity>(DEFAULT_FOLLOW_UP_INTENSITY);
+  const [followUpTone, setFollowUpTone] = useState<CommWhatsAppFollowUpTone>('consultivo');
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [composerRewriteModalOpen, setComposerRewriteModalOpen] = useState(false);
   const [composerRewriteSource, setComposerRewriteSource] = useState('');
@@ -4474,7 +4476,7 @@ export default function WhatsAppInboxScreen() {
   const resetFollowUpComposer = useCallback(() => {
     setFollowUpDraft('');
     setFollowUpCustomInstructions('');
-    setFollowUpIntensity(DEFAULT_FOLLOW_UP_INTENSITY);
+    setFollowUpSelectedSalesTechniques([]);
   }, []);
 
   const loadOperationalState = useCallback(async () => {
@@ -6790,7 +6792,7 @@ export default function WhatsAppInboxScreen() {
     });
   }, [composerRewriteDraft, handleCloseComposerRewriteModal]);
 
-  const handleGenerateFollowUp = useCallback(async (customInstructions: string, intensity: CommWhatsAppFollowUpIntensity) => {
+  const handleGenerateFollowUp = useCallback(async (customInstructions: string, tone: CommWhatsAppFollowUpTone) => {
     if (!selectedChat) {
       return;
     }
@@ -6799,6 +6801,8 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const validSalesTechniqueIds = new Set<string>(followUpSalesTechniqueOptions.map((technique) => technique.id));
+    const normalizedSalesTechniques = salesTechniques.filter((techniqueId) => validSalesTechniqueIds.has(techniqueId));
     const requestId = ++followUpGenerationRequestIdRef.current;
     const targetChatId = selectedChat.id;
     setGeneratingFollowUp(true);
@@ -6806,14 +6810,14 @@ export default function WhatsAppInboxScreen() {
     try {
       const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
         customInstructions,
-        intensity,
+        tone,
       });
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
       }
       setFollowUpDraft(result.text.trim());
       setFollowUpCustomInstructions(customInstructions);
-      setFollowUpIntensity(intensity);
+      setFollowUpTone(tone);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -6825,7 +6829,7 @@ export default function WhatsAppInboxScreen() {
         setGeneratingFollowUp(false);
       }
     }
-  }, [followUpGenerationDisabledReason, selectedChat]);
+  }, [followUpGenerationDisabledReason, followUpObjective, selectedChat]);
 
   const handleOpenFollowUpModal = useCallback(() => {
     if (followUpGenerationDisabledReason) {
@@ -7043,9 +7047,17 @@ export default function WhatsAppInboxScreen() {
     });
   }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
 
+  const handleToggleFollowUpSalesTechnique = useCallback((techniqueId: string) => {
+    setFollowUpSelectedSalesTechniques((current) => (
+      current.includes(techniqueId)
+        ? current.filter((selectedTechniqueId) => selectedTechniqueId !== techniqueId)
+        : [...current, techniqueId]
+    ));
+  }, []);
+
   const handleRegenerateFollowUp = useCallback(() => {
-    void handleGenerateFollowUp(followUpCustomInstructions, followUpIntensity);
-  }, [followUpCustomInstructions, followUpIntensity, handleGenerateFollowUp]);
+    void handleGenerateFollowUp(followUpCustomInstructions, followUpTone);
+  }, [followUpCustomInstructions, followUpTone, handleGenerateFollowUp]);
 
   const handleSendFollowUpDraft = useCallback(async () => {
     if (!selectedChat) {
@@ -8229,11 +8241,11 @@ export default function WhatsAppInboxScreen() {
           submitting={sending}
           value={followUpDraft}
           customInstructions={followUpCustomInstructions}
-          intensity={followUpIntensity}
+          tone={followUpTone}
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}
-          onChangeIntensity={setFollowUpIntensity}
+          onChangeTone={setFollowUpTone}
           onGenerate={handleRegenerateFollowUp}
           onSend={handleSendFollowUpDraft}
         />

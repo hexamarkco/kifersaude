@@ -16,6 +16,7 @@ import { cx } from '../../../lib/cx';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
+  type CommWhatsAppFollowUpIntensity,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppLeadSearchResult,
@@ -62,6 +63,7 @@ const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
+const DEFAULT_FOLLOW_UP_INTENSITY: CommWhatsAppFollowUpIntensity = 'leve';
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -2621,6 +2623,7 @@ export default function WhatsAppInboxScreen() {
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
+  const [followUpIntensity, setFollowUpIntensity] = useState<CommWhatsAppFollowUpIntensity>(DEFAULT_FOLLOW_UP_INTENSITY);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [composerRewriteModalOpen, setComposerRewriteModalOpen] = useState(false);
   const [composerRewriteSource, setComposerRewriteSource] = useState('');
@@ -4471,6 +4474,7 @@ export default function WhatsAppInboxScreen() {
   const resetFollowUpComposer = useCallback(() => {
     setFollowUpDraft('');
     setFollowUpCustomInstructions('');
+    setFollowUpIntensity(DEFAULT_FOLLOW_UP_INTENSITY);
   }, []);
 
   const loadOperationalState = useCallback(async () => {
@@ -6786,7 +6790,7 @@ export default function WhatsAppInboxScreen() {
     });
   }, [composerRewriteDraft, handleCloseComposerRewriteModal]);
 
-  const handleGenerateFollowUp = useCallback(async (customInstructions: string) => {
+  const handleGenerateFollowUp = useCallback(async (customInstructions: string, intensity: CommWhatsAppFollowUpIntensity) => {
     if (!selectedChat) {
       return;
     }
@@ -6802,12 +6806,14 @@ export default function WhatsAppInboxScreen() {
     try {
       const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
         customInstructions,
+        intensity,
       });
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
       }
       setFollowUpDraft(result.text.trim());
       setFollowUpCustomInstructions(customInstructions);
+      setFollowUpIntensity(intensity);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -7038,8 +7044,8 @@ export default function WhatsAppInboxScreen() {
   }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
 
   const handleRegenerateFollowUp = useCallback(() => {
-    void handleGenerateFollowUp(followUpCustomInstructions);
-  }, [followUpCustomInstructions, handleGenerateFollowUp]);
+    void handleGenerateFollowUp(followUpCustomInstructions, followUpIntensity);
+  }, [followUpCustomInstructions, followUpIntensity, handleGenerateFollowUp]);
 
   const handleSendFollowUpDraft = useCallback(async () => {
     if (!selectedChat) {
@@ -8223,9 +8229,11 @@ export default function WhatsAppInboxScreen() {
           submitting={sending}
           value={followUpDraft}
           customInstructions={followUpCustomInstructions}
+          intensity={followUpIntensity}
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}
+          onChangeIntensity={setFollowUpIntensity}
           onGenerate={handleRegenerateFollowUp}
           onSend={handleSendFollowUpDraft}
         />

@@ -7,7 +7,7 @@ import Textarea from '../../../../components/ui/Textarea';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpIntensity } from '../../../../lib/commWhatsAppService';
 
 type SpeechRecognitionType = {
   new (): {
@@ -29,15 +29,44 @@ declare global {
   }
 }
 
+const FOLLOW_UP_INTENSITY_OPTIONS: Array<{
+  value: CommWhatsAppFollowUpIntensity;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: 'leve',
+    label: 'Leve',
+    description: 'Toque humano, curto e sem pressão.',
+  },
+  {
+    value: 'moderada',
+    label: 'Moderada',
+    description: 'Objetiva, com próximo passo claro.',
+  },
+  {
+    value: 'direta',
+    label: 'Direta',
+    description: 'Mais assertiva e focada em decisão.',
+  },
+  {
+    value: 'ultima_tentativa',
+    label: 'Última tentativa',
+    description: 'Encerramento cordial, sem insistência futura.',
+  },
+];
+
 type WhatsAppFollowUpModalProps = {
   isOpen: boolean;
   generating: boolean;
   submitting: boolean;
   value: string;
   customInstructions: string;
+  intensity: CommWhatsAppFollowUpIntensity;
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
+  onChangeIntensity: (value: CommWhatsAppFollowUpIntensity) => void;
   onGenerate: () => void;
   onSend: () => void;
 };
@@ -48,9 +77,11 @@ export default function WhatsAppFollowUpModal({
   submitting,
   value,
   customInstructions,
+  intensity,
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
+  onChangeIntensity,
   onGenerate,
   onSend,
 }: WhatsAppFollowUpModalProps) {
@@ -152,6 +183,51 @@ export default function WhatsAppFollowUpModal({
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.9fr)]">
         <div className="space-y-4">
+          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
+            <div className="mb-3">
+              <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Intensidade</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                Controle o nível de pressão comercial e o tipo de chamada para ação da sugestão.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {FOLLOW_UP_INTENSITY_OPTIONS.map((option) => {
+                const selected = option.value === intensity;
+
+                return (
+                  <label
+                    key={option.value}
+                    className={[
+                      'cursor-pointer rounded-xl border p-3 transition',
+                      selected
+                        ? 'border-[var(--panel-accent,#c8792b)] bg-[var(--panel-surface,#fffdfa)] shadow-sm'
+                        : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] hover:bg-[var(--panel-surface,#fffdfa)]',
+                      generating || submitting ? 'cursor-not-allowed opacity-70' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    <span className="flex items-start gap-2">
+                      <input
+                        type="radio"
+                        name="follow-up-intensity"
+                        value={option.value}
+                        checked={selected}
+                        onChange={() => onChangeIntensity(option.value)}
+                        disabled={generating || submitting}
+                        className="mt-0.5 h-4 w-4 accent-[var(--panel-accent,#c8792b)]"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-[var(--panel-text,#1a120d)]">{option.label}</span>
+                        <span className="mt-1 block text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                          {option.description}
+                        </span>
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
             <div className="mb-2">
               <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Instruções personalizadas</h3>

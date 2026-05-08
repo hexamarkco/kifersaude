@@ -11,9 +11,12 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
+type FollowUpIntensity = 'leve' | 'moderada' | 'direta' | 'ultima_tentativa';
+
 type GenerateFollowUpBody = {
   chatId?: string;
   customInstructions?: string;
+  intensity?: string;
 };
 
 type ChatRow = {
@@ -72,6 +75,34 @@ const AI_FOLLOW_UP_PROMPT_SLUG = 'ai_follow_up_prompt';
 const DEFAULT_SYSTEM_TIMEZONE = 'America/Sao_Paulo';
 const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
+const DEFAULT_FOLLOW_UP_INTENSITY: FollowUpIntensity = 'leve';
+
+const FOLLOW_UP_INTENSITY_PROMPTS: Record<FollowUpIntensity, string> = {
+  leve: [
+    'Intensidade: leve.',
+    'Pressao comercial: minima; priorize cuidado, naturalidade e abertura para resposta sem parecer cobranca.',
+    'Tamanho: mensagem curta, preferencialmente 1 a 3 frases simples.',
+    'Chamada para acao: convite suave ou pergunta aberta e facil de responder, sem urgencia artificial.',
+  ].join(' '),
+  moderada: [
+    'Intensidade: moderada.',
+    'Pressao comercial: equilibrada; seja consultivo, objetivo e avance a conversa sem soar insistente.',
+    'Tamanho: mensagem curta a media, preferencialmente ate 4 frases.',
+    'Chamada para acao: pergunta objetiva sobre o proximo passo ou confirmacao de interesse.',
+  ].join(' '),
+  direta: [
+    'Intensidade: direta.',
+    'Pressao comercial: assertiva, mas educada; deixe claro o motivo do contato e reduza rodeios.',
+    'Tamanho: mensagem enxuta e pragmatica, preferencialmente 2 a 4 frases.',
+    'Chamada para acao: pedido claro de decisao, retorno ou melhor horario para concluir o proximo passo.',
+  ].join(' '),
+  ultima_tentativa: [
+    'Intensidade: ultima_tentativa.',
+    'Pressao comercial: encerramento cordial; nao ameace, nao culpe e nao pressione, apenas sinalize que este sera o ultimo contato por enquanto.',
+    'Tamanho: mensagem breve e respeitosa, preferencialmente 2 a 3 frases.',
+    'Chamada para acao: deixe uma porta aberta para o cliente chamar quando fizer sentido ou responder se ainda quiser seguir.',
+  ].join(' '),
+};
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -86,6 +117,16 @@ const createAdminClient = () => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeFollowUpIntensity = (value: unknown): FollowUpIntensity => {
+  const normalized = toTrimmedString(value).toLowerCase();
+
+  if (normalized === 'moderada' || normalized === 'direta' || normalized === 'ultima_tentativa') {
+    return normalized;
+  }
+
+  return DEFAULT_FOLLOW_UP_INTENSITY;
+};
 
 const normalizeSystemTimeZone = (value: unknown) => {
   const candidate = toTrimmedString(value);
@@ -422,6 +463,8 @@ Deno.serve(async (req: Request) => {
     const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);
+    const intensity = normalizeFollowUpIntensity(body.intensity);
+    const intensityInstructions = FOLLOW_UP_INTENSITY_PROMPTS[intensity];
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -493,6 +536,7 @@ Deno.serve(async (req: Request) => {
       'Considere as datas e horas do transcript como a referencia temporal principal.',
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.',
+      intensityInstructions,
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
       customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
     ]
@@ -508,6 +552,7 @@ Deno.serve(async (req: Request) => {
       `- Responsavel: ${toTrimmedString(lead?.responsavel) || 'Nao informado'}`,
       `- Fuso do sistema: ${systemTimeZone}`,
       `- Agora no sistema: ${formatDateTimeForPrompt(now, systemTimeZone)}`,
+      `- Intensidade solicitada: ${intensity}`,
       '',
       'Historico completo da conversa:',
       transcriptLines.join('\n'),

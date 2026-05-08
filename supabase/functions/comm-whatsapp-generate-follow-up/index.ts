@@ -11,15 +11,32 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
+type FollowUpTone = 'consultivo' | 'amigavel' | 'direto' | 'reativacao' | 'premium';
+
 type GenerateFollowUpBody = {
   chatId?: string;
   customInstructions?: string;
-  variantCount?: number;
+  tone?: string;
 };
 
-type FollowUpVariation = {
-  label: string;
-  text: string;
+const FOLLOW_UP_TONES: FollowUpTone[] = ['consultivo', 'amigavel', 'direto', 'reativacao', 'premium'];
+
+const isFollowUpTone = (value: string): value is FollowUpTone => FOLLOW_UP_TONES.includes(value as FollowUpTone);
+
+const getFollowUpToneInstruction = (tone: FollowUpTone) => {
+  switch (tone) {
+    case 'amigavel':
+      return 'Tom amigavel: escreva de forma leve, acolhedora e proxima, mantendo profissionalismo e objetividade.';
+    case 'direto':
+      return 'Tom direto: seja breve, objetivo e claro sobre o proximo passo, sem parecer frio ou pressionar demais.';
+    case 'reativacao':
+      return 'Tom de reativacao: retome a conversa parada com naturalidade, baixa pressao e uma pergunta simples para facilitar resposta.';
+    case 'premium':
+      return 'Tom premium: transmita cuidado personalizado, atencao consultiva e sensacao de atendimento diferenciado, sem exageros.';
+    case 'consultivo':
+    default:
+      return 'Tom consultivo: oriente com contexto, demonstre escuta ativa e proponha um proximo passo claro e util.';
+  }
 };
 
 type ChatRow = {
@@ -80,6 +97,49 @@ const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const MAX_FOLLOW_UP_VARIANTS = 5;
 
+type FollowUpSalesTechniqueOption = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+const FOLLOW_UP_SALES_TECHNIQUE_OPTIONS = [
+  {
+    id: 'rapport',
+    name: 'Rapport',
+    description: 'Criar proximidade e demonstrar atenção ao contexto do cliente.',
+  },
+  {
+    id: 'spin-selling',
+    name: 'SPIN Selling',
+    description: 'Explorar situação, problema, implicação e necessidade de solução.',
+  },
+  {
+    id: 'social-proof',
+    name: 'Prova social',
+    description: 'Reforçar segurança com exemplos ou validações sem inventar dados.',
+  },
+  {
+    id: 'scarcity-urgency',
+    name: 'Escassez e urgência',
+    description: 'Indicar próximos passos e timing com cuidado, sem pressão artificial.',
+  },
+  {
+    id: 'objection-handling',
+    name: 'Contorno de objeções',
+    description: 'Responder dúvidas prováveis com empatia e clareza comercial.',
+  },
+  {
+    id: 'assumptive-close',
+    name: 'Fechamento assumitivo',
+    description: 'Conduzir para uma decisão ou ação objetiva de forma natural.',
+  },
+] as const satisfies readonly FollowUpSalesTechniqueOption[];
+
+const FOLLOW_UP_SALES_TECHNIQUE_BY_ID = new Map(
+  FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => [technique.id, technique]),
+);
+
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -94,58 +154,42 @@ const createAdminClient = () => {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const normalizeVariantCount = (value: unknown) => {
-  const numericValue = typeof value === 'number' ? value : Number(value);
-
-  if (!Number.isFinite(numericValue)) {
-    return 1;
-  }
-
-  return Math.min(MAX_FOLLOW_UP_VARIANTS, Math.max(1, Math.floor(numericValue)));
-};
-
-const stripJsonCodeFence = (value: string) =>
-  value
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
-
-const normalizeFollowUpVariations = (value: unknown): FollowUpVariation[] => {
+const normalizeSalesTechniques = (value: unknown) => {
   if (!Array.isArray(value)) {
     return [];
   }
 
-  return value
-    .map((item, index) => {
-      if (!isRecord(item)) {
-        return null;
-      }
+  const selected: FollowUpSalesTechniqueOption[] = [];
+  const seen = new Set<string>();
 
-      const text = toTrimmedString(item.text);
-      if (!text) {
-        return null;
-      }
-
-      return {
-        label: toTrimmedString(item.label) || `Variação ${index + 1}`,
-        text,
-      };
-    })
-    .filter((item): item is FollowUpVariation => Boolean(item));
-};
-
-const parseFollowUpVariationsResult = (value: string) => {
-  try {
-    const parsed = JSON.parse(stripJsonCodeFence(value)) as unknown;
-    if (!isRecord(parsed)) {
-      return [];
+  for (const item of value) {
+    const techniqueId = toTrimmedString(item);
+    if (!techniqueId || seen.has(techniqueId)) {
+      continue;
     }
 
-    return normalizeFollowUpVariations(parsed.variations);
-  } catch {
-    return [];
+    const technique = FOLLOW_UP_SALES_TECHNIQUE_BY_ID.get(techniqueId);
+    if (!technique) {
+      continue;
+    }
+
+    selected.push(technique);
+    seen.add(techniqueId);
   }
+
+  return selected;
+};
+
+const buildSalesTechniquesPromptSection = (salesTechniques: FollowUpSalesTechniqueOption[]) => {
+  if (salesTechniques.length === 0) {
+    return '';
+  }
+
+  return [
+    'Técnicas comerciais a aplicar:',
+    'Combine as técnicas selecionadas de forma natural, usando apenas o que fizer sentido para o histórico. Não soe robótico, agressivo ou artificial.',
+    ...salesTechniques.map((technique) => `- ${technique.name}: ${technique.description}`),
+  ].join('\n');
 };
 
 const normalizeSystemTimeZone = (value: unknown) => {
@@ -483,8 +527,8 @@ Deno.serve(async (req: Request) => {
     const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);
-    const variantCount = normalizeVariantCount(body.variantCount);
-    const shouldGenerateVariations = variantCount > 1;
+    const toneCandidate = toTrimmedString(body.tone);
+    const tone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -549,6 +593,8 @@ Deno.serve(async (req: Request) => {
       systemTimeZone,
     );
 
+    const salesTechniquesPromptSection = buildSalesTechniquesPromptSection(salesTechniques);
+
     const now = new Date();
     const responseFormatInstruction = shouldGenerateVariations
       ? [
@@ -565,7 +611,9 @@ Deno.serve(async (req: Request) => {
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       responseFormatInstruction,
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
+      `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(tone)} Esta instrucao complementa as instrucoes globais da operacao e nao deve substitui-las.`,
       customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
+      salesTechniquesPromptSection,
     ]
       .filter(Boolean)
       .join('\n\n');

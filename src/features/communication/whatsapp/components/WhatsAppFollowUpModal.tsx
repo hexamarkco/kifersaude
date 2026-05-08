@@ -77,6 +77,7 @@ type WhatsAppFollowUpModalProps = {
   isOpen: boolean;
   generating: boolean;
   submitting: boolean;
+  chatId?: string | null;
   value: string;
   customInstructions: string;
   tone: CommWhatsAppFollowUpTone;
@@ -146,6 +147,7 @@ export default function WhatsAppFollowUpModal({
   isOpen,
   generating,
   submitting,
+  chatId,
   value,
   customInstructions,
   tone,
@@ -158,6 +160,7 @@ export default function WhatsAppFollowUpModal({
 }: WhatsAppFollowUpModalProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isCorrecting, setIsCorrecting] = useState(false);
+  const [refiningActionId, setRefiningActionId] = useState<string | null>(null);
   const [currentTranscript, setCurrentTranscript] = useState("");
   const recognitionRef = useRef<unknown>(null);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
@@ -197,6 +200,43 @@ export default function WhatsAppFollowUpModal({
     };
     recognitionRef.current = recognitionInstance;
   }, []);
+
+  const handleSimpleRefinement = async (tone: CommWhatsAppRewriteTone) => {
+    const currentMessage = value.trim();
+    if (!currentMessage || refiningActionId) {
+      return;
+    }
+
+    setRefiningActionId(tone);
+    try {
+      const result = await commWhatsAppService.rewriteMessage({
+        message: currentMessage,
+        tone,
+      });
+      onChangeValue(result.text);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível refinar a mensagem sugerida.');
+    } finally {
+      setRefiningActionId(null);
+    }
+  };
+
+  const handleContextRefinement = async (action: FollowUpRefinementAction) => {
+    const currentMessage = value.trim();
+    if (!currentMessage || refiningActionId) {
+      return;
+    }
+
+    setRefiningActionId(action.id);
+    try {
+      const refinedText = await action.run(currentMessage, chatId ?? undefined);
+      onChangeValue(refinedText);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Não foi possível refinar o follow-up com contexto.');
+    } finally {
+      setRefiningActionId(null);
+    }
+  };
 
   const handleToggleRecording = async () => {
     if (isRecording) {
@@ -243,7 +283,7 @@ export default function WhatsAppFollowUpModal({
             Separador de mensagens: <code>{WHATSAPP_MESSAGE_BREAK_DELIMITER}</code> em uma linha isolada. O envio respeita cada bloco como uma mensagem separada.
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose} disabled={generating || submitting}>
+            <Button variant="secondary" onClick={onClose} disabled={generating || submitting || Boolean(refiningActionId)}>
               Fechar
             </Button>
             <Button variant="secondary" onClick={() => onGenerate()} loading={generating} disabled={submitting}>
@@ -344,7 +384,7 @@ export default function WhatsAppFollowUpModal({
                 '- Não insista demais.\n' +
                 '- Termine com uma pergunta objetiva.'
               }
-              disabled={generating || submitting}
+              disabled={generating || submitting || Boolean(refiningActionId)}
             />
             <div className="flex justify-end">
               <Button
@@ -353,7 +393,7 @@ export default function WhatsAppFollowUpModal({
                 size="sm"
                 onClick={handleToggleRecording}
                 loading={isCorrecting}
-                disabled={generating || submitting}
+                disabled={generating || submitting || Boolean(refiningActionId)}
                 className={isRecording ? 'animate-pulse' : ''}
               >
                 {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -411,12 +451,44 @@ export default function WhatsAppFollowUpModal({
               <div>
                 <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Mensagem sugerida</h3>
                 <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-                  Edite livremente antes de enviar.
+                  Refine com IA ou edite livremente antes de enviar.
                 </p>
               </div>
-              <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
-                {messageSegments.length || 1} mensagem(ns)
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                  {messageSegments.length || 1} mensagem(ns)
+                </div>
               </div>
+            </div>
+            <div className="mb-3 flex flex-wrap gap-2" aria-label="Refinamentos da mensagem sugerida">
+              {SIMPLE_REFINEMENT_ACTIONS.map((action) => (
+                <Button
+                  key={action.id}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleSimpleRefinement(action.id)}
+                  loading={refiningActionId === action.id}
+                  disabled={generating || submitting || Boolean(refiningActionId) || !value.trim()}
+                  title={action.description}
+                >
+                  {action.label}
+                </Button>
+              ))}
+              {FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS.map((action) => (
+                <Button
+                  key={action.id}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleContextRefinement(action)}
+                  loading={refiningActionId === action.id}
+                  disabled={generating || submitting || Boolean(refiningActionId) || !value.trim()}
+                  title={action.description}
+                >
+                  {action.label}
+                </Button>
+              ))}
             </div>
             <Textarea
               value={value}
@@ -424,7 +496,7 @@ export default function WhatsAppFollowUpModal({
               rows={15}
               className="min-h-[320px] text-sm leading-6"
               placeholder="A sugestao de follow-up vai aparecer aqui."
-              disabled={generating || submitting}
+              disabled={generating || submitting || Boolean(refiningActionId)}
             />
           </div>
         </div>

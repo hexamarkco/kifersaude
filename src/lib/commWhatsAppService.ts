@@ -130,6 +130,8 @@ export type CommWhatsAppFollowUpTone = 'consultivo' | 'amigavel' | 'direto' | 'r
 
 export type CommWhatsAppRewriteTone = 'grammar' | 'professional' | 'friendly' | 'shorter' | 'assertive';
 
+export type CommWhatsAppFollowUpRefinementSuggestion = CommWhatsAppFollowUpSuggestion;
+
 export type CommWhatsAppRewriteSuggestion = {
   text: string;
   provider?: string | null;
@@ -685,6 +687,36 @@ export const commWhatsAppService = {
     return {
       text,
       variations: variations.length > 0 ? variations : undefined,
+      provider: payload.provider ?? null,
+      model: payload.model ?? null,
+      fallback_used: payload.fallback_used === true,
+    };
+  },
+
+  async refineFollowUp(chatId: string, options: {
+    currentMessage: string;
+    adjustmentInstruction: string;
+  }): Promise<CommWhatsAppFollowUpRefinementSuggestion> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-generate-follow-up', {
+      body: {
+        chatId,
+        mode: 'refine',
+        currentMessage: options.currentMessage,
+        adjustmentInstruction: options.adjustmentInstruction.trim(),
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel refinar o follow-up com IA.'));
+    }
+
+    const payload = (data ?? {}) as CommWhatsAppFollowUpRefinementSuggestion;
+    if (!payload.text?.trim()) {
+      throw new Error('A IA nao retornou um refinamento de follow-up valido.');
+    }
+
+    return {
+      text: payload.text.trim(),
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,

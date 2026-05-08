@@ -3746,15 +3746,13 @@ export default function WhatsAppInboxScreen() {
         setCrmStartResults([]);
       }
     } finally {
-      if (requestId !== startChatSourcesRequestIdRef.current) {
-        return;
-      }
-
-      if (appendSavedContacts) {
-        setSavedContactsLoadingMore(false);
-      } else {
-        setSavedContactsLoading(false);
-        setCrmStartLoading(false);
+      if (requestId === startChatSourcesRequestIdRef.current) {
+        if (appendSavedContacts) {
+          setSavedContactsLoadingMore(false);
+        } else {
+          setSavedContactsLoading(false);
+          setCrmStartLoading(false);
+        }
       }
     }
   }, []);
@@ -8239,6 +8237,7 @@ export default function WhatsAppInboxScreen() {
           isOpen={followUpModalOpen}
           generating={generatingFollowUp}
           submitting={sending}
+          chatId={selectedChat?.id ?? null}
           value={followUpDraft}
           customInstructions={followUpCustomInstructions}
           tone={followUpTone}

@@ -537,6 +537,20 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (refinementMode && !currentMessage) {
+      return new Response(JSON.stringify({ error: 'Mensagem atual obrigatoria para refinar follow-up.' }), {
+        status: 400,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (refinementMode && !adjustmentInstruction) {
+      return new Response(JSON.stringify({ error: 'Instrucao de ajuste obrigatoria para refinar follow-up.' }), {
+        status: 400,
+        headers: jsonHeaders,
+      });
+    }
+
     const { data: chatData, error: chatError } = await supabaseAdmin
       .from('comm_whatsapp_chats')
       .select('id, phone_number, display_name, saved_contact_name, push_name, lead_id')
@@ -618,7 +632,7 @@ Deno.serve(async (req: Request) => {
       .filter(Boolean)
       .join('\n\n');
 
-    const userPrompt = [
+    const baseUserPrompt = [
       'Contexto do chat:',
       `- Nome do contato: ${leadContext.nome}`,
       `- Telefone: ${toTrimmedString(lead?.telefone) || toTrimmedString(chat.phone_number) || 'Nao informado'}`,
@@ -640,7 +654,7 @@ Deno.serve(async (req: Request) => {
 
     const result = await generateTextWithRouting({
       supabaseAdmin,
-      task: 'follow_up_generation',
+      task: refinementMode ? 'follow_up_refinement' : 'follow_up_generation',
       systemPrompt,
       userPrompt,
       temperature: 0.5,

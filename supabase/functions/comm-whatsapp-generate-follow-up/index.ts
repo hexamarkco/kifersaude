@@ -627,6 +627,7 @@ Deno.serve(async (req: Request) => {
       `- Responsavel: ${toTrimmedString(lead?.responsavel) || 'Nao informado'}`,
       `- Fuso do sistema: ${systemTimeZone}`,
       `- Agora no sistema: ${formatDateTimeForPrompt(now, systemTimeZone)}`,
+      `- Intensidade solicitada: ${intensity}`,
       '',
       'Historico completo da conversa:',
       transcriptLines.join('\n'),

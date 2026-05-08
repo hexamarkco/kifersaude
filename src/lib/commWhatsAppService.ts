@@ -15,6 +15,8 @@ export type CommWhatsAppOperationalState = {
   tokenConfigured: boolean;
 };
 
+export type CommWhatsAppFollowUpIntensity = 'leve' | 'moderada' | 'direta' | 'ultima_tentativa';
+
 type ListChatsParams = {
   search?: string;
   activityFilter?: 'all' | 'unread';

@@ -65,6 +65,7 @@ const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
+const DEFAULT_FOLLOW_UP_INTENSITY: CommWhatsAppFollowUpIntensity = 'leve';
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;

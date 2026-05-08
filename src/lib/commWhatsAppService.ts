@@ -118,6 +118,8 @@ export type CommWhatsAppFollowUpSuggestion = {
   fallback_used?: boolean;
 };
 
+export type CommWhatsAppFollowUpTone = 'consultivo' | 'amigavel' | 'direto' | 'reativacao' | 'premium';
+
 export type CommWhatsAppRewriteTone = 'grammar' | 'professional' | 'friendly' | 'shorter' | 'assertive';
 
 export type CommWhatsAppRewriteSuggestion = {
@@ -644,11 +646,12 @@ export const commWhatsAppService = {
     return payload;
   },
 
-  async generateFollowUp(chatId: string, options: { customInstructions?: string } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+  async generateFollowUp(chatId: string, options: { customInstructions?: string; tone?: CommWhatsAppFollowUpTone } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-generate-follow-up', {
       body: {
         chatId,
         customInstructions: options.customInstructions?.trim() || '',
+        tone: options.tone ?? 'consultivo',
       },
     });
 

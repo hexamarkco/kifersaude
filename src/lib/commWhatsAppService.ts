@@ -921,13 +921,9 @@ export const commWhatsAppService = {
   },
 
   async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {
-    if (params.mediaUrl?.trim()) {
-      return params.mediaUrl.trim();
-    }
-
     const mediaId = params.mediaId?.trim();
     if (!mediaId) {
-      return null;
+      return params.mediaUrl?.trim() || null;
     }
 
     if (!mediaObjectUrlCache.has(mediaId)) {

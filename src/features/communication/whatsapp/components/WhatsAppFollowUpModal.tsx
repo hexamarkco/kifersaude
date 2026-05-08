@@ -62,6 +62,17 @@ declare global {
   }
 }
 
+const FOLLOW_UP_OBJECTIVE_OPTIONS = [
+  { value: '', label: 'Sem objetivo específico' },
+  { value: 'agendar ligação', label: 'Agendar ligação' },
+  { value: 'retomar cotação enviada', label: 'Retomar cotação enviada' },
+  { value: 'confirmar interesse', label: 'Confirmar interesse' },
+  { value: 'tirar dúvidas', label: 'Tirar dúvidas' },
+  { value: 'solicitar documentos', label: 'Solicitar documentos' },
+  { value: 'avançar para fechamento', label: 'Avançar para fechamento' },
+  { value: 'reativar lead frio', label: 'Reativar lead frio' },
+] as const;
+
 type WhatsAppFollowUpModalProps = {
   isOpen: boolean;
   generating: boolean;

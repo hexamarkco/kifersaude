@@ -6827,7 +6827,7 @@ export default function WhatsAppInboxScreen() {
         setGeneratingFollowUp(false);
       }
     }
-  }, [followUpGenerationDisabledReason, selectedChat]);
+  }, [followUpGenerationDisabledReason, followUpObjective, selectedChat]);
 
   const handleOpenFollowUpModal = useCallback(() => {
     if (followUpGenerationDisabledReason) {

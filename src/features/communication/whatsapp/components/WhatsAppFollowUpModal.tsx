@@ -161,6 +161,7 @@ export default function WhatsAppFollowUpModal({
   const [currentTranscript, setCurrentTranscript] = useState("");
   const recognitionRef = useRef<unknown>(null);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
+  const hasVariations = variations.length > 0;
 
   const handleApplySituationPreset = (preset: ConversationSituationPreset) => {
     onChangeCustomInstructions(appendInstruction(customInstructions, preset.instruction));
@@ -245,9 +246,13 @@ export default function WhatsAppFollowUpModal({
             <Button variant="secondary" onClick={onClose} disabled={generating || submitting}>
               Fechar
             </Button>
-            <Button variant="secondary" onClick={onGenerate} loading={generating} disabled={submitting}>
+            <Button variant="secondary" onClick={() => onGenerate()} loading={generating} disabled={submitting}>
               {!generating && <Sparkles className="h-4 w-4" />}
               <span>{value.trim() ? 'Gerar novamente' : 'Gerar agora'}</span>
+            </Button>
+            <Button variant="secondary" onClick={() => onGenerate({ variantCount: 3 })} loading={generating} disabled={submitting}>
+              {!generating && <Sparkles className="h-4 w-4" />}
+              <span>{hasVariations ? 'Novas variações' : 'Gerar variações'}</span>
             </Button>
             <Button onClick={onSend} loading={submitting} disabled={generating || submitting || !value.trim()}>
               Enviar mensagens

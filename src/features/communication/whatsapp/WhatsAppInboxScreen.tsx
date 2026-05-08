@@ -1647,21 +1647,12 @@ function WaveformBars({ bars, active = false }: { bars?: number[]; active?: bool
 }
 
 function useResolvedMediaUrl(message: CommWhatsAppMessage) {
-  const [mediaUrl, setMediaUrl] = useState<string | null>(message.media_url ?? commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id) ?? null);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id) ?? (!message.media_id ? message.media_url ?? null : null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-
-    if (message.media_url?.trim()) {
-      setMediaUrl(message.media_url.trim());
-      setLoading(false);
-      setError(null);
-      return () => {
-        active = false;
-      };
-    }
 
     const rememberedPreview = commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id);
     if (rememberedPreview) {
@@ -1683,7 +1674,7 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
     }
 
     if (!message.media_id) {
-      setMediaUrl(null);
+      setMediaUrl(message.media_url?.trim() || null);
       setLoading(false);
       setError(null);
       return () => {

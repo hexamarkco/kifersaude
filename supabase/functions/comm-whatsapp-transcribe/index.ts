@@ -2,7 +2,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { transcribeAudioWithRouting } from '../_shared/ai-router.ts';
-import { COMM_WHATSAPP_MODULE, corsHeaders, ensureCommWhatsAppSettings, fetchWhapiMediaBlob, toTrimmedString } from '../_shared/comm-whatsapp.ts';
+import { cacheCommWhatsAppMedia, COMM_WHATSAPP_MODULE, corsHeaders, ensureCommWhatsAppSettings, toTrimmedString } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
   env: {
@@ -159,7 +159,7 @@ Deno.serve(async (req: Request) => {
     });
 
     try {
-      const media = await fetchWhapiMediaBlob({
+      const media = await cacheCommWhatsAppMedia(supabaseAdmin, {
         token: settings.token,
         mediaId: targetMessage.media_id,
         mediaUrl: targetMessage.media_url,

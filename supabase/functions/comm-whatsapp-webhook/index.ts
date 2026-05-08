@@ -2,6 +2,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
   applyCommWhatsAppMessageEdit,
+  cacheCommWhatsAppMedia,
   COMM_WHATSAPP_CHANNEL_SLUG,
   corsHeaders,
   extractWhapiDeletedMessageEvent,
@@ -366,6 +367,19 @@ async function persistMessageFromWebhook(
       edit_action_type: editedEvent?.actionType ?? null,
     },
   });
+
+  if (whapiToken && mediaMeta.mediaId) {
+    await cacheCommWhatsAppMedia(supabaseAdmin, {
+      token: whapiToken,
+      mediaId: mediaMeta.mediaId,
+      mediaUrl: mediaMeta.mediaUrl,
+      fallbackMimeType: mediaMeta.mediaMimeType,
+      fallbackFileName: mediaMeta.mediaFileName,
+    }).catch((error) => {
+      console.warn('[comm-whatsapp-webhook] falha ao arquivar mídia do WhatsApp', error);
+      return null;
+    });
+  }
 
   return { id: result.chatId };
 }

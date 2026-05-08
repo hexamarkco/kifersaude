@@ -1,7 +1,7 @@
 // @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
-import { COMM_WHATSAPP_MODULE, ensureCommWhatsAppSettings, parseWhapiError, WHAPI_BASE_URL } from '../_shared/comm-whatsapp.ts';
+import { cacheCommWhatsAppMedia, COMM_WHATSAPP_MODULE, ensureCommWhatsAppSettings } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
   env: {
@@ -83,36 +83,27 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const whapiResponse = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
-      method: 'GET',
-      headers: {
-        Accept: '*/*',
-        Authorization: `Bearer ${settings.token}`,
-      },
+    const { data: messageRows } = await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .select('media_url, media_mime_type, media_file_name')
+      .eq('media_id', mediaId)
+      .limit(1);
+    const message = Array.isArray(messageRows) ? messageRows[0] : null;
+
+    const media = await cacheCommWhatsAppMedia(supabaseAdmin, {
+      token: settings.token,
+      mediaId,
+      mediaUrl: typeof message?.media_url === 'string' ? message.media_url : null,
+      fallbackMimeType: typeof message?.media_mime_type === 'string' ? message.media_mime_type : null,
+      fallbackFileName: typeof message?.media_file_name === 'string' ? message.media_file_name : null,
     });
 
-    if (!whapiResponse.ok) {
-      const raw = await whapiResponse.text();
-      return new Response(
-        JSON.stringify({ error: parseWhapiError(raw || null) || 'Nao foi possivel obter a midia na Whapi.' }),
-        {
-          status: whapiResponse.status,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      );
-    }
-
     const headers = new Headers(corsHeaders);
-    const contentType = whapiResponse.headers.get('content-type');
-    const contentLength = whapiResponse.headers.get('content-length');
-    const contentDisposition = whapiResponse.headers.get('content-disposition');
+    headers.set('Content-Type', media.mimeType);
+    headers.set('Content-Disposition', `inline; filename="${media.fileName.replace(/["\r\n]/g, '')}"`);
+    headers.set('Cache-Control', media.cached ? 'private, max-age=86400' : 'private, max-age=3600');
 
-    if (contentType) headers.set('Content-Type', contentType);
-    if (contentLength) headers.set('Content-Length', contentLength);
-    if (contentDisposition) headers.set('Content-Disposition', contentDisposition);
-    headers.set('Cache-Control', 'private, max-age=3600');
-
-    return new Response(whapiResponse.body, {
+    return new Response(media.blob, {
       status: 200,
       headers,
     });

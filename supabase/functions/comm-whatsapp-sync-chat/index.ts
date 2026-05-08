@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.5
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   applyCommWhatsAppMessageEdit,
+  cacheCommWhatsAppMedia,
   COMM_WHATSAPP_MODULE,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
@@ -354,6 +355,19 @@ Deno.serve(async (req: Request) => {
           ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
         },
       });
+
+      if (mediaMeta.mediaId) {
+        await cacheCommWhatsAppMedia(supabaseAdmin, {
+          token: settings.token,
+          mediaId: mediaMeta.mediaId,
+          mediaUrl: mediaMeta.mediaUrl,
+          fallbackMimeType: mediaMeta.mediaMimeType,
+          fallbackFileName: mediaMeta.mediaFileName,
+        }).catch((error) => {
+          console.warn('[comm-whatsapp-sync-chat] falha ao arquivar mídia do WhatsApp', error);
+          return null;
+        });
+      }
 
       if (persisted.inserted) {
         insertedCount += 1;

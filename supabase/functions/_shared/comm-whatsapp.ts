@@ -1833,6 +1833,68 @@ export async function fetchWhapiMediaBlob(params: {
   return await buildResult(response);
 }
 
+
+const COMM_WHATSAPP_MEDIA_BUCKET = 'comm-whatsapp-media';
+
+const sanitizeCommWhatsAppStorageSegment = (value: string) =>
+  value
+    .trim()
+    .replace(/[^a-zA-Z0-9._=-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 160) || 'media';
+
+const getCommWhatsAppMediaStoragePath = (mediaId: string) => `${sanitizeCommWhatsAppStorageSegment(mediaId)}`;
+
+export async function getCachedCommWhatsAppMedia(supabaseAdmin: SupabaseClient, mediaId: string): Promise<Blob | null> {
+  const normalizedMediaId = toTrimmedString(mediaId);
+  if (!normalizedMediaId) return null;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from(COMM_WHATSAPP_MEDIA_BUCKET)
+    .download(getCommWhatsAppMediaStoragePath(normalizedMediaId));
+
+  if (error) {
+    return null;
+  }
+
+  return data ?? null;
+}
+
+export async function cacheCommWhatsAppMedia(supabaseAdmin: SupabaseClient, params: {
+  token: string;
+  mediaId?: string | null;
+  mediaUrl?: string | null;
+  fallbackFileName?: string | null;
+  fallbackMimeType?: string | null;
+}): Promise<{ blob: Blob; mimeType: string; fileName: string; cached: boolean }> {
+  const mediaId = toTrimmedString(params.mediaId);
+  if (mediaId) {
+    const cachedBlob = await getCachedCommWhatsAppMedia(supabaseAdmin, mediaId);
+    if (cachedBlob) {
+      return {
+        blob: cachedBlob,
+        mimeType: params.fallbackMimeType?.trim() || cachedBlob.type || 'application/octet-stream',
+        fileName: params.fallbackFileName?.trim() || mediaId,
+        cached: true,
+      };
+    }
+  }
+
+  const result = await fetchWhapiMediaBlob(params);
+
+  if (mediaId) {
+    await supabaseAdmin.storage
+      .from(COMM_WHATSAPP_MEDIA_BUCKET)
+      .upload(getCommWhatsAppMediaStoragePath(mediaId), result.blob, {
+        contentType: result.mimeType,
+        upsert: true,
+      })
+      .catch(() => null);
+  }
+
+  return { ...result, cached: false };
+}
+
 export async function checkWhapiContactExists(params: {
   token: string;
   contactId: string;

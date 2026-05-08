@@ -45,6 +45,7 @@ import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteMo
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
+import { followUpSalesTechniqueOptions } from './components/followUpSalesTechniques';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
@@ -4473,6 +4474,7 @@ export default function WhatsAppInboxScreen() {
   const resetFollowUpComposer = useCallback(() => {
     setFollowUpDraft('');
     setFollowUpCustomInstructions('');
+    setFollowUpSelectedSalesTechniques([]);
   }, []);
 
   const loadOperationalState = useCallback(async () => {
@@ -6797,6 +6799,8 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    const validSalesTechniqueIds = new Set<string>(followUpSalesTechniqueOptions.map((technique) => technique.id));
+    const normalizedSalesTechniques = salesTechniques.filter((techniqueId) => validSalesTechniqueIds.has(techniqueId));
     const requestId = ++followUpGenerationRequestIdRef.current;
     const targetChatId = selectedChat.id;
     setGeneratingFollowUp(true);
@@ -7040,6 +7044,14 @@ export default function WhatsAppInboxScreen() {
       }
     });
   }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
+
+  const handleToggleFollowUpSalesTechnique = useCallback((techniqueId: string) => {
+    setFollowUpSelectedSalesTechniques((current) => (
+      current.includes(techniqueId)
+        ? current.filter((selectedTechniqueId) => selectedTechniqueId !== techniqueId)
+        : [...current, techniqueId]
+    ));
+  }, []);
 
   const handleRegenerateFollowUp = useCallback(() => {
     void handleGenerateFollowUp(followUpCustomInstructions, followUpTone);

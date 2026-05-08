@@ -96,6 +96,49 @@ const DEFAULT_SYSTEM_TIMEZONE = 'America/Sao_Paulo';
 const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 
+type FollowUpSalesTechniqueOption = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+const FOLLOW_UP_SALES_TECHNIQUE_OPTIONS = [
+  {
+    id: 'rapport',
+    name: 'Rapport',
+    description: 'Criar proximidade e demonstrar atenção ao contexto do cliente.',
+  },
+  {
+    id: 'spin-selling',
+    name: 'SPIN Selling',
+    description: 'Explorar situação, problema, implicação e necessidade de solução.',
+  },
+  {
+    id: 'social-proof',
+    name: 'Prova social',
+    description: 'Reforçar segurança com exemplos ou validações sem inventar dados.',
+  },
+  {
+    id: 'scarcity-urgency',
+    name: 'Escassez e urgência',
+    description: 'Indicar próximos passos e timing com cuidado, sem pressão artificial.',
+  },
+  {
+    id: 'objection-handling',
+    name: 'Contorno de objeções',
+    description: 'Responder dúvidas prováveis com empatia e clareza comercial.',
+  },
+  {
+    id: 'assumptive-close',
+    name: 'Fechamento assumitivo',
+    description: 'Conduzir para uma decisão ou ação objetiva de forma natural.',
+  },
+] as const satisfies readonly FollowUpSalesTechniqueOption[];
+
+const FOLLOW_UP_SALES_TECHNIQUE_BY_ID = new Map(
+  FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => [technique.id, technique]),
+);
+
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -109,6 +152,44 @@ const createAdminClient = () => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeSalesTechniques = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const selected: FollowUpSalesTechniqueOption[] = [];
+  const seen = new Set<string>();
+
+  for (const item of value) {
+    const techniqueId = toTrimmedString(item);
+    if (!techniqueId || seen.has(techniqueId)) {
+      continue;
+    }
+
+    const technique = FOLLOW_UP_SALES_TECHNIQUE_BY_ID.get(techniqueId);
+    if (!technique) {
+      continue;
+    }
+
+    selected.push(technique);
+    seen.add(techniqueId);
+  }
+
+  return selected;
+};
+
+const buildSalesTechniquesPromptSection = (salesTechniques: FollowUpSalesTechniqueOption[]) => {
+  if (salesTechniques.length === 0) {
+    return '';
+  }
+
+  return [
+    'Técnicas comerciais a aplicar:',
+    'Combine as técnicas selecionadas de forma natural, usando apenas o que fizer sentido para o histórico. Não soe robótico, agressivo ou artificial.',
+    ...salesTechniques.map((technique) => `- ${technique.name}: ${technique.description}`),
+  ].join('\n');
+};
 
 const normalizeSystemTimeZone = (value: unknown) => {
   const candidate = toTrimmedString(value);
@@ -511,6 +592,8 @@ Deno.serve(async (req: Request) => {
       systemTimeZone,
     );
 
+    const salesTechniquesPromptSection = buildSalesTechniquesPromptSection(salesTechniques);
+
     const now = new Date();
     const systemPrompt = [
       `Voce gera uma unica sugestao de follow-up pronta para envio no WhatsApp da operacao ${companyName}.`,
@@ -521,6 +604,7 @@ Deno.serve(async (req: Request) => {
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
       `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(tone)} Esta instrucao complementa as instrucoes globais da operacao e nao deve substitui-las.`,
       customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
+      salesTechniquesPromptSection,
     ]
       .filter(Boolean)
       .join('\n\n');

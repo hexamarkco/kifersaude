@@ -527,6 +527,8 @@ const readMediaPayload = (message: unknown): Record<string, unknown> | null => {
       return isRecord(message.audio) ? message.audio : null;
     case 'voice':
       return isRecord(message.voice) ? message.voice : null;
+    case 'sticker':
+      return isRecord(message.sticker) ? message.sticker : null;
     default:
       return null;
   }

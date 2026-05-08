@@ -2390,25 +2390,43 @@ function WhatsAppMessageBody({
     );
   }
 
-  if (kind === 'image') {
+  if (kind === 'image' || kind === 'sticker') {
+    const isSticker = kind === 'sticker';
+    const mediaLabel = isSticker ? 'Figurinha' : 'Imagem';
+    const unavailableLabel = isSticker ? 'Figurinha indisponível' : 'Imagem indisponível';
+    const loadingLabel = isSticker ? 'Carregando figurinha...' : 'Carregando imagem...';
+    const altLabel = message.media_file_name || (isSticker ? 'Figurinha enviada' : 'Imagem enviada');
+
     return (
       <div className="space-y-3">
         {quotePreviewNode}
         {mediaUrl ? (
           <button
             type="button"
-            onClick={() => onOpenImage({ src: mediaUrl, name: message.media_file_name || 'Imagem enviada' })}
-            className="whatsapp-inbox-image-card block w-full overflow-hidden rounded-2xl border text-left"
+            onClick={() => onOpenImage({ src: mediaUrl, name: altLabel })}
+            className={isSticker
+              ? 'block w-fit max-w-[180px] overflow-hidden rounded-2xl border border-transparent bg-transparent text-left transition hover:border-current/15'
+              : 'whatsapp-inbox-image-card block w-full overflow-hidden rounded-2xl border text-left'}
           >
-            <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="max-h-[280px] w-full object-cover" loading="lazy" />
-            <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
-              <span className="truncate font-medium">{message.media_file_name || 'Imagem'}</span>
-              <span className="shrink-0 opacity-80">Toque para ampliar</span>
-            </div>
+            <img
+              src={mediaUrl}
+              alt={altLabel}
+              className={isSticker ? 'max-h-[180px] max-w-[180px] object-contain' : 'max-h-[280px] w-full object-cover'}
+              loading="lazy"
+            />
+            {!isSticker ? (
+              <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
+                <span className="truncate font-medium">{message.media_file_name || mediaLabel}</span>
+                <span className="shrink-0 opacity-80">Toque para ampliar</span>
+              </div>
+            ) : null}
           </button>
         ) : (
-          <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
-            {loading ? 'Carregando imagem...' : error || 'Imagem indisponível'}
+          <div className={isSticker
+            ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 px-3 text-center text-sm opacity-80'
+            : 'flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80'}
+          >
+            {loading ? loadingLabel : error || unavailableLabel}
           </div>
         )}
         {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}

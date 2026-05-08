@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
+import { Check, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
 import Button from '../../../../components/ui/Button';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -7,7 +7,7 @@ import Textarea from '../../../../components/ui/Textarea';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpVariation } from '../../../../lib/commWhatsAppService';
 
 type SpeechRecognitionType = {
   new (): {
@@ -35,10 +35,11 @@ type WhatsAppFollowUpModalProps = {
   submitting: boolean;
   value: string;
   customInstructions: string;
+  variations?: CommWhatsAppFollowUpVariation[];
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
-  onGenerate: () => void;
+  onGenerate: (options?: { variantCount?: number }) => void;
   onSend: () => void;
 };
 
@@ -48,6 +49,7 @@ export default function WhatsAppFollowUpModal({
   submitting,
   value,
   customInstructions,
+  variations = [],
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
@@ -59,6 +61,7 @@ export default function WhatsAppFollowUpModal({
   const [currentTranscript, setCurrentTranscript] = useState("");
   const recognitionRef = useRef<unknown>(null);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
+  const hasVariations = variations.length > 0;
 
   useEffect(() => {
     if (typeof window === 'undefined' || (!window.SpeechRecognition && !window.webkitSpeechRecognition)) return;
@@ -139,9 +142,13 @@ export default function WhatsAppFollowUpModal({
             <Button variant="secondary" onClick={onClose} disabled={generating || submitting}>
               Fechar
             </Button>
-            <Button variant="secondary" onClick={onGenerate} loading={generating} disabled={submitting}>
+            <Button variant="secondary" onClick={() => onGenerate()} loading={generating} disabled={submitting}>
               {!generating && <Sparkles className="h-4 w-4" />}
               <span>{value.trim() ? 'Gerar novamente' : 'Gerar agora'}</span>
+            </Button>
+            <Button variant="secondary" onClick={() => onGenerate({ variantCount: 3 })} loading={generating} disabled={submitting}>
+              {!generating && <Sparkles className="h-4 w-4" />}
+              <span>{hasVariations ? 'Novas variações' : 'Gerar variações'}</span>
             </Button>
             <Button onClick={onSend} loading={submitting} disabled={generating || submitting || !value.trim()}>
               Enviar mensagens
@@ -193,6 +200,53 @@ export default function WhatsAppFollowUpModal({
               )}
             </div>
           </div>
+
+          {hasVariations && (
+            <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
+              <div className="mb-3">
+                <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Variações geradas</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                  Escolha uma opção para aplicar no campo “Mensagem sugerida” e editar antes do envio.
+                </p>
+              </div>
+              <div className="grid gap-3">
+                {variations.map((variation, index) => {
+                  const selected = value.trim() === variation.text.trim();
+
+                  return (
+                    <button
+                      key={`${variation.label}:${index}:${variation.text}`}
+                      type="button"
+                      onClick={() => onChangeValue(variation.text)}
+                      disabled={generating || submitting}
+                      className={[
+                        'rounded-xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-70',
+                        selected
+                          ? 'border-[var(--panel-accent,#d97706)] bg-[var(--panel-accent-soft,#fff3df)] shadow-sm'
+                          : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)]',
+                      ].join(' ')}
+                      aria-pressed={selected}
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                          {variation.label || `Variação ${index + 1}`}
+                        </span>
+                        {selected && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--panel-accent,#d97706)] px-2 py-0.5 text-[11px] font-semibold text-white">
+                            <Check className="h-3 w-3" />
+                            Aplicada
+                          </span>
+                        )}
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--panel-text,#1a120d)]">
+                        {variation.text}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
             <div className="mb-2 flex items-center justify-between gap-3">

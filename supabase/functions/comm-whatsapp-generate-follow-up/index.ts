@@ -14,6 +14,12 @@ declare const Deno: {
 type GenerateFollowUpBody = {
   chatId?: string;
   customInstructions?: string;
+  variantCount?: number;
+};
+
+type FollowUpVariation = {
+  label: string;
+  text: string;
 };
 
 type ChatRow = {
@@ -72,6 +78,7 @@ const AI_FOLLOW_UP_PROMPT_SLUG = 'ai_follow_up_prompt';
 const DEFAULT_SYSTEM_TIMEZONE = 'America/Sao_Paulo';
 const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
+const MAX_FOLLOW_UP_VARIANTS = 5;
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -86,6 +93,60 @@ const createAdminClient = () => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeVariantCount = (value: unknown) => {
+  const numericValue = typeof value === 'number' ? value : Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return 1;
+  }
+
+  return Math.min(MAX_FOLLOW_UP_VARIANTS, Math.max(1, Math.floor(numericValue)));
+};
+
+const stripJsonCodeFence = (value: string) =>
+  value
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+const normalizeFollowUpVariations = (value: unknown): FollowUpVariation[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item, index) => {
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      const text = toTrimmedString(item.text);
+      if (!text) {
+        return null;
+      }
+
+      return {
+        label: toTrimmedString(item.label) || `Variação ${index + 1}`,
+        text,
+      };
+    })
+    .filter((item): item is FollowUpVariation => Boolean(item));
+};
+
+const parseFollowUpVariationsResult = (value: string) => {
+  try {
+    const parsed = JSON.parse(stripJsonCodeFence(value)) as unknown;
+    if (!isRecord(parsed)) {
+      return [];
+    }
+
+    return normalizeFollowUpVariations(parsed.variations);
+  } catch {
+    return [];
+  }
+};
 
 const normalizeSystemTimeZone = (value: unknown) => {
   const candidate = toTrimmedString(value);
@@ -422,6 +483,8 @@ Deno.serve(async (req: Request) => {
     const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);
+    const variantCount = normalizeVariantCount(body.variantCount);
+    const shouldGenerateVariations = variantCount > 1;
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -487,12 +550,20 @@ Deno.serve(async (req: Request) => {
     );
 
     const now = new Date();
+    const responseFormatInstruction = shouldGenerateVariations
+      ? [
+          `Retorne apenas JSON valido, sem markdown, no formato {"variations":[{"label":"...","text":"..."}]}.`,
+          `Gere exatamente ${variantCount} variacoes com labels curtos e distintos, como "Direta", "Consultiva" ou "Leve".`,
+          'Cada text deve ser uma mensagem final pronta para envio; nao inclua explicacoes fora do JSON.',
+        ].join(' ')
+      : 'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.';
+
     const systemPrompt = [
-      `Voce gera uma unica sugestao de follow-up pronta para envio no WhatsApp da operacao ${companyName}.`,
+      `Voce gera sugestoes de follow-up prontas para envio no WhatsApp da operacao ${companyName}.`,
       'Leia todo o historico antes de responder e respeite a cronologia do transcript.',
       'Considere as datas e horas do transcript como a referencia temporal principal.',
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
-      'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.',
+      responseFormatInstruction,
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
       customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
     ]
@@ -513,7 +584,9 @@ Deno.serve(async (req: Request) => {
       transcriptLines.join('\n'),
       '',
       'Tarefa:',
-      'Gere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
+      shouldGenerateVariations
+        ? `Gere ${variantCount} variacoes da proxima mensagem de follow-up mais adequada para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
+        : 'Gere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
     ].join('\n');
 
     const result = await generateTextWithRouting({
@@ -522,13 +595,18 @@ Deno.serve(async (req: Request) => {
       systemPrompt,
       userPrompt,
       temperature: 0.5,
-      maxTokens: 320,
+      maxTokens: shouldGenerateVariations ? Math.min(900, 260 * variantCount) : 320,
     });
+
+    const generatedText = result.text.trim();
+    const variations = shouldGenerateVariations ? parseFollowUpVariationsResult(generatedText) : [];
+    const responseText = variations[0]?.text ?? generatedText;
 
     return new Response(
       JSON.stringify({
         success: true,
-        text: result.text.trim(),
+        text: responseText,
+        variations: variations.length > 0 ? variations : undefined,
         provider: result.provider,
         model: result.model,
         fallback_used: result.fallbackUsed,

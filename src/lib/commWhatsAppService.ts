@@ -111,8 +111,14 @@ export type CommWhatsAppTranscriptionResult = {
   fallback_used?: boolean;
 };
 
+export type CommWhatsAppFollowUpVariation = {
+  label: string;
+  text: string;
+};
+
 export type CommWhatsAppFollowUpSuggestion = {
   text: string;
+  variations?: CommWhatsAppFollowUpVariation[];
   provider?: string | null;
   model?: string | null;
   fallback_used?: boolean;
@@ -644,11 +650,12 @@ export const commWhatsAppService = {
     return payload;
   },
 
-  async generateFollowUp(chatId: string, options: { customInstructions?: string } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+  async generateFollowUp(chatId: string, options: { customInstructions?: string; variantCount?: number } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-generate-follow-up', {
       body: {
         chatId,
         customInstructions: options.customInstructions?.trim() || '',
+        variantCount: options.variantCount,
       },
     });
 
@@ -657,12 +664,23 @@ export const commWhatsAppService = {
     }
 
     const payload = (data ?? {}) as CommWhatsAppFollowUpSuggestion;
-    if (!payload.text?.trim()) {
+    const variations = Array.isArray(payload.variations)
+      ? payload.variations
+          .map((variation, index) => ({
+            label: variation.label?.trim() || `Variação ${index + 1}`,
+            text: variation.text?.trim() || '',
+          }))
+          .filter((variation) => variation.text)
+      : [];
+    const text = payload.text?.trim() || variations[0]?.text || '';
+
+    if (!text) {
       throw new Error('A IA nao retornou uma sugestao de follow-up.');
     }
 
     return {
-      text: payload.text.trim(),
+      text,
+      variations: variations.length > 0 ? variations : undefined,
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,

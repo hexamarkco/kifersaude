@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
+import { Check, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
 import Button from '../../../../components/ui/Button';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -8,6 +8,7 @@ import VariableAutocompleteTextarea from '../../../../components/ui/VariableAuto
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
 import { commWhatsAppService } from '../../../../lib/commWhatsAppService';
+import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
 
 type SpeechRecognitionType = {
   new (): {
@@ -35,9 +36,11 @@ type WhatsAppFollowUpModalProps = {
   submitting: boolean;
   value: string;
   customInstructions: string;
+  selectedSalesTechniques: string[];
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
+  onToggleSalesTechnique: (techniqueId: string) => void;
   onGenerate: () => void;
   onSend: () => void;
 };
@@ -48,9 +51,11 @@ export default function WhatsAppFollowUpModal({
   submitting,
   value,
   customInstructions,
+  selectedSalesTechniques,
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
+  onToggleSalesTechnique,
   onGenerate,
   onSend,
 }: WhatsAppFollowUpModalProps) {
@@ -192,6 +197,45 @@ export default function WhatsAppFollowUpModal({
                 </div>
               )}
             </div>
+          </div>
+
+
+          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
+            <div className="mb-3">
+              <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Técnicas de venda</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                Selecione uma ou mais abordagens para orientar a próxima geração sem deixar a mensagem robótica.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Técnicas de venda para o follow-up">
+              {followUpSalesTechniqueOptions.map((technique) => {
+                const selected = selectedSalesTechniques.includes(technique.id);
+
+                return (
+                  <button
+                    key={technique.id}
+                    type="button"
+                    onClick={() => onToggleSalesTechnique(technique.id)}
+                    aria-pressed={selected}
+                    disabled={generating || submitting}
+                    title={technique.description}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-left text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      selected
+                        ? 'border-[var(--panel-accent,#c46a1a)] bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)] shadow-sm'
+                        : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent,#c46a1a)] hover:text-[var(--panel-accent-ink,#8b4d12)]'
+                    }`}
+                  >
+                    {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : null}
+                    <span>{technique.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedSalesTechniques.length > 0 ? (
+              <p className="mt-3 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                {selectedSalesTechniques.length} técnica(s) selecionada(s) para a próxima geração.
+              </p>
+            ) : null}
           </div>
 
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">

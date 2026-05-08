@@ -17,6 +17,11 @@ type GenerateFollowUpBody = {
   chatId?: string;
   customInstructions?: string;
   tone?: string;
+  mode?: string;
+  currentMessage?: string;
+  adjustmentInstruction?: string;
+  variantCount?: number;
+  salesTechniques?: unknown;
 };
 
 const FOLLOW_UP_TONES: FollowUpTone[] = ['consultivo', 'amigavel', 'direto', 'reativacao', 'premium'];
@@ -190,6 +195,48 @@ const buildSalesTechniquesPromptSection = (salesTechniques: FollowUpSalesTechniq
     'Combine as técnicas selecionadas de forma natural, usando apenas o que fizer sentido para o histórico. Não soe robótico, agressivo ou artificial.',
     ...salesTechniques.map((technique) => `- ${technique.name}: ${technique.description}`),
   ].join('\n');
+};
+
+
+const clampVariantCount = (value: unknown) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 1;
+  }
+
+  return Math.max(1, Math.min(MAX_FOLLOW_UP_VARIANTS, Math.round(value)));
+};
+
+const parseFollowUpVariationsResult = (value: string) => {
+  const candidate = value.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
+
+  try {
+    const parsed = JSON.parse(candidate) as unknown;
+    const rawVariations = isRecord(parsed) ? parsed.variations : parsed;
+
+    if (!Array.isArray(rawVariations)) {
+      return [];
+    }
+
+    return rawVariations
+      .map((variation, index) => {
+        if (!isRecord(variation)) {
+          return null;
+        }
+
+        const text = toTrimmedString(variation.text);
+        if (!text) {
+          return null;
+        }
+
+        return {
+          label: toTrimmedString(variation.label) || `Variacao ${index + 1}`,
+          text,
+        };
+      })
+      .filter((variation): variation is { label: string; text: string } => Boolean(variation));
+  } catch {
+    return [];
+  }
 };
 
 const normalizeSystemTimeZone = (value: unknown) => {
@@ -529,6 +576,12 @@ Deno.serve(async (req: Request) => {
     const customInstructions = toTrimmedString(body.customInstructions);
     const toneCandidate = toTrimmedString(body.tone);
     const tone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
+    const refinementMode = toTrimmedString(body.mode) === 'refine';
+    const currentMessage = toTrimmedString(body.currentMessage);
+    const adjustmentInstruction = toTrimmedString(body.adjustmentInstruction);
+    const variantCount = refinementMode ? 1 : clampVariantCount(body.variantCount);
+    const shouldGenerateVariations = !refinementMode && variantCount > 1;
+    const salesTechniques = normalizeSalesTechniques(body.salesTechniques);
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -641,7 +694,6 @@ Deno.serve(async (req: Request) => {
       `- Responsavel: ${toTrimmedString(lead?.responsavel) || 'Nao informado'}`,
       `- Fuso do sistema: ${systemTimeZone}`,
       `- Agora no sistema: ${formatDateTimeForPrompt(now, systemTimeZone)}`,
-      `- Intensidade solicitada: ${intensity}`,
       '',
       'Historico completo da conversa:',
       transcriptLines.join('\n'),
@@ -652,9 +704,24 @@ Deno.serve(async (req: Request) => {
         : 'Gere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
     ].join('\n');
 
+    const userPrompt = refinementMode
+      ? [
+          baseUserPrompt,
+          '',
+          'Mensagem atual a refinar:',
+          currentMessage,
+          '',
+          'Ajuste solicitado:',
+          adjustmentInstruction,
+          '',
+          'Tarefa:',
+          'Reescreva apenas a mensagem atual aplicando o ajuste solicitado e o contexto do chat. Retorne somente a mensagem final, sem explicações.',
+        ].join('\n')
+      : baseUserPrompt;
+
     const result = await generateTextWithRouting({
       supabaseAdmin,
-      task: refinementMode ? 'follow_up_refinement' : 'follow_up_generation',
+      task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
       temperature: 0.5,

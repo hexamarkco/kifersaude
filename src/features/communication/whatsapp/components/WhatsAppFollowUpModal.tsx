@@ -7,7 +7,9 @@ import Textarea from '../../../../components/ui/Textarea';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpTone } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { toast } from '../../../../lib/toast';
+import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
 
 type SpeechRecognitionType = {
   new (): {
@@ -62,17 +64,6 @@ declare global {
   }
 }
 
-const FOLLOW_UP_OBJECTIVE_OPTIONS = [
-  { value: '', label: 'Sem objetivo específico' },
-  { value: 'agendar ligação', label: 'Agendar ligação' },
-  { value: 'retomar cotação enviada', label: 'Retomar cotação enviada' },
-  { value: 'confirmar interesse', label: 'Confirmar interesse' },
-  { value: 'tirar dúvidas', label: 'Tirar dúvidas' },
-  { value: 'solicitar documentos', label: 'Solicitar documentos' },
-  { value: 'avançar para fechamento', label: 'Avançar para fechamento' },
-  { value: 'reativar lead frio', label: 'Reativar lead frio' },
-] as const;
-
 type WhatsAppFollowUpModalProps = {
   isOpen: boolean;
   generating: boolean;
@@ -81,11 +72,14 @@ type WhatsAppFollowUpModalProps = {
   value: string;
   customInstructions: string;
   tone: CommWhatsAppFollowUpTone;
+  variations?: CommWhatsAppFollowUpVariation[];
+  selectedSalesTechniques: string[];
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
   onChangeTone: (value: CommWhatsAppFollowUpTone) => void;
-  onGenerate: () => void;
+  onToggleSalesTechnique: (techniqueId: string) => void;
+  onGenerate: (options?: { variantCount?: number }) => void;
   onSend: () => void;
 };
 
@@ -135,6 +129,48 @@ const CONVERSATION_SITUATION_PRESETS: ConversationSituationPreset[] = [
   },
 ];
 
+
+type SimpleRefinementAction = {
+  id: CommWhatsAppRewriteTone;
+  label: string;
+  description: string;
+};
+
+const SIMPLE_REFINEMENT_ACTIONS: SimpleRefinementAction[] = [
+  { id: 'shorter', label: 'Encurtar', description: 'Reescrever a sugestão de forma mais curta e objetiva.' },
+  { id: 'friendly', label: 'Mais amigável', description: 'Deixar a mensagem mais leve, humana e acolhedora.' },
+  { id: 'assertive', label: 'Mais direta', description: 'Tornar o próximo passo mais claro sem soar agressivo.' },
+  { id: 'professional', label: 'Mais profissional', description: 'Ajustar o texto para um tom mais consultivo e profissional.' },
+];
+
+type FollowUpRefinementAction = {
+  id: string;
+  label: string;
+  description: string;
+  instruction: string;
+};
+
+const FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS: FollowUpRefinementAction[] = [
+  {
+    id: 'add-context',
+    label: 'Usar contexto do chat',
+    description: 'Refinar considerando o histórico e o momento atual da conversa.',
+    instruction: 'Refine a mensagem usando o contexto completo do chat. Preserve apenas fatos confirmados no histórico e deixe o próximo passo mais coerente com a conversa.',
+  },
+  {
+    id: 'reduce-pressure',
+    label: 'Menos pressão',
+    description: 'Diminuir insistência e cobrança no follow-up.',
+    instruction: 'Refine a mensagem para reduzir pressão e cobrança. Mantenha cordialidade, naturalidade e uma pergunta simples para facilitar resposta.',
+  },
+  {
+    id: 'clear-next-step',
+    label: 'Próximo passo claro',
+    description: 'Reforçar uma ação objetiva para avançar a conversa.',
+    instruction: 'Refine a mensagem para terminar com um próximo passo claro, simples e fácil de responder, sem inventar combinados ou dados.',
+  },
+];
+
 const appendInstruction = (currentInstructions: string, instructionToAppend: string) => {
   const instructionsWithoutTrailingWhitespace = currentInstructions.trimEnd();
 
@@ -151,10 +187,13 @@ export default function WhatsAppFollowUpModal({
   value,
   customInstructions,
   tone,
+  variations = [],
+  selectedSalesTechniques,
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
   onChangeTone,
+  onToggleSalesTechnique,
   onGenerate,
   onSend,
 }: WhatsAppFollowUpModalProps) {
@@ -229,8 +268,16 @@ export default function WhatsAppFollowUpModal({
 
     setRefiningActionId(action.id);
     try {
-      const refinedText = await action.run(currentMessage, chatId ?? undefined);
-      onChangeValue(refinedText);
+      if (!chatId) {
+        toast.error('Selecione uma conversa para refinar com contexto.');
+        return;
+      }
+
+      const result = await commWhatsAppService.refineFollowUp(chatId, {
+        currentMessage,
+        adjustmentInstruction: action.instruction,
+      });
+      onChangeValue(result.text);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível refinar o follow-up com contexto.');
     } finally {
@@ -490,6 +537,27 @@ export default function WhatsAppFollowUpModal({
                 </Button>
               ))}
             </div>
+            {hasVariations ? (
+              <div className="mb-3 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                  Variações geradas
+                </p>
+                <div className="mt-3 space-y-2">
+                  {variations.map((variation, index) => (
+                    <button
+                      key={`${variation.label}:${index}`}
+                      type="button"
+                      onClick={() => onChangeValue(variation.text)}
+                      disabled={generating || submitting || Boolean(refiningActionId)}
+                      className="w-full rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-left text-xs transition hover:border-[var(--panel-accent-border,#d2ab85)] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <span className="block font-semibold text-[var(--panel-text,#1a120d)]">{variation.label}</span>
+                      <span className="mt-1 line-clamp-2 block leading-5 text-[var(--panel-text-muted,#876f5c)]">{variation.text}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <Textarea
               value={value}
               onChange={(event) => onChangeValue(event.target.value)}

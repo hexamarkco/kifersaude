@@ -29,15 +29,28 @@ declare global {
   }
 }
 
+const FOLLOW_UP_OBJECTIVE_OPTIONS = [
+  { value: '', label: 'Sem objetivo específico' },
+  { value: 'agendar ligação', label: 'Agendar ligação' },
+  { value: 'retomar cotação enviada', label: 'Retomar cotação enviada' },
+  { value: 'confirmar interesse', label: 'Confirmar interesse' },
+  { value: 'tirar dúvidas', label: 'Tirar dúvidas' },
+  { value: 'solicitar documentos', label: 'Solicitar documentos' },
+  { value: 'avançar para fechamento', label: 'Avançar para fechamento' },
+  { value: 'reativar lead frio', label: 'Reativar lead frio' },
+] as const;
+
 type WhatsAppFollowUpModalProps = {
   isOpen: boolean;
   generating: boolean;
   submitting: boolean;
   value: string;
   customInstructions: string;
+  objective: string;
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
+  onChangeObjective: (value: string) => void;
   onGenerate: () => void;
   onSend: () => void;
 };
@@ -48,9 +61,11 @@ export default function WhatsAppFollowUpModal({
   submitting,
   value,
   customInstructions,
+  objective,
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
+  onChangeObjective,
   onGenerate,
   onSend,
 }: WhatsAppFollowUpModalProps) {
@@ -152,6 +167,28 @@ export default function WhatsAppFollowUpModal({
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.9fr)]">
         <div className="space-y-4">
+          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
+            <label className="block text-sm font-semibold text-[var(--panel-text,#1a120d)]" htmlFor="whatsapp-follow-up-objective">
+              Objetivo do follow-up
+            </label>
+            <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+              Opcional: ajuda a IA a direcionar a próxima mensagem sem mudar o fluxo atual.
+            </p>
+            <select
+              id="whatsapp-follow-up-objective"
+              value={objective}
+              onChange={(event) => onChangeObjective(event.target.value)}
+              disabled={generating || submitting}
+              className="mt-3 w-full rounded-xl border border-[var(--panel-border,#d8c2aa)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-sm font-medium text-[var(--panel-text,#1a120d)] shadow-sm outline-none transition focus:border-[var(--panel-accent,#c66a1f)] focus:ring-2 focus:ring-[var(--panel-accent-soft,#f3d3b5)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {FOLLOW_UP_OBJECTIVE_OPTIONS.map((option) => (
+                <option key={option.value || 'empty'} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
             <div className="mb-2">
               <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Instruções personalizadas</h3>

@@ -14,6 +14,7 @@ declare const Deno: {
 type GenerateFollowUpBody = {
   chatId?: string;
   customInstructions?: string;
+  objective?: string;
 };
 
 type ChatRow = {
@@ -422,6 +423,7 @@ Deno.serve(async (req: Request) => {
     const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);
+    const objective = toTrimmedString(body.objective);
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -494,6 +496,7 @@ Deno.serve(async (req: Request) => {
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.',
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
+      objective ? `Objetivo principal desta mensagem: ${objective}.` : '',
       customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
     ]
       .filter(Boolean)

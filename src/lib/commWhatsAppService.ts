@@ -644,11 +644,15 @@ export const commWhatsAppService = {
     return payload;
   },
 
-  async generateFollowUp(chatId: string, options: { customInstructions?: string } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+  async generateFollowUp(
+    chatId: string,
+    options: { customInstructions?: string; objective?: string } = {},
+  ): Promise<CommWhatsAppFollowUpSuggestion> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-generate-follow-up', {
       body: {
         chatId,
         customInstructions: options.customInstructions?.trim() || '',
+        objective: options.objective?.trim() || '',
       },
     });
 

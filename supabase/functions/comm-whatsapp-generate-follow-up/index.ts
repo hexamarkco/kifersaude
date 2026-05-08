@@ -14,6 +14,9 @@ declare const Deno: {
 type GenerateFollowUpBody = {
   chatId?: string;
   customInstructions?: string;
+  mode?: string;
+  currentMessage?: string;
+  adjustmentInstruction?: string;
 };
 
 type ChatRow = {
@@ -422,9 +425,27 @@ Deno.serve(async (req: Request) => {
     const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);
+    const mode = toTrimmedString(body.mode).toLowerCase();
+    const refinementMode = mode === 'refine';
+    const currentMessage = String(body.currentMessage ?? '').trim();
+    const adjustmentInstruction = toTrimmedString(body.adjustmentInstruction);
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
+        status: 400,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (refinementMode && !currentMessage) {
+      return new Response(JSON.stringify({ error: 'Mensagem atual obrigatoria para refinar follow-up.' }), {
+        status: 400,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (refinementMode && !adjustmentInstruction) {
+      return new Response(JSON.stringify({ error: 'Instrucao de ajuste obrigatoria para refinar follow-up.' }), {
         status: 400,
         headers: jsonHeaders,
       });
@@ -488,18 +509,22 @@ Deno.serve(async (req: Request) => {
 
     const now = new Date();
     const systemPrompt = [
-      `Voce gera uma unica sugestao de follow-up pronta para envio no WhatsApp da operacao ${companyName}.`,
+      refinementMode
+        ? `Voce refina uma sugestao de follow-up pronta para envio no WhatsApp da operacao ${companyName}.`
+        : `Voce gera uma unica sugestao de follow-up pronta para envio no WhatsApp da operacao ${companyName}.`,
       'Leia todo o historico antes de responder e respeite a cronologia do transcript.',
       'Considere as datas e horas do transcript como a referencia temporal principal.',
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.',
+      refinementMode ? 'Ao refinar, preserve os fatos e a intencao da mensagem atual, ajustando apenas o que a instrucao pedir.' : '',
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
       customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
+      refinementMode ? `Instrucao especifica de refinamento:\n${adjustmentInstruction}` : '',
     ]
       .filter(Boolean)
       .join('\n\n');
 
-    const userPrompt = [
+    const baseUserPrompt = [
       'Contexto do chat:',
       `- Nome do contato: ${leadContext.nome}`,
       `- Telefone: ${toTrimmedString(lead?.telefone) || toTrimmedString(chat.phone_number) || 'Nao informado'}`,
@@ -511,17 +536,31 @@ Deno.serve(async (req: Request) => {
       '',
       'Historico completo da conversa:',
       transcriptLines.join('\n'),
-      '',
-      'Tarefa:',
-      'Gere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
-    ].join('\n');
+    ];
+
+    const userPrompt = refinementMode
+      ? [
+          ...baseUserPrompt,
+          '',
+          'Mensagem atual sugerida:',
+          currentMessage,
+          '',
+          'Tarefa:',
+          'Refine a mensagem atual seguindo a instrucao especifica de refinamento e mantendo coerencia com o historico do chat. A resposta deve ficar pronta para copiar e enviar no WhatsApp.',
+        ].join('\n')
+      : [
+          ...baseUserPrompt,
+          '',
+          'Tarefa:',
+          'Gere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
+        ].join('\n');
 
     const result = await generateTextWithRouting({
       supabaseAdmin,
-      task: 'follow_up_generation',
+      task: refinementMode ? 'follow_up_refinement' : 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: 0.5,
+      temperature: refinementMode ? 0.35 : 0.5,
       maxTokens: 320,
     });
 

@@ -11,9 +11,32 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
+type FollowUpTone = 'consultivo' | 'amigavel' | 'direto' | 'reativacao' | 'premium';
+
 type GenerateFollowUpBody = {
   chatId?: string;
   customInstructions?: string;
+  tone?: string;
+};
+
+const FOLLOW_UP_TONES: FollowUpTone[] = ['consultivo', 'amigavel', 'direto', 'reativacao', 'premium'];
+
+const isFollowUpTone = (value: string): value is FollowUpTone => FOLLOW_UP_TONES.includes(value as FollowUpTone);
+
+const getFollowUpToneInstruction = (tone: FollowUpTone) => {
+  switch (tone) {
+    case 'amigavel':
+      return 'Tom amigavel: escreva de forma leve, acolhedora e proxima, mantendo profissionalismo e objetividade.';
+    case 'direto':
+      return 'Tom direto: seja breve, objetivo e claro sobre o proximo passo, sem parecer frio ou pressionar demais.';
+    case 'reativacao':
+      return 'Tom de reativacao: retome a conversa parada com naturalidade, baixa pressao e uma pergunta simples para facilitar resposta.';
+    case 'premium':
+      return 'Tom premium: transmita cuidado personalizado, atencao consultiva e sensacao de atendimento diferenciado, sem exageros.';
+    case 'consultivo':
+    default:
+      return 'Tom consultivo: oriente com contexto, demonstre escuta ativa e proponha um proximo passo claro e util.';
+  }
 };
 
 type ChatRow = {
@@ -422,6 +445,8 @@ Deno.serve(async (req: Request) => {
     const body = (await req.json().catch(() => ({}))) as GenerateFollowUpBody;
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);
+    const toneCandidate = toTrimmedString(body.tone);
+    const tone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -494,6 +519,7 @@ Deno.serve(async (req: Request) => {
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.',
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
+      `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(tone)} Esta instrucao complementa as instrucoes globais da operacao e nao deve substitui-las.`,
       customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
     ]
       .filter(Boolean)

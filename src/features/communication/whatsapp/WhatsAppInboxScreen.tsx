@@ -22,6 +22,7 @@ import {
   type CommWhatsAppMessageSearchResult,
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
+  type CommWhatsAppFollowUpTone,
   type CommWhatsAppRewriteTone,
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
@@ -2621,6 +2622,7 @@ export default function WhatsAppInboxScreen() {
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
+  const [followUpTone, setFollowUpTone] = useState<CommWhatsAppFollowUpTone>('consultivo');
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [composerRewriteModalOpen, setComposerRewriteModalOpen] = useState(false);
   const [composerRewriteSource, setComposerRewriteSource] = useState('');
@@ -6786,7 +6788,7 @@ export default function WhatsAppInboxScreen() {
     });
   }, [composerRewriteDraft, handleCloseComposerRewriteModal]);
 
-  const handleGenerateFollowUp = useCallback(async (customInstructions: string) => {
+  const handleGenerateFollowUp = useCallback(async (customInstructions: string, tone: CommWhatsAppFollowUpTone) => {
     if (!selectedChat) {
       return;
     }
@@ -6802,12 +6804,14 @@ export default function WhatsAppInboxScreen() {
     try {
       const result = await commWhatsAppService.generateFollowUp(selectedChat.id, {
         customInstructions,
+        tone,
       });
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
       }
       setFollowUpDraft(result.text.trim());
       setFollowUpCustomInstructions(customInstructions);
+      setFollowUpTone(tone);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -7038,8 +7042,8 @@ export default function WhatsAppInboxScreen() {
   }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
 
   const handleRegenerateFollowUp = useCallback(() => {
-    void handleGenerateFollowUp(followUpCustomInstructions);
-  }, [followUpCustomInstructions, handleGenerateFollowUp]);
+    void handleGenerateFollowUp(followUpCustomInstructions, followUpTone);
+  }, [followUpCustomInstructions, followUpTone, handleGenerateFollowUp]);
 
   const handleSendFollowUpDraft = useCallback(async () => {
     if (!selectedChat) {
@@ -8223,9 +8227,11 @@ export default function WhatsAppInboxScreen() {
           submitting={sending}
           value={followUpDraft}
           customInstructions={followUpCustomInstructions}
+          tone={followUpTone}
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}
+          onChangeTone={setFollowUpTone}
           onGenerate={handleRegenerateFollowUp}
           onSend={handleSendFollowUpDraft}
         />

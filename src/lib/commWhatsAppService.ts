@@ -164,6 +164,27 @@ const sanitizeSearch = (value: string) =>
     .replace(/[,%]/g, ' ')
     .replace(/\s+/g, ' ');
 
+const getFunctionInvokeErrorMessage = async (error: unknown, fallbackMessage: string): Promise<string> => {
+  const context = error && typeof error === 'object' && 'context' in error
+    ? (error as { context?: unknown }).context
+    : null;
+
+  if (context instanceof Response) {
+    const payload = await context.clone().json().catch(() => null) as { error?: unknown; message?: unknown } | null;
+    const message = typeof payload?.error === 'string' && payload.error.trim()
+      ? payload.error.trim()
+      : typeof payload?.message === 'string' && payload.message.trim()
+        ? payload.message.trim()
+        : '';
+
+    if (message) {
+      return message;
+    }
+  }
+
+  return getSupabaseErrorMessage(error, fallbackMessage);
+};
+
 export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
   const digits = String(value ?? '').replace(/\D/g, '');
 
@@ -659,9 +680,23 @@ export const commWhatsAppService = {
     }
   },
 
-  async sendTextMessage(chatId: string, text: string, options: { clientRequestId?: string } = {}): Promise<{ messageId: string | null; status: string }> {
+  async sendTextMessage(chatId: string, text: string, options: {
+    clientRequestId?: string;
+    quotedMessageId?: string;
+    quotedPreviewText?: string;
+    quotedType?: string;
+    quotedAuthorPhone?: string;
+  } = {}): Promise<{ messageId: string | null; status: string }> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-send', {
-      body: { chatId, text, clientRequestId: options.clientRequestId?.trim() || '' },
+      body: {
+        chatId,
+        text,
+        clientRequestId: options.clientRequestId?.trim() || '',
+        quotedMessageId: options.quotedMessageId?.trim() || '',
+        quotedPreviewText: options.quotedPreviewText?.trim() || '',
+        quotedType: options.quotedType?.trim() || '',
+        quotedAuthorPhone: options.quotedAuthorPhone?.trim() || '',
+      },
     });
 
     if (error) {
@@ -818,6 +853,10 @@ export const commWhatsAppService = {
     durationSeconds?: number;
     waveform?: string;
     clientRequestId?: string;
+    quotedMessageId?: string;
+    quotedPreviewText?: string;
+    quotedType?: string;
+    quotedAuthorPhone?: string;
     onUploadProgress?: (progress: number | null) => void;
     signal?: AbortSignal;
   }): Promise<{ messageId: string | null; status: string }> {
@@ -839,6 +878,10 @@ export const commWhatsAppService = {
     form.append('type', params.kind);
     form.append('clientRequestId', params.clientRequestId?.trim() || '');
     form.append('caption', params.caption?.trim() || '');
+    form.append('quotedMessageId', params.quotedMessageId?.trim() || '');
+    form.append('quotedPreviewText', params.quotedPreviewText?.trim() || '');
+    form.append('quotedType', params.quotedType?.trim() || '');
+    form.append('quotedAuthorPhone', params.quotedAuthorPhone?.trim() || '');
     if (typeof params.durationSeconds === 'number' && Number.isFinite(params.durationSeconds)) {
       form.append('durationSeconds', String(Math.max(0, Math.round(params.durationSeconds))));
     }
@@ -939,6 +982,10 @@ export const commWhatsAppService = {
     mimeType?: string;
     caption?: string;
     clientRequestId?: string;
+    quotedMessageId?: string;
+    quotedPreviewText?: string;
+    quotedType?: string;
+    quotedAuthorPhone?: string;
   }): Promise<{ messageId: string | null; status: string }> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-send', {
       body: {
@@ -949,6 +996,10 @@ export const commWhatsAppService = {
         fileName: params.fileName?.trim() || '',
         mimeType: params.mimeType?.trim() || '',
         clientRequestId: params.clientRequestId?.trim() || '',
+        quotedMessageId: params.quotedMessageId?.trim() || '',
+        quotedPreviewText: params.quotedPreviewText?.trim() || '',
+        quotedType: params.quotedType?.trim() || '',
+        quotedAuthorPhone: params.quotedAuthorPhone?.trim() || '',
       },
     });
 
@@ -987,7 +1038,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel editar a mensagem no WhatsApp.'));
+      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel editar a mensagem no WhatsApp.'));
     }
 
     const payload = (data ?? {}) as { editedText?: string; editedAt?: string | null };
@@ -1006,12 +1057,32 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel apagar a mensagem no WhatsApp.'));
+      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel apagar a mensagem no WhatsApp.'));
     }
 
     const payload = (data ?? {}) as { deletedAt?: string | null };
     return {
       deletedAt: typeof payload.deletedAt === 'string' ? payload.deletedAt : null,
+    };
+  },
+
+  async forwardMessage(messageId: string, targetChatId: string): Promise<{ messageId: string | null; status: string }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-manage-message', {
+      body: {
+        messageId,
+        action: 'forward',
+        targetChatId,
+      },
+    });
+
+    if (error) {
+      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel encaminhar a mensagem no WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { messageId?: string | null; status?: string };
+    return {
+      messageId: payload.messageId ?? null,
+      status: typeof payload.status === 'string' ? payload.status : 'pending',
     };
   },
 

@@ -8,8 +8,15 @@ import {
   corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  extractPhoneFromChatId,
+  extractWhapiMessageId,
+  extractWhapiMessageStatus,
+  formatPhoneLabel,
   getNowIso,
+  isDirectWhapiChatId,
   markCommWhatsAppMessageDeleted,
+  normalizeWhapiChatId,
+  persistCommWhatsAppMessage,
   parseWhapiError,
   readResponsePayload,
   sanitizeWhapiToken,
@@ -27,6 +34,7 @@ type ManageMessageBody = {
   messageId?: string;
   action?: string;
   text?: string;
+  targetChatId?: string;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
@@ -88,7 +96,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (action !== 'edit' && action !== 'delete') {
+    if (action !== 'edit' && action !== 'delete' && action !== 'forward') {
       return new Response(JSON.stringify({ error: 'Acao invalida para a mensagem.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -137,7 +145,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (toTrimmedString(message.direction).toLowerCase() !== 'outbound') {
+    if ((action === 'edit' || action === 'delete') && toTrimmedString(message.direction).toLowerCase() !== 'outbound') {
       return new Response(JSON.stringify({ error: 'Somente mensagens enviadas por voce podem ser alteradas aqui.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -247,6 +255,94 @@ Deno.serve(async (req: Request) => {
         action: 'edit',
         editedText: nextText,
         editedAt,
+      }), {
+        status: 200,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (action === 'forward') {
+      const targetChatId = normalizeWhapiChatId(body.targetChatId);
+      if (!targetChatId || !isDirectWhapiChatId(targetChatId)) {
+        return new Response(JSON.stringify({ error: 'Conversa de destino invalida para encaminhar.' }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(externalMessageId)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          to: targetChatId,
+          force: true,
+        }),
+      });
+      const payload = await readResponsePayload(response);
+
+      if (!response.ok) {
+        return new Response(JSON.stringify({ error: parseWhapiError(payload) || 'Falha ao encaminhar mensagem na Whapi.' }), {
+          status: response.status,
+          headers: jsonHeaders,
+        });
+      }
+
+      const forwardedMessageId = extractWhapiMessageId(payload);
+      const deliveryStatus = extractWhapiMessageStatus(payload) || 'pending';
+      const nowIso = getNowIso();
+      const { data: targetChat } = await supabaseAdmin
+        .from('comm_whatsapp_chats')
+        .select('display_name, push_name')
+        .eq('channel_id', channel.id)
+        .eq('external_chat_id', targetChatId)
+        .maybeSingle();
+      const phoneDigits = extractPhoneFromChatId(targetChatId);
+      const summaryText = toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || '[Mensagem encaminhada]';
+
+      await persistCommWhatsAppMessage(supabaseAdmin, {
+        channelId: channel.id,
+        externalChatId: targetChatId,
+        phoneNumber: phoneDigits || null,
+        displayName: toTrimmedString(targetChat?.display_name) || formatPhoneLabel(phoneDigits),
+        pushName: toTrimmedString(targetChat?.push_name) || null,
+        lastMessageText: summaryText,
+        lastMessageDirection: 'outbound',
+        lastMessageAt: nowIso,
+        incrementUnread: false,
+        externalMessageId: forwardedMessageId || null,
+        direction: 'outbound',
+        messageType: toTrimmedString(message.message_type) || 'text',
+        deliveryStatus,
+        textContent: summaryText,
+        createdBy: authResult.user.profileId,
+        source: 'api',
+        senderPhone: channel.phone_number,
+        senderName: channel.connected_user_name,
+        statusUpdatedAt: nowIso,
+        errorMessage: null,
+        mediaId: null,
+        mediaUrl: null,
+        mediaMimeType: null,
+        mediaFileName: null,
+        mediaSizeBytes: null,
+        mediaDurationSeconds: null,
+        mediaCaption: null,
+        metadata: {
+          provider: 'whapi',
+          forwarded: true,
+          forwarded_from_external_message_id: externalMessageId,
+        },
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        action: 'forward',
+        messageId: forwardedMessageId || null,
+        status: deliveryStatus,
       }), {
         status: 200,
         headers: jsonHeaders,

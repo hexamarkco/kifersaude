@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -136,6 +136,8 @@ type QueuedTextMessage = {
   optimisticMessage: CommWhatsAppMessage;
   clientRequestId: string;
 };
+
+type OutgoingQuotePayload = ReturnType<typeof getQuotePayloadFromMessage>;
 
 type MessageQuoteInfo = {
   externalMessageId: string | null;
@@ -416,6 +418,19 @@ const canDeleteOutboundMessage = (message: CommWhatsAppMessage) => {
     && Boolean(message.external_message_id?.trim())
     && message.delivery_status.trim().toLowerCase() !== 'deleted';
 };
+
+const canReplyOrForwardMessage = (message: CommWhatsAppMessage) => {
+  return message.direction !== 'system'
+    && Boolean(message.external_message_id?.trim())
+    && message.delivery_status.trim().toLowerCase() !== 'deleted';
+};
+
+const getQuotePayloadFromMessage = (message: CommWhatsAppMessage) => ({
+  quotedMessageId: message.external_message_id?.trim() || '',
+  quotedPreviewText: getMessageSearchPreviewText(message),
+  quotedType: message.message_type.trim().toLowerCase(),
+  quotedAuthorPhone: message.sender_phone?.trim() || '',
+});
 
 const getMessageTimestampMs = (value?: string | null) => {
   if (!value) {
@@ -2648,6 +2663,10 @@ export default function WhatsAppInboxScreen() {
   const [editingMessageDraft, setEditingMessageDraft] = useState('');
   const [savingMessageEdit, setSavingMessageEdit] = useState(false);
   const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
+  const [replyTargetMessage, setReplyTargetMessage] = useState<CommWhatsAppMessage | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<CommWhatsAppMessage | null>(null);
+  const [forwardSearch, setForwardSearch] = useState('');
+  const [forwardingChatId, setForwardingChatId] = useState<string | null>(null);
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<string | null>(null);
   const [reactionPickerPosition, setReactionPickerPosition] = useState<{ top: number; left: number } | null>(null);
   const [openMessageActionMenuMessageId, setOpenMessageActionMenuMessageId] = useState<string | null>(null);
@@ -2965,6 +2984,15 @@ export default function WhatsAppInboxScreen() {
     () => (search ? mergeUniqueChats(remoteChatSearchResults, localChatSearchResults) : scopedChats),
     [localChatSearchResults, remoteChatSearchResults, scopedChats, search],
   );
+  const forwardTargetChats = useMemo(() => {
+    const normalizedSearch = normalizeInboxSearch(forwardSearch);
+    const candidates = chats.filter((chat) => chat.external_chat_id?.trim());
+    const filtered = normalizedSearch
+      ? candidates.filter((chat) => normalizeInboxSearch(`${chat.display_name} ${chat.saved_contact_name ?? ''} ${chat.phone_number}`).includes(normalizedSearch))
+      : candidates;
+
+    return sortChatsByInboxOrder(filtered).slice(0, 30);
+  }, [chats, forwardSearch]);
   useEffect(() => {
     if (!search) {
       setChatSearchResults([]);
@@ -3338,6 +3366,7 @@ export default function WhatsAppInboxScreen() {
       });
     }
     setPendingAttachments([]);
+    setReplyTargetMessage(null);
     setMediaUploadProgress(null);
     voicePreviewAudioRef.current?.pause();
     if (voicePreviewAudioRef.current) {
@@ -4928,6 +4957,7 @@ export default function WhatsAppInboxScreen() {
       setLoadingOlderMessages(false);
       setHasOlderMessages(false);
       setPendingAttachments([]);
+      setReplyTargetMessage(null);
       cancelVoiceRecordingRef.current();
       messagesSignatureRef.current = '';
       return;
@@ -4939,6 +4969,7 @@ export default function WhatsAppInboxScreen() {
     pendingScrollHeightRef.current = null;
     isNearBottomRef.current = true;
     setPendingAttachments([]);
+    setReplyTargetMessage(null);
     cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
     setHasOlderMessages(false);
@@ -5560,7 +5591,7 @@ export default function WhatsAppInboxScreen() {
     }
   };
 
-  const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[]) => {
+  const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[], quotePayload: OutgoingQuotePayload | null = null) => {
     if (textSegments.length === 0) {
       return;
     }
@@ -5573,6 +5604,16 @@ export default function WhatsAppInboxScreen() {
         messageType: 'text',
         textContent: segment,
         messageAt: optimisticTimestamps[index],
+        metadata: quotePayload && index === 0
+          ? {
+              quote: {
+                external_message_id: quotePayload.quotedMessageId,
+                author_phone: quotePayload.quotedAuthorPhone || null,
+                quoted_type: quotePayload.quotedType || null,
+                preview_text: quotePayload.quotedPreviewText || null,
+              },
+            }
+          : undefined,
       });
 
       appendLocalOutgoingMessage(optimisticMessage, {
@@ -5592,6 +5633,7 @@ export default function WhatsAppInboxScreen() {
         try {
           const sendResult = await commWhatsAppService.sendTextMessage(chat.external_chat_id, queued.segment, {
             clientRequestId: queued.clientRequestId,
+            ...(quotePayload && queued === queuedMessages[0] ? quotePayload : {}),
           });
           hadSuccessfulSend = true;
           patchLocalOutgoingMessage(queued.optimisticMessage.id, {
@@ -5651,6 +5693,8 @@ export default function WhatsAppInboxScreen() {
     resetComposerAfterQueue();
 
     try {
+      const replyTargetSnapshot = replyTargetMessage;
+      const quotePayload = replyTargetSnapshot ? getQuotePayloadFromMessage(replyTargetSnapshot) : null;
       if (attachmentsSnapshot.length > 0) {
         const optimisticTimestamps = allocateOptimisticMessageTimestamps(selectedChat.id, attachmentsSnapshot.length);
         const attachmentsToSend = attachmentsSnapshot.map((attachment, index) => {
@@ -5668,6 +5712,16 @@ export default function WhatsAppInboxScreen() {
             mediaSizeBytes: attachment.file.size,
             mediaDurationSeconds: attachment.durationSeconds ?? null,
             mediaCaption: attachment.kind === 'voice' ? null : caption ?? null,
+            metadata: quotePayload && index === 0
+              ? {
+                  quote: {
+                    external_message_id: quotePayload.quotedMessageId,
+                    author_phone: quotePayload.quotedAuthorPhone || null,
+                    quoted_type: quotePayload.quotedType || null,
+                    preview_text: quotePayload.quotedPreviewText || null,
+                  },
+                }
+              : undefined,
           });
 
           appendLocalOutgoingMessage(optimisticMessage, {
@@ -5722,6 +5776,7 @@ export default function WhatsAppInboxScreen() {
                   durationSeconds: queued.attachment.durationSeconds,
                   waveform: queued.attachment.kind === 'voice' ? queued.attachment.waveformPayload || undefined : undefined,
                   clientRequestId: queued.clientRequestId,
+                  ...(quotePayload && index === 0 ? quotePayload : {}),
                   onUploadProgress: (progress) => {
                     setMediaUploadProgress((current) => current?.attachmentId === queued.optimisticMessage.id
                       ? { ...current, progress }
@@ -5783,14 +5838,15 @@ export default function WhatsAppInboxScreen() {
           }
         });
       } else {
-        sendTextSegments(selectedChat, textSegments);
+        sendTextSegments(selectedChat, textSegments, quotePayload);
       }
+      setReplyTargetMessage(null);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
       const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
       toast.error(message);
     }
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments]);
 
   useEffect(() => {
     if (!voiceAttachment) {
@@ -5993,6 +6049,57 @@ export default function WhatsAppInboxScreen() {
     setEditingMessage(null);
     setEditingMessageDraft('');
   }, []);
+
+  const handleReplyToMessage = useCallback((message: CommWhatsAppMessage) => {
+    if (!canReplyOrForwardMessage(message)) {
+      toast.error('Esta mensagem nao pode ser respondida no momento.');
+      return;
+    }
+
+    setReplyTargetMessage(message);
+    setMessageActionMenuPointerAnchor(null);
+    setOpenMessageActionMenuMessageId(null);
+    window.setTimeout(() => composerTextareaRef.current?.focus(), 0);
+  }, []);
+
+  const handleOpenForwardMessageModal = useCallback((message: CommWhatsAppMessage) => {
+    if (!canReplyOrForwardMessage(message)) {
+      toast.error('Esta mensagem nao pode ser encaminhada no momento.');
+      return;
+    }
+
+    setForwardingMessage(message);
+    setForwardSearch('');
+    setMessageActionMenuPointerAnchor(null);
+    setOpenMessageActionMenuMessageId(null);
+  }, []);
+
+  const handleCloseForwardMessageModal = useCallback(() => {
+    setForwardingMessage(null);
+    setForwardSearch('');
+    setForwardingChatId(null);
+  }, []);
+
+  const handleForwardMessage = useCallback(async (targetChat: CommWhatsAppChat) => {
+    if (!forwardingMessage) {
+      return;
+    }
+
+    setForwardingChatId(targetChat.id);
+
+    try {
+      await commWhatsAppService.forwardMessage(forwardingMessage.id, targetChat.external_chat_id);
+      hydratedChatsRef.current.add(targetChat.external_chat_id);
+      await Promise.all([loadChats(), targetChat.id === selectedChatIdRef.current ? loadMessages(targetChat, 'send') : Promise.resolve()]);
+      toast.success('Mensagem encaminhada.');
+      handleCloseForwardMessageModal();
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao encaminhar mensagem', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel encaminhar a mensagem.');
+    } finally {
+      setForwardingChatId(null);
+    }
+  }, [forwardingMessage, handleCloseForwardMessageModal, loadChats, loadMessages]);
 
   const handleSaveEditedMessage = useCallback(async () => {
     if (!editingMessage) {
@@ -7745,6 +7852,7 @@ export default function WhatsAppInboxScreen() {
                     const reactionTooltipText = getReactionTooltipText(message);
                     const showEditAction = canEditOutboundMessage(message);
                     const showDeleteAction = canDeleteOutboundMessage(message);
+                    const showReplyForwardActions = canReplyOrForwardMessage(message);
 
                     return (
                       <div key={item.key} className={`message-bubble-row group/message flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
@@ -7783,7 +7891,7 @@ export default function WhatsAppInboxScreen() {
                           <div
                             className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)}`}
                             onContextMenu={(event) => {
-                              if (!showEditAction && !showDeleteAction) {
+                              if (!showEditAction && !showDeleteAction && !showReplyForwardActions) {
                                 return;
                               }
 
@@ -7801,7 +7909,7 @@ export default function WhatsAppInboxScreen() {
                               transcribing={transcribingMessageId === message.id}
                             />
                             <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-medium">
-                              {showEditAction || showDeleteAction ? (
+                              {showEditAction || showDeleteAction || showReplyForwardActions ? (
                                 <button
                                   ref={(node) => {
                                     if (node) {
@@ -7983,6 +8091,24 @@ export default function WhatsAppInboxScreen() {
                         aria-label="Parar e enviar nota de voz"
                       >
                         <SendHorizontal className="h-5 w-5" />
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {replyTargetMessage ? (
+                    <div className="mb-3 flex items-start gap-3 rounded-2xl border border-[rgba(212,192,167,0.56)] bg-[color:var(--panel-surface-soft,#f8f2e9)] px-3 py-2.5">
+                      <Reply className="mt-0.5 h-4 w-4 shrink-0 text-[var(--panel-accent-strong,#c86f1d)]" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">Respondendo</p>
+                        <p className="truncate text-sm text-[var(--panel-text-soft,#5b4635)]">{getMessageSearchPreviewText(replyTargetMessage)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setReplyTargetMessage(null)}
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--panel-text-muted,#6b7280)] transition hover:bg-black/10"
+                        aria-label="Cancelar resposta"
+                      >
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   ) : null}
@@ -8340,6 +8466,55 @@ export default function WhatsAppInboxScreen() {
           onSubmit={() => void handleSaveEditedMessage()}
         />
 
+        {forwardingMessage ? (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-label="Encaminhar mensagem">
+            <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(212,192,167,0.28)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-[var(--panel-border-subtle,#e7dac8)] px-5 py-4">
+                <div>
+                  <p className="text-base font-semibold text-[var(--panel-text,#1f2937)]">Encaminhar mensagem</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-[var(--panel-text-muted,#6b7280)]">{getMessageSearchPreviewText(forwardingMessage)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseForwardMessageModal}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--panel-text-muted,#6b7280)] transition hover:bg-black/10"
+                  aria-label="Fechar encaminhamento"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="space-y-3 p-5">
+                <Input
+                  value={forwardSearch}
+                  onChange={(event) => setForwardSearch(event.target.value)}
+                  placeholder="Buscar conversa"
+                />
+                <div className="max-h-[50vh] space-y-1 overflow-y-auto pr-1">
+                  {forwardTargetChats.length > 0 ? forwardTargetChats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      type="button"
+                      onClick={() => void handleForwardMessage(chat)}
+                      disabled={forwardingChatId === chat.id}
+                      className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--panel-surface-soft,#f8f2e9)] disabled:opacity-70"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">{getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}</p>
+                        <p className="truncate text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
+                      </div>
+                      {forwardingChatId === chat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Forward className="h-4 w-4 shrink-0 text-[var(--panel-text-muted,#6b7280)]" />}
+                    </button>
+                  )) : (
+                    <div className="rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] p-5 text-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                      Nenhuma conversa encontrada.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <WhatsAppComposerRewriteModal
           isOpen={composerRewriteModalOpen}
           generating={rewritingComposer}
@@ -8539,6 +8714,26 @@ export default function WhatsAppInboxScreen() {
         >
           {openMessageActionMenuMessage ? (
             <div className="flex flex-col gap-1">
+              {canReplyOrForwardMessage(openMessageActionMenuMessage) ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleReplyToMessage(openMessageActionMenuMessage)}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                  >
+                    <Reply className="h-4 w-4 shrink-0" />
+                    <span>Responder mensagem</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenForwardMessageModal(openMessageActionMenuMessage)}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                  >
+                    <Forward className="h-4 w-4 shrink-0" />
+                    <span>Encaminhar mensagem</span>
+                  </button>
+                </>
+              ) : null}
               {canEditOutboundMessage(openMessageActionMenuMessage) ? (
                 <button
                   type="button"

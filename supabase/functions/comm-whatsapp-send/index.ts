@@ -35,6 +35,10 @@ type SendMessageBody = {
   text?: string;
   type?: string;
   caption?: string;
+  quotedMessageId?: string;
+  quotedPreviewText?: string;
+  quotedType?: string;
+  quotedAuthorPhone?: string;
   durationSeconds?: number;
   waveform?: string;
   remoteUrl?: string;
@@ -130,6 +134,24 @@ const inferRemoteFileName = (remoteUrl: string, fallback: string) => {
   } catch {
     return sanitizeFileName('', fallback);
   }
+};
+
+const buildQuoteMetadata = (params: {
+  quotedMessageId: string;
+  quotedPreviewText: string;
+  quotedType: string;
+  quotedAuthorPhone: string;
+}) => {
+  if (!params.quotedMessageId) {
+    return null;
+  }
+
+  return {
+    external_message_id: params.quotedMessageId,
+    author_phone: params.quotedAuthorPhone || null,
+    quoted_type: params.quotedType || null,
+    preview_text: params.quotedPreviewText || null,
+  };
 };
 
 const isAllowedRemoteMediaUrl = (value: string) => {
@@ -338,6 +360,7 @@ async function sendAudioLikeWhapi(params: {
   caption: string;
   waveform: string;
   file: File;
+  quotedMessageId?: string;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
   const cleanMimeType = stripMimeParameters(params.file.type || 'audio/webm');
   const bytes = new Uint8Array(await params.file.arrayBuffer());
@@ -357,6 +380,10 @@ async function sendAudioLikeWhapi(params: {
 
   if (params.kind === 'voice' && params.waveform) {
     jsonPayload.waveform = params.waveform;
+  }
+
+  if (params.quotedMessageId) {
+    jsonPayload.quoted = params.quotedMessageId;
   }
 
   let response = await fetch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
@@ -386,6 +413,9 @@ async function sendAudioLikeWhapi(params: {
   }
   if (params.kind === 'voice' && params.waveform) {
     messageForm.append('waveform', params.waveform);
+  }
+  if (params.quotedMessageId) {
+    messageForm.append('quoted', params.quotedMessageId);
   }
   messageForm.append('media', freshFile, freshFile.name);
 
@@ -450,6 +480,10 @@ async function sendAudioLikeWhapi(params: {
     mediaIdPayload.waveform = params.waveform;
   }
 
+  if (params.quotedMessageId) {
+    mediaIdPayload.quoted = params.quotedMessageId;
+  }
+
   response = await fetch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
     method: 'POST',
     headers: {
@@ -510,12 +544,20 @@ Deno.serve(async (req: Request) => {
     let mediaWaveform = '';
     let remoteUrl = '';
     let clientRequestId = '';
+    let quotedMessageId = '';
+    let quotedPreviewText = '';
+    let quotedType = '';
+    let quotedAuthorPhone = '';
 
     if (contentType.includes('multipart/form-data')) {
       const form = await req.formData();
       chatId = normalizeWhapiChatId(form.get('chatId'));
       text = toTrimmedString(form.get('caption'));
       clientRequestId = sanitizeClientRequestId(form.get('clientRequestId'));
+      quotedMessageId = toTrimmedString(form.get('quotedMessageId'));
+      quotedPreviewText = toTrimmedString(form.get('quotedPreviewText'));
+      quotedType = toTrimmedString(form.get('quotedType'));
+      quotedAuthorPhone = toTrimmedString(form.get('quotedAuthorPhone'));
       const uploaded = form.get('file');
 
       if (!(uploaded instanceof File)) {
@@ -535,6 +577,10 @@ Deno.serve(async (req: Request) => {
       chatId = normalizeWhapiChatId(body.chatId);
       text = toTrimmedString(body.text) || toTrimmedString(body.caption);
       clientRequestId = sanitizeClientRequestId(body.clientRequestId);
+      quotedMessageId = toTrimmedString(body.quotedMessageId);
+      quotedPreviewText = toTrimmedString(body.quotedPreviewText);
+      quotedType = toTrimmedString(body.quotedType);
+      quotedAuthorPhone = toTrimmedString(body.quotedAuthorPhone);
       remoteUrl = toTrimmedString(body.remoteUrl);
       if (remoteUrl) {
         mediaFile = await fetchRemoteMediaFile({
@@ -598,6 +644,12 @@ Deno.serve(async (req: Request) => {
 
     let whapiResponse: Response;
     let uploadedMediaId = '';
+    const quoteMetadata = buildQuoteMetadata({
+      quotedMessageId,
+      quotedPreviewText,
+      quotedType,
+      quotedAuthorPhone,
+    });
 
     if (mediaFile && mediaKind) {
       if (mediaKind === 'audio' || mediaKind === 'voice') {
@@ -608,6 +660,7 @@ Deno.serve(async (req: Request) => {
           caption: text,
           waveform: mediaWaveform,
           file: mediaFile,
+          quotedMessageId,
         });
 
         whapiResponse = audioLikeResult.response;
@@ -662,6 +715,7 @@ Deno.serve(async (req: Request) => {
           metadata: {
             provider: 'whapi',
             ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
+            ...(quoteMetadata ? { quote: quoteMetadata } : {}),
           },
         });
 
@@ -687,6 +741,9 @@ Deno.serve(async (req: Request) => {
         if (text) {
           messageForm.append('caption', text);
         }
+        if (quotedMessageId) {
+          messageForm.append('quoted', quotedMessageId);
+        }
         messageForm.append('media', mediaFile, mediaFile.name);
 
         whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
@@ -699,6 +756,14 @@ Deno.serve(async (req: Request) => {
         });
       }
     } else {
+      const textPayload: Record<string, unknown> = {
+        to: chatId,
+        body: text,
+      };
+      if (quotedMessageId) {
+        textPayload.quoted = quotedMessageId;
+      }
+
       whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
         method: 'POST',
         headers: {
@@ -706,10 +771,7 @@ Deno.serve(async (req: Request) => {
           Accept: 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          to: chatId,
-          body: text,
-        }),
+        body: JSON.stringify(textPayload),
       });
     }
 
@@ -776,6 +838,7 @@ Deno.serve(async (req: Request) => {
       metadata: {
         provider: 'whapi',
         ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
+        ...(quoteMetadata ? { quote: quoteMetadata } : {}),
       },
     });
 

@@ -321,174 +321,276 @@ export default function WhatsAppFollowUpModal({
     <ModalShell
       isOpen={isOpen}
       onClose={onClose}
-      title="Gerador de follow-up"
-      description="Gere uma sugestão com IA, refine com instruções extras e use --- em uma linha isolada para separar mensagens no envio."
+      title="Gerar follow-up"
+      description="Escolha um cenário, gere uma sugestão e envie. Os ajustes avançados continuam disponíveis quando precisar."
       size="xl"
-      panelClassName="config-transparent-buttons max-w-[92rem]"
+      panelClassName="config-transparent-buttons max-w-[82rem]"
       footer={(
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-            Separador de mensagens: <code>{WHATSAPP_MESSAGE_BREAK_DELIMITER}</code> em uma linha isolada. O envio respeita cada bloco como uma mensagem separada.
+            Use <code>{WHATSAPP_MESSAGE_BREAK_DELIMITER}</code> em uma linha isolada para separar em várias mensagens.
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button variant="secondary" onClick={onClose} disabled={generating || submitting || Boolean(refiningActionId)}>
               Fechar
             </Button>
-            <Button variant="secondary" onClick={() => onGenerate()} loading={generating} disabled={submitting}>
+            <Button variant={value.trim() ? 'secondary' : 'primary'} onClick={() => onGenerate()} loading={generating} disabled={submitting}>
               {!generating && <Sparkles className="h-4 w-4" />}
               <span>{value.trim() ? 'Gerar novamente' : 'Gerar agora'}</span>
             </Button>
             <Button variant="secondary" onClick={() => onGenerate({ variantCount: 3 })} loading={generating} disabled={submitting}>
               {!generating && <Sparkles className="h-4 w-4" />}
-              <span>{hasVariations ? 'Novas variações' : 'Gerar variações'}</span>
+              <span>{hasVariations ? 'Novas opções' : 'Gerar 3 opções'}</span>
             </Button>
             <Button onClick={onSend} loading={submitting} disabled={generating || submitting || !value.trim()}>
-              Enviar mensagens
+              Enviar
             </Button>
           </div>
         </div>
       )}
     >
-      <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(280px,0.82fr)_minmax(0,1.28fr)_minmax(300px,0.9fr)]">
+      <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.72fr)]">
+        <section className="min-w-0 space-y-4">
+          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Cenário</h3>
+                  <span className="text-[11px] font-medium text-[var(--panel-text-muted,#876f5c)]">Clique e gere</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CONVERSATION_SITUATION_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.id}
+                      type="button"
+                      variant="soft"
+                      size="sm"
+                      onClick={() => handleApplySituationPreset(preset)}
+                      disabled={generating || submitting}
+                      title={`Adicionar instrução: ${preset.label}`}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Tom</h3>
+                  <span className="text-[11px] font-medium text-[var(--panel-accent-ink,#8b4d12)]">{selectedToneOption.label}</span>
+                </div>
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Tom do follow-up">
+                  {followUpToneOptions.map((option) => {
+                    const active = tone === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => onChangeTone(option.value)}
+                        disabled={generating || submitting}
+                        title={option.description}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${active
+                          ? 'border-[var(--panel-accent,#c46a1a)] bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)] shadow-sm'
+                          : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)]'}`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <details className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3" open={Boolean(customInstructions.trim())}>
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Ajustes extras</h3>
+                    <p className="mt-0.5 text-xs text-[var(--panel-text-muted,#876f5c)]">Instruções, variáveis e áudio ficam aqui.</p>
+                  </div>
+                  <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
+                    {customInstructions.trim() ? 'Ativo' : 'Abrir'}
+                  </span>
+                </summary>
+                <div className="mt-3">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-soft,#5b4635)]">Instruções personalizadas</span>
+                    <span className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">Digite {'{{'} para variáveis</span>
+                  </div>
+                  <VariableAutocompleteTextarea
+                    value={customInstructions}
+                    onChange={onChangeCustomInstructions}
+                    suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
+                    rows={5}
+                    size="compact"
+                    placeholder={
+                      'Ex.:\n' +
+                      '- Fale mais curto.\n' +
+                      '- Não insista demais.\n' +
+                      '- Termine com uma pergunta objetiva.'
+                    }
+                    disabled={generating || submitting || Boolean(refiningActionId)}
+                  />
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    {isRecording && currentTranscript ? (
+                      <div className="text-xs italic text-[var(--panel-text-muted,#876f5c)]">
+                        "...{currentTranscript}"
+                      </div>
+                    ) : (
+                      <p className="text-[11px] leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                        O áudio entra como instrução corrigida automaticamente.
+                      </p>
+                    )}
+                    <Button
+                      type="button"
+                      variant={isRecording ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={handleToggleRecording}
+                      loading={isCorrecting}
+                      disabled={generating || submitting || Boolean(refiningActionId)}
+                      className={isRecording ? 'animate-pulse' : ''}
+                    >
+                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      <span>{isCorrecting ? 'Corrigindo...' : isRecording ? 'Parar' : 'Gravar áudio'}</span>
+                    </Button>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+            <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Mensagem</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">Edite o texto final ou refine com um clique.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                  {messageSegments.length || 1} mensagem(ns)
+                </div>
+                {value.trim() ? (
+                  <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
+                    {value.trim().length} caracteres
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="mb-3 flex flex-wrap gap-2" aria-label="Refinamentos da mensagem sugerida">
+              {SIMPLE_REFINEMENT_ACTIONS.map((action) => (
+                <Button
+                  key={action.id}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleSimpleRefinement(action.id)}
+                  loading={refiningActionId === action.id}
+                  disabled={generating || submitting || Boolean(refiningActionId) || !value.trim()}
+                  title={action.description}
+                >
+                  {action.label}
+                </Button>
+              ))}
+              {FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS.map((action) => (
+                <Button
+                  key={action.id}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void handleContextRefinement(action)}
+                  loading={refiningActionId === action.id}
+                  disabled={generating || submitting || Boolean(refiningActionId) || !value.trim()}
+                  title={action.description}
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+
+            {hasVariations ? (
+              <div className="mb-3 flex gap-2 overflow-x-auto pb-1" aria-label="Variações geradas">
+                {variations.map((variation, index) => (
+                  <button
+                    key={`${variation.label}:${index}`}
+                    type="button"
+                    onClick={() => onChangeValue(variation.text)}
+                    disabled={generating || submitting || Boolean(refiningActionId)}
+                    className="min-w-[12rem] max-w-[16rem] rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2 text-left text-xs transition hover:border-[var(--panel-accent-border,#d2ab85)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <span className="block truncate font-semibold text-[var(--panel-text,#1a120d)]">{variation.label}</span>
+                    <span className="mt-1 line-clamp-2 block leading-5 text-[var(--panel-text-muted,#876f5c)]">{variation.text}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            <Textarea
+              value={value}
+              onChange={(event) => onChangeValue(event.target.value)}
+              rows={12}
+              className="min-h-[320px] text-sm leading-6"
+              placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
+              disabled={generating || submitting || Boolean(refiningActionId)}
+            />
+          </div>
+        </section>
+
         <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#8b4d12)]">Passo 1</p>
-                <h3 className="mt-1 text-sm font-semibold text-[var(--panel-text,#1a120d)]">Direção da IA</h3>
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text,#1a120d)]">
+                  <MessageSquare className="h-4 w-4" />
+                  Preview
+                </div>
+                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">Como será enviado no WhatsApp.</p>
               </div>
               <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
-                Configuração
-              </span>
-            </div>
-            <p className="mt-2 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-              Defina o tom, acrescente o cenário e deixe as instruções específicas em um único bloco.
-            </p>
-
-            <div className="mt-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-soft,#5b4635)]">Tom</h4>
-                <span className="text-[11px] font-medium text-[var(--panel-accent-ink,#8b4d12)]">{selectedToneOption.label}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Tom do follow-up">
-                {followUpToneOptions.map((option) => {
-                  const active = tone === option.value;
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      onClick={() => onChangeTone(option.value)}
-                      disabled={generating || submitting}
-                      title={option.description}
-                      className={`rounded-xl border px-3 py-2 text-left text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${active
-                        ? 'border-[var(--panel-accent,#c46a1a)] bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)] shadow-sm'
-                        : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)]'}`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="mt-2 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-                {selectedToneOption.description}
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#8b4d12)]">Passo 2</p>
-                <h3 className="mt-1 text-sm font-semibold text-[var(--panel-text,#1a120d)]">Contexto e instruções</h3>
-              </div>
-              <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
-                Editável
+                {messageSegments.length || 1} bloco(s)
               </span>
             </div>
 
-            <div className="mt-4 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
-              <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-soft,#5b4635)]">Situação da conversa</h4>
-              <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-                Use um preset para preencher a intenção sem reescrever o prompt manualmente.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {CONVERSATION_SITUATION_PRESETS.map((preset) => (
-                  <Button
-                    key={preset.id}
-                    type="button"
-                    variant="soft"
-                    size="sm"
-                    onClick={() => handleApplySituationPreset(preset)}
-                    disabled={generating || submitting}
-                    title={`Adicionar instrução: ${preset.label}`}
+            <div className="mt-4 max-h-[430px] space-y-3 overflow-y-auto pr-1">
+              {messageSegments.length > 0 ? (
+                messageSegments.map((segment, index) => (
+                  <div
+                    key={`${index}:${segment}`}
+                    className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm"
                   >
-                    {preset.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-soft,#5b4635)]">Instruções personalizadas</h4>
-                <span className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">Digite {'{{'} para variáveis</span>
-              </div>
-              <VariableAutocompleteTextarea
-                value={customInstructions}
-                onChange={onChangeCustomInstructions}
-                suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
-                rows={7}
-                size="compact"
-                placeholder={
-                  'Ex.:\n' +
-                  '- Fale mais curto.\n' +
-                  '- Não insista demais.\n' +
-                  '- Termine com uma pergunta objetiva.'
-                }
-                disabled={generating || submitting || Boolean(refiningActionId)}
-              />
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                {isRecording && currentTranscript ? (
-                  <div className="text-xs italic text-[var(--panel-text-muted,#876f5c)]">
-                    "...{currentTranscript}"
+                    <div className="rounded-t-xl border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                        Mensagem {index + 1}
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1a120d)]">
+                        {segment}
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-[11px] leading-5 text-[var(--panel-text-muted,#876f5c)]">
-                    O áudio é transcrito e corrigido antes de entrar nas instruções.
-                  </p>
-                )}
-                <Button
-                  type="button"
-                  variant={isRecording ? 'primary' : 'secondary'}
-                  size="sm"
-                  onClick={handleToggleRecording}
-                  loading={isCorrecting}
-                  disabled={generating || submitting || Boolean(refiningActionId)}
-                  className={isRecording ? 'animate-pulse' : ''}
-                >
-                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                  <span>{isCorrecting ? 'Corrigindo...' : isRecording ? 'Parar' : 'Gravar áudio'}</span>
-                </Button>
-              </div>
+                ))
+              ) : (
+                <div className="rounded-xl border-2 border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-10 text-center">
+                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[var(--panel-text-muted,#876f5c)]" />
+                  <p className="text-sm text-[var(--panel-text-muted,#876f5c)]">Gere ou escreva uma sugestão para visualizar.</p>
+                </div>
+              )}
             </div>
           </div>
 
           <details className="group rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4" open={selectedSalesTechniques.length > 0}>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#8b4d12)]">Opcional</p>
-                <h3 className="mt-1 text-sm font-semibold text-[var(--panel-text,#1a120d)]">Técnicas de venda</h3>
+                <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Técnicas avançadas</h3>
+                <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">Opcional para a próxima geração.</p>
               </div>
               <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
-                {selectedSalesTechniques.length || 'Ver'}
+                {selectedSalesTechniques.length || 'Abrir'}
               </span>
             </summary>
-            <p className="mt-2 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-              Selecione abordagens apenas quando elas ajudarem a próxima geração.
-            </p>
             <div className="mt-3 max-h-44 space-y-2 overflow-y-auto pr-1" role="group" aria-label="Técnicas de venda para o follow-up">
               {followUpSalesTechniqueOptions.map((technique) => {
                 const selected = selectedSalesTechniques.includes(technique.id);
@@ -514,150 +616,6 @@ export default function WhatsAppFollowUpModal({
               })}
             </div>
           </details>
-        </aside>
-
-        <section className="min-w-0 space-y-4">
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#8b4d12)]">Passo 3</p>
-                <h3 className="mt-1 text-sm font-semibold text-[var(--panel-text,#1a120d)]">Mensagem sugerida</h3>
-                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-                  Edite o texto final e use os atalhos abaixo para refinar sem sair do fluxo.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
-                  {messageSegments.length || 1} mensagem(ns)
-                </div>
-                {value.trim() ? (
-                  <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
-                    {value.trim().length} caracteres
-                  </div>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="mb-4 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
-              <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-soft,#5b4635)]">Refinar mensagem</h4>
-                <p className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">Disponível após existir uma sugestão</p>
-              </div>
-              <div className="flex flex-wrap gap-2" aria-label="Refinamentos da mensagem sugerida">
-                {SIMPLE_REFINEMENT_ACTIONS.map((action) => (
-                  <Button
-                    key={action.id}
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => void handleSimpleRefinement(action.id)}
-                    loading={refiningActionId === action.id}
-                    disabled={generating || submitting || Boolean(refiningActionId) || !value.trim()}
-                    title={action.description}
-                  >
-                    {action.label}
-                  </Button>
-                ))}
-                {FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS.map((action) => (
-                  <Button
-                    key={action.id}
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => void handleContextRefinement(action)}
-                    loading={refiningActionId === action.id}
-                    disabled={generating || submitting || Boolean(refiningActionId) || !value.trim()}
-                    title={action.description}
-                  >
-                    {action.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {hasVariations ? (
-              <div className="mb-4 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
-                <div className="flex items-center justify-between gap-3">
-                  <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
-                    Variações geradas
-                  </h4>
-                  <span className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">Clique para usar</span>
-                </div>
-                <div className="mt-3 grid gap-2 md:grid-cols-3">
-                  {variations.map((variation, index) => (
-                    <button
-                      key={`${variation.label}:${index}`}
-                      type="button"
-                      onClick={() => onChangeValue(variation.text)}
-                      disabled={generating || submitting || Boolean(refiningActionId)}
-                      className="min-w-0 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-left text-xs transition hover:border-[var(--panel-accent-border,#d2ab85)] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <span className="block truncate font-semibold text-[var(--panel-text,#1a120d)]">{variation.label}</span>
-                      <span className="mt-1 line-clamp-3 block leading-5 text-[var(--panel-text-muted,#876f5c)]">{variation.text}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <Textarea
-              value={value}
-              onChange={(event) => onChangeValue(event.target.value)}
-              rows={17}
-              className="min-h-[420px] text-sm leading-6"
-              placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
-              disabled={generating || submitting || Boolean(refiningActionId)}
-            />
-          </div>
-        </section>
-
-        <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#8b4d12)]">Passo 4</p>
-                <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-[var(--panel-text,#1a120d)]">
-                  <MessageSquare className="h-4 w-4" />
-                  Preview do envio
-                </div>
-              </div>
-              <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
-                WhatsApp
-              </span>
-            </div>
-            <p className="mt-2 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-              Cada bloco separado por <code>{WHATSAPP_MESSAGE_BREAK_DELIMITER}</code> vira uma mensagem independente.
-            </p>
-
-            <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">
-              {messageSegments.length > 0 ? (
-                messageSegments.map((segment, index) => (
-                  <div
-                    key={`${index}:${segment}`}
-                    className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm"
-                  >
-                    <div className="rounded-t-xl border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
-                        Mensagem {index + 1}
-                      </span>
-                    </div>
-                    <div className="p-3">
-                      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1a120d)]">
-                        {segment}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-xl border-2 border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-10 text-center">
-                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[var(--panel-text-muted,#876f5c)]" />
-                  <p className="text-sm text-[var(--panel-text-muted,#876f5c)]">
-                    Gere ou escreva uma sugestão para visualizar como ela será enviada.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
         </aside>
       </div>
     </ModalShell>

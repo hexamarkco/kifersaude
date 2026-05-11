@@ -51,6 +51,20 @@ export type CommWhatsAppMessagesPage = {
   hasMore: boolean;
 };
 
+export type CommWhatsAppRefreshedMessageStatus = {
+  id: string;
+  external_message_id: string;
+  previous_status: string;
+  delivery_status: string;
+  updated: boolean;
+};
+
+export type CommWhatsAppRefreshMessageStatusResult = {
+  refreshed: CommWhatsAppRefreshedMessageStatus[];
+  checked: number;
+  updated: number;
+};
+
 export type CommWhatsAppMessageSearchResult = {
   message: CommWhatsAppMessage;
   chat: CommWhatsAppChat;
@@ -604,6 +618,31 @@ export const commWhatsAppService = {
       imported: typeof payload.imported === 'number' ? payload.imported : 0,
       fetched: typeof payload.fetched === 'number' ? payload.fetched : 0,
       inserted: typeof payload.inserted === 'number' ? payload.inserted : typeof payload.imported === 'number' ? payload.imported : 0,
+      updated: typeof payload.updated === 'number' ? payload.updated : 0,
+    };
+  },
+
+  async refreshMessageStatuses(params: {
+    chatId?: string;
+    externalMessageIds?: string[];
+    limit?: number;
+  }): Promise<CommWhatsAppRefreshMessageStatusResult> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-refresh-message-status', {
+      body: {
+        chatId: params.chatId?.trim() || '',
+        externalMessageIds: params.externalMessageIds?.map((id) => id.trim()).filter(Boolean) ?? [],
+        limit: params.limit,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o status das mensagens.'));
+    }
+
+    const payload = (data ?? {}) as Partial<CommWhatsAppRefreshMessageStatusResult>;
+    return {
+      refreshed: Array.isArray(payload.refreshed) ? payload.refreshed : [],
+      checked: typeof payload.checked === 'number' ? payload.checked : 0,
       updated: typeof payload.updated === 'number' ? payload.updated : 0,
     };
   },

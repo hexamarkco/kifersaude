@@ -1694,6 +1694,43 @@ export async function fetchWhapiChatMessages(params: {
   return extractWhapiMessages(payload);
 }
 
+export async function fetchWhapiMessage(params: {
+  token: string;
+  messageId: string;
+}): Promise<Record<string, unknown> | null> {
+  const messageId = toTrimmedString(params.messageId);
+  if (!messageId) {
+    return null;
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+  });
+
+  const payload = await readResponsePayload(response);
+  if (!response.ok) {
+    return null;
+  }
+
+  if (isRecord(payload)) {
+    if (isRecord(payload.message)) {
+      return payload.message;
+    }
+
+    const payloadId = toTrimmedString(payload.id) || toTrimmedString(payload.message_id);
+    if (payloadId) {
+      return payload;
+    }
+  }
+
+  const [message] = extractWhapiMessages(payload);
+  return message ?? null;
+}
+
 export async function fetchWhapiContactsPage(params: {
   token: string;
   count?: number;

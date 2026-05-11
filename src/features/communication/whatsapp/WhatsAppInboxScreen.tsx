@@ -65,6 +65,8 @@ const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
+const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000];
+const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending']);
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -2734,6 +2736,8 @@ export default function WhatsAppInboxScreen() {
   const localOutgoingRetryPayloadRef = useRef<Map<string, LocalOutgoingRetryPayload>>(new Map());
   const localOutgoingMediaPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const sendQueueByChatIdRef = useRef<Map<string, Promise<void>>>(new Map());
+  const statusRefreshTimeoutsRef = useRef<number[]>([]);
+  const lastPendingStatusRefreshKeyRef = useRef('');
   const activeSendOperationsRef = useRef(0);
   const composerQueueSnapshotKeysRef = useRef<Set<string>>(new Set());
   const retryingMessageIdsRef = useRef<Set<string>>(new Set());
@@ -4848,6 +4852,57 @@ export default function WhatsAppInboxScreen() {
     }
   }, [buildMessagesSignature, loadChats]);
 
+  const scheduleMessageStatusRefresh = useCallback((params: {
+    chat: CommWhatsAppChat;
+    externalMessageIds: string[];
+  }) => {
+    const externalMessageIds = Array.from(new Set(params.externalMessageIds.map((id) => id.trim()).filter(Boolean))).slice(0, 20);
+    if (externalMessageIds.length === 0) {
+      return;
+    }
+
+    for (const delayMs of MESSAGE_STATUS_REFRESH_DELAYS_MS) {
+      const timeoutId = window.setTimeout(() => {
+        statusRefreshTimeoutsRef.current = statusRefreshTimeoutsRef.current.filter((id) => id !== timeoutId);
+
+        void commWhatsAppService.refreshMessageStatuses({
+          chatId: params.chat.external_chat_id,
+          externalMessageIds,
+          limit: externalMessageIds.length,
+        }).then((result) => {
+          if (result.refreshed.length === 0) {
+            return;
+          }
+
+          const refreshedByExternalId = new Map(result.refreshed.map((item) => [item.external_message_id, item]));
+          setLocalOutgoingMessages((current) => current.map((message) => {
+            const externalMessageId = String(message.external_message_id ?? '').trim();
+            const refreshed = externalMessageId ? refreshedByExternalId.get(externalMessageId) : null;
+            if (!refreshed || message.delivery_status === refreshed.delivery_status) {
+              return message;
+            }
+
+            return {
+              ...message,
+              delivery_status: refreshed.delivery_status,
+              status_updated_at: new Date().toISOString(),
+            };
+          }));
+
+          if (result.updated > 0 || result.refreshed.some((item) => !REFRESHABLE_OUTBOUND_STATUSES.has(item.delivery_status.trim().toLowerCase()))) {
+            void Promise.all([loadMessages(params.chat, 'send'), loadChats()]).catch((error) => {
+              console.error('[WhatsAppInbox] erro ao recarregar apos atualizar status ativo', error);
+            });
+          }
+        }).catch((error) => {
+          console.error('[WhatsAppInbox] erro ao atualizar status ativo da mensagem', error);
+        });
+      }, delayMs);
+
+      statusRefreshTimeoutsRef.current.push(timeoutId);
+    }
+  }, [loadChats, loadMessages]);
+
   useEffect(() => {
     let active = true;
 
@@ -4896,6 +4951,10 @@ export default function WhatsAppInboxScreen() {
     () => () => {
       mediaUploadAbortControllerRef.current?.abort();
       cancelVoiceRecordingRef.current();
+      for (const timeoutId of statusRefreshTimeoutsRef.current) {
+        window.clearTimeout(timeoutId);
+      }
+      statusRefreshTimeoutsRef.current = [];
     },
     [],
   );
@@ -4948,6 +5007,35 @@ export default function WhatsAppInboxScreen() {
 
     return () => window.clearInterval(intervalId);
   }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, pollingEnabled, selectedChat]);
+
+  useEffect(() => {
+    if (!pollingEnabled || !selectedChat) {
+      return;
+    }
+
+    const pendingExternalIds = visibleMessages
+      .filter((message) => message.direction === 'outbound')
+      .filter((message) => REFRESHABLE_OUTBOUND_STATUSES.has(String(message.delivery_status ?? '').trim().toLowerCase()))
+      .map((message) => String(message.external_message_id ?? '').trim())
+      .filter(Boolean)
+      .slice(-10);
+
+    if (pendingExternalIds.length === 0) {
+      lastPendingStatusRefreshKeyRef.current = '';
+      return;
+    }
+
+    const refreshKey = `${selectedChat.id}:${pendingExternalIds.join('|')}`;
+    if (lastPendingStatusRefreshKeyRef.current === refreshKey) {
+      return;
+    }
+
+    lastPendingStatusRefreshKeyRef.current = refreshKey;
+    scheduleMessageStatusRefresh({
+      chat: selectedChat,
+      externalMessageIds: pendingExternalIds,
+    });
+  }, [pollingEnabled, scheduleMessageStatusRefresh, selectedChat, visibleMessages]);
 
   useEffect(() => {
     if (!pollingEnabled || loading) {
@@ -5512,6 +5600,12 @@ export default function WhatsAppInboxScreen() {
             status_updated_at: new Date().toISOString(),
             error_message: null,
           });
+          if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+            scheduleMessageStatusRefresh({
+              chat,
+              externalMessageIds: [sendResult.messageId],
+            });
+          }
           localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
@@ -5530,7 +5624,7 @@ export default function WhatsAppInboxScreen() {
         });
       }
     });
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh]);
 
   const handleSendMessage = useCallback(() => {
     if (!selectedChat) return;
@@ -5647,6 +5741,12 @@ export default function WhatsAppInboxScreen() {
                   status_updated_at: new Date().toISOString(),
                   error_message: null,
                 });
+                if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+                  scheduleMessageStatusRefresh({
+                    chat: selectedChat,
+                    externalMessageIds: [sendResult.messageId],
+                  });
+                }
                 localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
               } catch (error) {
                 const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia.';
@@ -5690,7 +5790,7 @@ export default function WhatsAppInboxScreen() {
       const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
       toast.error(message);
     }
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, resetComposerAfterQueue, resolveComposerVariables, selectedChat, sendDisabledReason, sendTextSegments]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments]);
 
   useEffect(() => {
     if (!voiceAttachment) {
@@ -5746,6 +5846,12 @@ export default function WhatsAppInboxScreen() {
             status_updated_at: new Date().toISOString(),
             error_message: null,
           });
+          if (selectedChat && sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+            scheduleMessageStatusRefresh({
+              chat: selectedChat,
+              externalMessageIds: [sendResult.messageId],
+            });
+          }
         } else if (localRetryPayload.kind === 'media') {
           const sendResult = await commWhatsAppService.sendMediaMessage({
             chatId: selectedChat?.external_chat_id || '',
@@ -5765,6 +5871,12 @@ export default function WhatsAppInboxScreen() {
             status_updated_at: new Date().toISOString(),
             error_message: null,
           });
+          if (selectedChat && sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+            scheduleMessageStatusRefresh({
+              chat: selectedChat,
+              externalMessageIds: [sendResult.messageId],
+            });
+          }
         } else {
           const sendResult = await commWhatsAppService.sendRemoteMediaMessage({
             chatId: selectedChat?.external_chat_id || '',
@@ -5781,6 +5893,12 @@ export default function WhatsAppInboxScreen() {
             status_updated_at: new Date().toISOString(),
             error_message: null,
           });
+          if (selectedChat && sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+            scheduleMessageStatusRefresh({
+              chat: selectedChat,
+              externalMessageIds: [sendResult.messageId],
+            });
+          }
         }
 
         localOutgoingRetryPayloadRef.current.delete(message.id);
@@ -7044,6 +7162,12 @@ export default function WhatsAppInboxScreen() {
           status_updated_at: new Date().toISOString(),
           error_message: null,
         });
+        if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
+          scheduleMessageStatusRefresh({
+            chat: selectedChat,
+            externalMessageIds: [sendResult.messageId],
+          });
+        }
         localOutgoingRetryPayloadRef.current.delete(optimisticMessage.id);
 
         void (async () => {
@@ -7066,7 +7190,7 @@ export default function WhatsAppInboxScreen() {
         setSendingDrawerMedia(false);
       }
     });
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, selectedChat]);
 
   const handleToggleFollowUpSalesTechnique = useCallback((techniqueId: string) => {
     setFollowUpSelectedSalesTechniques((current) => (

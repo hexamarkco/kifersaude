@@ -215,8 +215,18 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
+        const sent = (payload as Record<string, unknown>).sent;
+        if (sent === false) {
+          return new Response(JSON.stringify({ error: parseWhapiError(payload) || 'A Whapi nao confirmou a edicao da mensagem.' }), {
+            status: 400,
+            headers: jsonHeaders,
+          });
+        }
+      }
+
       const editedAt = getNowIso();
-      await applyCommWhatsAppMessageEdit(supabaseAdmin, {
+      const editResult = await applyCommWhatsAppMessageEdit(supabaseAdmin, {
         channelId: channel.id,
         targetExternalMessageId: externalMessageId,
         editedText: nextText,
@@ -224,6 +234,13 @@ Deno.serve(async (req: Request) => {
         originalText: toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || null,
         actionType: 'manual_edit',
       });
+
+      if (!editResult) {
+        return new Response(JSON.stringify({ error: 'Mensagem editada na Whapi, mas nao encontrada para atualizar no inbox.' }), {
+          status: 404,
+          headers: jsonHeaders,
+        });
+      }
 
       return new Response(JSON.stringify({
         success: true,

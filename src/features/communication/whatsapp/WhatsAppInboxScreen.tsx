@@ -188,12 +188,7 @@ const GALLERY_GROUP_MAX_GAP_MS = 2 * 60 * 1000;
 const EDITABLE_OUTBOUND_MESSAGE_TYPES = new Set(['text', 'image', 'video', 'gif', 'short', 'document']);
 const EMPTY_COMPOSER_SELECTION: ComposerSelection = { start: 0, end: 0 };
 
-const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document', caption?: string) => {
-  const normalizedCaption = String(caption ?? '').trim();
-  if (normalizedCaption) {
-    return normalizedCaption;
-  }
-
+const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document') => {
   if (kind === 'image') return '[Imagem]';
   if (kind === 'video') return '[Video]';
   if (kind === 'audio' || kind === 'voice') return '[Audio]';
@@ -306,10 +301,10 @@ type ChatPreviewMediaIconType = 'image' | 'video' | 'audio' | 'document';
 const getChatPreviewMediaIconType = (value: string | null | undefined): ChatPreviewMediaIconType | null => {
   const normalized = String(value ?? '').trim();
 
-  if (normalized === '[Imagem]') return 'image';
-  if (normalized === '[Video]') return 'video';
-  if (normalized === '[Audio]') return 'audio';
-  if (normalized === '[Documento]') return 'document';
+  if (normalized === '[Imagem]' || normalized.startsWith('[Imagem] ')) return 'image';
+  if (normalized === '[Video]' || normalized.startsWith('[Video] ')) return 'video';
+  if (normalized === '[Audio]' || normalized.startsWith('[Audio] ')) return 'audio';
+  if (normalized === '[Documento]' || normalized.startsWith('[Documento] ')) return 'document';
   return null;
 };
 
@@ -2747,6 +2742,7 @@ export default function WhatsAppInboxScreen() {
   const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
+  const optimisticMessageTimestampByChatIdRef = useRef<Map<string, number>>(new Map());
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
   const resolvedIdentityPhoneKeysRef = useRef<Set<string>>(new Set());
   const hydratedChatsRef = useRef<Set<string>>(new Set());
@@ -2916,6 +2912,15 @@ export default function WhatsAppInboxScreen() {
     [],
   );
 
+  const allocateOptimisticMessageTimestamps = useCallback((chatId: string, count: number) => {
+    const safeCount = Math.max(0, count);
+    const previousTimestamp = optimisticMessageTimestampByChatIdRef.current.get(chatId) ?? 0;
+    const firstTimestamp = Math.max(Date.now(), previousTimestamp + 1);
+    optimisticMessageTimestampByChatIdRef.current.set(chatId, firstTimestamp + safeCount - 1);
+
+    return Array.from({ length: safeCount }, (_, index) => new Date(firstTimestamp + index).toISOString());
+  }, []);
+
   const getSelectedChatSnapshot = useCallback((chatId: string | null) => {
     if (!chatId) return null;
     return latestChatsRef.current.find((chat) => chat.id === chatId) ?? null;
@@ -3070,6 +3075,9 @@ export default function WhatsAppInboxScreen() {
       updated_at: timestamp,
     };
   }, [leadPanel, selectedChat]);
+  const resolveComposerVariables = useCallback((value: string) => {
+    return quickReplyLead ? applyTemplateVariables(value, quickReplyLead) : value;
+  }, [quickReplyLead]);
   const quickReplyOptions = useMemo(() => {
     const usedShortcuts = new Set<string>();
 
@@ -5469,14 +5477,14 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const optimisticBaseTimestampMs = Date.now();
+    const optimisticTimestamps = allocateOptimisticMessageTimestamps(chat.id, textSegments.length);
     const queuedMessages: QueuedTextMessage[] = textSegments.map((segment, index) => {
       const clientRequestId = createClientRequestId();
       const optimisticMessage = buildOptimisticOutgoingMessage({
         chat,
         messageType: 'text',
         textContent: segment,
-        messageAt: new Date(optimisticBaseTimestampMs + index).toISOString(),
+        messageAt: optimisticTimestamps[index],
       });
 
       appendLocalOutgoingMessage(optimisticMessage, {
@@ -5522,13 +5530,14 @@ export default function WhatsAppInboxScreen() {
         });
       }
     });
-  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage]);
 
   const handleSendMessage = useCallback(() => {
     if (!selectedChat) return;
 
-    const text = messageDraft.trim();
-    const textSegments = splitWhatsAppMessageSegments(messageDraft);
+    const resolvedMessageDraft = resolveComposerVariables(messageDraft);
+    const text = resolvedMessageDraft.trim();
+    const textSegments = splitWhatsAppMessageSegments(resolvedMessageDraft);
     const attachmentsSnapshot = [...pendingAttachments];
     if (!text && attachmentsSnapshot.length === 0) return;
 
@@ -5549,7 +5558,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       if (attachmentsSnapshot.length > 0) {
-        const optimisticBaseTimestampMs = Date.now();
+        const optimisticTimestamps = allocateOptimisticMessageTimestamps(selectedChat.id, attachmentsSnapshot.length);
         const attachmentsToSend = attachmentsSnapshot.map((attachment, index) => {
           const caption = index === 0 && attachment.kind !== 'voice' ? text || undefined : undefined;
           const clientRequestId = createClientRequestId();
@@ -5557,8 +5566,8 @@ export default function WhatsAppInboxScreen() {
           const optimisticMessage = buildOptimisticOutgoingMessage({
             chat: selectedChat,
             messageType: attachment.kind,
-            textContent: buildMediaSummaryText(attachment.kind, caption),
-            messageAt: new Date(optimisticBaseTimestampMs + index).toISOString(),
+            textContent: buildMediaSummaryText(attachment.kind),
+            messageAt: optimisticTimestamps[index],
             mediaUrl: localPreviewUrl,
             mediaMimeType: attachment.file.type || null,
             mediaFileName: attachment.file.name,
@@ -5681,7 +5690,7 @@ export default function WhatsAppInboxScreen() {
       const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
       toast.error(message);
     }
-  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, resetComposerAfterQueue, selectedChat, sendDisabledReason, sendTextSegments]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, resetComposerAfterQueue, resolveComposerVariables, selectedChat, sendDisabledReason, sendTextSegments]);
 
   useEffect(() => {
     if (!voiceAttachment) {
@@ -5888,6 +5897,7 @@ export default function WhatsAppInboxScreen() {
 
     try {
       const result = await commWhatsAppService.editMessage(editingMessage.id, nextText);
+      const editedText = result.editedText || nextText;
       const editedAt = result.editedAt || new Date().toISOString();
       const metadata = editingMessage.metadata && typeof editingMessage.metadata === 'object' && !Array.isArray(editingMessage.metadata)
         ? editingMessage.metadata as Record<string, unknown>
@@ -5896,8 +5906,8 @@ export default function WhatsAppInboxScreen() {
       const isMediaMessage = editingMessage.message_type.trim().toLowerCase() !== 'text';
 
       patchMessageLocally(editingMessage.id, {
-        text_content: nextText,
-        media_caption: isMediaMessage ? nextText : editingMessage.media_caption,
+        text_content: editedText,
+        media_caption: isMediaMessage ? editedText : editingMessage.media_caption,
         status_updated_at: editedAt,
         metadata: {
           ...metadata,
@@ -5910,7 +5920,7 @@ export default function WhatsAppInboxScreen() {
             {
               at: editedAt,
               previous_text: previousText || null,
-              next_text: nextText,
+              next_text: editedText,
               action_type: 'manual_edit',
             },
           ].slice(-10),
@@ -5920,12 +5930,12 @@ export default function WhatsAppInboxScreen() {
       if (selectedChat && selectedChat.id === editingMessage.chat_id && selectedChat.last_message_at === editingMessage.message_at) {
         upsertChatLocally({
           ...selectedChat,
-          last_message_text: nextText,
+          last_message_text: editedText,
           updated_at: editedAt,
         });
       } else {
         setChats((current) => current.map((chat) => chat.id === editingMessage.chat_id && chat.last_message_at === editingMessage.message_at
-          ? { ...chat, last_message_text: nextText, updated_at: editedAt }
+          ? { ...chat, last_message_text: editedText, updated_at: editedAt }
           : chat));
       }
 
@@ -6990,10 +7000,12 @@ export default function WhatsAppInboxScreen() {
     }
 
     const clientRequestId = createClientRequestId();
+    const [messageAt] = allocateOptimisticMessageTimestamps(selectedChat.id, 1);
     const optimisticMessage = buildOptimisticOutgoingMessage({
       chat: selectedChat,
       messageType: item.sendKind,
       textContent: buildMediaSummaryText(item.sendKind),
+      messageAt,
       mediaUrl: item.previewUrl ?? item.sendUrl,
       mediaMimeType: item.mimeType,
       mediaFileName: item.title,
@@ -7054,7 +7066,7 @@ export default function WhatsAppInboxScreen() {
         setSendingDrawerMedia(false);
       }
     });
-  }, [appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, selectedChat]);
 
   const handleToggleFollowUpSalesTechnique = useCallback((techniqueId: string) => {
     setFollowUpSelectedSalesTechniques((current) => (

@@ -3339,6 +3339,8 @@ export default function WhatsAppInboxScreen() {
     upsertChatLocally({
       ...chat,
       ...readPatch,
+      is_archived: chat.is_muted ? chat.is_archived : false,
+      archived_at: chat.is_muted ? chat.archived_at : null,
       last_message_text: summaryText,
       last_message_direction: 'outbound',
       last_message_at: messageAt,

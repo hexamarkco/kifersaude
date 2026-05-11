@@ -4261,16 +4261,17 @@ export default function WhatsAppInboxScreen() {
       const triggerRect = messageActionMenuPointerAnchor
         ? createVirtualAnchorRect(messageActionMenuPointerAnchor)
         : trigger!.getBoundingClientRect();
-      const menuWidth = 216;
-      const menuHeight = 124;
+      const menuWidth = 268;
+      const estimatedMenuHeight = 236;
       const viewportPadding = 12;
       const gap = 6;
       const availableBelow = window.innerHeight - triggerRect.bottom - viewportPadding;
       const availableAbove = triggerRect.top - viewportPadding;
-      const openUpward = availableBelow < Math.min(menuHeight, 120) && availableAbove > availableBelow;
-      const maxHeight = Math.max(96, Math.min(menuHeight, (openUpward ? availableAbove : availableBelow) - gap));
+      const openUpward = availableBelow < Math.min(estimatedMenuHeight, 180) && availableAbove > availableBelow;
+      const maxAvailableHeight = Math.max(120, (openUpward ? availableAbove : availableBelow) - gap);
+      const maxHeight = Math.min(estimatedMenuHeight, maxAvailableHeight);
       const measuredMenuHeight = Math.ceil(messageActionMenuRef.current?.getBoundingClientRect().height ?? 0);
-      const effectiveMenuHeight = Math.min(maxHeight, measuredMenuHeight || menuHeight);
+      const effectiveMenuHeight = Math.min(maxHeight, measuredMenuHeight || estimatedMenuHeight);
       const left = Math.max(
         viewportPadding,
         Math.min(triggerRect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding),
@@ -8709,8 +8710,8 @@ export default function WhatsAppInboxScreen() {
             setOpenMessageActionMenuMessageId(null);
           }}
           ariaLabel="Menu da mensagem"
-          className="before:hidden rounded-2xl border-[rgba(212,192,167,0.18)] bg-[rgba(16,12,10,0.98)] p-1 shadow-2xl"
-          style={{ width: messageActionMenuPosition?.width ?? 216 }}
+          className="before:hidden overflow-y-auto rounded-2xl border-[rgba(212,192,167,0.18)] bg-[rgba(16,12,10,0.98)] p-1 shadow-2xl"
+          style={{ width: messageActionMenuPosition?.width ?? 268, maxHeight: messageActionMenuPosition?.maxHeight }}
         >
           {openMessageActionMenuMessage ? (
             <div className="flex flex-col gap-1">

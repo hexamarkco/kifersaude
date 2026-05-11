@@ -82,6 +82,24 @@ const PRIORITY_OPTIONS = [
   { value: "alta", label: "Alta" },
 ];
 
+const AGENDA_DAY_SECTION_STYLES = {
+  overdue: {
+    title: "Atrasados",
+    description: "Exigem atenção primeiro",
+    tone: "danger" as const,
+  },
+  pending: {
+    title: "Pendentes",
+    description: "Próximas ações do dia",
+    tone: "accent" as const,
+  },
+  completed: {
+    title: "Concluídos",
+    description: "Itens já finalizados",
+    tone: "success" as const,
+  },
+};
+
 const splitIntoBatches = <T,>(items: T[], batchSize: number): T[][] => {
   if (batchSize <= 0) {
     return [items];
@@ -1074,6 +1092,26 @@ export default function AgendaScreen() {
 
   const pendingSelectedReminders = selectedDateReminders.filter((item) => !item.lido);
   const completedSelectedReminders = selectedDateReminders.filter((item) => item.lido);
+  const overdueSelectedReminders = pendingSelectedReminders.filter((item) => isOverdue(item.data_lembrete));
+  const activeSelectedReminders = pendingSelectedReminders.filter((item) => !isOverdue(item.data_lembrete));
+  const selectedDateSections = [
+    {
+      id: "overdue" as const,
+      ...AGENDA_DAY_SECTION_STYLES.overdue,
+      items: overdueSelectedReminders,
+    },
+    {
+      id: "pending" as const,
+      ...AGENDA_DAY_SECTION_STYLES.pending,
+      items: activeSelectedReminders,
+    },
+    {
+      id: "completed" as const,
+      ...AGENDA_DAY_SECTION_STYLES.completed,
+      items: completedSelectedReminders,
+    },
+  ].filter((section) => section.items.length > 0);
+  const selectedDateDensity = selectedDateReminders.length >= 18 ? "compact" : selectedDateReminders.length >= 8 ? "comfortable" : "spacious";
 
   const pendingFilteredCount = filteredReminders.filter((item) => !item.lido).length;
   const completedFilteredCount = filteredReminders.filter((item) => item.lido).length;
@@ -1221,7 +1259,7 @@ export default function AgendaScreen() {
       const isToday = getDateKey(new Date()) === dayKey;
       const isSelected = selectedDateKey === dayKey;
       const baseClasses =
-        "aspect-square rounded-[1.1rem] border p-2 text-left transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 flex flex-col justify-between";
+        "flex min-h-[3.85rem] flex-col justify-between rounded-[0.85rem] border p-1.5 text-left transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 sm:min-h-[4.25rem] sm:rounded-[1rem] sm:p-2";
       const stateStyle = getCalendarCellStyle({
         isSelected,
         isToday,
@@ -1243,37 +1281,27 @@ export default function AgendaScreen() {
           }}
         >
           <div className="flex items-start justify-between gap-2">
-            <span className="text-sm font-semibold">{day}</span>
+            <span className="text-xs font-bold sm:text-sm">{day}</span>
             {totalCount > 0 && (
               <Badge
                 size="sm"
-                className="px-2 py-0.5 text-[10px]"
+                className="px-1.5 py-0.5 text-[10px] leading-none sm:px-2"
                 style={isSelected ? getPanelToneStyle("neutral") : getPanelToneStyle("accent")}
               >
                 {totalCount}
               </Badge>
             )}
           </div>
-          <div className="mt-auto space-y-1 text-[10px] font-semibold">
-            {pendingCount > 0 && (
-              <div className="flex items-center gap-1" style={{ color: "var(--panel-accent-ink)" }}>
-                <Circle className="h-3 w-3" />
-                <span>{pendingCount} aberto(s)</span>
-              </div>
-            )}
-            {doneCount > 0 && (
-              <div className="flex items-center gap-1" style={{ color: "var(--panel-accent-green-text)" }}>
-                <CheckCircle2 className="h-3 w-3" />
-                <span>{doneCount} concluido(s)</span>
-              </div>
-            )}
+          <div className="mt-auto flex flex-wrap items-center gap-1 text-[10px] font-semibold">
+            {pendingCount > 0 && <span className="h-1.5 min-w-3 rounded-full sm:min-w-5" style={{ background: "var(--panel-accent-strong)" }} title={`${pendingCount} pendente(s)`} />}
+            {doneCount > 0 && <span className="h-1.5 min-w-3 rounded-full sm:min-w-5" style={{ background: "var(--panel-accent-green-text)" }} title={`${doneCount} concluido(s)`} />}
           </div>
         </button>,
       );
     }
 
     return (
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {weekDays.map((day) => (
           <div
             key={day}
@@ -1335,7 +1363,7 @@ export default function AgendaScreen() {
     return (
       <article
         key={reminder.id}
-        className={`panel-glass-lite rounded-[1.35rem] border p-4 shadow-sm transition-all ${canOpenLead ? "cursor-pointer" : ""}`}
+        className={`panel-glass-lite rounded-[1.15rem] border p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${canOpenLead ? "cursor-pointer" : ""}`}
         style={getReminderCardStyle(reminder)}
         onClick={canOpenLead ? handleCardOpen : undefined}
         onKeyDown={canOpenLead ? handleCardKeyDown : undefined}
@@ -1343,41 +1371,38 @@ export default function AgendaScreen() {
         tabIndex={canOpenLead ? 0 : undefined}
         aria-label={canOpenLead ? `Abrir edicao do lead ${leadInfo?.nome_completo ?? ""}`.trim() : undefined}
       >
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="rounded-[1rem] border p-3" style={reminder.lido ? getPanelToneStyle("success") : getReminderTypeStyle(reminder.tipo)}>
+        <div className="grid min-w-0 gap-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-start">
+          <div className="rounded-[0.95rem] border p-2.5" style={reminder.lido ? getPanelToneStyle("success") : getReminderTypeStyle(reminder.tipo)}>
             {getReminderIcon(reminder.tipo)}
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div>
-                <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-3">
-                  <h3 className="text-base font-semibold" style={{ color: "var(--panel-text)" }}>
+                <div className="flex flex-col gap-1 xl:flex-row xl:items-center xl:gap-3">
+                  <h3 className="line-clamp-2 text-sm font-bold leading-5" style={{ color: "var(--panel-text)" }}>
                     {reminder.titulo}
                   </h3>
                   {contextBadge && <div className="hidden xl:flex xl:items-center">{contextBadge}</div>}
                 </div>
                 {reminder.descricao && (
-                  <p className="mt-1 text-sm" style={{ color: "var(--panel-text-soft)" }}>
+                  <p className="mt-1 line-clamp-2 text-xs leading-5" style={{ color: "var(--panel-text-soft)" }}>
                     {reminder.descricao}
                   </p>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {contextBadge && <div className="xl:hidden">{contextBadge}</div>}
-                <Badge
-                  style={getReminderPriorityStyle(reminder.prioridade)}
-                >
+                <Badge size="sm" style={getReminderPriorityStyle(reminder.prioridade)}>
                   {reminder.prioridade}
                 </Badge>
-                <Badge
-                  style={getReminderTypeStyle(reminder.tipo)}
-                >
+                <Badge size="sm" style={getReminderTypeStyle(reminder.tipo)}>
                   {reminder.tipo}
                 </Badge>
                 {reminder.tempo_estimado_minutos && (
                   <Badge
+                    size="sm"
                     className="gap-1"
                     style={getPanelToneStyle("info")}
                   >
@@ -1387,6 +1412,7 @@ export default function AgendaScreen() {
                 )}
                 {overdue && !reminder.lido && (
                   <Badge
+                    size="sm"
                     style={getPanelToneStyle("danger")}
                   >
                     Atrasado
@@ -1394,6 +1420,7 @@ export default function AgendaScreen() {
                 )}
                 {reminder.tags?.map((tag, index) => (
                   <Badge
+                    size="sm"
                     key={`${tag}-${index}`}
                     className="gap-1 font-medium"
                     style={getPanelToneStyle("info")}
@@ -1404,20 +1431,22 @@ export default function AgendaScreen() {
                 ))}
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: "var(--panel-text-muted)" }}>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: "var(--panel-text-muted)" }}>
                 <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
+                  <Clock3 className="h-3.5 w-3.5" />
                   <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="flex w-full flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:max-w-[8.5rem] sm:justify-end">
                 <Button
                   onClick={handleCardAction(() => openLeadInOfficialWhatsApp(leadInfo ?? null))}
                   disabled={!hasLeadPhone}
                   variant="soft"
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-8 w-8"
                   title={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
                   aria-label={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
                 >
@@ -1451,7 +1480,7 @@ export default function AgendaScreen() {
                         disabled={isQuickSchedulingCurrentReminder}
                         variant="primary"
                         size="icon"
-                        className="h-9 w-9"
+                        className="h-8 w-8"
                         title="Agendar dias uteis e marcar atual como lido"
                         aria-label="Agendar dias uteis e marcar atual como lido"
                       >
@@ -1502,7 +1531,7 @@ export default function AgendaScreen() {
                   onClick={handleCardAction(() => handleMarkAsRead(reminder.id, reminder.lido))}
                   variant={reminder.lido ? "secondary" : "soft"}
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-8 w-8"
                   title={reminder.lido ? "Marcar como nao lido" : "Marcar como lido"}
                   aria-label={reminder.lido ? "Marcar como nao lido" : "Marcar como lido"}
                 >
@@ -1513,7 +1542,7 @@ export default function AgendaScreen() {
                     onClick={handleCardAction(() => setReschedulingReminderId(reminder.id))}
                     variant="secondary"
                     size="icon"
-                    className="h-9 w-9"
+                    className="h-8 w-8"
                     title="Reagendar item"
                     aria-label="Reagendar item"
                   >
@@ -1525,7 +1554,7 @@ export default function AgendaScreen() {
                     onClick={handleCardAction(() => handleMarkLeadAsLost(reminder))}
                     variant="danger"
                     size="icon"
-                    className="h-9 w-9"
+                    className="h-8 w-8"
                     title="Marcar lead como perdido e limpar lembretes"
                     aria-label="Marcar lead como perdido e limpar lembretes"
                     disabled={markingLostLeadId === leadId}
@@ -1538,14 +1567,12 @@ export default function AgendaScreen() {
                   onClick={handleCardAction(() => handleDelete(reminder.id))}
                   variant="danger"
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-8 w-8"
                   title="Excluir item"
                   aria-label="Excluir item"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-              </div>
-            </div>
           </div>
         </div>
       </article>
@@ -1742,15 +1769,20 @@ export default function AgendaScreen() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,0.9fr)]">
-            <Surface variant="muted" padding="none" className="overflow-hidden rounded-[1.7rem]">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)]">
+            <Surface variant="muted" padding="none" className="overflow-hidden rounded-[1.7rem] xl:sticky xl:top-4 xl:self-start">
               <Surface variant="muted" padding="sm" className="flex items-center justify-between gap-2 rounded-none border-x-0 border-t-0 px-4 py-3">
                 <Button onClick={goToPreviousMonth} variant="icon" size="icon" aria-label="Mes anterior">
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
-                <h3 className="text-lg font-semibold capitalize" style={{ color: "var(--panel-text)" }}>
-                  {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-                </h3>
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold capitalize" style={{ color: "var(--panel-text)" }}>
+                    {currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+                  </h3>
+                  <p className="text-xs" style={{ color: "var(--panel-text-muted)" }}>
+                    {filteredMonthReminders.length} item(ns) com os filtros atuais
+                  </p>
+                </div>
                 <Button onClick={goToNextMonth} variant="icon" size="icon" aria-label="Proximo mes">
                   <ChevronRight className="h-5 w-5" />
                 </Button>
@@ -1758,75 +1790,77 @@ export default function AgendaScreen() {
               <div className="p-4">{renderCalendar()}</div>
             </Surface>
 
-            <div className="space-y-4">
-              <div className="space-y-1 px-1">
-                <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--panel-text-muted)" }}>
-                  Dia selecionado
-                </p>
-                <h3 className="text-xl font-semibold" style={{ color: "var(--panel-text)" }}>
-                  {selectedDateLabel}
-                </h3>
-                <p className="text-sm" style={{ color: "var(--panel-text-muted)" }}>
-                  {selectedDateReminders.length > 0
-                    ? `${selectedDateReminders.length} item(ns) ao todo - ${pendingSelectedReminders.length} pendente(s) e ${completedSelectedReminders.length} concluido(s).`
-                    : "Nenhum item encontrado para este dia com os filtros atuais."}
-                </p>
+            <Surface variant="muted" padding="none" className="overflow-hidden rounded-[1.7rem]">
+              <div className="sticky top-0 z-10 border-b px-4 py-4 backdrop-blur-xl" style={{ borderColor: "var(--panel-border-subtle)", background: "color-mix(in srgb, var(--panel-surface) 88%, transparent)" }}>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: "var(--panel-text-muted)" }}>
+                      Dia selecionado
+                    </p>
+                    <h3 className="mt-1 text-xl font-semibold capitalize" style={{ color: "var(--panel-text)" }}>
+                      {selectedDateLabel}
+                    </h3>
+                    <p className="mt-1 text-sm" style={{ color: "var(--panel-text-muted)" }}>
+                      {selectedDateReminders.length > 0
+                        ? `${selectedDateReminders.length} item(ns): ${pendingSelectedReminders.length} pendente(s), ${overdueSelectedReminders.length} atrasado(s), ${completedSelectedReminders.length} concluido(s).`
+                        : "Nenhum item encontrado para este dia com os filtros atuais."}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 sm:min-w-[20rem]">
+                    {[
+                      { label: "Atrasados", value: overdueSelectedReminders.length, tone: "danger" as const },
+                      { label: "Pendentes", value: activeSelectedReminders.length, tone: "accent" as const },
+                      { label: "Concluídos", value: completedSelectedReminders.length, tone: "success" as const },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-[1rem] border px-3 py-2 text-center" style={getPanelToneStyle(item.tone)}>
+                        <div className="text-lg font-bold leading-none">{item.value}</div>
+                        <div className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.12em]">{item.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {reschedulingReminderId && (
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[1.1rem] border px-4 py-3 text-sm" style={getPanelToneStyle("accent")}>
+                    <span>Selecione um dia no calendario para reagendar o item.</span>
+                    <Button onClick={() => setReschedulingReminderId(null)} variant="ghost" size="sm" className="h-auto px-0 hover:bg-transparent">
+                      Cancelar reagendamento
+                    </Button>
+                  </div>
+                )}
+
+                {error && (
+                  <div className="mt-3 flex items-center gap-2 rounded-[1.1rem] border p-3 text-sm" style={getPanelToneStyle("danger")}>
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{error}</span>
+                  </div>
+                )}
               </div>
 
-              {reschedulingReminderId && (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.1rem] border px-4 py-3 text-sm" style={getPanelToneStyle("accent")}>
-                  <span>Selecione um dia no calendario para reagendar o item.</span>
-                  <Button onClick={() => setReschedulingReminderId(null)} variant="ghost" size="sm" className="h-auto px-0 hover:bg-transparent">
-                    Cancelar reagendamento
-                  </Button>
-                </div>
-              )}
-
-              {error && (
-                <div className="flex items-center gap-2 rounded-[1.1rem] border p-3 text-sm" style={getPanelToneStyle("danger")}>
-                  <AlertCircle className="h-4 w-4" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <Surface variant="muted" className="rounded-[1.7rem] p-4 sm:p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-soft)" }}>
-                    Pendentes
-                  </h4>
-                  <span className="text-xs font-semibold" style={{ color: "var(--panel-accent-ink)" }}>
-                    {pendingSelectedReminders.length}
-                  </span>
-                </div>
-
-                {pendingSelectedReminders.length > 0 ? (
-                  <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">{pendingSelectedReminders.map(renderReminderCard)}</div>
+              <div className={`max-h-[calc(100vh-18rem)] min-h-[28rem] overflow-y-auto px-4 py-4 ${selectedDateDensity === "compact" ? "space-y-3" : "space-y-4"}`}>
+                {selectedDateSections.length > 0 ? (
+                  selectedDateSections.map((section) => (
+                    <section key={section.id} className="space-y-2">
+                      <div className="sticky top-0 z-[5] -mx-1 flex items-center justify-between rounded-[1rem] border px-3 py-2 backdrop-blur-xl" style={{ ...getPanelToneStyle(section.tone), background: "color-mix(in srgb, var(--panel-surface) 84%, transparent)" }}>
+                        <div>
+                          <h4 className="text-sm font-black uppercase tracking-[0.16em]">{section.title}</h4>
+                          <p className="text-[11px] opacity-80">{section.description}</p>
+                        </div>
+                        <Badge size="sm" style={getPanelToneStyle(section.tone)}>{section.items.length}</Badge>
+                      </div>
+                      <div className={selectedDateDensity === "compact" ? "space-y-2" : "space-y-3"}>
+                        {section.items.map(renderReminderCard)}
+                      </div>
+                    </section>
+                  ))
                 ) : (
-                  <Surface variant="muted" className="rounded-[1.3rem] py-8 text-center text-sm">
-                    Nenhum item pendente neste dia.
+                  <Surface variant="muted" className="rounded-[1.3rem] py-12 text-center text-sm">
+                    Nenhum item neste dia com os filtros atuais.
                   </Surface>
                 )}
-              </Surface>
-
-              <Surface variant="muted" className="rounded-[1.7rem] p-4 sm:p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-soft)" }}>
-                    Concluidos
-                  </h4>
-                  <span className="text-xs font-semibold" style={{ color: "var(--panel-accent-green-text)" }}>
-                    {completedSelectedReminders.length}
-                  </span>
-                </div>
-
-                {completedSelectedReminders.length > 0 ? (
-                  <div className="space-y-3">{completedSelectedReminders.map(renderReminderCard)}</div>
-                ) : (
-                  <Surface variant="muted" className="rounded-[1.3rem] py-8 text-center text-sm">
-                    Nenhum item concluido neste dia.
-                  </Surface>
-                )}
-              </Surface>
-            </div>
+              </div>
+            </Surface>
           </div>
 
           {filteredReminders.length === 0 && (

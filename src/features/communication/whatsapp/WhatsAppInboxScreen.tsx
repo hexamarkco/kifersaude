@@ -2986,17 +2986,38 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+
+  const chatMatchesActiveFilters = useCallback((chat: CommWhatsAppChat) => {
+    if (chatActivityFilter === 'unread' && chat.unread_count <= 0 && !chat.manual_unread) {
+      return false;
+    }
+
+    if (leadStatusFilters.length > 0) {
+      const chatLeadStatus = String(chat.lead_status ?? '').trim().toLowerCase();
+      const acceptedStatuses = new Set(leadStatusFilters.map((status) => status.trim().toLowerCase()).filter(Boolean));
+      if (!chatLeadStatus || !acceptedStatuses.has(chatLeadStatus)) {
+        return false;
+      }
+    }
+
+    return true;
+  }, [chatActivityFilter, leadStatusFilters]);
+
   const scopedChats = useMemo(
-    () => sortChatsByInboxOrder(chats.filter((chat) => archivedSectionOpen ? chat.is_archived : !chat.is_archived)),
-    [archivedSectionOpen, chats],
+    () => sortChatsByInboxOrder(chats.filter((chat) => (archivedSectionOpen ? chat.is_archived : !chat.is_archived) && chatMatchesActiveFilters(chat))),
+    [archivedSectionOpen, chatMatchesActiveFilters, chats],
   );
   const localChatSearchResults = useMemo(
-    () => (search ? rankChatsBySearch(chats, search, operationalState?.channel?.connected_user_name ?? null) : []),
-    [chats, operationalState?.channel?.connected_user_name, search],
+    () => (search ? rankChatsBySearch(chats.filter(chatMatchesActiveFilters), search, operationalState?.channel?.connected_user_name ?? null) : []),
+    [chatMatchesActiveFilters, chats, operationalState?.channel?.connected_user_name, search],
   );
   const remoteChatSearchResults = useMemo(
-    () => (search ? rankChatsBySearch(chatSearchResults, search, operationalState?.channel?.connected_user_name ?? null) : []),
-    [chatSearchResults, operationalState?.channel?.connected_user_name, search],
+    () => (search ? rankChatsBySearch(chatSearchResults.filter(chatMatchesActiveFilters), search, operationalState?.channel?.connected_user_name ?? null) : []),
+    [chatMatchesActiveFilters, chatSearchResults, operationalState?.channel?.connected_user_name, search],
+  );
+  const filteredMessageSearchResults = useMemo(
+    () => messageSearchResults.filter((result) => chatMatchesActiveFilters(result.chat)),
+    [chatMatchesActiveFilters, messageSearchResults],
   );
   const sidebarChats = useMemo(
     () => (search ? mergeUniqueChats(remoteChatSearchResults, localChatSearchResults) : scopedChats),
@@ -4785,7 +4806,9 @@ export default function WhatsAppInboxScreen() {
         ? latestChatsRef.current.find((chat) => chat.id === currentSelectedChatId) ?? null
         : null;
       const shouldPreserveSelectedChat = Boolean(
-        preservedSelectedChat && !refreshedChats.some((chat) => chat.id === preservedSelectedChat.id),
+        preservedSelectedChat
+          && chatMatchesActiveFilters(preservedSelectedChat)
+          && !refreshedChats.some((chat) => chat.id === preservedSelectedChat.id),
       );
       const hydratedData = sortChatsByInboxOrder(
         shouldPreserveSelectedChat && preservedSelectedChat
@@ -4815,7 +4838,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao carregar chats', error);
       toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
     }
-  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters]);
+  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, chatMatchesActiveFilters, leadStatusFilters]);
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
@@ -7567,7 +7590,7 @@ export default function WhatsAppInboxScreen() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Carregando conversas...
               </div>
-            ) : search ? (sidebarChats.length === 0 && messageSearchResults.length === 0 && !searchingChats && !searchingMessages ? (
+            ) : search ? (sidebarChats.length === 0 && filteredMessageSearchResults.length === 0 && !searchingChats && !searchingMessages ? (
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
                 <Search className="h-8 w-8 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
@@ -7618,7 +7641,7 @@ export default function WhatsAppInboxScreen() {
                     }}
                   />
                 ))}
-                {messageSearchResults.length > 0 || searchingMessages ? (
+                {filteredMessageSearchResults.length > 0 || searchingMessages ? (
                   <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
                     Mensagens
                   </div>
@@ -7629,7 +7652,7 @@ export default function WhatsAppInboxScreen() {
                     Buscando mensagens...
                   </div>
                 ) : null}
-                {messageSearchResults.map((result) => (
+                {filteredMessageSearchResults.map((result) => (
                   <InboxMessageSearchListItem
                     key={result.message.id}
                     result={result}

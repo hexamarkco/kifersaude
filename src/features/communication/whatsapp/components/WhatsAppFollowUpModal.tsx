@@ -10,6 +10,7 @@ import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '
 import { commWhatsAppService, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
 import { toast } from '../../../../lib/toast';
 import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
+import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
 
 type SpeechRecognitionType = {
   new (): {
@@ -74,61 +75,16 @@ type WhatsAppFollowUpModalProps = {
   tone: CommWhatsAppFollowUpTone;
   variations?: CommWhatsAppFollowUpVariation[];
   selectedSalesTechniques: string[];
+  selectedSituationPresetIds: string[];
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
   onChangeTone: (value: CommWhatsAppFollowUpTone) => void;
+  onToggleSituationPreset: (presetId: string) => void;
   onToggleSalesTechnique: (techniqueId: string) => void;
   onGenerate: (options?: { variantCount?: number }) => void;
   onSend: () => void;
 };
-
-type ConversationSituationPresetId =
-  | 'cliente_sumiu'
-  | 'achou_caro'
-  | 'comparando_concorrente'
-  | 'pediu_retorno_depois'
-  | 'aguardando_documentos';
-
-type ConversationSituationPreset = {
-  id: ConversationSituationPresetId;
-  label: string;
-  instruction: string;
-};
-
-const CONVERSATION_SITUATION_PRESETS: ConversationSituationPreset[] = [
-  {
-    id: 'cliente_sumiu',
-    label: 'Cliente sumiu',
-    instruction:
-      'Cenário: cliente parou de responder. Faça um follow-up curto, leve e sem cobrança. Reforce que está disponível para ajudar e termine com uma pergunta simples para retomar a conversa.',
-  },
-  {
-    id: 'achou_caro',
-    label: 'Achou caro',
-    instruction:
-      'Cenário: cliente achou o plano caro. Reconheça a preocupação com preço, destaque valor e adequação do plano, ofereça revisar alternativas e evite tom defensivo.',
-  },
-  {
-    id: 'comparando_concorrente',
-    label: 'Comparando concorrente',
-    instruction:
-      'Cenário: cliente está comparando com concorrentes. Oriente a mensagem a comparar benefícios, rede, carências e suporte de forma objetiva, sem desqualificar outras empresas.',
-  },
-  {
-    id: 'pediu_retorno_depois',
-    label: 'Pediu retorno depois',
-    instruction:
-      'Cenário: cliente pediu para retornar depois. Seja respeitoso com o prazo, mencione que está retomando conforme combinado e proponha um próximo passo objetivo.',
-  },
-  {
-    id: 'aguardando_documentos',
-    label: 'Aguardando documentos',
-    instruction:
-      'Cenário: estamos aguardando documentos. Lembre de forma cordial quais documentos faltam, explique que eles são necessários para avançar e ofereça ajuda em caso de dúvida.',
-  },
-];
-
 
 type SimpleRefinementAction = {
   id: CommWhatsAppRewriteTone;
@@ -171,14 +127,6 @@ const FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS: FollowUpRefinementAction[] = [
   },
 ];
 
-const appendInstruction = (currentInstructions: string, instructionToAppend: string) => {
-  const instructionsWithoutTrailingWhitespace = currentInstructions.trimEnd();
-
-  if (!instructionsWithoutTrailingWhitespace.trim()) return instructionToAppend;
-
-  return `${instructionsWithoutTrailingWhitespace}\n\n${instructionToAppend}`;
-};
-
 export default function WhatsAppFollowUpModal({
   isOpen,
   generating,
@@ -189,10 +137,12 @@ export default function WhatsAppFollowUpModal({
   tone,
   variations = [],
   selectedSalesTechniques,
+  selectedSituationPresetIds,
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
   onChangeTone,
+  onToggleSituationPreset,
   onToggleSalesTechnique,
   onGenerate,
   onSend,
@@ -205,10 +155,6 @@ export default function WhatsAppFollowUpModal({
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
   const hasVariations = variations.length > 0;
   const selectedToneOption = followUpToneOptions.find((option) => option.value === tone) ?? followUpToneOptions[0];
-
-  const handleApplySituationPreset = (preset: ConversationSituationPreset) => {
-    onChangeCustomInstructions(appendInstruction(customInstructions, preset.instruction));
-  };
 
   useEffect(() => {
     if (typeof window === 'undefined' || (!window.SpeechRecognition && !window.webkitSpeechRecognition)) return;
@@ -356,22 +302,27 @@ export default function WhatsAppFollowUpModal({
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Cenário</h3>
-                  <span className="text-[11px] font-medium text-[var(--panel-text-muted,#876f5c)]">Clique e gere</span>
+                  <span className="text-[11px] font-medium text-[var(--panel-text-muted,#876f5c)]">IA seleciona ao gerar</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {CONVERSATION_SITUATION_PRESETS.map((preset) => (
-                    <Button
-                      key={preset.id}
-                      type="button"
-                      variant="soft"
-                      size="sm"
-                      onClick={() => handleApplySituationPreset(preset)}
-                      disabled={generating || submitting}
-                      title={`Adicionar instrução: ${preset.label}`}
-                    >
-                      {preset.label}
-                    </Button>
-                  ))}
+                  {CONVERSATION_SITUATION_PRESETS.map((preset) => {
+                    const active = selectedSituationPresetIds.includes(preset.id);
+
+                    return (
+                      <Button
+                        key={preset.id}
+                        type="button"
+                        variant={active ? 'primary' : 'soft'}
+                        size="sm"
+                        onClick={() => onToggleSituationPreset(preset.id)}
+                        disabled={generating || submitting}
+                        title={active ? `Remover cenário: ${preset.label}` : `Aplicar cenário: ${preset.label}`}
+                      >
+                        {active && <Check className="h-3.5 w-3.5" />}
+                        {preset.label}
+                      </Button>
+                    );
+                  })}
                 </div>
               </div>
 

@@ -22,6 +22,8 @@ type GenerateFollowUpBody = {
   adjustmentInstruction?: string;
   variantCount?: number;
   salesTechniques?: unknown;
+  situationPresetIds?: unknown;
+  autoSelectContext?: boolean;
 };
 
 const FOLLOW_UP_TONES: FollowUpTone[] = ['consultivo', 'amigavel', 'direto', 'reativacao', 'premium'];
@@ -101,6 +103,34 @@ const DEFAULT_SYSTEM_TIMEZONE = 'America/Sao_Paulo';
 const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const MAX_FOLLOW_UP_VARIANTS = 5;
+const FOLLOW_UP_SITUATION_PRESETS = [
+  {
+    id: 'cliente_sumiu',
+    label: 'Cliente sumiu',
+    instruction: 'Cenário: cliente parou de responder. Faça um follow-up curto, leve e sem cobrança. Reforce que está disponível para ajudar e termine com uma pergunta simples para retomar a conversa.',
+  },
+  {
+    id: 'achou_caro',
+    label: 'Achou caro',
+    instruction: 'Cenário: cliente achou o plano caro. Reconheça a preocupação com preço, destaque valor e adequação do plano, ofereça revisar alternativas e evite tom defensivo.',
+  },
+  {
+    id: 'comparando_concorrente',
+    label: 'Comparando concorrente',
+    instruction: 'Cenário: cliente está comparando com concorrentes. Oriente a mensagem a comparar benefícios, rede, carências e suporte de forma objetiva, sem desqualificar outras empresas.',
+  },
+  {
+    id: 'pediu_retorno_depois',
+    label: 'Pediu retorno depois',
+    instruction: 'Cenário: cliente pediu para retornar depois. Seja respeitoso com o prazo, mencione que está retomando conforme combinado e proponha um próximo passo objetivo.',
+  },
+  {
+    id: 'aguardando_documentos',
+    label: 'Aguardando documentos',
+    instruction: 'Cenário: estamos aguardando documentos. Lembre de forma cordial quais documentos faltam, explique que eles são necessários para avançar e ofereça ajuda em caso de dúvida.',
+  },
+] as const;
+const FOLLOW_UP_SITUATION_PRESET_BY_ID = new Map(FOLLOW_UP_SITUATION_PRESETS.map((preset) => [preset.id, preset]));
 
 type FollowUpSalesTechniqueOption = {
   id: string;
@@ -183,6 +213,52 @@ const normalizeSalesTechniques = (value: unknown) => {
   }
 
   return selected;
+};
+
+const normalizeSituationPresetIds = (value: unknown) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const selected: string[] = [];
+  const seen = new Set<string>();
+
+  for (const item of value) {
+    const presetId = toTrimmedString(item);
+    if (!presetId || seen.has(presetId) || !FOLLOW_UP_SITUATION_PRESET_BY_ID.has(presetId)) {
+      continue;
+    }
+
+    selected.push(presetId);
+    seen.add(presetId);
+  }
+
+  return selected;
+};
+
+const parseAiContextRecommendation = (value: string) => {
+  const candidate = value.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
+
+  try {
+    const parsed = JSON.parse(candidate) as unknown;
+    if (!isRecord(parsed)) {
+      return null;
+    }
+
+    const toneCandidate = toTrimmedString(parsed.tone);
+    const tone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
+    const situationPresetIds = normalizeSituationPresetIds(parsed.situationPresetIds);
+    const salesTechniques = normalizeSalesTechniques(parsed.salesTechniques).map((technique) => technique.id);
+
+    return {
+      situationPresetIds,
+      tone,
+      salesTechniques,
+      rationale: toTrimmedString(parsed.rationale) || null,
+    };
+  } catch {
+    return null;
+  }
 };
 
 const buildSalesTechniquesPromptSection = (salesTechniques: FollowUpSalesTechniqueOption[]) => {
@@ -575,13 +651,15 @@ Deno.serve(async (req: Request) => {
     const chatId = toTrimmedString(body.chatId);
     const customInstructions = toTrimmedString(body.customInstructions);
     const toneCandidate = toTrimmedString(body.tone);
-    const tone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
+    const requestedTone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
     const refinementMode = toTrimmedString(body.mode) === 'refine';
     const currentMessage = toTrimmedString(body.currentMessage);
     const adjustmentInstruction = toTrimmedString(body.adjustmentInstruction);
     const variantCount = refinementMode ? 1 : clampVariantCount(body.variantCount);
     const shouldGenerateVariations = !refinementMode && variantCount > 1;
-    const salesTechniques = normalizeSalesTechniques(body.salesTechniques);
+    const requestedSalesTechniqueIds = normalizeSalesTechniques(body.salesTechniques).map((technique) => technique.id);
+    const requestedSituationPresetIds = normalizeSituationPresetIds(body.situationPresetIds);
+    const autoSelectContext = body.autoSelectContext !== false && !refinementMode;
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -660,9 +738,70 @@ Deno.serve(async (req: Request) => {
       systemTimeZone,
     );
 
-    const salesTechniquesPromptSection = buildSalesTechniquesPromptSection(salesTechniques);
-
     const now = new Date();
+    const baseContextPrompt = [
+      'Contexto do chat:',
+      `- Nome do contato: ${leadContext.nome}`,
+      `- Telefone: ${toTrimmedString(lead?.telefone) || toTrimmedString(chat.phone_number) || 'Nao informado'}`,
+      `- Lead vinculado: ${lead ? 'Sim' : 'Nao'}`,
+      `- Status do lead: ${toTrimmedString(lead?.status) || 'Nao informado'}`,
+      `- Responsavel: ${toTrimmedString(lead?.responsavel) || 'Nao informado'}`,
+      `- Fuso do sistema: ${systemTimeZone}`,
+      `- Agora no sistema: ${formatDateTimeForPrompt(now, systemTimeZone)}`,
+      '',
+      'Historico completo da conversa:',
+      transcriptLines.join('\n'),
+    ].join('\n');
+
+    let aiContext: {
+      situationPresetIds: string[];
+      tone: FollowUpTone;
+      salesTechniques: string[];
+      rationale: string | null;
+    } | null = null;
+
+    if (autoSelectContext) {
+      const recommendationResult = await generateTextWithRouting({
+        supabaseAdmin,
+        task: 'follow_up_context_selection',
+        systemPrompt: [
+          'Voce classifica o contexto de uma conversa comercial de planos de saude para configurar um follow-up.',
+          'Retorne apenas JSON valido, sem markdown, no formato {"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"rationale":"..."}.',
+          `Cenarios permitidos: ${FOLLOW_UP_SITUATION_PRESETS.map((preset) => `${preset.id} (${preset.label})`).join(', ')}. Use no maximo 2 e somente quando fizer sentido claro no historico.`,
+          `Tons permitidos: ${FOLLOW_UP_TONES.join(', ')}.`,
+          `Tecnicas permitidas: ${FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => technique.id).join(', ')}. Use entre 1 e 3 tecnicas.`,
+          'Nao invente objeções, combinados ou fatos. Se o contexto estiver neutro, prefira consultivo com rapport e assumptive-close.',
+        ].join('\n'),
+        userPrompt: baseContextPrompt,
+        temperature: 0.2,
+        maxTokens: 260,
+      });
+
+      aiContext = parseAiContextRecommendation(recommendationResult.text) ?? {
+        situationPresetIds: [],
+        tone: requestedTone,
+        salesTechniques: requestedSalesTechniqueIds,
+        rationale: null,
+      };
+    }
+
+    const effectiveSituationPresetIds = autoSelectContext && aiContext
+      ? aiContext.situationPresetIds
+      : requestedSituationPresetIds;
+    const effectiveTone = autoSelectContext && aiContext ? aiContext.tone : requestedTone;
+    const effectiveSalesTechniqueIds = autoSelectContext && aiContext
+      ? aiContext.salesTechniques
+      : requestedSalesTechniqueIds;
+    const selectedSituationPresetInstructions = effectiveSituationPresetIds
+      .map((presetId) => FOLLOW_UP_SITUATION_PRESET_BY_ID.get(presetId)?.instruction)
+      .filter((instruction): instruction is string => Boolean(instruction));
+    const salesTechniques = normalizeSalesTechniques(effectiveSalesTechniqueIds);
+    const salesTechniquesPromptSection = buildSalesTechniquesPromptSection(salesTechniques);
+    const generationCustomInstructions = [
+      ...selectedSituationPresetInstructions,
+      customInstructions,
+    ].map((instruction) => instruction.trim()).filter(Boolean).join('\n\n');
+
     const responseFormatInstruction = shouldGenerateVariations
       ? [
           `Retorne apenas JSON valido, sem markdown, no formato {"variations":[{"label":"...","text":"..."}]}.`,
@@ -678,25 +817,15 @@ Deno.serve(async (req: Request) => {
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       responseFormatInstruction,
       configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
-      `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(tone)} Esta instrucao complementa as instrucoes globais da operacao e nao deve substitui-las.`,
-      customInstructions ? `Instrucoes personalizadas desta geracao:\n${customInstructions}` : '',
+      `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(effectiveTone)} Esta instrucao complementa as instrucoes globais da operacao e nao deve substitui-las.`,
+      generationCustomInstructions ? `Instrucoes personalizadas desta geracao:\n${generationCustomInstructions}` : '',
       salesTechniquesPromptSection,
     ]
       .filter(Boolean)
       .join('\n\n');
 
     const baseUserPrompt = [
-      'Contexto do chat:',
-      `- Nome do contato: ${leadContext.nome}`,
-      `- Telefone: ${toTrimmedString(lead?.telefone) || toTrimmedString(chat.phone_number) || 'Nao informado'}`,
-      `- Lead vinculado: ${lead ? 'Sim' : 'Nao'}`,
-      `- Status do lead: ${toTrimmedString(lead?.status) || 'Nao informado'}`,
-      `- Responsavel: ${toTrimmedString(lead?.responsavel) || 'Nao informado'}`,
-      `- Fuso do sistema: ${systemTimeZone}`,
-      `- Agora no sistema: ${formatDateTimeForPrompt(now, systemTimeZone)}`,
-      '',
-      'Historico completo da conversa:',
-      transcriptLines.join('\n'),
+      baseContextPrompt,
       '',
       'Tarefa:',
       shouldGenerateVariations
@@ -737,6 +866,12 @@ Deno.serve(async (req: Request) => {
         success: true,
         text: responseText,
         variations: variations.length > 0 ? variations : undefined,
+        aiContext: {
+          situationPresetIds: effectiveSituationPresetIds,
+          tone: effectiveTone,
+          salesTechniques: effectiveSalesTechniqueIds,
+          rationale: aiContext?.rationale ?? null,
+        },
         provider: result.provider,
         model: result.model,
         fallback_used: result.fallbackUsed,

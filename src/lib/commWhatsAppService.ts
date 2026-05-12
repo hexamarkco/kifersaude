@@ -132,9 +132,17 @@ export type CommWhatsAppFollowUpVariation = {
   text: string;
 };
 
+export type CommWhatsAppFollowUpAiContext = {
+  situationPresetIds: string[];
+  tone: CommWhatsAppFollowUpTone;
+  salesTechniques: string[];
+  rationale?: string | null;
+};
+
 export type CommWhatsAppFollowUpSuggestion = {
   text: string;
   variations?: CommWhatsAppFollowUpVariation[];
+  aiContext?: CommWhatsAppFollowUpAiContext;
   provider?: string | null;
   model?: string | null;
   fallback_used?: boolean;
@@ -730,7 +738,7 @@ export const commWhatsAppService = {
     return payload;
   },
 
-  async generateFollowUp(chatId: string, options: { customInstructions?: string; tone?: CommWhatsAppFollowUpTone; variantCount?: number; salesTechniques?: string[] } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+  async generateFollowUp(chatId: string, options: { customInstructions?: string; tone?: CommWhatsAppFollowUpTone; variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[]; autoSelectContext?: boolean } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-generate-follow-up', {
       body: {
         chatId,
@@ -738,6 +746,8 @@ export const commWhatsAppService = {
         tone: options.tone ?? 'consultivo',
         variantCount: options.variantCount,
         salesTechniques: options.salesTechniques ?? [],
+        situationPresetIds: options.situationPresetIds ?? [],
+        autoSelectContext: options.autoSelectContext !== false,
       },
     });
 
@@ -763,6 +773,7 @@ export const commWhatsAppService = {
     return {
       text,
       variations: variations.length > 0 ? variations : undefined,
+      aiContext: payload.aiContext,
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,

@@ -47,6 +47,7 @@ import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
 import WhatsAppFollowUpModal from './components/WhatsAppFollowUpModal';
 import { followUpSalesTechniqueOptions } from './components/followUpSalesTechniques';
+import { CONVERSATION_SITUATION_PRESETS } from './components/followUpSituationPresets';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
@@ -2657,6 +2658,7 @@ export default function WhatsAppInboxScreen() {
   const [followUpTone, setFollowUpTone] = useState<CommWhatsAppFollowUpTone>('consultivo');
   const [followUpVariations, setFollowUpVariations] = useState<CommWhatsAppFollowUpVariation[]>([]);
   const [followUpSelectedSalesTechniques, setFollowUpSelectedSalesTechniques] = useState<string[]>([]);
+  const [followUpSelectedSituationPresetIds, setFollowUpSelectedSituationPresetIds] = useState<string[]>([]);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [composerRewriteModalOpen, setComposerRewriteModalOpen] = useState(false);
   const [composerRewriteSource, setComposerRewriteSource] = useState('');
@@ -4581,6 +4583,7 @@ export default function WhatsAppInboxScreen() {
     setFollowUpCustomInstructions('');
     setFollowUpVariations([]);
     setFollowUpSelectedSalesTechniques([]);
+    setFollowUpSelectedSituationPresetIds([]);
   }, []);
 
   const loadOperationalState = useCallback(async () => {
@@ -7100,7 +7103,7 @@ export default function WhatsAppInboxScreen() {
   const handleGenerateFollowUp = useCallback(async (
     customInstructions: string,
     tone: CommWhatsAppFollowUpTone,
-    options: { variantCount?: number; salesTechniques?: string[] } = {},
+    options: { variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[] } = {},
   ) => {
     if (!selectedChat) {
       return;
@@ -7113,6 +7116,9 @@ export default function WhatsAppInboxScreen() {
     const validSalesTechniqueIds = new Set<string>(followUpSalesTechniqueOptions.map((technique) => technique.id));
     const normalizedSalesTechniques = (options.salesTechniques ?? followUpSelectedSalesTechniques)
       .filter((techniqueId) => validSalesTechniqueIds.has(techniqueId));
+    const validSituationPresetIds = new Set<string>(CONVERSATION_SITUATION_PRESETS.map((preset) => preset.id));
+    const normalizedSituationPresetIds = (options.situationPresetIds ?? followUpSelectedSituationPresetIds)
+      .filter((presetId) => validSituationPresetIds.has(presetId));
     const requestId = ++followUpGenerationRequestIdRef.current;
     const targetChatId = selectedChat.id;
     setGeneratingFollowUp(true);
@@ -7123,6 +7129,8 @@ export default function WhatsAppInboxScreen() {
         tone,
         variantCount: options.variantCount,
         salesTechniques: normalizedSalesTechniques,
+        situationPresetIds: normalizedSituationPresetIds,
+        autoSelectContext: true,
       });
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -7130,8 +7138,9 @@ export default function WhatsAppInboxScreen() {
       setFollowUpDraft(result.text.trim());
       setFollowUpVariations(result.variations ?? []);
       setFollowUpCustomInstructions(customInstructions);
-      setFollowUpTone(tone);
-      setFollowUpSelectedSalesTechniques(normalizedSalesTechniques);
+      setFollowUpTone(result.aiContext?.tone ?? tone);
+      setFollowUpSelectedSalesTechniques(result.aiContext?.salesTechniques ?? normalizedSalesTechniques);
+      setFollowUpSelectedSituationPresetIds(result.aiContext?.situationPresetIds ?? normalizedSituationPresetIds);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -7143,7 +7152,7 @@ export default function WhatsAppInboxScreen() {
         setGeneratingFollowUp(false);
       }
     }
-  }, [followUpGenerationDisabledReason, followUpSelectedSalesTechniques, selectedChat]);
+  }, [followUpGenerationDisabledReason, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, selectedChat]);
 
   const handleOpenFollowUpModal = useCallback(() => {
     if (followUpGenerationDisabledReason) {
@@ -7377,12 +7386,21 @@ export default function WhatsAppInboxScreen() {
     ));
   }, []);
 
+  const handleToggleFollowUpSituationPreset = useCallback((presetId: string) => {
+    setFollowUpSelectedSituationPresetIds((current) => (
+      current.includes(presetId)
+        ? current.filter((selectedPresetId) => selectedPresetId !== presetId)
+        : [...current, presetId]
+    ));
+  }, []);
+
   const handleRegenerateFollowUp = useCallback((options: { variantCount?: number } = {}) => {
     void handleGenerateFollowUp(followUpCustomInstructions, followUpTone, {
       ...options,
       salesTechniques: followUpSelectedSalesTechniques,
+      situationPresetIds: followUpSelectedSituationPresetIds,
     });
-  }, [followUpCustomInstructions, followUpSelectedSalesTechniques, followUpTone, handleGenerateFollowUp]);
+  }, [followUpCustomInstructions, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, followUpTone, handleGenerateFollowUp]);
 
   const handleSendFollowUpDraft = useCallback(async () => {
     if (!selectedChat) {
@@ -8638,10 +8656,12 @@ export default function WhatsAppInboxScreen() {
           tone={followUpTone}
           variations={followUpVariations}
           selectedSalesTechniques={followUpSelectedSalesTechniques}
+          selectedSituationPresetIds={followUpSelectedSituationPresetIds}
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}
           onChangeTone={setFollowUpTone}
+          onToggleSituationPreset={handleToggleFollowUpSituationPreset}
           onToggleSalesTechnique={handleToggleFollowUpSalesTechnique}
           onGenerate={handleRegenerateFollowUp}
           onSend={handleSendFollowUpDraft}

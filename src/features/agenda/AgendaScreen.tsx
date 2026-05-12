@@ -1689,7 +1689,6 @@ export default function AgendaScreen() {
               <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-3">
                 <FilterSingleSelect
                   icon={Tag}
-                  size="compact"
                   value={typeFilter}
                   onChange={setTypeFilter}
                   placeholder="Todos os tipos"
@@ -1698,7 +1697,6 @@ export default function AgendaScreen() {
                 />
                 <FilterSingleSelect
                   icon={AlertCircle}
-                  size="compact"
                   value={priorityFilter}
                   onChange={setPriorityFilter}
                   placeholder="Todas prioridades"
@@ -1707,7 +1705,6 @@ export default function AgendaScreen() {
                 />
                 <FilterSingleSelect
                   icon={Calendar}
-                  size="compact"
                   value={timeFilter}
                   onChange={(val) => setTimeFilter(val as AgendaTimeFilter)}
                   placeholder="Periodo"
@@ -1719,21 +1716,21 @@ export default function AgendaScreen() {
                 <Button
                   onClick={() => setStatusFilter("nao-lidos")}
                   variant={statusFilter === "nao-lidos" ? "primary" : "secondary"}
-                  size="sm"
+                  size="md"
                 >
                   Pendentes
                 </Button>
                 <Button
                   onClick={() => setStatusFilter("todos")}
                   variant={statusFilter === "todos" ? "primary" : "secondary"}
-                  size="sm"
+                  size="md"
                 >
                   Todos
                 </Button>
                 <Button
                   onClick={() => setStatusFilter("lidos")}
                   variant={statusFilter === "lidos" ? "primary" : "secondary"}
-                  size="sm"
+                  size="md"
                 >
                   Concluidos
                 </Button>
@@ -1746,7 +1743,7 @@ export default function AgendaScreen() {
                       setStatusFilter("todos");
                     }}
                     variant="ghost"
-                    size="sm"
+                    size="md"
                     className="whitespace-nowrap"
                   >
                     Limpar filtros ({hasActiveFilters})

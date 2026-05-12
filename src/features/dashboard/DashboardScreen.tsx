@@ -236,21 +236,9 @@ export default function DashboardScreen({
       }
 
       const params = new URLSearchParams(searchParams);
-      params.set("periodFilter", nextPeriod);
-
-      if (
-        nextPeriod === "personalizado" &&
-        nextStart &&
-        nextEnd &&
-        validateDashboardDate(nextStart) &&
-        validateDashboardDate(nextEnd)
-      ) {
-        params.set("customStartDate", nextStart);
-        params.set("customEndDate", nextEnd);
-      } else {
-        params.delete("customStartDate");
-        params.delete("customEndDate");
-      }
+      params.delete("periodFilter");
+      params.delete("customStartDate");
+      params.delete("customEndDate");
 
       if (nextOrigin) {
         params.set("dashboardOrigin", nextOrigin);

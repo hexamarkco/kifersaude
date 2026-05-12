@@ -1645,7 +1645,7 @@ export default function AgendaScreen() {
             ))}
           </div>
 
-          <Surface variant="muted" className="flex flex-col gap-3 rounded-[1.7rem] p-4 sm:p-5">
+          <Surface variant="muted" className="flex flex-col gap-3 rounded-[1.7rem] p-4">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div className="relative flex-1">
                 <Input
@@ -1669,7 +1669,7 @@ export default function AgendaScreen() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
                 <Button onClick={goToToday} variant="secondary" size="md">
                   Hoje
                 </Button>
@@ -1678,58 +1678,62 @@ export default function AgendaScreen() {
                   Nova tarefa
                 </Button>
                 {filteredReminders.some((item) => !item.lido) && (
-                  <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="md">
+                  <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="md" className="whitespace-nowrap">
                     Marcar filtrados como lidos
                   </Button>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,220px)_minmax(0,220px)_1fr]">
-              <FilterSingleSelect
-                icon={Tag}
-                value={typeFilter}
-                onChange={setTypeFilter}
-                placeholder="Todos os tipos"
-                includePlaceholderOption={false}
-                options={typeOptions}
-              />
-              <FilterSingleSelect
-                icon={AlertCircle}
-                value={priorityFilter}
-                onChange={setPriorityFilter}
-                placeholder="Todas prioridades"
-                includePlaceholderOption={false}
-                options={PRIORITY_OPTIONS}
-              />
-              <FilterSingleSelect
-                icon={Calendar}
-                size="compact"
-                value={timeFilter}
-                onChange={(val) => setTimeFilter(val as AgendaTimeFilter)}
-                placeholder="Periodo"
-                includePlaceholderOption={false}
-                options={TIME_FILTER_OPTIONS}
-              />
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+              <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-3">
+                <FilterSingleSelect
+                  icon={Tag}
+                  size="compact"
+                  value={typeFilter}
+                  onChange={setTypeFilter}
+                  placeholder="Todos os tipos"
+                  includePlaceholderOption={false}
+                  options={typeOptions}
+                />
+                <FilterSingleSelect
+                  icon={AlertCircle}
+                  size="compact"
+                  value={priorityFilter}
+                  onChange={setPriorityFilter}
+                  placeholder="Todas prioridades"
+                  includePlaceholderOption={false}
+                  options={PRIORITY_OPTIONS}
+                />
+                <FilterSingleSelect
+                  icon={Calendar}
+                  size="compact"
+                  value={timeFilter}
+                  onChange={(val) => setTimeFilter(val as AgendaTimeFilter)}
+                  placeholder="Periodo"
+                  includePlaceholderOption={false}
+                  options={TIME_FILTER_OPTIONS}
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
                 <Button
                   onClick={() => setStatusFilter("nao-lidos")}
                   variant={statusFilter === "nao-lidos" ? "primary" : "secondary"}
-                  size="md"
+                  size="sm"
                 >
                   Pendentes
                 </Button>
                 <Button
                   onClick={() => setStatusFilter("todos")}
                   variant={statusFilter === "todos" ? "primary" : "secondary"}
-                  size="md"
+                  size="sm"
                 >
                   Todos
                 </Button>
                 <Button
                   onClick={() => setStatusFilter("lidos")}
                   variant={statusFilter === "lidos" ? "primary" : "secondary"}
-                  size="md"
+                  size="sm"
                 >
                   Concluidos
                 </Button>
@@ -1742,7 +1746,8 @@ export default function AgendaScreen() {
                       setStatusFilter("todos");
                     }}
                     variant="ghost"
-                    size="md"
+                    size="sm"
+                    className="whitespace-nowrap"
                   >
                     Limpar filtros ({hasActiveFilters})
                   </Button>

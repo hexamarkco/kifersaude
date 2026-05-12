@@ -2659,6 +2659,7 @@ export default function WhatsAppInboxScreen() {
   const [followUpVariations, setFollowUpVariations] = useState<CommWhatsAppFollowUpVariation[]>([]);
   const [followUpSelectedSalesTechniques, setFollowUpSelectedSalesTechniques] = useState<string[]>([]);
   const [followUpSelectedSituationPresetIds, setFollowUpSelectedSituationPresetIds] = useState<string[]>([]);
+  const [followUpAiContextRationale, setFollowUpAiContextRationale] = useState<string | null>(null);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [composerRewriteModalOpen, setComposerRewriteModalOpen] = useState(false);
   const [composerRewriteSource, setComposerRewriteSource] = useState('');
@@ -4584,6 +4585,7 @@ export default function WhatsAppInboxScreen() {
     setFollowUpVariations([]);
     setFollowUpSelectedSalesTechniques([]);
     setFollowUpSelectedSituationPresetIds([]);
+    setFollowUpAiContextRationale(null);
   }, []);
 
   const loadOperationalState = useCallback(async () => {
@@ -7141,6 +7143,7 @@ export default function WhatsAppInboxScreen() {
       setFollowUpTone(result.aiContext?.tone ?? tone);
       setFollowUpSelectedSalesTechniques(result.aiContext?.salesTechniques ?? normalizedSalesTechniques);
       setFollowUpSelectedSituationPresetIds(result.aiContext?.situationPresetIds ?? normalizedSituationPresetIds);
+      setFollowUpAiContextRationale(result.aiContext?.rationale ?? null);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -8657,6 +8660,7 @@ export default function WhatsAppInboxScreen() {
           variations={followUpVariations}
           selectedSalesTechniques={followUpSelectedSalesTechniques}
           selectedSituationPresetIds={followUpSelectedSituationPresetIds}
+          aiContextRationale={followUpAiContextRationale}
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}

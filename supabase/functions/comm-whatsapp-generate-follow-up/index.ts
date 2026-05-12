@@ -761,26 +761,32 @@ Deno.serve(async (req: Request) => {
     } | null = null;
 
     if (autoSelectContext) {
-      const recommendationResult = await generateTextWithRouting({
-        supabaseAdmin,
-        task: 'follow_up_context_selection',
-        systemPrompt: [
-          'Voce classifica o contexto de uma conversa comercial de planos de saude para configurar um follow-up.',
-          'Retorne apenas JSON valido, sem markdown, no formato {"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"rationale":"..."}.',
-          `Cenarios permitidos: ${FOLLOW_UP_SITUATION_PRESETS.map((preset) => `${preset.id} (${preset.label})`).join(', ')}. Use no maximo 2 e somente quando fizer sentido claro no historico.`,
-          `Tons permitidos: ${FOLLOW_UP_TONES.join(', ')}.`,
-          `Tecnicas permitidas: ${FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => technique.id).join(', ')}. Use entre 1 e 3 tecnicas.`,
-          'Nao invente objeções, combinados ou fatos. Se o contexto estiver neutro, prefira consultivo com rapport e assumptive-close.',
-        ].join('\n'),
-        userPrompt: baseContextPrompt,
-        temperature: 0.2,
-        maxTokens: 260,
-      });
+      try {
+        const recommendationResult = await generateTextWithRouting({
+          supabaseAdmin,
+          task: 'follow_up_generation',
+          systemPrompt: [
+            'Voce classifica o contexto de uma conversa comercial de planos de saude para configurar um follow-up.',
+            'Retorne apenas JSON valido, sem markdown, no formato {"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"rationale":"..."}.',
+            `Cenarios permitidos: ${FOLLOW_UP_SITUATION_PRESETS.map((preset) => `${preset.id} (${preset.label})`).join(', ')}. Use no maximo 2 e somente quando fizer sentido claro no historico.`,
+            `Tons permitidos: ${FOLLOW_UP_TONES.join(', ')}.`,
+            `Tecnicas permitidas: ${FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => technique.id).join(', ')}. Use entre 1 e 3 tecnicas.`,
+            'Nao invente objeções, combinados ou fatos. Se o contexto estiver neutro, prefira consultivo com rapport e assumptive-close.',
+          ].join('\n'),
+          userPrompt: baseContextPrompt,
+          temperature: 0.2,
+          maxTokens: 260,
+        });
 
-      aiContext = parseAiContextRecommendation(recommendationResult.text) ?? {
+        aiContext = parseAiContextRecommendation(recommendationResult.text);
+      } catch (error) {
+        console.error('[comm-whatsapp-generate-follow-up] erro ao classificar contexto automatico', error);
+      }
+
+      aiContext ??= {
         situationPresetIds: [],
         tone: requestedTone,
-        salesTechniques: requestedSalesTechniqueIds,
+        salesTechniques: requestedSalesTechniqueIds.length > 0 ? requestedSalesTechniqueIds : ['rapport', 'assumptive-close'],
         rationale: null,
       };
     }

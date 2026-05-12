@@ -76,6 +76,7 @@ type WhatsAppFollowUpModalProps = {
   variations?: CommWhatsAppFollowUpVariation[];
   selectedSalesTechniques: string[];
   selectedSituationPresetIds: string[];
+  aiContextRationale?: string | null;
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
@@ -138,6 +139,7 @@ export default function WhatsAppFollowUpModal({
   variations = [],
   selectedSalesTechniques,
   selectedSituationPresetIds,
+  aiContextRationale,
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
@@ -299,6 +301,16 @@ export default function WhatsAppFollowUpModal({
         <section className="min-w-0 space-y-4">
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
             <div className="flex flex-col gap-4">
+              {(selectedSituationPresetIds.length > 0 || selectedSalesTechniques.length > 0 || aiContextRationale) && (
+                <div className="rounded-2xl border border-[var(--panel-accent-border,#d2ab85)] bg-[var(--panel-accent-soft,#f4e2cc)] px-3 py-2 text-xs text-[var(--panel-accent-ink,#8b4d12)]">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>IA aplicou o contexto da conversa</span>
+                  </div>
+                  {aiContextRationale ? <p className="mt-1 leading-5 opacity-85">{aiContextRationale}</p> : null}
+                </div>
+              )}
+
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Cenário</h3>

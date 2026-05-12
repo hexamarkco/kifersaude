@@ -4205,6 +4205,22 @@ html {
   color: var(--panel-accent-red-text);
 }
 
+.painel-theme .whatsapp-inbox-preview-status-pending,
+.painel-theme .whatsapp-inbox-preview-status-sent,
+.painel-theme .whatsapp-inbox-preview-status-delivered,
+.painel-theme .whatsapp-inbox-preview-status-deleted {
+  color: var(--panel-text-subtle);
+}
+
+.painel-theme .whatsapp-inbox-preview-status-read,
+.painel-theme .whatsapp-inbox-preview-status-played {
+  color: var(--panel-accent-ink-strong);
+}
+
+.painel-theme .whatsapp-inbox-preview-status-failed {
+  color: var(--panel-accent-red-text);
+}
+
 .painel-theme .whatsapp-inbox-thread .message-bubble-inbound .whatsapp-inbox-message-meta,
 .painel-theme .whatsapp-inbox-thread .message-bubble-system .whatsapp-inbox-message-meta {
   color: var(--panel-text-subtle);

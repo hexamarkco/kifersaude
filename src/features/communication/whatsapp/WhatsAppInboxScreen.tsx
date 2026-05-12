@@ -1196,6 +1196,10 @@ type PendingChatInboxStatePatch = Partial<Pick<CommWhatsAppChat,
   | 'manual_unread_at'
   | 'unread_count'
   | 'last_read_at'
+  | 'last_message_text'
+  | 'last_message_direction'
+  | 'last_message_at'
+  | 'last_message_delivery_status'
 >>;
 
 const applyPendingChatInboxState = (
@@ -1212,7 +1216,10 @@ const applyPendingChatInboxState = (
     const serverReadAt = getMessageTimestampMs(chat.last_read_at);
     const lastMessageAt = getMessageTimestampMs(chat.last_message_at);
 
-    if (serverReadAt !== null && pendingReadAt !== null && serverReadAt >= pendingReadAt && chat.unread_count <= 0 && !chat.manual_unread) {
+    const pendingLastMessageAt = getMessageTimestampMs(pendingState.last_message_at);
+    const serverCaughtUpWithPendingMessage = pendingLastMessageAt === null || (lastMessageAt !== null && lastMessageAt >= pendingLastMessageAt);
+
+    if (serverReadAt !== null && pendingReadAt !== null && serverReadAt >= pendingReadAt && chat.unread_count <= 0 && !chat.manual_unread && serverCaughtUpWithPendingMessage) {
       pendingStateByChatId.delete(chat.id);
       return chat;
     }
@@ -1540,8 +1547,8 @@ const mergeUniqueChats = (...collections: CommWhatsAppChat[][]) => {
   return Array.from(chatsById.values());
 };
 
-const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => {
-  const status = String(message.delivery_status ?? '').trim().toLowerCase();
+const getDeliveryStatusMetaFromValues = (deliveryStatus?: string | null, messageType?: string | null) => {
+  const status = String(deliveryStatus ?? '').trim().toLowerCase();
 
   switch (status) {
     case 'pending':
@@ -1555,7 +1562,7 @@ const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => {
     case 'played':
       return {
         icon: Volume2,
-        label: message.message_type === 'voice' ? 'Ouvida' : 'Reproduzida',
+        label: messageType === 'voice' ? 'Ouvida' : 'Reproduzida',
         tone: 'played' as const,
       };
     case 'failed':
@@ -1566,6 +1573,8 @@ const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => {
       return { icon: Clock3, label: status || 'Pendente', tone: 'pending' as const };
   }
 };
+
+const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => getDeliveryStatusMetaFromValues(message.delivery_status, message.message_type);
 
 const formatDurationLabel = (seconds: number) => {
   const mins = Math.floor(seconds / 60)
@@ -2098,6 +2107,10 @@ function InboxChatListItem({
   const rawLastMessageText = String(chat.last_message_text ?? '').trim();
   const visibleLastMessageText = getVisiblePreviewText(chat.last_message_text);
   const previewMediaIconType = getChatPreviewMediaIconType(visibleLastMessageText);
+  const outboundPreviewStatusMeta = chat.last_message_direction === 'outbound'
+    ? getDeliveryStatusMetaFromValues(chat.last_message_delivery_status)
+    : null;
+  const OutboundPreviewStatusIcon = outboundPreviewStatusMeta?.icon;
 
   return (
     <div
@@ -2138,6 +2151,11 @@ function InboxChatListItem({
                 <span className={`mr-1 font-semibold ${getChatPreviewPrefixClassName(chat.last_message_direction)}`}>
                   {getChatPreviewPrefix(chat, connectedUserName)}
                 </span>
+                {OutboundPreviewStatusIcon && outboundPreviewStatusMeta ? (
+                  <span className={`mr-1 inline-flex align-middle whatsapp-inbox-preview-status whatsapp-inbox-preview-status-${outboundPreviewStatusMeta.tone}`} title={outboundPreviewStatusMeta.label} aria-label={outboundPreviewStatusMeta.label}>
+                    <OutboundPreviewStatusIcon className="h-3.5 w-3.5" />
+                  </span>
+                ) : null}
                 {previewMediaIconType ? (
                   <ChatPreviewMediaIcon type={previewMediaIconType} />
                 ) : (
@@ -2918,7 +2936,7 @@ export default function WhatsAppInboxScreen() {
       items
         .map(
           (chat) =>
-            `${chat.id}:${chat.updated_at}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.display_name}:${chat.saved_contact_name ?? ''}:${chat.lead_id ?? ''}:${chat.is_archived}:${chat.archived_at ?? ''}:${chat.is_muted}:${chat.muted_at ?? ''}:${chat.is_pinned}:${chat.pinned_at ?? ''}:${chat.manual_unread}:${chat.manual_unread_at ?? ''}`,
+            `${chat.id}:${chat.updated_at}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.last_message_delivery_status ?? ''}:${chat.display_name}:${chat.saved_contact_name ?? ''}:${chat.lead_id ?? ''}:${chat.is_archived}:${chat.archived_at ?? ''}:${chat.is_muted}:${chat.muted_at ?? ''}:${chat.is_pinned}:${chat.pinned_at ?? ''}:${chat.manual_unread}:${chat.manual_unread_at ?? ''}`,
         )
         .join('|'),
     [],
@@ -3334,6 +3352,10 @@ export default function WhatsAppInboxScreen() {
     pendingChatInboxStateRef.current.set(chat.id, {
       ...pendingChatInboxStateRef.current.get(chat.id),
       ...readPatch,
+      last_message_text: summaryText,
+      last_message_direction: 'outbound',
+      last_message_at: messageAt,
+      last_message_delivery_status: 'pending',
     });
 
     upsertChatLocally({
@@ -3344,6 +3366,7 @@ export default function WhatsAppInboxScreen() {
       last_message_text: summaryText,
       last_message_direction: 'outbound',
       last_message_at: messageAt,
+      last_message_delivery_status: 'pending',
       updated_at: messageAt,
     });
 
@@ -3353,6 +3376,22 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao avancar leitura apos envio', error);
     });
   }, [upsertChatLocally]);
+
+  const updateOptimisticChatPreviewStatus = useCallback((chatId: string, messageAt: string, deliveryStatus: string) => {
+    const pendingState = pendingChatInboxStateRef.current.get(chatId);
+    if (pendingState?.last_message_at === messageAt) {
+      pendingChatInboxStateRef.current.set(chatId, {
+        ...pendingState,
+        last_message_delivery_status: deliveryStatus,
+      });
+    }
+
+    setChats((current) => current.map((chat) => (
+      chat.id === chatId && chat.last_message_at === messageAt
+        ? { ...chat, last_message_delivery_status: deliveryStatus }
+        : chat
+    )));
+  }, []);
 
   const resetComposerAfterQueue = useCallback(() => {
     setMessageDraft('');
@@ -5645,6 +5684,7 @@ export default function WhatsAppInboxScreen() {
             status_updated_at: new Date().toISOString(),
             error_message: null,
           });
+          updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, sendResult.status);
           if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
             scheduleMessageStatusRefresh({
               chat,
@@ -5659,6 +5699,7 @@ export default function WhatsAppInboxScreen() {
             status_updated_at: new Date().toISOString(),
             error_message: message,
           });
+          updateOptimisticChatPreviewStatus(chat.id, queued.optimisticMessage.message_at, 'failed');
         }
       }
 
@@ -5669,7 +5710,7 @@ export default function WhatsAppInboxScreen() {
         });
       }
     });
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, updateOptimisticChatPreviewStatus]);
 
   const handleSendMessage = useCallback(() => {
     if (!selectedChat) return;
@@ -5758,6 +5799,7 @@ export default function WhatsAppInboxScreen() {
                   status_updated_at: new Date().toISOString(),
                   error_message: 'Envio interrompido antes deste item. Toque em reenviar para tentar novamente.',
                 });
+                updateOptimisticChatPreviewStatus(selectedChat.id, queued.optimisticMessage.message_at, 'failed');
                 continue;
               }
 
@@ -5799,6 +5841,7 @@ export default function WhatsAppInboxScreen() {
                   status_updated_at: new Date().toISOString(),
                   error_message: null,
                 });
+                updateOptimisticChatPreviewStatus(selectedChat.id, queued.optimisticMessage.message_at, sendResult.status);
                 if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
                   scheduleMessageStatusRefresh({
                     chat: selectedChat,
@@ -5814,6 +5857,7 @@ export default function WhatsAppInboxScreen() {
                   status_updated_at: new Date().toISOString(),
                   error_message: message,
                 });
+                updateOptimisticChatPreviewStatus(selectedChat.id, queued.optimisticMessage.message_at, 'failed');
                 shouldStopQueue = true;
               }
             }
@@ -5849,7 +5893,7 @@ export default function WhatsAppInboxScreen() {
       const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
       toast.error(message);
     }
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments, updateOptimisticChatPreviewStatus]);
 
   useEffect(() => {
     if (!voiceAttachment) {

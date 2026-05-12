@@ -702,6 +702,7 @@ export type CommWhatsAppChat = {
   last_message_text?: string | null;
   last_message_direction: 'inbound' | 'outbound' | 'system';
   last_message_at?: string | null;
+  last_message_delivery_status?: string | null;
   unread_count: number;
   status: 'open' | 'pending' | 'closed';
   last_read_at?: string | null;

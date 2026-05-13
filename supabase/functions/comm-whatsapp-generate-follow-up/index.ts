@@ -103,6 +103,8 @@ const DEFAULT_SYSTEM_TIMEZONE = 'America/Sao_Paulo';
 const MESSAGE_PAGE_SIZE = 1000;
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const MAX_FOLLOW_UP_VARIANTS = 5;
+const DAILY_FOLLOW_UP_CAPACITY = 15;
+const FOLLOW_UP_SCHEDULE_HOURS = [10, 11, 14, 15, 16] as const;
 const FOLLOW_UP_SITUATION_PRESETS = [
   {
     id: 'cliente_sumiu',
@@ -213,6 +215,19 @@ const normalizeSalesTechniques = (value: unknown) => {
   }
 
   return selected;
+};
+
+type FollowUpNextAction = {
+  type: 'schedule' | 'wait' | 'mark_lost_recommended';
+  suggestedDateTime: string | null;
+  priority: 'baixa' | 'normal' | 'alta';
+  title: string;
+  reason: string;
+  attemptNumber: number;
+  maxAttempts: number;
+  dayLoad: number | null;
+  dailyCapacity: number;
+  giveUpRecommendation: string;
 };
 
 const normalizeSituationPresetIds = (value: unknown) => {
@@ -349,6 +364,159 @@ const getDateTimeParts = (date: Date, timeZone: string) => {
     year: read('year'),
     hour: read('hour'),
     minute: read('minute'),
+  };
+};
+
+const getBusinessDayOffsetForAttempt = (attemptNumber: number) => {
+  if (attemptNumber <= 1) return 1;
+  if (attemptNumber === 2) return 2;
+  if (attemptNumber === 3) return 3;
+  return 5;
+};
+
+const addBusinessDays = (date: Date, businessDays: number) => {
+  const next = new Date(date);
+  let added = 0;
+
+  while (added < businessDays) {
+    next.setUTCDate(next.getUTCDate() + 1);
+    const day = next.getUTCDay();
+    if (day !== 0 && day !== 6) {
+      added += 1;
+    }
+  }
+
+  return next;
+};
+
+const getSaoPauloDateParts = (date: Date) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: DEFAULT_SYSTEM_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const read = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? 0);
+  return { year: read('year'), month: read('month'), day: read('day') };
+};
+
+const buildSaoPauloDateTimeUtc = (date: Date, hour: number) => {
+  const { year, month, day } = getSaoPauloDateParts(date);
+  return new Date(Date.UTC(year, month - 1, day, hour + 3, 0, 0, 0));
+};
+
+const getSaoPauloDayUtcRange = (date: Date) => {
+  const { year, month, day } = getSaoPauloDateParts(date);
+  return {
+    start: new Date(Date.UTC(year, month - 1, day, 3, 0, 0, 0)),
+    end: new Date(Date.UTC(year, month - 1, day + 1, 3, 0, 0, 0)),
+  };
+};
+
+const countPendingRemindersForDay = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  date: Date,
+) => {
+  const range = getSaoPauloDayUtcRange(date);
+  const { count, error } = await supabaseAdmin
+    .from('reminders')
+    .select('id', { count: 'exact', head: true })
+    .eq('lido', false)
+    .gte('data_lembrete', range.start.toISOString())
+    .lt('data_lembrete', range.end.toISOString());
+
+  if (error) {
+    console.error('[comm-whatsapp-generate-follow-up] erro ao contar lembretes do dia', error);
+    return null;
+  }
+
+  return count ?? 0;
+};
+
+const countConsecutiveOutboundMessages = (messages: MessageRow[]) => {
+  let count = 0;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.direction === 'inbound') break;
+    if (message.direction === 'outbound' && buildTranscriptContent(message)) count += 1;
+  }
+  return count;
+};
+
+const buildFollowUpNextAction = async (params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  messages: MessageRow[];
+  lead: LeadRow | null;
+  leadContext: FollowUpLeadContext;
+  effectiveSituationPresetIds: string[];
+  now: Date;
+}): Promise<FollowUpNextAction> => {
+  const consecutiveOutbound = countConsecutiveOutboundMessages(params.messages);
+  const attemptNumber = Math.min(consecutiveOutbound + 1, 5);
+  const maxAttempts = 4;
+  const leadStatus = toTrimmedString(params.lead?.status).toLowerCase();
+
+  if (['perdido', 'convertido', 'fechado', 'duplicado'].includes(leadStatus)) {
+    return {
+      type: 'wait',
+      suggestedDateTime: null,
+      priority: 'baixa',
+      title: `Follow-up: ${params.leadContext.nome}`,
+      reason: 'O status atual do lead não pede novo follow-up automático.',
+      attemptNumber,
+      maxAttempts,
+      dayLoad: null,
+      dailyCapacity: DAILY_FOLLOW_UP_CAPACITY,
+      giveUpRecommendation: 'Não agendar novo retorno enquanto o status permanecer finalizado.',
+    };
+  }
+
+  if (attemptNumber > maxAttempts) {
+    return {
+      type: 'mark_lost_recommended',
+      suggestedDateTime: null,
+      priority: 'baixa',
+      title: `Última tentativa: ${params.leadContext.nome}`,
+      reason: 'Já houve várias tentativas consecutivas sem resposta do cliente.',
+      attemptNumber,
+      maxAttempts,
+      dayLoad: null,
+      dailyCapacity: DAILY_FOLLOW_UP_CAPACITY,
+      giveUpRecommendation: 'Se não houver resposta após esta mensagem, recomendamos marcar o lead como Perdido e limpar próximos lembretes.',
+    };
+  }
+
+  const businessDays = getBusinessDayOffsetForAttempt(attemptNumber);
+  let candidateDay = addBusinessDays(params.now, businessDays);
+  let dayLoad: number | null = null;
+
+  for (let attempts = 0; attempts < 10; attempts += 1) {
+    dayLoad = await countPendingRemindersForDay(params.supabaseAdmin, candidateDay);
+    if (dayLoad === null || dayLoad < DAILY_FOLLOW_UP_CAPACITY) break;
+    candidateDay = addBusinessDays(candidateDay, 1);
+  }
+
+  const hour = FOLLOW_UP_SCHEDULE_HOURS[Math.max(0, Math.min(FOLLOW_UP_SCHEDULE_HOURS.length - 1, dayLoad ?? 0)) % FOLLOW_UP_SCHEDULE_HOURS.length];
+  const suggestedDate = buildSaoPauloDateTimeUtc(candidateDay, hour);
+  const isLastAttempt = attemptNumber >= maxAttempts;
+  const hasDocumentScenario = params.effectiveSituationPresetIds.includes('aguardando_documentos');
+
+  return {
+    type: 'schedule',
+    suggestedDateTime: suggestedDate.toISOString(),
+    priority: hasDocumentScenario || isLastAttempt ? 'alta' : 'normal',
+    title: `${isLastAttempt ? 'Última tentativa' : 'Follow-up'}: ${params.leadContext.nome}`,
+    reason: dayLoad !== null && dayLoad >= DAILY_FOLLOW_UP_CAPACITY
+      ? `A data inicial estava cheia. Sugeri o próximo dia útil com menos de ${DAILY_FOLLOW_UP_CAPACITY} lembretes pendentes.`
+      : `Cadência sugerida para a tentativa ${attemptNumber}: +${businessDays} dia(s) útil(eis), evitando concentrar mais de ${DAILY_FOLLOW_UP_CAPACITY} follow-ups no mesmo dia.`,
+    attemptNumber,
+    maxAttempts,
+    dayLoad,
+    dailyCapacity: DAILY_FOLLOW_UP_CAPACITY,
+    giveUpRecommendation: isLastAttempt
+      ? 'Esta deve ser a última tentativa. Se não houver resposta, recomendamos marcar como Perdido.'
+      : `Se não houver resposta até a tentativa ${maxAttempts}, recomendamos fazer uma última tentativa leve e depois marcar como Perdido.`,
   };
 };
 
@@ -866,6 +1034,14 @@ Deno.serve(async (req: Request) => {
     const generatedText = result.text.trim();
     const variations = shouldGenerateVariations ? parseFollowUpVariationsResult(generatedText) : [];
     const responseText = variations[0]?.text ?? generatedText;
+    const nextAction = refinementMode ? null : await buildFollowUpNextAction({
+      supabaseAdmin,
+      messages,
+      lead,
+      leadContext,
+      effectiveSituationPresetIds,
+      now,
+    });
 
     return new Response(
       JSON.stringify({
@@ -878,6 +1054,7 @@ Deno.serve(async (req: Request) => {
           salesTechniques: effectiveSalesTechniqueIds,
           rationale: aiContext?.rationale ?? null,
         },
+        nextAction,
         provider: result.provider,
         model: result.model,
         fallback_used: result.fallbackUsed,

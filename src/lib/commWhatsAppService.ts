@@ -139,10 +139,24 @@ export type CommWhatsAppFollowUpAiContext = {
   rationale?: string | null;
 };
 
+export type CommWhatsAppFollowUpNextAction = {
+  type: 'schedule' | 'wait' | 'mark_lost_recommended';
+  suggestedDateTime: string | null;
+  priority: 'baixa' | 'normal' | 'alta';
+  title: string;
+  reason: string;
+  attemptNumber: number;
+  maxAttempts: number;
+  dayLoad: number | null;
+  dailyCapacity: number;
+  giveUpRecommendation: string;
+};
+
 export type CommWhatsAppFollowUpSuggestion = {
   text: string;
   variations?: CommWhatsAppFollowUpVariation[];
   aiContext?: CommWhatsAppFollowUpAiContext;
+  nextAction?: CommWhatsAppFollowUpNextAction | null;
   provider?: string | null;
   model?: string | null;
   fallback_used?: boolean;
@@ -774,6 +788,7 @@ export const commWhatsAppService = {
       text,
       variations: variations.length > 0 ? variations : undefined,
       aiContext: payload.aiContext,
+      nextAction: payload.nextAction ?? null,
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,

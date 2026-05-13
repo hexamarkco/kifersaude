@@ -22,13 +22,14 @@ import {
   type CommWhatsAppMessageSearchResult,
   type CommWhatsAppMediaSendKind,
   type CommWhatsAppOperationalState,
+  type CommWhatsAppFollowUpNextAction,
   type CommWhatsAppFollowUpTone,
   type CommWhatsAppFollowUpVariation,
   type CommWhatsAppRewriteTone,
 } from '../../../lib/commWhatsAppService';
 import { configService } from '../../../lib/configService';
 import { formatDateTimeFullBR, getDateKey, isOverdue, SAO_PAULO_TIMEZONE } from '../../../lib/dateUtils';
-import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote } from '../../../lib/leadReminderUtils';
+import { normalizeLeadStatusLabel, shouldPromptFirstReminderAfterQuote, syncLeadNextReturnFromUpcomingReminder } from '../../../lib/leadReminderUtils';
 import { toast } from '../../../lib/toast';
 import { splitWhatsAppMessageSegments } from '../../../lib/whatsAppMessageSegments';
 import {
@@ -2660,6 +2661,8 @@ export default function WhatsAppInboxScreen() {
   const [followUpSelectedSalesTechniques, setFollowUpSelectedSalesTechniques] = useState<string[]>([]);
   const [followUpSelectedSituationPresetIds, setFollowUpSelectedSituationPresetIds] = useState<string[]>([]);
   const [followUpAiContextRationale, setFollowUpAiContextRationale] = useState<string | null>(null);
+  const [followUpNextAction, setFollowUpNextAction] = useState<CommWhatsAppFollowUpNextAction | null>(null);
+  const [schedulingFollowUpNextAction, setSchedulingFollowUpNextAction] = useState(false);
   const [generatingFollowUp, setGeneratingFollowUp] = useState(false);
   const [composerRewriteModalOpen, setComposerRewriteModalOpen] = useState(false);
   const [composerRewriteSource, setComposerRewriteSource] = useState('');
@@ -4586,6 +4589,7 @@ export default function WhatsAppInboxScreen() {
     setFollowUpSelectedSalesTechniques([]);
     setFollowUpSelectedSituationPresetIds([]);
     setFollowUpAiContextRationale(null);
+    setFollowUpNextAction(null);
   }, []);
 
   const loadOperationalState = useCallback(async () => {
@@ -7144,6 +7148,7 @@ export default function WhatsAppInboxScreen() {
       setFollowUpSelectedSalesTechniques(result.aiContext?.salesTechniques ?? normalizedSalesTechniques);
       setFollowUpSelectedSituationPresetIds(result.aiContext?.situationPresetIds ?? normalizedSituationPresetIds);
       setFollowUpAiContextRationale(result.aiContext?.rationale ?? null);
+      setFollowUpNextAction(result.nextAction ?? null);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -7404,6 +7409,55 @@ export default function WhatsAppInboxScreen() {
       situationPresetIds: followUpSelectedSituationPresetIds,
     });
   }, [followUpCustomInstructions, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, followUpTone, handleGenerateFollowUp]);
+
+  const handleScheduleFollowUpNextAction = useCallback(async () => {
+    if (!selectedChat || !followUpNextAction?.suggestedDateTime) {
+      return;
+    }
+
+    const leadId = selectedChat.lead_id ?? leadPanel?.id ?? null;
+    if (!leadId) {
+      toast.error('Vincule um lead antes de agendar a próxima ação.');
+      return;
+    }
+
+    if (!canEditAgenda) {
+      toast.error('Você não tem permissão para editar a agenda.');
+      return;
+    }
+
+    setSchedulingFollowUpNextAction(true);
+    try {
+      const description = [
+        followUpNextAction.reason,
+        followUpNextAction.giveUpRecommendation,
+      ].filter(Boolean).join('\n\n');
+
+      const { error } = await supabase.from('reminders').insert([
+        {
+          lead_id: leadId,
+          tipo: 'Follow-up',
+          titulo: followUpNextAction.title || `Follow-up: ${getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null)}`,
+          descricao: description || null,
+          data_lembrete: followUpNextAction.suggestedDateTime,
+          lido: false,
+          prioridade: followUpNextAction.priority,
+        },
+      ]);
+
+      if (error) throw error;
+
+      await syncLeadNextReturnFromUpcomingReminder(leadId);
+      await loadChatAgendaSummary(leadId, leadContracts.map((contract) => contract.id));
+      toast.success('Próximo follow-up agendado.');
+      setFollowUpNextAction(null);
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao agendar proxima acao do follow-up', error);
+      toast.error('Não foi possível agendar a próxima ação.');
+    } finally {
+      setSchedulingFollowUpNextAction(false);
+    }
+  }, [canEditAgenda, channelState?.connected_user_name, followUpNextAction, leadContracts, leadPanel?.id, loadChatAgendaSummary, selectedChat]);
 
   const handleSendFollowUpDraft = useCallback(async () => {
     if (!selectedChat) {
@@ -8661,6 +8715,8 @@ export default function WhatsAppInboxScreen() {
           selectedSalesTechniques={followUpSelectedSalesTechniques}
           selectedSituationPresetIds={followUpSelectedSituationPresetIds}
           aiContextRationale={followUpAiContextRationale}
+          nextAction={followUpNextAction}
+          schedulingNextAction={schedulingFollowUpNextAction}
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}
@@ -8668,6 +8724,7 @@ export default function WhatsAppInboxScreen() {
           onToggleSituationPreset={handleToggleFollowUpSituationPreset}
           onToggleSalesTechnique={handleToggleFollowUpSalesTechnique}
           onGenerate={handleRegenerateFollowUp}
+          onScheduleNextAction={handleScheduleFollowUpNextAction}
           onSend={handleSendFollowUpDraft}
         />
 

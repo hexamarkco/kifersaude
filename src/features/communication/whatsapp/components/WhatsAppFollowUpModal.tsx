@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { Check, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
+import { CalendarPlus, Check, Clock3, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
 import Button from '../../../../components/ui/Button';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -7,7 +7,7 @@ import Textarea from '../../../../components/ui/Textarea';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, type CommWhatsAppFollowUpNextAction, type CommWhatsAppFollowUpTone, type CommWhatsAppFollowUpVariation, type CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
 import { toast } from '../../../../lib/toast';
 import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
 import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
@@ -77,6 +77,8 @@ type WhatsAppFollowUpModalProps = {
   selectedSalesTechniques: string[];
   selectedSituationPresetIds: string[];
   aiContextRationale?: string | null;
+  nextAction?: CommWhatsAppFollowUpNextAction | null;
+  schedulingNextAction?: boolean;
   onClose: () => void;
   onChangeValue: (value: string) => void;
   onChangeCustomInstructions: (value: string) => void;
@@ -84,7 +86,21 @@ type WhatsAppFollowUpModalProps = {
   onToggleSituationPreset: (presetId: string) => void;
   onToggleSalesTechnique: (techniqueId: string) => void;
   onGenerate: (options?: { variantCount?: number }) => void;
+  onScheduleNextAction: () => void;
   onSend: () => void;
+};
+
+const formatNextActionDate = (value?: string | null) => {
+  if (!value) return 'Sem data sugerida';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Data sugerida inválida';
+  return date.toLocaleString('pt-BR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 type SimpleRefinementAction = {
@@ -140,6 +156,8 @@ export default function WhatsAppFollowUpModal({
   selectedSalesTechniques,
   selectedSituationPresetIds,
   aiContextRationale,
+  nextAction,
+  schedulingNextAction = false,
   onClose,
   onChangeValue,
   onChangeCustomInstructions,
@@ -147,6 +165,7 @@ export default function WhatsAppFollowUpModal({
   onToggleSituationPreset,
   onToggleSalesTechnique,
   onGenerate,
+  onScheduleNextAction,
   onSend,
 }: WhatsAppFollowUpModalProps) {
   const [isRecording, setIsRecording] = useState(false);
@@ -543,6 +562,43 @@ export default function WhatsAppFollowUpModal({
               )}
             </div>
           </div>
+
+          {nextAction ? (
+            <div className="rounded-2xl border border-[var(--panel-accent-border,#d2ab85)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text,#1a120d)]">
+                    <CalendarPlus className="h-4 w-4 text-[var(--panel-accent-strong,#c86f1d)]" />
+                    Próxima ação sugerida
+                  </div>
+                  <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">{nextAction.reason}</p>
+                </div>
+                <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                  {nextAction.type === 'schedule' ? 'Agendar' : nextAction.type === 'wait' ? 'Aguardar' : 'Perdido?'}
+                </span>
+              </div>
+
+              <div className="mt-3 grid gap-2 text-xs text-[var(--panel-text-soft,#5b4635)] sm:grid-cols-2">
+                <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
+                  <div className="font-semibold text-[var(--panel-text,#1a120d)]">{formatNextActionDate(nextAction.suggestedDateTime)}</div>
+                  <div className="mt-0.5 flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> Tentativa {nextAction.attemptNumber}/{nextAction.maxAttempts}</div>
+                </div>
+                <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
+                  <div className="font-semibold text-[var(--panel-text,#1a120d)]">Prioridade {nextAction.priority}</div>
+                  <div className="mt-0.5">Dia: {nextAction.dayLoad ?? 0}/{nextAction.dailyCapacity} pendentes</div>
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">{nextAction.giveUpRecommendation}</p>
+
+              {nextAction.type === 'schedule' && nextAction.suggestedDateTime ? (
+                <Button type="button" variant="primary" size="sm" className="mt-3" onClick={onScheduleNextAction} loading={schedulingNextAction} disabled={generating || submitting || schedulingNextAction}>
+                  <CalendarPlus className="h-4 w-4" />
+                  Agendar sugestão
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
 
           <details className="group rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4" open={selectedSalesTechniques.length > 0}>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">

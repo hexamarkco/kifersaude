@@ -2988,7 +2988,7 @@ export default function WhatsAppInboxScreen() {
     optimisticMessageTimestampByChatIdRef.current.set(chatId, firstTimestamp + safeCount - 1);
 
     return Array.from({ length: safeCount }, (_, index) => new Date(firstTimestamp + index).toISOString());
-  }, [setComposerSelection]);
+  }, []);
 
   const getSelectedChatSnapshot = useCallback((chatId: string | null) => {
     if (!chatId) return null;
@@ -7049,7 +7049,7 @@ export default function WhatsAppInboxScreen() {
 
       return nextSelection;
     });
-  }, []);
+  }, [setComposerSelection]);
 
   const handleComposerChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setMessageDraft(event.target.value);

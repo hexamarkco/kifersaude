@@ -1220,6 +1220,19 @@ const applyPendingChatInboxState = (
 
     const pendingLastMessageAt = getMessageTimestampMs(pendingState.last_message_at);
     const serverCaughtUpWithPendingMessage = pendingLastMessageAt === null || (lastMessageAt !== null && lastMessageAt >= pendingLastMessageAt);
+    const serverDeliveryStatus = String(chat.last_message_delivery_status ?? '').trim().toLowerCase();
+    const pendingDeliveryStatus = String(pendingState.last_message_delivery_status ?? '').trim().toLowerCase();
+
+    if (
+      pendingState.last_message_at
+      && serverCaughtUpWithPendingMessage
+      && pendingState.last_message_direction === chat.last_message_direction
+      && serverDeliveryStatus
+      && serverDeliveryStatus !== pendingDeliveryStatus
+    ) {
+      pendingStateByChatId.delete(chat.id);
+      return chat;
+    }
 
     if (serverReadAt !== null && pendingReadAt !== null && serverReadAt >= pendingReadAt && chat.unread_count <= 0 && !chat.manual_unread && serverCaughtUpWithPendingMessage) {
       pendingStateByChatId.delete(chat.id);

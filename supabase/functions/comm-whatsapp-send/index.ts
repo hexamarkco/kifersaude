@@ -55,6 +55,7 @@ type SendRequestRow = {
   external_message_id: string | null;
   delivery_status: string | null;
   error_message: string | null;
+  updated_at: string | null;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
@@ -205,6 +206,15 @@ const sanitizeClientRequestId = (value: unknown) => {
   return normalized.slice(0, 128);
 };
 
+const isStaleSendingRequest = (row: SendRequestRow | null) => {
+  if (row?.status !== 'sending' || !row.updated_at) {
+    return false;
+  }
+
+  const updatedAt = Date.parse(row.updated_at);
+  return Number.isFinite(updatedAt) && Date.now() - updatedAt > 5 * 60 * 1000;
+};
+
 async function reserveSendRequest(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   params: {
@@ -227,7 +237,7 @@ async function reserveSendRequest(
       payload: params.payload,
       status: 'sending',
     })
-    .select('id,status,external_message_id,delivery_status,error_message')
+    .select('id,status,external_message_id,delivery_status,error_message,updated_at')
     .maybeSingle();
 
   if (!error) {
@@ -241,7 +251,7 @@ async function reserveSendRequest(
 
   const { data: existing, error: existingError } = await supabaseAdmin
     .from('comm_whatsapp_send_requests')
-    .select('id,status,external_message_id,delivery_status,error_message')
+    .select('id,status,external_message_id,delivery_status,error_message,updated_at')
     .eq('channel_id', params.channelId)
     .eq('client_request_id', params.clientRequestId)
     .maybeSingle();
@@ -251,7 +261,7 @@ async function reserveSendRequest(
   }
 
   const existingRow = existing as SendRequestRow | null;
-  if (existingRow?.status === 'failed') {
+  if (existingRow?.status === 'failed' || isStaleSendingRequest(existingRow)) {
     const { data: retryRow, error: retryError } = await supabaseAdmin
       .from('comm_whatsapp_send_requests')
       .update({
@@ -264,7 +274,7 @@ async function reserveSendRequest(
         updated_at: getNowIso(),
       })
       .eq('id', existingRow.id)
-      .select('id,status,external_message_id,delivery_status,error_message')
+      .select('id,status,external_message_id,delivery_status,error_message,updated_at')
       .maybeSingle();
 
     if (retryError) {

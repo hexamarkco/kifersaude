@@ -46,6 +46,17 @@ type SearchMessagesParams = {
   limit?: number;
 };
 
+type CommWhatsAppSendResult = {
+  messageId: string | null;
+  status: string;
+};
+
+type CommWhatsAppSendResponsePayload = {
+  messageId?: string | null;
+  status?: string;
+  duplicate?: boolean;
+};
+
 export type CommWhatsAppMessagesPage = {
   messages: CommWhatsAppMessage[];
   hasMore: boolean;
@@ -205,6 +216,22 @@ const getFunctionInvokeErrorMessage = async (error: unknown, fallbackMessage: st
   }
 
   return getSupabaseErrorMessage(error, fallbackMessage);
+};
+
+const parseSendResponse = (data: unknown, fallbackStatus = 'pending'): CommWhatsAppSendResult => {
+  const payload = (data ?? {}) as CommWhatsAppSendResponsePayload;
+  const messageId = typeof payload.messageId === 'string' && payload.messageId.trim()
+    ? payload.messageId.trim()
+    : null;
+  const status = typeof payload.status === 'string' && payload.status.trim()
+    ? payload.status.trim()
+    : fallbackStatus;
+
+  if (payload.duplicate === true && !messageId && status.toLowerCase() === 'sending') {
+    throw new Error('Este envio ainda está em andamento. Aguarde a confirmação antes de reenviar.');
+  }
+
+  return { messageId, status };
 };
 
 export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
@@ -615,6 +642,21 @@ export const commWhatsAppService = {
     };
   },
 
+  async listMessageContext(chatId: string, messageId: string): Promise<CommWhatsAppMessage[]> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_list_message_context' as never, {
+      p_chat_id: chatId,
+      p_message_id: messageId,
+      p_before_limit: 50,
+      p_after_limit: 50,
+    } as never);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar o contexto da mensagem.'));
+    }
+
+    return (Array.isArray(data) ? data : []) as CommWhatsAppMessage[];
+  },
+
   async listAllMessages(chatId: string): Promise<CommWhatsAppMessage[]> {
     const messages: CommWhatsAppMessage[] = [];
     let before: MessageCursor | null = null;
@@ -708,7 +750,7 @@ export const commWhatsAppService = {
     quotedPreviewText?: string;
     quotedType?: string;
     quotedAuthorPhone?: string;
-  } = {}): Promise<{ messageId: string | null; status: string }> {
+  } = {}): Promise<CommWhatsAppSendResult> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-send', {
       body: {
         chatId,
@@ -725,11 +767,7 @@ export const commWhatsAppService = {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem no WhatsApp.'));
     }
 
-    const payload = (data ?? {}) as { messageId?: string | null; status?: string };
-    return {
-      messageId: payload.messageId ?? null,
-      status: payload.status ?? 'pending',
-    };
+    return parseSendResponse(data);
   },
 
   async transcribeMessage(messageId: string, options: { force?: boolean } = {}): Promise<CommWhatsAppTranscriptionResult> {
@@ -885,7 +923,7 @@ export const commWhatsAppService = {
     quotedAuthorPhone?: string;
     onUploadProgress?: (progress: number | null) => void;
     signal?: AbortSignal;
-  }): Promise<{ messageId: string | null; status: string }> {
+  }): Promise<CommWhatsAppSendResult> {
     const {
       data: { session },
       error: sessionError,
@@ -976,12 +1014,12 @@ export const commWhatsAppService = {
           return;
         }
 
-        finalize(() =>
-          resolve({
-            messageId: typeof payload.messageId === 'string' ? payload.messageId : null,
-            status: typeof payload.status === 'string' ? payload.status : 'pending',
-          }),
-        );
+        try {
+          const result = parseSendResponse(payload);
+          finalize(() => resolve(result));
+        } catch (error) {
+          finalize(() => reject(error));
+        }
       };
 
       xhr.onerror = () => {
@@ -1012,7 +1050,7 @@ export const commWhatsAppService = {
     quotedPreviewText?: string;
     quotedType?: string;
     quotedAuthorPhone?: string;
-  }): Promise<{ messageId: string | null; status: string }> {
+  }): Promise<CommWhatsAppSendResult> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-send', {
       body: {
         chatId: params.chatId,
@@ -1033,11 +1071,7 @@ export const commWhatsAppService = {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a midia remota no WhatsApp.'));
     }
 
-    const payload = (data ?? {}) as { messageId?: string | null; status?: string };
-    return {
-      messageId: payload.messageId ?? null,
-      status: typeof payload.status === 'string' ? payload.status : 'pending',
-    };
+    return parseSendResponse(data);
   },
 
   async reactToMessage(params: { chatId: string; messageId: string; emoji?: string | null }): Promise<void> {
@@ -1105,11 +1139,7 @@ export const commWhatsAppService = {
       throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel encaminhar a mensagem no WhatsApp.'));
     }
 
-    const payload = (data ?? {}) as { messageId?: string | null; status?: string };
-    return {
-      messageId: payload.messageId ?? null,
-      status: typeof payload.status === 'string' ? payload.status : 'pending',
-    };
+    return parseSendResponse(data);
   },
 
   async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {

@@ -1217,6 +1217,13 @@ html {
   box-shadow: 0 18px 30px -24px rgba(28, 25, 23, 0.34);
 }
 
+.painel-theme .message-bubble-search-highlight {
+  animation: messageBubbleSearchPulse 1.6s ease-in-out 2;
+  box-shadow:
+    0 0 0 3px rgba(202, 111, 29, 0.34),
+    0 18px 34px -20px rgba(202, 111, 29, 0.56) !important;
+}
+
 .painel-theme .message-bubble-action-trigger {
   transition: opacity 180ms ease, background-color 180ms ease, color 180ms ease;
 }
@@ -1252,6 +1259,21 @@ html {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes messageBubbleSearchPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(202, 111, 29, 0.28),
+      0 18px 34px -20px rgba(202, 111, 29, 0.46);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(202, 111, 29, 0.2),
+      0 22px 40px -18px rgba(202, 111, 29, 0.62);
   }
 }
 

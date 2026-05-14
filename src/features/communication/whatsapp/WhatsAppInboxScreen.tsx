@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -1820,6 +1821,7 @@ function WhatsAppMediaViewer({
   const canGoNext = selectedIndex < messages.length - 1;
   const selectedName = selectedMessage?.media_file_name || (isVideo ? 'Vídeo' : 'Imagem');
   const selectedAuthor = selectedMessage?.direction === 'outbound' ? 'Você' : contactName;
+  const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
 
   const goToIndex = useCallback((nextIndex: number) => {
     const nextMessage = messages[nextIndex];
@@ -1827,6 +1829,16 @@ function WhatsAppMediaViewer({
       onSelect(nextMessage.id);
     }
   }, [messages, onSelect]);
+
+  const scrollThumbnails = useCallback((direction: 'previous' | 'next') => {
+    const target = thumbnailStripRef.current;
+    if (!target) {
+      return;
+    }
+
+    const amount = Math.max(260, target.clientWidth * 0.72);
+    target.scrollBy({ left: direction === 'previous' ? -amount : amount, behavior: 'smooth' });
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -1854,8 +1866,8 @@ function WhatsAppMediaViewer({
     return null;
   }
 
-  return (
-    <div className="whatsapp-inbox-media-viewer fixed inset-0 z-[120] flex flex-col bg-[#111413] text-white" role="dialog" aria-modal="true">
+  const viewer = (
+    <div className="whatsapp-inbox-media-viewer fixed inset-0 z-[2147483000] flex flex-col bg-[#111413] text-white" role="dialog" aria-modal="true">
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{selectedAuthor}</p>
@@ -1930,19 +1942,39 @@ function WhatsAppMediaViewer({
       </main>
 
       {messages.length > 1 ? (
-        <footer className="whatsapp-inbox-media-viewer-strip flex shrink-0 gap-2 overflow-x-auto border-t border-white/10 px-4 py-3">
-          {messages.map((message) => (
-            <WhatsAppMediaViewerThumb
-              key={message.id}
-              message={message}
-              active={message.id === selectedMessage.id}
-              onSelect={onSelect}
-            />
-          ))}
+        <footer className="whatsapp-inbox-media-viewer-strip relative shrink-0 border-t border-white/10 px-16 py-4">
+          <button
+            type="button"
+            onClick={() => scrollThumbnails('previous')}
+            className="whatsapp-inbox-media-viewer-strip-nav left-4"
+            aria-label="Rolar miniaturas para trás"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <div ref={thumbnailStripRef} className="flex gap-3 overflow-x-auto py-1">
+            {messages.map((message) => (
+              <WhatsAppMediaViewerThumb
+                key={message.id}
+                message={message}
+                active={message.id === selectedMessage.id}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => scrollThumbnails('next')}
+            className="whatsapp-inbox-media-viewer-strip-nav right-4"
+            aria-label="Rolar miniaturas para frente"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </footer>
       ) : null}
     </div>
   );
+
+  return typeof document === 'undefined' ? viewer : createPortal(viewer, document.body);
 }
 
 function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) {
@@ -2323,6 +2355,7 @@ function InboxChatListItem({
     ? getDeliveryStatusMetaFromValues(chat.last_message_delivery_status)
     : null;
   const OutboundPreviewStatusIcon = outboundPreviewStatusMeta?.icon;
+  const hasUnreadBadge = chat.unread_count > 0 || chat.manual_unread;
 
   return (
     <div
@@ -2345,16 +2378,11 @@ function InboxChatListItem({
                 {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--panel-text-muted,#8a735f)]" /> : null}
               </div>
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
+            <div className="flex shrink-0 items-start">
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
-              {chat.unread_count > 0 || chat.manual_unread ? (
-                <span className="whatsapp-inbox-unread-badge inline-flex min-h-5 min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
-                  {chat.unread_count > 0 ? chat.unread_count : '•'}
-                </span>
-              ) : null}
             </div>
           </div>
-          <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
+          <p className={`mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)] ${hasUnreadBadge ? 'pr-10' : ''}`}>
             {draftPreview ? (
               <>
                 <span className="mr-1 font-semibold text-[var(--panel-accent-red-text,#d9776b)]">Rascunho:</span>
@@ -2377,6 +2405,11 @@ function InboxChatListItem({
               'Sem mensagens ainda'
             )}
           </p>
+          {hasUnreadBadge ? (
+            <span className="whatsapp-inbox-unread-badge absolute right-4 top-[3.35rem] inline-flex min-h-5 min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
+              {chat.unread_count > 0 ? chat.unread_count : '•'}
+            </span>
+          ) : null}
         </button>
       </div>
 

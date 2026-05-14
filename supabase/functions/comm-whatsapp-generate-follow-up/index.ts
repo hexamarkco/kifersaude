@@ -105,6 +105,7 @@ const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const MAX_FOLLOW_UP_VARIANTS = 5;
 const DAILY_FOLLOW_UP_CAPACITY = 15;
 const FOLLOW_UP_SCHEDULE_HOURS = [10, 11, 14, 15, 16] as const;
+const OUTBOUND_ATTEMPT_GROUP_GAP_MS = 2 * 60 * 60 * 1000;
 const FOLLOW_UP_SITUATION_PRESETS = [
   {
     id: 'cliente_sumiu',
@@ -434,14 +435,36 @@ const countPendingRemindersForDay = async (
   return count ?? 0;
 };
 
-const countConsecutiveOutboundMessages = (messages: MessageRow[]) => {
-  let count = 0;
+const countConsecutiveOutboundAttempts = (messages: MessageRow[]) => {
+  let lastInboundIndex = -1;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message.direction === 'inbound') break;
-    if (message.direction === 'outbound' && buildTranscriptContent(message)) count += 1;
+    if (messages[index].direction === 'inbound') {
+      lastInboundIndex = index;
+      break;
+    }
   }
-  return count;
+
+  const outboundMessages = messages
+    .slice(lastInboundIndex + 1)
+    .filter((message) => message.direction === 'outbound' && buildTranscriptContent(message));
+
+  if (outboundMessages.length === 0) {
+    return 0;
+  }
+
+  let attempts = 1;
+  let previousMessageAt = Date.parse(outboundMessages[0].message_at);
+
+  for (const message of outboundMessages.slice(1)) {
+    const messageAt = Date.parse(message.message_at);
+    if (!Number.isNaN(messageAt) && !Number.isNaN(previousMessageAt) && messageAt - previousMessageAt > OUTBOUND_ATTEMPT_GROUP_GAP_MS) {
+      attempts += 1;
+    }
+
+    previousMessageAt = messageAt;
+  }
+
+  return attempts;
 };
 
 const buildFollowUpNextAction = async (params: {
@@ -452,8 +475,8 @@ const buildFollowUpNextAction = async (params: {
   effectiveSituationPresetIds: string[];
   now: Date;
 }): Promise<FollowUpNextAction> => {
-  const consecutiveOutbound = countConsecutiveOutboundMessages(params.messages);
-  const attemptNumber = Math.min(consecutiveOutbound + 1, 5);
+  const consecutiveOutboundAttempts = countConsecutiveOutboundAttempts(params.messages);
+  const attemptNumber = Math.min(Math.max(consecutiveOutboundAttempts, 1), 5);
   const maxAttempts = 4;
   const leadStatus = toTrimmedString(params.lead?.status).toLowerCase();
 

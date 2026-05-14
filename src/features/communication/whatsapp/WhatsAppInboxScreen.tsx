@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -1291,6 +1291,25 @@ const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
   }
 
   return 'document';
+};
+
+const createPendingAttachmentFromFile = (file: File): PendingAttachment => {
+  const kind = inferAttachmentKind(file);
+  return {
+    id: createPendingAttachmentId(),
+    file,
+    kind,
+    previewUrl: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
+  };
+};
+
+const normalizePastedImageFile = (file: File, index: number) => {
+  if (file.name.trim()) {
+    return file;
+  }
+
+  const extension = file.type.split('/')[1]?.split(';')[0] || 'png';
+  return new File([file], `imagem-colada-${Date.now()}-${index + 1}.${extension}`, { type: file.type || 'image/png' });
 };
 
 const formatFileSize = (value?: number | null) => {
@@ -5514,15 +5533,7 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const nextAttachments = nextFiles.map((file) => {
-      const kind = inferAttachmentKind(file);
-      return {
-        id: createPendingAttachmentId(),
-        file,
-        kind,
-        previewUrl: kind === 'image' || kind === 'video' ? URL.createObjectURL(file) : null,
-      } satisfies PendingAttachment;
-    });
+    const nextAttachments = nextFiles.map(createPendingAttachmentFromFile);
 
     setPendingAttachments((current) => {
       const preserved = current.filter((attachment) => attachment.kind !== 'voice');
@@ -5530,6 +5541,36 @@ export default function WhatsAppInboxScreen() {
     });
 
     event.target.value = '';
+  };
+
+  const handleComposerPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (voiceRecordingState !== 'idle' || generatingFollowUp) {
+      return;
+    }
+
+    const clipboardItems = Array.from(event.clipboardData.items ?? []);
+    const imageFilesFromItems = clipboardItems
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => Boolean(file));
+    const imageFiles = imageFilesFromItems.length > 0
+      ? imageFilesFromItems
+      : Array.from(event.clipboardData.files ?? []).filter((file) => file.type.startsWith('image/'));
+
+    if (imageFiles.length === 0) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const pastedAttachments = imageFiles
+      .map(normalizePastedImageFile)
+      .map(createPendingAttachmentFromFile);
+
+    setPendingAttachments((current) => {
+      const preserved = current.filter((attachment) => attachment.kind !== 'voice');
+      return [...preserved, ...pastedAttachments];
+    });
   };
 
   const handleClearAttachment = (attachmentId?: string) => {
@@ -8753,6 +8794,7 @@ export default function WhatsAppInboxScreen() {
                         rows={1}
                         value={messageDraft}
                         onChange={handleComposerChange}
+                        onPaste={handleComposerPaste}
                         onKeyDown={handleComposerKeyDown}
                         onClick={(event) => syncComposerSelection(event.currentTarget)}
                         onKeyUp={(event) => syncComposerSelection(event.currentTarget)}

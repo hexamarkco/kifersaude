@@ -202,7 +202,7 @@ const loadInboxSummary = async (supabaseAdmin: any) => {
     countRows(supabaseAdmin.from('comm_whatsapp_messages').select('*', { count: 'exact', head: true }).eq('direction', 'outbound').in('delivery_status', ['pending', 'queued', 'sending']), 'Falha ao contar envios pendentes'),
     supabaseAdmin
       .from('comm_whatsapp_chats')
-      .select('id, display_name, saved_contact_name, phone_number, lead_id, lead_status, unread_count, manual_unread, is_archived, is_muted, is_pinned, last_message_at, last_message_direction, last_message_delivery_status, last_message_text')
+      .select('id, display_name, saved_contact_name, phone_number, lead_id, unread_count, manual_unread, is_archived, is_muted, is_pinned, last_message_at, last_message_direction, last_message_delivery_status, last_message_text')
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .order('updated_at', { ascending: false })
       .limit(12),
@@ -238,7 +238,7 @@ const loadSelectedChatContext = async (supabaseAdmin: any, chatId: string) => {
 
   const chatQuery = supabaseAdmin
     .from('comm_whatsapp_chats')
-    .select('id, channel_id, external_chat_id, phone_number, phone_digits, display_name, saved_contact_name, push_name, lead_id, lead_status, unread_count, manual_unread, is_archived, is_muted, is_pinned, status, last_message_text, last_message_direction, last_message_at, last_message_delivery_status, created_at, updated_at')
+    .select('id, channel_id, external_chat_id, phone_number, phone_digits, display_name, saved_contact_name, push_name, lead_id, unread_count, manual_unread, is_archived, is_muted, is_pinned, status, last_message_text, last_message_direction, last_message_at, last_message_delivery_status, created_at, updated_at')
     .limit(1);
 
   const { data: chatRows, error: chatError } = isUuid(chatId)

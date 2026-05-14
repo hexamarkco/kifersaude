@@ -16,6 +16,7 @@ import { cx } from '../../../lib/cx';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
+  type CommWhatsAppAssistantResponse,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppLeadSearchResult,
@@ -43,6 +44,7 @@ import {
 } from '../../../lib/whatsAppQuickReplies';
 import { fetchAllPages, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
+import WhatsAppAssistantModal from './components/WhatsAppAssistantModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
@@ -2667,6 +2669,10 @@ export default function WhatsAppInboxScreen() {
   const [savingQuickReplies, setSavingQuickReplies] = useState(false);
   const [whatsAppAgendaOpen, setWhatsAppAgendaOpen] = useState(false);
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
+  const [assistantModalOpen, setAssistantModalOpen] = useState(false);
+  const [assistantPrompt, setAssistantPrompt] = useState('');
+  const [assistantResponse, setAssistantResponse] = useState<CommWhatsAppAssistantResponse | null>(null);
+  const [assistantLoading, setAssistantLoading] = useState(false);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
   const [followUpCustomInstructions, setFollowUpCustomInstructions] = useState('');
@@ -2833,6 +2839,7 @@ export default function WhatsAppInboxScreen() {
   const leadPanelRequestIdRef = useRef(0);
   const leadContractsRequestIdRef = useRef(0);
   const chatAgendaSummaryRequestIdRef = useRef(0);
+  const assistantRequestIdRef = useRef(0);
   const followUpGenerationRequestIdRef = useRef(0);
   const leadSearchRequestIdRef = useRef(0);
   const startChatSourcesRequestIdRef = useRef(0);
@@ -7156,6 +7163,72 @@ export default function WhatsAppInboxScreen() {
     }
   }, [quickReplyIntegration]);
 
+  const handleAskAssistant = useCallback(async () => {
+    const prompt = assistantPrompt.trim();
+    if (!prompt) {
+      toast.error('Digite uma pergunta para o R.A.V.I.');
+      return;
+    }
+
+    const requestId = ++assistantRequestIdRef.current;
+    const targetChatId = selectedChat?.id ?? null;
+    setAssistantLoading(true);
+
+    try {
+      const result = await commWhatsAppService.askAssistant({
+        prompt,
+        chatId: targetChatId,
+        scope: targetChatId ? 'chat' : 'inbox',
+        composerDraft: messageDraft,
+      });
+
+      if (requestId !== assistantRequestIdRef.current) {
+        return;
+      }
+
+      setAssistantResponse(result);
+    } catch (error) {
+      if (requestId !== assistantRequestIdRef.current) {
+        return;
+      }
+
+      console.error('[WhatsAppInbox] erro ao consultar R.A.V.I.', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível consultar o R.A.V.I.');
+    } finally {
+      if (requestId === assistantRequestIdRef.current) {
+        setAssistantLoading(false);
+      }
+    }
+  }, [assistantPrompt, messageDraft, selectedChat?.id]);
+
+  const handleApplyAssistantSuggestedMessage = useCallback((message: string) => {
+    const nextValue = message.trim();
+    if (!nextValue) {
+      return;
+    }
+
+    if (!selectedChat) {
+      toast.error('Selecione uma conversa para aplicar a sugestão no composer.');
+      return;
+    }
+
+    const nextCursor = nextValue.length;
+    setMessageDraft(nextValue);
+    setComposerSelection({ start: nextCursor, end: nextCursor });
+    setComposerFocused(true);
+    toast.success('Sugestão aplicada no composer. Revise antes de enviar.');
+
+    requestAnimationFrame(() => {
+      const target = composerTextareaRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [selectedChat, setComposerSelection, setMessageDraft]);
+
   const handleCloseFollowUpModal = useCallback(() => {
     setFollowUpModalOpen(false);
   }, []);
@@ -7728,6 +7801,16 @@ export default function WhatsAppInboxScreen() {
                     disabled={!canViewAgenda}
                   >
                     <CalendarDays className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    onClick={() => setAssistantModalOpen(true)}
+                    className="rounded-xl"
+                    aria-label="R.A.V.I."
+                    title="R.A.V.I."
+                  >
+                    <Sparkles className="h-4 w-4" />
                   </Button>
                   <Button
                     size="icon"
@@ -8823,6 +8906,19 @@ export default function WhatsAppInboxScreen() {
           canEdit={canEditAgenda}
           onGenerateFollowUp={selectedChat ? handleOpenFollowUpModal : undefined}
           onOpenLeadChat={handleOpenAgendaLeadChat}
+        />
+
+        <WhatsAppAssistantModal
+          isOpen={assistantModalOpen}
+          loading={assistantLoading}
+          prompt={assistantPrompt}
+          response={assistantResponse}
+          selectedChatName={selectedChatDisplayName}
+          hasSelectedChat={Boolean(selectedChat)}
+          onClose={() => setAssistantModalOpen(false)}
+          onPromptChange={setAssistantPrompt}
+          onAsk={() => void handleAskAssistant()}
+          onApplySuggestedMessage={handleApplyAssistantSuggestedMessage}
         />
 
         <WhatsAppDashboardModal

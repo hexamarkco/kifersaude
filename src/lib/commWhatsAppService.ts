@@ -15,6 +15,68 @@ export type CommWhatsAppOperationalState = {
   tokenConfigured: boolean;
 };
 
+export type CommWhatsAppDashboardRecentChat = {
+  id: string;
+  displayName: string;
+  phoneNumber: string;
+  leadId?: string | null;
+  leadStatus?: string | null;
+  unreadCount: number;
+  manualUnread: boolean;
+  isArchived: boolean;
+  isMuted: boolean;
+  isPinned: boolean;
+  lastMessageAt?: string | null;
+  lastMessageDirection?: string | null;
+  lastMessageStatus?: string | null;
+  lastMessageText?: string | null;
+};
+
+export type CommWhatsAppDashboardMetrics = {
+  generatedAt?: string | null;
+  channel: Pick<
+    CommWhatsAppChannel,
+    | 'id'
+    | 'name'
+    | 'enabled'
+    | 'connection_status'
+    | 'health_status'
+    | 'phone_number'
+    | 'connected_user_name'
+    | 'last_health_check_at'
+    | 'last_webhook_received_at'
+    | 'last_error'
+    | 'updated_at'
+  > | null;
+  chatMetrics: {
+    totalChats: number;
+    activeChats: number;
+    archivedChats: number;
+    unreadChats: number;
+    unreadMessages: number;
+    linkedLeadChats: number;
+    activeUnlinkedChats: number;
+    pinnedChats: number;
+    mutedChats: number;
+    staleUnreadChats: number;
+    oldestUnreadAt?: string | null;
+    lastInboundAt?: string | null;
+    lastOutboundAt?: string | null;
+  };
+  messageMetrics: {
+    messages24h: number;
+    inbound24h: number;
+    outbound24h: number;
+    pendingOutbound: number;
+    failedOutbound24h: number;
+  };
+  reminderMetrics: {
+    overdueReminders: number;
+    upcomingReminders24h: number;
+  };
+  recentChats: CommWhatsAppDashboardRecentChat[];
+};
+
 export type CommWhatsAppFollowUpIntensity = 'leve' | 'moderada' | 'direta' | 'ultima_tentativa';
 
 type ListChatsParams = {
@@ -186,6 +248,37 @@ export type CommWhatsAppRewriteSuggestion = {
   fallback_used?: boolean;
 };
 
+export type CommWhatsAppAssistantActionType = 'draft_message' | 'schedule_follow_up' | 'review_lead' | 'open_dashboard' | 'manual';
+
+export type CommWhatsAppAssistantAction = {
+  id: string;
+  type: CommWhatsAppAssistantActionType;
+  title: string;
+  description: string;
+  requiresConfirmation: boolean;
+  payload?: Record<string, unknown> | null;
+};
+
+export type CommWhatsAppAssistantResponse = {
+  answer: string;
+  clarification?: string | null;
+  confidence: 'low' | 'medium' | 'high';
+  actionPlan: CommWhatsAppAssistantAction[];
+  suggestedMessage?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  fallback_used?: boolean;
+  contextSummary?: {
+    scope?: string;
+    chatLoaded?: boolean;
+    messagesLoaded?: number;
+    leadLoaded?: boolean;
+    contractsLoaded?: number;
+    remindersLoaded?: number;
+    recentChatsLoaded?: number;
+  } | null;
+};
+
 export type CommWhatsAppMediaSendKind = 'image' | 'video' | 'document' | 'audio' | 'voice';
 
 const mediaObjectUrlCache = new Map<string, Promise<string>>();
@@ -232,6 +325,90 @@ const parseSendResponse = (data: unknown, fallbackStatus = 'pending'): CommWhats
   }
 
   return { messageId, status };
+};
+
+const toRecord = (value: unknown): Record<string, unknown> => (
+  value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+);
+
+const readNumber = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+
+const readString = (value: unknown): string => (typeof value === 'string' ? value : '');
+
+const normalizeDashboardRecentChat = (value: unknown): CommWhatsAppDashboardRecentChat => {
+  const row = toRecord(value);
+  return {
+    id: readString(row.id),
+    displayName: readString(row.displayName) || readString(row.display_name) || readString(row.phoneNumber) || readString(row.phone_number),
+    phoneNumber: readString(row.phoneNumber) || readString(row.phone_number),
+    leadId: readString(row.leadId) || readString(row.lead_id) || null,
+    leadStatus: readString(row.leadStatus) || readString(row.lead_status) || null,
+    unreadCount: readNumber(row.unreadCount ?? row.unread_count),
+    manualUnread: row.manualUnread === true || row.manual_unread === true,
+    isArchived: row.isArchived === true || row.is_archived === true,
+    isMuted: row.isMuted === true || row.is_muted === true,
+    isPinned: row.isPinned === true || row.is_pinned === true,
+    lastMessageAt: readString(row.lastMessageAt) || readString(row.last_message_at) || null,
+    lastMessageDirection: readString(row.lastMessageDirection) || readString(row.last_message_direction) || null,
+    lastMessageStatus: readString(row.lastMessageStatus) || readString(row.last_message_status) || readString(row.last_message_delivery_status) || null,
+    lastMessageText: readString(row.lastMessageText) || readString(row.last_message_text) || null,
+  };
+};
+
+const normalizeDashboardMetrics = (value: unknown): CommWhatsAppDashboardMetrics => {
+  const payload = toRecord(value);
+  const channel = toRecord(payload.channel);
+  const chatMetrics = toRecord(payload.chatMetrics ?? payload.chat_metrics);
+  const messageMetrics = toRecord(payload.messageMetrics ?? payload.message_metrics);
+  const reminderMetrics = toRecord(payload.reminderMetrics ?? payload.reminder_metrics);
+  const rawRecentChats = payload.recentChats ?? payload.recent_chats;
+  const recentChats = Array.isArray(rawRecentChats) ? rawRecentChats : [];
+
+  return {
+    generatedAt: readString(payload.generatedAt) || readString(payload.generated_at) || null,
+    channel: Object.keys(channel).length > 0
+      ? {
+          id: readString(channel.id),
+          name: readString(channel.name),
+          enabled: channel.enabled === true,
+          connection_status: readString(channel.connection_status),
+          health_status: readString(channel.health_status),
+          phone_number: readString(channel.phone_number) || null,
+          connected_user_name: readString(channel.connected_user_name) || null,
+          last_health_check_at: readString(channel.last_health_check_at) || null,
+          last_webhook_received_at: readString(channel.last_webhook_received_at) || null,
+          last_error: readString(channel.last_error) || null,
+          updated_at: readString(channel.updated_at),
+        }
+      : null,
+    chatMetrics: {
+      totalChats: readNumber(chatMetrics.totalChats ?? chatMetrics.total_chats),
+      activeChats: readNumber(chatMetrics.activeChats ?? chatMetrics.active_chats),
+      archivedChats: readNumber(chatMetrics.archivedChats ?? chatMetrics.archived_chats),
+      unreadChats: readNumber(chatMetrics.unreadChats ?? chatMetrics.unread_chats),
+      unreadMessages: readNumber(chatMetrics.unreadMessages ?? chatMetrics.unread_messages),
+      linkedLeadChats: readNumber(chatMetrics.linkedLeadChats ?? chatMetrics.linked_lead_chats),
+      activeUnlinkedChats: readNumber(chatMetrics.activeUnlinkedChats ?? chatMetrics.active_unlinked_chats),
+      pinnedChats: readNumber(chatMetrics.pinnedChats ?? chatMetrics.pinned_chats),
+      mutedChats: readNumber(chatMetrics.mutedChats ?? chatMetrics.muted_chats),
+      staleUnreadChats: readNumber(chatMetrics.staleUnreadChats ?? chatMetrics.stale_unread_chats),
+      oldestUnreadAt: readString(chatMetrics.oldestUnreadAt) || readString(chatMetrics.oldest_unread_at) || null,
+      lastInboundAt: readString(chatMetrics.lastInboundAt) || readString(chatMetrics.last_inbound_at) || null,
+      lastOutboundAt: readString(chatMetrics.lastOutboundAt) || readString(chatMetrics.last_outbound_at) || null,
+    },
+    messageMetrics: {
+      messages24h: readNumber(messageMetrics.messages24h ?? messageMetrics.messages_24h),
+      inbound24h: readNumber(messageMetrics.inbound24h ?? messageMetrics.inbound_24h),
+      outbound24h: readNumber(messageMetrics.outbound24h ?? messageMetrics.outbound_24h),
+      pendingOutbound: readNumber(messageMetrics.pendingOutbound ?? messageMetrics.pending_outbound),
+      failedOutbound24h: readNumber(messageMetrics.failedOutbound24h ?? messageMetrics.failed_outbound_24h),
+    },
+    reminderMetrics: {
+      overdueReminders: readNumber(reminderMetrics.overdueReminders ?? reminderMetrics.overdue_reminders),
+      upcomingReminders24h: readNumber(reminderMetrics.upcomingReminders24h ?? reminderMetrics.upcoming_reminders_24h),
+    },
+    recentChats: recentChats.map(normalizeDashboardRecentChat),
+  };
 };
 
 export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
@@ -317,6 +494,21 @@ export const commWhatsAppService = {
       configEnabled: row.config_enabled === true,
       tokenConfigured: row.token_configured === true,
     };
+  },
+
+  async getDashboardMetrics(): Promise<CommWhatsAppDashboardMetrics> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_get_dashboard_metrics' as never);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as metricas do Painel WhatsApp.'));
+    }
+
+    const payload = toRecord(data);
+    if (payload.authorized === false) {
+      throw new Error('Permissao insuficiente para visualizar o Painel WhatsApp.');
+    }
+
+    return normalizeDashboardMetrics(payload);
   },
 
   async listChats(params: ListChatsParams = {}): Promise<CommWhatsAppChat[]> {
@@ -890,6 +1082,86 @@ export const commWhatsAppService = {
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,
+    };
+  },
+
+  async askAssistant(options: {
+    prompt: string;
+    chatId?: string | null;
+    scope?: 'inbox' | 'chat';
+    composerDraft?: string;
+  }): Promise<CommWhatsAppAssistantResponse> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-assistant', {
+      body: {
+        prompt: options.prompt,
+        chatId: options.chatId?.trim() || '',
+        scope: options.scope ?? (options.chatId ? 'chat' : 'inbox'),
+        composerDraft: options.composerDraft?.trim() || '',
+      },
+    });
+
+    if (error) {
+      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel consultar o R.A.V.I.'));
+    }
+
+    const payload = (data ?? {}) as {
+      answer?: string;
+      clarification?: string | null;
+      confidence?: string;
+      action_plan?: Array<{
+        id?: string;
+        type?: string;
+        title?: string;
+        description?: string;
+        requires_confirmation?: boolean;
+        payload?: Record<string, unknown> | null;
+      }>;
+      suggested_message?: string | null;
+      provider?: string | null;
+      model?: string | null;
+      fallback_used?: boolean;
+      context_summary?: CommWhatsAppAssistantResponse['contextSummary'];
+    };
+
+    const answer = payload.answer?.trim() || '';
+    if (!answer) {
+      throw new Error('O R.A.V.I. nao retornou uma resposta valida.');
+    }
+
+    const validActionTypes = new Set<CommWhatsAppAssistantActionType>([
+      'draft_message',
+      'schedule_follow_up',
+      'review_lead',
+      'open_dashboard',
+      'manual',
+    ]);
+
+    const actionPlan = Array.isArray(payload.action_plan)
+      ? payload.action_plan.map((action, index) => {
+          const actionType = action.type?.trim() as CommWhatsAppAssistantActionType | undefined;
+          return {
+            id: action.id?.trim() || `action-${index + 1}`,
+            type: actionType && validActionTypes.has(actionType) ? actionType : 'manual',
+            title: action.title?.trim() || `Ação ${index + 1}`,
+            description: action.description?.trim() || action.title?.trim() || `Ação ${index + 1}`,
+            requiresConfirmation: action.requires_confirmation !== false,
+            payload: action.payload ?? null,
+          };
+        })
+      : [];
+
+    const confidence = payload.confidence === 'low' || payload.confidence === 'high' ? payload.confidence : 'medium';
+
+    return {
+      answer,
+      clarification: payload.clarification?.trim() || null,
+      confidence,
+      actionPlan,
+      suggestedMessage: payload.suggested_message?.trim() || null,
+      provider: payload.provider ?? null,
+      model: payload.model ?? null,
+      fallback_used: payload.fallback_used === true,
+      contextSummary: payload.context_summary ?? null,
     };
   },
 

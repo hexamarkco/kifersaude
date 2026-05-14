@@ -18,7 +18,8 @@ export type AiProvider = "openai" | "gemini" | "claude";
 export type AiTaskKey =
   | "rewrite_message"
   | "follow_up_generation"
-  | "whatsapp_audio_transcription";
+  | "whatsapp_audio_transcription"
+  | "whatsapp_assistant";
 export type ModelOption = { value: string; label: string };
 
 export type AiProviderFormState = {
@@ -86,6 +87,11 @@ export const AI_TASKS: Array<{
     key: "whatsapp_audio_transcription",
     label: "Transcricao de audio do WhatsApp",
     description: "Usado no inbox para transcrever notas de voz e audios sob demanda.",
+  },
+  {
+    key: "whatsapp_assistant",
+    label: "Assistente WhatsApp / R.A.V.I.",
+    description: "Usado no inbox para analisar contexto, responder perguntas operacionais e sugerir planos confirmaveis.",
   },
 ];
 
@@ -193,6 +199,11 @@ export const createDefaultRoutingForm = (): AiRoutingFormState => ({
     fallbackToOpenAi: true,
   },
   whatsapp_audio_transcription: {
+    provider: "openai",
+    model: getDefaultTaskModel("openai"),
+    fallbackToOpenAi: true,
+  },
+  whatsapp_assistant: {
     provider: "openai",
     model: getDefaultTaskModel("openai"),
     fallbackToOpenAi: true,

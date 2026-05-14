@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type AiProvider = 'openai' | 'gemini' | 'claude';
 
-export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'whatsapp_audio_transcription';
+export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'whatsapp_audio_transcription' | 'whatsapp_assistant';
 
 type ProviderSettings = {
   enabled: boolean;
@@ -98,7 +98,7 @@ const GEMINI_DEFAULT_TRANSCRIPTION_MODEL = GEMINI_DEFAULT_TEXT_MODEL;
 const CLAUDE_DEFAULT_TEXT_MODEL = 'claude-3-5-sonnet-latest';
 const CLAUDE_DEFAULT_TRANSCRIPTION_MODEL = CLAUDE_DEFAULT_TEXT_MODEL;
 
-const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'whatsapp_audio_transcription'];
+const AI_TASKS: AiTask[] = ['rewrite_message', 'follow_up_generation', 'whatsapp_audio_transcription', 'whatsapp_assistant'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -275,6 +275,7 @@ const loadAiRuntimeConfig = async (supabaseAdmin: any): Promise<AiRuntimeConfig>
       providers,
       fallbackEnabled,
     ),
+    whatsapp_assistant: normalizeTaskRouting('whatsapp_assistant', rawTasks.whatsapp_assistant, providers, fallbackEnabled),
   };
 
   return {

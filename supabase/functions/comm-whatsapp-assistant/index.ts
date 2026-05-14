@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
@@ -79,8 +80,6 @@ const clampText = (value: string, maxLength: number) => {
 
   return `${value.slice(0, maxLength).trimEnd()}...`;
 };
-
-const compactText = (value: unknown) => toTrimmedString(value).replace(/\s+/g, ' ');
 
 const toNullableText = (value: unknown, maxLength = 1200): string | null => {
   const text = toTrimmedString(value);

@@ -3,17 +3,19 @@ import { AlertCircle, CheckCircle2, Loader2, SendHorizontal, Sparkles } from 'lu
 import Button from '../../../../components/ui/Button';
 import ModalShell from '../../../../components/ui/ModalShell';
 import { cx } from '../../../../lib/cx';
-import type { CommWhatsAppAssistantResponse } from '../../../../lib/commWhatsAppService';
+import type { CommWhatsAppAssistantResponse, CommWhatsAppAssistantScope } from '../../../../lib/commWhatsAppService';
 
 type WhatsAppAssistantModalProps = {
   isOpen: boolean;
   loading: boolean;
   prompt: string;
+  scope: CommWhatsAppAssistantScope;
   response: CommWhatsAppAssistantResponse | null;
   selectedChatName?: string | null;
   hasSelectedChat: boolean;
   onClose: () => void;
   onPromptChange: (value: string) => void;
+  onScopeChange: (value: CommWhatsAppAssistantScope) => void;
   onAsk: () => void;
   onApplySuggestedMessage: (message: string) => void;
 };
@@ -22,7 +24,25 @@ const promptExamples = [
   'O que eu deveria responder agora?',
   'Resuma essa conversa e diga o próximo passo.',
   'Onde devo olhar primeiro no inbox hoje?',
+  'Liste os tipos de contato que preciso priorizar hoje.',
 ];
+
+const scopeOptions: Array<{ value: CommWhatsAppAssistantScope; label: string; description: string }> = [
+  { value: 'free', label: 'Livre', description: 'Sistema, operação, múltiplos contatos ou dúvidas gerais.' },
+  { value: 'chat', label: 'Chat atual', description: 'Força análise da conversa aberta.' },
+  { value: 'inbox', label: 'Inbox', description: 'Foco em fila, status e WhatsApp.' },
+  { value: 'system', label: 'Sistema/CRM', description: 'Foco em leads, contratos, agenda e processos.' },
+];
+
+const getScopeFooterText = (scope: CommWhatsAppAssistantScope, hasSelectedChat: boolean, selectedChatName?: string | null) => {
+  if (scope === 'chat') {
+    return hasSelectedChat ? `Modo: chat atual${selectedChatName ? ` (${selectedChatName})` : ''}.` : 'Modo: chat atual, mas nenhuma conversa está selecionada.';
+  }
+
+  if (scope === 'inbox') return 'Modo: inbox geral do WhatsApp.';
+  if (scope === 'system') return 'Modo: sistema/CRM.';
+  return hasSelectedChat ? 'Modo: livre. O chat atual só será usado se a pergunta pedir claramente.' : 'Modo: livre.';
+};
 
 const confidenceLabel = (confidence: CommWhatsAppAssistantResponse['confidence']) => {
   if (confidence === 'high') return 'Alta confiança';
@@ -42,11 +62,13 @@ export default function WhatsAppAssistantModal({
   isOpen,
   loading,
   prompt,
+  scope,
   response,
   selectedChatName,
   hasSelectedChat,
   onClose,
   onPromptChange,
+  onScopeChange,
   onAsk,
   onApplySuggestedMessage,
 }: WhatsAppAssistantModalProps) {
@@ -64,7 +86,7 @@ export default function WhatsAppAssistantModal({
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-            Escopo: {hasSelectedChat ? `chat atual${selectedChatName ? ` (${selectedChatName})` : ''}` : 'inbox geral'}.
+            {getScopeFooterText(scope, hasSelectedChat, selectedChatName)}
           </div>
           <Button variant="secondary" onClick={onClose}>Fechar</Button>
         </div>
@@ -79,9 +101,34 @@ export default function WhatsAppAssistantModal({
             <div>
               <p className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Pergunte de forma livre</p>
               <p className="mt-1 text-sm leading-6 text-[var(--panel-text-soft,#5b4635)]">
-                O R.A.V.I. usa o chat selecionado, o composer atual, métricas do inbox, lead, contratos e agenda quando disponíveis.
+                O R.A.V.I. é livre por padrão. Use o modo Chat atual quando quiser analisar explicitamente a conversa aberta.
               </p>
             </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            {scopeOptions.map((option) => {
+              const active = option.value === scope;
+              const disabled = loading || (option.value === 'chat' && !hasSelectedChat);
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onScopeChange(option.value)}
+                  disabled={disabled}
+                  className={cx(
+                    'rounded-2xl border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-50',
+                    active
+                      ? 'border-[var(--panel-accent-border,#d5a25c)] bg-[var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink,#6f3f16)]'
+                      : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d5a25c)]',
+                  )}
+                >
+                  <span className="block text-xs font-semibold uppercase tracking-[0.12em]">{option.label}</span>
+                  <span className="mt-1 block text-xs leading-5 opacity-80">{option.description}</span>
+                </button>
+              );
+            })}
           </div>
 
           <textarea
@@ -188,7 +235,7 @@ export default function WhatsAppAssistantModal({
               <div>
                 <p className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Pronto para analisar</p>
                 <p className="mt-1 max-w-md text-sm leading-6 text-[var(--panel-text-muted,#876f5c)]">
-                  Faça uma pergunta aberta. Se um chat estiver selecionado, o R.A.V.I. usa o histórico recente e os dados do lead vinculado.
+                  Faça uma pergunta aberta. No modo livre, o R.A.V.I. não assume que o chat aberto é o assunto.
                 </p>
               </div>
             </div>

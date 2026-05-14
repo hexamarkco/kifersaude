@@ -259,6 +259,8 @@ export type CommWhatsAppAssistantAction = {
   payload?: Record<string, unknown> | null;
 };
 
+export type CommWhatsAppAssistantScope = 'free' | 'chat' | 'inbox' | 'system';
+
 export type CommWhatsAppAssistantResponse = {
   answer: string;
   clarification?: string | null;
@@ -1088,7 +1090,7 @@ export const commWhatsAppService = {
   async askAssistant(options: {
     prompt: string;
     chatId?: string | null;
-    scope?: 'inbox' | 'chat';
+    scope?: CommWhatsAppAssistantScope;
     composerDraft?: string;
   }): Promise<CommWhatsAppAssistantResponse> {
     const {
@@ -1118,7 +1120,7 @@ export const commWhatsAppService = {
         body: JSON.stringify({
           prompt: options.prompt,
           chatId: options.chatId?.trim() || '',
-          scope: options.scope ?? (options.chatId ? 'chat' : 'inbox'),
+          scope: options.scope ?? 'free',
           composerDraft: options.composerDraft?.trim() || '',
         }),
         signal: controller.signal,

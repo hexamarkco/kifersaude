@@ -17,6 +17,7 @@ import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
   type CommWhatsAppAssistantResponse,
+  type CommWhatsAppAssistantScope,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppLeadSearchResult,
@@ -2671,6 +2672,7 @@ export default function WhatsAppInboxScreen() {
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
   const [assistantModalOpen, setAssistantModalOpen] = useState(false);
   const [assistantPrompt, setAssistantPrompt] = useState('');
+  const [assistantScope, setAssistantScope] = useState<CommWhatsAppAssistantScope>('free');
   const [assistantResponse, setAssistantResponse] = useState<CommWhatsAppAssistantResponse | null>(null);
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
@@ -7163,6 +7165,33 @@ export default function WhatsAppInboxScreen() {
     }
   }, [quickReplyIntegration]);
 
+  const shouldAssistantUseCurrentChat = useCallback((promptValue: string, scope: CommWhatsAppAssistantScope) => {
+    if (!selectedChat) return false;
+    if (scope === 'chat') return true;
+    if (scope !== 'free') return false;
+
+    const normalized = normalizeInboxSearch(promptValue);
+    const chatIntentPatterns = [
+      'essa conversa',
+      'esta conversa',
+      'esse chat',
+      'este chat',
+      'esse cliente',
+      'este cliente',
+      'cliente atual',
+      'chat atual',
+      'conversa atual',
+      'o que eu respondo',
+      'o que responder',
+      'resuma essa',
+      'resuma esta',
+      'resumir essa',
+      'resumir esta',
+    ];
+
+    return chatIntentPatterns.some((pattern) => normalized.includes(normalizeInboxSearch(pattern)));
+  }, [selectedChat]);
+
   const handleAskAssistant = useCallback(async () => {
     const prompt = assistantPrompt.trim();
     if (!prompt) {
@@ -7171,15 +7200,16 @@ export default function WhatsAppInboxScreen() {
     }
 
     const requestId = ++assistantRequestIdRef.current;
-    const targetChatId = selectedChat?.id ?? null;
+    const shouldUseCurrentChat = shouldAssistantUseCurrentChat(prompt, assistantScope);
+    const targetChatId = shouldUseCurrentChat ? selectedChat?.id ?? null : null;
     setAssistantLoading(true);
 
     try {
       const result = await commWhatsAppService.askAssistant({
         prompt,
         chatId: targetChatId,
-        scope: targetChatId ? 'chat' : 'inbox',
-        composerDraft: messageDraft,
+        scope: shouldUseCurrentChat ? 'chat' : assistantScope,
+        composerDraft: shouldUseCurrentChat ? messageDraft : '',
       });
 
       if (requestId !== assistantRequestIdRef.current) {
@@ -7199,7 +7229,7 @@ export default function WhatsAppInboxScreen() {
         setAssistantLoading(false);
       }
     }
-  }, [assistantPrompt, messageDraft, selectedChat?.id]);
+  }, [assistantPrompt, assistantScope, messageDraft, selectedChat?.id, shouldAssistantUseCurrentChat]);
 
   const handleApplyAssistantSuggestedMessage = useCallback((message: string) => {
     const nextValue = message.trim();
@@ -8912,11 +8942,13 @@ export default function WhatsAppInboxScreen() {
           isOpen={assistantModalOpen}
           loading={assistantLoading}
           prompt={assistantPrompt}
+          scope={assistantScope}
           response={assistantResponse}
           selectedChatName={selectedChatDisplayName}
           hasSelectedChat={Boolean(selectedChat)}
           onClose={() => setAssistantModalOpen(false)}
           onPromptChange={setAssistantPrompt}
+          onScopeChange={setAssistantScope}
           onAsk={() => void handleAskAssistant()}
           onApplySuggestedMessage={handleApplyAssistantSuggestedMessage}
         />

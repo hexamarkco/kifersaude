@@ -12,7 +12,7 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
-type AssistantScope = 'inbox' | 'chat';
+type AssistantScope = 'free' | 'inbox' | 'chat' | 'system';
 
 type AssistantRequestBody = {
   prompt?: string;
@@ -64,11 +64,11 @@ const createAdminClient = () => {
 
 const normalizeScope = (value: string, hasChatId: boolean): AssistantScope => {
   const normalized = value.trim().toLowerCase();
-  if (normalized === 'chat' || normalized === 'inbox') {
+  if (normalized === 'free' || normalized === 'chat' || normalized === 'inbox' || normalized === 'system') {
     return normalized;
   }
 
-  return hasChatId ? 'chat' : 'inbox';
+  return hasChatId ? 'chat' : 'free';
 };
 
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -443,11 +443,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const shouldLoadSelectedChat = scope === 'chat' && Boolean(chatId);
     const [systemSettings, operationalState, inboxSummary, selectedChatContext] = await Promise.all([
       loadSystemSettings(supabaseAdmin),
       loadOperationalState(supabaseAdmin),
       loadInboxSummary(supabaseAdmin),
-      loadSelectedChatContext(supabaseAdmin, chatId),
+      shouldLoadSelectedChat ? loadSelectedChatContext(supabaseAdmin, chatId) : loadSelectedChatContext(supabaseAdmin, ''),
     ]);
 
     const context = {
@@ -461,8 +462,11 @@ Deno.serve(async (req: Request) => {
       request: {
         scope,
         prompt,
-        chatId: chatId || null,
+        chatId: shouldLoadSelectedChat ? chatId : null,
         composerDraft: composerDraft || null,
+        note: scope === 'free'
+          ? 'Modo livre: nao assuma que o chat aberto e o assunto, salvo se o pedido mencionar claramente esta conversa ou este cliente.'
+          : null,
       },
       operationalState,
       inboxSummary,
@@ -472,6 +476,9 @@ Deno.serve(async (req: Request) => {
     const systemPrompt = [
       'Voce e o R.A.V.I., assistente operacional de IA do WhatsApp Inbox da Kifer Saude.',
       'Seu papel e analisar contexto real do inbox, conversar com o operador, identificar riscos, orientar proximos passos e sugerir textos ou planos acionaveis.',
+      'Voce nao esta preso ao chat aberto. No modo free, trate a pergunta como livre: pode ser sobre sistema, CRM, multiplos contatos, agenda, contratos, operacao ou WhatsApp em geral.',
+      'Use selectedChat apenas quando request.scope for chat. Se scope for free/inbox/system, nao baseie a resposta na conversa aberta.',
+      'Se o operador pedir acoes sobre multiplos contatos, responda com plano, criterios e proximos passos confirmaveis; nao invente dados nao enviados.',
       'Use somente os dados enviados no contexto. Se faltar informacao para concluir, diga exatamente o que falta e use clarification.',
       'Nunca diga que executou, alterou, enviou, arquivou, agendou ou vinculou algo. Voce pode apenas sugerir a acao e indicar que precisa de confirmacao humana.',
       'Toda acao de escrita, envio, agenda, mudanca de status, vinculo de lead, arquivamento ou exclusao deve aparecer com requires_confirmation true.',

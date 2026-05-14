@@ -16,9 +16,18 @@ type WhatsAppDashboardModalProps = {
 };
 
 type PriorityItem = {
-  tone: 'danger' | 'warning' | 'neutral' | 'success';
+  tone: DashboardTone;
   title: string;
   description: string;
+};
+
+type DashboardTone = 'danger' | 'warning' | 'neutral' | 'success';
+
+type ChannelStatusInfo = {
+  tone: DashboardTone;
+  title: string;
+  description: string;
+  connected: boolean;
 };
 
 const numberFormatter = new Intl.NumberFormat('pt-BR');
@@ -38,10 +47,7 @@ const formatDateTime = (value?: string | null) => {
   });
 };
 
-const isConnectedStatus = (value?: string | null) => {
-  const normalized = String(value ?? '').trim().toLowerCase();
-  return ['connected', 'open', 'online', 'active', 'ready'].includes(normalized);
-};
+const normalizeWhapiChannelStatus = (value?: string | null) => String(value ?? '').trim().toUpperCase();
 
 const normalizeStatusLabel = (value?: string | null) => {
   const normalized = String(value ?? '').trim();
@@ -49,13 +55,88 @@ const normalizeStatusLabel = (value?: string | null) => {
   return normalized.replace(/_/g, ' ');
 };
 
-const getChannelHealth = (metrics: CommWhatsAppDashboardMetrics | null): PriorityItem => {
+const getWhapiChannelStatusInfo = (value?: string | null): ChannelStatusInfo => {
+  const status = normalizeWhapiChannelStatus(value);
+
+  if (status === 'AUTH') {
+    return {
+      tone: 'success',
+      title: 'Canal AUTH',
+      description: 'Canal autenticado, conectado e operacional segundo a Whapi.',
+      connected: true,
+    };
+  }
+
+  if (status === 'QR') {
+    return {
+      tone: 'warning',
+      title: 'Canal QR',
+      description: 'Aguardando leitura do QR code ou pareamento do dispositivo.',
+      connected: false,
+    };
+  }
+
+  if (status === 'INIT') {
+    return {
+      tone: 'warning',
+      title: 'Canal INIT',
+      description: 'Canal inicializando. Em reconexões normais pode evoluir para LAUNCH e AUTH em poucos segundos.',
+      connected: false,
+    };
+  }
+
+  if (status === 'LAUNCH') {
+    return {
+      tone: 'warning',
+      title: 'Canal LAUNCH',
+      description: 'Canal conectando ou temporariamente inativo. Aguarde a evolução para AUTH antes de considerar operacional.',
+      connected: false,
+    };
+  }
+
+  if (status === 'STOP') {
+    return {
+      tone: 'danger',
+      title: 'Canal STOP',
+      description: 'Canal parado na Whapi. Revise a instância antes de enviar mensagens.',
+      connected: false,
+    };
+  }
+
+  if (status === 'SYNC_ERROR') {
+    return {
+      tone: 'danger',
+      title: 'Canal SYNC_ERROR',
+      description: 'A Whapi indica problema de sincronização. Reautentique ou verifique o canal no painel da Whapi.',
+      connected: false,
+    };
+  }
+
+  if (status === 'ERROR') {
+    return {
+      tone: 'danger',
+      title: 'Canal ERROR',
+      description: 'A Whapi retornou estado de erro para a instância.',
+      connected: false,
+    };
+  }
+
+  return {
+    tone: 'neutral',
+    title: status ? `Canal ${status}` : 'Canal sem status',
+    description: 'Status não reconhecido no mapeamento oficial da Whapi. Confirme no painel da Whapi antes de operar.',
+    connected: false,
+  };
+};
+
+const getChannelHealth = (metrics: CommWhatsAppDashboardMetrics | null): PriorityItem & { connected: boolean } => {
   const channel = metrics?.channel;
   if (!channel) {
     return {
       tone: 'danger',
       title: 'Canal não encontrado',
       description: 'O canal primário do WhatsApp ainda não foi inicializado no banco.',
+      connected: false,
     };
   }
 
@@ -64,20 +145,20 @@ const getChannelHealth = (metrics: CommWhatsAppDashboardMetrics | null): Priorit
       tone: 'warning',
       title: 'Canal desabilitado',
       description: 'O canal existe, mas está marcado como desabilitado para operação.',
+      connected: false,
     };
   }
 
-  if (!isConnectedStatus(channel.connection_status)) {
+  const statusInfo = getWhapiChannelStatusInfo(channel.connection_status);
+  if (!statusInfo.connected) {
     return {
-      tone: 'danger',
-      title: `Canal ${normalizeStatusLabel(channel.connection_status)}`,
-      description: channel.last_error || 'Verifique conexão da Whapi antes de priorizar novos atendimentos.',
+      ...statusInfo,
+      description: channel.last_error || statusInfo.description,
     };
   }
 
   return {
-    tone: 'success',
-    title: 'Canal conectado',
+    ...statusInfo,
     description: `Webhook: ${formatDateTime(channel.last_webhook_received_at)}. Saúde: ${normalizeStatusLabel(channel.health_status)}.`,
   };
 };
@@ -139,11 +220,18 @@ const buildPriorityItems = (metrics: CommWhatsAppDashboardMetrics): PriorityItem
   return items.slice(0, 5);
 };
 
-const toneClasses: Record<PriorityItem['tone'], string> = {
-  danger: 'border-red-200 bg-red-50 text-red-900',
-  warning: 'border-amber-200 bg-amber-50 text-amber-900',
+const toneClasses: Record<DashboardTone, string> = {
+  danger: 'border-[var(--panel-accent-red-border,#d79a8f)] bg-[var(--panel-accent-red-bg,#faecea)] text-[var(--panel-accent-red-text,#8a3128)]',
+  warning: 'border-[var(--panel-accent-amber-border,var(--panel-accent-border,#d5a25c))] bg-[var(--panel-accent-amber-bg,var(--panel-accent-soft,#f6e4c7))] text-[var(--panel-accent-amber-text,var(--panel-accent-ink,#6f3f16))]',
   neutral: 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)]',
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+  success: 'border-[var(--panel-accent-green-border,#95c4a1)] bg-[var(--panel-accent-green-bg,#edf6ef)] text-[var(--panel-accent-green-text,#275c39)]',
+};
+
+const toneIconClasses: Record<DashboardTone, string> = {
+  danger: 'bg-[var(--panel-accent-red-bg-strong,#f2d0ca)] text-[var(--panel-accent-red-text,#8a3128)]',
+  warning: 'bg-[var(--panel-accent-amber-bg-strong,var(--panel-accent-warm,#efcf9f))] text-[var(--panel-accent-amber-text,var(--panel-accent-ink,#6f3f16))]',
+  neutral: 'bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]',
+  success: 'bg-[var(--panel-accent-green-bg-strong,#d6ead8)] text-[var(--panel-accent-green-text,#275c39)]',
 };
 
 const getChatPreview = (chat: CommWhatsAppDashboardRecentChat) => {
@@ -211,7 +299,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           Carregando métricas do WhatsApp...
         </div>
       ) : error ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-5 text-red-900">
+        <div className={`rounded-3xl border p-5 ${toneClasses.danger}`}>
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
@@ -225,7 +313,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           <section className={`rounded-3xl border p-4 ${toneClasses[channelHealth.tone]}`}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/65">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${toneIconClasses[channelHealth.tone]}`}>
                   {channelHealth.tone === 'danger' ? <WifiOff className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
                 </div>
                 <div>
@@ -234,7 +322,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                   <p className="mt-1 text-sm leading-6 opacity-90">{channelHealth.description}</p>
                 </div>
               </div>
-              <div className="rounded-2xl bg-white/60 px-3 py-2 text-right text-xs font-medium">
+              <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-right text-xs font-medium">
                 <p>{metrics.channel?.connected_user_name || metrics.channel?.name || 'WhatsApp principal'}</p>
                 <p className="mt-1 opacity-75">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</p>
               </div>
@@ -293,10 +381,10 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                     </div>
                     <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--panel-text-soft,#5b4635)]">{getChatPreview(chat)}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-[var(--panel-text-muted,#876f5c)]">
-                      {chat.leadId ? <span className="rounded-full bg-white/70 px-2 py-0.5"><Link2 className="mr-1 inline h-3 w-3" />Lead vinculado</span> : <span className="rounded-full bg-white/70 px-2 py-0.5">Sem lead</span>}
-                      {chat.isPinned ? <span className="rounded-full bg-white/70 px-2 py-0.5">Fixado</span> : null}
-                      {chat.isMuted ? <span className="rounded-full bg-white/70 px-2 py-0.5">Silenciado</span> : null}
-                      {chat.lastMessageStatus ? <span className="rounded-full bg-white/70 px-2 py-0.5"><SendHorizontal className="mr-1 inline h-3 w-3" />{normalizeStatusLabel(chat.lastMessageStatus)}</span> : null}
+                      {chat.leadId ? <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5"><Link2 className="mr-1 inline h-3 w-3" />Lead vinculado</span> : <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5">Sem lead</span>}
+                      {chat.isPinned ? <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5">Fixado</span> : null}
+                      {chat.isMuted ? <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5">Silenciado</span> : null}
+                      {chat.lastMessageStatus ? <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5"><SendHorizontal className="mr-1 inline h-3 w-3" />{normalizeStatusLabel(chat.lastMessageStatus)}</span> : null}
                     </div>
                   </div>
                 )) : (

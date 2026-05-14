@@ -2154,9 +2154,11 @@ function InboxChatListItem({
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
-              <span className={`whatsapp-inbox-unread-badge inline-flex min-h-5 min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold transition-opacity ${(chat.unread_count > 0 || chat.manual_unread) ? 'opacity-100' : 'opacity-0'}`} aria-hidden={chat.unread_count > 0 || chat.manual_unread ? undefined : true}>
-                {chat.unread_count > 0 ? chat.unread_count : chat.manual_unread ? '•' : ''}
-              </span>
+              {chat.unread_count > 0 || chat.manual_unread ? (
+                <span className="whatsapp-inbox-unread-badge inline-flex min-h-5 min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
+                  {chat.unread_count > 0 ? chat.unread_count : '•'}
+                </span>
+              ) : null}
             </div>
           </div>
           <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">

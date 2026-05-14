@@ -1091,17 +1091,56 @@ export const commWhatsAppService = {
     scope?: 'inbox' | 'chat';
     composerDraft?: string;
   }): Promise<CommWhatsAppAssistantResponse> {
-    const { data, error } = await supabase.functions.invoke('comm-whatsapp-assistant', {
-      body: {
-        prompt: options.prompt,
-        chatId: options.chatId?.trim() || '',
-        scope: options.scope ?? (options.chatId ? 'chat' : 'inbox'),
-        composerDraft: options.composerDraft?.trim() || '',
-      },
-    });
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
 
-    if (error) {
-      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel consultar o R.A.V.I.'));
+    if (sessionError) {
+      throw new Error(getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a consulta ao R.A.V.I.'));
+    }
+
+    if (!session?.access_token) {
+      throw new Error('Sua sessao expirou. Entre novamente para consultar o R.A.V.I.');
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 60000);
+
+    let data: unknown;
+    try {
+      const response = await fetch(`${supabaseFunctionsUrl}/comm-whatsapp-assistant`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: options.prompt,
+          chatId: options.chatId?.trim() || '',
+          scope: options.scope ?? (options.chatId ? 'chat' : 'inbox'),
+          composerDraft: options.composerDraft?.trim() || '',
+        }),
+        signal: controller.signal,
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = typeof payload?.error === 'string' && payload.error.trim()
+          ? payload.error.trim()
+          : 'Nao foi possivel consultar o R.A.V.I.';
+        throw new Error(message);
+      }
+
+      data = payload;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('A consulta ao R.A.V.I. demorou mais que 60 segundos. Tente novamente com uma pergunta mais objetiva.');
+      }
+
+      throw error instanceof Error ? error : new Error('Nao foi possivel consultar o R.A.V.I.');
+    } finally {
+      window.clearTimeout(timeoutId);
     }
 
     const payload = (data ?? {}) as {

@@ -2382,7 +2382,7 @@ function InboxChatListItem({
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
             </div>
           </div>
-          <p className={`mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)] ${hasUnreadBadge ? 'pr-10' : ''}`}>
+          <p className={`mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
             {draftPreview ? (
               <>
                 <span className="mr-1 font-semibold text-[var(--panel-accent-red-text,#d9776b)]">Rascunho:</span>
@@ -2406,7 +2406,7 @@ function InboxChatListItem({
             )}
           </p>
           {hasUnreadBadge ? (
-            <span className="whatsapp-inbox-unread-badge absolute right-4 top-[3.35rem] inline-flex min-h-5 min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
+            <span className="whatsapp-inbox-unread-badge absolute right-4 top-1/2 inline-flex min-h-5 min-w-6 -translate-y-1/2 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
               {chat.unread_count > 0 ? chat.unread_count : '•'}
             </span>
           ) : null}

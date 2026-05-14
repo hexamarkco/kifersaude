@@ -60,7 +60,7 @@ type AssistantConversationEntry = {
 const promptExamples = [
   'RAVI, o que responder?',
   'RAVI, resuma esse chat.',
-  'RAVI, onde olhar agora?',
+  'RAVI, quais leads falaram sobre Porto Saude?',
   'RAVI, quem priorizar hoje?',
 ];
 

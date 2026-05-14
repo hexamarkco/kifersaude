@@ -7880,6 +7880,15 @@ export default function WhatsAppInboxScreen() {
           </div>
 
           <div className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-0">
+            {archivedSectionOpen ? (
+              <div className="sticky top-0 z-[1] flex items-center gap-2 border-b bg-[var(--panel-surface,#fff8f0)] px-4 py-3 text-sm font-semibold text-[var(--panel-text,#1f2937)]">
+                <Archive className="h-4 w-4 text-[var(--panel-text-muted,#8a735f)]" />
+                <span>Conversas arquivadas</span>
+                <span className="ml-auto text-xs font-medium text-[var(--panel-text-muted,#8a735f)]">
+                  {archivedChatsCount > 0 ? `${archivedChatsCount} ${archivedChatsCount === 1 ? 'chat' : 'chats'}` : '0 chats'}
+                </span>
+              </div>
+            ) : null}
             {loading ? (
               <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

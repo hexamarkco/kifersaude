@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Loader2, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, Volume2, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -305,36 +305,50 @@ const getVisiblePreviewText = (value?: string | null, messageType?: string) => (
   isHiddenTechnicalMessageMarker(value, messageType) ? '' : String(value ?? '').trim()
 );
 
-type ChatPreviewMediaIconType = 'image' | 'video' | 'audio' | 'document';
+type ChatPreviewIconType = 'image' | 'video' | 'audio' | 'document' | 'link' | 'location' | 'sticker' | 'contact' | 'poll' | 'interactive';
 
-const getChatPreviewMediaIconType = (value: string | null | undefined): ChatPreviewMediaIconType | null => {
-  const normalized = String(value ?? '').trim();
+const getChatPreviewIconType = (value: string | null | undefined): ChatPreviewIconType | null => {
+  const normalized = normalizeTechnicalMarker(value);
 
-  if (normalized === '[Imagem]' || normalized.startsWith('[Imagem] ')) return 'image';
-  if (normalized === '[Video]' || normalized.startsWith('[Video] ')) return 'video';
-  if (normalized === '[Audio]' || normalized.startsWith('[Audio] ')) return 'audio';
-  if (normalized === '[Documento]' || normalized.startsWith('[Documento] ')) return 'document';
+  if (normalized === '[imagem]' || normalized.startsWith('[imagem] ')) return 'image';
+  if (normalized === '[video]' || normalized.startsWith('[video] ')) return 'video';
+  if (normalized === '[audio]' || normalized.startsWith('[audio] ')) return 'audio';
+  if (normalized === '[documento]' || normalized.startsWith('[documento] ')) return 'document';
+  if (normalized === '[link]' || normalized.startsWith('[link] ')) return 'link';
+  if (normalized === '[localizacao]' || normalized.startsWith('[localizacao] ')) return 'location';
+  if (normalized === '[sticker]' || normalized.startsWith('[sticker] ')) return 'sticker';
+  if (normalized === '[contato]' || normalized.startsWith('[contato] ')) return 'contact';
+  if (normalized === '[enquete]' || normalized.startsWith('[enquete] ')) return 'poll';
+  if (normalized === '[resposta]' || normalized.startsWith('[resposta] ')) return 'interactive';
+  if (normalized === '[mensagem interativa]' || normalized.startsWith('[mensagem interativa] ')) return 'interactive';
   return null;
 };
 
-const CHAT_PREVIEW_MEDIA_ICON_CONFIG: Record<ChatPreviewMediaIconType, { label: string; Icon: typeof FileImage }> = {
-  image: { label: 'Imagem', Icon: FileImage },
-  video: { label: 'Vídeo', Icon: Images },
-  audio: { label: 'Áudio', Icon: FileAudio },
-  document: { label: 'Documento', Icon: FileText },
+const CHAT_PREVIEW_ICON_CONFIG: Record<ChatPreviewIconType, { label: string; Icon: typeof FileImage }> = {
+  image: { label: 'foto', Icon: FileImage },
+  video: { label: 'vídeo', Icon: Images },
+  audio: { label: 'áudio', Icon: FileAudio },
+  document: { label: 'documento', Icon: FileText },
+  link: { label: 'link', Icon: Link2 },
+  location: { label: 'localização', Icon: MapPin },
+  sticker: { label: 'figurinha', Icon: Sticker },
+  contact: { label: 'contato', Icon: UserRound },
+  poll: { label: 'enquete', Icon: Vote },
+  interactive: { label: 'mensagem', Icon: MessageCircle },
 };
 
-function ChatPreviewMediaIcon({ type }: { type: ChatPreviewMediaIconType }) {
-  const { label, Icon } = CHAT_PREVIEW_MEDIA_ICON_CONFIG[type];
+function ChatPreviewIcon({ type }: { type: ChatPreviewIconType }) {
+  const { label, Icon } = CHAT_PREVIEW_ICON_CONFIG[type];
 
   return (
     <span
       aria-label={label}
-      className="inline-flex align-middle text-[var(--panel-text-muted,#8a735f)]"
+      className="inline-flex items-center gap-1 align-middle text-[var(--panel-text-muted,#8a735f)]"
       role="img"
       title={label}
     >
       <Icon aria-hidden="true" className="h-4 w-4" />
+      <span>{label}</span>
     </span>
   );
 }
@@ -1091,38 +1105,6 @@ const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage
   }
 
   return a.id.localeCompare(b.id);
-};
-
-const getChatPreviewPrefix = (
-  chat: CommWhatsAppChat,
-  connectedUserName?: string | null,
-) => {
-  const direction = chat.last_message_direction;
-  switch (direction) {
-    case 'outbound':
-      return 'Você:';
-    case 'inbound': {
-      const displayName = getSafeChatDisplayName(chat, connectedUserName);
-      const phoneLabel = formatCommWhatsAppPhoneLabel(chat.phone_number);
-      const firstName = displayName.split(/\s+/)[0]?.trim() || '';
-      return `${displayName === phoneLabel ? 'Contato' : firstName || displayName}:`;
-    }
-    case 'system':
-      return 'Sistema:';
-    default:
-      return '';
-  }
-};
-
-const getChatPreviewPrefixClassName = (direction: CommWhatsAppChat['last_message_direction']) => {
-  switch (direction) {
-    case 'outbound':
-      return 'text-[var(--panel-accent-ink,#8b4d12)]';
-    case 'system':
-      return 'text-[var(--panel-text-subtle,#9a8573)]';
-    default:
-      return 'text-[var(--panel-text-soft,#5b4635)]';
-  }
 };
 
 const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMessage[]) => {
@@ -2124,7 +2106,7 @@ function InboxChatListItem({
 }) {
   const rawLastMessageText = String(chat.last_message_text ?? '').trim();
   const visibleLastMessageText = getVisiblePreviewText(chat.last_message_text);
-  const previewMediaIconType = getChatPreviewMediaIconType(visibleLastMessageText);
+  const previewIconType = getChatPreviewIconType(visibleLastMessageText);
   const outboundPreviewStatusMeta = chat.last_message_direction === 'outbound'
     ? getDeliveryStatusMetaFromValues(chat.last_message_delivery_status)
     : null;
@@ -2166,16 +2148,13 @@ function InboxChatListItem({
               </>
             ) : visibleLastMessageText ? (
               <>
-                <span className={`mr-1 font-semibold ${getChatPreviewPrefixClassName(chat.last_message_direction)}`}>
-                  {getChatPreviewPrefix(chat, connectedUserName)}
-                </span>
                 {OutboundPreviewStatusIcon && outboundPreviewStatusMeta ? (
                   <span className={`mr-1 inline-flex align-middle whatsapp-inbox-preview-status whatsapp-inbox-preview-status-${outboundPreviewStatusMeta.tone}`} title={outboundPreviewStatusMeta.label} aria-label={outboundPreviewStatusMeta.label}>
                     <OutboundPreviewStatusIcon className="h-3.5 w-3.5" />
                   </span>
                 ) : null}
-                {previewMediaIconType ? (
-                  <ChatPreviewMediaIcon type={previewMediaIconType} />
+                {previewIconType ? (
+                  <ChatPreviewIcon type={previewIconType} />
                 ) : (
                   <span>{visibleLastMessageText}</span>
                 )}
@@ -2221,7 +2200,7 @@ function InboxMessageSearchListItem({
   onSelect: (chatId: string) => void;
 }) {
   const messagePreviewText = getMessageSearchPreviewText(result.message);
-  const messagePreviewMediaIconType = getChatPreviewMediaIconType(messagePreviewText);
+  const messagePreviewIconType = getChatPreviewIconType(messagePreviewText);
 
   if (!messagePreviewText) {
     return null;
@@ -2238,8 +2217,8 @@ function InboxMessageSearchListItem({
               </p>
               {messagePreviewText ? (
                 <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
-                  {messagePreviewMediaIconType ? (
-                    <ChatPreviewMediaIcon type={messagePreviewMediaIconType} />
+                  {messagePreviewIconType ? (
+                    <ChatPreviewIcon type={messagePreviewIconType} />
                   ) : (
                     messagePreviewText
                   )}

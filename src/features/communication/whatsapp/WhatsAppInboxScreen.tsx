@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -1752,6 +1752,199 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
   return { mediaUrl, loading, error };
 }
 
+const isChatMediaViewerMessage = (message: CommWhatsAppMessage) => {
+  const kind = message.message_type.trim().toLowerCase();
+  return (kind === 'image' || isVideoLikeMessageType(kind)) && message.delivery_status.trim().toLowerCase() !== 'deleted';
+};
+
+function WhatsAppMediaViewerThumb({
+  message,
+  active,
+  onSelect,
+}: {
+  message: CommWhatsAppMessage;
+  active: boolean;
+  onSelect: (messageId: string) => void;
+}) {
+  const { mediaUrl, loading } = useResolvedMediaUrl(message);
+  const isVideo = isVideoLikeMessageType(message.message_type);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(message.id)}
+      className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition ${active ? 'is-active' : ''}`}
+      aria-label="Abrir mídia"
+      aria-current={active ? 'true' : undefined}
+    >
+      {mediaUrl ? (
+        isVideo ? (
+          <video muted playsInline preload="metadata" className="h-full w-full object-cover">
+            <source src={mediaUrl} type={message.media_mime_type || undefined} />
+          </video>
+        ) : (
+          <img src={mediaUrl} alt={message.media_file_name || 'Imagem'} className="h-full w-full object-cover" loading="lazy" />
+        )
+      ) : (
+        <span className="flex h-full w-full items-center justify-center bg-white/5 text-[10px] text-white/60">
+          {loading ? '...' : 'Mídia'}
+        </span>
+      )}
+      {isVideo ? (
+        <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
+          <Play className="h-4 w-4 fill-current" />
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function WhatsAppMediaViewer({
+  messages,
+  selectedMessageId,
+  contactName,
+  onSelect,
+  onClose,
+}: {
+  messages: CommWhatsAppMessage[];
+  selectedMessageId: string;
+  contactName: string;
+  onSelect: (messageId: string) => void;
+  onClose: () => void;
+}) {
+  const selectedIndex = Math.max(0, messages.findIndex((message) => message.id === selectedMessageId));
+  const selectedMessage = messages[selectedIndex] ?? messages[0];
+  const { mediaUrl, loading, error } = useResolvedMediaUrl(selectedMessage);
+  const isVideo = selectedMessage ? isVideoLikeMessageType(selectedMessage.message_type) : false;
+  const canGoPrevious = selectedIndex > 0;
+  const canGoNext = selectedIndex < messages.length - 1;
+  const selectedName = selectedMessage?.media_file_name || (isVideo ? 'Vídeo' : 'Imagem');
+  const selectedAuthor = selectedMessage?.direction === 'outbound' ? 'Você' : contactName;
+
+  const goToIndex = useCallback((nextIndex: number) => {
+    const nextMessage = messages[nextIndex];
+    if (nextMessage) {
+      onSelect(nextMessage.id);
+    }
+  }, [messages, onSelect]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+        return;
+      }
+
+      if (event.key === 'ArrowLeft' && canGoPrevious) {
+        event.preventDefault();
+        goToIndex(selectedIndex - 1);
+      }
+
+      if (event.key === 'ArrowRight' && canGoNext) {
+        event.preventDefault();
+        goToIndex(selectedIndex + 1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [canGoNext, canGoPrevious, goToIndex, onClose, selectedIndex]);
+
+  if (!selectedMessage) {
+    return null;
+  }
+
+  return (
+    <div className="whatsapp-inbox-media-viewer fixed inset-0 z-[120] flex flex-col bg-[#111413] text-white" role="dialog" aria-modal="true">
+      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-4 py-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{selectedAuthor}</p>
+          <p className="mt-0.5 truncate text-xs text-white/65">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {mediaUrl ? (
+            <a
+              href={mediaUrl}
+              download={selectedName}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
+              aria-label="Baixar mídia"
+              title="Baixar"
+            >
+              <Download className="h-5 w-5" />
+            </a>
+          ) : null}
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
+            aria-label="Fechar"
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+      </header>
+
+      <main className="relative flex min-h-0 flex-1 items-center justify-center px-4 py-5">
+        {canGoPrevious ? (
+          <button
+            type="button"
+            onClick={() => goToIndex(selectedIndex - 1)}
+            className="whatsapp-inbox-media-viewer-nav left-4"
+            aria-label="Mídia anterior"
+          >
+            <ChevronLeft className="h-7 w-7" />
+          </button>
+        ) : null}
+
+        <div className="flex h-full w-full items-center justify-center">
+          {loading ? (
+            <div className="flex items-center gap-2 text-sm text-white/70">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Carregando mídia...
+            </div>
+          ) : mediaUrl ? (
+            isVideo ? (
+              <video controls autoPlay className="max-h-full max-w-full bg-black object-contain">
+                <source src={mediaUrl} type={selectedMessage.media_mime_type || undefined} />
+              </video>
+            ) : (
+              <img src={mediaUrl} alt={selectedName} className="max-h-full max-w-full object-contain" />
+            )
+          ) : (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/70">
+              {error || 'Mídia indisponível no momento.'}
+            </div>
+          )}
+        </div>
+
+        {canGoNext ? (
+          <button
+            type="button"
+            onClick={() => goToIndex(selectedIndex + 1)}
+            className="whatsapp-inbox-media-viewer-nav right-4"
+            aria-label="Próxima mídia"
+          >
+            <ChevronRight className="h-7 w-7" />
+          </button>
+        ) : null}
+      </main>
+
+      {messages.length > 1 ? (
+        <footer className="whatsapp-inbox-media-viewer-strip flex shrink-0 gap-2 overflow-x-auto border-t border-white/10 px-4 py-3">
+          {messages.map((message) => (
+            <WhatsAppMediaViewerThumb
+              key={message.id}
+              message={message}
+              active={message.id === selectedMessage.id}
+              onSelect={onSelect}
+            />
+          ))}
+        </footer>
+      ) : null}
+    </div>
+  );
+}
+
 function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) {
   const meta = getDeliveryStatusMeta(message);
   const Icon = meta.icon;
@@ -2017,7 +2210,7 @@ function WhatsAppGalleryMediaTile({
   overlayLabel,
 }: {
   message: CommWhatsAppMessage;
-  onOpenImage: (payload: { src: string; name: string }) => void;
+  onOpenImage: (messageId: string) => void;
   className?: string;
   overlayLabel?: string;
 }) {
@@ -2029,7 +2222,7 @@ function WhatsAppGalleryMediaTile({
     return mediaUrl ? (
       <button
         type="button"
-        onClick={() => onOpenImage({ src: mediaUrl, name: message.media_file_name || 'Imagem enviada' })}
+        onClick={() => onOpenImage(message.id)}
         className={baseClassName}
       >
         <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
@@ -2051,7 +2244,7 @@ function WhatsAppGalleryMediaTile({
     : formatFileSize(message.media_size_bytes) || 'Video';
 
   return mediaUrl ? (
-    <a href={mediaUrl} target="_blank" rel="noreferrer" className={baseClassName}>
+    <button type="button" onClick={() => onOpenImage(message.id)} className={baseClassName}>
       <video muted playsInline preload="metadata" className="h-full w-full object-cover">
         <source src={mediaUrl} type={message.media_mime_type || undefined} />
       </video>
@@ -2062,7 +2255,7 @@ function WhatsAppGalleryMediaTile({
         </span>
         {overlayLabel ? <span className="text-sm font-semibold">{overlayLabel}</span> : null}
       </div>
-    </a>
+    </button>
   ) : (
     <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--panel-text-muted,#8a735f)]`}>
       {loading ? 'Carregando video...' : error || 'Video indisponivel'}
@@ -2075,7 +2268,7 @@ function WhatsAppMediaGroupBody({
   onOpenImage,
 }: {
   messages: CommWhatsAppMessage[];
-  onOpenImage: (payload: { src: string; name: string }) => void;
+  onOpenImage: (messageId: string) => void;
 }) {
   const visibleMessages = messages.slice(0, 4);
   const hiddenCount = Math.max(0, messages.length - visibleMessages.length);
@@ -2266,7 +2459,7 @@ function WhatsAppMessageBody({
   transcribing,
 }: {
   message: CommWhatsAppMessage;
-  onOpenImage: (payload: { src: string; name: string }) => void;
+  onOpenImage: (messageId: string) => void;
   onTranscribe: (message: CommWhatsAppMessage) => void;
   onOpenSharedContactChat: (contact: { name: string | null; phoneNumber: string | null }) => void;
   onSaveSharedContact: (contact: { name: string | null; phoneNumber: string | null }) => void;
@@ -2454,7 +2647,7 @@ function WhatsAppMessageBody({
         {mediaUrl ? (
           <button
             type="button"
-            onClick={() => onOpenImage({ src: mediaUrl, name: altLabel })}
+            onClick={() => onOpenImage(message.id)}
             className={isSticker
               ? 'block w-fit max-w-[180px] overflow-hidden rounded-2xl border border-transparent bg-transparent text-left transition hover:border-current/15'
               : 'whatsapp-inbox-image-card block w-full overflow-hidden rounded-2xl border text-left'}
@@ -2734,7 +2927,7 @@ export default function WhatsAppInboxScreen() {
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
   const [operationalStateError, setOperationalStateError] = useState<string | null>(null);
-  const [lightboxMedia, setLightboxMedia] = useState<{ src: string; name: string } | null>(null);
+  const [lightboxMessageId, setLightboxMessageId] = useState<string | null>(null);
   const [autoLinkedChatIds, setAutoLinkedChatIds] = useState<Record<string, true>>({});
   const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
   const [leadPanel, setLeadPanel] = useState<CommWhatsAppLeadPanel | null>(null);
@@ -3399,6 +3592,17 @@ export default function WhatsAppInboxScreen() {
 
     return mergeMessages(filteredMessages, localVisible);
   }, [localOutgoingMessages, messages, selectedChatId]);
+
+  const mediaViewerMessages = useMemo(
+    () => visibleMessages.filter(isChatMediaViewerMessage),
+    [visibleMessages],
+  );
+
+  useEffect(() => {
+    if (lightboxMessageId && !mediaViewerMessages.some((message) => message.id === lightboxMessageId)) {
+      setLightboxMessageId(null);
+    }
+  }, [lightboxMessageId, mediaViewerMessages]);
 
   const applyOptimisticChatSummary = useCallback((chat: CommWhatsAppChat, summaryText: string, messageAt: string) => {
     const readPatch: PendingChatInboxStatePatch = {
@@ -5179,21 +5383,6 @@ export default function WhatsAppInboxScreen() {
     },
     [],
   );
-
-  useEffect(() => {
-    if (!lightboxMedia) {
-      return;
-    }
-
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setLightboxMedia(null);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [lightboxMedia]);
 
   useEffect(() => {
     if (!pollingEnabled) {
@@ -8258,7 +8447,7 @@ export default function WhatsAppInboxScreen() {
                         >
                           <div className="relative max-w-[82%] pb-2">
                             <div className={`rounded-[2rem] px-2 py-2 shadow-sm ${getMessageBubbleClasses(lastMessage.direction)} ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
-                              <WhatsAppMediaGroupBody messages={groupMessages} onOpenImage={setLightboxMedia} />
+                              <WhatsAppMediaGroupBody messages={groupMessages} onOpenImage={setLightboxMessageId} />
                               <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 px-2 text-[11px] font-medium">
                                 <span>{formatMessageTime(lastMessage.message_at)}</span>
                                 {lastMessage.direction === 'outbound' && <DeliveryStatusIndicator message={lastMessage} />}
@@ -8329,7 +8518,7 @@ export default function WhatsAppInboxScreen() {
                           >
                             <WhatsAppMessageBody
                               message={message}
-                              onOpenImage={setLightboxMedia}
+                              onOpenImage={setLightboxMessageId}
                               onTranscribe={(target) => void handleTranscribeMessage(target)}
                               onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}
                               onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
@@ -8839,40 +9028,15 @@ export default function WhatsAppInboxScreen() {
         </div>
         </section>
 
-        {lightboxMedia && (
-          <div className="whatsapp-inbox-lightbox fixed inset-0 z-[120] flex items-center justify-center p-6" role="dialog" aria-modal="true">
-            <button
-              type="button"
-              className="absolute inset-0 h-full w-full bg-black/70 backdrop-blur-sm"
-              aria-label="Fechar visualização"
-              onClick={() => setLightboxMedia(null)}
-            />
-            <div className="relative z-[1] flex max-h-full max-w-5xl flex-col gap-4">
-              <div className="flex items-center justify-between gap-4 rounded-2xl bg-black/65 px-4 py-3 text-white">
-                <p className="truncate text-sm font-medium">{lightboxMedia.name}</p>
-                <div className="flex items-center gap-2">
-                  <a
-                    href={lightboxMedia.src}
-                    download={lightboxMedia.name}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] hover:bg-white/10"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Baixar
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => setLightboxMedia(null)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/20 hover:bg-white/10"
-                    aria-label="Fechar"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <img src={lightboxMedia.src} alt={lightboxMedia.name} className="max-h-[80vh] max-w-full rounded-3xl object-contain shadow-2xl" />
-            </div>
-          </div>
-        )}
+        {lightboxMessageId && mediaViewerMessages.length > 0 ? (
+          <WhatsAppMediaViewer
+            messages={mediaViewerMessages}
+            selectedMessageId={lightboxMessageId}
+            contactName={selectedChatDisplayName}
+            onSelect={setLightboxMessageId}
+            onClose={() => setLightboxMessageId(null)}
+          />
+        ) : null}
 
         <WhatsAppQuickRepliesModal
           isOpen={quickRepliesModalOpen}

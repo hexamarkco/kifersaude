@@ -4580,6 +4580,50 @@ html {
   animation: whatsapp-lightbox-fade 160ms ease;
 }
 
+.painel-theme .whatsapp-inbox-media-viewer {
+  animation: whatsapp-lightbox-fade 160ms ease;
+}
+
+.painel-theme .whatsapp-inbox-media-viewer-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  height: 3.25rem;
+  width: 3.25rem;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.34);
+  color: rgba(255, 255, 255, 0.82);
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.painel-theme .whatsapp-inbox-media-viewer-nav:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: translateY(-50%) scale(1.04);
+}
+
+.painel-theme .whatsapp-inbox-media-viewer-strip {
+  background: #151817;
+  scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+}
+
+.painel-theme .whatsapp-inbox-media-viewer-thumb {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  opacity: 0.74;
+}
+
+.painel-theme .whatsapp-inbox-media-viewer-thumb:hover,
+.painel-theme .whatsapp-inbox-media-viewer-thumb.is-active {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.64);
+  opacity: 1;
+}
+
 .painel-theme .whatsapp-inbox-attachment-action {
   border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
   background: color-mix(in srgb, var(--panel-surface) 74%, rgba(255, 255, 255, 0.18) 26%);

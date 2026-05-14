@@ -231,6 +231,28 @@ type FollowUpNextAction = {
   giveUpRecommendation: string;
 };
 
+type FollowUpNextActionType = FollowUpNextAction['type'];
+
+type AiContextRecommendation = {
+  situationPresetIds: string[];
+  tone: FollowUpTone;
+  salesTechniques: string[];
+  rationale: string | null;
+  nextActionType: FollowUpNextActionType | null;
+  nextActionReason: string | null;
+  nextActionPriority: FollowUpNextAction['priority'] | null;
+};
+
+const normalizeNextActionType = (value: unknown): FollowUpNextActionType | null => {
+  const candidate = toTrimmedString(value);
+  return candidate === 'schedule' || candidate === 'wait' || candidate === 'mark_lost_recommended' ? candidate : null;
+};
+
+const normalizeNextActionPriority = (value: unknown): FollowUpNextAction['priority'] | null => {
+  const candidate = toTrimmedString(value);
+  return candidate === 'baixa' || candidate === 'normal' || candidate === 'alta' ? candidate : null;
+};
+
 const normalizeSituationPresetIds = (value: unknown) => {
   if (!Array.isArray(value)) {
     return [];
@@ -252,7 +274,7 @@ const normalizeSituationPresetIds = (value: unknown) => {
   return selected;
 };
 
-const parseAiContextRecommendation = (value: string) => {
+const parseAiContextRecommendation = (value: string): AiContextRecommendation | null => {
   const candidate = value.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
 
   try {
@@ -265,12 +287,16 @@ const parseAiContextRecommendation = (value: string) => {
     const tone = isFollowUpTone(toneCandidate) ? toneCandidate : 'consultivo';
     const situationPresetIds = normalizeSituationPresetIds(parsed.situationPresetIds);
     const salesTechniques = normalizeSalesTechniques(parsed.salesTechniques).map((technique) => technique.id);
+    const nextAction = isRecord(parsed.nextAction) ? parsed.nextAction : null;
 
     return {
       situationPresetIds,
       tone,
       salesTechniques,
       rationale: toTrimmedString(parsed.rationale) || null,
+      nextActionType: normalizeNextActionType(nextAction?.type),
+      nextActionReason: toTrimmedString(nextAction?.reason) || null,
+      nextActionPriority: normalizeNextActionPriority(nextAction?.priority),
     };
   } catch {
     return null;
@@ -473,12 +499,16 @@ const buildFollowUpNextAction = async (params: {
   lead: LeadRow | null;
   leadContext: FollowUpLeadContext;
   effectiveSituationPresetIds: string[];
+  aiContext: AiContextRecommendation | null;
   now: Date;
 }): Promise<FollowUpNextAction> => {
   const consecutiveOutboundAttempts = countConsecutiveOutboundAttempts(params.messages);
   const attemptNumber = Math.min(Math.max(consecutiveOutboundAttempts, 1), 5);
   const maxAttempts = 4;
   const leadStatus = toTrimmedString(params.lead?.status).toLowerCase();
+  const aiNextActionType = params.aiContext?.nextActionType ?? null;
+  const aiNextActionReason = params.aiContext?.nextActionReason ?? null;
+  const aiNextActionPriority = params.aiContext?.nextActionPriority ?? null;
 
   if (['perdido', 'convertido', 'fechado', 'duplicado'].includes(leadStatus)) {
     return {
@@ -495,13 +525,28 @@ const buildFollowUpNextAction = async (params: {
     };
   }
 
-  if (attemptNumber > maxAttempts) {
+  if (aiNextActionType === 'wait') {
+    return {
+      type: 'wait',
+      suggestedDateTime: null,
+      priority: aiNextActionPriority ?? 'baixa',
+      title: `Aguardar: ${params.leadContext.nome}`,
+      reason: aiNextActionReason || 'O contexto da conversa indica que ainda não é o momento de agendar novo follow-up.',
+      attemptNumber,
+      maxAttempts,
+      dayLoad: null,
+      dailyCapacity: DAILY_FOLLOW_UP_CAPACITY,
+      giveUpRecommendation: 'Acompanhe o contexto antes de criar uma nova cobrança ou marcar o lead como perdido.',
+    };
+  }
+
+  if (aiNextActionType === 'mark_lost_recommended' || (!params.aiContext && attemptNumber > maxAttempts)) {
     return {
       type: 'mark_lost_recommended',
       suggestedDateTime: null,
-      priority: 'baixa',
+      priority: aiNextActionPriority ?? 'baixa',
       title: `Última tentativa: ${params.leadContext.nome}`,
-      reason: 'Já houve várias tentativas consecutivas sem resposta do cliente.',
+      reason: aiNextActionReason || 'Já houve várias tentativas consecutivas sem resposta do cliente.',
       attemptNumber,
       maxAttempts,
       dayLoad: null,
@@ -528,11 +573,11 @@ const buildFollowUpNextAction = async (params: {
   return {
     type: 'schedule',
     suggestedDateTime: suggestedDate.toISOString(),
-    priority: hasDocumentScenario || isLastAttempt ? 'alta' : 'normal',
+    priority: aiNextActionPriority ?? (hasDocumentScenario || isLastAttempt ? 'alta' : 'normal'),
     title: `${isLastAttempt ? 'Última tentativa' : 'Follow-up'}: ${params.leadContext.nome}`,
-    reason: dayLoad !== null && dayLoad >= DAILY_FOLLOW_UP_CAPACITY
+    reason: aiNextActionReason || (dayLoad !== null && dayLoad >= DAILY_FOLLOW_UP_CAPACITY
       ? `A data inicial estava cheia. Sugeri o próximo dia útil com menos de ${DAILY_FOLLOW_UP_CAPACITY} lembretes pendentes.`
-      : `Cadência sugerida para a tentativa ${attemptNumber}: +${businessDays} dia(s) útil(eis), evitando concentrar mais de ${DAILY_FOLLOW_UP_CAPACITY} follow-ups no mesmo dia.`,
+      : `Cadência sugerida para a tentativa ${attemptNumber}: +${businessDays} dia(s) útil(eis), evitando concentrar mais de ${DAILY_FOLLOW_UP_CAPACITY} follow-ups no mesmo dia.`),
     attemptNumber,
     maxAttempts,
     dayLoad,
@@ -944,12 +989,7 @@ Deno.serve(async (req: Request) => {
       transcriptLines.join('\n'),
     ].join('\n');
 
-    let aiContext: {
-      situationPresetIds: string[];
-      tone: FollowUpTone;
-      salesTechniques: string[];
-      rationale: string | null;
-    } | null = null;
+    let aiContext: AiContextRecommendation | null = null;
 
     if (autoSelectContext) {
       try {
@@ -958,11 +998,14 @@ Deno.serve(async (req: Request) => {
           task: 'follow_up_generation',
           systemPrompt: [
             'Voce classifica o contexto de uma conversa comercial de planos de saude para configurar um follow-up.',
-            'Retorne apenas JSON valido, sem markdown, no formato {"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"rationale":"..."}.',
+            'Retorne apenas JSON valido, sem markdown, no formato {"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"rationale":"...","nextAction":{"type":"schedule|wait|mark_lost_recommended","reason":"...","priority":"baixa|normal|alta"}}.',
             `Cenarios permitidos: ${FOLLOW_UP_SITUATION_PRESETS.map((preset) => `${preset.id} (${preset.label})`).join(', ')}. Use no maximo 2 e somente quando fizer sentido claro no historico.`,
             `Tons permitidos: ${FOLLOW_UP_TONES.join(', ')}.`,
             `Tecnicas permitidas: ${FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => technique.id).join(', ')}. Use entre 1 e 3 tecnicas.`,
-            'Nao invente objeções, combinados ou fatos. Se o contexto estiver neutro, prefira consultivo com rapport e assumptive-close.',
+            'Decida nextAction lendo a conversa inteira, nao por quantidade bruta de mensagens. Varios envios seguidos da mesma proposta/cotacao contam como um unico bloco de contexto, nao como varias tentativas de follow-up.',
+            'Use mark_lost_recommended somente quando houver sinais claros de varias tentativas reais em dias/momentos diferentes sem resposta util do cliente. Se a proposta acabou de ser enviada ou ainda e o primeiro retorno apos proposta, use schedule.',
+            'Use wait quando o cliente ja respondeu, existe combinado pendente, ou ainda nao cabe nova cobranca.',
+            'Nao invente objeções, combinados ou fatos. Se o contexto estiver neutro, prefira consultivo com rapport e assumptive-close e nextAction schedule.',
           ].join('\n'),
           userPrompt: baseContextPrompt,
           temperature: 0.2,
@@ -979,6 +1022,9 @@ Deno.serve(async (req: Request) => {
         tone: requestedTone,
         salesTechniques: requestedSalesTechniqueIds.length > 0 ? requestedSalesTechniqueIds : ['rapport', 'assumptive-close'],
         rationale: null,
+        nextActionType: null,
+        nextActionReason: null,
+        nextActionPriority: null,
       };
     }
 
@@ -1063,6 +1109,7 @@ Deno.serve(async (req: Request) => {
       lead,
       leadContext,
       effectiveSituationPresetIds,
+      aiContext,
       now,
     });
 

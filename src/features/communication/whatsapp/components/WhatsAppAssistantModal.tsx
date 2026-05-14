@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
+  Baby,
   CheckCircle2,
   Loader2,
   Mic,
   MicOff,
   Radio,
   SendHorizontal,
-  Sparkles,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -58,10 +58,10 @@ type AssistantConversationEntry = {
 };
 
 const promptExamples = [
-  'RAVI, o que eu deveria responder agora?',
-  'RAVI, resuma essa conversa e diga o próximo passo.',
-  'RAVI, onde devo olhar primeiro no inbox hoje?',
-  'RAVI, liste os contatos que preciso priorizar hoje.',
+  'RAVI, o que responder?',
+  'RAVI, resuma esse chat.',
+  'RAVI, onde olhar agora?',
+  'RAVI, quem priorizar hoje?',
 ];
 
 const scopeOptions: Array<{ value: CommWhatsAppAssistantScope; label: string; description: string }> = [
@@ -128,6 +128,7 @@ export default function WhatsAppAssistantModal({
   const conversationEndRef = useRef<HTMLDivElement | null>(null);
   const trimmedPrompt = prompt.trim();
   const canAsk = trimmedPrompt.length > 0 && !loading;
+  const visibleConversation = conversation.slice(-5);
 
   const currentStatus = useMemo(() => {
     if (loading) return 'PROCESSANDO';
@@ -292,15 +293,15 @@ export default function WhatsAppAssistantModal({
         </div>
       )}
     >
-      <div className="grid h-[min(78dvh,760px)] min-h-[620px] overflow-hidden text-orange-50 lg:grid-cols-[minmax(280px,0.78fr)_minmax(0,1.22fr)]">
-        <section className="relative flex min-h-0 flex-col overflow-hidden border-b border-orange-300/15 bg-black/20 p-4 lg:border-b-0 lg:border-r">
+      <div className="grid h-[min(76dvh,660px)] min-h-0 overflow-hidden text-orange-50 lg:grid-cols-[minmax(250px,0.62fr)_minmax(0,1.38fr)]">
+        <section className="relative flex min-h-0 flex-col overflow-hidden border-b border-orange-300/15 bg-black/20 p-3 lg:border-b-0 lg:border-r">
           <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(255,179,96,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,179,96,0.07)_1px,transparent_1px)] [background-size:24px_24px]" />
-          <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-4">
-            <div className="rounded-3xl border border-orange-200/15 bg-orange-950/20 p-4 shadow-[inset_0_0_28px_rgba(249,115,22,0.12)]">
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-3">
+            <div className="rounded-3xl border border-orange-200/15 bg-orange-950/20 p-3 shadow-[inset_0_0_28px_rgba(249,115,22,0.12)]">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-200/70">Kifer AI Core</p>
-                  <h3 className="mt-1 text-2xl font-semibold tracking-[0.08em] text-orange-50">R.A.V.I.</h3>
+                  <h3 className="mt-0.5 text-xl font-semibold tracking-[0.08em] text-orange-50">R.A.V.I.</h3>
                 </div>
                 <span className="inline-flex items-center gap-2 rounded-full border border-orange-200/20 bg-orange-300/10 px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-orange-100">
                   <Radio className={cx('h-3.5 w-3.5', loading || isRecording ? 'animate-pulse' : '')} />
@@ -308,16 +309,16 @@ export default function WhatsAppAssistantModal({
                 </span>
               </div>
 
-              <div className="relative mx-auto my-6 flex h-52 w-52 items-center justify-center rounded-full border border-orange-200/20 bg-[radial-gradient(circle,rgba(251,146,60,0.28)_0%,rgba(120,53,15,0.1)_43%,transparent_70%)] shadow-[0_0_46px_rgba(249,115,22,0.28)]">
-                <div className="absolute inset-4 animate-spin rounded-full border border-dashed border-orange-200/25 [animation-duration:18s]" />
-                <div className="absolute inset-10 animate-spin rounded-full border border-orange-300/20 [animation-duration:9s] [animation-direction:reverse]" />
-                <div className="absolute h-36 w-36 rounded-full border border-orange-100/15" />
-                <div className={cx('h-20 w-20 rounded-full bg-orange-300/80 shadow-[0_0_42px_rgba(251,146,60,0.8)]', loading || isRecording ? 'animate-pulse' : '')} />
-                <Sparkles className="absolute h-8 w-8 text-stone-950" />
+              <div className="relative mx-auto my-3 flex h-36 w-36 items-center justify-center rounded-full border border-orange-200/20 bg-[radial-gradient(circle,rgba(251,146,60,0.28)_0%,rgba(120,53,15,0.1)_43%,transparent_70%)] shadow-[0_0_42px_rgba(249,115,22,0.24)]">
+                <div className="absolute inset-3 animate-spin rounded-full border border-dashed border-orange-200/25 [animation-duration:18s]" />
+                <div className="absolute inset-8 animate-spin rounded-full border border-orange-300/20 [animation-duration:9s] [animation-direction:reverse]" />
+                <div className="absolute h-24 w-24 rounded-full border border-orange-100/15" />
+                <div className={cx('h-16 w-16 rounded-full bg-orange-300/80 shadow-[0_0_38px_rgba(251,146,60,0.78)]', loading || isRecording ? 'animate-pulse' : '')} />
+                <Baby className="absolute h-8 w-8 text-stone-950" />
               </div>
 
-              <p className="text-center text-sm leading-6 text-orange-100/72">
-                Acione por voz ou texto. Eu analiso contexto operacional, proponho próximos passos e peço confirmação antes de qualquer ação sensível.
+              <p className="text-center text-xs leading-5 text-orange-100/72">
+                Voz ou texto. Contexto real, próximos passos e confirmação antes de ações sensíveis.
               </p>
             </div>
 
@@ -333,20 +334,20 @@ export default function WhatsAppAssistantModal({
                     onClick={() => onScopeChange(option.value)}
                     disabled={disabled}
                     className={cx(
-                      'rounded-2xl border px-3 py-2.5 text-left transition disabled:cursor-not-allowed disabled:opacity-40',
+                      'rounded-2xl border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-40',
                       active
                         ? 'border-orange-200/40 bg-orange-300/15 text-orange-50 shadow-[0_0_22px_rgba(249,115,22,0.18)]'
                         : 'border-orange-200/15 bg-black/20 text-orange-100/70 hover:border-orange-200/35 hover:text-orange-50',
                     )}
                   >
                     <span className="block text-xs font-semibold uppercase tracking-[0.14em]">{option.label}</span>
-                    <span className="mt-1 block text-xs leading-5 opacity-80">{option.description}</span>
+                    <span className="mt-0.5 block text-[11px] leading-4 opacity-80">{option.description}</span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-auto rounded-2xl border border-orange-200/15 bg-black/20 p-3">
+            <div className="mt-auto rounded-2xl border border-orange-200/15 bg-black/20 p-2.5">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-orange-100/50">Comandos rápidos</p>
               <div className="flex flex-wrap gap-2">
                 {promptExamples.map((example) => (
@@ -355,7 +356,7 @@ export default function WhatsAppAssistantModal({
                     type="button"
                     onClick={() => onPromptChange(example)}
                     disabled={loading}
-                    className="rounded-full border border-orange-200/15 bg-orange-300/5 px-3 py-1.5 text-xs font-medium text-orange-100/70 transition hover:border-orange-200/35 hover:text-orange-50 disabled:opacity-50"
+                    className="rounded-full border border-orange-200/15 bg-orange-300/5 px-2.5 py-1 text-[11px] font-medium text-orange-100/70 transition hover:border-orange-200/35 hover:text-orange-50 disabled:opacity-50"
                   >
                     {example}
                   </button>
@@ -366,11 +367,11 @@ export default function WhatsAppAssistantModal({
         </section>
 
         <section className="flex min-h-0 flex-col bg-black/10">
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 sm:p-5">
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3 sm:p-4">
             {conversation.length === 0 && !loading && !response ? (
-              <div className="flex min-h-[260px] flex-1 flex-col items-center justify-center text-center">
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-orange-200/20 bg-orange-300/10 shadow-[0_0_30px_rgba(249,115,22,0.18)]">
-                  <Sparkles className="h-7 w-7 text-orange-100" />
+              <div className="flex min-h-[150px] flex-1 flex-col items-center justify-center text-center">
+                <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-orange-200/20 bg-orange-300/10 shadow-[0_0_30px_rgba(249,115,22,0.18)]">
+                  <Baby className="h-7 w-7 text-orange-100" />
                 </div>
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-orange-100">Pronto para conversar</p>
                 <p className="mt-2 max-w-lg text-sm leading-6 text-orange-100/62">
@@ -379,10 +380,16 @@ export default function WhatsAppAssistantModal({
               </div>
             ) : null}
 
-            {conversation.map((entry) => (
+            {conversation.length > visibleConversation.length ? (
+              <p className="text-center text-[11px] uppercase tracking-[0.16em] text-orange-100/38">
+                Mostrando interações recentes
+              </p>
+            ) : null}
+
+            {visibleConversation.map((entry) => (
               <div key={entry.id} className={cx('flex', entry.role === 'operator' ? 'justify-end' : 'justify-start')}>
                 <div className={cx(
-                  'max-w-[88%] rounded-3xl border px-4 py-3 shadow-lg',
+                  'max-w-[88%] rounded-3xl border px-3.5 py-2.5 shadow-lg',
                   entry.role === 'operator'
                     ? 'border-orange-200/30 bg-orange-300/15 text-orange-50'
                     : 'border-orange-100/15 bg-black/30 text-orange-50 shadow-orange-950/20',
@@ -391,15 +398,15 @@ export default function WhatsAppAssistantModal({
                   <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-100/50">
                     {entry.role === 'operator' ? 'Operador' : 'R.A.V.I.'}
                   </p>
-                  <p className="whitespace-pre-wrap text-sm leading-6">{entry.text}</p>
-                  {entry.detail ? <p className="mt-2 text-xs leading-5 text-orange-100/55">{entry.detail}</p> : null}
+                  <p className="line-clamp-4 whitespace-pre-wrap text-sm leading-5">{entry.text}</p>
+                  {entry.detail ? <p className="mt-1.5 line-clamp-2 text-xs leading-4 text-orange-100/55">{entry.detail}</p> : null}
                 </div>
               </div>
             ))}
 
             {loading ? (
               <div className="flex justify-start">
-                <div className="max-w-[88%] rounded-3xl border border-orange-100/15 bg-black/30 px-4 py-3 text-orange-100/70">
+                <div className="max-w-[88%] rounded-3xl border border-orange-100/15 bg-black/30 px-4 py-2.5 text-orange-100/70">
                   <div className="flex items-center gap-3 text-sm">
                     <Loader2 className="h-4 w-4 animate-spin text-orange-200" />
                     Processando contexto operacional...
@@ -409,7 +416,7 @@ export default function WhatsAppAssistantModal({
             ) : null}
 
             {response && !loading ? (
-              <div className="space-y-4 rounded-3xl border border-orange-200/15 bg-orange-950/15 p-4">
+              <div className="min-h-0 space-y-3 overflow-hidden rounded-3xl border border-orange-200/15 bg-orange-950/15 p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-orange-300/15 px-3 py-1 text-xs font-semibold text-orange-100">
                     {confidenceLabel(response.confidence)}
@@ -422,14 +429,14 @@ export default function WhatsAppAssistantModal({
                 </div>
 
                 {response.clarification ? (
-                  <div className="flex items-start gap-3 rounded-2xl border border-amber-300/35 bg-amber-300/10 px-4 py-3 text-amber-100">
+                  <div className="flex items-start gap-3 rounded-2xl border border-amber-300/35 bg-amber-300/10 px-3 py-2 text-amber-100">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <p className="text-sm leading-6">{response.clarification}</p>
+                    <p className="line-clamp-3 text-sm leading-5">{response.clarification}</p>
                   </div>
                 ) : null}
 
                 {response.suggestedMessage ? (
-                  <div className="space-y-3 rounded-2xl border border-orange-200/15 bg-black/20 px-4 py-3">
+                  <div className="space-y-2 rounded-2xl border border-orange-200/15 bg-black/20 px-3 py-2.5">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-semibold text-orange-50">Mensagem sugerida</p>
                       <Button
@@ -440,30 +447,33 @@ export default function WhatsAppAssistantModal({
                         Aplicar no composer
                       </Button>
                     </div>
-                    <p className="whitespace-pre-wrap text-sm leading-6 text-orange-100/72">{response.suggestedMessage}</p>
+                    <p className="line-clamp-4 whitespace-pre-wrap text-sm leading-5 text-orange-100/72">{response.suggestedMessage}</p>
                   </div>
                 ) : null}
 
                 {response.actionPlan.length > 0 ? (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-100/52">Plano confirmável</p>
-                    {response.actionPlan.map((action) => (
-                      <div key={action.id} className="rounded-2xl border border-orange-200/15 bg-black/20 px-4 py-3">
+                    {response.actionPlan.slice(0, 3).map((action) => (
+                      <div key={action.id} className="rounded-2xl border border-orange-200/15 bg-black/20 px-3 py-2.5">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="text-sm font-semibold text-orange-50">{action.title}</p>
-                            <p className="mt-1 text-sm leading-6 text-orange-100/70">{action.description}</p>
+                            <p className="mt-1 line-clamp-2 text-sm leading-5 text-orange-100/70">{action.description}</p>
                           </div>
                           <span className="rounded-full bg-orange-300/10 px-2.5 py-1 text-[11px] font-semibold text-orange-100/70">
                             {actionTypeLabel(action.type)}
                           </span>
                         </div>
-                        <div className={cx('mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', action.requiresConfirmation ? 'bg-amber-300/12 text-amber-100' : 'bg-emerald-300/12 text-emerald-100')}>
+                        <div className={cx('mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', action.requiresConfirmation ? 'bg-amber-300/12 text-amber-100' : 'bg-emerald-300/12 text-emerald-100')}>
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           {action.requiresConfirmation ? 'Requer confirmação humana' : 'Informativo'}
                         </div>
                       </div>
                     ))}
+                    {response.actionPlan.length > 3 ? (
+                      <p className="text-xs text-orange-100/50">+{response.actionPlan.length - 3} ações adicionais na resposta do R.A.V.I.</p>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -472,19 +482,19 @@ export default function WhatsAppAssistantModal({
             <div ref={conversationEndRef} />
           </div>
 
-          <div className="border-t border-orange-200/15 bg-[#100905]/95 p-4 sm:p-5">
+          <div className="border-t border-orange-200/15 bg-[#100905]/95 p-3 sm:p-4">
             {isRecording && transcriptPreview ? (
-              <div className="mb-3 rounded-2xl border border-orange-200/20 bg-orange-300/10 px-4 py-2 text-sm text-orange-100/80">
+              <div className="mb-2 rounded-2xl border border-orange-200/20 bg-orange-300/10 px-3 py-1.5 text-sm text-orange-100/80">
                 Ouvindo: {transcriptPreview}
               </div>
             ) : null}
-            <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 type="button"
                 onClick={handleToggleRecording}
                 disabled={!voiceSupported || loading}
                 className={cx(
-                  'flex h-14 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-semibold transition sm:w-40',
+                  'flex h-12 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-semibold transition sm:w-36',
                   isRecording
                     ? 'border-red-300/50 bg-red-500/20 text-red-50 shadow-[0_0_28px_rgba(248,113,113,0.22)]'
                     : 'border-orange-200/20 bg-orange-300/10 text-orange-50 hover:border-orange-200/40 hover:bg-orange-300/15',
@@ -499,12 +509,12 @@ export default function WhatsAppAssistantModal({
                 value={prompt}
                 onChange={(event) => onPromptChange(event.target.value)}
                 placeholder="Diga ou digite: RAVI, quem eu devo priorizar agora?"
-                rows={2}
-                className="min-h-14 flex-1 resize-none rounded-2xl border border-orange-200/20 bg-black/35 px-4 py-3 text-sm leading-6 text-orange-50 outline-none transition placeholder:text-orange-100/32 focus:border-orange-200/45 focus:ring-2 focus:ring-orange-300/15"
+                rows={1}
+                className="min-h-12 flex-1 resize-none rounded-2xl border border-orange-200/20 bg-black/35 px-4 py-2.5 text-sm leading-6 text-orange-50 outline-none transition placeholder:text-orange-100/32 focus:border-orange-200/45 focus:ring-2 focus:ring-orange-300/15"
                 disabled={loading}
               />
 
-              <Button onClick={handleAsk} loading={loading} disabled={!canAsk} className="h-14 rounded-2xl sm:w-44">
+              <Button onClick={handleAsk} loading={loading} disabled={!canAsk} className="h-12 rounded-2xl sm:w-40">
                 <SendHorizontal className="h-4 w-4" />
                 Enviar
               </Button>

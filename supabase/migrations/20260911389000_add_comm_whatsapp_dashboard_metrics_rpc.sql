@@ -102,10 +102,21 @@ AS $$
       '[]'::jsonb
     ) AS items
     FROM (
-      SELECT *
-      FROM chats
-      WHERE NOT COALESCE(is_archived, false)
-      ORDER BY COALESCE(is_pinned, false) DESC, pinned_at DESC NULLS LAST, last_message_at DESC NULLS LAST, updated_at DESC
+      SELECT
+        c.*,
+        l.status AS lead_status,
+        latest_message.delivery_status AS last_message_delivery_status
+      FROM chats c
+      LEFT JOIN public.leads l ON l.id = c.lead_id
+      LEFT JOIN LATERAL (
+        SELECT m.delivery_status
+        FROM messages m
+        WHERE m.chat_id = c.id
+        ORDER BY m.message_at DESC, m.created_at DESC, m.id DESC
+        LIMIT 1
+      ) latest_message ON true
+      WHERE NOT COALESCE(c.is_archived, false)
+      ORDER BY COALESCE(c.is_pinned, false) DESC, c.pinned_at DESC NULLS LAST, c.last_message_at DESC NULLS LAST, c.updated_at DESC
       LIMIT 8
     ) ranked
   )

@@ -272,7 +272,7 @@ const loadSelectedChatContext = async (supabaseAdmin: any, chatId: string) => {
     leadId
       ? supabaseAdmin
           .from('leads')
-          .select('id, nome_completo, telefone, email, cidade, origem, tipo_contratacao, status, responsavel, ultimo_contato, proximo_retorno, observacoes, created_at, updated_at')
+          .select('*')
           .eq('id', leadId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),

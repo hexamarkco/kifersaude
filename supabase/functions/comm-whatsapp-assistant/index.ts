@@ -126,6 +126,7 @@ const normalizeRecentMessage = (message: Record<string, unknown>) => ({
 
 const normalizeRecentChat = (chat: Record<string, unknown>) => ({
   id: toTrimmedString(chat.id),
+  externalChatId: toNullableText(chat.external_chat_id, 140),
   displayName: toTrimmedString(chat.display_name) || toTrimmedString(chat.saved_contact_name) || toTrimmedString(chat.phone_number),
   phone: toTrimmedString(chat.phone_number),
   leadId: toNullableText(chat.lead_id, 80),
@@ -322,6 +323,111 @@ const normalizeQuoteSearchResult = (row: Record<string, unknown>) => {
         createdAt: toNullableText(item.created_at, 80),
       }];
     }),
+  };
+};
+
+const incrementGroup = (groups: Record<string, number>, rawKey: unknown) => {
+  const key = toTrimmedString(rawKey) || 'Nao informado';
+  groups[key] = (groups[key] ?? 0) + 1;
+};
+
+const buildAssistantInsights = (
+  historicalConversationSearch: { triggered: boolean; query: string | null; terms: string[]; results: ReturnType<typeof normalizeHistoricalSearchResult>[] },
+  cotadorQuoteSearch: { triggered: boolean; query: string | null; terms: string[]; results: ReturnType<typeof normalizeQuoteSearchResult>[] },
+) => {
+  const byStatus: Record<string, number> = {};
+  const byOwner: Record<string, number> = {};
+  const bySource: Record<string, number> = {};
+  const byOperatorOrProduct: Record<string, number> = {};
+  const seenLeadIds = new Set<string>();
+  const duplicateLeadIds = new Set<string>();
+
+  const targets = historicalConversationSearch.results.flatMap((result) => {
+    if (!result.chat.externalChatId) return [];
+
+    const leadId = result.lead?.id || result.chat.leadId || null;
+    if (leadId) {
+      if (seenLeadIds.has(leadId)) duplicateLeadIds.add(leadId);
+      seenLeadIds.add(leadId);
+    }
+
+    incrementGroup(byStatus, result.lead?.status || result.chat.leadStatus || 'Sem status');
+    incrementGroup(byOwner, result.lead?.owner || 'Sem responsavel');
+    incrementGroup(bySource, 'WhatsApp');
+
+    return [{
+      id: result.chat.id,
+      source: 'whatsapp',
+      chatId: result.chat.id,
+      externalChatId: result.chat.externalChatId,
+      leadId,
+      displayName: result.lead?.name || result.chat.displayName || result.chat.phone,
+      phone: result.lead?.phone || result.chat.phone,
+      status: result.lead?.status || result.chat.leadStatus,
+      owner: result.lead?.owner,
+      archived: result.chat.archived,
+      latestAt: result.latestMessageAt,
+      evidence: result.snippets.slice(0, 2).map((snippet) => ({
+        at: snippet.at,
+        direction: snippet.direction,
+        text: clampText(snippet.text, 220),
+      })),
+    }];
+  });
+
+  cotadorQuoteSearch.results.forEach((result) => {
+    const leadId = result.lead?.id || result.quote.leadId || null;
+    if (leadId) {
+      if (seenLeadIds.has(leadId)) duplicateLeadIds.add(leadId);
+      seenLeadIds.add(leadId);
+    }
+
+    incrementGroup(byStatus, result.lead?.status || 'Sem status');
+    incrementGroup(byOwner, result.lead?.owner || 'Sem responsavel');
+    incrementGroup(bySource, 'Cotador');
+    result.items.forEach((item) => incrementGroup(byOperatorOrProduct, item.operator || item.title || 'Sem operadora/produto'));
+  });
+
+  const hotTargets = targets.filter((target) => {
+    const status = normalizeSearchText(target.status || '');
+    return status.includes('proposta') || status.includes('convertido') || status.includes('atendimento') || status.includes('negociacao');
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    query: historicalConversationSearch.query || cotadorQuoteSearch.query,
+    terms: Array.from(new Set([...historicalConversationSearch.terms, ...cotadorQuoteSearch.terms])),
+    sources: [
+      historicalConversationSearch.triggered ? { name: 'WhatsApp', type: 'conversation_history', results: historicalConversationSearch.results.length } : null,
+      cotadorQuoteSearch.triggered ? { name: 'Cotador', type: 'saved_quotes', results: cotadorQuoteSearch.results.length } : null,
+    ].filter(Boolean),
+    totals: {
+      whatsappConversations: historicalConversationSearch.results.length,
+      cotadorQuotes: cotadorQuoteSearch.results.length,
+      actionableTargets: targets.length,
+      duplicateLeadCount: duplicateLeadIds.size,
+      hotLeadCount: hotTargets.length,
+    },
+    groups: {
+      byStatus,
+      byOwner,
+      bySource,
+      byOperatorOrProduct,
+    },
+    targets,
+    flags: {
+      hasMultipleTargets: targets.length > 1,
+      hasArchivedChats: targets.some((target) => target.archived),
+      hasDuplicateLeads: duplicateLeadIds.size > 0,
+      incomplete: false,
+      incompleteReason: null,
+    },
+    audit: {
+      searchedWhatsApp: historicalConversationSearch.triggered,
+      searchedCotador: cotadorQuoteSearch.triggered,
+      resultLimitPerSource: 25,
+      note: 'Resultados limitados e compactados para operacao segura no inbox.',
+    },
   };
 };
 
@@ -731,6 +837,7 @@ Deno.serve(async (req: Request) => {
       cotadorQuoteSearch,
       selectedChat: selectedChatContext,
     };
+    const assistantInsights = buildAssistantInsights(historicalConversationSearch, cotadorQuoteSearch);
 
     const systemPrompt = [
       'Voce e o R.A.V.I., assistente operacional de IA do WhatsApp Inbox da Kifer Saude.',
@@ -747,6 +854,8 @@ Deno.serve(async (req: Request) => {
       'Toda acao de escrita, envio, agenda, mudanca de status, vinculo de lead, arquivamento ou exclusao deve aparecer com requires_confirmation true.',
       'Quando sugerir mensagem para WhatsApp, deixe suggested_message com texto pronto para o composer, sem markdown e sem aspas. Nao envie a mensagem.',
       'Quando houver uma mensagem pronta para acionar contatos, inclua tambem uma action_plan do tipo draft_message com payload.message contendo exatamente o texto sugerido.',
+      'Se assistantInsights.flags.hasMultipleTargets for true, trate a mensagem como modelo para disparo selecionavel em massa, nao como mensagem para o composer do chat atual.',
+      'Para disparo em massa, inclua payload.bulkEligible true e payload.message no draft_message. Nao diga que enviou; diga que os contatos precisam ser selecionados e confirmados.',
       'Quando a resposta mencionar leads, chats, cotacoes ou contatos que merecem revisao, inclua actions do tipo review_lead ou open_dashboard com payload contendo ids disponiveis no contexto; se nao houver id, use uma action manual descritiva.',
       'Quando sugerir follow-up ou agenda, inclua action do tipo schedule_follow_up com payload contendo leadId, chatId, title, reason e suggestedDateTime quando esses dados existirem.',
       'Responda em portugues do Brasil, com tom direto, consultivo e operacional.',
@@ -759,6 +868,9 @@ Deno.serve(async (req: Request) => {
       '',
       'Contexto operacional em JSON:',
       JSON.stringify(context, null, 2),
+      '',
+      'Insights estruturados ja calculados:',
+      JSON.stringify(assistantInsights, null, 2),
     ].join('\n');
 
     const result = await generateTextWithRouting({
@@ -778,6 +890,7 @@ Deno.serve(async (req: Request) => {
       provider: result.provider,
       model: result.model,
       fallback_used: result.fallbackUsed,
+      assistant_insights: assistantInsights,
       context_summary: {
         scope,
         chatLoaded: Boolean(selectedChatContext.chat),

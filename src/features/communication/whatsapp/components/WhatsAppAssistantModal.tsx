@@ -13,7 +13,7 @@ import {
 import Button from '../../../../components/ui/Button';
 import ModalShell from '../../../../components/ui/ModalShell';
 import { cx } from '../../../../lib/cx';
-import type { CommWhatsAppAssistantResponse, CommWhatsAppAssistantScope } from '../../../../lib/commWhatsAppService';
+import type { CommWhatsAppAssistantResponse, CommWhatsAppAssistantScope, CommWhatsAppAssistantTarget } from '../../../../lib/commWhatsAppService';
 
 type SpeechRecognitionType = {
   new (): {
@@ -46,6 +46,7 @@ type WhatsAppAssistantModalProps = {
   onScopeChange: (value: CommWhatsAppAssistantScope) => void;
   onAsk: () => void;
   onApplySuggestedMessage: (message: string) => void;
+  onSendBulkMessage?: (targets: CommWhatsAppAssistantTarget[], message: string) => void;
 };
 
 type AssistantConversationEntry = {
@@ -108,6 +109,17 @@ const getActionDraftText = (payload?: Record<string, unknown> | null) => {
   return candidates.find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim() || '';
 };
 
+const isMultiContactResponse = (response: CommWhatsAppAssistantResponse | null) => {
+  const summary = response?.contextSummary;
+  if (!summary) return false;
+
+  return (summary.historicalSearchResultsLoaded ?? 0) > 1 || (summary.quoteSearchResultsLoaded ?? 0) > 1;
+};
+
+const formatGroup = (group?: Record<string, number>) => Object.entries(group ?? {})
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 6);
+
 const createEntryId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export default function WhatsAppAssistantModal({
@@ -123,8 +135,10 @@ export default function WhatsAppAssistantModal({
   onScopeChange,
   onAsk,
   onApplySuggestedMessage,
+  onSendBulkMessage,
 }: WhatsAppAssistantModalProps) {
   const [conversation, setConversation] = useState<AssistantConversationEntry[]>([]);
+  const [selectedTargetIds, setSelectedTargetIds] = useState<Set<string>>(new Set());
   const [isRecording, setIsRecording] = useState(false);
   const [transcriptPreview, setTranscriptPreview] = useState('');
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -134,6 +148,10 @@ export default function WhatsAppAssistantModal({
   const trimmedPrompt = prompt.trim();
   const canAsk = trimmedPrompt.length > 0 && !loading;
   const visibleConversation = conversation.slice(-5);
+  const multiContactResponse = isMultiContactResponse(response);
+  const assistantTargets = response?.assistantInsights?.targets ?? [];
+  const selectedTargets = assistantTargets.filter((target) => selectedTargetIds.has(target.id));
+  const bulkDraftMessage = response?.suggestedMessage || response?.actionPlan.map((action) => getActionDraftText(action.payload)).find(Boolean) || '';
 
   const currentStatus = useMemo(() => {
     if (loading) return 'PROCESSANDO';
@@ -199,6 +217,7 @@ export default function WhatsAppAssistantModal({
   useEffect(() => {
     if (!response || response === lastResponseRef.current) return;
     lastResponseRef.current = response;
+    setSelectedTargetIds(new Set(response.assistantInsights?.targets?.map((target) => target.id) ?? []));
 
     setConversation((current) => [
       ...current,
@@ -210,6 +229,24 @@ export default function WhatsAppAssistantModal({
       },
     ]);
   }, [response]);
+
+  const handleToggleTarget = (targetId: string) => {
+    setSelectedTargetIds((current) => {
+      const next = new Set(current);
+      if (next.has(targetId)) {
+        next.delete(targetId);
+      } else {
+        next.add(targetId);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleAllTargets = () => {
+    setSelectedTargetIds((current) => (
+      current.size === assistantTargets.length ? new Set() : new Set(assistantTargets.map((target) => target.id))
+    ));
+  };
 
   const handleAsk = () => {
     if (!canAsk) return;
@@ -411,16 +448,130 @@ export default function WhatsAppAssistantModal({
                 {response.suggestedMessage ? (
                   <div className="space-y-2 rounded-2xl border border-orange-200/15 bg-black/20 px-3 py-2.5">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-orange-50">Mensagem sugerida</p>
-                      <Button
-                        size="sm"
-                        onClick={() => onApplySuggestedMessage(response.suggestedMessage || '')}
-                        disabled={!hasSelectedChat}
-                      >
-                        Aplicar no composer
-                      </Button>
+                      <div>
+                        <p className="text-sm font-semibold text-orange-50">
+                          {multiContactResponse ? 'Modelo de mensagem' : 'Mensagem sugerida'}
+                        </p>
+                        {multiContactResponse ? (
+                          <p className="mt-1 text-xs leading-4 text-orange-100/55">
+                            Resultado envolve múltiplos contatos. O composer só envia para o chat atual.
+                          </p>
+                        ) : null}
+                      </div>
+                      {!multiContactResponse ? (
+                        <Button
+                          size="sm"
+                          onClick={() => onApplySuggestedMessage(response.suggestedMessage || '')}
+                          disabled={!hasSelectedChat}
+                        >
+                          Aplicar no composer
+                        </Button>
+                      ) : null}
                     </div>
                     <p className="whitespace-pre-wrap text-sm leading-5 text-orange-100/72">{response.suggestedMessage}</p>
+                  </div>
+                ) : null}
+
+                {response.assistantInsights ? (
+                  <div className="space-y-3 rounded-2xl border border-orange-200/15 bg-black/20 px-3 py-2.5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-orange-50">Resultados estruturados</p>
+                        <p className="mt-1 text-xs leading-4 text-orange-100/55">
+                          Fontes: {(response.assistantInsights.sources ?? []).map((source) => `${source.name} (${source.results ?? 0})`).join(', ') || 'nenhuma'}.
+                        </p>
+                      </div>
+                      {assistantTargets.length > 0 ? (
+                        <Button size="sm" variant="secondary" onClick={handleToggleAllTargets}>
+                          {selectedTargetIds.size === assistantTargets.length ? 'Limpar seleção' : 'Selecionar todos'}
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-xl border border-orange-200/10 bg-orange-300/5 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-orange-100/45">Conversas</p>
+                        <p className="text-lg font-semibold text-orange-50">{response.assistantInsights.totals?.whatsappConversations ?? 0}</p>
+                      </div>
+                      <div className="rounded-xl border border-orange-200/10 bg-orange-300/5 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-orange-100/45">Cotações</p>
+                        <p className="text-lg font-semibold text-orange-50">{response.assistantInsights.totals?.cotadorQuotes ?? 0}</p>
+                      </div>
+                      <div className="rounded-xl border border-orange-200/10 bg-orange-300/5 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-orange-100/45">Selecionáveis</p>
+                        <p className="text-lg font-semibold text-orange-50">{assistantTargets.length}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 lg:grid-cols-2">
+                      {formatGroup(response.assistantInsights.groups?.byStatus).length > 0 ? (
+                        <div className="rounded-xl border border-orange-200/10 bg-black/20 px-3 py-2">
+                          <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-orange-100/45">Por status</p>
+                          {formatGroup(response.assistantInsights.groups?.byStatus).map(([label, count]) => (
+                            <p key={label} className="text-xs leading-5 text-orange-100/70">{label}: {count}</p>
+                          ))}
+                        </div>
+                      ) : null}
+                      {formatGroup(response.assistantInsights.groups?.byOwner).length > 0 ? (
+                        <div className="rounded-xl border border-orange-200/10 bg-black/20 px-3 py-2">
+                          <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-orange-100/45">Por responsável</p>
+                          {formatGroup(response.assistantInsights.groups?.byOwner).map(([label, count]) => (
+                            <p key={label} className="text-xs leading-5 text-orange-100/70">{label}: {count}</p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {assistantTargets.length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-100/52">Leads/chats encontrados</p>
+                          <p className="text-xs text-orange-100/55">{selectedTargets.length} selecionado(s)</p>
+                        </div>
+                        <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                          {assistantTargets.map((target) => (
+                            <label key={target.id} className="flex cursor-pointer gap-3 rounded-xl border border-orange-200/10 bg-black/20 px-3 py-2">
+                              <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 rounded border-orange-200/30 bg-black"
+                                checked={selectedTargetIds.has(target.id)}
+                                onChange={() => handleToggleTarget(target.id)}
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold text-orange-50">{target.displayName || target.phone || 'Contato sem nome'}</span>
+                                <span className="mt-0.5 block text-xs text-orange-100/55">
+                                  {target.status || 'Sem status'} · {target.owner || 'Sem responsável'} · {target.archived ? 'Arquivado' : 'Ativo'}
+                                </span>
+                                {target.evidence?.[0]?.text ? (
+                                  <span className="mt-1 block line-clamp-2 text-xs leading-4 text-orange-100/50">{target.evidence[0].text}</span>
+                                ) : null}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                        {bulkDraftMessage ? (
+                          <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2">
+                            <p className="text-xs leading-4 text-amber-100">
+                              Disparo em massa exige seleção e confirmação. Nada será enviado sem clicar no botão abaixo.
+                            </p>
+                            <Button
+                              size="sm"
+                              className="mt-2"
+                              disabled={selectedTargets.length === 0 || !onSendBulkMessage}
+                              onClick={() => onSendBulkMessage?.(selectedTargets, bulkDraftMessage)}
+                            >
+                              Enviar para {selectedTargets.length} selecionado(s)
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {response.assistantInsights.flags?.incomplete ? (
+                      <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">
+                        Busca incompleta: {response.assistantInsights.flags.incompleteReason || 'verifique migrations, permissões ou dados disponíveis.'}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -444,14 +595,20 @@ export default function WhatsAppAssistantModal({
                           {draftText ? (
                             <div className="mt-2 rounded-xl border border-orange-200/10 bg-black/25 px-3 py-2">
                               <p className="whitespace-pre-wrap text-xs leading-5 text-orange-100/65">{draftText}</p>
-                              <Button
-                                size="sm"
-                                className="mt-2"
-                                onClick={() => onApplySuggestedMessage(draftText)}
-                                disabled={!hasSelectedChat}
-                              >
-                                Aplicar no composer
-                              </Button>
+                              {multiContactResponse ? (
+                                <p className="mt-2 rounded-lg border border-amber-300/20 bg-amber-300/10 px-2.5 py-1.5 text-xs leading-4 text-amber-100">
+                                  Modelo para uso manual: não posso aplicar no composer porque a ação envolve múltiplos contatos.
+                                </p>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  className="mt-2"
+                                  onClick={() => onApplySuggestedMessage(draftText)}
+                                  disabled={!hasSelectedChat}
+                                >
+                                  Aplicar no composer
+                                </Button>
+                              )}
                             </div>
                           ) : null}
                           <div className={cx('mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold', action.requiresConfirmation ? 'bg-amber-300/12 text-amber-100' : 'bg-emerald-300/12 text-emerald-100')}>

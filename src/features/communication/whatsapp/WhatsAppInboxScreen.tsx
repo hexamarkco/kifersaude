@@ -19,6 +19,7 @@ import {
   formatCommWhatsAppPhoneLabel,
   type CommWhatsAppAssistantResponse,
   type CommWhatsAppAssistantScope,
+  type CommWhatsAppAssistantTarget,
   type CommWhatsAppLeadContractSummary,
   type CommWhatsAppLeadPanel,
   type CommWhatsAppLeadSearchResult,
@@ -7503,6 +7504,49 @@ export default function WhatsAppInboxScreen() {
     });
   }, [selectedChat, setComposerSelection, setMessageDraft]);
 
+  const handleSendAssistantBulkMessage = useCallback(async (targets: CommWhatsAppAssistantTarget[], message: string) => {
+    const text = message.trim();
+    const uniqueTargets = Array.from(new Map(
+      targets
+        .filter((target) => target.externalChatId?.trim())
+        .map((target) => [target.externalChatId?.trim(), target] as const),
+    ).values());
+
+    if (!text || uniqueTargets.length === 0) {
+      toast.error('Selecione ao menos um contato com conversa válida e uma mensagem para enviar.');
+      return;
+    }
+
+    const confirmed = window.confirm(`Enviar esta mensagem para ${uniqueTargets.length} contato(s) selecionado(s)?`);
+    if (!confirmed) {
+      return;
+    }
+
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const target of uniqueTargets) {
+      try {
+        await commWhatsAppService.sendTextMessage(target.externalChatId || '', text, {
+          clientRequestId: createClientRequestId(),
+        });
+        sentCount += 1;
+      } catch (error) {
+        failedCount += 1;
+        console.error('[WhatsAppInbox] erro no disparo RAVI em massa', { targetId: target.id, error });
+      }
+    }
+
+    if (sentCount > 0) {
+      toast.success(`Mensagem enviada para ${sentCount} contato(s).`);
+      void loadChats();
+    }
+
+    if (failedCount > 0) {
+      toast.error(`${failedCount} envio(s) falharam. Revise os contatos selecionados.`);
+    }
+  }, [loadChats]);
+
   const handleCloseFollowUpModal = useCallback(() => {
     setFollowUpModalOpen(false);
   }, []);
@@ -9180,6 +9224,7 @@ export default function WhatsAppInboxScreen() {
           onScopeChange={setAssistantScope}
           onAsk={() => void handleAskAssistant()}
           onApplySuggestedMessage={handleApplyAssistantSuggestedMessage}
+          onSendBulkMessage={(targets, message) => void handleSendAssistantBulkMessage(targets, message)}
         />
 
         <WhatsAppDashboardModal

@@ -261,6 +261,50 @@ export type CommWhatsAppAssistantAction = {
 
 export type CommWhatsAppAssistantScope = 'free' | 'chat' | 'inbox' | 'system';
 
+export type CommWhatsAppAssistantTarget = {
+  id: string;
+  source: 'whatsapp' | 'cotador' | string;
+  chatId?: string | null;
+  externalChatId?: string | null;
+  leadId?: string | null;
+  displayName: string;
+  phone?: string | null;
+  status?: string | null;
+  owner?: string | null;
+  archived?: boolean;
+  latestAt?: string | null;
+  evidence?: Array<{ at?: string | null; direction?: string | null; text: string }>;
+};
+
+export type CommWhatsAppAssistantInsights = {
+  generatedAt?: string | null;
+  query?: string | null;
+  terms?: string[];
+  sources?: Array<{ name?: string; type?: string; results?: number }>;
+  totals?: {
+    whatsappConversations?: number;
+    cotadorQuotes?: number;
+    actionableTargets?: number;
+    duplicateLeadCount?: number;
+    hotLeadCount?: number;
+  };
+  groups?: {
+    byStatus?: Record<string, number>;
+    byOwner?: Record<string, number>;
+    bySource?: Record<string, number>;
+    byOperatorOrProduct?: Record<string, number>;
+  };
+  targets?: CommWhatsAppAssistantTarget[];
+  flags?: {
+    hasMultipleTargets?: boolean;
+    hasArchivedChats?: boolean;
+    hasDuplicateLeads?: boolean;
+    incomplete?: boolean;
+    incompleteReason?: string | null;
+  };
+  audit?: Record<string, unknown> | null;
+};
+
 export type CommWhatsAppAssistantResponse = {
   answer: string;
   clarification?: string | null;
@@ -270,6 +314,7 @@ export type CommWhatsAppAssistantResponse = {
   provider?: string | null;
   model?: string | null;
   fallback_used?: boolean;
+  assistantInsights?: CommWhatsAppAssistantInsights | null;
   contextSummary?: {
     scope?: string;
     chatLoaded?: boolean;
@@ -1166,6 +1211,7 @@ export const commWhatsAppService = {
       model?: string | null;
       fallback_used?: boolean;
       context_summary?: CommWhatsAppAssistantResponse['contextSummary'];
+      assistant_insights?: CommWhatsAppAssistantInsights | null;
     };
 
     const answer = payload.answer?.trim() || '';
@@ -1206,6 +1252,7 @@ export const commWhatsAppService = {
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,
+      assistantInsights: payload.assistant_insights ?? null,
       contextSummary: payload.context_summary ?? null,
     };
   },

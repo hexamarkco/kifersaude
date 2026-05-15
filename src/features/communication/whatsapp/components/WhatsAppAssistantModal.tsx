@@ -275,7 +275,7 @@ export default function WhatsAppAssistantModal({
       title="R.A.V.I."
       description="Interface operacional por texto e voz. O R.A.V.I. sugere ações, mas nada é enviado ou alterado sem confirmação."
       size="xl"
-      panelClassName="config-transparent-buttons h-[100dvh] border-orange-300/25 bg-[#100b08] text-orange-50 shadow-[0_0_80px_rgba(200,111,29,0.26)] sm:h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-1.5rem)] sm:max-w-[min(96vw,88rem)]"
+      panelClassName="config-transparent-buttons h-[100dvh] border-orange-300/25 bg-[#100b08] text-orange-50 shadow-[0_0_80px_rgba(200,111,29,0.26)] [&>footer]:px-4 [&>footer]:py-2.5 [&>header]:px-4 [&>header]:py-3 sm:h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-1.5rem)] sm:max-w-[min(96vw,88rem)] sm:[&>footer]:px-5 sm:[&>header]:px-5"
       bodyClassName="bg-[radial-gradient(circle_at_50%_0%,rgba(200,111,29,0.25),transparent_32%),linear-gradient(145deg,#130d09_0%,#090604_56%,#1b0f08_100%)] p-0 sm:p-0"
       bodyScrollable={false}
       footer={(
@@ -294,14 +294,14 @@ export default function WhatsAppAssistantModal({
       )}
     >
       <div className="grid h-full min-h-0 overflow-hidden text-orange-50 lg:grid-cols-[minmax(250px,0.62fr)_minmax(0,1.38fr)]">
-        <section className="relative flex min-h-0 flex-col overflow-hidden border-b border-orange-300/15 bg-black/20 p-2.5 lg:border-b-0 lg:border-r">
+        <section className="relative flex min-h-0 flex-col overflow-hidden border-b border-orange-300/15 bg-black/20 p-2 lg:border-b-0 lg:border-r">
           <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(255,179,96,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(255,179,96,0.07)_1px,transparent_1px)] [background-size:24px_24px]" />
-          <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-2.5">
-            <div className="rounded-[1.35rem] border border-orange-200/15 bg-orange-950/20 p-2.5 shadow-[inset_0_0_28px_rgba(249,115,22,0.12)]">
+          <div className="relative z-10 flex min-h-0 flex-1 flex-col gap-2">
+            <div className="rounded-[1.2rem] border border-orange-200/15 bg-orange-950/20 p-2 shadow-[inset_0_0_28px_rgba(249,115,22,0.12)]">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-orange-200/70">Kifer AI Core</p>
-                  <h3 className="mt-0.5 text-lg font-semibold tracking-[0.08em] text-orange-50">R.A.V.I.</h3>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-orange-200/70">Kifer AI Core</p>
+                  <h3 className="text-base font-semibold tracking-[0.08em] text-orange-50">R.A.V.I.</h3>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-200/20 bg-orange-300/10 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-orange-100">
                   <Radio className={cx('h-3.5 w-3.5', loading || isRecording ? 'animate-pulse' : '')} />
@@ -309,20 +309,20 @@ export default function WhatsAppAssistantModal({
                 </span>
               </div>
 
-              <div className="relative mx-auto my-2 flex h-28 w-28 items-center justify-center rounded-full border border-orange-200/20 bg-[radial-gradient(circle,rgba(251,146,60,0.28)_0%,rgba(120,53,15,0.1)_43%,transparent_70%)] shadow-[0_0_42px_rgba(249,115,22,0.24)]">
-                <div className="absolute inset-2.5 animate-spin rounded-full border border-dashed border-orange-200/25 [animation-duration:18s]" />
-                <div className="absolute inset-6 animate-spin rounded-full border border-orange-300/20 [animation-duration:9s] [animation-direction:reverse]" />
-                <div className="absolute h-16 w-16 rounded-full border border-orange-100/15" />
-                <div className={cx('h-12 w-12 rounded-full bg-orange-300/80 shadow-[0_0_38px_rgba(251,146,60,0.78)]', loading || isRecording ? 'animate-pulse' : '')} />
-                <Baby className="absolute h-6 w-6 text-stone-950" />
+              <div className="relative mx-auto my-1.5 flex h-20 w-20 items-center justify-center rounded-full border border-orange-200/20 bg-[radial-gradient(circle,rgba(251,146,60,0.28)_0%,rgba(120,53,15,0.1)_43%,transparent_70%)] shadow-[0_0_32px_rgba(249,115,22,0.22)]">
+                <div className="absolute inset-2 animate-spin rounded-full border border-dashed border-orange-200/25 [animation-duration:18s]" />
+                <div className="absolute inset-5 animate-spin rounded-full border border-orange-300/20 [animation-duration:9s] [animation-direction:reverse]" />
+                <div className="absolute h-12 w-12 rounded-full border border-orange-100/15" />
+                <div className={cx('h-9 w-9 rounded-full bg-orange-300/80 shadow-[0_0_30px_rgba(251,146,60,0.72)]', loading || isRecording ? 'animate-pulse' : '')} />
+                <Baby className="absolute h-5 w-5 text-stone-950" />
               </div>
 
-              <p className="text-center text-[11px] leading-4 text-orange-100/72">
+              <p className="text-center text-[10px] leading-3 text-orange-100/72">
                 Voz ou texto. Contexto real, próximos passos e confirmação antes de ações sensíveis.
               </p>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <div className="grid grid-cols-2 gap-1.5">
               {scopeOptions.map((option) => {
                 const active = option.value === scope;
                 const disabled = loading || (option.value === 'chat' && !hasSelectedChat);
@@ -333,30 +333,30 @@ export default function WhatsAppAssistantModal({
                     type="button"
                     onClick={() => onScopeChange(option.value)}
                     disabled={disabled}
+                    title={option.description}
                     className={cx(
-                      'rounded-2xl border px-2.5 py-1.5 text-left transition disabled:cursor-not-allowed disabled:opacity-40',
+                      'rounded-xl border px-2.5 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-40',
                       active
                         ? 'border-orange-200/40 bg-orange-300/15 text-orange-50 shadow-[0_0_22px_rgba(249,115,22,0.18)]'
                         : 'border-orange-200/15 bg-black/20 text-orange-100/70 hover:border-orange-200/35 hover:text-orange-50',
                     )}
                   >
-                    <span className="block text-[11px] font-semibold uppercase tracking-[0.14em]">{option.label}</span>
-                    <span className="mt-0.5 block text-[10px] leading-3 opacity-80">{option.description}</span>
+                    <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.14em]">{option.label}</span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-auto rounded-2xl border border-orange-200/15 bg-black/20 p-2">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-100/50">Comandos rápidos</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="mt-auto rounded-xl border border-orange-200/15 bg-black/20 p-2">
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-orange-100/50">Comandos rápidos</p>
+              <div className="grid grid-cols-2 gap-1.5">
                 {promptExamples.map((example) => (
                   <button
                     key={example}
                     type="button"
                     onClick={() => onPromptChange(example)}
                     disabled={loading}
-                    className="rounded-full border border-orange-200/15 bg-orange-300/5 px-2 py-0.5 text-[10px] font-medium text-orange-100/70 transition hover:border-orange-200/35 hover:text-orange-50 disabled:opacity-50"
+                    className="truncate rounded-lg border border-orange-200/15 bg-orange-300/5 px-2 py-1 text-left text-[10px] font-medium text-orange-100/70 transition hover:border-orange-200/35 hover:text-orange-50 disabled:opacity-50"
                   >
                     {example}
                   </button>

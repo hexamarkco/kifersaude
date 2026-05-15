@@ -4,36 +4,14 @@ import {
   Baby,
   CheckCircle2,
   Loader2,
-  Mic,
-  MicOff,
   Radio,
   SendHorizontal,
-  Volume2,
-  VolumeX,
 } from 'lucide-react';
 
 import Button from '../../../../components/ui/Button';
 import ModalShell from '../../../../components/ui/ModalShell';
 import { cx } from '../../../../lib/cx';
 import type { CommWhatsAppAssistantResponse, CommWhatsAppAssistantScope } from '../../../../lib/commWhatsAppService';
-
-type SpeechRecognitionType = {
-  new (): {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    onresult: ((event: unknown) => void) | null;
-    onerror: ((event: unknown) => void) | null;
-    onend: (() => void) | null;
-    start: () => void;
-    stop: () => void;
-  };
-};
-
-type SpeechRecognitionWindow = Window & {
-  SpeechRecognition?: SpeechRecognitionType;
-  webkitSpeechRecognition?: SpeechRecognitionType;
-};
 
 type WhatsAppAssistantModalProps = {
   isOpen: boolean;
@@ -97,12 +75,6 @@ const actionTypeLabel = (type: string) => {
 
 const createEntryId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-const getAssistantSpeechText = (response: CommWhatsAppAssistantResponse) => {
-  const firstParagraph = response.answer.split('\n').find((line) => line.trim())?.trim() || response.answer.trim();
-  if (response.clarification) return `${firstParagraph}. ${response.clarification}`;
-  return firstParagraph;
-};
-
 export default function WhatsAppAssistantModal({
   isOpen,
   loading,
@@ -118,12 +90,6 @@ export default function WhatsAppAssistantModal({
   onApplySuggestedMessage,
 }: WhatsAppAssistantModalProps) {
   const [conversation, setConversation] = useState<AssistantConversationEntry[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [transcriptPreview, setTranscriptPreview] = useState('');
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [voiceSupported, setVoiceSupported] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const recognitionRef = useRef<InstanceType<SpeechRecognitionType> | null>(null);
   const lastResponseRef = useRef<CommWhatsAppAssistantResponse | null>(null);
   const conversationEndRef = useRef<HTMLDivElement | null>(null);
   const trimmedPrompt = prompt.trim();
@@ -132,65 +98,14 @@ export default function WhatsAppAssistantModal({
 
   const currentStatus = useMemo(() => {
     if (loading) return 'PROCESSANDO';
-    if (isRecording) return 'OUVINDO';
     if (response) return 'RESPOSTA PRONTA';
     return 'ONLINE';
-  }, [isRecording, loading, response]);
+  }, [loading, response]);
 
   useEffect(() => {
     if (!isOpen) return;
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [conversation, isOpen, loading]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const speechWindow = window as SpeechRecognitionWindow;
-    const SpeechRecognitionClass = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
-    setSpeechSupported('speechSynthesis' in window);
-    setVoiceSupported(Boolean(SpeechRecognitionClass));
-
-    if (!SpeechRecognitionClass) return;
-
-    const recognition = new SpeechRecognitionClass();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'pt-BR';
-    recognition.onresult = (event: unknown) => {
-      const results = (event as { results?: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }> }).results;
-      if (!results) return;
-
-      let interimTranscript = '';
-      let finalTranscript = '';
-      for (let index = 0; index < results.length; index += 1) {
-        const result = results[index];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript;
-        } else {
-          interimTranscript += result[0].transcript;
-        }
-      }
-
-      const nextTranscript = `${finalTranscript}${interimTranscript}`.trim();
-      setTranscriptPreview(nextTranscript);
-      if (nextTranscript) {
-        onPromptChange(nextTranscript);
-      }
-    };
-    recognition.onerror = () => {
-      setIsRecording(false);
-      setTranscriptPreview('');
-    };
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-    recognitionRef.current = recognition;
-
-    return () => {
-      recognition.stop();
-      recognitionRef.current = null;
-    };
-  }, [onPromptChange]);
 
   useEffect(() => {
     if (!response || response === lastResponseRef.current) return;
@@ -205,22 +120,7 @@ export default function WhatsAppAssistantModal({
         detail: response.clarification || null,
       },
     ]);
-
-    if (voiceEnabled && speechSupported && typeof window !== 'undefined') {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(getAssistantSpeechText(response));
-      utterance.lang = 'pt-BR';
-      utterance.rate = 0.96;
-      utterance.pitch = 0.92;
-      window.speechSynthesis.speak(utterance);
-    }
-  }, [response, speechSupported, voiceEnabled]);
-
-  useEffect(() => {
-    if (!isOpen && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-  }, [isOpen]);
+  }, [response]);
 
   const handleAsk = () => {
     if (!canAsk) return;
@@ -236,35 +136,7 @@ export default function WhatsAppAssistantModal({
     onAsk();
   };
 
-  const handleToggleRecording = () => {
-    if (!voiceSupported) return;
-
-    if (isRecording) {
-      recognitionRef.current?.stop();
-      setIsRecording(false);
-      return;
-    }
-
-    setTranscriptPreview('');
-    recognitionRef.current?.start();
-    setIsRecording(true);
-  };
-
-  const handleToggleVoice = () => {
-    setVoiceEnabled((current) => {
-      const next = !current;
-      if (!next && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-      return next;
-    });
-  };
-
   const handleClose = () => {
-    recognitionRef.current?.stop();
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
     onClose();
   };
 
@@ -273,7 +145,7 @@ export default function WhatsAppAssistantModal({
       isOpen={isOpen}
       onClose={handleClose}
       title="R.A.V.I."
-      description="Interface operacional por texto e voz. O R.A.V.I. sugere ações, mas nada é enviado ou alterado sem confirmação."
+      description="Interface operacional por texto. O R.A.V.I. sugere ações, mas nada é enviado ou alterado sem confirmação."
       size="xl"
       panelClassName="config-transparent-buttons h-[100dvh] border-orange-300/25 bg-[#100b08] text-orange-50 shadow-[0_0_80px_rgba(200,111,29,0.26)] [&>footer]:px-4 [&>footer]:py-2.5 [&>header]:px-4 [&>header]:py-3 sm:h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-1.5rem)] sm:max-w-[min(96vw,88rem)] sm:[&>footer]:px-5 sm:[&>header]:px-5"
       bodyClassName="bg-[radial-gradient(circle_at_50%_0%,rgba(200,111,29,0.25),transparent_32%),linear-gradient(145deg,#130d09_0%,#090604_56%,#1b0f08_100%)] p-0 sm:p-0"
@@ -281,13 +153,9 @@ export default function WhatsAppAssistantModal({
       footer={(
         <div className="flex flex-col gap-2 bg-[#120b07] text-orange-100 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs leading-5 text-orange-100/70">
-            {getScopeFooterText(scope, hasSelectedChat, selectedChatName)} Voz: {voiceSupported ? 'microfone disponível' : 'microfone indisponível neste navegador'}.
+            {getScopeFooterText(scope, hasSelectedChat, selectedChatName)}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={handleToggleVoice} disabled={!speechSupported}>
-              {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-              {voiceEnabled ? 'Voz ligada' : 'Voz desligada'}
-            </Button>
             <Button variant="secondary" onClick={handleClose}>Fechar</Button>
           </div>
         </div>
@@ -303,7 +171,7 @@ export default function WhatsAppAssistantModal({
                   <h3 className="text-base font-semibold tracking-[0.08em] text-orange-50">R.A.V.I.</h3>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-200/20 bg-orange-300/10 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-orange-100">
-                  <Radio className={cx('h-3.5 w-3.5', loading || isRecording ? 'animate-pulse' : '')} />
+                  <Radio className={cx('h-3.5 w-3.5', loading ? 'animate-pulse' : '')} />
                   {currentStatus}
                 </span>
               </div>
@@ -312,12 +180,12 @@ export default function WhatsAppAssistantModal({
                 <div className="absolute inset-2 animate-spin rounded-full border border-dashed border-orange-200/25 [animation-duration:18s]" />
                 <div className="absolute inset-5 animate-spin rounded-full border border-orange-300/20 [animation-duration:9s] [animation-direction:reverse]" />
                 <div className="absolute h-12 w-12 rounded-full border border-orange-100/15" />
-                <div className={cx('h-9 w-9 rounded-full bg-orange-300/80 shadow-[0_0_30px_rgba(251,146,60,0.72)]', loading || isRecording ? 'animate-pulse' : '')} />
+                <div className={cx('h-9 w-9 rounded-full bg-orange-300/80 shadow-[0_0_30px_rgba(251,146,60,0.72)]', loading ? 'animate-pulse' : '')} />
                 <Baby className="absolute h-5 w-5 text-stone-950" />
               </div>
 
               <p className="text-center text-[10px] leading-3 text-orange-100/72">
-                Voz ou texto. Contexto real, próximos passos e confirmação antes de ações sensíveis.
+                Texto, contexto real, próximos passos e confirmação antes de ações sensíveis.
               </p>
             </div>
 
@@ -482,32 +350,11 @@ export default function WhatsAppAssistantModal({
           </div>
 
           <div className="border-t border-orange-200/15 bg-[#100905]/95 p-3 sm:p-4">
-            {isRecording && transcriptPreview ? (
-              <div className="mb-2 rounded-2xl border border-orange-200/20 bg-orange-300/10 px-3 py-1.5 text-sm text-orange-100/80">
-                Ouvindo: {transcriptPreview}
-              </div>
-            ) : null}
             <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={handleToggleRecording}
-                disabled={!voiceSupported || loading}
-                className={cx(
-                  'flex h-12 w-full items-center justify-center gap-2 rounded-2xl border text-sm font-semibold transition sm:w-36',
-                  isRecording
-                    ? 'border-red-300/50 bg-red-500/20 text-red-50 shadow-[0_0_28px_rgba(248,113,113,0.22)]'
-                    : 'border-orange-200/20 bg-orange-300/10 text-orange-50 hover:border-orange-200/40 hover:bg-orange-300/15',
-                  (!voiceSupported || loading) && 'cursor-not-allowed opacity-50',
-                )}
-              >
-                {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                {isRecording ? 'Parar' : 'Falar'}
-              </button>
-
               <textarea
                 value={prompt}
                 onChange={(event) => onPromptChange(event.target.value)}
-                placeholder="Diga ou digite: RAVI, quem eu devo priorizar agora?"
+                placeholder="Digite: RAVI, quem eu devo priorizar agora?"
                 rows={1}
                 className="min-h-12 flex-1 resize-none rounded-2xl border border-orange-200/20 bg-black/35 px-4 py-2.5 text-sm leading-6 text-orange-50 outline-none transition placeholder:text-orange-100/32 focus:border-orange-200/45 focus:ring-2 focus:ring-orange-300/15"
                 disabled={loading}

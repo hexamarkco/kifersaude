@@ -300,7 +300,6 @@ export default function WhatsAppAssistantModal({
             <div className="rounded-[1.2rem] border border-orange-200/15 bg-orange-950/20 p-2 shadow-[inset_0_0_28px_rgba(249,115,22,0.12)]">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-orange-200/70">Kifer AI Core</p>
                   <h3 className="text-base font-semibold tracking-[0.08em] text-orange-50">R.A.V.I.</h3>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-200/20 bg-orange-300/10 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-orange-100">

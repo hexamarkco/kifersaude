@@ -746,6 +746,9 @@ Deno.serve(async (req: Request) => {
       'Nunca diga que executou, alterou, enviou, arquivou, agendou ou vinculou algo. Voce pode apenas sugerir a acao e indicar que precisa de confirmacao humana.',
       'Toda acao de escrita, envio, agenda, mudanca de status, vinculo de lead, arquivamento ou exclusao deve aparecer com requires_confirmation true.',
       'Quando sugerir mensagem para WhatsApp, deixe suggested_message com texto pronto para o composer, sem markdown e sem aspas. Nao envie a mensagem.',
+      'Quando houver uma mensagem pronta para acionar contatos, inclua tambem uma action_plan do tipo draft_message com payload.message contendo exatamente o texto sugerido.',
+      'Quando a resposta mencionar leads, chats, cotacoes ou contatos que merecem revisao, inclua actions do tipo review_lead ou open_dashboard com payload contendo ids disponiveis no contexto; se nao houver id, use uma action manual descritiva.',
+      'Quando sugerir follow-up ou agenda, inclua action do tipo schedule_follow_up com payload contendo leadId, chatId, title, reason e suggestedDateTime quando esses dados existirem.',
       'Responda em portugues do Brasil, com tom direto, consultivo e operacional.',
       'Retorne exclusivamente JSON valido no formato: {"answer":"...","clarification":null,"confidence":"low|medium|high","action_plan":[{"id":"...","type":"draft_message|schedule_follow_up|review_lead|open_dashboard|manual","title":"...","description":"...","requires_confirmation":true,"payload":{}}],"suggested_message":null}.',
     ].join('\n\n');

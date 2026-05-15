@@ -38,9 +38,11 @@ type NormalizedAssistantResponse = {
   suggested_message: string | null;
 };
 
-type HistoricalConversationSearchRequest = {
+type AssistantSearchPlan = {
   query: string;
   terms: string[];
+  includeHistoricalConversations: boolean;
+  includeQuotes: boolean;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
@@ -147,13 +149,21 @@ const normalizeSearchText = (value: string) => value
   .replace(/\s+/g, ' ')
   .trim();
 
-const removeLeadingSearchNoise = (value: string) => value
-  .replace(/^r\.?a\.?v\.?i\.?\s*,?\s*/i, '')
-  .replace(/^(quais?|quem|liste|listar|mostre|mostrar|busque|buscar|procure|procurar|localize|localizar)\s+/i, '')
-  .replace(/^(os|as|todos?|todas?|leads?|clientes?|contatos?|chats?|conversas?)\s+/i, '')
-  .replace(/^(que|quais?)\s+/i, '')
-  .replace(/^(falaram|conversaram|mencionaram|comentaram|trataram)\s+/i, '')
-  .trim();
+const SEARCH_STOP_WORDS = new Set([
+  'a', 'agora', 'algum', 'alguma', 'algumas', 'alguns', 'as', 'ate', 'buscar', 'busque', 'chat', 'chats', 'cliente', 'clientes', 'com', 'contato',
+  'contatos', 'conversa', 'conversar', 'conversaram', 'conversei', 'conversou', 'conversas', 'cotacao', 'cotacoes', 'da', 'das', 'de', 'do', 'dos',
+  'essa', 'esse', 'esta', 'este', 'eu', 'falei', 'falaram', 'falou', 'historico', 'inbox', 'lead', 'leads', 'liste', 'listar', 'localize', 'localizar',
+  'mande', 'mandei', 'me', 'mencionei', 'mencionaram', 'mencionou', 'mensagem', 'mensagens', 'mostra', 'mostrar', 'mostre', 'na', 'nas', 'no', 'nos',
+  'o', 'operadora', 'operadoras', 'operador', 'orcamento', 'orcamentos', 'os', 'para', 'pediu', 'pediram', 'por', 'procure', 'procurar', 'proposta',
+  'propostas', 'quais', 'qual', 'que', 'quem', 'ravi', 'recebeu', 'receberam', 'recente', 'recentemente', 'semana', 'sobre', 'todos', 'todas', 'traga',
+  'trataram', 'tratou', 'ultima', 'ultimas', 'ultimo', 'ultimos', 'um', 'uma', 'whatsapp',
+]);
+
+const SEARCH_TIME_WORDS = new Set(['hoje', 'ontem', 'recentemente', 'recente', 'semana', 'mes', 'mês', 'dia', 'dias', 'ultimos', 'últimos', 'ultimas', 'últimas']);
+
+const SEARCH_ACTION_PATTERN = /\b(buscar|busque|liste|listar|mostre|mostrar|procure|procurar|localize|localizar|traga|falei|falou|falaram|conversei|conversou|conversaram|mencionei|mencionou|mencionaram|comentei|comentou|comentaram|tratei|tratou|trataram|mandei|enviou|enviei|recebeu|receberam|pediu|pediram|cotacao|cotacoes|or[cç]amento|or[cç]amentos|proposta|propostas)\b/;
+const SEARCH_AUDIENCE_PATTERN = /\b(quem|quais|qual|lead|leads|cliente|clientes|contato|contatos|chat|chats|conversa|conversas)\b/;
+const QUOTE_SEARCH_PATTERN = /\b(cotacao|cotacoes|or[cç]amento|or[cç]amentos|proposta|propostas|plano|planos|operadora|operadoras|seguradora|seguradoras)\b/;
 
 const splitTopicTerms = (topic: string) => Array.from(new Set(
   topic
@@ -162,38 +172,89 @@ const splitTopicTerms = (topic: string) => Array.from(new Set(
     .filter((term) => term.length >= 3),
 ));
 
-const extractHistoricalConversationSearchRequest = (prompt: string): HistoricalConversationSearchRequest | null => {
+const cleanSearchCandidate = (value: string) => value
+  .replace(/^r\.?a\.?v\.?i\.?\s*,?\s*/i, '')
+  .replace(/[?.!]+$/g, '')
+  .replace(/\b(?:no|na|nos|nas)?\s*(?:historico|whatsapp|inbox|mensagens?)\b.*$/i, '')
+  .replace(/\b(?:hoje|ontem|recentemente|essa semana|esta semana|ultimos dias|últimos dias|esse mes|este mes|este mês|esse mês)\b/gi, '')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const extractQuotedTerms = (value: string) => Array.from(value.matchAll(/["']([^"']{3,80})["']/g))
+  .map((match) => cleanSearchCandidate(match[1]))
+  .filter(Boolean);
+
+const extractConnectorTerms = (value: string) => {
+  const terms: string[] = [];
+  const patterns = [
+    /\b(?:sobre|contendo|mencionando|relacionad[oa]s?\s+a|referente\s+a)\s+([^?.!,;]{3,120})/gi,
+    /\b(?:cotacao|cotacoes|or[cç]amento|or[cç]amentos|proposta|propostas|plano|planos)\s+(?:de|da|do|para|com)?\s*([^?.!,;]{3,120})/gi,
+    /\b(?:falei|conversei|tratei|mencionei|enviei|mandei|receberam|recebeu|pediram|pediu)\s+(?:sobre|de|da|do|com|para)?\s*([^?.!,;]{3,120})/gi,
+  ];
+
+  patterns.forEach((pattern) => {
+    for (const match of value.matchAll(pattern)) {
+      const candidate = cleanSearchCandidate(match[1]);
+      if (candidate) terms.push(candidate);
+    }
+  });
+
+  return terms;
+};
+
+const extractResidualTerms = (value: string) => {
+  const words = value
+    .replace(/^r\.?a\.?v\.?i\.?\s*,?\s*/i, '')
+    .replace(/[?.!,;:()[\]{}]/g, ' ')
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .filter((word) => {
+      const normalized = normalizeSearchText(word);
+      return normalized.length >= 3 && !SEARCH_STOP_WORDS.has(normalized) && !SEARCH_TIME_WORDS.has(normalized);
+    });
+
+  return words.length > 0 ? [words.join(' '), ...words] : [];
+};
+
+const buildSearchTerms = (prompt: string) => {
+  const terms = [
+    ...extractQuotedTerms(prompt),
+    ...extractConnectorTerms(prompt),
+    ...extractResidualTerms(prompt),
+  ];
+
+  return Array.from(new Map(
+    terms
+      .flatMap((term) => [term, ...splitTopicTerms(term)])
+      .map((term) => cleanSearchCandidate(term))
+      .filter((term) => normalizeSearchText(term).length >= 3)
+      .filter((term) => normalizeSearchText(term).split(' ').length <= 8)
+      .map((term) => [normalizeSearchText(term), term] as const),
+  ).values()).slice(0, 8);
+};
+
+const analyzeAssistantSearchPlan = (prompt: string): AssistantSearchPlan | null => {
   const normalizedPrompt = normalizeSearchText(prompt);
-  const hasAudienceIntent = /\b(lead|leads|cliente|clientes|contato|contatos|chat|chats|conversa|conversas)\b/.test(normalizedPrompt);
-  const hasHistoryIntent = /\b(falaram|falou|conversaram|conversou|mencionaram|mencionou|comentaram|comentou|buscar|busque|procure|procurar|localize|listar|liste|historico|historica|mensagens)\b/.test(normalizedPrompt);
+  const hasAudienceIntent = SEARCH_AUDIENCE_PATTERN.test(normalizedPrompt);
+  const hasActionIntent = SEARCH_ACTION_PATTERN.test(normalizedPrompt);
+  const hasQuoteIntent = QUOTE_SEARCH_PATTERN.test(normalizedPrompt);
 
-  if (!hasAudienceIntent || !hasHistoryIntent) {
+  if (!hasActionIntent && !hasAudienceIntent && !hasQuoteIntent) {
     return null;
   }
 
-  const trimmed = prompt.trim();
-  const quotedTerms = Array.from(trimmed.matchAll(/["']([^"']{3,80})["']/g))
-    .map((match) => match[1].trim())
-    .filter(Boolean);
-
-  const topicMatch = trimmed.match(/\b(?:sobre|de|do|da|dos|das|por|com|contendo|mencionando)\b\s+(.{3,160})$/i);
-  const rawTopic = quotedTerms[0] || topicMatch?.[1] || removeLeadingSearchNoise(trimmed);
-  const topic = rawTopic
-    .replace(/[?.!]+$/g, '')
-    .replace(/\b(?:no|na|nos|nas)?\s*(?:historico|whatsapp|inbox|mensagens?)\b.*$/i, '')
-    .trim();
-
-  if (!topic || normalizeSearchText(topic).split(' ').length > 8) {
+  const terms = buildSearchTerms(prompt);
+  if (terms.length === 0) {
     return null;
   }
 
-  const terms = Array.from(new Set([
-    topic,
-    ...quotedTerms,
-    ...splitTopicTerms(topic),
-  ].map((term) => term.trim()).filter((term) => term.length >= 3))).slice(0, 8);
-
-  return terms.length > 0 ? { query: topic, terms } : null;
+  return {
+    query: terms[0],
+    terms,
+    includeHistoricalConversations: hasAudienceIntent || hasActionIntent,
+    includeQuotes: hasQuoteIntent,
+  };
 };
 
 const normalizeHistoricalSearchResult = (row: Record<string, unknown>) => {
@@ -220,6 +281,45 @@ const normalizeHistoricalSearchResult = (row: Record<string, unknown>) => {
         type: toTrimmedString(snippet.type),
         at: toTrimmedString(snippet.at),
         text: clampText(toTrimmedString(snippet.text), 500),
+      }];
+    }),
+  };
+};
+
+const normalizeQuoteSearchResult = (row: Record<string, unknown>) => {
+  const quote = isRecord(row.quote) ? row.quote : {};
+  const lead = isRecord(row.lead) ? row.lead : null;
+  const rawItems = Array.isArray(row.items) ? row.items : [];
+
+  return {
+    quote: {
+      id: toTrimmedString(quote.id),
+      name: toNullableText(quote.nome, 220),
+      modality: toNullableText(quote.modalidade, 40),
+      totalLives: typeof quote.total_vidas === 'number' ? quote.total_vidas : 0,
+      leadId: toNullableText(quote.lead_id, 80),
+      updatedAt: toNullableText(quote.updated_at, 80),
+    },
+    lead: lead ? {
+      id: toTrimmedString(lead.id),
+      name: toNullableText(lead.nome_completo, 180),
+      phone: toNullableText(lead.telefone, 80),
+      status: toNullableText(lead.status_nome ?? lead.status_value, 120),
+      owner: toNullableText(lead.responsavel_label ?? lead.responsavel_value, 120),
+    } : null,
+    latestItemAt: toNullableText(row.latest_item_at, 80),
+    matchCount: typeof row.match_count === 'number' ? row.match_count : 0,
+    items: rawItems.slice(0, 5).flatMap((item) => {
+      if (!isRecord(item)) return [];
+      return [{
+        id: toTrimmedString(item.id),
+        operator: toNullableText(item.operadora, 180),
+        title: toNullableText(item.titulo, 260),
+        subtitle: toNullableText(item.subtitulo, 260),
+        line: toNullableText(item.linha, 180),
+        table: toNullableText(item.tabela, 180),
+        monthlyTotal: typeof item.mensalidade_total === 'number' ? item.mensalidade_total : null,
+        createdAt: toNullableText(item.created_at, 80),
       }];
     }),
   };
@@ -405,9 +505,8 @@ const loadSelectedChatContext = async (supabaseAdmin: any, chatId: string) => {
   };
 };
 
-const loadHistoricalConversationSearch = async (supabaseAdmin: any, prompt: string) => {
-  const searchRequest = extractHistoricalConversationSearchRequest(prompt);
-  if (!searchRequest) {
+const loadHistoricalConversationSearch = async (supabaseAdmin: any, searchPlan: AssistantSearchPlan | null) => {
+  if (!searchPlan?.includeHistoricalConversations) {
     return {
       triggered: false,
       query: null,
@@ -417,8 +516,8 @@ const loadHistoricalConversationSearch = async (supabaseAdmin: any, prompt: stri
   }
 
   const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_search_leads_by_conversation_topic', {
-    p_search: searchRequest.query,
-    p_terms: searchRequest.terms,
+    p_search: searchPlan.query,
+    p_terms: searchPlan.terms,
     p_limit: 25,
   });
 
@@ -431,8 +530,39 @@ const loadHistoricalConversationSearch = async (supabaseAdmin: any, prompt: stri
 
   return {
     triggered: true,
-    query: searchRequest.query,
-    terms: searchRequest.terms,
+    query: searchPlan.query,
+    terms: searchPlan.terms,
+    results,
+  };
+};
+
+const loadCotadorQuoteSearch = async (supabaseAdmin: any, searchPlan: AssistantSearchPlan | null) => {
+  if (!searchPlan?.includeQuotes) {
+    return {
+      triggered: false,
+      query: null,
+      terms: [],
+      results: [],
+    };
+  }
+
+  const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_search_cotador_quotes_by_topic', {
+    p_search: searchPlan.query,
+    p_terms: searchPlan.terms,
+    p_limit: 25,
+  });
+
+  if (error) {
+    throw new Error(`Falha ao buscar cotacoes do Cotador: ${error.message}`);
+  }
+
+  const results = ((Array.isArray(data) ? data : []) as Record<string, unknown>[])
+    .map(normalizeQuoteSearchResult);
+
+  return {
+    triggered: true,
+    query: searchPlan.query,
+    terms: searchPlan.terms,
     results,
   };
 };
@@ -567,12 +697,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const shouldLoadSelectedChat = scope === 'chat' && Boolean(chatId);
-    const [systemSettings, operationalState, inboxSummary, selectedChatContext, historicalConversationSearch] = await Promise.all([
+    const searchPlan = analyzeAssistantSearchPlan(prompt);
+    const [systemSettings, operationalState, inboxSummary, selectedChatContext, historicalConversationSearch, cotadorQuoteSearch] = await Promise.all([
       loadSystemSettings(supabaseAdmin),
       loadOperationalState(supabaseAdmin),
       loadInboxSummary(supabaseAdmin),
       shouldLoadSelectedChat ? loadSelectedChatContext(supabaseAdmin, chatId) : loadSelectedChatContext(supabaseAdmin, ''),
-      loadHistoricalConversationSearch(supabaseAdmin, prompt),
+      loadHistoricalConversationSearch(supabaseAdmin, searchPlan),
+      loadCotadorQuoteSearch(supabaseAdmin, searchPlan),
     ]);
 
     const context = {
@@ -588,6 +720,7 @@ Deno.serve(async (req: Request) => {
         prompt,
         chatId: shouldLoadSelectedChat ? chatId : null,
         composerDraft: composerDraft || null,
+        searchPlan,
         note: scope === 'free'
           ? 'Modo livre: nao assuma que o chat aberto e o assunto, salvo se o pedido mencionar claramente esta conversa ou este cliente.'
           : null,
@@ -595,6 +728,7 @@ Deno.serve(async (req: Request) => {
       operationalState,
       inboxSummary,
       historicalConversationSearch,
+      cotadorQuoteSearch,
       selectedChat: selectedChatContext,
     };
 
@@ -605,6 +739,8 @@ Deno.serve(async (req: Request) => {
       'Use selectedChat apenas quando request.scope for chat. Se scope for free/inbox/system, nao baseie a resposta na conversa aberta.',
       'Quando historicalConversationSearch.triggered for true, use seus results como fonte principal para perguntas globais sobre quais leads, clientes, contatos ou conversas mencionaram um assunto no historico do WhatsApp.',
       'Se historicalConversationSearch.triggered for true e results estiver vazio, diga que nao encontrou conversas no historico carregado para os termos pesquisados. Nao invente leads.',
+      'Quando cotadorQuoteSearch.triggered for true, use seus results para perguntas sobre cotacoes, propostas, orcamentos, planos, produtos ou operadoras no Cotador.',
+      'Quando historicalConversationSearch e cotadorQuoteSearch forem acionados juntos, diferencie claramente conversas de WhatsApp e cotacoes salvas no Cotador.',
       'Se o operador pedir acoes sobre multiplos contatos, responda com plano, criterios e proximos passos confirmaveis; nao invente dados nao enviados.',
       'Use somente os dados enviados no contexto. Se faltar informacao para concluir, diga exatamente o que falta e use clarification.',
       'Nunca diga que executou, alterou, enviou, arquivou, agendou ou vinculou algo. Voce pode apenas sugerir a acao e indicar que precisa de confirmacao humana.',
@@ -649,6 +785,8 @@ Deno.serve(async (req: Request) => {
         recentChatsLoaded: inboxSummary.recentChats.length,
         historicalSearchTriggered: historicalConversationSearch.triggered,
         historicalSearchResultsLoaded: historicalConversationSearch.results.length,
+        quoteSearchTriggered: cotadorQuoteSearch.triggered,
+        quoteSearchResultsLoaded: cotadorQuoteSearch.results.length,
       },
     }), {
       status: 200,

@@ -280,6 +280,8 @@ export type CommWhatsAppAssistantResponse = {
     recentChatsLoaded?: number;
     historicalSearchTriggered?: boolean;
     historicalSearchResultsLoaded?: number;
+    quoteSearchTriggered?: boolean;
+    quoteSearchResultsLoaded?: number;
   } | null;
 };
 

@@ -41,6 +41,11 @@ type NormalizedAssistantResponse = {
 type AssistantSearchPlan = {
   query: string;
   terms: string[];
+  requiredTerms: string[];
+  optionalTerms: string[];
+  direction: 'inbound' | 'outbound' | null;
+  since: string | null;
+  periodLabel: string | null;
   includeHistoricalConversations: boolean;
   includeQuotes: boolean;
 };
@@ -157,7 +162,7 @@ const SEARCH_STOP_WORDS = new Set([
   'mande', 'mandei', 'me', 'mencionei', 'mencionaram', 'mencionou', 'mensagem', 'mensagens', 'mostra', 'mostrar', 'mostre', 'na', 'nas', 'no', 'nos',
   'o', 'operadora', 'operadoras', 'operador', 'orcamento', 'orcamentos', 'os', 'para', 'pediu', 'pediram', 'por', 'procure', 'procurar', 'proposta',
   'propostas', 'quais', 'qual', 'que', 'quem', 'ravi', 'recebeu', 'receberam', 'recente', 'recentemente', 'semana', 'sobre', 'todos', 'todas', 'traga',
-  'trataram', 'tratou', 'ultima', 'ultimas', 'ultimo', 'ultimos', 'um', 'uma', 'whatsapp',
+  'trataram', 'tratou', 'ultima', 'ultimas', 'ultimo', 'ultimos', 'um', 'uma', 'whatsapp', 'pois', 'porque', 'pra', 'fechar', 'dando', 'oferecendo',
 ]);
 
 const SEARCH_TIME_WORDS = new Set(['hoje', 'ontem', 'recentemente', 'recente', 'semana', 'mes', 'mês', 'dia', 'dias', 'ultimos', 'últimos', 'ultimas', 'últimas']);
@@ -165,6 +170,8 @@ const SEARCH_TIME_WORDS = new Set(['hoje', 'ontem', 'recentemente', 'recente', '
 const SEARCH_ACTION_PATTERN = /\b(buscar|busque|liste|listar|mostre|mostrar|procure|procurar|localize|localizar|traga|falei|falou|falaram|conversei|conversou|conversaram|mencionei|mencionou|mencionaram|comentei|comentou|comentaram|tratei|tratou|trataram|mandei|enviou|enviei|recebeu|receberam|pediu|pediram|cotacao|cotacoes|or[cç]amento|or[cç]amentos|proposta|propostas)\b/;
 const SEARCH_AUDIENCE_PATTERN = /\b(quem|quais|qual|lead|leads|cliente|clientes|contato|contatos|chat|chats|conversa|conversas)\b/;
 const QUOTE_SEARCH_PATTERN = /\b(cotacao|cotacoes|or[cç]amento|or[cç]amentos|proposta|propostas|plano|planos|operadora|operadoras|seguradora|seguradoras)\b/;
+const OUTBOUND_INTENT_PATTERN = /\b(mandei|enviei|falei|conversei|acionei|disparei|encaminhei|envia|enviar|mande|mandar)\b/;
+const INBOUND_INTENT_PATTERN = /\b(recebi|pediram|pediu|perguntaram|perguntou|responderam|respondeu)\b/;
 
 const splitTopicTerms = (topic: string) => Array.from(new Set(
   topic
@@ -176,6 +183,7 @@ const splitTopicTerms = (topic: string) => Array.from(new Set(
 const cleanSearchCandidate = (value: string) => value
   .replace(/^r\.?a\.?v\.?i\.?\s*,?\s*/i, '')
   .replace(/[?.!]+$/g, '')
+  .replace(/\b(?:pois|porque|ja que|já que|para quem|pra quem|com desconto|dando|oferecendo|esta|está|ta|tá)\b.*$/i, '')
   .replace(/\b(?:no|na|nos|nas)?\s*(?:historico|whatsapp|inbox|mensagens?)\b.*$/i, '')
   .replace(/\b(?:hoje|ontem|recentemente|essa semana|esta semana|ultimos dias|últimos dias|esse mes|este mes|este mês|esse mês)\b/gi, '')
   .replace(/\s+/g, ' ')
@@ -235,6 +243,48 @@ const buildSearchTerms = (prompt: string) => {
   ).values()).slice(0, 8);
 };
 
+const inferSearchDirection = (normalizedPrompt: string): 'inbound' | 'outbound' | null => {
+  if (OUTBOUND_INTENT_PATTERN.test(normalizedPrompt)) return 'outbound';
+  if (INBOUND_INTENT_PATTERN.test(normalizedPrompt)) return 'inbound';
+  return null;
+};
+
+const inferSearchPeriod = (normalizedPrompt: string) => {
+  const now = Date.now();
+  if (/\b(hoje)\b/.test(normalizedPrompt)) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return { since: today.toISOString(), label: 'hoje' };
+  }
+  if (/\b(ultimos 7 dias|ultimas 7 dias|7 dias|essa semana|esta semana|semana|recentemente|esses dias|estes dias)\b/.test(normalizedPrompt)) {
+    return { since: new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString(), label: 'ultimos_7_dias' };
+  }
+  if (/\b(mes|mês|esse mes|este mes|esse mês|este mês)\b/.test(normalizedPrompt)) {
+    return { since: new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString(), label: 'ultimos_30_dias' };
+  }
+  return { since: null, label: null };
+};
+
+const isWeakSearchTerm = (term: string) => {
+  const normalized = normalizeSearchText(term);
+  return normalized.length < 3
+    || SEARCH_STOP_WORDS.has(normalized)
+    || /^(seguro|seguros|desconto|mensalidade|primeira|75|22|05|plano|planos|cotacao|cotacoes|proposta|propostas)$/.test(normalized);
+};
+
+const buildRequiredAndOptionalTerms = (terms: string[]) => {
+  const strongTerms = terms.filter((term) => !isWeakSearchTerm(term));
+  const phraseTerms = strongTerms.filter((term) => normalizeSearchText(term).split(' ').length > 1);
+  const requiredTerms = (phraseTerms.length > 0 ? phraseTerms : strongTerms).slice(0, 3);
+  const requiredKeys = new Set(requiredTerms.map(normalizeSearchText));
+  const optionalTerms = terms
+    .filter((term) => !requiredKeys.has(normalizeSearchText(term)))
+    .filter((term) => !isWeakSearchTerm(term))
+    .slice(0, 8);
+
+  return { requiredTerms, optionalTerms };
+};
+
 const analyzeAssistantSearchPlan = (prompt: string): AssistantSearchPlan | null => {
   const normalizedPrompt = normalizeSearchText(prompt);
   const hasAudienceIntent = SEARCH_AUDIENCE_PATTERN.test(normalizedPrompt);
@@ -250,9 +300,22 @@ const analyzeAssistantSearchPlan = (prompt: string): AssistantSearchPlan | null 
     return null;
   }
 
+  const { requiredTerms, optionalTerms } = buildRequiredAndOptionalTerms(terms);
+  if (requiredTerms.length === 0) {
+    return null;
+  }
+
+  const direction = inferSearchDirection(normalizedPrompt);
+  const period = inferSearchPeriod(normalizedPrompt);
+
   return {
-    query: terms[0],
+    query: requiredTerms[0],
     terms,
+    requiredTerms,
+    optionalTerms,
+    direction,
+    since: period.since,
+    periodLabel: period.label,
     includeHistoricalConversations: hasAudienceIntent || hasActionIntent,
     includeQuotes: hasQuoteIntent,
   };
@@ -282,6 +345,8 @@ const normalizeHistoricalSearchResult = (row: Record<string, unknown>) => {
         type: toTrimmedString(snippet.type),
         at: toTrimmedString(snippet.at),
         text: clampText(toTrimmedString(snippet.text), 500),
+        matchedRequiredTerm: snippet.matchedRequiredTerm === true,
+        optionalMatchCount: typeof snippet.optionalMatchCount === 'number' ? snippet.optionalMatchCount : 0,
       }];
     }),
   };
@@ -341,21 +406,22 @@ const buildAssistantInsights = (
   const byOperatorOrProduct: Record<string, number> = {};
   const seenLeadIds = new Set<string>();
   const duplicateLeadIds = new Set<string>();
+  const discardedTargets: Array<Record<string, unknown>> = [];
 
   const targets = historicalConversationSearch.results.flatMap((result) => {
-    if (!result.chat.externalChatId) return [];
-
     const leadId = result.lead?.id || result.chat.leadId || null;
-    if (leadId) {
-      if (seenLeadIds.has(leadId)) duplicateLeadIds.add(leadId);
-      seenLeadIds.add(leadId);
-    }
+    const evidence = result.snippets
+      .filter((snippet) => snippet.matchedRequiredTerm === true && Boolean(snippet.text))
+      .slice(0, 2)
+      .map((snippet) => ({
+        at: snippet.at,
+        direction: snippet.direction,
+        text: clampText(snippet.text, 220),
+        matchedRequiredTerm: true,
+        optionalMatchCount: snippet.optionalMatchCount,
+      }));
 
-    incrementGroup(byStatus, result.lead?.status || result.chat.leadStatus || 'Sem status');
-    incrementGroup(byOwner, result.lead?.owner || 'Sem responsavel');
-    incrementGroup(bySource, 'WhatsApp');
-
-    return [{
+    const baseTarget = {
       id: result.chat.id,
       source: 'whatsapp',
       chatId: result.chat.id,
@@ -367,12 +433,29 @@ const buildAssistantInsights = (
       owner: result.lead?.owner,
       archived: result.chat.archived,
       latestAt: result.latestMessageAt,
-      evidence: result.snippets.slice(0, 2).map((snippet) => ({
-        at: snippet.at,
-        direction: snippet.direction,
-        text: clampText(snippet.text, 220),
-      })),
-    }];
+      evidence,
+    };
+
+    if (!result.chat.externalChatId) {
+      discardedTargets.push({ ...baseTarget, discardReason: 'Sem identificador externo do WhatsApp para envio seguro.' });
+      return [];
+    }
+
+    if (evidence.length === 0) {
+      discardedTargets.push({ ...baseTarget, discardReason: 'Sem evidencia do termo obrigatorio retornada pela busca.' });
+      return [];
+    }
+
+    if (leadId) {
+      if (seenLeadIds.has(leadId)) duplicateLeadIds.add(leadId);
+      seenLeadIds.add(leadId);
+    }
+
+    incrementGroup(byStatus, result.lead?.status || result.chat.leadStatus || 'Sem status');
+    incrementGroup(byOwner, result.lead?.owner || 'Sem responsavel');
+    incrementGroup(bySource, 'WhatsApp');
+
+    return [baseTarget];
   });
 
   cotadorQuoteSearch.results.forEach((result) => {
@@ -405,6 +488,8 @@ const buildAssistantInsights = (
       whatsappConversations: historicalConversationSearch.results.length,
       cotadorQuotes: cotadorQuoteSearch.results.length,
       actionableTargets: targets.length,
+      validatedTargets: targets.length,
+      discardedTargets: discardedTargets.length,
       duplicateLeadCount: duplicateLeadIds.size,
       hotLeadCount: hotTargets.length,
     },
@@ -415,19 +500,98 @@ const buildAssistantInsights = (
       byOperatorOrProduct,
     },
     targets,
+    validatedTargets: targets,
+    discardedTargets,
     flags: {
       hasMultipleTargets: targets.length > 1,
       hasArchivedChats: targets.some((target) => target.archived),
       hasDuplicateLeads: duplicateLeadIds.size > 0,
+      hasDiscardedTargets: discardedTargets.length > 0,
       incomplete: false,
       incompleteReason: null,
     },
     audit: {
       searchedWhatsApp: historicalConversationSearch.triggered,
       searchedCotador: cotadorQuoteSearch.triggered,
+      requiredTerms: historicalConversationSearch.terms.length > 0 ? historicalConversationSearch.terms : cotadorQuoteSearch.terms,
       resultLimitPerSource: 25,
-      note: 'Resultados limitados e compactados para operacao segura no inbox.',
+      validatedTargetCount: targets.length,
+      discardedTargetCount: discardedTargets.length,
+      note: 'Resultados limitados, compactados e exigindo evidencia do termo principal para operacao segura no inbox.',
     },
+  };
+};
+
+const buildAssistantPlan = (
+  scope: AssistantScope,
+  searchPlan: AssistantSearchPlan | null,
+  assistantInsights: ReturnType<typeof buildAssistantInsights>,
+  selectedChatContext: { chat: ReturnType<typeof normalizeRecentChat> | null; messages: ReturnType<typeof normalizeRecentMessage>[] },
+) => {
+  const searchedWhatsApp = assistantInsights.audit.searchedWhatsApp === true;
+  const searchedCotador = assistantInsights.audit.searchedCotador === true;
+  const validatedTargetCount = assistantInsights.validatedTargets.length;
+  const discardedTargetCount = assistantInsights.discardedTargets.length;
+  const hasSelectedChatContext = Boolean(selectedChatContext.chat);
+  const intent = searchedWhatsApp && searchedCotador
+    ? 'cross_source_search'
+    : searchedWhatsApp
+      ? 'historical_conversation_search'
+      : searchedCotador
+        ? 'quote_search'
+        : scope === 'chat' && hasSelectedChatContext
+          ? 'selected_chat_analysis'
+          : scope === 'inbox'
+            ? 'inbox_operational_analysis'
+            : 'general_operational_support';
+  const actionMode = validatedTargetCount > 1
+    ? 'bulk_select_confirm'
+    : validatedTargetCount === 1
+      ? 'single_target_confirm'
+      : 'answer_only';
+  const confidenceReasons = [
+    searchedWhatsApp || searchedCotador ? 'Busca estruturada executada antes da resposta do modelo.' : 'Resposta baseada no contexto operacional carregado.',
+    searchPlan?.requiredTerms.length ? 'Termos obrigatorios definidos para evitar falsos positivos.' : 'Sem termo obrigatorio aplicavel ao pedido.',
+    validatedTargetCount > 0 ? `${validatedTargetCount} alvo(s) com evidencia acionavel.` : 'Nenhum alvo acionavel validado.',
+    discardedTargetCount > 0 ? `${discardedTargetCount} resultado(s) descartado(s) por seguranca.` : 'Nenhum resultado descartado por seguranca.',
+  ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    intent,
+    scope,
+    actionMode,
+    sources: assistantInsights.sources.flatMap((source) => (source ? [{
+      name: source.name,
+      type: source.type,
+      status: 'loaded',
+      results: source.results,
+    }] : [])),
+    criteria: {
+      query: searchPlan?.query ?? null,
+      requiredTerms: searchPlan?.requiredTerms ?? [],
+      optionalTerms: searchPlan?.optionalTerms ?? [],
+      direction: searchPlan?.direction ?? null,
+      periodLabel: searchPlan?.periodLabel ?? null,
+      requiresEvidence: searchedWhatsApp,
+    },
+    safetyChecks: {
+      requiresHumanConfirmation: actionMode !== 'answer_only',
+      blocksTargetsWithoutEvidence: true,
+      blocksTargetsWithoutExternalChatId: true,
+      composerRestrictedToCurrentChat: true,
+    },
+    counts: {
+      validatedTargets: validatedTargetCount,
+      discardedTargets: discardedTargetCount,
+      selectedChatMessages: selectedChatContext.messages.length,
+    },
+    confidenceReasons,
+    nextStep: actionMode === 'bulk_select_confirm'
+      ? 'Selecionar contatos validados e confirmar disparo antes de qualquer envio.'
+      : actionMode === 'single_target_confirm'
+        ? 'Revisar o alvo validado e confirmar a acao sugerida.'
+        : 'Responder ao operador sem executar acao de escrita.',
   };
 };
 
@@ -624,6 +788,10 @@ const loadHistoricalConversationSearch = async (supabaseAdmin: any, searchPlan: 
   const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_search_leads_by_conversation_topic', {
     p_search: searchPlan.query,
     p_terms: searchPlan.terms,
+    p_required_terms: searchPlan.requiredTerms,
+    p_optional_terms: searchPlan.optionalTerms,
+    p_direction: searchPlan.direction,
+    p_since: searchPlan.since,
     p_limit: 25,
   });
 
@@ -813,6 +981,8 @@ Deno.serve(async (req: Request) => {
       loadCotadorQuoteSearch(supabaseAdmin, searchPlan),
     ]);
 
+    const assistantInsights = buildAssistantInsights(historicalConversationSearch, cotadorQuoteSearch);
+    const assistantPlan = buildAssistantPlan(scope, searchPlan, assistantInsights, selectedChatContext);
     const context = {
       now: new Date().toISOString(),
       system: systemSettings,
@@ -827,6 +997,7 @@ Deno.serve(async (req: Request) => {
         chatId: shouldLoadSelectedChat ? chatId : null,
         composerDraft: composerDraft || null,
         searchPlan,
+        assistantPlan,
         note: scope === 'free'
           ? 'Modo livre: nao assuma que o chat aberto e o assunto, salvo se o pedido mencionar claramente esta conversa ou este cliente.'
           : null,
@@ -837,7 +1008,6 @@ Deno.serve(async (req: Request) => {
       cotadorQuoteSearch,
       selectedChat: selectedChatContext,
     };
-    const assistantInsights = buildAssistantInsights(historicalConversationSearch, cotadorQuoteSearch);
 
     const systemPrompt = [
       'Voce e o R.A.V.I., assistente operacional de IA do WhatsApp Inbox da Kifer Saude.',
@@ -848,6 +1018,7 @@ Deno.serve(async (req: Request) => {
       'Se historicalConversationSearch.triggered for true e results estiver vazio, diga que nao encontrou conversas no historico carregado para os termos pesquisados. Nao invente leads.',
       'Quando cotadorQuoteSearch.triggered for true, use seus results para perguntas sobre cotacoes, propostas, orcamentos, planos, produtos ou operadoras no Cotador.',
       'Quando historicalConversationSearch e cotadorQuoteSearch forem acionados juntos, diferencie claramente conversas de WhatsApp e cotacoes salvas no Cotador.',
+      'Use assistantPlan como plano deterministico da operacao: respeite intent, criteria, safetyChecks, actionMode e nextStep. Nao contradiga esse plano.',
       'Se o operador pedir acoes sobre multiplos contatos, responda com plano, criterios e proximos passos confirmaveis; nao invente dados nao enviados.',
       'Use somente os dados enviados no contexto. Se faltar informacao para concluir, diga exatamente o que falta e use clarification.',
       'Nunca diga que executou, alterou, enviou, arquivou, agendou ou vinculou algo. Voce pode apenas sugerir a acao e indicar que precisa de confirmacao humana.',
@@ -871,6 +1042,9 @@ Deno.serve(async (req: Request) => {
       '',
       'Insights estruturados ja calculados:',
       JSON.stringify(assistantInsights, null, 2),
+      '',
+      'Plano deterministico da operacao:',
+      JSON.stringify(assistantPlan, null, 2),
     ].join('\n');
 
     const result = await generateTextWithRouting({
@@ -890,6 +1064,7 @@ Deno.serve(async (req: Request) => {
       provider: result.provider,
       model: result.model,
       fallback_used: result.fallbackUsed,
+      assistant_plan: assistantPlan,
       assistant_insights: assistantInsights,
       context_summary: {
         scope,

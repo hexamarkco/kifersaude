@@ -120,6 +120,23 @@ const formatGroup = (group?: Record<string, number>) => Object.entries(group ?? 
   .sort((a, b) => b[1] - a[1])
   .slice(0, 6);
 
+const assistantPlanIntentLabel = (intent?: string | null) => {
+  if (intent === 'historical_conversation_search') return 'Busca no histórico';
+  if (intent === 'quote_search') return 'Busca no Cotador';
+  if (intent === 'cross_source_search') return 'Busca combinada';
+  if (intent === 'selected_chat_analysis') return 'Análise do chat';
+  if (intent === 'inbox_operational_analysis') return 'Análise do inbox';
+  return 'Apoio operacional';
+};
+
+const assistantPlanActionLabel = (actionMode?: string | null) => {
+  if (actionMode === 'bulk_select_confirm') return 'Seleção + confirmação';
+  if (actionMode === 'single_target_confirm') return 'Confirmação individual';
+  return 'Resposta sem ação';
+};
+
+const formatPlanTerms = (terms?: string[]) => terms?.filter(Boolean).join(', ') || 'nenhum';
+
 const createEntryId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export default function WhatsAppAssistantModal({
@@ -149,7 +166,8 @@ export default function WhatsAppAssistantModal({
   const canAsk = trimmedPrompt.length > 0 && !loading;
   const visibleConversation = conversation.slice(-5);
   const multiContactResponse = isMultiContactResponse(response);
-  const assistantTargets = response?.assistantInsights?.targets ?? [];
+  const assistantTargets = response?.assistantInsights?.validatedTargets ?? response?.assistantInsights?.targets ?? [];
+  const discardedTargets = response?.assistantInsights?.discardedTargets ?? [];
   const selectedTargets = assistantTargets.filter((target) => selectedTargetIds.has(target.id));
   const bulkDraftMessage = response?.suggestedMessage || response?.actionPlan.map((action) => getActionDraftText(action.payload)).find(Boolean) || '';
 
@@ -217,7 +235,8 @@ export default function WhatsAppAssistantModal({
   useEffect(() => {
     if (!response || response === lastResponseRef.current) return;
     lastResponseRef.current = response;
-    setSelectedTargetIds(new Set(response.assistantInsights?.targets?.map((target) => target.id) ?? []));
+    const safeTargets = response.assistantInsights?.validatedTargets ?? response.assistantInsights?.targets ?? [];
+    setSelectedTargetIds(new Set(safeTargets.map((target) => target.id)));
 
     setConversation((current) => [
       ...current,
@@ -472,6 +491,46 @@ export default function WhatsAppAssistantModal({
                   </div>
                 ) : null}
 
+                {response.assistantPlan ? (
+                  <div className="space-y-2 rounded-2xl border border-orange-200/15 bg-black/20 px-3 py-2.5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-orange-50">Plano do agente</p>
+                        <p className="mt-1 text-xs leading-4 text-orange-100/55">
+                          {assistantPlanIntentLabel(response.assistantPlan.intent)} · {assistantPlanActionLabel(response.assistantPlan.actionMode)}
+                        </p>
+                      </div>
+                      {response.assistantPlan.criteria?.requiresEvidence ? (
+                        <span className="rounded-full border border-emerald-200/20 bg-emerald-300/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-100">
+                          Evidência obrigatória
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="grid gap-2 text-xs leading-5 text-orange-100/68 sm:grid-cols-2">
+                      <div className="rounded-xl border border-orange-200/10 bg-orange-300/5 px-3 py-2">
+                        <p className="font-semibold text-orange-100">Critérios</p>
+                        <p>Obrigatórios: {formatPlanTerms(response.assistantPlan.criteria?.requiredTerms)}</p>
+                        <p>Opcionais: {formatPlanTerms(response.assistantPlan.criteria?.optionalTerms)}</p>
+                        <p>Direção: {response.assistantPlan.criteria?.direction || 'qualquer'}</p>
+                      </div>
+                      <div className="rounded-xl border border-orange-200/10 bg-orange-300/5 px-3 py-2">
+                        <p className="font-semibold text-orange-100">Segurança</p>
+                        <p>Validados: {response.assistantPlan.counts?.validatedTargets ?? 0}</p>
+                        <p>Descartados: {response.assistantPlan.counts?.discardedTargets ?? 0}</p>
+                        <p>{response.assistantPlan.nextStep || 'Aguardar próxima instrução.'}</p>
+                      </div>
+                    </div>
+                    {(response.assistantPlan.confidenceReasons ?? []).length > 0 ? (
+                      <div className="rounded-xl border border-orange-200/10 bg-black/20 px-3 py-2">
+                        <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-orange-100/45">Razões de confiança</p>
+                        {(response.assistantPlan.confidenceReasons ?? []).slice(0, 4).map((reason) => (
+                          <p key={reason} className="text-xs leading-5 text-orange-100/65">{reason}</p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {response.assistantInsights ? (
                   <div className="space-y-3 rounded-2xl border border-orange-200/15 bg-black/20 px-3 py-2.5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -500,6 +559,9 @@ export default function WhatsAppAssistantModal({
                       <div className="rounded-xl border border-orange-200/10 bg-orange-300/5 px-3 py-2">
                         <p className="text-[10px] uppercase tracking-[0.16em] text-orange-100/45">Selecionáveis</p>
                         <p className="text-lg font-semibold text-orange-50">{assistantTargets.length}</p>
+                        {discardedTargets.length > 0 ? (
+                          <p className="mt-0.5 text-[11px] text-amber-100/75">{discardedTargets.length} descartado(s)</p>
+                        ) : null}
                       </div>
                     </div>
 
@@ -552,7 +614,7 @@ export default function WhatsAppAssistantModal({
                         {bulkDraftMessage ? (
                           <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2">
                             <p className="text-xs leading-4 text-amber-100">
-                              Disparo em massa exige seleção e confirmação. Nada será enviado sem clicar no botão abaixo.
+                              Disparo em massa usa apenas contatos validados com evidencia do termo obrigatório. Nada será enviado sem clicar no botão abaixo.
                             </p>
                             <Button
                               size="sm"
@@ -564,6 +626,31 @@ export default function WhatsAppAssistantModal({
                             </Button>
                           </div>
                         ) : null}
+                      </div>
+                    ) : null}
+
+                    {discardedTargets.length > 0 ? (
+                      <div className="space-y-2 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-100" />
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-100">Descartados da ação</p>
+                            <p className="mt-1 text-xs leading-4 text-amber-100/80">
+                              Estes contatos apareceram na busca, mas não podem receber disparo automático sem identificador de envio ou evidência válida.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="max-h-40 space-y-1.5 overflow-y-auto pr-1">
+                          {discardedTargets.map((target) => (
+                            <div key={target.id} className="rounded-lg border border-amber-200/10 bg-black/20 px-2.5 py-2">
+                              <p className="truncate text-xs font-semibold text-amber-50">{target.displayName || target.phone || 'Contato sem nome'}</p>
+                              <p className="mt-0.5 text-xs leading-4 text-amber-100/70">{target.discardReason || 'Sem evidência acionável.'}</p>
+                              {target.evidence?.[0]?.text ? (
+                                <p className="mt-1 line-clamp-2 text-xs leading-4 text-amber-100/55">{target.evidence[0].text}</p>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ) : null}
 

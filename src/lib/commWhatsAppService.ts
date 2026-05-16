@@ -273,7 +273,8 @@ export type CommWhatsAppAssistantTarget = {
   owner?: string | null;
   archived?: boolean;
   latestAt?: string | null;
-  evidence?: Array<{ at?: string | null; direction?: string | null; text: string }>;
+  evidence?: Array<{ at?: string | null; direction?: string | null; text: string; matchedRequiredTerm?: boolean; optionalMatchCount?: number }>;
+  discardReason?: string | null;
 };
 
 export type CommWhatsAppAssistantInsights = {
@@ -285,6 +286,8 @@ export type CommWhatsAppAssistantInsights = {
     whatsappConversations?: number;
     cotadorQuotes?: number;
     actionableTargets?: number;
+    validatedTargets?: number;
+    discardedTargets?: number;
     duplicateLeadCount?: number;
     hotLeadCount?: number;
   };
@@ -295,14 +298,46 @@ export type CommWhatsAppAssistantInsights = {
     byOperatorOrProduct?: Record<string, number>;
   };
   targets?: CommWhatsAppAssistantTarget[];
+  validatedTargets?: CommWhatsAppAssistantTarget[];
+  discardedTargets?: CommWhatsAppAssistantTarget[];
   flags?: {
     hasMultipleTargets?: boolean;
     hasArchivedChats?: boolean;
     hasDuplicateLeads?: boolean;
+    hasDiscardedTargets?: boolean;
     incomplete?: boolean;
     incompleteReason?: string | null;
   };
   audit?: Record<string, unknown> | null;
+};
+
+export type CommWhatsAppAssistantPlan = {
+  generatedAt?: string | null;
+  intent?: string | null;
+  scope?: CommWhatsAppAssistantScope | string | null;
+  actionMode?: 'bulk_select_confirm' | 'single_target_confirm' | 'answer_only' | string | null;
+  sources?: Array<{ name?: string; type?: string; status?: string; results?: number }>;
+  criteria?: {
+    query?: string | null;
+    requiredTerms?: string[];
+    optionalTerms?: string[];
+    direction?: string | null;
+    periodLabel?: string | null;
+    requiresEvidence?: boolean;
+  };
+  safetyChecks?: {
+    requiresHumanConfirmation?: boolean;
+    blocksTargetsWithoutEvidence?: boolean;
+    blocksTargetsWithoutExternalChatId?: boolean;
+    composerRestrictedToCurrentChat?: boolean;
+  };
+  counts?: {
+    validatedTargets?: number;
+    discardedTargets?: number;
+    selectedChatMessages?: number;
+  };
+  confidenceReasons?: string[];
+  nextStep?: string | null;
 };
 
 export type CommWhatsAppAssistantResponse = {
@@ -314,6 +349,7 @@ export type CommWhatsAppAssistantResponse = {
   provider?: string | null;
   model?: string | null;
   fallback_used?: boolean;
+  assistantPlan?: CommWhatsAppAssistantPlan | null;
   assistantInsights?: CommWhatsAppAssistantInsights | null;
   contextSummary?: {
     scope?: string;
@@ -1211,6 +1247,7 @@ export const commWhatsAppService = {
       model?: string | null;
       fallback_used?: boolean;
       context_summary?: CommWhatsAppAssistantResponse['contextSummary'];
+      assistant_plan?: CommWhatsAppAssistantPlan | null;
       assistant_insights?: CommWhatsAppAssistantInsights | null;
     };
 
@@ -1252,6 +1289,7 @@ export const commWhatsAppService = {
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,
+      assistantPlan: payload.assistant_plan ?? null,
       assistantInsights: payload.assistant_insights ?? null,
       contextSummary: payload.context_summary ?? null,
     };

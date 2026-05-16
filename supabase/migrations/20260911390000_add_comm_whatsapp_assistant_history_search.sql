@@ -1,8 +1,14 @@
 BEGIN;
 
+DROP FUNCTION IF EXISTS public.comm_whatsapp_search_leads_by_conversation_topic(text, text[], integer);
+
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_search_leads_by_conversation_topic(
   p_search text,
   p_terms text[] DEFAULT NULL,
+  p_required_terms text[] DEFAULT NULL,
+  p_optional_terms text[] DEFAULT NULL,
+  p_direction text DEFAULT NULL,
+  p_since timestamptz DEFAULT NULL,
   p_limit integer DEFAULT 20
 )
 RETURNS TABLE(
@@ -20,13 +26,15 @@ AS $$
   WITH input AS (
     SELECT
       LEAST(GREATEST(COALESCE(p_limit, 20), 1), 50) AS safe_limit,
+      NULLIF(lower(btrim(COALESCE(p_direction, ''))), '') AS direction_filter,
+      p_since AS since_filter,
       ARRAY(
         SELECT DISTINCT normalized.term
         FROM (
           SELECT NULLIF(btrim(COALESCE(p_search, '')), '') AS value
           UNION ALL
           SELECT NULLIF(btrim(term), '') AS value
-          FROM unnest(COALESCE(p_terms, ARRAY[]::text[])) AS term
+          FROM unnest(COALESCE(p_required_terms, ARRAY[]::text[])) AS term
         ) raw
         CROSS JOIN LATERAL (
           SELECT NULLIF(
@@ -39,7 +47,25 @@ AS $$
           ) AS term
         ) normalized
         WHERE normalized.term IS NOT NULL
-      ) AS terms
+      ) AS required_terms,
+      ARRAY(
+        SELECT DISTINCT normalized.term
+        FROM (
+          SELECT NULLIF(btrim(term), '') AS value
+          FROM unnest(COALESCE(p_optional_terms, p_terms, ARRAY[]::text[])) AS term
+        ) raw
+        CROSS JOIN LATERAL (
+          SELECT NULLIF(
+            translate(
+              lower(raw.value),
+              'áàâãäåéèêëíìîïóòôõöúùûüçñÁÀÂÃÄÅÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇÑ',
+              'aaaaaaeeeeiiiiooooouuuucnaaaaaaeeeeiiiiooooouuuucn'
+            ),
+            ''
+          ) AS term
+        ) normalized
+        WHERE normalized.term IS NOT NULL
+      ) AS optional_terms
   ),
   matched_messages AS (
     SELECT
@@ -49,7 +75,12 @@ AS $$
       m.created_at,
       m.direction,
       m.message_type,
-      COALESCE(NULLIF(btrim(m.text_content), ''), NULLIF(btrim(m.media_caption), ''), NULLIF(btrim(m.transcription_text), ''), '[' || COALESCE(NULLIF(btrim(m.message_type), ''), 'mensagem') || ']') AS snippet_text
+      COALESCE(NULLIF(btrim(m.text_content), ''), NULLIF(btrim(m.media_caption), ''), NULLIF(btrim(m.transcription_text), ''), '[' || COALESCE(NULLIF(btrim(m.message_type), ''), 'mensagem') || ']') AS snippet_text,
+      (
+        SELECT count(*)::integer
+        FROM unnest(input.optional_terms) AS term
+        WHERE normalized_message.searchable_text LIKE '%' || term || '%'
+      ) AS optional_match_count
     FROM public.comm_whatsapp_messages m
     CROSS JOIN input
     CROSS JOIN LATERAL (
@@ -59,10 +90,12 @@ AS $$
         'aaaaaaeeeeiiiiooooouuuucnaaaaaaeeeeiiiiooooouuuucn'
       ) AS searchable_text
     ) normalized_message
-    WHERE cardinality(input.terms) > 0
+    WHERE cardinality(input.required_terms) > 0
+      AND (input.direction_filter IS NULL OR lower(m.direction) = input.direction_filter)
+      AND (input.since_filter IS NULL OR m.message_at >= input.since_filter)
       AND EXISTS (
         SELECT 1
-        FROM unnest(input.terms) AS term
+        FROM unnest(input.required_terms) AS term
         WHERE normalized_message.searchable_text LIKE '%' || term || '%'
       )
   ),
@@ -71,7 +104,8 @@ AS $$
       mm.*,
       row_number() OVER (PARTITION BY mm.chat_id ORDER BY mm.message_at DESC, mm.created_at DESC, mm.id DESC) AS snippet_rank,
       count(*) OVER (PARTITION BY mm.chat_id) AS chat_match_count,
-      max(mm.message_at) OVER (PARTITION BY mm.chat_id) AS chat_latest_message_at
+      max(mm.message_at) OVER (PARTITION BY mm.chat_id) AS chat_latest_message_at,
+      sum(mm.optional_match_count) OVER (PARTITION BY mm.chat_id) AS chat_optional_score
     FROM matched_messages mm
   ),
   grouped_chats AS (
@@ -99,7 +133,9 @@ AS $$
             'direction', rm.direction,
             'type', rm.message_type,
             'at', rm.message_at,
-            'text', left(rm.snippet_text, 500)
+            'text', left(rm.snippet_text, 500),
+            'matchedRequiredTerm', true,
+            'optionalMatchCount', rm.optional_match_count
           )
           ORDER BY rm.message_at DESC, rm.created_at DESC, rm.id DESC
         ) FILTER (WHERE rm.snippet_rank <= 3),
@@ -122,8 +158,8 @@ AS $$
   LIMIT (SELECT safe_limit FROM input);
 $$;
 
-REVOKE ALL ON FUNCTION public.comm_whatsapp_search_leads_by_conversation_topic(text, text[], integer) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.comm_whatsapp_search_leads_by_conversation_topic(text, text[], integer) TO service_role;
+REVOKE ALL ON FUNCTION public.comm_whatsapp_search_leads_by_conversation_topic(text, text[], text[], text[], text, timestamptz, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.comm_whatsapp_search_leads_by_conversation_topic(text, text[], text[], text[], text, timestamptz, integer) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_search_cotador_quotes_by_topic(
   p_search text,

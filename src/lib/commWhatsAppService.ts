@@ -340,6 +340,34 @@ export type CommWhatsAppAssistantPlan = {
   nextStep?: string | null;
 };
 
+export type CommWhatsAppAssistantTools = {
+  version?: number;
+  definitions?: Array<{
+    name?: string;
+    kind?: 'read' | 'prepare_action' | string;
+    description?: string;
+    inputSchema?: Record<string, unknown>;
+    outputSchema?: Record<string, unknown>;
+    requiresConfirmation?: boolean;
+  }>;
+  calls?: Array<{
+    id?: string;
+    name?: string;
+    kind?: 'read' | 'prepare_action' | string;
+    status?: 'executed' | 'skipped' | 'prepared' | string;
+    input?: Record<string, unknown>;
+    output?: Record<string, unknown>;
+    evidencePolicy?: string;
+    requiresConfirmation?: boolean;
+  }>;
+  audit?: {
+    executedReadTools?: number;
+    preparedActionTools?: number;
+    skippedTools?: number;
+    note?: string;
+  } | null;
+};
+
 export type CommWhatsAppAssistantResponse = {
   answer: string;
   clarification?: string | null;
@@ -350,6 +378,7 @@ export type CommWhatsAppAssistantResponse = {
   model?: string | null;
   fallback_used?: boolean;
   assistantPlan?: CommWhatsAppAssistantPlan | null;
+  assistantTools?: CommWhatsAppAssistantTools | null;
   assistantInsights?: CommWhatsAppAssistantInsights | null;
   contextSummary?: {
     scope?: string;
@@ -1248,6 +1277,7 @@ export const commWhatsAppService = {
       fallback_used?: boolean;
       context_summary?: CommWhatsAppAssistantResponse['contextSummary'];
       assistant_plan?: CommWhatsAppAssistantPlan | null;
+      assistant_tools?: CommWhatsAppAssistantTools | null;
       assistant_insights?: CommWhatsAppAssistantInsights | null;
     };
 
@@ -1290,6 +1320,7 @@ export const commWhatsAppService = {
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,
       assistantPlan: payload.assistant_plan ?? null,
+      assistantTools: payload.assistant_tools ?? null,
       assistantInsights: payload.assistant_insights ?? null,
       contextSummary: payload.context_summary ?? null,
     };

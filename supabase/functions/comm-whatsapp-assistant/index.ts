@@ -50,6 +50,34 @@ type AssistantSearchPlan = {
   includeQuotes: boolean;
 };
 
+type AssistantToolName =
+  | 'load_inbox_summary'
+  | 'load_selected_chat_context'
+  | 'search_whatsapp_history'
+  | 'search_cotador_quotes'
+  | 'prepare_draft_message'
+  | 'prepare_bulk_whatsapp_send';
+
+type AssistantToolDefinition = {
+  name: AssistantToolName;
+  kind: 'read' | 'prepare_action';
+  description: string;
+  inputSchema: Record<string, unknown>;
+  outputSchema: Record<string, unknown>;
+  requiresConfirmation: boolean;
+};
+
+type AssistantToolCall = {
+  id: string;
+  name: AssistantToolName;
+  kind: AssistantToolDefinition['kind'];
+  status: 'executed' | 'skipped' | 'prepared';
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+  evidencePolicy?: string;
+  requiresConfirmation: boolean;
+};
+
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const MAX_PROMPT_LENGTH = 4000;
 const MAX_COMPOSER_DRAFT_LENGTH = 2500;
@@ -62,6 +90,57 @@ const VALID_ACTION_TYPES = new Set<AssistantAction['type']>([
   'open_dashboard',
   'manual',
 ]);
+
+const ASSISTANT_TOOL_DEFINITIONS: AssistantToolDefinition[] = [
+  {
+    name: 'load_inbox_summary',
+    kind: 'read',
+    description: 'Carrega resumo operacional e chats recentes do inbox WhatsApp.',
+    inputSchema: { scope: 'AssistantScope' },
+    outputSchema: { recentChats: 'number', unreadMessages: 'number', archivedChats: 'number' },
+    requiresConfirmation: false,
+  },
+  {
+    name: 'load_selected_chat_context',
+    kind: 'read',
+    description: 'Carrega mensagens, lead, contratos e lembretes do chat selecionado quando o escopo permite.',
+    inputSchema: { chatId: 'uuid | null', enabled: 'boolean' },
+    outputSchema: { chatLoaded: 'boolean', messagesLoaded: 'number', leadLoaded: 'boolean' },
+    requiresConfirmation: false,
+  },
+  {
+    name: 'search_whatsapp_history',
+    kind: 'read',
+    description: 'Busca conversas historicas no WhatsApp usando termos obrigatorios, opcionais, direcao e periodo.',
+    inputSchema: { query: 'string', requiredTerms: 'string[]', optionalTerms: 'string[]', direction: 'inbound | outbound | null', since: 'iso-date | null' },
+    outputSchema: { results: 'number', validatedTargets: 'number', discardedTargets: 'number' },
+    requiresConfirmation: false,
+  },
+  {
+    name: 'search_cotador_quotes',
+    kind: 'read',
+    description: 'Busca cotacoes salvas no Cotador por termos detectados no pedido.',
+    inputSchema: { query: 'string', terms: 'string[]' },
+    outputSchema: { results: 'number' },
+    requiresConfirmation: false,
+  },
+  {
+    name: 'prepare_draft_message',
+    kind: 'prepare_action',
+    description: 'Prepara texto para composer ou acao confirmavel sem enviar mensagem.',
+    inputSchema: { message: 'string', targetMode: 'current_chat | selected_targets' },
+    outputSchema: { actionType: 'draft_message', requiresConfirmation: true },
+    requiresConfirmation: true,
+  },
+  {
+    name: 'prepare_bulk_whatsapp_send',
+    kind: 'prepare_action',
+    description: 'Prepara envio em massa apenas para targets validados e exige confirmacao humana.',
+    inputSchema: { targetIds: 'string[]', message: 'string' },
+    outputSchema: { eligibleTargets: 'number', blockedTargets: 'number', requiresConfirmation: true },
+    requiresConfirmation: true,
+  },
+];
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -595,6 +674,120 @@ const buildAssistantPlan = (
   };
 };
 
+const findAssistantToolDefinition = (name: AssistantToolName) => {
+  const definition = ASSISTANT_TOOL_DEFINITIONS.find((tool) => tool.name === name);
+  if (!definition) {
+    throw new Error(`Tool do R.A.V.I. nao registrada: ${name}`);
+  }
+
+  return definition;
+};
+
+const buildAssistantToolCall = (
+  name: AssistantToolName,
+  status: AssistantToolCall['status'],
+  input: Record<string, unknown>,
+  output: Record<string, unknown>,
+  evidencePolicy?: string,
+): AssistantToolCall => {
+  const definition = findAssistantToolDefinition(name);
+
+  return {
+    id: `${name}-${status}`,
+    name,
+    kind: definition.kind,
+    status,
+    input,
+    output,
+    evidencePolicy,
+    requiresConfirmation: definition.requiresConfirmation,
+  };
+};
+
+const buildAssistantTools = (
+  scope: AssistantScope,
+  chatId: string,
+  searchPlan: AssistantSearchPlan | null,
+  inboxSummary: ReturnType<typeof loadInboxSummary> extends Promise<infer T> ? T : never,
+  selectedChatContext: ReturnType<typeof loadSelectedChatContext> extends Promise<infer T> ? T : never,
+  historicalConversationSearch: { triggered: boolean; query: string | null; terms: string[]; results: ReturnType<typeof normalizeHistoricalSearchResult>[] },
+  cotadorQuoteSearch: { triggered: boolean; query: string | null; terms: string[]; results: ReturnType<typeof normalizeQuoteSearchResult>[] },
+  assistantInsights: ReturnType<typeof buildAssistantInsights>,
+  assistantPlan: ReturnType<typeof buildAssistantPlan>,
+) => {
+  const calls: AssistantToolCall[] = [
+    buildAssistantToolCall('load_inbox_summary', 'executed', { scope }, {
+      totalChats: inboxSummary.totalChats,
+      activeChats: inboxSummary.activeChats,
+      unreadChats: inboxSummary.unreadChats,
+      recentChats: inboxSummary.recentChats.length,
+      pendingOutbound: inboxSummary.pendingOutbound,
+    }),
+    buildAssistantToolCall('load_selected_chat_context', selectedChatContext.chat ? 'executed' : 'skipped', {
+      enabled: scope === 'chat' && Boolean(chatId),
+      chatId: scope === 'chat' && chatId ? chatId : null,
+    }, {
+      chatLoaded: Boolean(selectedChatContext.chat),
+      messagesLoaded: selectedChatContext.messages.length,
+      leadLoaded: Boolean(selectedChatContext.lead),
+      contractsLoaded: Array.isArray(selectedChatContext.contracts) ? selectedChatContext.contracts.length : 0,
+      remindersLoaded: Array.isArray(selectedChatContext.reminders) ? selectedChatContext.reminders.length : 0,
+    }),
+    buildAssistantToolCall('search_whatsapp_history', historicalConversationSearch.triggered ? 'executed' : 'skipped', {
+      query: searchPlan?.query ?? null,
+      requiredTerms: searchPlan?.requiredTerms ?? [],
+      optionalTerms: searchPlan?.optionalTerms ?? [],
+      direction: searchPlan?.direction ?? null,
+      since: searchPlan?.since ?? null,
+      limit: 25,
+    }, {
+      results: historicalConversationSearch.results.length,
+      validatedTargets: assistantInsights.validatedTargets.length,
+      discardedTargets: assistantInsights.discardedTargets.length,
+    }, 'Resultados acionaveis exigem evidencia do termo obrigatorio no snippet retornado.'),
+    buildAssistantToolCall('search_cotador_quotes', cotadorQuoteSearch.triggered ? 'executed' : 'skipped', {
+      query: searchPlan?.query ?? null,
+      terms: searchPlan?.terms ?? [],
+      limit: 25,
+    }, {
+      results: cotadorQuoteSearch.results.length,
+    }),
+  ];
+
+  if (assistantPlan.actionMode === 'single_target_confirm' || assistantPlan.actionMode === 'bulk_select_confirm') {
+    calls.push(buildAssistantToolCall('prepare_draft_message', 'prepared', {
+      targetMode: assistantPlan.actionMode === 'bulk_select_confirm' ? 'selected_targets' : 'current_chat',
+      message: null,
+    }, {
+      actionType: 'draft_message',
+      requiresConfirmation: true,
+    }));
+  }
+
+  if (assistantPlan.actionMode === 'bulk_select_confirm') {
+    calls.push(buildAssistantToolCall('prepare_bulk_whatsapp_send', 'prepared', {
+      targetIds: assistantInsights.validatedTargets.map((target) => target.id),
+      message: null,
+    }, {
+      eligibleTargets: assistantInsights.validatedTargets.length,
+      blockedTargets: assistantInsights.discardedTargets.length,
+      requiresConfirmation: true,
+    }, 'Somente targets validados com externalChatId e evidencia obrigatoria podem ser selecionados.'));
+  }
+
+  return {
+    version: 1,
+    definitions: ASSISTANT_TOOL_DEFINITIONS,
+    calls,
+    audit: {
+      executedReadTools: calls.filter((call) => call.kind === 'read' && call.status === 'executed').length,
+      preparedActionTools: calls.filter((call) => call.kind === 'prepare_action' && call.status === 'prepared').length,
+      skippedTools: calls.filter((call) => call.status === 'skipped').length,
+      note: 'Tools de escrita apenas preparam acoes confirmaveis; nenhum envio ou alteracao e executado pela resposta do modelo.',
+    },
+  };
+};
+
 const loadSystemSettings = async (supabaseAdmin: any) => {
   const { data, error } = await supabaseAdmin
     .from('system_settings')
@@ -983,6 +1176,17 @@ Deno.serve(async (req: Request) => {
 
     const assistantInsights = buildAssistantInsights(historicalConversationSearch, cotadorQuoteSearch);
     const assistantPlan = buildAssistantPlan(scope, searchPlan, assistantInsights, selectedChatContext);
+    const assistantTools = buildAssistantTools(
+      scope,
+      chatId,
+      searchPlan,
+      inboxSummary,
+      selectedChatContext,
+      historicalConversationSearch,
+      cotadorQuoteSearch,
+      assistantInsights,
+      assistantPlan,
+    );
     const context = {
       now: new Date().toISOString(),
       system: systemSettings,
@@ -998,6 +1202,7 @@ Deno.serve(async (req: Request) => {
         composerDraft: composerDraft || null,
         searchPlan,
         assistantPlan,
+        assistantTools,
         note: scope === 'free'
           ? 'Modo livre: nao assuma que o chat aberto e o assunto, salvo se o pedido mencionar claramente esta conversa ou este cliente.'
           : null,
@@ -1019,6 +1224,7 @@ Deno.serve(async (req: Request) => {
       'Quando cotadorQuoteSearch.triggered for true, use seus results para perguntas sobre cotacoes, propostas, orcamentos, planos, produtos ou operadoras no Cotador.',
       'Quando historicalConversationSearch e cotadorQuoteSearch forem acionados juntos, diferencie claramente conversas de WhatsApp e cotacoes salvas no Cotador.',
       'Use assistantPlan como plano deterministico da operacao: respeite intent, criteria, safetyChecks, actionMode e nextStep. Nao contradiga esse plano.',
+      'Use assistantTools como contrato de tools tipadas. Considere somente calls com status executed/prepared; tools prepare_action nunca significam execucao real.',
       'Se o operador pedir acoes sobre multiplos contatos, responda com plano, criterios e proximos passos confirmaveis; nao invente dados nao enviados.',
       'Use somente os dados enviados no contexto. Se faltar informacao para concluir, diga exatamente o que falta e use clarification.',
       'Nunca diga que executou, alterou, enviou, arquivou, agendou ou vinculou algo. Voce pode apenas sugerir a acao e indicar que precisa de confirmacao humana.',
@@ -1045,6 +1251,9 @@ Deno.serve(async (req: Request) => {
       '',
       'Plano deterministico da operacao:',
       JSON.stringify(assistantPlan, null, 2),
+      '',
+      'Tools tipadas disponiveis e chamadas nesta execucao:',
+      JSON.stringify(assistantTools, null, 2),
     ].join('\n');
 
     const result = await generateTextWithRouting({
@@ -1065,6 +1274,7 @@ Deno.serve(async (req: Request) => {
       model: result.model,
       fallback_used: result.fallbackUsed,
       assistant_plan: assistantPlan,
+      assistant_tools: assistantTools,
       assistant_insights: assistantInsights,
       context_summary: {
         scope,

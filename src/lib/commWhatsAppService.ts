@@ -248,6 +248,14 @@ export type CommWhatsAppRewriteSuggestion = {
   fallback_used?: boolean;
 };
 
+export type CommWhatsAppReplySuggestion = {
+  text: string;
+  mode?: 'suggest_reply' | 'complete_draft' | string;
+  provider?: string | null;
+  model?: string | null;
+  fallback_used?: boolean;
+};
+
 export type CommWhatsAppAssistantActionType = 'draft_message' | 'schedule_follow_up' | 'review_lead' | 'open_dashboard' | 'manual';
 
 export type CommWhatsAppAssistantAction = {
@@ -1195,6 +1203,37 @@ export const commWhatsAppService = {
 
     return {
       text: payload.text.trim(),
+      provider: payload.provider ?? null,
+      model: payload.model ?? null,
+      fallback_used: payload.fallback_used === true,
+    };
+  },
+
+  async suggestReply(options: {
+    chatId: string;
+    composerDraft?: string;
+    mode?: 'suggest_reply' | 'complete_draft';
+  }): Promise<CommWhatsAppReplySuggestion> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-suggest-reply', {
+      body: {
+        chatId: options.chatId,
+        composerDraft: options.composerDraft ?? '',
+        mode: options.mode,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sugerir uma resposta com IA.'));
+    }
+
+    const payload = (data ?? {}) as CommWhatsAppReplySuggestion;
+    if (!payload.text?.trim()) {
+      throw new Error('A IA nao retornou uma sugestao valida.');
+    }
+
+    return {
+      text: payload.text.trim(),
+      mode: payload.mode ?? options.mode,
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,

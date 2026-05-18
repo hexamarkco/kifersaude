@@ -14,7 +14,7 @@ export type PanelButtonVariant =
 export type PanelButtonSize = 'sm' | 'md' | 'lg' | 'icon';
 
 export const panelButtonBaseClass =
-  'panel-ui-button inline-flex items-center justify-center gap-2 rounded-lg border font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel-bg,#f8f5ef)] disabled:cursor-not-allowed disabled:opacity-60';
+  'panel-ui-button inline-flex items-center justify-center gap-2 rounded-[var(--kds-radius-sm,0.75rem)] border font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--panel-bg,#f8f5ef)] disabled:cursor-not-allowed disabled:opacity-60';
 
 export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
   primary:
@@ -76,7 +76,7 @@ export const getPanelButtonClass = ({
 export type PanelCardVariant = 'default' | 'glass' | 'strong' | 'interactive';
 export type PanelCardPadding = 'none' | 'sm' | 'md' | 'lg';
 
-export const panelCardBaseClass = 'rounded-xl';
+export const panelCardBaseClass = 'rounded-[var(--kds-radius-lg,1.4rem)]';
 
 export const panelCardVariantClasses: Record<PanelCardVariant, string> = {
   default: 'bg-[color:var(--panel-surface,#fffdfa)] border border-[var(--panel-border-subtle,#e7dac8)] shadow-sm',
@@ -96,7 +96,7 @@ export const panelCardPaddingClasses: Record<PanelCardPadding, string> = {
 export type PanelInputSize = 'default' | 'compact';
 
 export const panelInputBaseClass =
-  'panel-ui-input w-full rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] px-3 shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60';
+  'panel-ui-input w-full rounded-[var(--kds-radius-sm,0.75rem)] border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] px-3 shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60';
 
 export const panelInputStateClasses = {
   valid: 'border-[var(--panel-border,#d4c0a7)] text-[var(--panel-input-text,var(--panel-text-soft))] placeholder:text-[var(--panel-placeholder,var(--panel-text-muted))]',
@@ -129,12 +129,12 @@ const tabsListBaseClass = 'flex w-full flex-wrap';
 
 const tabsListVariantClasses: Record<PanelTabsVariant, string> = {
   underline: 'gap-0 border-b border-[var(--panel-border-subtle,#e7dac8)] px-2 sm:px-4',
-  pill: 'gap-2 rounded-xl bg-[color:var(--panel-surface-soft,#f4ede3)] p-1',
-  panel: 'panel-glass-panel gap-1 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] p-[3px]',
+  pill: 'gap-2 rounded-[var(--kds-radius-md,1rem)] bg-[color:var(--panel-surface-soft,#f4ede3)] p-1',
+  panel: 'panel-glass-panel gap-1 rounded-[var(--kds-radius-md,1rem)] border border-[var(--panel-border-subtle,#e7dac8)] p-1',
 };
 
 const tabsTriggerBaseClass =
-  'panel-ui-tab inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+  'panel-ui-tab inline-flex items-center justify-center gap-2 rounded-[var(--kds-radius-sm,0.75rem)] px-4 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
 const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle: string }> = {
   underline: {

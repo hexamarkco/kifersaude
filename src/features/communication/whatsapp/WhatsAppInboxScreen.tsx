@@ -74,6 +74,8 @@ const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
 const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending']);
+const REPLY_SUGGESTION_EMPTY_DRAFT_DEBOUNCE_MS = 650;
+const REPLY_SUGGESTION_DRAFT_DEBOUNCE_MS = 1200;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -2919,6 +2921,10 @@ export default function WhatsAppInboxScreen() {
   const [composerRewriteCustomInstructions, setComposerRewriteCustomInstructions] = useState('');
   const [composerRewriteTone, setComposerRewriteTone] = useState<CommWhatsAppRewriteTone>('grammar');
   const [rewritingComposer, setRewritingComposer] = useState(false);
+  const [replySuggestionText, setReplySuggestionText] = useState('');
+  const [replySuggestionLoading, setReplySuggestionLoading] = useState(false);
+  const [replySuggestionError, setReplySuggestionError] = useState<string | null>(null);
+  const [dismissedReplySuggestionKey, setDismissedReplySuggestionKey] = useState<string | null>(null);
   const [copyingTranscript, setCopyingTranscript] = useState(false);
   const [syncingHistoryChatId, setSyncingHistoryChatId] = useState<string | null>(null);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
@@ -3071,6 +3077,8 @@ export default function WhatsAppInboxScreen() {
   const chatAgendaSummaryRequestIdRef = useRef(0);
   const assistantRequestIdRef = useRef(0);
   const followUpGenerationRequestIdRef = useRef(0);
+  const replySuggestionRequestIdRef = useRef(0);
+  const replySuggestionKeyRef = useRef('');
   const leadSearchRequestIdRef = useRef(0);
   const startChatSourcesRequestIdRef = useRef(0);
   const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
@@ -3632,6 +3640,16 @@ export default function WhatsAppInboxScreen() {
     () => visibleMessages.filter(isChatMediaViewerMessage),
     [visibleMessages],
   );
+  const lastUsefulVisibleMessage = useMemo(() => {
+    for (let index = visibleMessages.length - 1; index >= 0; index -= 1) {
+      const message = visibleMessages[index];
+      if (message && message.direction !== 'system' && getMessageSearchPreviewText(message).trim()) {
+        return message;
+      }
+    }
+
+    return null;
+  }, [visibleMessages]);
 
   useEffect(() => {
     if (lightboxMessageId && !mediaViewerMessages.some((message) => message.id === lightboxMessageId)) {
@@ -4230,6 +4248,53 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [messageDraft, rewritingComposer, selectedChat, voiceRecordingState]);
+  const replySuggestionDisabledReason = useMemo(() => {
+    if (!selectedChat) {
+      return 'Selecione uma conversa para sugerir resposta.';
+    }
+
+    if (loadingMessages) {
+      return 'Aguarde as mensagens carregarem para sugerir resposta.';
+    }
+
+    if (voiceRecordingState !== 'idle') {
+      return 'Finalize a gravação de áudio antes de sugerir resposta.';
+    }
+
+    if (pendingAttachments.length > 0) {
+      return 'Remova o anexo atual antes de sugerir resposta.';
+    }
+
+    if (sending) {
+      return 'Aguarde o envio atual terminar para sugerir resposta.';
+    }
+
+    return null;
+  }, [loadingMessages, pendingAttachments.length, selectedChat, sending, voiceRecordingState]);
+  const replySuggestionKey = useMemo(() => {
+    if (!selectedChatId) {
+      return '';
+    }
+
+    const lastMessageSignature = lastUsefulVisibleMessage
+      ? [
+          lastUsefulVisibleMessage.id,
+          lastUsefulVisibleMessage.direction,
+          lastUsefulVisibleMessage.message_at,
+          lastUsefulVisibleMessage.delivery_status,
+          lastUsefulVisibleMessage.text_content ?? '',
+          lastUsefulVisibleMessage.media_caption ?? '',
+          lastUsefulVisibleMessage.transcription_text ?? '',
+        ].join(':')
+      : 'sem-mensagem';
+
+    return `${selectedChatId}:${lastMessageSignature}:${messageDraft.trim()}`;
+  }, [lastUsefulVisibleMessage, messageDraft, selectedChatId]);
+  useEffect(() => {
+    replySuggestionKeyRef.current = replySuggestionKey;
+    setReplySuggestionText('');
+    setReplySuggestionError(null);
+  }, [replySuggestionKey]);
   const historyRecoveryDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para recuperar mensagens antigas.';
@@ -7644,6 +7709,100 @@ export default function WhatsAppInboxScreen() {
     });
   }, [composerRewriteDraft, handleCloseComposerRewriteModal, setComposerSelection, setMessageDraft]);
 
+  const handleGenerateReplySuggestion = useCallback(async (manual = false) => {
+    if (!selectedChatId || replySuggestionDisabledReason) {
+      if (manual && replySuggestionDisabledReason) {
+        toast.error(replySuggestionDisabledReason);
+      }
+      return;
+    }
+
+    const requestId = ++replySuggestionRequestIdRef.current;
+    const requestKey = replySuggestionKey;
+
+    if (manual) {
+      setDismissedReplySuggestionKey(null);
+    }
+
+    setReplySuggestionLoading(true);
+    setReplySuggestionError(null);
+
+    try {
+      const result = await commWhatsAppService.suggestReply({
+        chatId: selectedChatId,
+        composerDraft: messageDraft,
+        mode: messageDraft.trim() ? 'complete_draft' : 'suggest_reply',
+      });
+
+      if (requestId !== replySuggestionRequestIdRef.current || requestKey !== replySuggestionKeyRef.current) {
+        return;
+      }
+
+      setReplySuggestionText(result.text.trim());
+    } catch (error) {
+      if (requestId !== replySuggestionRequestIdRef.current) {
+        return;
+      }
+
+      console.error('[WhatsAppInbox] erro ao sugerir resposta com IA', error);
+      const message = error instanceof Error ? error.message : 'Nao foi possivel sugerir uma resposta com IA.';
+      setReplySuggestionError(message);
+      setReplySuggestionText('');
+      if (manual) {
+        toast.error(message);
+      }
+    } finally {
+      if (requestId === replySuggestionRequestIdRef.current) {
+        setReplySuggestionLoading(false);
+      }
+    }
+  }, [messageDraft, replySuggestionDisabledReason, replySuggestionKey, selectedChatId]);
+
+  const handleApplyReplySuggestion = useCallback(() => {
+    const nextValue = replySuggestionText.trim();
+    if (!nextValue) {
+      return;
+    }
+
+    const nextCursor = nextValue.length;
+    setMessageDraft(nextValue);
+    setComposerSelection({ start: nextCursor, end: nextCursor });
+    setComposerFocused(true);
+    setReplySuggestionText('');
+    setReplySuggestionError(null);
+    setDismissedReplySuggestionKey(replySuggestionKey);
+
+    requestAnimationFrame(() => {
+      const target = composerTextareaRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [replySuggestionKey, replySuggestionText, setComposerSelection, setMessageDraft]);
+
+  const handleDismissReplySuggestion = useCallback(() => {
+    setDismissedReplySuggestionKey(replySuggestionKey);
+    setReplySuggestionText('');
+    setReplySuggestionError(null);
+  }, [replySuggestionKey]);
+
+  useEffect(() => {
+    if (!selectedChatId || replySuggestionDisabledReason || quickReplyMenuOpen || dismissedReplySuggestionKey === replySuggestionKey) {
+      replySuggestionRequestIdRef.current += 1;
+      setReplySuggestionLoading(false);
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void handleGenerateReplySuggestion(false);
+    }, messageDraft.trim() ? REPLY_SUGGESTION_DRAFT_DEBOUNCE_MS : REPLY_SUGGESTION_EMPTY_DRAFT_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [dismissedReplySuggestionKey, handleGenerateReplySuggestion, messageDraft, quickReplyMenuOpen, replySuggestionDisabledReason, replySuggestionKey, selectedChatId]);
+
   const handleGenerateFollowUp = useCallback(async (
     customInstructions: string,
     tone: CommWhatsAppFollowUpTone,
@@ -8067,6 +8226,12 @@ export default function WhatsAppInboxScreen() {
         setQuickReplyActiveIndex(0);
         return;
       }
+    }
+
+    if (event.key === 'Tab' && replySuggestionText.trim() && !replySuggestionLoading) {
+      event.preventDefault();
+      handleApplyReplySuggestion();
+      return;
     }
 
     if (event.key !== 'Enter' || event.shiftKey) {
@@ -8928,6 +9093,60 @@ export default function WhatsAppInboxScreen() {
                   )}
 
                   {voiceRecordingState === 'recording' || voiceAttachment ? null : (
+                  <>
+                  {(replySuggestionLoading || replySuggestionText || replySuggestionError) && !quickReplyMenuOpen ? (
+                    <div className="mb-2 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2.5 shadow-sm">
+                      <div className="flex items-start gap-2">
+                        <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-strong,#c86f1d)]">
+                          {replySuggestionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                              Sugestão da IA
+                            </p>
+                            {replySuggestionText ? (
+                              <span className="hidden text-[11px] text-[var(--panel-text-muted,#8a735f)] sm:inline">Tab para aplicar</span>
+                            ) : null}
+                          </div>
+                          {replySuggestionText ? (
+                            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--panel-text-soft,#5b4635)]">{replySuggestionText}</p>
+                          ) : replySuggestionError ? (
+                            <p className="mt-1 text-sm leading-6 text-[var(--panel-accent-red-text,#d9776b)]">{replySuggestionError}</p>
+                          ) : (
+                            <p className="mt-1 text-sm leading-6 text-[var(--panel-text-muted,#8a735f)]">Analisando histórico e padrão de atendimento...</p>
+                          )}
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {replySuggestionText ? (
+                              <Button type="button" size="sm" className="h-8 rounded-xl px-3 text-[11px]" onClick={handleApplyReplySuggestion}>
+                                Aplicar
+                              </Button>
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 rounded-xl px-3 text-[11px]"
+                              onClick={() => void handleGenerateReplySuggestion(true)}
+                              disabled={replySuggestionLoading}
+                            >
+                              {replySuggestionText ? 'Gerar outra' : 'Gerar sugestão'}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 rounded-xl px-3 text-[11px]"
+                              onClick={handleDismissReplySuggestion}
+                              disabled={replySuggestionLoading && !replySuggestionText}
+                            >
+                              Ignorar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                   <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                     <div ref={attachmentMenuRef} className={`relative flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       {attachmentMenuOpen && (
@@ -9112,6 +9331,7 @@ export default function WhatsAppInboxScreen() {
                       </button>
                     </div>
                   </div>
+                  </>
                   )}
                 </div>
               </div>

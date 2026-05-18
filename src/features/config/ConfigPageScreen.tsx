@@ -50,7 +50,7 @@ export default function ConfigPageScreen() {
           value={activeAllowedTab}
           onChange={setActiveTab}
           variant="panel"
-          listClassName="rounded-none border-x-0 border-t-0"
+          listClassName="rounded-b-none border-x-0 border-t-0"
         />
 
         <div className="p-6">

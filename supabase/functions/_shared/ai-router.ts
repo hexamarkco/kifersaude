@@ -61,6 +61,7 @@ type GenerateTextWithRoutingOptions = {
   userPrompt: string;
   temperature?: number;
   maxTokens?: number;
+  preferDefaultModel?: boolean;
 };
 
 type TranscribeAudioWithRoutingOptions = {
@@ -324,7 +325,12 @@ const getAlternateOpenAiTokenParameter = (value: OpenAiTokenParameter): OpenAiTo
 const getPreferredOpenAiReasoningEffort = (model: string): OpenAiReasoningEffort | undefined => {
   const normalized = model.trim().toLowerCase();
 
-  if (normalized.startsWith('gpt-5.4') || normalized.startsWith('gpt-5.2') || normalized.startsWith('gpt-5.1')) {
+  if (
+    normalized.startsWith('gpt-5.5') ||
+    normalized.startsWith('gpt-5.4') ||
+    normalized.startsWith('gpt-5.2') ||
+    normalized.startsWith('gpt-5.1')
+  ) {
     return 'none';
   }
 
@@ -662,13 +668,15 @@ export const generateTextWithRouting = async (
 
   const preferredProvider = taskRoute.provider;
   const preferredProviderSettings = runtime.providers[preferredProvider];
-  const preferredModel = getCompatibleTaskModel(
-    options.task,
-    preferredProvider,
-    preferredProviderSettings,
-    taskRoute.model,
-  );
   const preferredDefaultModel = getTaskDefaultModel(options.task, preferredProvider, preferredProviderSettings);
+  const preferredModel = options.preferDefaultModel
+    ? preferredDefaultModel
+    : getCompatibleTaskModel(
+        options.task,
+        preferredProvider,
+        preferredProviderSettings,
+        taskRoute.model,
+      );
 
   const attempts: Array<{ provider: AiProvider; model: string }> = [
     { provider: preferredProvider, model: preferredModel },

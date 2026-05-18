@@ -1010,6 +1010,7 @@ Deno.serve(async (req: Request) => {
           userPrompt: baseContextPrompt,
           temperature: 0.2,
           maxTokens: 260,
+          preferDefaultModel: true,
         });
 
         aiContext = parseAiContextRecommendation(recommendationResult.text);

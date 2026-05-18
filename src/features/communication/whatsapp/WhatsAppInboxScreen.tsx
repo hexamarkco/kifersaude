@@ -3060,6 +3060,7 @@ export default function WhatsAppInboxScreen() {
   const pendingMessageSearchChatIdRef = useRef<string | null>(null);
   const messagesRequestIdRef = useRef(0);
   const chatsLoadPromiseRef = useRef<Promise<void> | null>(null);
+  const chatsLoadKeyRef = useRef<string | null>(null);
   const pollingMessagesChatIdRef = useRef<string | null>(null);
   const olderMessagesRequestIdRef = useRef(0);
   const operationalStateRequestIdRef = useRef(0);
@@ -3961,10 +3962,17 @@ export default function WhatsAppInboxScreen() {
         return;
       }
       setLeadPanel(lead);
-      if (lead?.nome_completo && !chat.saved_contact_name && chat.display_name !== lead.nome_completo) {
+      const nextLeadStatus = lead?.status_value ?? lead?.status_nome ?? null;
+      const shouldHydrateChatFromLead = Boolean(
+        lead
+          && ((!chat.saved_contact_name && lead.nome_completo && chat.display_name !== lead.nome_completo)
+            || (nextLeadStatus && chat.lead_status !== nextLeadStatus)),
+      );
+      if (shouldHydrateChatFromLead && lead) {
         upsertChatLocally({
           ...chat,
-          display_name: lead.nome_completo,
+          display_name: !chat.saved_contact_name && lead.nome_completo ? lead.nome_completo : chat.display_name,
+          lead_status: nextLeadStatus,
         });
       }
       await loadLeadContracts(lead?.id ?? null);
@@ -5038,10 +5046,16 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const loadChats = useCallback(async () => {
-    if (chatsLoadPromiseRef.current) {
+    const loadKey = JSON.stringify({
+      activity: chatActivityFilter,
+      statuses: leadStatusFilters.map((status) => status.trim()).filter(Boolean).sort(),
+    });
+
+    if (chatsLoadPromiseRef.current && chatsLoadKeyRef.current === loadKey) {
       return chatsLoadPromiseRef.current;
     }
 
+    chatsLoadKeyRef.current = loadKey;
     const requestId = ++chatsRequestIdRef.current;
     const loadPromise = (async () => {
       try {
@@ -5124,6 +5138,7 @@ export default function WhatsAppInboxScreen() {
     })().finally(() => {
       if (chatsLoadPromiseRef.current === loadPromise) {
         chatsLoadPromiseRef.current = null;
+        chatsLoadKeyRef.current = null;
       }
     });
 

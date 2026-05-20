@@ -1238,6 +1238,42 @@ const applyPendingChatInboxState = (
   return { ...chat, ...pendingState };
 });
 
+const mergePendingChatInboxState = (
+  pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
+  chatId: string,
+  patch: PendingChatInboxStatePatch,
+) => {
+  pendingStateByChatId.set(chatId, {
+    ...pendingStateByChatId.get(chatId),
+    ...patch,
+  });
+};
+
+const clearPendingChatReadState = (
+  pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
+  chatId: string,
+) => {
+  const current = pendingStateByChatId.get(chatId);
+  if (!current) {
+    return;
+  }
+
+  const {
+    unread_count: _unreadCount,
+    manual_unread: _manualUnread,
+    manual_unread_at: _manualUnreadAt,
+    last_read_at: _lastReadAt,
+    ...rest
+  } = current;
+
+  if (Object.keys(rest).length === 0) {
+    pendingStateByChatId.delete(chatId);
+    return;
+  }
+
+  pendingStateByChatId.set(chatId, rest);
+};
+
 const buildPendingChatInboxStatePatch = (
   chat: CommWhatsAppChat,
   options: {
@@ -3653,8 +3689,7 @@ export default function WhatsAppInboxScreen() {
       last_read_at: messageAt,
     };
 
-    pendingChatInboxStateRef.current.set(chat.id, {
-      ...pendingChatInboxStateRef.current.get(chat.id),
+    mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, {
       ...readPatch,
       last_message_text: summaryText,
       last_message_direction: 'outbound',
@@ -5752,7 +5787,7 @@ export default function WhatsAppInboxScreen() {
       last_read_at: readAt,
     };
 
-    pendingChatInboxStateRef.current.set(selectedChat.id, readPatch);
+    mergePendingChatInboxState(pendingChatInboxStateRef.current, selectedChat.id, readPatch);
 
     setChats((current) =>
       current.map((chat) => (chat.id === selectedChat.id
@@ -5770,7 +5805,7 @@ export default function WhatsAppInboxScreen() {
     void commWhatsAppService.markChatRead(selectedChat.id, {
       messageAt: readAt,
     }).catch((error) => {
-      pendingChatInboxStateRef.current.delete(selectedChat.id);
+      clearPendingChatReadState(pendingChatInboxStateRef.current, selectedChat.id);
       console.error('[WhatsAppInbox] erro ao marcar chat como lido', error);
     });
   }, [selectedChat]);
@@ -7938,7 +7973,7 @@ export default function WhatsAppInboxScreen() {
 
     const pendingPatch = buildPendingChatInboxStatePatch(chat, options);
     if (Object.keys(pendingPatch).length > 0) {
-      pendingChatInboxStateRef.current.set(chat.id, pendingPatch);
+      mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, pendingPatch);
       upsertChatLocally({ ...chat, ...pendingPatch });
     }
 

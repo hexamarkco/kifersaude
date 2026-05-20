@@ -32,7 +32,6 @@ type ReminderRow = {
   data_lembrete: string;
   lido: boolean;
   prioridade: string | null;
-  responsavel: string | null;
   created_at: string | null;
 };
 
@@ -285,7 +284,7 @@ const loadCandidates = async (supabaseAdmin: any, options: OrganizerOptions) => 
 
   let query = supabaseAdmin
     .from('reminders')
-    .select('id, contract_id, lead_id, tipo, titulo, descricao, data_lembrete, lido, prioridade, responsavel, created_at')
+    .select('id, contract_id, lead_id, tipo, titulo, descricao, data_lembrete, lido, prioridade, created_at')
     .eq('lido', false)
     .order('data_lembrete', { ascending: true })
     .limit(MAX_CANDIDATES);

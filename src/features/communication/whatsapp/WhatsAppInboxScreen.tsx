@@ -1200,7 +1200,7 @@ const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
 
 const sortChatsByInboxOrder = (items: CommWhatsAppChat[]) => [...items].sort(compareChatsByInboxOrder);
 
-type PendingChatInboxStatePatch = Partial<Pick<CommWhatsAppChat,
+type PendingChatInboxStateFields = Partial<Pick<CommWhatsAppChat,
   'is_archived'
   | 'archived_at'
   | 'is_muted'
@@ -1217,6 +1217,43 @@ type PendingChatInboxStatePatch = Partial<Pick<CommWhatsAppChat,
   | 'last_message_delivery_status'
 >>;
 
+// Metadados privados do patch otimista. Sao prefixados com `__` para que
+// nunca colidam com colunas reais do servidor quando spreadados em um chat.
+type PendingChatInboxStateMetadata = {
+  __issuedAt?: number;
+  __actions?: Partial<Record<'isArchived' | 'isMuted' | 'isPinned' | 'markAsUnread', number>>;
+};
+
+type PendingChatInboxStatePatch = PendingChatInboxStateFields & PendingChatInboxStateMetadata;
+
+// TTL padrao para descartar patches otimistas presos (em ms). Cobre:
+//   * mutations cuja Promise foi abortada sem cair em catch/finally
+//   * patches "abandonados" porque o front trocou de chat antes do confirmacao
+// O front sempre confirma via upsertChatLocally apos a mutation, entao 30s
+// e mais que suficiente em condicoes normais.
+const PENDING_CHAT_INBOX_STATE_TTL_MS = 30_000;
+
+// Janela em que protegemos um patch de arquivamento otimista contra
+// sobrescrita pelo realtime/refetch. Mantemos um pouco menor que o TTL.
+const PENDING_CHAT_ARCHIVE_PATCH_PROTECT_MS = 20_000;
+
+const PENDING_CHAT_INBOX_META_KEYS: ReadonlyArray<keyof PendingChatInboxStateMetadata> = ['__issuedAt', '__actions'];
+
+const stripPendingChatInboxMetadata = (patch: PendingChatInboxStatePatch): PendingChatInboxStateFields => {
+  const next: Record<string, unknown> = { ...patch };
+  for (const key of PENDING_CHAT_INBOX_META_KEYS) {
+    delete next[key as string];
+  }
+  return next as PendingChatInboxStateFields;
+};
+
+const isPendingPatchExpired = (patch: PendingChatInboxStatePatch | undefined): boolean => {
+  if (!patch?.__issuedAt) {
+    return false;
+  }
+  return Date.now() - patch.__issuedAt > PENDING_CHAT_INBOX_STATE_TTL_MS;
+};
+
 const applyPendingChatInboxState = (
   items: CommWhatsAppChat[],
   pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
@@ -1226,6 +1263,15 @@ const applyPendingChatInboxState = (
     return chat;
   }
 
+  // Expira patches abandonados para evitar reaplicacao infinita.
+  if (isPendingPatchExpired(pendingState)) {
+    pendingStateByChatId.delete(chat.id);
+    return chat;
+  }
+
+  // ----------------------------------------------------------------
+  // Reconciliacao de leitura (mark-as-read) e summary otimista.
+  // ----------------------------------------------------------------
   if (pendingState.last_read_at) {
     const pendingReadAt = getMessageTimestampMs(pendingState.last_read_at);
     const serverReadAt = getMessageTimestampMs(chat.last_read_at);
@@ -1264,7 +1310,77 @@ const applyPendingChatInboxState = (
     }
   }
 
-  return { ...chat, ...pendingState };
+  // ----------------------------------------------------------------
+  // Reconciliacao de archive/mute/pin/manual_unread.
+  // Se o servidor ja respondeu com o estado que o usuario pediu,
+  // limpamos os campos correspondentes do patch. Caso contrario,
+  // preservamos o patch dentro da janela de protecao para evitar
+  // que polling/realtime "desfaca" a acao visualmente.
+  // ----------------------------------------------------------------
+  const issuedAt = pendingState.__issuedAt ?? 0;
+  const ageMs = issuedAt > 0 ? Date.now() - issuedAt : 0;
+  const withinProtection = issuedAt > 0 && ageMs <= PENDING_CHAT_ARCHIVE_PATCH_PROTECT_MS;
+
+  const fieldsPatch = stripPendingChatInboxMetadata(pendingState);
+  const remaining: PendingChatInboxStateFields = { ...fieldsPatch };
+
+  if (typeof remaining.is_archived === 'boolean') {
+    if (chat.is_archived === remaining.is_archived) {
+      // servidor ja refletiu, descarta este campo
+      delete remaining.is_archived;
+      delete remaining.archived_at;
+    } else if (!withinProtection) {
+      // patch ficou orfao (servidor diverge e janela expirou)
+      delete remaining.is_archived;
+      delete remaining.archived_at;
+    }
+  }
+
+  if (typeof remaining.is_muted === 'boolean') {
+    if (chat.is_muted === remaining.is_muted) {
+      delete remaining.is_muted;
+      delete remaining.muted_at;
+    } else if (!withinProtection) {
+      delete remaining.is_muted;
+      delete remaining.muted_at;
+    }
+  }
+
+  if (typeof remaining.is_pinned === 'boolean') {
+    if (chat.is_pinned === remaining.is_pinned) {
+      delete remaining.is_pinned;
+      delete remaining.pinned_at;
+    } else if (!withinProtection) {
+      delete remaining.is_pinned;
+      delete remaining.pinned_at;
+    }
+  }
+
+  if (typeof remaining.manual_unread === 'boolean') {
+    if (chat.manual_unread === remaining.manual_unread) {
+      delete remaining.manual_unread;
+      delete remaining.manual_unread_at;
+    } else if (!withinProtection) {
+      delete remaining.manual_unread;
+      delete remaining.manual_unread_at;
+    }
+  }
+
+  if (Object.keys(remaining).length === 0) {
+    pendingStateByChatId.delete(chat.id);
+    return chat;
+  }
+
+  // Se reduzimos o patch, persistimos o "remanescente" com a metadata original
+  if (Object.keys(remaining).length !== Object.keys(fieldsPatch).length) {
+    pendingStateByChatId.set(chat.id, {
+      ...remaining,
+      __issuedAt: pendingState.__issuedAt,
+      __actions: pendingState.__actions,
+    });
+  }
+
+  return { ...chat, ...remaining };
 });
 
 const mergePendingChatInboxState = (
@@ -1272,9 +1388,18 @@ const mergePendingChatInboxState = (
   chatId: string,
   patch: PendingChatInboxStatePatch,
 ) => {
+  const existing = pendingStateByChatId.get(chatId);
+  // Sempre renova o timestamp do patch para reabrir a janela de protecao
+  // contra refetch/realtime quando o usuario faz uma nova acao otimista.
+  const issuedAt = patch.__issuedAt ?? existing?.__issuedAt ?? Date.now();
   pendingStateByChatId.set(chatId, {
-    ...pendingStateByChatId.get(chatId),
+    ...existing,
     ...patch,
+    __issuedAt: issuedAt,
+    __actions: {
+      ...existing?.__actions,
+      ...patch.__actions,
+    },
   });
 };
 
@@ -1292,15 +1417,20 @@ const clearPendingChatReadState = (
     manual_unread: _manualUnread,
     manual_unread_at: _manualUnreadAt,
     last_read_at: _lastReadAt,
+    last_message_text: _lastMessageText,
+    last_message_direction: _lastMessageDirection,
+    last_message_at: _lastMessageAt,
+    last_message_delivery_status: _lastMessageDeliveryStatus,
     ...rest
   } = current;
 
-  if (Object.keys(rest).length === 0) {
+  const remainingKeys = Object.keys(rest).filter((key) => !PENDING_CHAT_INBOX_META_KEYS.includes(key as keyof PendingChatInboxStateMetadata));
+  if (remainingKeys.length === 0) {
     pendingStateByChatId.delete(chatId);
     return;
   }
 
-  pendingStateByChatId.set(chatId, rest);
+  pendingStateByChatId.set(chatId, rest as PendingChatInboxStatePatch);
 };
 
 const buildPendingChatInboxStatePatch = (
@@ -1312,22 +1442,29 @@ const buildPendingChatInboxStatePatch = (
     markAsUnread?: boolean | null;
   },
 ): PendingChatInboxStatePatch => {
-  const now = new Date().toISOString();
-  const patch: PendingChatInboxStatePatch = {};
+  const nowMs = Date.now();
+  const now = new Date(nowMs).toISOString();
+  const patch: PendingChatInboxStatePatch = {
+    __issuedAt: nowMs,
+    __actions: {},
+  };
 
   if (typeof options.isArchived === 'boolean') {
     patch.is_archived = options.isArchived;
-    patch.archived_at = options.isArchived ? (chat.archived_at ?? now) : null;
+    patch.archived_at = options.isArchived ? now : null;
+    patch.__actions!.isArchived = nowMs;
   }
 
   if (typeof options.isMuted === 'boolean') {
     patch.is_muted = options.isMuted;
     patch.muted_at = options.isMuted ? (chat.muted_at ?? now) : null;
+    patch.__actions!.isMuted = nowMs;
   }
 
   if (typeof options.isPinned === 'boolean') {
     patch.is_pinned = options.isPinned;
     patch.pinned_at = options.isPinned ? (chat.pinned_at ?? now) : null;
+    patch.__actions!.isPinned = nowMs;
   }
 
   if (typeof options.markAsUnread === 'boolean') {
@@ -1336,6 +1473,7 @@ const buildPendingChatInboxStatePatch = (
     if (options.markAsUnread === false) {
       patch.unread_count = 0;
     }
+    patch.__actions!.markAsUnread = nowMs;
   }
 
   return patch;
@@ -3107,6 +3245,8 @@ export default function WhatsAppInboxScreen() {
   const resolvedIdentityPhoneKeysRef = useRef<Set<string>>(new Set());
   const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
+  const archivedSectionOpenRef = useRef<boolean>(false);
+  const latestChatsLoadedAtRef = useRef<number>(0);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const latestCrmStartResultsRef = useRef<CommWhatsAppLeadSearchResult[]>([]);
   const outgoingMessageOrderAtByExternalIdRef = useRef<Map<string, string>>(new Map());
@@ -3341,6 +3481,10 @@ export default function WhatsAppInboxScreen() {
     const filtered = chats.filter((chat) => matchesCurrentSection(chat) && chatMatchesActiveFilters(chat));
     const selected = selectedChatId ? chats.find((chat) => chat.id === selectedChatId) ?? null : null;
 
+    // BUG FIX (BUG #4): so reincluimos o chat selecionado se ele pertence
+    // a secao atual. Se ele acabou de ser arquivado/desarquivado, deixar
+    // ele sair da lista da secao corrente (e a logica de selecao em
+    // handleUpdateChatInboxState ja escolheu o proximo chat valido).
     if (selected && matchesCurrentSection(selected) && !filtered.some((chat) => chat.id === selected.id)) {
       return sortChatsByInboxOrder([...filtered, selected]);
     }
@@ -4662,6 +4806,10 @@ export default function WhatsAppInboxScreen() {
   }, [chats]);
 
   useEffect(() => {
+    archivedSectionOpenRef.current = archivedSectionOpen;
+  }, [archivedSectionOpen]);
+
+  useEffect(() => {
     latestMessagesRef.current = messages;
   }, [messages]);
 
@@ -5445,6 +5593,7 @@ export default function WhatsAppInboxScreen() {
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
       }
     })().finally(() => {
+      latestChatsLoadedAtRef.current = Date.now();
       if (chatsLoadPromiseRef.current === loadPromise) {
         chatsLoadPromiseRef.current = null;
         chatsLoadKeyRef.current = null;
@@ -5822,9 +5971,15 @@ export default function WhatsAppInboxScreen() {
   }, [loadOperationalState, pollingEnabled]);
 
   useEffect(() => {
-    if (!pollingEnabled || !selectedChat || loadingOlderMessages) return;
+    if (!pollingEnabled || !selectedChat) return;
 
+    // BUG FIX (BUG #16): nao pausamos mais o polling de mensagens enquanto
+    // o "Carregar mais antigas" esta em andamento. O proprio loadMessages
+    // ja respeita pollingMessagesChatIdRef para evitar requests concorrentes.
     const intervalId = window.setInterval(() => {
+      if (loadingOlderMessages) {
+        return;
+      }
       void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
     }, MESSAGE_POLL_INTERVAL_MS);
 
@@ -5865,6 +6020,15 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    // BUG FIX (BUG #6): throttle do refocus refresh. Evita disparar
+    // loadChats() em cima de uma mutation otimista recente. A janela de
+    // 3s alinha com o objetivo do polling normal sem multiplicar fontes.
+    const REFOCUS_THROTTLE_MS = 3_000;
+    const elapsed = Date.now() - latestChatsLoadedAtRef.current;
+    if (elapsed < REFOCUS_THROTTLE_MS) {
+      return;
+    }
+
     void loadChats();
     void loadOperationalState();
 
@@ -5883,6 +6047,14 @@ export default function WhatsAppInboxScreen() {
       && selectedChat.unread_count <= 0;
 
     if (skipManualUnreadRead) {
+      return;
+    }
+
+    // BUG FIX (BUG #2/#11): se o chat foi marcado como nao lido manualmente
+    // e nao ha mensagens novas reais (unread_count == 0), nao disparar
+    // mark-as-read so porque o chat foi selecionado. So zeramos o
+    // manual_unread quando o usuario realmente le (scroll-to-bottom).
+    if (selectedChat.manual_unread && selectedChat.unread_count <= 0) {
       return;
     }
 
@@ -6503,8 +6675,11 @@ export default function WhatsAppInboxScreen() {
 
       if (hadSuccessfulSend) {
         hydratedChatsRef.current.add(chat.external_chat_id);
+        // BUG FIX (BUG #13): erro de pos-sincronizacao agora avisa o usuario
+        // de forma discreta (warning), em vez de falhar silenciosamente.
         void Promise.all([loadMessages(chat, 'send'), loadChats()]).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de texto', error);
+          toast.warning('Mensagem enviada, mas houve um erro ao atualizar a lista. Atualize a pagina se necessario.');
         });
       }
     });
@@ -8130,27 +8305,58 @@ export default function WhatsAppInboxScreen() {
   ) => {
     setUpdatingChatStateId(chat.id);
 
+    const fieldsOnlyPatch = stripPendingChatInboxMetadata(buildPendingChatInboxStatePatch(chat, options));
     const pendingPatch = buildPendingChatInboxStatePatch(chat, options);
-    if (Object.keys(pendingPatch).length > 0) {
+    const hasFieldsToApply = Object.keys(fieldsOnlyPatch).length > 0;
+    if (hasFieldsToApply) {
       mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, pendingPatch);
-      upsertChatLocally({ ...chat, ...pendingPatch });
+      upsertChatLocally({ ...chat, ...fieldsOnlyPatch });
     }
 
     if (options.markAsUnread === true && selectedChatIdRef.current === chat.id) {
       manualUnreadSkipReadChatIdRef.current = chat.id;
     }
 
+    // BUG FIX (BUG #4): ao arquivar/desarquivar o chat atualmente selecionado
+    // que sai da secao visivel, escolhemos automaticamente o proximo chat
+    // valido. Isso evita que o chat arquivado continue na lista da Inbox
+    // ate que o usuario troque manualmente.
+    const shouldRotateSelection = (
+      typeof options.isArchived === 'boolean'
+      && selectedChatIdRef.current === chat.id
+      // se o usuario esta na secao "Arquivadas" e desarquivou, idem
+      && options.isArchived !== archivedSectionOpenRef.current
+    );
+
+    if (shouldRotateSelection) {
+      const nextChat = latestChatsRef.current.find((candidate) => (
+        candidate.id !== chat.id
+        && Boolean(candidate.is_archived) === archivedSectionOpenRef.current
+      )) ?? null;
+      setSelectedChatId(nextChat?.id ?? null);
+    }
+
     try {
       const updatedChat = await commWhatsAppService.updateChatInboxState(chat.id, options);
-      pendingChatInboxStateRef.current.delete(chat.id);
+
+      // Sanidade: confirma que o servidor refletiu o que pedimos. Caso
+      // contrario, mantemos o patch otimista vivo dentro da janela de
+      // protecao para evitar reversao temporaria pelo realtime/refetch.
+      const archiveConfirmed = typeof options.isArchived !== 'boolean' || updatedChat.is_archived === options.isArchived;
+      const muteConfirmed = typeof options.isMuted !== 'boolean' || updatedChat.is_muted === options.isMuted;
+      const pinConfirmed = typeof options.isPinned !== 'boolean' || updatedChat.is_pinned === options.isPinned;
+
+      if (archiveConfirmed && muteConfirmed && pinConfirmed) {
+        pendingChatInboxStateRef.current.delete(chat.id);
+      }
       upsertChatLocally(updatedChat);
 
-      if (selectedChatIdRef.current === updatedChat.id) {
-        setSelectedChatId(updatedChat.id);
-      }
-
       if (typeof options.isArchived === 'boolean') {
-        toast.success(options.isArchived ? 'Conversa arquivada.' : 'Conversa removida dos arquivados.');
+        if (archiveConfirmed) {
+          toast.success(options.isArchived ? 'Conversa arquivada.' : 'Conversa removida dos arquivados.');
+        } else {
+          toast.warning('Conversa atualizada, mas o servidor reverteu o arquivamento. Verifique se ha mensagens novas chegando.');
+        }
       } else if (typeof options.isMuted === 'boolean') {
         toast.success(options.isMuted ? 'Conversa silenciada.' : 'Conversa com notificacao restaurada.');
       } else if (typeof options.isPinned === 'boolean') {
@@ -8160,7 +8366,7 @@ export default function WhatsAppInboxScreen() {
       }
     } catch (error) {
       pendingChatInboxStateRef.current.delete(chat.id);
-      if (Object.keys(pendingPatch).length > 0) {
+      if (hasFieldsToApply) {
         upsertChatLocally(chat);
       }
       console.error('[WhatsAppInbox] erro ao atualizar estado do chat', error);

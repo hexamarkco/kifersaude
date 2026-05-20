@@ -60,6 +60,7 @@ import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRe
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
 import { useWindowPollingState } from './hooks/useWindowPollingState';
 import { useComposerDraft, type ComposerSelection } from './hooks/useComposerDraft';
+import { useVoiceRecording } from './hooks/useVoiceRecording';
 import {
   applyPendingChatInboxState,
   buildPendingChatInboxStatePatch,
@@ -2882,13 +2883,7 @@ export default function WhatsAppInboxScreen() {
   const [chatMenuPointerAnchor, setChatMenuPointerAnchor] = useState<PointerAnchor | null>(null);
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
-  const [voiceRecordingState, setVoiceRecordingState] = useState<VoiceRecordingState>('idle');
-  const [voiceRecordingSeconds, setVoiceRecordingSeconds] = useState(0);
-  const [voiceRecordingWaveform, setVoiceRecordingWaveform] = useState<number[]>(DEFAULT_WAVEFORM);
   const [mediaUploadProgress, setMediaUploadProgress] = useState<MediaUploadProgress | null>(null);
-  const [voicePreviewPlaying, setVoicePreviewPlaying] = useState(false);
-  const [voicePreviewDuration, setVoicePreviewDuration] = useState<number | null>(null);
-  const [voicePreviewCurrentTime, setVoicePreviewCurrentTime] = useState(0);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
@@ -2931,7 +2926,6 @@ export default function WhatsAppInboxScreen() {
   const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const voicePreviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const reactionPickerRef = useRef<HTMLDivElement | null>(null);
   const messageActionMenuRef = useRef<HTMLDivElement | null>(null);
   const chatMenuRef = useRef<HTMLDivElement | null>(null);
@@ -4254,6 +4248,28 @@ export default function WhatsAppInboxScreen() {
 
     return null;
   }, [connectionStatus, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
+
+  const {
+    voiceRecordingState,
+    voiceRecordingSeconds,
+    voiceRecordingWaveform,
+    voicePreviewPlaying,
+    voicePreviewDuration,
+    voicePreviewCurrentTime,
+    voicePreviewAudioRef,
+    autoSendVoiceRef,
+    handleStartVoiceRecording,
+    handleStopVoiceRecording,
+    handleCancelVoiceRecording,
+    handleToggleVoicePreviewPlayback,
+    handleClearVoiceAttachment: handleClearVoiceAttachmentFromHook,
+    setVoicePreviewPlaying,
+    setVoicePreviewCurrentTime,
+    setVoicePreviewDuration,
+  } = useVoiceRecording({
+    sendDisabledReason,
+    onAttachmentChange: setPendingAttachments,
+  });
   const followUpGenerationDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para gerar o follow-up.';

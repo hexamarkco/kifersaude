@@ -59,6 +59,7 @@ import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
 import { useWindowPollingState } from './hooks/useWindowPollingState';
+import { useComposerDraft, type ComposerSelection } from './hooks/useComposerDraft';
 import {
   applyPendingChatInboxState,
   buildPendingChatInboxStatePatch,
@@ -107,7 +108,6 @@ type MediaUploadProgress = {
 };
 type AttachmentMenuAction = 'document' | 'media' | 'audio' | 'contact';
 type ChatActivityFilter = 'all' | 'unread';
-type ComposerSelection = { start: number; end: number };
 type QuickReplyCommandMatch = { query: string; start: number; end: number };
 type QuickReplyOption = {
   id: string;
@@ -208,7 +208,6 @@ const VIDEO_LIKE_MESSAGE_TYPES = new Set(['video', 'gif', 'short']);
 const GALLERY_MESSAGE_TYPES = new Set(['image', 'video', 'gif', 'short']);
 const GALLERY_GROUP_MAX_GAP_MS = 2 * 60 * 1000;
 const EDITABLE_OUTBOUND_MESSAGE_TYPES = new Set(['text', 'image', 'video', 'gif', 'short', 'document']);
-const EMPTY_COMPOSER_SELECTION: ComposerSelection = { start: 0, end: 0 };
 
 const buildMediaSummaryText = (kind: CommWhatsAppMediaSendKind | 'document') => {
   if (kind === 'image') return '[Imagem]';
@@ -2825,7 +2824,6 @@ export default function WhatsAppInboxScreen() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
-  const [composerDraftsByChatId, setComposerDraftsByChatId] = useState<Record<string, string>>({});
   const [archivedSectionOpen, setArchivedSectionOpen] = useState(false);
   const [updatingChatStateId, setUpdatingChatStateId] = useState<string | null>(null);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
@@ -2860,8 +2858,6 @@ export default function WhatsAppInboxScreen() {
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
   const [mediaDrawerPosition, setMediaDrawerPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
   const [sendingDrawerMedia, setSendingDrawerMedia] = useState(false);
-  const [composerSelectionsByChatId, setComposerSelectionsByChatId] = useState<Record<string, ComposerSelection>>({});
-  const [composerFocused, setComposerFocused] = useState(false);
   const [quickReplyActiveIndex, setQuickReplyActiveIndex] = useState(0);
   const [dismissedQuickReplyKey, setDismissedQuickReplyKey] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -3025,66 +3021,16 @@ export default function WhatsAppInboxScreen() {
     () => pendingAttachments.filter((attachment) => attachment.kind !== 'voice'),
     [pendingAttachments],
   );
-  const messageDraft = selectedChatId ? composerDraftsByChatId[selectedChatId] ?? '' : '';
-  const composerSelection = useMemo(
-    () => (selectedChatId
-      ? composerSelectionsByChatId[selectedChatId] ?? { start: messageDraft.length, end: messageDraft.length }
-      : EMPTY_COMPOSER_SELECTION),
-    [composerSelectionsByChatId, messageDraft.length, selectedChatId],
-  );
-  const setMessageDraft = useCallback((value: string | ((current: string) => string)) => {
-    if (!selectedChatId) {
-      return;
-    }
-
-    setComposerDraftsByChatId((current) => {
-      const currentValue = current[selectedChatId] ?? '';
-      const nextValue = typeof value === 'function' ? value(currentValue) : value;
-      const trimmedValue = nextValue;
-
-      if (!trimmedValue) {
-        if (!(selectedChatId in current)) {
-          return current;
-        }
-
-        const next = { ...current };
-        delete next[selectedChatId];
-        return next;
-      }
-
-      if (currentValue === trimmedValue) {
-        return current;
-      }
-
-      return {
-        ...current,
-        [selectedChatId]: trimmedValue,
-      };
-    });
-  }, [selectedChatId]);
-  const setComposerSelection = useCallback((value: ComposerSelection | ((current: ComposerSelection) => ComposerSelection)) => {
-    if (!selectedChatId) {
-      return;
-    }
-
-    setComposerSelectionsByChatId((current) => {
-      const currentValue = current[selectedChatId] ?? { start: messageDraft.length, end: messageDraft.length };
-      const nextValue = typeof value === 'function' ? value(currentValue) : value;
-
-      if (nextValue.start === 0 && nextValue.end === 0 && !(selectedChatId in current)) {
-        return current;
-      }
-
-      if (nextValue.start === currentValue.start && nextValue.end === currentValue.end) {
-        return current;
-      }
-
-      return {
-        ...current,
-        [selectedChatId]: nextValue,
-      };
-    });
-  }, [messageDraft.length, selectedChatId]);
+  const {
+    messageDraft,
+    composerSelection,
+    composerFocused,
+    setMessageDraft,
+    setComposerSelection,
+    setComposerFocused,
+    resetComposerDraft,
+    composerDraftsByChatId,
+  } = useComposerDraft(selectedChatId);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
   const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
@@ -3716,18 +3662,7 @@ export default function WhatsAppInboxScreen() {
   }, [buildChatsSignature]);
 
   const resetComposerAfterQueue = useCallback(() => {
-    setMessageDraft('');
-    if (selectedChatId) {
-      setComposerSelectionsByChatId((current) => {
-        if (!(selectedChatId in current)) {
-          return current;
-        }
-
-        const next = { ...current };
-        delete next[selectedChatId];
-        return next;
-      });
-    }
+    resetComposerDraft();
     setPendingAttachments([]);
     setReplyTargetMessage(null);
     setMediaUploadProgress(null);
@@ -3738,7 +3673,7 @@ export default function WhatsAppInboxScreen() {
     setVoicePreviewPlaying(false);
     setVoicePreviewCurrentTime(0);
     setVoicePreviewDuration(null);
-  }, [selectedChatId, setMessageDraft]);
+  }, [resetComposerDraft]);
 
   const messageTimelineItems = useMemo(() => {
     const items: Array<
@@ -7712,7 +7647,7 @@ export default function WhatsAppInboxScreen() {
       target.focus();
       target.setSelectionRange(nextCursor, nextCursor);
     });
-  }, [composerSelection, messageDraft, setComposerSelection, setMessageDraft]);
+  }, [composerSelection, messageDraft, setComposerFocused, setComposerSelection, setMessageDraft]);
 
   const handleOpenQuickReplySettings = useCallback(() => {
     setQuickRepliesModalOpen(true);
@@ -7834,7 +7769,7 @@ export default function WhatsAppInboxScreen() {
       target.focus();
       target.setSelectionRange(nextCursor, nextCursor);
     });
-  }, [composerRewriteDraft, handleCloseComposerRewriteModal, setComposerSelection, setMessageDraft]);
+  }, [composerRewriteDraft, handleCloseComposerRewriteModal, setComposerFocused, setComposerSelection, setMessageDraft]);
 
   const handleGenerateReplySuggestion = useCallback(async (manual = false) => {
     if (!selectedChatId || replySuggestionDisabledReason) {
@@ -7903,7 +7838,7 @@ export default function WhatsAppInboxScreen() {
       target.focus();
       target.setSelectionRange(nextCursor, nextCursor);
     });
-  }, [replySuggestionText, setComposerSelection, setMessageDraft]);
+  }, [replySuggestionText, setComposerFocused, setComposerSelection, setMessageDraft]);
 
   const handleDismissReplySuggestion = useCallback(() => {
     setReplySuggestionText('');

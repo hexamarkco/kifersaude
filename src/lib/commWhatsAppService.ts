@@ -495,6 +495,7 @@ export const commWhatsAppService = {
     let query = supabase
       .from('comm_whatsapp_chats')
       .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
       .or('unread_count.gt.0,manual_unread.eq.true');
 
     if (!params.includeArchived) {
@@ -627,6 +628,24 @@ export const commWhatsAppService = {
     const row = rows[0] as CommWhatsAppChat | undefined;
     if (!row) {
       throw new Error('A conversa atualizada nao foi retornada.');
+    }
+
+    return row;
+  },
+
+  async deleteChat(chatId: string): Promise<CommWhatsAppChat> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_delete_chat', {
+      p_chat_id: chatId,
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel excluir esta conversa.'));
+    }
+
+    const rows = Array.isArray(data) ? data : [];
+    const row = rows[0] as CommWhatsAppChat | undefined;
+    if (!row) {
+      throw new Error('A conversa excluida nao foi retornada.');
     }
 
     return row;

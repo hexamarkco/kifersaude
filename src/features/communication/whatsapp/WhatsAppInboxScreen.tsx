@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
@@ -55,6 +55,18 @@ import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
+import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
+import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
+import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
+import { useWindowPollingState } from './hooks/useWindowPollingState';
+import {
+  applyPendingChatInboxState,
+  buildPendingChatInboxStatePatch,
+  clearPendingChatReadState,
+  mergePendingChatInboxState,
+  stripPendingChatInboxMetadata,
+  type PendingChatInboxStatePatch,
+} from './pendingChatInboxState';
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
@@ -1199,285 +1211,6 @@ const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
 };
 
 const sortChatsByInboxOrder = (items: CommWhatsAppChat[]) => [...items].sort(compareChatsByInboxOrder);
-
-type PendingChatInboxStateFields = Partial<Pick<CommWhatsAppChat,
-  'is_archived'
-  | 'archived_at'
-  | 'is_muted'
-  | 'muted_at'
-  | 'is_pinned'
-  | 'pinned_at'
-  | 'manual_unread'
-  | 'manual_unread_at'
-  | 'unread_count'
-  | 'last_read_at'
-  | 'last_message_text'
-  | 'last_message_direction'
-  | 'last_message_at'
-  | 'last_message_delivery_status'
->>;
-
-// Metadados privados do patch otimista. Sao prefixados com `__` para que
-// nunca colidam com colunas reais do servidor quando spreadados em um chat.
-type PendingChatInboxStateMetadata = {
-  __issuedAt?: number;
-  __actions?: Partial<Record<'isArchived' | 'isMuted' | 'isPinned' | 'markAsUnread', number>>;
-};
-
-type PendingChatInboxStatePatch = PendingChatInboxStateFields & PendingChatInboxStateMetadata;
-
-// TTL padrao para descartar patches otimistas presos (em ms). Cobre:
-//   * mutations cuja Promise foi abortada sem cair em catch/finally
-//   * patches "abandonados" porque o front trocou de chat antes do confirmacao
-// O front sempre confirma via upsertChatLocally apos a mutation, entao 30s
-// e mais que suficiente em condicoes normais.
-const PENDING_CHAT_INBOX_STATE_TTL_MS = 30_000;
-
-// Janela em que protegemos um patch de arquivamento otimista contra
-// sobrescrita pelo realtime/refetch. Mantemos um pouco menor que o TTL.
-const PENDING_CHAT_ARCHIVE_PATCH_PROTECT_MS = 20_000;
-
-const PENDING_CHAT_INBOX_META_KEYS: ReadonlyArray<keyof PendingChatInboxStateMetadata> = ['__issuedAt', '__actions'];
-
-const stripPendingChatInboxMetadata = (patch: PendingChatInboxStatePatch): PendingChatInboxStateFields => {
-  const next: Record<string, unknown> = { ...patch };
-  for (const key of PENDING_CHAT_INBOX_META_KEYS) {
-    delete next[key as string];
-  }
-  return next as PendingChatInboxStateFields;
-};
-
-const isPendingPatchExpired = (patch: PendingChatInboxStatePatch | undefined): boolean => {
-  if (!patch?.__issuedAt) {
-    return false;
-  }
-  return Date.now() - patch.__issuedAt > PENDING_CHAT_INBOX_STATE_TTL_MS;
-};
-
-const applyPendingChatInboxState = (
-  items: CommWhatsAppChat[],
-  pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
-) => items.map((chat) => {
-  const pendingState = pendingStateByChatId.get(chat.id);
-  if (!pendingState) {
-    return chat;
-  }
-
-  // Expira patches abandonados para evitar reaplicacao infinita.
-  if (isPendingPatchExpired(pendingState)) {
-    pendingStateByChatId.delete(chat.id);
-    return chat;
-  }
-
-  // ----------------------------------------------------------------
-  // Reconciliacao de leitura (mark-as-read) e summary otimista.
-  // ----------------------------------------------------------------
-  if (pendingState.last_read_at) {
-    const pendingReadAt = getMessageTimestampMs(pendingState.last_read_at);
-    const serverReadAt = getMessageTimestampMs(chat.last_read_at);
-    const lastMessageAt = getMessageTimestampMs(chat.last_message_at);
-
-    const pendingLastMessageAt = getMessageTimestampMs(pendingState.last_message_at);
-    const serverCaughtUpWithPendingMessage = pendingLastMessageAt === null || (lastMessageAt !== null && lastMessageAt >= pendingLastMessageAt);
-    const serverDeliveryStatus = String(chat.last_message_delivery_status ?? '').trim().toLowerCase();
-    const pendingDeliveryStatus = String(pendingState.last_message_delivery_status ?? '').trim().toLowerCase();
-
-    if (
-      pendingState.last_message_at
-      && serverCaughtUpWithPendingMessage
-      && pendingState.last_message_direction === chat.last_message_direction
-      && serverDeliveryStatus
-      && serverDeliveryStatus !== pendingDeliveryStatus
-    ) {
-      pendingStateByChatId.delete(chat.id);
-      return chat;
-    }
-
-    if (serverReadAt !== null && pendingReadAt !== null && serverReadAt >= pendingReadAt && chat.unread_count <= 0 && !chat.manual_unread && serverCaughtUpWithPendingMessage) {
-      pendingStateByChatId.delete(chat.id);
-      return chat;
-    }
-
-    const pendingReadWasInvalidatedByInbound = chat.last_message_direction === 'inbound'
-      && lastMessageAt !== null
-      && pendingReadAt !== null
-      && lastMessageAt > pendingReadAt
-      && (chat.unread_count > 0 || chat.manual_unread);
-
-    if (pendingReadWasInvalidatedByInbound) {
-      pendingStateByChatId.delete(chat.id);
-      return chat;
-    }
-  }
-
-  // ----------------------------------------------------------------
-  // Reconciliacao de archive/mute/pin/manual_unread.
-  // Se o servidor ja respondeu com o estado que o usuario pediu,
-  // limpamos os campos correspondentes do patch. Caso contrario,
-  // preservamos o patch dentro da janela de protecao para evitar
-  // que polling/realtime "desfaca" a acao visualmente.
-  // ----------------------------------------------------------------
-  const issuedAt = pendingState.__issuedAt ?? 0;
-  const ageMs = issuedAt > 0 ? Date.now() - issuedAt : 0;
-  const withinProtection = issuedAt > 0 && ageMs <= PENDING_CHAT_ARCHIVE_PATCH_PROTECT_MS;
-
-  const fieldsPatch = stripPendingChatInboxMetadata(pendingState);
-  const remaining: PendingChatInboxStateFields = { ...fieldsPatch };
-
-  if (typeof remaining.is_archived === 'boolean') {
-    if (chat.is_archived === remaining.is_archived) {
-      // servidor ja refletiu, descarta este campo
-      delete remaining.is_archived;
-      delete remaining.archived_at;
-    } else if (!withinProtection) {
-      // patch ficou orfao (servidor diverge e janela expirou)
-      delete remaining.is_archived;
-      delete remaining.archived_at;
-    }
-  }
-
-  if (typeof remaining.is_muted === 'boolean') {
-    if (chat.is_muted === remaining.is_muted) {
-      delete remaining.is_muted;
-      delete remaining.muted_at;
-    } else if (!withinProtection) {
-      delete remaining.is_muted;
-      delete remaining.muted_at;
-    }
-  }
-
-  if (typeof remaining.is_pinned === 'boolean') {
-    if (chat.is_pinned === remaining.is_pinned) {
-      delete remaining.is_pinned;
-      delete remaining.pinned_at;
-    } else if (!withinProtection) {
-      delete remaining.is_pinned;
-      delete remaining.pinned_at;
-    }
-  }
-
-  if (typeof remaining.manual_unread === 'boolean') {
-    if (chat.manual_unread === remaining.manual_unread) {
-      delete remaining.manual_unread;
-      delete remaining.manual_unread_at;
-    } else if (!withinProtection) {
-      delete remaining.manual_unread;
-      delete remaining.manual_unread_at;
-    }
-  }
-
-  if (Object.keys(remaining).length === 0) {
-    pendingStateByChatId.delete(chat.id);
-    return chat;
-  }
-
-  // Se reduzimos o patch, persistimos o "remanescente" com a metadata original
-  if (Object.keys(remaining).length !== Object.keys(fieldsPatch).length) {
-    pendingStateByChatId.set(chat.id, {
-      ...remaining,
-      __issuedAt: pendingState.__issuedAt,
-      __actions: pendingState.__actions,
-    });
-  }
-
-  return { ...chat, ...remaining };
-});
-
-const mergePendingChatInboxState = (
-  pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
-  chatId: string,
-  patch: PendingChatInboxStatePatch,
-) => {
-  const existing = pendingStateByChatId.get(chatId);
-  // Sempre renova o timestamp do patch para reabrir a janela de protecao
-  // contra refetch/realtime quando o usuario faz uma nova acao otimista.
-  const issuedAt = patch.__issuedAt ?? existing?.__issuedAt ?? Date.now();
-  pendingStateByChatId.set(chatId, {
-    ...existing,
-    ...patch,
-    __issuedAt: issuedAt,
-    __actions: {
-      ...existing?.__actions,
-      ...patch.__actions,
-    },
-  });
-};
-
-const clearPendingChatReadState = (
-  pendingStateByChatId: Map<string, PendingChatInboxStatePatch>,
-  chatId: string,
-) => {
-  const current = pendingStateByChatId.get(chatId);
-  if (!current) {
-    return;
-  }
-
-  const {
-    unread_count: _unreadCount,
-    manual_unread: _manualUnread,
-    manual_unread_at: _manualUnreadAt,
-    last_read_at: _lastReadAt,
-    last_message_text: _lastMessageText,
-    last_message_direction: _lastMessageDirection,
-    last_message_at: _lastMessageAt,
-    last_message_delivery_status: _lastMessageDeliveryStatus,
-    ...rest
-  } = current;
-
-  const remainingKeys = Object.keys(rest).filter((key) => !PENDING_CHAT_INBOX_META_KEYS.includes(key as keyof PendingChatInboxStateMetadata));
-  if (remainingKeys.length === 0) {
-    pendingStateByChatId.delete(chatId);
-    return;
-  }
-
-  pendingStateByChatId.set(chatId, rest as PendingChatInboxStatePatch);
-};
-
-const buildPendingChatInboxStatePatch = (
-  chat: CommWhatsAppChat,
-  options: {
-    isArchived?: boolean | null;
-    isMuted?: boolean | null;
-    isPinned?: boolean | null;
-    markAsUnread?: boolean | null;
-  },
-): PendingChatInboxStatePatch => {
-  const nowMs = Date.now();
-  const now = new Date(nowMs).toISOString();
-  const patch: PendingChatInboxStatePatch = {
-    __issuedAt: nowMs,
-    __actions: {},
-  };
-
-  if (typeof options.isArchived === 'boolean') {
-    patch.is_archived = options.isArchived;
-    patch.archived_at = options.isArchived ? now : null;
-    patch.__actions!.isArchived = nowMs;
-  }
-
-  if (typeof options.isMuted === 'boolean') {
-    patch.is_muted = options.isMuted;
-    patch.muted_at = options.isMuted ? (chat.muted_at ?? now) : null;
-    patch.__actions!.isMuted = nowMs;
-  }
-
-  if (typeof options.isPinned === 'boolean') {
-    patch.is_pinned = options.isPinned;
-    patch.pinned_at = options.isPinned ? (chat.pinned_at ?? now) : null;
-    patch.__actions!.isPinned = nowMs;
-  }
-
-  if (typeof options.markAsUnread === 'boolean') {
-    patch.manual_unread = options.markAsUnread && chat.unread_count <= 0;
-    patch.manual_unread_at = patch.manual_unread ? (chat.manual_unread_at ?? now) : null;
-    if (options.markAsUnread === false) {
-      patch.unread_count = 0;
-    }
-    patch.__actions!.markAsUnread = nowMs;
-  }
-
-  return patch;
-};
 
 const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
   if (file.type.startsWith('image/')) {
@@ -3065,6 +2798,7 @@ function WhatsAppMessageBody({
 
 export default function WhatsAppInboxScreen() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { role } = useAuth();
   const { leadStatuses, options, getRoleModulePermission } = useConfig();
   const responsavelOptions = options.lead_responsavel;
@@ -3094,6 +2828,7 @@ export default function WhatsAppInboxScreen() {
   const [composerDraftsByChatId, setComposerDraftsByChatId] = useState<Record<string, string>>({});
   const [archivedSectionOpen, setArchivedSectionOpen] = useState(false);
   const [updatingChatStateId, setUpdatingChatStateId] = useState<string | null>(null);
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [quickReplyIntegration, setQuickReplyIntegration] = useState<IntegrationSetting | null>(null);
   const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>(DEFAULT_QUICK_REPLIES);
   const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
@@ -3192,8 +2927,7 @@ export default function WhatsAppInboxScreen() {
   const [manualStartPhone, setManualStartPhone] = useState('');
   const [startingChatKey, setStartingChatKey] = useState<string | null>(null);
   const [sharedContactActionKey, setSharedContactActionKey] = useState<string | null>(null);
-  const [isDocumentVisible, setIsDocumentVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
-  const [isWindowFocused, setIsWindowFocused] = useState(() => (typeof document === 'undefined' ? true : document.hasFocus()));
+  const { pollingEnabled } = useWindowPollingState();
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -3260,6 +2994,7 @@ export default function WhatsAppInboxScreen() {
   const pendingScrollHeightRef = useRef<number | null>(null);
   const isNearBottomRef = useRef(true);
   const selectedChatIdRef = useRef<string | null>(null);
+  const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
   const chatSearchRequestIdRef = useRef(0);
   const messageSearchRequestIdRef = useRef(0);
@@ -3352,7 +3087,6 @@ export default function WhatsAppInboxScreen() {
   }, [messageDraft.length, selectedChatId]);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
-  const pollingEnabled = isDocumentVisible && isWindowFocused;
   const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
 
   const beginSendOperation = useCallback(() => {
@@ -4176,7 +3910,7 @@ export default function WhatsAppInboxScreen() {
     setChats((current) => {
       let next = current.filter((chat) => chat.id !== changedChatId);
 
-      if (payload.eventType !== 'DELETE' && incomingChat) {
+      if (payload.eventType !== 'DELETE' && incomingChat && !incomingChat.deleted_at) {
         const hydratedChat = applyPendingChatInboxState(
           applyPrefetchedLeadNames([incomingChat]),
           pendingChatInboxStateRef.current,
@@ -4268,6 +4002,8 @@ export default function WhatsAppInboxScreen() {
       });
     }
   }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder]);
+
+  const messageRealtimeReadyChatId = useCommWhatsAppMessageRealtime(selectedChatId, applyRealtimeMessageChange);
 
   const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
     setMessages((current) => current.map((message) => (message.id === messageId ? { ...message, ...patch } : message)));
@@ -5477,36 +5213,18 @@ export default function WhatsAppInboxScreen() {
     void refreshStartChatSources(startChatQuery, savedContactsPage + 1, true);
   }, [refreshStartChatSources, savedContactsHasMore, savedContactsLoading, savedContactsLoadingMore, savedContactsPage, startChatQuery]);
 
-  useEffect(() => {
-    if (typeof document === 'undefined' || typeof window === 'undefined') {
-      return;
-    }
+  const loadChats = useCallback(async (loadOptions: { sections?: Array<'active' | 'archived'> } = {}) => {
+    // BUG FIX (BUG #7): por default carregamos APENAS a secao que o usuario
+    // esta visualizando. Os chats da outra secao continuam em memoria (e sao
+    // recarregados sob demanda quando o usuario alterna). Isso reduz drasticamente
+    // o trafego de polling (8s) em contas com muitos chats arquivados.
+    const requestedSections = loadOptions.sections
+      ?? (archivedSectionOpenRef.current ? (['archived'] as const) : (['active'] as const));
 
-    const handleVisibilityChange = () => {
-      setIsDocumentVisible(!document.hidden);
-      if (!document.hidden) {
-        setIsWindowFocused(document.hasFocus());
-      }
-    };
-
-    const handleFocus = () => setIsWindowFocused(true);
-    const handleBlur = () => setIsWindowFocused(false);
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
-    };
-  }, []);
-
-  const loadChats = useCallback(async () => {
     const loadKey = JSON.stringify({
       activity: chatActivityFilter,
       statuses: leadStatusFilters.map((status) => status.trim()).filter(Boolean).sort(),
+      sections: [...requestedSections].sort(),
     });
 
     if (chatsLoadPromiseRef.current && chatsLoadKeyRef.current === loadKey) {
@@ -5542,23 +5260,48 @@ export default function WhatsAppInboxScreen() {
           return all;
         };
 
-        const [activeChats, archivedChats] = await Promise.all([
-          fetchChatSection('active'),
-          fetchChatSection('archived'),
-        ]);
-        const data = [...activeChats, ...archivedChats];
+        const fetchedSections = await Promise.all(
+          requestedSections.map(async (section) => ({ section, data: await fetchChatSection(section) })),
+        );
 
         if (requestId !== chatsRequestIdRef.current) {
           return;
         }
 
+        // Combinar fetched com chats que ja temos da(s) outra(s) secao(oes).
+        const fetchedSectionSet = new Set(requestedSections);
+        const fetchedChatIds = new Set<string>();
+        const fetchedFlat: CommWhatsAppChat[] = [];
+        for (const bucket of fetchedSections) {
+          for (const chat of bucket.data) {
+            fetchedFlat.push(chat);
+            fetchedChatIds.add(chat.id);
+          }
+        }
+
+        const previousChats = latestChatsRef.current;
+        const preservedFromOtherSections = previousChats.filter((chat) => {
+          if (chat.deleted_at) {
+            return false;
+          }
+
+          const sectionOfChat = chat.is_archived ? 'archived' : 'active';
+          if (fetchedSectionSet.has(sectionOfChat)) {
+            // se a secao foi recarregada, removemos chats antigos que nao vieram
+            return false;
+          }
+          return !fetchedChatIds.has(chat.id);
+        });
+
+        const mergedData = [...fetchedFlat, ...preservedFromOtherSections];
+
         const refreshedChats = applyPendingChatInboxState(
-          applyPrefetchedLeadNames(data),
+          applyPrefetchedLeadNames(mergedData),
           pendingChatInboxStateRef.current,
         );
         const currentSelectedChatId = selectedChatIdRef.current;
         const preservedSelectedChat = currentSelectedChatId
-          ? latestChatsRef.current.find((chat) => chat.id === currentSelectedChatId) ?? null
+          ? previousChats.find((chat) => chat.id === currentSelectedChatId) ?? null
           : null;
         const shouldPreserveSelectedChat = Boolean(
           preservedSelectedChat
@@ -5577,9 +5320,21 @@ export default function WhatsAppInboxScreen() {
           setChats(hydratedData);
         }
 
+        const requestedChatId = chatIdFromUrlRef.current;
+        const requestedChat = requestedChatId
+          ? hydratedData.find((chat) => chat.id === requestedChatId) ?? null
+          : null;
+        if (requestedChat) {
+          setArchivedSectionOpen(Boolean(requestedChat.is_archived));
+        }
+
         setSelectedChatId((current) => {
           if (current && hydratedData.some((chat) => chat.id === current)) {
             return current;
+          }
+
+          if (requestedChat) {
+            return requestedChat.id;
           }
 
           return hydratedData.find((chat) => !chat.is_archived)?.id ?? hydratedData[0]?.id ?? null;
@@ -5602,7 +5357,18 @@ export default function WhatsAppInboxScreen() {
 
     chatsLoadPromiseRef.current = loadPromise;
     return loadPromise;
-  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, chatMatchesActiveFilters, leadStatusFilters]);
+  }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters]);
+
+  useWhatsAppInboxDeepLink({
+    searchParams,
+    setSearchParams,
+    selectedChatId,
+    chatIdFromUrlRef,
+    latestChatsRef,
+    setArchivedSectionOpen,
+    setSelectedChatId,
+    loadChats,
+  });
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
     if (!chat) {
@@ -5837,7 +5603,7 @@ export default function WhatsAppInboxScreen() {
 
     const bootstrap = async () => {
       setLoading(true);
-      await Promise.all([loadChats(), loadOperationalState()]);
+      await Promise.all([loadChats({ sections: ['active', 'archived'] }), loadOperationalState()]);
       if (active) {
         setLoading(false);
       }
@@ -5875,34 +5641,6 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     if (!selectedChatId) {
-      return;
-    }
-
-    const channel = supabase
-      .channel(`comm-whatsapp-messages-${selectedChatId}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'comm_whatsapp_messages',
-          filter: `chat_id=eq.${selectedChatId}`,
-        },
-        applyRealtimeMessageChange,
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[WhatsAppInbox] realtime de mensagens indisponivel; polling permanece ativo.');
-        }
-      });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [applyRealtimeMessageChange, selectedChatId]);
-
-  useEffect(() => {
-    if (!selectedChatId) {
       setMessages([]);
       setLoadingMessages(false);
       setLoadingOlderMessages(false);
@@ -5931,8 +5669,16 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
+    // BUG FIX (BUG #12): evita carregar a primeira pagina antes da assinatura
+    // realtime do chat estar pronta. Isso reduz a janela em que uma mensagem
+    // inserida exatamente durante a troca de conversa ficaria invisivel ate o
+    // proximo polling.
+    if (messageRealtimeReadyChatId !== selectedChatId) {
+      return;
+    }
+
     void loadMessages(getSelectedChatSnapshot(selectedChatId), 'initial');
-  }, [getSelectedChatSnapshot, loadMessages, selectedChatId]);
+  }, [getSelectedChatSnapshot, loadMessages, messageRealtimeReadyChatId, selectedChatId]);
 
   useEffect(
     () => () => {
@@ -8157,7 +7903,7 @@ export default function WhatsAppInboxScreen() {
       target.focus();
       target.setSelectionRange(nextCursor, nextCursor);
     });
-  }, [replySuggestionKey, replySuggestionText, setComposerSelection, setMessageDraft]);
+  }, [replySuggestionText, setComposerSelection, setMessageDraft]);
 
   const handleDismissReplySuggestion = useCallback(() => {
     setReplySuggestionText('');
@@ -8378,6 +8124,43 @@ export default function WhatsAppInboxScreen() {
       setUpdatingChatStateId((current) => (current === chat.id ? null : current));
     }
   }, [upsertChatLocally]);
+
+  const handleDeleteChat = useCallback(async (chat: CommWhatsAppChat) => {
+    if (deletingChatId) {
+      return;
+    }
+
+    const confirmed = window.confirm('Excluir esta conversa da Inbox? Novas mensagens recebidas do contato podem reabrir a conversa.');
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingChatId(chat.id);
+    try {
+      await commWhatsAppService.deleteChat(chat.id);
+
+      setChats((current) => {
+        const next = current.filter((candidate) => candidate.id !== chat.id);
+        chatsSignatureRef.current = buildChatsSignature(next);
+        return next;
+      });
+
+      if (selectedChatIdRef.current === chat.id) {
+        const nextChat = sortChatsByInboxOrder(latestChatsRef.current.filter((candidate) => (
+          candidate.id !== chat.id
+          && Boolean(candidate.is_archived) === archivedSectionOpenRef.current
+        )))[0] ?? null;
+        setSelectedChatId(nextChat?.id ?? null);
+      }
+
+      toast.success('Conversa excluida da Inbox.');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao excluir conversa', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel excluir esta conversa.');
+    } finally {
+      setDeletingChatId((current) => (current === chat.id ? null : current));
+    }
+  }, [buildChatsSignature, deletingChatId]);
 
   const handleToggleMediaDrawer = useCallback(() => {
     setAttachmentMenuOpen(false);
@@ -8641,7 +8424,14 @@ export default function WhatsAppInboxScreen() {
     void handleSendMessage();
   };
 
+  const selectionContextValue = useMemo<WhatsAppInboxSelectionContextValue>(() => ({
+    selectedChatId,
+    selectedChat,
+    archivedSectionOpen,
+  }), [archivedSectionOpen, selectedChat, selectedChatId]);
+
   return (
+    <WhatsAppInboxSelectionProvider value={selectionContextValue}>
     <div className="whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0">
       <div className="flex h-full min-h-0 flex-col gap-0">
         {operationalBanner && (
@@ -8666,7 +8456,17 @@ export default function WhatsAppInboxScreen() {
                   <Button
                     size="icon"
                     variant={archivedSectionOpen ? 'soft' : 'secondary'}
-                    onClick={() => setArchivedSectionOpen((current) => !current)}
+                    onClick={() => setArchivedSectionOpen((current) => {
+                      const next = !current;
+                      // BUG FIX (BUG #7): ao alternar a secao, garantimos
+                      // que os chats da nova secao estao frescos no client.
+                      if (next) {
+                        void loadChats({ sections: ['archived', 'active'] });
+                      } else {
+                        void loadChats({ sections: ['active'] });
+                      }
+                      return next;
+                    })}
                     className="rounded-xl"
                     aria-label="Chats arquivados"
                     title={archivedChatsCount > 0 ? `Chats arquivados (${archivedChatsCount})` : 'Chats arquivados'}
@@ -10131,6 +9931,19 @@ export default function WhatsAppInboxScreen() {
                 <MessageCircle className="h-4 w-4 shrink-0" />
                 <span>{openChatMenuChat.manual_unread || openChatMenuChat.unread_count > 0 ? 'Marcar como lida' : 'Marcar como nao lida'}</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChatMenuPointerAnchor(null);
+                  setOpenChatMenuChatId(null);
+                  void handleDeleteChat(openChatMenuChat);
+                }}
+                disabled={deletingChatId === openChatMenuChat.id || updatingChatStateId === openChatMenuChat.id}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-accent-red-text,#d9776b)] transition hover:bg-[rgba(122,33,24,0.16)] disabled:opacity-60"
+              >
+                {deletingChatId === openChatMenuChat.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
+                <span>Excluir conversa</span>
+              </button>
             </div>
           ) : null}
         </PanelPopoverShell>
@@ -10185,5 +9998,6 @@ export default function WhatsAppInboxScreen() {
         </PanelPopoverShell>
       </div>
     </div>
+    </WhatsAppInboxSelectionProvider>
   );
 }

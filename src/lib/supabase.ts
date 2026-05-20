@@ -706,6 +706,7 @@ export type CommWhatsAppChat = {
   unread_count: number;
   status: 'open' | 'pending' | 'closed';
   last_read_at?: string | null;
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
 };

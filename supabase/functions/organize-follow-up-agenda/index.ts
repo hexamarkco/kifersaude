@@ -40,7 +40,6 @@ type LeadRow = {
   nome_completo: string | null;
   telefone: string | null;
   status: string | null;
-  responsavel: string | null;
   ultimo_contato: string | null;
   proximo_retorno: string | null;
 };
@@ -319,7 +318,7 @@ const loadCandidates = async (supabaseAdmin: any, options: OrganizerOptions) => 
     supabaseAdmin,
     'leads',
     leadIds,
-    'id, nome_completo, telefone, status, responsavel, ultimo_contato, proximo_retorno',
+    'id, nome_completo, telefone, status, ultimo_contato, proximo_retorno',
   );
   const leadsById = new Map(leads.map((lead) => [lead.id, lead]));
 

@@ -46,6 +46,7 @@ import type { ManualReminderPrompt } from '../../../reminders/shared/reminderTyp
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { supabase, type Contract, type Lead, type Reminder, fetchAllPages } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
+import FollowUpAgendaOrganizerModal from '../../../agenda/components/FollowUpAgendaOrganizerModal';
 
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
@@ -196,6 +197,7 @@ export default function WhatsAppAgendaModal({
   const [openingLeadChatId, setOpeningLeadChatId] = useState<string | null>(null);
   const [onlyCurrentLead, setOnlyCurrentLead] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const loadRemindersRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -1400,6 +1402,10 @@ export default function WhatsAppAgendaModal({
                   <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => void loadReminders({ showLoading: true })} aria-label="Atualizar agenda" title="Atualizar agenda">
                     <RefreshCw className="h-4 w-4" />
                   </Button>
+                  <Button onClick={() => setOrganizerOpen(true)} variant="primary" size="md" className="h-11" disabled={!canEdit}>
+                    <Sparkles className="h-4 w-4" />
+                    Organizar follow-ups
+                  </Button>
                   <Button onClick={goToPreviousDay} variant="secondary" size="icon" className="h-11 w-11" aria-label="Dia anterior">
                     <ChevronLeft className="h-5 w-5" />
                   </Button>
@@ -1671,6 +1677,12 @@ export default function WhatsAppAgendaModal({
           defaultPriority={manualReminderQueue[0].defaultPriority}
         />
       ) : null}
+
+      <FollowUpAgendaOrganizerModal
+        isOpen={organizerOpen}
+        onClose={() => setOrganizerOpen(false)}
+        onApplied={() => loadReminders({ showLoading: true })}
+      />
 
       {ConfirmationDialog}
     </>

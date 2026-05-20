@@ -237,6 +237,46 @@ export type CommWhatsAppFollowUpSuggestion = {
 
 export type CommWhatsAppFollowUpTone = 'consultivo' | 'amigavel' | 'direto' | 'reativacao' | 'premium';
 
+export type FollowUpAgendaOrganizerMode = 'balanced' | 'urgency' | 'minimal_changes';
+
+export type FollowUpAgendaOrganizerOptions = {
+  dailyLimit: number;
+  queueTime: string;
+  startDate: string;
+  weekdaysOnly: boolean;
+  includeOverdue: boolean;
+  preserveToday: boolean;
+  priorityMode: FollowUpAgendaOrganizerMode;
+};
+
+export type FollowUpAgendaOrganizerChange = {
+  reminderId: string;
+  leadId: string | null;
+  leadName: string;
+  title: string;
+  currentDateTime: string;
+  newDateTime: string;
+  priority: string;
+  score: number;
+  reasons: string[];
+  changed: boolean;
+};
+
+export type FollowUpAgendaOrganizerPreview = {
+  options: FollowUpAgendaOrganizerOptions;
+  generatedAt: string;
+  totalCandidates: number;
+  totalChanges: number;
+  groupedDays: Record<string, number>;
+  changes: FollowUpAgendaOrganizerChange[];
+  ai?: { provider?: string | null; model?: string | null; fallback_used?: boolean } | null;
+};
+
+export type FollowUpAgendaOrganizerApplyResult = {
+  applied: number;
+  skipped: number;
+};
+
 export type CommWhatsAppRewriteTone = 'grammar' | 'professional' | 'friendly' | 'shorter' | 'assertive';
 
 export type CommWhatsAppFollowUpRefinementSuggestion = CommWhatsAppFollowUpSuggestion;
@@ -400,6 +440,54 @@ export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
   }
 
   return value?.trim() || 'Numero desconhecido';
+};
+
+const invokeFollowUpAgendaOrganizer = async (body: Record<string, unknown>) => {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    throw new Error(getSupabaseErrorMessage(sessionError, 'Nao foi possivel autenticar a organizacao da agenda.'));
+  }
+
+  if (!session?.access_token) {
+    throw new Error('Sua sessao expirou. Entre novamente para organizar a agenda.');
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 60000);
+
+  try {
+    const response = await fetch(`${supabaseFunctionsUrl}/organize-follow-up-agenda`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = typeof payload?.error === 'string' && payload.error.trim()
+        ? payload.error.trim()
+        : 'Nao foi possivel organizar a agenda de follow-ups.';
+      throw new Error(message);
+    }
+
+    return payload;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('A organizacao da agenda demorou mais que 60 segundos. Tente reduzir o volume de follow-ups.');
+    }
+
+    throw error instanceof Error ? error : new Error('Nao foi possivel organizar a agenda de follow-ups.');
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 };
 
 export const commWhatsAppService = {
@@ -1029,6 +1117,30 @@ export const commWhatsAppService = {
       provider: payload.provider ?? null,
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,
+    };
+  },
+
+  async previewFollowUpAgendaOrganization(options: FollowUpAgendaOrganizerOptions): Promise<FollowUpAgendaOrganizerPreview> {
+    const payload = await invokeFollowUpAgendaOrganizer({ action: 'preview', options }) as { preview?: FollowUpAgendaOrganizerPreview };
+    if (!payload.preview || !Array.isArray(payload.preview.changes)) {
+      throw new Error('A organizacao da agenda nao retornou uma previa valida.');
+    }
+
+    return payload.preview;
+  },
+
+  async applyFollowUpAgendaOrganization(changes: FollowUpAgendaOrganizerChange[]): Promise<FollowUpAgendaOrganizerApplyResult> {
+    const payload = await invokeFollowUpAgendaOrganizer({
+      action: 'apply',
+      changes: changes.map((change) => ({
+        reminderId: change.reminderId,
+        leadId: change.leadId,
+        newDateTime: change.newDateTime,
+      })),
+    }) as Partial<FollowUpAgendaOrganizerApplyResult>;
+    return {
+      applied: typeof payload.applied === 'number' ? payload.applied : 0,
+      skipped: typeof payload.skipped === 'number' ? payload.skipped : 0,
     };
   },
 

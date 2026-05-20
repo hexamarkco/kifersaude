@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -70,8 +71,6 @@ const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
 const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending']);
-const REPLY_SUGGESTION_EMPTY_DRAFT_DEBOUNCE_MS = 650;
-const REPLY_SUGGESTION_DRAFT_DEBOUNCE_MS = 1200;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -2915,7 +2914,6 @@ export default function WhatsAppInboxScreen() {
   const [replySuggestionText, setReplySuggestionText] = useState('');
   const [replySuggestionLoading, setReplySuggestionLoading] = useState(false);
   const [replySuggestionError, setReplySuggestionError] = useState<string | null>(null);
-  const [dismissedReplySuggestionKey, setDismissedReplySuggestionKey] = useState<string | null>(null);
   const [copyingTranscript, setCopyingTranscript] = useState(false);
   const [syncingHistoryChatId, setSyncingHistoryChatId] = useState<string | null>(null);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
@@ -3882,6 +3880,114 @@ export default function WhatsAppInboxScreen() {
     });
   }, []);
 
+  const applyRealtimeChatChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppChat>) => {
+    const incomingChat = payload.new as CommWhatsAppChat | null;
+    const previousChat = payload.old as Partial<CommWhatsAppChat> | null;
+    const changedChatId = incomingChat?.id ?? previousChat?.id ?? null;
+
+    if (!changedChatId) {
+      return;
+    }
+
+    setChats((current) => {
+      let next = current.filter((chat) => chat.id !== changedChatId);
+
+      if (payload.eventType !== 'DELETE' && incomingChat) {
+        const hydratedChat = applyPendingChatInboxState(
+          applyPrefetchedLeadNames([incomingChat]),
+          pendingChatInboxStateRef.current,
+        )[0];
+        const shouldKeepSelectedChat = selectedChatIdRef.current === hydratedChat.id;
+
+        if (chatMatchesActiveFilters(hydratedChat) || shouldKeepSelectedChat) {
+          next = [...next, hydratedChat];
+        }
+      }
+
+      next = sortChatsByInboxOrder(next);
+      const nextSignature = buildChatsSignature(next);
+      if (nextSignature === chatsSignatureRef.current) {
+        return current;
+      }
+
+      chatsSignatureRef.current = nextSignature;
+      return next;
+    });
+  }, [applyPrefetchedLeadNames, buildChatsSignature, chatMatchesActiveFilters]);
+
+  const applyRealtimeMessageChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppMessage>) => {
+    const incomingMessage = payload.new as CommWhatsAppMessage | null;
+    const previousMessage = payload.old as Partial<CommWhatsAppMessage> | null;
+    const targetChatId = incomingMessage?.chat_id ?? previousMessage?.chat_id ?? null;
+
+    if (!targetChatId || selectedChatIdRef.current !== targetChatId) {
+      return;
+    }
+
+    setMessages((current) => {
+      const nextMessages = payload.eventType === 'DELETE'
+        ? current.filter((message) => message.id !== previousMessage?.id)
+        : incomingMessage
+          ? mergeMessages(current, [incomingMessage])
+          : current;
+      const nextSignature = buildMessagesSignature(nextMessages);
+
+      if (nextSignature === messagesSignatureRef.current) {
+        return current;
+      }
+
+      messagesSignatureRef.current = nextSignature;
+
+      if (payload.eventType === 'INSERT') {
+        if (isNearBottomRef.current || incomingMessage?.direction === 'outbound') {
+          pendingScrollModeRef.current = 'bottom';
+          pendingScrollTopRef.current = null;
+          pendingScrollHeightRef.current = null;
+        } else {
+          pendingScrollModeRef.current = 'preserve';
+          pendingScrollTopRef.current = messagesContainerRef.current?.scrollTop ?? 0;
+          pendingScrollHeightRef.current = null;
+        }
+      } else {
+        pendingScrollModeRef.current = null;
+      }
+
+      return nextMessages;
+    });
+
+    if (incomingMessage) {
+      setLocalOutgoingMessages((current) => {
+        const externalMessageId = String(incomingMessage.external_message_id ?? '').trim();
+        if (!externalMessageId) {
+          return current;
+        }
+
+        let changed = false;
+        const nextLocalMessages = current.filter((message) => {
+          if (message.chat_id !== targetChatId) {
+            return true;
+          }
+
+          const localExternalMessageId = String(message.external_message_id ?? '').trim();
+          if (localExternalMessageId !== externalMessageId) {
+            return true;
+          }
+
+          changed = true;
+          localOutgoingRetryPayloadRef.current.delete(message.id);
+          const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
+          if (previewUrl?.startsWith('blob:')) {
+            URL.revokeObjectURL(previewUrl);
+          }
+          localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
+          return false;
+        });
+
+        return changed ? nextLocalMessages : current;
+      });
+    }
+  }, [buildMessagesSignature]);
+
   const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
     setMessages((current) => current.map((message) => (message.id === messageId ? { ...message, ...patch } : message)));
   }, []);
@@ -4282,6 +4388,8 @@ export default function WhatsAppInboxScreen() {
   }, [lastUsefulVisibleMessage, messageDraft, selectedChatId]);
   useEffect(() => {
     replySuggestionKeyRef.current = replySuggestionKey;
+    replySuggestionRequestIdRef.current += 1;
+    setReplySuggestionLoading(false);
     setReplySuggestionText('');
     setReplySuggestionError(null);
   }, [replySuggestionKey]);
@@ -5442,6 +5550,57 @@ export default function WhatsAppInboxScreen() {
       active = false;
     };
   }, [loadChats, loadOperationalState]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`comm-whatsapp-chats-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'comm_whatsapp_chats',
+        },
+        applyRealtimeChatChange,
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[WhatsAppInbox] realtime de chats indisponivel; polling permanece ativo.');
+        }
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [applyRealtimeChatChange]);
+
+  useEffect(() => {
+    if (!selectedChatId) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`comm-whatsapp-messages-${selectedChatId}-${Math.random().toString(36).slice(2)}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'comm_whatsapp_messages',
+          filter: `chat_id=eq.${selectedChatId}`,
+        },
+        applyRealtimeMessageChange,
+      )
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[WhatsAppInbox] realtime de mensagens indisponivel; polling permanece ativo.');
+        }
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [applyRealtimeMessageChange, selectedChatId]);
 
   useEffect(() => {
     if (!selectedChatId) {
@@ -7573,10 +7732,6 @@ export default function WhatsAppInboxScreen() {
     const requestId = ++replySuggestionRequestIdRef.current;
     const requestKey = replySuggestionKey;
 
-    if (manual) {
-      setDismissedReplySuggestionKey(null);
-    }
-
     setReplySuggestionLoading(true);
     setReplySuggestionError(null);
 
@@ -7623,7 +7778,6 @@ export default function WhatsAppInboxScreen() {
     setComposerFocused(true);
     setReplySuggestionText('');
     setReplySuggestionError(null);
-    setDismissedReplySuggestionKey(replySuggestionKey);
 
     requestAnimationFrame(() => {
       const target = composerTextareaRef.current;
@@ -7637,24 +7791,9 @@ export default function WhatsAppInboxScreen() {
   }, [replySuggestionKey, replySuggestionText, setComposerSelection, setMessageDraft]);
 
   const handleDismissReplySuggestion = useCallback(() => {
-    setDismissedReplySuggestionKey(replySuggestionKey);
     setReplySuggestionText('');
     setReplySuggestionError(null);
-  }, [replySuggestionKey]);
-
-  useEffect(() => {
-    if (!selectedChatId || replySuggestionDisabledReason || quickReplyMenuOpen || dismissedReplySuggestionKey === replySuggestionKey) {
-      replySuggestionRequestIdRef.current += 1;
-      setReplySuggestionLoading(false);
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      void handleGenerateReplySuggestion(false);
-    }, messageDraft.trim() ? REPLY_SUGGESTION_DRAFT_DEBOUNCE_MS : REPLY_SUGGESTION_EMPTY_DRAFT_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [dismissedReplySuggestionKey, handleGenerateReplySuggestion, messageDraft, quickReplyMenuOpen, replySuggestionDisabledReason, replySuggestionKey, selectedChatId]);
+  }, []);
 
   const handleGenerateFollowUp = useCallback(async (
     customInstructions: string,
@@ -9070,6 +9209,16 @@ export default function WhatsAppInboxScreen() {
                           title={composerRewriteDisabledReason ?? 'Reescrever mensagem com IA'}
                         >
                           <Sparkles className="h-4.5 w-4.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleGenerateReplySuggestion(true)}
+                          disabled={Boolean(replySuggestionDisabledReason) || replySuggestionLoading}
+                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
+                          aria-label="Sugerir resposta com IA"
+                          title={replySuggestionDisabledReason ?? 'Sugerir resposta com IA'}
+                        >
+                          {replySuggestionLoading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <MessageCircle className="h-4.5 w-4.5" />}
                         </button>
                     </div>
 

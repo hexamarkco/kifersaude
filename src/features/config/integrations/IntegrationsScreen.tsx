@@ -43,6 +43,7 @@ type AiProvider = "openai" | "gemini" | "claude";
 type AiTaskKey =
   | "rewrite_message"
   | "follow_up_generation"
+  | "follow_up_agenda_organization"
   | "whatsapp_audio_transcription";
 type AiTaskKind = "text" | "transcription";
 type ModelOption = { value: string; label: string };
@@ -106,6 +107,12 @@ const AI_TASKS: Array<{ key: AiTaskKey; label: string; description: string; kind
       key: "follow_up_generation",
       label: "Geração de follow-up",
       description: "Usado em lembretes para sugerir mensagens de follow-up.",
+      kind: "text",
+    },
+    {
+      key: "follow_up_agenda_organization",
+      label: "Organização da agenda de follow-ups",
+      description: "Usado para priorizar e reagendar a fila diária de follow-ups.",
       kind: "text",
     },
     {
@@ -318,6 +325,11 @@ const createDefaultRoutingForm = (): AiRoutingFormState => ({
   follow_up_generation: {
     provider: "openai",
     model: getDefaultTaskModel("openai", "follow_up_generation"),
+    fallbackToOpenAi: true,
+  },
+  follow_up_agenda_organization: {
+    provider: "openai",
+    model: getDefaultTaskModel("openai", "follow_up_agenda_organization"),
     fallbackToOpenAi: true,
   },
   whatsapp_audio_transcription: {

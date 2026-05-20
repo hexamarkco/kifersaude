@@ -23,6 +23,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Sparkles,
   Tag,
   Timer,
   Trash2,
@@ -62,6 +63,7 @@ import {
   isReminderPriority,
 } from "../reminders/shared/reminderHelpers";
 import type { ManualReminderPrompt } from "../reminders/shared/reminderTypes";
+import FollowUpAgendaOrganizerModal from "./components/FollowUpAgendaOrganizerModal";
 
 const RELATED_ENTITY_BATCH_SIZE = 100;
 
@@ -203,6 +205,7 @@ export default function AgendaScreen() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [savingTask, setSavingTask] = useState(false);
+  const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -1673,6 +1676,10 @@ export default function AgendaScreen() {
                 <Button onClick={goToToday} variant="secondary" size="md">
                   Hoje
                 </Button>
+                <Button onClick={() => setOrganizerOpen(true)} variant="primary" size="md">
+                  <Sparkles className="h-4 w-4" />
+                  Organizar follow-ups
+                </Button>
                 <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
                   <Plus className="h-4 w-4" />
                   Nova tarefa
@@ -2004,6 +2011,11 @@ export default function AgendaScreen() {
         )}
 
         {editingLead && <LeadForm lead={editingLead} onClose={() => setEditingLead(null)} onSave={handleLeadSaved} />}
+        <FollowUpAgendaOrganizerModal
+          isOpen={organizerOpen}
+          onClose={() => setOrganizerOpen(false)}
+          onApplied={() => loadReminders({ showLoading: true })}
+        />
         {ConfirmationDialog}
       </div>
     </PanelAdaptiveLoadingFrame>

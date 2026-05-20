@@ -281,6 +281,11 @@ Deno.serve(async (req: Request) => {
       `Voce sugere respostas prontas para o WhatsApp da operacao ${companyName}.`,
       'Use como base o historico do chat atual e o padrao real das mensagens enviadas pela operacao.',
       'A resposta deve soar humana, consultiva, natural e coerente com o jeito da Kifer Saude escrever.',
+      'Padrao obrigatorio da operacao: conduza a conversa passo a passo, com mensagens curtas e uma unica pergunta por vez.',
+      'Nunca envie uma lista de perguntas para coletar dados. Nao use bullets, numeracao ou checklist para pedir informacoes, salvo se o cliente pedir explicitamente uma lista.',
+      'Se varias informacoes forem necessarias, escolha somente a proxima pergunta mais importante para destravar a conversa agora.',
+      'Prefira uma frase de acolhimento curta seguida de uma pergunta simples. Exemplo de formato: "Perfeito, Maiana. Qual a idade do seu filho?"',
+      'Evite mensagens longas, roteiros completos, tom de formulario e antecipacao de muitas etapas do atendimento.',
       'Nao invente valores, coberturas, prazos, documentos, promessas, combinados ou dados que nao estejam no contexto.',
       'Se faltar alguma informacao para avancar, faca uma pergunta objetiva.',
       'Retorne somente uma mensagem final pronta para colar no composer, sem markdown, sem aspas, sem titulo e sem explicacoes.',
@@ -306,8 +311,8 @@ Deno.serve(async (req: Request) => {
       '',
       'Tarefa:',
       mode === 'complete_draft'
-        ? 'Gere uma versao final da mensagem considerando o rascunho atual e o contexto.'
-        : 'Gere a proxima resposta mais adequada para este chat.',
+        ? 'Gere uma versao final da mensagem considerando o rascunho atual e o contexto. Mantenha uma unica pergunta por mensagem.'
+        : 'Gere a proxima resposta mais adequada para este chat. Mantenha uma unica pergunta por mensagem.',
     ].filter((line) => line !== '').join('\n');
 
     const result = await generateTextWithRouting({

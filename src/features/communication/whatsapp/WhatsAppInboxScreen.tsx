@@ -573,6 +573,28 @@ const readRecord = (value: unknown): Record<string, unknown> | null => (
 
 const getMessageMetadataRecord = (message?: CommWhatsAppMessage | null) => readRecord(message?.metadata) ?? {};
 
+const getMessageClientRequestId = (message?: CommWhatsAppMessage | null) => {
+  const metadata = getMessageMetadataRecord(message);
+  return String(metadata.client_request_id ?? metadata.clientRequestId ?? '').trim();
+};
+
+const getMessageClientOrderAt = (message?: CommWhatsAppMessage | null) => {
+  const metadata = getMessageMetadataRecord(message);
+  return String(metadata.client_order_at ?? metadata.clientOrderAt ?? '').trim();
+};
+
+const messagesReferToSameOutgoing = (left: CommWhatsAppMessage, right: CommWhatsAppMessage) => {
+  const leftExternalId = String(left.external_message_id ?? '').trim();
+  const rightExternalId = String(right.external_message_id ?? '').trim();
+  if (leftExternalId && rightExternalId && leftExternalId === rightExternalId) {
+    return true;
+  }
+
+  const leftClientRequestId = getMessageClientRequestId(left);
+  const rightClientRequestId = getMessageClientRequestId(right);
+  return Boolean(leftClientRequestId && rightClientRequestId && leftClientRequestId === rightClientRequestId);
+};
+
 const getMessageQuoteInfo = (message?: CommWhatsAppMessage | null): MessageQuoteInfo | null => {
   if (!message) {
     return null;
@@ -834,7 +856,12 @@ const parseCommMessageDate = (value?: string | null) => {
   return new Date(Number.NaN);
 };
 
-const getComparableMessageTimestampMs = (message: Pick<CommWhatsAppMessage, 'message_at' | 'created_at'>) => {
+const getComparableMessageTimestampMs = (message: Pick<CommWhatsAppMessage, 'message_at' | 'created_at' | 'metadata'>) => {
+  const clientOrderTimestamp = getMessageTimestampMs(getMessageClientOrderAt(message as CommWhatsAppMessage));
+  if (clientOrderTimestamp !== null) {
+    return clientOrderTimestamp;
+  }
+
   const messageTimestamp = getMessageTimestampMs(message.message_at);
   if (messageTimestamp !== null) {
     return messageTimestamp;
@@ -3082,6 +3109,8 @@ export default function WhatsAppInboxScreen() {
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const latestCrmStartResultsRef = useRef<CommWhatsAppLeadSearchResult[]>([]);
+  const outgoingMessageOrderAtByExternalIdRef = useRef<Map<string, string>>(new Map());
+  const outgoingMessageOrderAtByClientRequestIdRef = useRef<Map<string, string>>(new Map());
   const chatIdentityLookupInFlightKeysRef = useRef<Set<string>>(new Set());
   const chatIdentityLookupFailedAtByKeyRef = useRef<Map<string, number>>(new Map());
   const chatsSignatureRef = useRef('');
@@ -3307,10 +3336,17 @@ export default function WhatsAppInboxScreen() {
     return true;
   }, [chatActivityFilter, leadStatusFilters]);
 
-  const scopedChats = useMemo(
-    () => sortChatsByInboxOrder(chats.filter((chat) => (archivedSectionOpen ? chat.is_archived : !chat.is_archived) && chatMatchesActiveFilters(chat))),
-    [archivedSectionOpen, chatMatchesActiveFilters, chats],
-  );
+  const scopedChats = useMemo(() => {
+    const matchesCurrentSection = (chat: CommWhatsAppChat) => (archivedSectionOpen ? chat.is_archived : !chat.is_archived);
+    const filtered = chats.filter((chat) => matchesCurrentSection(chat) && chatMatchesActiveFilters(chat));
+    const selected = selectedChatId ? chats.find((chat) => chat.id === selectedChatId) ?? null : null;
+
+    if (selected && matchesCurrentSection(selected) && !filtered.some((chat) => chat.id === selected.id)) {
+      return sortChatsByInboxOrder([...filtered, selected]);
+    }
+
+    return sortChatsByInboxOrder(filtered);
+  }, [archivedSectionOpen, chatMatchesActiveFilters, chats, selectedChatId]);
   const localChatSearchResults = useMemo(
     () => (search ? rankChatsBySearch(chats.filter(chatMatchesActiveFilters), search, operationalState?.channel?.connected_user_name ?? null) : []),
     [chatMatchesActiveFilters, chats, operationalState?.channel?.connected_user_name, search],
@@ -3324,7 +3360,7 @@ export default function WhatsAppInboxScreen() {
     [chatMatchesActiveFilters, messageSearchResults],
   );
   const sidebarChats = useMemo(
-    () => (search ? mergeUniqueChats(remoteChatSearchResults, localChatSearchResults) : scopedChats),
+    () => (search ? mergeUniqueChats(localChatSearchResults, remoteChatSearchResults) : scopedChats),
     [localChatSearchResults, remoteChatSearchResults, scopedChats, search],
   );
   const forwardTargetChats = useMemo(() => {
@@ -3550,24 +3586,76 @@ export default function WhatsAppInboxScreen() {
         ? current.map((chat) => (chat.id === nextChat.id ? { ...chat, ...nextChat } : chat))
         : [nextChat, ...current];
 
-      return sortChatsByInboxOrder(updated);
+      const sorted = sortChatsByInboxOrder(updated);
+      chatsSignatureRef.current = buildChatsSignature(sorted);
+      return sorted;
     });
+  }, [buildChatsSignature]);
+
+  const rememberOutgoingMessageOrder = useCallback((message: CommWhatsAppMessage) => {
+    const orderAt = getMessageClientOrderAt(message) || message.message_at;
+    if (!orderAt) {
+      return;
+    }
+
+    const externalMessageId = String(message.external_message_id ?? '').trim();
+    if (externalMessageId) {
+      outgoingMessageOrderAtByExternalIdRef.current.set(externalMessageId, orderAt);
+    }
+
+    const clientRequestId = getMessageClientRequestId(message);
+    if (clientRequestId) {
+      outgoingMessageOrderAtByClientRequestIdRef.current.set(clientRequestId, orderAt);
+    }
+  }, []);
+
+  const applyOutgoingOrderToServerMessage = useCallback((message: CommWhatsAppMessage) => {
+    if (message.direction !== 'outbound') {
+      return message;
+    }
+
+    const existingOrderAt = getMessageClientOrderAt(message);
+    if (existingOrderAt) {
+      return message;
+    }
+
+    const externalMessageId = String(message.external_message_id ?? '').trim();
+    const clientRequestId = getMessageClientRequestId(message);
+    const orderAt = (externalMessageId ? outgoingMessageOrderAtByExternalIdRef.current.get(externalMessageId) : null)
+      ?? (clientRequestId ? outgoingMessageOrderAtByClientRequestIdRef.current.get(clientRequestId) : null)
+      ?? null;
+
+    if (!orderAt) {
+      return message;
+    }
+
+    return {
+      ...message,
+      metadata: {
+        ...getMessageMetadataRecord(message),
+        client_order_at: orderAt,
+      },
+    };
   }, []);
 
   const patchLocalOutgoingMessage = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
-    setLocalOutgoingMessages((current) => current.map((message) => (
-      message.id === messageId
-        ? {
-            ...message,
-            ...patch,
-            metadata: {
-              ...message.metadata,
-              ...(patch.metadata ?? {}),
-            },
-          }
-        : message
-    )));
-  }, []);
+    setLocalOutgoingMessages((current) => current.map((message) => {
+      if (message.id !== messageId) {
+        return message;
+      }
+
+      const nextMessage = {
+        ...message,
+        ...patch,
+        metadata: {
+          ...message.metadata,
+          ...(patch.metadata ?? {}),
+        },
+      };
+      rememberOutgoingMessageOrder(nextMessage);
+      return nextMessage;
+    }));
+  }, [rememberOutgoingMessageOrder]);
 
   const removeLocalOutgoingMessage = useCallback((messageId: string) => {
     setLocalOutgoingMessages((current) => {
@@ -3586,6 +3674,7 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const appendLocalOutgoingMessage = useCallback((message: CommWhatsAppMessage, retryPayload?: LocalOutgoingRetryPayload) => {
+    rememberOutgoingMessageOrder(message);
     setLocalOutgoingMessages((current) => mergeMessages(current, [message]));
     if (retryPayload) {
       localOutgoingRetryPayloadRef.current.set(message.id, retryPayload);
@@ -3594,12 +3683,13 @@ export default function WhatsAppInboxScreen() {
     if (message.media_url?.startsWith('blob:')) {
       localOutgoingMediaPreviewUrlsRef.current.set(message.id, message.media_url);
     }
-  }, []);
+  }, [rememberOutgoingMessageOrder]);
 
   const buildOptimisticOutgoingMessage = useCallback((params: {
     chat: CommWhatsAppChat;
     messageType: CommWhatsAppMediaSendKind | 'text' | 'document';
     textContent: string;
+    clientRequestId?: string;
     messageAt?: string;
     mediaUrl?: string | null;
     mediaMimeType?: string | null;
@@ -3642,6 +3732,8 @@ export default function WhatsAppInboxScreen() {
       transcription_updated_at: null,
       metadata: {
         local_outgoing: true,
+        client_order_at: nowIso,
+        ...(params.clientRequestId ? { client_request_id: params.clientRequestId } : {}),
         ...params.metadata,
       },
       created_at: nowIso,
@@ -3649,7 +3741,9 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const visibleMessages = useMemo(() => {
-    const filteredMessages = messages.filter((message) => !shouldHideTechnicalMessage(message));
+    const filteredMessages = messages
+      .filter((message) => !shouldHideTechnicalMessage(message))
+      .map(applyOutgoingOrderToServerMessage);
 
     if (!selectedChatId) {
       return filteredMessages;
@@ -3660,18 +3754,10 @@ export default function WhatsAppInboxScreen() {
       return filteredMessages;
     }
 
-    const serverExternalIds = new Set(
-      filteredMessages
-        .map((message) => String(message.external_message_id ?? '').trim())
-        .filter(Boolean),
-    );
-    const localVisible = localForChat.filter((message) => {
-      const externalId = String(message.external_message_id ?? '').trim();
-      return !externalId || !serverExternalIds.has(externalId);
-    });
+    const localVisible = localForChat.filter((message) => !filteredMessages.some((serverMessage) => messagesReferToSameOutgoing(message, serverMessage)));
 
     return mergeMessages(filteredMessages, localVisible);
-  }, [localOutgoingMessages, messages, selectedChatId]);
+  }, [applyOutgoingOrderToServerMessage, localOutgoingMessages, messages, selectedChatId]);
 
   const mediaViewerMessages = useMemo(
     () => visibleMessages.filter(isChatMediaViewerMessage),
@@ -3704,6 +3790,8 @@ export default function WhatsAppInboxScreen() {
 
     mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, {
       ...readPatch,
+      is_archived: chat.is_muted ? chat.is_archived : false,
+      archived_at: chat.is_muted ? chat.archived_at : null,
       last_message_text: summaryText,
       last_message_direction: 'outbound',
       last_message_at: messageAt,
@@ -3738,12 +3826,16 @@ export default function WhatsAppInboxScreen() {
       });
     }
 
-    setChats((current) => current.map((chat) => (
-      chat.id === chatId && chat.last_message_at === messageAt
-        ? { ...chat, last_message_delivery_status: deliveryStatus }
-        : chat
-    )));
-  }, []);
+    setChats((current) => {
+      const next = current.map((chat) => (
+        chat.id === chatId && chat.last_message_at === messageAt
+          ? { ...chat, last_message_delivery_status: deliveryStatus }
+          : chat
+      ));
+      chatsSignatureRef.current = buildChatsSignature(next);
+      return next;
+    });
+  }, [buildChatsSignature]);
 
   const resetComposerAfterQueue = useCallback(() => {
     setMessageDraft('');
@@ -3967,6 +4059,7 @@ export default function WhatsAppInboxScreen() {
     const incomingMessage = payload.new as CommWhatsAppMessage | null;
     const previousMessage = payload.old as Partial<CommWhatsAppMessage> | null;
     const targetChatId = incomingMessage?.chat_id ?? previousMessage?.chat_id ?? null;
+    const orderedIncomingMessage = incomingMessage ? applyOutgoingOrderToServerMessage(incomingMessage) : null;
 
     if (!targetChatId || selectedChatIdRef.current !== targetChatId) {
       return;
@@ -3975,8 +4068,8 @@ export default function WhatsAppInboxScreen() {
     setMessages((current) => {
       const nextMessages = payload.eventType === 'DELETE'
         ? current.filter((message) => message.id !== previousMessage?.id)
-        : incomingMessage
-          ? mergeMessages(current, [incomingMessage])
+        : orderedIncomingMessage
+          ? mergeMessages(current, [orderedIncomingMessage])
           : current;
       const nextSignature = buildMessagesSignature(nextMessages);
 
@@ -4005,27 +4098,23 @@ export default function WhatsAppInboxScreen() {
 
     if (incomingMessage) {
       setLocalOutgoingMessages((current) => {
-        const externalMessageId = String(incomingMessage.external_message_id ?? '').trim();
-        if (!externalMessageId) {
-          return current;
-        }
-
         let changed = false;
         const nextLocalMessages = current.filter((message) => {
           if (message.chat_id !== targetChatId) {
             return true;
           }
 
-          const localExternalMessageId = String(message.external_message_id ?? '').trim();
-          if (localExternalMessageId !== externalMessageId) {
+          if (!messagesReferToSameOutgoing(message, incomingMessage)) {
             return true;
           }
 
           changed = true;
+          rememberOutgoingMessageOrder(message);
           localOutgoingRetryPayloadRef.current.delete(message.id);
           const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
-          if (previewUrl?.startsWith('blob:') && !localExternalMessageId) {
-            URL.revokeObjectURL(previewUrl);
+          const incomingExternalMessageId = String(incomingMessage.external_message_id ?? '').trim();
+          if (previewUrl && incomingExternalMessageId) {
+            commWhatsAppService.rememberLocalMediaPreview(incomingExternalMessageId, previewUrl);
           }
           localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
           return false;
@@ -4034,7 +4123,7 @@ export default function WhatsAppInboxScreen() {
         return changed ? nextLocalMessages : current;
       });
     }
-  }, [buildMessagesSignature]);
+  }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder]);
 
   const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
     setMessages((current) => current.map((message) => (message.id === messageId ? { ...message, ...patch } : message)));
@@ -5325,7 +5414,6 @@ export default function WhatsAppInboxScreen() {
           : null;
         const shouldPreserveSelectedChat = Boolean(
           preservedSelectedChat
-            && chatMatchesActiveFilters(preservedSelectedChat)
             && !refreshedChats.some((chat) => chat.id === preservedSelectedChat.id),
         );
         const hydratedData = sortChatsByInboxOrder(
@@ -5414,7 +5502,8 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      const nextMessages = reason === 'initial' ? data : mergeMessages(latestMessagesRef.current, data);
+      const orderedData = data.map(applyOutgoingOrderToServerMessage);
+      const nextMessages = reason === 'initial' ? orderedData : mergeMessages(latestMessagesRef.current, orderedData);
       const nextSignature = buildMessagesSignature(nextMessages);
       setLocalOutgoingMessages((current) => {
         const nextLocalMessages: CommWhatsAppMessage[] = [];
@@ -5426,13 +5515,16 @@ export default function WhatsAppInboxScreen() {
           }
 
           const externalId = String(message.external_message_id ?? '').trim();
-          const alreadySynced = externalId && nextMessages.some((serverMessage) => String(serverMessage.external_message_id ?? '').trim() === externalId);
+          const syncedServerMessage = nextMessages.find((serverMessage) => messagesReferToSameOutgoing(message, serverMessage)) ?? null;
+          const alreadySynced = Boolean(syncedServerMessage);
 
           if (alreadySynced) {
+            rememberOutgoingMessageOrder(message);
             localOutgoingRetryPayloadRef.current.delete(message.id);
             const previewUrl = localOutgoingMediaPreviewUrlsRef.current.get(message.id);
-            if (previewUrl?.startsWith('blob:') && !externalId) {
-              URL.revokeObjectURL(previewUrl);
+            const syncedExternalMessageId = String(syncedServerMessage?.external_message_id ?? externalId).trim();
+            if (previewUrl && syncedExternalMessageId) {
+              commWhatsAppService.rememberLocalMediaPreview(syncedExternalMessageId, previewUrl);
             }
             localOutgoingMediaPreviewUrlsRef.current.delete(message.id);
             continue;
@@ -5483,7 +5575,7 @@ export default function WhatsAppInboxScreen() {
         pollingMessagesChatIdRef.current = null;
       }
     }
-  }, [buildMessagesSignature, loadChats]);
+  }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, loadChats, rememberOutgoingMessageOrder]);
 
   const handleSelectMessageSearchResult = useCallback((result: CommWhatsAppMessageSearchResult) => {
     const targetChat = result.chat;
@@ -6350,6 +6442,7 @@ export default function WhatsAppInboxScreen() {
         chat,
         messageType: 'text',
         textContent: segment,
+        clientRequestId,
         messageAt: optimisticTimestamps[index],
         metadata: quotePayload && index === 0
           ? {
@@ -6454,6 +6547,7 @@ export default function WhatsAppInboxScreen() {
             chat: selectedChat,
             messageType: attachment.kind,
             textContent: buildMediaSummaryText(attachment.kind),
+            clientRequestId,
             messageAt: optimisticTimestamps[index],
             mediaUrl: localPreviewUrl,
             mediaMimeType: attachment.file.type || null,
@@ -8106,6 +8200,7 @@ export default function WhatsAppInboxScreen() {
       chat: selectedChat,
       messageType: item.sendKind,
       textContent: buildMediaSummaryText(item.sendKind),
+      clientRequestId,
       messageAt,
       mediaUrl: item.previewUrl ?? item.sendUrl,
       mediaMimeType: item.mimeType,
@@ -8145,6 +8240,7 @@ export default function WhatsAppInboxScreen() {
           status_updated_at: new Date().toISOString(),
           error_message: null,
         });
+        updateOptimisticChatPreviewStatus(selectedChat.id, optimisticMessage.message_at, sendResult.status);
         if (sendResult.messageId && REFRESHABLE_OUTBOUND_STATUSES.has(sendResult.status.trim().toLowerCase())) {
           scheduleMessageStatusRefresh({
             chat: selectedChat,
@@ -8168,12 +8264,13 @@ export default function WhatsAppInboxScreen() {
           status_updated_at: new Date().toISOString(),
           error_message: message,
         });
+        updateOptimisticChatPreviewStatus(selectedChat.id, optimisticMessage.message_at, 'failed');
         throw error instanceof Error ? error : new Error(message);
       } finally {
         setSendingDrawerMedia(false);
       }
     });
-  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, selectedChat]);
+  }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, selectedChat, updateOptimisticChatPreviewStatus]);
 
   const handleToggleFollowUpSalesTechnique = useCallback((techniqueId: string) => {
     setFollowUpSelectedSalesTechniques((current) => (

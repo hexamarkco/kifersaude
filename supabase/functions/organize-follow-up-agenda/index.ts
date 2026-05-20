@@ -67,12 +67,26 @@ type ChatRow = {
   last_message_text: string | null;
 };
 
+type MessageRow = {
+  id: string;
+  chat_id: string;
+  direction: string | null;
+  message_type: string | null;
+  text_content: string | null;
+  media_caption: string | null;
+  transcription_text: string | null;
+  message_at: string | null;
+};
+
 type Candidate = {
   reminder: ReminderRow;
   lead: LeadRow | null;
   chat: ChatRow | null;
+  messages: MessageRow[];
   score: number;
   reasons: string[];
+  aiScore?: number | null;
+  aiReason?: string | null;
 };
 
 type PreviewChange = {
@@ -100,6 +114,9 @@ const DEFAULT_OPTIONS: OrganizerOptions = {
 };
 const MAX_DAILY_LIMIT = 80;
 const MAX_CANDIDATES = 500;
+const MAX_AI_CANDIDATES = 35;
+const MAX_MESSAGES_PER_CHAT = 10;
+const MAX_MESSAGE_TEXT_LENGTH = 220;
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -205,7 +222,7 @@ const isHotStatus = (status: unknown) => {
 
 const daysBetween = (left: Date, right: Date) => Math.floor((startOfLocalDay(left).getTime() - startOfLocalDay(right).getTime()) / 86400000);
 
-const buildCandidate = (reminder: ReminderRow, lead: LeadRow | null, chat: ChatRow | null, now: Date, options: OrganizerOptions): Candidate => {
+const buildCandidate = (reminder: ReminderRow, lead: LeadRow | null, chat: ChatRow | null, messages: MessageRow[], now: Date, options: OrganizerOptions): Candidate => {
   const dueAt = new Date(reminder.data_lembrete);
   const overdueDays = Math.max(0, daysBetween(now, dueAt));
   const lastContactAt = lead?.ultimo_contato || chat?.last_message_at || reminder.created_at || reminder.data_lembrete;
@@ -254,8 +271,31 @@ const buildCandidate = (reminder: ReminderRow, lead: LeadRow | null, chat: ChatR
 
   if (reasons.length === 0) reasons.push('Follow-up pendente dentro do criterio configurado.');
 
-  return { reminder, lead, chat, score, reasons };
+  if (messages.length === 0) {
+    score -= 20;
+    reasons.push('Sem historico recente de mensagens carregado.');
+  }
+
+  return { reminder, lead, chat, messages, score, reasons };
 };
+
+const extractMessageText = (message: MessageRow) => {
+  const text = toTrimmedString(message.text_content);
+  if (text) return text;
+  const caption = toTrimmedString(message.media_caption);
+  if (caption) return caption;
+  const transcription = toTrimmedString(message.transcription_text);
+  if (transcription) return `[Audio transcrito] ${transcription}`;
+  return `[${toTrimmedString(message.message_type) || 'mensagem sem texto'}]`;
+};
+
+const buildConversationSnippet = (messages: MessageRow[]) => messages
+  .slice(-MAX_MESSAGES_PER_CHAT)
+  .map((message) => ({
+    at: message.message_at,
+    direction: message.direction,
+    text: extractMessageText(message).slice(0, MAX_MESSAGE_TEXT_LENGTH),
+  }));
 
 const chunk = <T,>(items: T[], size: number): T[][] => {
   const chunks: T[][] = [];
@@ -274,6 +314,43 @@ const fetchByIds = async <T,>(supabaseAdmin: any, table: string, ids: string[], 
   }));
 
   return pages.flat();
+};
+
+const loadRecentMessagesByChatId = async (supabaseAdmin: any, chatIds: string[]) => {
+  const uniqueChatIds = Array.from(new Set(chatIds.filter(Boolean)));
+  const messagesByChatId = new Map<string, MessageRow[]>();
+  if (uniqueChatIds.length === 0) return messagesByChatId;
+
+  const pages = await Promise.all(chunk(uniqueChatIds, 60).map(async (batch) => {
+    const { data, error } = await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .select('id, chat_id, direction, message_type, text_content, media_caption, transcription_text, message_at')
+      .in('chat_id', batch)
+      .order('message_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(batch.length * MAX_MESSAGES_PER_CHAT);
+
+    if (error) throw new Error(`Falha ao carregar mensagens dos chats: ${error.message}`);
+    return (data ?? []) as MessageRow[];
+  }));
+
+  pages.flat().forEach((message) => {
+    const current = messagesByChatId.get(message.chat_id) ?? [];
+    if (current.length < MAX_MESSAGES_PER_CHAT) {
+      current.push(message);
+      messagesByChatId.set(message.chat_id, current);
+    }
+  });
+
+  messagesByChatId.forEach((messages, chatId) => {
+    messagesByChatId.set(chatId, [...messages].sort((left, right) => {
+      const leftTime = new Date(left.message_at || '').getTime();
+      const rightTime = new Date(right.message_at || '').getTime();
+      return leftTime - rightTime;
+    }));
+  });
+
+  return messagesByChatId;
 };
 
 const loadCandidates = async (supabaseAdmin: any, options: OrganizerOptions) => {
@@ -335,26 +412,26 @@ const loadCandidates = async (supabaseAdmin: any, options: OrganizerOptions) => 
   chatPages.flat().forEach((chat) => {
     if (chat.lead_id && !chatsByLeadId.has(chat.lead_id)) chatsByLeadId.set(chat.lead_id, chat);
   });
+  const messagesByChatId = await loadRecentMessagesByChatId(supabaseAdmin, Array.from(chatsByLeadId.values()).map((chat) => chat.id));
 
   return reminders.map((reminder) => {
     const leadId = reminder.lead_id || (reminder.contract_id ? contractsById.get(reminder.contract_id)?.lead_id : null) || null;
     const lead = leadId ? leadsById.get(leadId) ?? null : null;
     const chat = leadId ? chatsByLeadId.get(leadId) ?? null : null;
-    return buildCandidate(reminder, lead, chat, new Date(), options);
+    const messages = chat ? messagesByChatId.get(chat.id) ?? [] : [];
+    return buildCandidate(reminder, lead, chat, messages, new Date(), options);
   });
 };
 
 const tryAiRankCandidates = async (supabaseAdmin: any, candidates: Candidate[], options: OrganizerOptions) => {
-  const compact = candidates.slice(0, 120).map((candidate) => ({
+  const compact = candidates.slice(0, MAX_AI_CANDIDATES).map((candidate) => ({
     id: candidate.reminder.id,
     lead: candidate.lead?.nome_completo || candidate.chat?.display_name || candidate.reminder.titulo,
-    status: candidate.lead?.status,
     dueAt: candidate.reminder.data_lembrete,
-    priority: candidate.reminder.prioridade,
-    score: candidate.score,
-    reasons: candidate.reasons,
-    unread: Number(candidate.chat?.unread_count ?? 0) > 0 || candidate.chat?.manual_unread === true,
-    lastDirection: candidate.chat?.last_message_direction,
+    reminderTitle: candidate.reminder.titulo,
+    reminderDescription: candidate.reminder.descricao,
+    deterministicScore: candidate.score,
+    conversation: buildConversationSnippet(candidate.messages),
   }));
 
   try {
@@ -362,44 +439,55 @@ const tryAiRankCandidates = async (supabaseAdmin: any, candidates: Candidate[], 
       supabaseAdmin,
       task: 'follow_up_agenda_organization',
       systemPrompt: [
-        'Voce ajuda a priorizar uma fila diaria de follow-ups comerciais de planos de saude.',
-        'Use somente os dados enviados. Nao invente clientes, datas ou fatos.',
-        'Retorne apenas JSON valido no formato {"rankedIds":["..."],"notes":{"id":"motivo curto"}}.',
-        'Priorize atrasados, status comerciais quentes, chats com resposta/nao lidas e follow-ups antigos.',
+        'Voce prioriza uma fila diaria de follow-ups comerciais de planos de saude usando principalmente o contexto real de mensagens de cada chat.',
+        'A conversa e a fonte principal. Data do lembrete, status e score deterministico sao apenas apoio quando o historico estiver ambiguo.',
+        'De score 0-100 para urgencia de follow-up agora: 90-100 cliente quente/solicitou retorno/esta esperando proposta; 70-89 oportunidade clara ou resposta recente; 40-69 acompanhamento normal; 0-39 baixa prioridade, sem gancho claro ou deve aguardar.',
+        'Nao invente fatos. Se nao houver historico util, de score baixo/medio e explique que faltou contexto.',
+        'Retorne apenas JSON valido no formato {"items":[{"id":"...","score":0,"reason":"motivo curto baseado na conversa"}]}.',
       ].join('\n'),
       userPrompt: JSON.stringify({ options, candidates: compact }),
       temperature: 0.15,
-      maxTokens: 700,
+      maxTokens: 1800,
       preferDefaultModel: true,
     });
     const parsed = JSON.parse(result.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim());
-    const rankedIds = Array.isArray(parsed?.rankedIds) ? parsed.rankedIds.filter((id: unknown): id is string => typeof id === 'string') : [];
-    const notes = isRecord(parsed?.notes) ? parsed.notes as Record<string, unknown> : {};
-    return { rankedIds, notes, provider: result.provider, model: result.model, fallbackUsed: result.fallbackUsed };
+    const items = Array.isArray(parsed?.items) ? parsed.items.flatMap((item: unknown) => {
+      if (!isRecord(item)) return [];
+      const id = toTrimmedString(item.id);
+      const score = Number(item.score);
+      if (!id || !Number.isFinite(score)) return [];
+      return [{ id, score: Math.max(0, Math.min(100, Math.round(score))), reason: toTrimmedString(item.reason) }];
+    }) : [];
+    return { items, provider: result.provider, model: result.model, fallbackUsed: result.fallbackUsed };
   } catch (error) {
     console.error('[organize-follow-up-agenda] IA indisponivel para ranking, usando fallback deterministico', error);
-    return { rankedIds: [], notes: {}, provider: null, model: null, fallbackUsed: false };
+    return { items: [], provider: null, model: null, fallbackUsed: false };
   }
 };
 
 const buildPreview = async (supabaseAdmin: any, options: OrganizerOptions) => {
   const candidates = await loadCandidates(supabaseAdmin, options);
-  const deterministic = [...candidates].sort((left, right) => {
+  const deterministicBase = [...candidates].sort((left, right) => {
     if (right.score !== left.score) return right.score - left.score;
     return new Date(left.reminder.data_lembrete).getTime() - new Date(right.reminder.data_lembrete).getTime();
   });
-  const ai = await tryAiRankCandidates(supabaseAdmin, deterministic, options);
-  const byId = new Map(deterministic.map((candidate) => [candidate.reminder.id, candidate]));
-  const used = new Set<string>();
-  const ranked = [
-    ...ai.rankedIds.flatMap((id) => {
-      const candidate = byId.get(id);
-      if (!candidate || used.has(id)) return [];
-      used.add(id);
-      return [candidate];
-    }),
-    ...deterministic.filter((candidate) => !used.has(candidate.reminder.id)),
-  ];
+  const ai = await tryAiRankCandidates(supabaseAdmin, deterministicBase, options);
+  const aiById = new Map(ai.items.map((item) => [item.id, item]));
+  const ranked = deterministicBase
+    .map((candidate) => {
+      const aiItem = aiById.get(candidate.reminder.id);
+      return aiItem
+        ? { ...candidate, aiScore: aiItem.score, aiReason: aiItem.reason || null }
+        : candidate;
+    })
+    .sort((left, right) => {
+      const leftHasAi = typeof left.aiScore === 'number';
+      const rightHasAi = typeof right.aiScore === 'number';
+      if (leftHasAi && rightHasAi && left.aiScore !== right.aiScore) return (right.aiScore ?? 0) - (left.aiScore ?? 0);
+      if (leftHasAi !== rightHasAi) return leftHasAi ? -1 : 1;
+      if (right.score !== left.score) return right.score - left.score;
+      return new Date(left.reminder.data_lembrete).getTime() - new Date(right.reminder.data_lembrete).getTime();
+    });
 
   let scheduleDate = parseLocalDate(options.startDate);
   while (options.weekdaysOnly && isWeekend(scheduleDate)) scheduleDate = advanceDay(scheduleDate, true);
@@ -411,8 +499,7 @@ const buildPreview = async (supabaseAdmin: any, options: OrganizerOptions) => {
     }
     const newDateTime = buildIsoAtLocalTime(scheduleDate, options.queueTime);
     dayCount += 1;
-    const aiNote = toTrimmedString(ai.notes[candidate.reminder.id]);
-    const reasons = aiNote ? [aiNote, ...candidate.reasons] : candidate.reasons;
+    const reasons = candidate.aiReason ? [candidate.aiReason, ...candidate.reasons] : candidate.reasons;
     const leadName = candidate.lead?.nome_completo || candidate.chat?.display_name || candidate.chat?.saved_contact_name || candidate.reminder.titulo || 'Lead sem nome';
 
     return {
@@ -423,7 +510,7 @@ const buildPreview = async (supabaseAdmin: any, options: OrganizerOptions) => {
       currentDateTime: candidate.reminder.data_lembrete,
       newDateTime,
       priority: candidate.reminder.prioridade || 'normal',
-      score: Math.round(candidate.score),
+      score: Math.round(candidate.aiScore ?? candidate.score),
       reasons: reasons.slice(0, 4),
       changed: candidate.reminder.data_lembrete !== newDateTime,
     };

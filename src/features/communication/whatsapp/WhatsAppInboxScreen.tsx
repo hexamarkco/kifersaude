@@ -61,6 +61,7 @@ import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
 import { useWindowPollingState } from './hooks/useWindowPollingState';
 import { useComposerDraft, type ComposerSelection } from './hooks/useComposerDraft';
 import { useVoiceRecording } from './hooks/useVoiceRecording';
+import { useChatSearch } from './hooks/useChatSearch';
 import {
   applyPendingChatInboxState,
   buildPendingChatInboxStatePatch,
@@ -2741,12 +2742,6 @@ export default function WhatsAppInboxScreen() {
   const canViewAgenda = agendaPermission.can_view;
   const canEditAgenda = agendaPermission.can_edit;
   const [loading, setLoading] = useState(true);
-  const [searchDraft, setSearchDraft] = useState('');
-  const [search, setSearch] = useState('');
-  const [chatSearchResults, setChatSearchResults] = useState<CommWhatsAppChat[]>([]);
-  const [messageSearchResults, setMessageSearchResults] = useState<CommWhatsAppMessageSearchResult[]>([]);
-  const [searchingChats, setSearchingChats] = useState(false);
-  const [searchingMessages, setSearchingMessages] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const [advancedFiltersPosition, setAdvancedFiltersPosition] = useState<{ top: number; left: number } | null>(null);
@@ -2906,8 +2901,6 @@ export default function WhatsAppInboxScreen() {
   const selectedChatIdRef = useRef<string | null>(null);
   const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
-  const chatSearchRequestIdRef = useRef(0);
-  const messageSearchRequestIdRef = useRef(0);
   const messageSearchSelectionRequestIdRef = useRef(0);
   const pendingMessageSearchChatIdRef = useRef<string | null>(null);
   const messagesRequestIdRef = useRef(0);
@@ -2927,6 +2920,21 @@ export default function WhatsAppInboxScreen() {
   const leadSearchRequestIdRef = useRef(0);
   const startChatSourcesRequestIdRef = useRef(0);
   const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
+  const {
+    searchDraft,
+    search,
+    chatSearchResults,
+    messageSearchResults,
+    searchingChats,
+    searchingMessages,
+    setSearchDraft,
+    setSearch,
+  } = useChatSearch({
+    activityFilter: chatActivityFilter,
+    leadStatusFilters,
+    pendingChatInboxStateRef,
+    sortChats: sortChatsByInboxOrder,
+  });
   const voiceAttachment = useMemo(
     () => pendingAttachments.find((attachment) => attachment.kind === 'voice') ?? null,
     [pendingAttachments],
@@ -3039,14 +3047,6 @@ export default function WhatsAppInboxScreen() {
     return remaining <= SCROLL_BOTTOM_THRESHOLD_PX;
   }, []);
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setSearch(searchDraft.trim());
-    }, 250);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [searchDraft]);
-
   const archivedChatsCount = useMemo(() => chats.filter((chat) => chat.is_archived).length, [chats]);
 
   const selectedChat = useMemo(
@@ -3110,85 +3110,6 @@ export default function WhatsAppInboxScreen() {
 
     return sortChatsByInboxOrder(filtered).slice(0, 30);
   }, [chats, forwardSearch]);
-  useEffect(() => {
-    if (!search) {
-      setChatSearchResults([]);
-      setSearchingChats(false);
-      return;
-    }
-
-    const requestId = ++chatSearchRequestIdRef.current;
-    setSearchingChats(true);
-
-    void commWhatsAppService.listChats({
-      search,
-      activityFilter: chatActivityFilter,
-      leadStatusFilters,
-      archivedFilter: 'all',
-      limit: 500,
-    }).then((results) => {
-      if (requestId !== chatSearchRequestIdRef.current) {
-        return;
-      }
-
-      const hydratedResults = sortChatsByInboxOrder(applyPendingChatInboxState(results, pendingChatInboxStateRef.current));
-      setChatSearchResults(hydratedResults);
-    }).catch((error) => {
-      if (requestId !== chatSearchRequestIdRef.current) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao buscar conversas', error);
-      setChatSearchResults([]);
-    }).finally(() => {
-      if (requestId === chatSearchRequestIdRef.current) {
-        setSearchingChats(false);
-      }
-    });
-  }, [chatActivityFilter, leadStatusFilters, search]);
-
-  useEffect(() => {
-    if (!search) {
-      setMessageSearchResults([]);
-      setSearchingMessages(false);
-      return;
-    }
-
-    const requestId = ++messageSearchRequestIdRef.current;
-    setSearchingMessages(true);
-
-    void commWhatsAppService.searchMessages({
-      search,
-      archivedFilter: 'all',
-      limit: 30,
-    }).then((results) => {
-      if (requestId !== messageSearchRequestIdRef.current) {
-        return;
-      }
-
-      const seen = new Set<string>();
-      setMessageSearchResults(results.filter((result) => {
-        if (seen.has(result.message.id)) {
-          return false;
-        }
-
-        seen.add(result.message.id);
-        return true;
-      }));
-    }).catch((error) => {
-      if (requestId !== messageSearchRequestIdRef.current) {
-        return;
-      }
-
-      console.error('[WhatsAppInbox] erro ao buscar mensagens', error);
-      setMessageSearchResults([]);
-    }).finally(() => {
-      if (requestId === messageSearchRequestIdRef.current) {
-        setSearchingMessages(false);
-      }
-    });
-  }, [search]);
-
   const selectedChatTranscriptLabel = useMemo(
     () => {
       if (!selectedChat) {
@@ -7117,7 +7038,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setStartingChatKey((current) => (current === openingKey ? null : current));
     }
-  }, [startingChatKey, upsertChatLocally]);
+  }, [setSearch, setSearchDraft, startingChatKey, upsertChatLocally]);
 
   const handleStartChatFromManual = async () => {
     if (startingChatKey) {
@@ -7197,7 +7118,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setSharedContactActionKey((current) => (current === actionKey ? null : current));
     }
-  }, [chats, upsertChatLocally]);
+  }, [chats, setSearch, setSearchDraft, upsertChatLocally]);
 
   const handleSaveSharedContact = useCallback(async (contact: { name: string | null; phoneNumber: string | null }) => {
     const displayName = contact.name?.trim() ?? '';

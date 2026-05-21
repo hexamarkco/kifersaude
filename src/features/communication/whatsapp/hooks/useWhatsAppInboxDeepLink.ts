@@ -1,4 +1,4 @@
-import { useEffect, type MutableRefObject } from 'react';
+import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { SetURLSearchParams } from 'react-router-dom';
 
 import type { CommWhatsAppChat } from '../../../../lib/supabase';
@@ -24,6 +24,13 @@ export const useWhatsAppInboxDeepLink = ({
   setSelectedChatId: (value: string | null) => void;
   loadChats: LoadChats;
 }) => {
+  const selectedChatIdRef = useRef(selectedChatId);
+  const lastProcessedUrlChatIdRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
+
   useEffect(() => {
     chatIdFromUrlRef.current = searchParams.get('chatId');
   }, [chatIdFromUrlRef, searchParams]);
@@ -32,7 +39,13 @@ export const useWhatsAppInboxDeepLink = ({
     const requestedChatId = searchParams.get('chatId');
     chatIdFromUrlRef.current = requestedChatId;
 
-    if (!requestedChatId || selectedChatId === requestedChatId) {
+    if (lastProcessedUrlChatIdRef.current === requestedChatId) {
+      return;
+    }
+
+    lastProcessedUrlChatIdRef.current = requestedChatId;
+
+    if (!requestedChatId || selectedChatIdRef.current === requestedChatId) {
       return;
     }
 
@@ -44,12 +57,14 @@ export const useWhatsAppInboxDeepLink = ({
     }
 
     void loadChats({ sections: ['active', 'archived'] });
-  }, [chatIdFromUrlRef, latestChatsRef, loadChats, searchParams, selectedChatId, setArchivedSectionOpen, setSelectedChatId]);
+  }, [chatIdFromUrlRef, latestChatsRef, loadChats, searchParams, setArchivedSectionOpen, setSelectedChatId]);
 
   useEffect(() => {
     const currentUrlChatId = searchParams.get('chatId');
 
     if (selectedChatId) {
+      chatIdFromUrlRef.current = selectedChatId;
+
       if (currentUrlChatId === selectedChatId) {
         return;
       }
@@ -61,11 +76,14 @@ export const useWhatsAppInboxDeepLink = ({
     }
 
     if (!currentUrlChatId) {
+      chatIdFromUrlRef.current = null;
       return;
     }
+
+    chatIdFromUrlRef.current = null;
 
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('chatId');
     setSearchParams(nextParams, { replace: true });
-  }, [searchParams, selectedChatId, setSearchParams]);
+  }, [chatIdFromUrlRef, searchParams, selectedChatId, setSearchParams]);
 };

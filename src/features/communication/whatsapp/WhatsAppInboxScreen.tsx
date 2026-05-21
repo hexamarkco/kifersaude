@@ -535,6 +535,93 @@ type LinkifiedTextProps = {
   linkClassName?: string;
 };
 
+type WhatsAppTextFormat = 'bold' | 'italic' | 'strike';
+
+const WHATSAPP_TEXT_FORMAT_MARKERS: Array<{ marker: string; format: WhatsAppTextFormat }> = [
+  { marker: '**', format: 'bold' },
+  { marker: '__', format: 'italic' },
+  { marker: '*', format: 'bold' },
+  { marker: '_', format: 'italic' },
+  { marker: '~', format: 'strike' },
+];
+
+const isWhitespace = (value: string | undefined) => !value || /\s/.test(value);
+
+const findWhatsAppFormatMatch = (text: string, startIndex: number = 0) => {
+  let bestMatch: { start: number; end: number; marker: string; format: WhatsAppTextFormat } | null = null;
+
+  for (let index = startIndex; index < text.length; index += 1) {
+    for (const candidate of WHATSAPP_TEXT_FORMAT_MARKERS) {
+      const { marker, format } = candidate;
+      if (!text.startsWith(marker, index) || isWhitespace(text[index + marker.length])) {
+        continue;
+      }
+
+      let closingIndex = text.indexOf(marker, index + marker.length);
+      while (closingIndex !== -1) {
+        const content = text.slice(index + marker.length, closingIndex);
+        if (content.trim() && !isWhitespace(text[closingIndex - 1])) {
+          const match = { start: index, end: closingIndex, marker, format };
+          if (!bestMatch || match.start < bestMatch.start || (match.start === bestMatch.start && marker.length > bestMatch.marker.length)) {
+            bestMatch = match;
+          }
+          break;
+        }
+
+        closingIndex = text.indexOf(marker, closingIndex + marker.length);
+      }
+    }
+
+    if (bestMatch?.start === index) {
+      return bestMatch;
+    }
+  }
+
+  return bestMatch;
+};
+
+const hasWhatsAppTextFormatting = (text: string) => findWhatsAppFormatMatch(text) !== null;
+
+const renderWhatsAppFormattedText = (text: string, keyPrefix: string, depth: number = 0): ReactNode[] => {
+  if (!text || depth > 8) {
+    return text ? [text] : [];
+  }
+
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+  let matchIndex = 0;
+
+  while (cursor < text.length) {
+    const match = findWhatsAppFormatMatch(text, cursor);
+    if (!match) {
+      nodes.push(text.slice(cursor));
+      break;
+    }
+
+    if (match.start > cursor) {
+      nodes.push(text.slice(cursor, match.start));
+    }
+
+    const contentStart = match.start + match.marker.length;
+    const content = text.slice(contentStart, match.end);
+    const children = renderWhatsAppFormattedText(content, `${keyPrefix}-${matchIndex}`, depth + 1);
+    const key = `${keyPrefix}-${match.format}-${match.start}-${matchIndex}`;
+
+    if (match.format === 'bold') {
+      nodes.push(<strong key={key}>{children}</strong>);
+    } else if (match.format === 'italic') {
+      nodes.push(<em key={key}>{children}</em>);
+    } else {
+      nodes.push(<s key={key}>{children}</s>);
+    }
+
+    cursor = match.end + match.marker.length;
+    matchIndex += 1;
+  }
+
+  return nodes;
+};
+
 type PointerAnchor = {
   x: number;
   y: number;
@@ -544,7 +631,7 @@ function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
   const matches = extractRenderableUrls(text);
 
   if (matches.length === 0) {
-    return <p className={className}>{text}</p>;
+    return <p className={className}>{renderWhatsAppFormattedText(text, 'text')}</p>;
   }
 
   const parts: ReactNode[] = [];
@@ -552,7 +639,7 @@ function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
 
   matches.forEach((match, index) => {
     if (match.index > cursor) {
-      parts.push(text.slice(cursor, match.index));
+      parts.push(...renderWhatsAppFormattedText(text.slice(cursor, match.index), `text-${index}`));
     }
 
     parts.push(
@@ -571,7 +658,7 @@ function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
   });
 
   if (cursor < text.length) {
-    parts.push(text.slice(cursor));
+    parts.push(...renderWhatsAppFormattedText(text.slice(cursor), 'text-tail'));
   }
 
   return <p className={className}>{parts}</p>;
@@ -2955,6 +3042,7 @@ export default function WhatsAppInboxScreen() {
   } = useComposerDraft(selectedChatId);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
+  const hasComposerFormattingPreview = hasTypedMessage && hasWhatsAppTextFormatting(messageDraft);
   const channelState = operationalState?.channel ?? null;
   const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
   const isChannelConnected = connectionStatus === 'AUTH';
@@ -9028,6 +9116,12 @@ export default function WhatsAppInboxScreen() {
                         disabled={generatingFollowUp}
                         className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-sm leading-6 focus:outline-none"
                       />
+                      {hasComposerFormattingPreview ? (
+                        <div className="whatsapp-inbox-composer-format-preview mt-2 rounded-xl px-3 py-2 text-xs leading-5">
+                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Prévia</span>
+                          <LinkifiedText className="whitespace-pre-wrap break-words" text={messageDraft} />
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className={`flex shrink-0 ${isComposerExpanded ? 'items-end pb-0.5' : 'items-center'}`}>

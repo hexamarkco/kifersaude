@@ -4702,6 +4702,18 @@ html {
   color: var(--panel-placeholder);
 }
 
+.painel-theme .whatsapp-inbox-composer-format-preview {
+  border: 1px solid color-mix(in srgb, var(--panel-border-subtle, #e7dac8) 82%, transparent);
+  background: color-mix(in srgb, var(--panel-surface-soft, #f8f2e9) 84%, transparent);
+  color: var(--panel-text-soft, #5b4635);
+}
+
+.painel-theme.theme-dark .whatsapp-inbox-composer-format-preview {
+  border-color: rgba(247, 218, 188, 0.13);
+  background: rgba(255, 229, 199, 0.055);
+  color: var(--panel-text-soft, #f4d7b4);
+}
+
 .painel-theme .whatsapp-inbox-composer-icon,
 .painel-theme .whatsapp-inbox-composer-action {
   border: 1px solid color-mix(in srgb, var(--panel-border) 72%, transparent);

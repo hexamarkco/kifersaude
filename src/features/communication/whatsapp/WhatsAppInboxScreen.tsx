@@ -2955,7 +2955,6 @@ export default function WhatsAppInboxScreen() {
   } = useComposerDraft(selectedChatId);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
-  const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
 
   const beginSendOperation = useCallback(() => {
     activeSendOperationsRef.current += 1;
@@ -4111,6 +4110,7 @@ export default function WhatsAppInboxScreen() {
     sendDisabledReason,
     onAttachmentChange: setPendingAttachments,
   });
+  const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
   const followUpGenerationDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para gerar o follow-up.';

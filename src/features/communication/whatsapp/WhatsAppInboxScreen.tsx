@@ -90,7 +90,6 @@ const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending']);
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
-type VoiceRecordingState = 'idle' | 'requesting' | 'recording';
 type PendingAttachment = {
   id: string;
   file: File;
@@ -1541,70 +1540,6 @@ const formatDurationLabel = (seconds: number) => {
   return `${mins}:${secs}`;
 };
 
-const getSupportedVoiceMimeType = () => {
-  if (typeof MediaRecorder === 'undefined') {
-    return '';
-  }
-
-  const candidates = ['audio/ogg;codecs=opus', 'audio/ogg', 'audio/webm;codecs=opus', 'audio/webm'];
-  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) || '';
-};
-
-const buildWaveformBars = (input: Uint8Array, barCount: number = 28) => {
-  if (!input.length) return DEFAULT_WAVEFORM;
-
-  const chunkSize = Math.max(1, Math.floor(input.length / barCount));
-  const bars: number[] = [];
-
-  for (let index = 0; index < barCount; index += 1) {
-    const start = index * chunkSize;
-    const end = Math.min(input.length, start + chunkSize);
-    let peak = 0;
-
-    for (let offset = start; offset < end; offset += 1) {
-      const amplitude = Math.abs(input[offset] - 128) / 128;
-      if (amplitude > peak) {
-        peak = amplitude;
-      }
-    }
-
-    bars.push(Math.max(0.14, Math.min(1, peak * 1.8 + 0.12)));
-  }
-
-  return bars;
-};
-
-const buildVoiceWaveformPayload = (input: Uint8Array, barCount: number = 64) => {
-  if (!input.length) {
-    return '';
-  }
-
-  const chunkSize = Math.max(1, Math.floor(input.length / barCount));
-  const samples = new Uint8Array(barCount);
-
-  for (let index = 0; index < barCount; index += 1) {
-    const start = index * chunkSize;
-    const end = Math.min(input.length, start + chunkSize);
-    let total = 0;
-    let count = 0;
-
-    for (let offset = start; offset < end; offset += 1) {
-      total += Math.abs(input[offset] - 128) / 128;
-      count += 1;
-    }
-
-    const average = count > 0 ? total / count : 0;
-    samples[index] = Math.max(0, Math.min(127, Math.round(average * 127)));
-  }
-
-  let binary = '';
-  samples.forEach((value) => {
-    binary += String.fromCharCode(value);
-  });
-
-  return btoa(binary);
-};
-
 function WaveformBars({ bars, active = false }: { bars?: number[]; active?: boolean }) {
   const resolvedBars = bars && bars.length > 0 ? bars : DEFAULT_WAVEFORM;
 
@@ -2934,21 +2869,7 @@ export default function WhatsAppInboxScreen() {
   const messageActionTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const messageBubbleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const chatMenuTriggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const voiceRecorderRef = useRef<MediaRecorder | null>(null);
-  const voiceChunksRef = useRef<Blob[]>([]);
-  const voiceStreamRef = useRef<MediaStream | null>(null);
-  const voiceTimerRef = useRef<number | null>(null);
-  const voiceWaveformTimerRef = useRef<number | null>(null);
-  const voiceMimeTypeRef = useRef('');
-  const discardVoiceRecordingRef = useRef(false);
   const cancelVoiceRecordingRef = useRef<() => void>(() => undefined);
-  const voiceRecordingSecondsRef = useRef(0);
-  const voiceAudioContextRef = useRef<AudioContext | null>(null);
-  const voiceAnalyserRef = useRef<AnalyserNode | null>(null);
-  const voiceSourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const voiceWaveformDataRef = useRef<Uint8Array | null>(null);
-  const voiceWaveformSnapshotRef = useRef<number[]>(DEFAULT_WAVEFORM);
-  const voiceWaveformPayloadRef = useRef('');
   const mediaUploadAbortControllerRef = useRef<AbortController | null>(null);
   const attachmentPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const localOutgoingRetryPayloadRef = useRef<Map<string, LocalOutgoingRetryPayload>>(new Map());
@@ -2959,7 +2880,6 @@ export default function WhatsAppInboxScreen() {
   const activeSendOperationsRef = useRef(0);
   const composerQueueSnapshotKeysRef = useRef<Set<string>>(new Set());
   const retryingMessageIdsRef = useRef<Set<string>>(new Set());
-  const autoSendVoiceRef = useRef(false);
   const autoLinkedLeadKeyRef = useRef<string | null>(null);
   const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
@@ -3667,7 +3587,7 @@ export default function WhatsAppInboxScreen() {
     setVoicePreviewPlaying(false);
     setVoicePreviewCurrentTime(0);
     setVoicePreviewDuration(null);
-  }, [resetComposerDraft]);
+  }, [resetComposerDraft, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying, voicePreviewAudioRef]);
 
   const messageTimelineItems = useMemo(() => {
     const items: Array<
@@ -4999,7 +4919,7 @@ export default function WhatsAppInboxScreen() {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [voiceAttachment]);
+  }, [voiceAttachment, voicePreviewAudioRef, setVoicePreviewCurrentTime, setVoicePreviewDuration, setVoicePreviewPlaying]);
 
   useEffect(() => {
     selectedChatIdRef.current = selectedChatId;
@@ -5907,45 +5827,6 @@ export default function WhatsAppInboxScreen() {
     isNearBottomRef.current = isScrolledNearBottom(container);
   }, [isScrolledNearBottom]);
 
-  const clearVoiceTimer = useCallback(() => {
-    if (voiceTimerRef.current !== null) {
-      window.clearInterval(voiceTimerRef.current);
-      voiceTimerRef.current = null;
-    }
-  }, []);
-
-  const clearVoiceWaveformTimer = useCallback(() => {
-    if (voiceWaveformTimerRef.current !== null) {
-      window.clearInterval(voiceWaveformTimerRef.current);
-      voiceWaveformTimerRef.current = null;
-    }
-  }, []);
-
-  const teardownVoiceAnalyser = useCallback(() => {
-    clearVoiceWaveformTimer();
-
-    voiceSourceNodeRef.current?.disconnect();
-    voiceSourceNodeRef.current = null;
-    voiceAnalyserRef.current?.disconnect();
-    voiceAnalyserRef.current = null;
-    voiceWaveformDataRef.current = null;
-
-    if (voiceAudioContextRef.current) {
-      void voiceAudioContextRef.current.close().catch(() => undefined);
-      voiceAudioContextRef.current = null;
-    }
-  }, [clearVoiceWaveformTimer]);
-
-  const stopVoiceStream = useCallback(() => {
-    if (voiceStreamRef.current) {
-      for (const track of voiceStreamRef.current.getTracks()) {
-        track.stop();
-      }
-      voiceStreamRef.current = null;
-    }
-    teardownVoiceAnalyser();
-  }, [teardownVoiceAnalyser]);
-
   useEffect(() => {
     const textarea = composerTextareaRef.current;
     if (!textarea) return;
@@ -6047,246 +5928,17 @@ export default function WhatsAppInboxScreen() {
   };
 
   const handleClearAttachment = (attachmentId?: string) => {
-    voicePreviewAudioRef.current?.pause();
-    if (voicePreviewAudioRef.current) {
-      voicePreviewAudioRef.current.currentTime = 0;
+    if (!attachmentId || pendingAttachments.find((a) => a.id === attachmentId)?.kind === 'voice') {
+      handleClearVoiceAttachmentFromHook();
     }
-    setVoicePreviewPlaying(false);
-    setVoicePreviewCurrentTime(0);
-    setVoicePreviewDuration(null);
     setPendingAttachments((current) => {
       if (!attachmentId) {
         return [];
       }
-
       return current.filter((attachment) => attachment.id !== attachmentId);
     });
     setMediaUploadProgress(null);
   };
-
-  const finalizeVoiceRecording = useCallback(() => {
-    const chunks = [...voiceChunksRef.current];
-    voiceChunksRef.current = [];
-
-    if (discardVoiceRecordingRef.current) {
-      discardVoiceRecordingRef.current = false;
-      setPendingAttachments([]);
-      setVoiceRecordingSeconds(0);
-      voiceRecordingSecondsRef.current = 0;
-      voiceWaveformPayloadRef.current = '';
-      return;
-    }
-
-    if (chunks.length === 0) {
-      setVoiceRecordingSeconds(0);
-      voiceRecordingSecondsRef.current = 0;
-      voiceWaveformPayloadRef.current = '';
-      return;
-    }
-
-    const mimeType = voiceMimeTypeRef.current || 'audio/webm';
-    const blob = new Blob(chunks, { type: mimeType });
-    const extension = mimeType.includes('ogg') ? 'ogg' : 'webm';
-    const file = new File([blob], `nota-voz-${Date.now()}.${extension}`, { type: mimeType });
-    const durationSeconds = voiceRecordingSecondsRef.current;
-    const previewUrl = URL.createObjectURL(blob);
-
-    setPendingAttachments([{
-      id: createPendingAttachmentId(),
-      file,
-      kind: 'voice',
-      durationSeconds,
-      previewUrl,
-      waveform: voiceWaveformSnapshotRef.current,
-      waveformPayload: voiceWaveformPayloadRef.current || null,
-    }]);
-    setVoiceRecordingSeconds(0);
-    voiceRecordingSecondsRef.current = 0;
-    setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
-    voiceWaveformPayloadRef.current = '';
-  }, []);
-
-  const handleStopVoiceRecording = useCallback((autoSend: boolean = false) => {
-    if (voiceRecordingState !== 'recording') {
-      return;
-    }
-
-    autoSendVoiceRef.current = autoSend;
-    setVoiceRecordingState('idle');
-    clearVoiceTimer();
-    voiceRecorderRef.current?.stop();
-  }, [clearVoiceTimer, voiceRecordingState]);
-
-  const handleCancelVoiceRecording = useCallback(() => {
-    if (voiceRecordingState === 'idle' && !voiceRecorderRef.current) {
-      return;
-    }
-
-    discardVoiceRecordingRef.current = true;
-    autoSendVoiceRef.current = false;
-    setVoiceRecordingState('idle');
-    setVoiceRecordingSeconds(0);
-    voiceRecordingSecondsRef.current = 0;
-    setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
-    voiceWaveformPayloadRef.current = '';
-    clearVoiceTimer();
-
-    if (voiceRecorderRef.current && voiceRecorderRef.current.state !== 'inactive') {
-      voiceRecorderRef.current.stop();
-    } else {
-      voiceChunksRef.current = [];
-      stopVoiceStream();
-    }
-  }, [clearVoiceTimer, stopVoiceStream, voiceRecordingState]);
-
-  const handleStartVoiceRecording = useCallback(async () => {
-    if (voiceRecordingState !== 'idle') {
-      return;
-    }
-
-    if (sendDisabledReason) {
-      toast.error(sendDisabledReason);
-      return;
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      toast.error('Seu navegador não suporta gravação de áudio neste inbox.');
-      return;
-    }
-
-    try {
-      setVoiceRecordingState('requesting');
-      setPendingAttachments([]);
-      setVoicePreviewPlaying(false);
-      setVoicePreviewCurrentTime(0);
-      setVoicePreviewDuration(null);
-      setVoiceRecordingSeconds(0);
-      voiceRecordingSecondsRef.current = 0;
-      setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
-      setMediaUploadProgress(null);
-      discardVoiceRecordingRef.current = false;
-      voiceWaveformPayloadRef.current = '';
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      if (discardVoiceRecordingRef.current) {
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-        setVoiceRecordingState('idle');
-        return;
-      }
-
-      const supportedMimeType = getSupportedVoiceMimeType();
-      const recorder = supportedMimeType
-        ? new MediaRecorder(stream, { mimeType: supportedMimeType })
-        : new MediaRecorder(stream);
-
-      const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (AudioContextCtor) {
-        const audioContext = new AudioContextCtor();
-        const analyser = audioContext.createAnalyser();
-        analyser.fftSize = 128;
-        analyser.smoothingTimeConstant = 0.78;
-        const sourceNode = audioContext.createMediaStreamSource(stream);
-        sourceNode.connect(analyser);
-
-        voiceAudioContextRef.current = audioContext;
-        voiceAnalyserRef.current = analyser;
-        voiceSourceNodeRef.current = sourceNode;
-        voiceWaveformDataRef.current = new Uint8Array(analyser.frequencyBinCount);
-        setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
-        voiceWaveformSnapshotRef.current = DEFAULT_WAVEFORM;
-
-        voiceWaveformTimerRef.current = window.setInterval(() => {
-          if (!voiceAnalyserRef.current || !voiceWaveformDataRef.current) {
-            return;
-          }
-
-          voiceAnalyserRef.current.getByteTimeDomainData(voiceWaveformDataRef.current);
-          const nextBars = buildWaveformBars(voiceWaveformDataRef.current);
-          const nextWaveformPayload = buildVoiceWaveformPayload(voiceWaveformDataRef.current);
-          voiceWaveformSnapshotRef.current = nextBars;
-          voiceWaveformPayloadRef.current = nextWaveformPayload;
-          setVoiceRecordingWaveform(nextBars);
-        }, 120);
-      }
-
-      voiceMimeTypeRef.current = supportedMimeType || recorder.mimeType || 'audio/webm';
-      voiceStreamRef.current = stream;
-      voiceRecorderRef.current = recorder;
-      voiceChunksRef.current = [];
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          voiceChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        stopVoiceStream();
-        voiceRecorderRef.current = null;
-        clearVoiceTimer();
-        finalizeVoiceRecording();
-      };
-
-      recorder.onerror = () => {
-        stopVoiceStream();
-        voiceRecorderRef.current = null;
-        clearVoiceTimer();
-        setVoiceRecordingState('idle');
-        setVoiceRecordingSeconds(0);
-        discardVoiceRecordingRef.current = true;
-        voiceChunksRef.current = [];
-        toast.error('Não foi possível continuar a gravação de áudio.');
-      };
-
-      recorder.start(250);
-      setVoiceRecordingState('recording');
-      voiceTimerRef.current = window.setInterval(() => {
-        setVoiceRecordingSeconds((current) => {
-          const next = current + 1;
-          voiceRecordingSecondsRef.current = next;
-          return next;
-        });
-      }, 1000);
-    } catch (error) {
-      stopVoiceStream();
-      voiceRecorderRef.current = null;
-      clearVoiceTimer();
-      setVoiceRecordingState('idle');
-      setVoiceRecordingSeconds(0);
-      voiceRecordingSecondsRef.current = 0;
-      setVoiceRecordingWaveform(DEFAULT_WAVEFORM);
-      voiceWaveformPayloadRef.current = '';
-
-      const message =
-        error instanceof DOMException && error.name === 'NotAllowedError'
-          ? 'Permita o microfone no navegador para gravar nota de voz.'
-          : 'Não foi possível iniciar a gravação de áudio.';
-      toast.error(message);
-    }
-  }, [clearVoiceTimer, finalizeVoiceRecording, sendDisabledReason, stopVoiceStream, voiceRecordingState]);
-
-  cancelVoiceRecordingRef.current = handleCancelVoiceRecording;
-
-  const handleToggleVoicePreviewPlayback = useCallback(() => {
-    const audio = voicePreviewAudioRef.current;
-    if (!audio || !voiceAttachment) {
-      return;
-    }
-
-    if (voicePreviewPlaying) {
-      audio.pause();
-      setVoicePreviewPlaying(false);
-      return;
-    }
-
-    void audio.play().then(() => {
-      setVoicePreviewPlaying(true);
-    }).catch(() => {
-      toast.error('Não foi possível reproduzir a nota de voz agora.');
-    });
-  }, [voiceAttachment, voicePreviewPlaying]);
 
   const handleSendCurrentVoiceRecording = () => {
     if (voiceRecordingState === 'recording') {
@@ -6578,7 +6230,7 @@ export default function WhatsAppInboxScreen() {
 
     autoSendVoiceRef.current = false;
     void handleSendMessage();
-  }, [handleSendMessage, voiceAttachment]);
+  }, [handleSendMessage, voiceAttachment, autoSendVoiceRef]);
 
   const handleCancelMediaUpload = () => {
     mediaUploadAbortControllerRef.current?.abort();

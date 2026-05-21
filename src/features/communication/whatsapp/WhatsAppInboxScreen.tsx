@@ -2955,6 +2955,59 @@ export default function WhatsAppInboxScreen() {
   } = useComposerDraft(selectedChatId);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
+  const channelState = operationalState?.channel ?? null;
+  const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
+  const isChannelConnected = connectionStatus === 'AUTH';
+  const hasWebhookEver = Boolean(channelState?.last_webhook_received_at);
+  const webhookAgeMs = channelState?.last_webhook_received_at
+    ? Date.now() - new Date(channelState.last_webhook_received_at).getTime()
+    : null;
+  const isWebhookStale = Boolean(webhookAgeMs && webhookAgeMs > STALE_WEBHOOK_THRESHOLD_MS);
+  const sendDisabledReason = useMemo(() => {
+    if (!operationalStateLoaded) {
+      return null;
+    }
+
+    if (operationalStateError && !operationalState) {
+      return 'Não foi possível verificar o canal do WhatsApp agora.';
+    }
+
+    if (!operationalState?.tokenConfigured) {
+      return 'Token da Whapi não configurado em /painel/config.';
+    }
+
+    if (!operationalState.configEnabled) {
+      return 'Envio do WhatsApp está desabilitado em /painel/config.';
+    }
+
+    if (!isChannelConnected) {
+      return `Canal WhatsApp ${formatConnectionStatusLabel(connectionStatus).toLowerCase()}.`;
+    }
+
+    return null;
+  }, [connectionStatus, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
+  const {
+    voiceRecordingState,
+    voiceRecordingSeconds,
+    voiceRecordingWaveform,
+    voicePreviewPlaying,
+    voicePreviewDuration,
+    voicePreviewCurrentTime,
+    voicePreviewAudioRef,
+    autoSendVoiceRef,
+    handleStartVoiceRecording,
+    handleStopVoiceRecording,
+    handleCancelVoiceRecording,
+    handleToggleVoicePreviewPlayback,
+    handleClearVoiceAttachment: handleClearVoiceAttachmentFromHook,
+    setVoicePreviewPlaying,
+    setVoicePreviewCurrentTime,
+    setVoicePreviewDuration,
+  } = useVoiceRecording({
+    sendDisabledReason,
+    onAttachmentChange: setPendingAttachments,
+  });
+  const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
 
   const beginSendOperation = useCallback(() => {
     activeSendOperationsRef.current += 1;
@@ -4045,8 +4098,6 @@ export default function WhatsAppInboxScreen() {
     }
   }, []);
 
-  const channelState = operationalState?.channel ?? null;
-  const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
   const suggestedLead = useMemo(() => {
     if (!leadDrawerOpen || selectedChat?.lead_id || leadSearchQuery.trim() !== '') {
       return null;
@@ -4059,58 +4110,6 @@ export default function WhatsAppInboxScreen() {
     () => getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null),
     [channelState?.connected_user_name, selectedChat],
   );
-  const isChannelConnected = connectionStatus === 'AUTH';
-  const hasWebhookEver = Boolean(channelState?.last_webhook_received_at);
-  const webhookAgeMs = channelState?.last_webhook_received_at
-    ? Date.now() - new Date(channelState.last_webhook_received_at).getTime()
-    : null;
-  const isWebhookStale = Boolean(webhookAgeMs && webhookAgeMs > STALE_WEBHOOK_THRESHOLD_MS);
-  const sendDisabledReason = useMemo(() => {
-    if (!operationalStateLoaded) {
-      return null;
-    }
-
-    if (operationalStateError && !operationalState) {
-      return 'Não foi possível verificar o canal do WhatsApp agora.';
-    }
-
-    if (!operationalState?.tokenConfigured) {
-      return 'Token da Whapi não configurado em /painel/config.';
-    }
-
-    if (!operationalState.configEnabled) {
-      return 'Envio do WhatsApp está desabilitado em /painel/config.';
-    }
-
-    if (!isChannelConnected) {
-      return `Canal WhatsApp ${formatConnectionStatusLabel(connectionStatus).toLowerCase()}.`;
-    }
-
-    return null;
-  }, [connectionStatus, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
-
-  const {
-    voiceRecordingState,
-    voiceRecordingSeconds,
-    voiceRecordingWaveform,
-    voicePreviewPlaying,
-    voicePreviewDuration,
-    voicePreviewCurrentTime,
-    voicePreviewAudioRef,
-    autoSendVoiceRef,
-    handleStartVoiceRecording,
-    handleStopVoiceRecording,
-    handleCancelVoiceRecording,
-    handleToggleVoicePreviewPlayback,
-    handleClearVoiceAttachment: handleClearVoiceAttachmentFromHook,
-    setVoicePreviewPlaying,
-    setVoicePreviewCurrentTime,
-    setVoicePreviewDuration,
-  } = useVoiceRecording({
-    sendDisabledReason,
-    onAttachmentChange: setPendingAttachments,
-  });
-  const isVoiceComposerMode = voiceRecordingState === 'recording' || voiceAttachment !== null;
   const followUpGenerationDisabledReason = useMemo(() => {
     if (!selectedChat) {
       return 'Selecione uma conversa para gerar o follow-up.';

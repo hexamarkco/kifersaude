@@ -1066,7 +1066,7 @@ export const commWhatsAppService = {
     return payload;
   },
 
-  async generateFollowUp(chatId: string, options: { customInstructions?: string; tone?: CommWhatsAppFollowUpTone; variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[]; autoSelectContext?: boolean } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+  async generateFollowUp(chatId: string, options: { customInstructions?: string; tone?: CommWhatsAppFollowUpTone; variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[]; autoSelectContext?: boolean; manualContext?: { tone?: boolean; situationPresetIds?: boolean; salesTechniques?: boolean } } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-generate-follow-up', {
       body: {
         chatId,
@@ -1076,6 +1076,7 @@ export const commWhatsAppService = {
         salesTechniques: options.salesTechniques ?? [],
         situationPresetIds: options.situationPresetIds ?? [],
         autoSelectContext: options.autoSelectContext !== false,
+        manualContext: options.manualContext ?? {},
       },
     });
 

@@ -2858,6 +2858,11 @@ export default function WhatsAppInboxScreen() {
   const [followUpVariations, setFollowUpVariations] = useState<CommWhatsAppFollowUpVariation[]>([]);
   const [followUpSelectedSalesTechniques, setFollowUpSelectedSalesTechniques] = useState<string[]>([]);
   const [followUpSelectedSituationPresetIds, setFollowUpSelectedSituationPresetIds] = useState<string[]>([]);
+  const [followUpManualContext, setFollowUpManualContext] = useState({
+    tone: false,
+    situationPresetIds: false,
+    salesTechniques: false,
+  });
   const [followUpAiContextRationale, setFollowUpAiContextRationale] = useState<string | null>(null);
   const [followUpNextAction, setFollowUpNextAction] = useState<CommWhatsAppFollowUpNextAction | null>(null);
   const [schedulingFollowUpNextAction, setSchedulingFollowUpNextAction] = useState(false);
@@ -4939,6 +4944,7 @@ export default function WhatsAppInboxScreen() {
     setFollowUpVariations([]);
     setFollowUpSelectedSalesTechniques([]);
     setFollowUpSelectedSituationPresetIds([]);
+    setFollowUpManualContext({ tone: false, situationPresetIds: false, salesTechniques: false });
     setFollowUpAiContextRationale(null);
     setFollowUpNextAction(null);
   }, []);
@@ -7524,7 +7530,7 @@ export default function WhatsAppInboxScreen() {
   const handleGenerateFollowUp = useCallback(async (
     customInstructions: string,
     tone: CommWhatsAppFollowUpTone,
-    options: { variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[] } = {},
+    options: { variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[]; manualContext?: { tone?: boolean; situationPresetIds?: boolean; salesTechniques?: boolean } } = {},
   ) => {
     if (!selectedChat) {
       return;
@@ -7540,6 +7546,7 @@ export default function WhatsAppInboxScreen() {
     const validSituationPresetIds = new Set<string>(CONVERSATION_SITUATION_PRESETS.map((preset) => preset.id));
     const normalizedSituationPresetIds = (options.situationPresetIds ?? followUpSelectedSituationPresetIds)
       .filter((presetId) => validSituationPresetIds.has(presetId));
+    const activeManualContext = options.manualContext ?? followUpManualContext;
     const requestId = ++followUpGenerationRequestIdRef.current;
     const targetChatId = selectedChat.id;
     setGeneratingFollowUp(true);
@@ -7552,6 +7559,7 @@ export default function WhatsAppInboxScreen() {
         salesTechniques: normalizedSalesTechniques,
         situationPresetIds: normalizedSituationPresetIds,
         autoSelectContext: true,
+        manualContext: activeManualContext,
       });
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -7562,6 +7570,7 @@ export default function WhatsAppInboxScreen() {
       setFollowUpTone(result.aiContext?.tone ?? tone);
       setFollowUpSelectedSalesTechniques(result.aiContext?.salesTechniques ?? normalizedSalesTechniques);
       setFollowUpSelectedSituationPresetIds(result.aiContext?.situationPresetIds ?? normalizedSituationPresetIds);
+      setFollowUpManualContext(activeManualContext);
       setFollowUpAiContextRationale(result.aiContext?.rationale ?? null);
       setFollowUpNextAction(result.nextAction ?? null);
     } catch (error) {
@@ -7575,7 +7584,7 @@ export default function WhatsAppInboxScreen() {
         setGeneratingFollowUp(false);
       }
     }
-  }, [followUpGenerationDisabledReason, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, selectedChat]);
+  }, [followUpGenerationDisabledReason, followUpManualContext, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, selectedChat]);
 
   const handleOpenFollowUpModal = useCallback(() => {
     if (followUpGenerationDisabledReason) {
@@ -7873,6 +7882,7 @@ export default function WhatsAppInboxScreen() {
   }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, mediaDrawerSendDisabledReason, patchLocalOutgoingMessage, scheduleMessageStatusRefresh, selectedChat, updateOptimisticChatPreviewStatus]);
 
   const handleToggleFollowUpSalesTechnique = useCallback((techniqueId: string) => {
+    setFollowUpManualContext((current) => ({ ...current, salesTechniques: true }));
     setFollowUpSelectedSalesTechniques((current) => (
       current.includes(techniqueId)
         ? current.filter((selectedTechniqueId) => selectedTechniqueId !== techniqueId)
@@ -7881,6 +7891,7 @@ export default function WhatsAppInboxScreen() {
   }, []);
 
   const handleToggleFollowUpSituationPreset = useCallback((presetId: string) => {
+    setFollowUpManualContext((current) => ({ ...current, situationPresetIds: true }));
     setFollowUpSelectedSituationPresetIds((current) => (
       current.includes(presetId)
         ? current.filter((selectedPresetId) => selectedPresetId !== presetId)
@@ -7888,13 +7899,19 @@ export default function WhatsAppInboxScreen() {
     ));
   }, []);
 
+  const handleChangeFollowUpTone = useCallback((tone: CommWhatsAppFollowUpTone) => {
+    setFollowUpTone(tone);
+    setFollowUpManualContext((current) => ({ ...current, tone: true }));
+  }, []);
+
   const handleRegenerateFollowUp = useCallback((options: { variantCount?: number } = {}) => {
     void handleGenerateFollowUp(followUpCustomInstructions, followUpTone, {
       ...options,
       salesTechniques: followUpSelectedSalesTechniques,
       situationPresetIds: followUpSelectedSituationPresetIds,
+      manualContext: followUpManualContext,
     });
-  }, [followUpCustomInstructions, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, followUpTone, handleGenerateFollowUp]);
+  }, [followUpCustomInstructions, followUpManualContext, followUpSelectedSalesTechniques, followUpSelectedSituationPresetIds, followUpTone, handleGenerateFollowUp]);
 
   const handleScheduleFollowUpNextAction = useCallback(async () => {
     if (!selectedChat || !followUpNextAction?.suggestedDateTime) {
@@ -9292,7 +9309,7 @@ export default function WhatsAppInboxScreen() {
           onClose={handleCloseFollowUpModal}
           onChangeValue={setFollowUpDraft}
           onChangeCustomInstructions={setFollowUpCustomInstructions}
-          onChangeTone={setFollowUpTone}
+          onChangeTone={handleChangeFollowUpTone}
           onToggleSituationPreset={handleToggleFollowUpSituationPreset}
           onToggleSalesTechnique={handleToggleFollowUpSalesTechnique}
           onGenerate={handleRegenerateFollowUp}

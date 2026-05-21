@@ -24,6 +24,7 @@ type GenerateFollowUpBody = {
   salesTechniques?: unknown;
   situationPresetIds?: unknown;
   autoSelectContext?: boolean;
+  manualContext?: unknown;
 };
 
 const FOLLOW_UP_TONES: FollowUpTone[] = ['consultivo', 'amigavel', 'direto', 'reativacao', 'premium'];
@@ -392,6 +393,44 @@ const getDateTimeParts = (date: Date, timeZone: string) => {
     hour: read('hour'),
     minute: read('minute'),
   };
+};
+
+const isManualContextFlagEnabled = (value: unknown, key: string) => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return value[key] === true;
+};
+
+const buildSelectedContextPromptSection = (params: {
+  situationPresetIds: string[];
+  tone: FollowUpTone;
+  salesTechniques: FollowUpSalesTechniqueOption[];
+  customInstructions: string;
+  manualContext: {
+    tone: boolean;
+    situationPresetIds: boolean;
+    salesTechniques: boolean;
+  };
+}) => {
+  const scenarioLabels = params.situationPresetIds
+    .map((presetId) => FOLLOW_UP_SITUATION_PRESET_BY_ID.get(presetId)?.label)
+    .filter((label): label is string => Boolean(label));
+  const techniqueLabels = params.salesTechniques.map((technique) => technique.name);
+
+  return [
+    'Contexto selecionado para esta geração:',
+    `- Cenário: ${scenarioLabels.length > 0 ? scenarioLabels.join(', ') : 'Nenhum específico'}`,
+    `- Origem do cenário: ${params.manualContext.situationPresetIds ? 'seleção manual do usuário' : 'seleção automática da IA'}`,
+    `- Tom: ${params.tone}`,
+    `- Origem do tom: ${params.manualContext.tone ? 'seleção manual do usuário' : 'seleção automática da IA'}`,
+    `- Técnicas avançadas: ${techniqueLabels.length > 0 ? techniqueLabels.join(', ') : 'Nenhuma específica'}`,
+    `- Origem das técnicas: ${params.manualContext.salesTechniques ? 'seleção manual do usuário' : 'seleção automática da IA'}`,
+    params.customInstructions ? `- Ajustes extras do usuário: ${params.customInstructions}` : '- Ajustes extras do usuário: Nenhum',
+    '',
+    'Use este contexto selecionado com prioridade alta na mensagem final. Se houver conflito entre seleção automática e escolha manual do usuário, obedeça a escolha manual. Se houver ajustes extras do usuário, eles têm prioridade sobre o restante, desde que não contrariem fatos do histórico.',
+  ].join('\n');
 };
 
 const getBusinessDayOffsetForAttempt = (attemptNumber: number) => {
@@ -896,6 +935,11 @@ Deno.serve(async (req: Request) => {
     const requestedSalesTechniqueIds = normalizeSalesTechniques(body.salesTechniques).map((technique) => technique.id);
     const requestedSituationPresetIds = normalizeSituationPresetIds(body.situationPresetIds);
     const autoSelectContext = body.autoSelectContext !== false && !refinementMode;
+    const manualContext = {
+      tone: isManualContextFlagEnabled(body.manualContext, 'tone'),
+      situationPresetIds: isManualContextFlagEnabled(body.manualContext, 'situationPresetIds'),
+      salesTechniques: isManualContextFlagEnabled(body.manualContext, 'salesTechniques'),
+    };
 
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
@@ -1029,13 +1073,21 @@ Deno.serve(async (req: Request) => {
       };
     }
 
-    const effectiveSituationPresetIds = autoSelectContext && aiContext
-      ? aiContext.situationPresetIds
-      : requestedSituationPresetIds;
-    const effectiveTone = autoSelectContext && aiContext ? aiContext.tone : requestedTone;
-    const effectiveSalesTechniqueIds = autoSelectContext && aiContext
-      ? aiContext.salesTechniques
-      : requestedSalesTechniqueIds;
+    const effectiveSituationPresetIds = manualContext.situationPresetIds
+      ? requestedSituationPresetIds
+      : autoSelectContext && aiContext
+        ? aiContext.situationPresetIds
+        : requestedSituationPresetIds;
+    const effectiveTone = manualContext.tone
+      ? requestedTone
+      : autoSelectContext && aiContext
+        ? aiContext.tone
+        : requestedTone;
+    const effectiveSalesTechniqueIds = manualContext.salesTechniques
+      ? requestedSalesTechniqueIds
+      : autoSelectContext && aiContext
+        ? aiContext.salesTechniques
+        : requestedSalesTechniqueIds;
     const selectedSituationPresetInstructions = effectiveSituationPresetIds
       .map((presetId) => FOLLOW_UP_SITUATION_PRESET_BY_ID.get(presetId)?.instruction)
       .filter((instruction): instruction is string => Boolean(instruction));
@@ -1054,15 +1106,29 @@ Deno.serve(async (req: Request) => {
         ].join(' ')
       : 'Retorne apenas o texto final da mensagem sugerida, sem aspas, sem markdown, sem explicacoes extras e sem listar alternativas.';
 
-    const systemPrompt = [
+    const configuredPromptBase = configuredInstructions || [
       `Voce gera sugestoes de follow-up prontas para envio no WhatsApp da operacao ${companyName}.`,
+      'Gere uma unica mensagem pronta para envio no WhatsApp.',
+    ].join('\n');
+
+    const selectedContextPromptSection = buildSelectedContextPromptSection({
+      situationPresetIds: effectiveSituationPresetIds,
+      tone: effectiveTone,
+      salesTechniques,
+      customInstructions,
+      manualContext,
+    });
+
+    const systemPrompt = [
+      configuredPromptBase,
+      'Regras de segurança e contexto do sistema:',
       'Leia todo o historico antes de responder e respeite a cronologia do transcript.',
       'Considere as datas e horas do transcript como a referencia temporal principal.',
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
       responseFormatInstruction,
-      configuredInstructions ? `Instrucoes adicionais da operacao:\n${configuredInstructions}` : '',
-      `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(effectiveTone)} Esta instrucao complementa as instrucoes globais da operacao e nao deve substitui-las.`,
-      generationCustomInstructions ? `Instrucoes personalizadas desta geracao:\n${generationCustomInstructions}` : '',
+      selectedContextPromptSection,
+      `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(effectiveTone)} Aplique este tom com seriedade na mensagem final.`,
+      generationCustomInstructions ? `Instrucoes de cenário e ajustes desta geracao:\n${generationCustomInstructions}` : '',
       salesTechniquesPromptSection,
     ]
       .filter(Boolean)

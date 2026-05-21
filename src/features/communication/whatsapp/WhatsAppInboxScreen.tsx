@@ -3479,6 +3479,12 @@ export default function WhatsAppInboxScreen() {
 
   const appendLocalOutgoingMessage = useCallback((message: CommWhatsAppMessage, retryPayload?: LocalOutgoingRetryPayload) => {
     rememberOutgoingMessageOrder(message);
+    if (selectedChatIdRef.current === message.chat_id) {
+      pendingScrollModeRef.current = 'bottom';
+      pendingScrollTopRef.current = null;
+      pendingScrollHeightRef.current = null;
+    }
+
     setLocalOutgoingMessages((current) => mergeMessages(current, [message]));
     if (retryPayload) {
       localOutgoingRetryPayloadRef.current.set(message.id, retryPayload);
@@ -5755,7 +5761,7 @@ export default function WhatsAppInboxScreen() {
     pendingScrollModeRef.current = null;
     pendingScrollTopRef.current = null;
     pendingScrollHeightRef.current = null;
-  }, [messages, selectedChatId]);
+  }, [localOutgoingMessages, messages, selectedChatId]);
 
   useLayoutEffect(() => {
     if (!highlightedMessageId) {
@@ -7546,7 +7552,12 @@ export default function WhatsAppInboxScreen() {
     const validSituationPresetIds = new Set<string>(CONVERSATION_SITUATION_PRESETS.map((preset) => preset.id));
     const normalizedSituationPresetIds = (options.situationPresetIds ?? followUpSelectedSituationPresetIds)
       .filter((presetId) => validSituationPresetIds.has(presetId));
-    const activeManualContext = options.manualContext ?? followUpManualContext;
+    const manualContextSource = options.manualContext ?? followUpManualContext;
+    const activeManualContext = {
+      tone: manualContextSource.tone === true,
+      situationPresetIds: manualContextSource.situationPresetIds === true,
+      salesTechniques: manualContextSource.salesTechniques === true,
+    };
     const requestId = ++followUpGenerationRequestIdRef.current;
     const targetChatId = selectedChat.id;
     setGeneratingFollowUp(true);

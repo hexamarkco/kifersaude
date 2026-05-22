@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Bot, CalendarClock, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 
 import { Badge, Button, Card, Input, PageHeader, Textarea } from '../../../design-system';
@@ -17,6 +17,21 @@ import {
 } from './commWhatsAppCampaignService';
 
 type AudienceMode = 'crm' | 'csv';
+
+type VariableAutocompleteState = {
+  stepIndex: number;
+  query: string;
+  replaceStart: number;
+  replaceEnd: number;
+};
+
+const campaignVariableSuggestions = [
+  { key: 'nome', label: 'Nome completo', description: 'Nome do lead ou contato.' },
+  { key: 'primeiro_nome', label: 'Primeiro nome', description: 'Primeiro nome do lead ou contato.' },
+  { key: 'telefone', label: 'Telefone', description: 'Telefone normalizado do contato.' },
+  { key: 'status', label: 'Status', description: 'Status atual do lead no CRM.' },
+  { key: 'responsavel', label: 'Responsavel', description: 'Responsavel atual pelo lead.' },
+];
 
 const statusLabels: Record<CommWhatsAppCampaign['status'], string> = {
   draft: 'Rascunho',
@@ -85,6 +100,18 @@ const readStringArrayFilter = (filters: Record<string, unknown>, pluralKey: stri
   return typeof legacyValue === 'string' && legacyValue.trim() ? [legacyValue.trim()] : [];
 };
 
+const getVariableAutocompleteState = (value: string, cursorPosition: number, stepIndex: number): VariableAutocompleteState | null => {
+  const beforeCursor = value.slice(0, cursorPosition);
+  const match = beforeCursor.match(/{{\s*([a-zA-Z0-9_]*)$/);
+  if (!match || match.index === undefined) return null;
+  return {
+    stepIndex,
+    query: match[1].toLowerCase(),
+    replaceStart: match.index,
+    replaceEnd: cursorPosition,
+  };
+};
+
 export default function WhatsAppCampaignsScreen() {
   const { leadStatuses, options } = useConfig();
   const [campaigns, setCampaigns] = useState<CommWhatsAppCampaign[]>([]);
@@ -112,6 +139,8 @@ export default function WhatsAppCampaignsScreen() {
   const [sendWindowStart, setSendWindowStart] = useState('');
   const [sendWindowEnd, setSendWindowEnd] = useState('');
   const [pacingPerMinute, setPacingPerMinute] = useState(12);
+  const [variableAutocomplete, setVariableAutocomplete] = useState<VariableAutocompleteState | null>(null);
+  const stepTextareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
@@ -123,6 +152,13 @@ export default function WhatsAppCampaignsScreen() {
     [options.lead_responsavel],
   );
   const firstMessageText = steps.find((step) => step.messageText.trim())?.messageText.trim() || messageText.trim();
+  const visibleVariableSuggestions = useMemo(() => {
+    if (!variableAutocomplete) return [];
+    return campaignVariableSuggestions.filter((suggestion) => (
+      suggestion.key.includes(variableAutocomplete.query)
+      || suggestion.label.toLowerCase().includes(variableAutocomplete.query)
+    ));
+  }, [variableAutocomplete]);
   const csvValidTargets = useMemo(
     () => csvTargets.filter((target) => commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber).length > 0),
     [csvTargets],
@@ -172,6 +208,7 @@ export default function WhatsAppCampaignsScreen() {
     setSendWindowStart('');
     setSendWindowEnd('');
     setPacingPerMinute(12);
+    setVariableAutocomplete(null);
   };
 
   const openNewCampaignModal = () => {
@@ -294,6 +331,34 @@ export default function WhatsAppCampaignsScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateVariableAutocomplete = (stepIndex: number, value: string, cursorPosition: number | null) => {
+    if (cursorPosition === null) {
+      setVariableAutocomplete(null);
+      return;
+    }
+
+    setVariableAutocomplete(getVariableAutocompleteState(value, cursorPosition, stepIndex));
+  };
+
+  const insertVariableSuggestion = (suggestionKey: string) => {
+    if (!variableAutocomplete) return;
+    const stepIndex = variableAutocomplete.stepIndex;
+    const currentStep = steps[stepIndex];
+    if (!currentStep) return;
+
+    const nextText = `${currentStep.messageText.slice(0, variableAutocomplete.replaceStart)}{{${suggestionKey}}}${currentStep.messageText.slice(variableAutocomplete.replaceEnd)}`;
+    const nextCursorPosition = variableAutocomplete.replaceStart + suggestionKey.length + 4;
+    updateStep(stepIndex, { messageText: nextText });
+    if (stepIndex === 0) setMessageText(nextText);
+    setVariableAutocomplete(null);
+
+    window.setTimeout(() => {
+      const textarea = stepTextareaRefs.current[stepIndex];
+      textarea?.focus();
+      textarea?.setSelectionRange(nextCursorPosition, nextCursorPosition);
+    }, 0);
   };
 
   const updateStep = (index: number, patch: Partial<CommWhatsAppCampaignStepDraft>) => {
@@ -524,15 +589,50 @@ export default function WhatsAppCampaignsScreen() {
                     )}
                   </div>
                   <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
-                    <Textarea
-                      size="compact"
-                      value={step.messageText}
-                      onChange={(event) => {
-                        updateStep(index, { messageText: event.target.value });
-                        if (index === 0) setMessageText(event.target.value);
-                      }}
-                      placeholder={index === 0 ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
-                    />
+                    <div className="relative">
+                      <Textarea
+                        ref={(element) => {
+                          stepTextareaRefs.current[index] = element;
+                        }}
+                        size="compact"
+                        value={step.messageText}
+                        onChange={(event) => {
+                          updateStep(index, { messageText: event.target.value });
+                          if (index === 0) setMessageText(event.target.value);
+                          updateVariableAutocomplete(index, event.target.value, event.target.selectionStart);
+                        }}
+                        onClick={(event) => updateVariableAutocomplete(index, event.currentTarget.value, event.currentTarget.selectionStart)}
+                        onKeyUp={(event) => updateVariableAutocomplete(index, event.currentTarget.value, event.currentTarget.selectionStart)}
+                        onBlur={() => window.setTimeout(() => setVariableAutocomplete(null), 120)}
+                        placeholder={index === 0 ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
+                      />
+                      {variableAutocomplete?.stepIndex === index && visibleVariableSuggestions.length > 0 && (
+                        <div className="mt-2 overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] shadow-xl">
+                          <div className="border-b border-[color:var(--panel-border-subtle)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">
+                            Variaveis disponiveis
+                          </div>
+                          <div className="max-h-56 overflow-y-auto py-1">
+                            {visibleVariableSuggestions.map((suggestion) => (
+                              <button
+                                key={suggestion.key}
+                                type="button"
+                                className="flex w-full items-start gap-3 px-3 py-2 text-left transition hover:bg-[color:var(--panel-surface-soft)]"
+                                onMouseDown={(event) => {
+                                  event.preventDefault();
+                                  insertVariableSuggestion(suggestion.key);
+                                }}
+                              >
+                                <code className="mt-0.5 rounded-[var(--kds-radius-sm)] bg-[color:var(--panel-accent-soft)] px-2 py-1 text-xs font-semibold text-[color:var(--panel-accent-ink)]">{`{{${suggestion.key}}}`}</code>
+                                <span>
+                                  <span className="block text-sm font-medium text-[color:var(--panel-text)]">{suggestion.label}</span>
+                                  <span className="block text-xs text-[color:var(--panel-text-muted)]">{suggestion.description}</span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <div className={cx('grid gap-3 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3 sm:grid-cols-2 lg:grid-cols-1', index === 0 && 'items-center')}>
                       {index === 0 ? (
                         <p className="text-xs text-[color:var(--panel-text-muted)]">Sem atraso nesta etapa.</p>

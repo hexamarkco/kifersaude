@@ -5220,12 +5220,12 @@ export default function WhatsAppInboxScreen() {
         }
 
         setSelectedChatId((current) => {
-          if (current && hydratedData.some((chat) => chat.id === current)) {
-            return current;
-          }
-
           if (requestedChat) {
             return requestedChat.id;
+          }
+
+          if (current && hydratedData.some((chat) => chat.id === current)) {
+            return current;
           }
 
           return hydratedData.find((chat) => !chat.is_archived)?.id ?? hydratedData[0]?.id ?? null;
@@ -5249,6 +5249,26 @@ export default function WhatsAppInboxScreen() {
     chatsLoadPromiseRef.current = loadPromise;
     return loadPromise;
   }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters]);
+
+  const handleSwitchArchivedSection = useCallback((nextArchivedSectionOpen: boolean) => {
+    setArchivedSectionOpen(nextArchivedSectionOpen);
+
+    const currentSelectedChat = selectedChatIdRef.current
+      ? latestChatsRef.current.find((chat) => chat.id === selectedChatIdRef.current) ?? null
+      : null;
+
+    if (currentSelectedChat && Boolean(currentSelectedChat.is_archived) !== nextArchivedSectionOpen) {
+      const nextChat = sortChatsByInboxOrder(latestChatsRef.current.filter((candidate) => (
+        candidate.id !== currentSelectedChat.id
+        && Boolean(candidate.is_archived) === nextArchivedSectionOpen
+        && chatMatchesActiveFilters(candidate)
+      )))[0] ?? null;
+      chatIdFromUrlRef.current = nextChat?.id ?? null;
+      setSelectedChatId(nextChat?.id ?? null);
+    }
+
+    void loadChats({ sections: nextArchivedSectionOpen ? ['archived', 'active'] : ['active'] });
+  }, [chatMatchesActiveFilters, loadChats]);
 
   useWhatsAppInboxDeepLink({
     searchParams,
@@ -5703,7 +5723,11 @@ export default function WhatsAppInboxScreen() {
       .filter((message) => message.chat_id === selectedChat.id)
       .sort(compareMessageChronology);
     const latestRenderedMessage = renderedMessagesForChat[renderedMessagesForChat.length - 1];
-    const readAt = latestRenderedMessage?.message_at ?? selectedChat.last_message_at ?? new Date().toISOString();
+    const latestRenderedMessageAtMs = getMessageTimestampMs(latestRenderedMessage?.message_at);
+    const selectedChatLastMessageAtMs = getMessageTimestampMs(selectedChat.last_message_at);
+    const readAt = selectedChatLastMessageAtMs !== null && (latestRenderedMessageAtMs === null || selectedChatLastMessageAtMs >= latestRenderedMessageAtMs)
+      ? selectedChat.last_message_at
+      : latestRenderedMessage?.message_at ?? new Date().toISOString();
     const readPatch: PendingChatInboxStatePatch = {
       unread_count: 0,
       manual_unread: false,
@@ -7694,18 +7718,26 @@ export default function WhatsAppInboxScreen() {
       manualUnreadSkipReadChatIdRef.current = chat.id;
     }
 
-    // BUG FIX (BUG #4): ao arquivar/desarquivar o chat atualmente selecionado
-    // que sai da secao visivel, escolhemos automaticamente o proximo chat
-    // valido. Isso evita que o chat arquivado continue na lista da Inbox
-    // ate que o usuario troque manualmente.
+    // Ao desarquivar a conversa aberta dentro de Arquivadas, levamos o usuario
+    // de volta para Conversas mantendo o chat selecionado. Arquivar a conversa
+    // aberta na Inbox continua selecionando o proximo chat ativo.
+    const shouldMoveSelectedUnarchivedChatToActive = (
+      options.isArchived === false
+      && selectedChatIdRef.current === chat.id
+      && archivedSectionOpenRef.current
+    );
     const shouldRotateSelection = (
       typeof options.isArchived === 'boolean'
       && selectedChatIdRef.current === chat.id
+      && !shouldMoveSelectedUnarchivedChatToActive
       // se o usuario esta na secao "Arquivadas" e desarquivou, idem
       && options.isArchived !== archivedSectionOpenRef.current
     );
 
-    if (shouldRotateSelection) {
+    if (shouldMoveSelectedUnarchivedChatToActive) {
+      setArchivedSectionOpen(false);
+      void loadChats({ sections: ['active'] });
+    } else if (shouldRotateSelection) {
       const nextChat = latestChatsRef.current.find((candidate) => (
         candidate.id !== chat.id
         && Boolean(candidate.is_archived) === archivedSectionOpenRef.current
@@ -7754,7 +7786,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setUpdatingChatStateId((current) => (current === chat.id ? null : current));
     }
-  }, [upsertChatLocally]);
+  }, [loadChats, upsertChatLocally]);
 
   const handleDeleteChat = useCallback(async (chat: CommWhatsAppChat) => {
     if (deletingChatId) {
@@ -8095,17 +8127,7 @@ export default function WhatsAppInboxScreen() {
                   <Button
                     size="icon"
                     variant={archivedSectionOpen ? 'soft' : 'secondary'}
-                    onClick={() => setArchivedSectionOpen((current) => {
-                      const next = !current;
-                      // BUG FIX (BUG #7): ao alternar a secao, garantimos
-                      // que os chats da nova secao estao frescos no client.
-                      if (next) {
-                        void loadChats({ sections: ['archived', 'active'] });
-                      } else {
-                        void loadChats({ sections: ['active'] });
-                      }
-                      return next;
-                    })}
+                    onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
                     className="rounded-xl"
                     aria-label="Chats arquivados"
                     title={archivedChatsCount > 0 ? `Chats arquivados (${archivedChatsCount})` : 'Chats arquivados'}

@@ -404,9 +404,9 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       {campaignModalOpen && (
-        <div className="fixed inset-0 z-[2147482000] flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-6 backdrop-blur-sm">
-          <Card className="w-full max-w-4xl space-y-5" role="dialog" aria-modal="true" aria-labelledby="whatsapp-campaign-modal-title">
-            <div className="flex items-start justify-between gap-4">
+        <div className="fixed inset-0 z-[2147482000] flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm">
+          <Card className="flex max-h-[calc(100vh-3rem)] w-full max-w-5xl flex-col overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="whatsapp-campaign-modal-title">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[color:var(--panel-border-subtle)] pb-4">
               <div>
                 <h2 id="whatsapp-campaign-modal-title" className="text-lg font-semibold text-[color:var(--panel-text)]">{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</h2>
                 <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure publico, pacote de mensagens, agendamento e ritmo de envio.</p>
@@ -416,6 +416,7 @@ export default function WhatsAppCampaignsScreen() {
               </Button>
             </div>
 
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-5 pr-1">
           <div className="grid gap-4 md:grid-cols-2">
             <LabelledField label="Nome da campanha">
               <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Reativacao PME maio" />
@@ -465,53 +466,71 @@ export default function WhatsAppCampaignsScreen() {
             </div>
           )}
 
-          <div className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-3 rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Pacote de mensagens</span>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure uma sequencia. Cada etapa pode aguardar segundos, minutos, horas ou dias antes de enviar.</p>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure a sequencia em blocos compactos. A lista abaixo rola separadamente quando houver muitas mensagens.</p>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <Badge tone="neutral">{steps.length} mensagem(ns)</Badge>
+                  <Badge tone="neutral">1 inicial</Badge>
+                  {steps.length > 1 && <Badge tone="neutral">{steps.length - 1} follow-up(s)</Badge>}
+                </div>
               </div>
               <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStep}>
                 <Plus className="h-3.5 w-3.5" />
                 Adicionar
               </Button>
             </div>
-            <div className="space-y-3">
+            <div className="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
               {steps.map((step, index) => (
-                <div key={index} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+                <div key={index} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 shadow-sm">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-[color:var(--panel-text)]">Mensagem {index + 1}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-[color:var(--panel-accent-soft)] px-2 text-xs font-semibold text-[color:var(--panel-accent)]">{index + 1}</span>
+                      <div>
+                        <p className="text-sm font-semibold text-[color:var(--panel-text)]">{index === 0 ? 'Mensagem inicial' : 'Follow-up'}</p>
+                        <p className="text-xs text-[color:var(--panel-text-muted)]">{index === 0 ? 'Enviada ao ativar ou no horario agendado.' : 'Enviado depois do intervalo abaixo, se nao houver resposta.'}</p>
+                      </div>
+                    </div>
                     {steps.length > 1 && (
                       <Button variant="ghost" size="sm" onClick={() => removeStep(index)}>Remover</Button>
                     )}
                   </div>
-                  {index > 0 && (
-                    <div className="mb-3 grid gap-3 sm:grid-cols-[120px_1fr]">
-                      <LabelledField label="Aguardar">
-                        <Input type="number" min={0} value={step.delayAmount} onChange={(event) => updateStep(index, { delayAmount: Number(event.target.value) || 0 })} />
-                      </LabelledField>
-                      <LabelledField label="Unidade">
-                        <select
-                          value={step.delayUnit}
-                          onChange={(event) => updateStep(index, { delayUnit: event.target.value as CommWhatsAppCampaignStepDraft['delayUnit'] })}
-                          className="h-10 w-full rounded-[var(--kds-radius-sm)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] px-3 text-sm text-[color:var(--panel-text)]"
-                        >
-                          <option value="seconds">segundos</option>
-                          <option value="minutes">minutos</option>
-                          <option value="hours">horas</option>
-                          <option value="days">dias</option>
-                        </select>
-                      </LabelledField>
+                  <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <Textarea
+                      size="compact"
+                      value={step.messageText}
+                      onChange={(event) => {
+                        updateStep(index, { messageText: event.target.value });
+                        if (index === 0) setMessageText(event.target.value);
+                      }}
+                      placeholder={index === 0 ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
+                    />
+                    <div className={cx('grid gap-3 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3 sm:grid-cols-2 lg:grid-cols-1', index === 0 && 'items-center')}>
+                      {index === 0 ? (
+                        <p className="text-xs text-[color:var(--panel-text-muted)]">Sem atraso nesta etapa.</p>
+                      ) : (
+                        <>
+                          <LabelledField label="Aguardar">
+                            <Input type="number" min={0} value={step.delayAmount} onChange={(event) => updateStep(index, { delayAmount: Number(event.target.value) || 0 })} />
+                          </LabelledField>
+                          <LabelledField label="Unidade">
+                            <select
+                              value={step.delayUnit}
+                              onChange={(event) => updateStep(index, { delayUnit: event.target.value as CommWhatsAppCampaignStepDraft['delayUnit'] })}
+                              className="h-10 w-full rounded-[var(--kds-radius-sm)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] px-3 text-sm text-[color:var(--panel-text)]"
+                            >
+                              <option value="seconds">segundos</option>
+                              <option value="minutes">minutos</option>
+                              <option value="hours">horas</option>
+                              <option value="days">dias</option>
+                            </select>
+                          </LabelledField>
+                        </>
+                      )}
                     </div>
-                  )}
-                  <Textarea
-                    value={step.messageText}
-                    onChange={(event) => {
-                      updateStep(index, { messageText: event.target.value });
-                      if (index === 0) setMessageText(event.target.value);
-                    }}
-                    placeholder={index === 0 ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
-                  />
+                  </div>
                 </div>
               ))}
             </div>
@@ -525,8 +544,9 @@ export default function WhatsAppCampaignsScreen() {
               <Input type="number" min={1} max={120} value={pacingPerMinute} onChange={(event) => setPacingPerMinute(Number(event.target.value) || 1)} />
             </LabelledField>
           </div>
+            </div>
 
-          <div className="flex flex-col gap-3 border-t border-[color:var(--panel-border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex shrink-0 flex-col gap-3 border-t border-[color:var(--panel-border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2 text-xs text-[color:var(--panel-text-muted)]">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent)]" />
               Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.

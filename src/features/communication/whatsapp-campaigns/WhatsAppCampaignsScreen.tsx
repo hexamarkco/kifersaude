@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
-import { Bot, CalendarClock, FileSpreadsheet, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, Users, X, type LucideIcon } from 'lucide-react';
+import { Bot, CalendarClock, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 
 import { Badge, Button, Card, Input, PageHeader, Textarea } from '../../../design-system';
+import FilterMultiSelect from '../../../components/FilterMultiSelect';
+import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
 import { cx } from '../../../lib/cx';
 import {
@@ -76,7 +78,15 @@ const defaultStats: CampaignStats = {
   aiSuggestionsPending: 0,
 };
 
+const readStringArrayFilter = (filters: Record<string, unknown>, pluralKey: string, legacyKey: string) => {
+  const pluralValue = filters[pluralKey];
+  if (Array.isArray(pluralValue)) return pluralValue.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  const legacyValue = filters[legacyKey];
+  return typeof legacyValue === 'string' && legacyValue.trim() ? [legacyValue.trim()] : [];
+};
+
 export default function WhatsAppCampaignsScreen() {
+  const { leadStatuses, options } = useConfig();
   const [campaigns, setCampaigns] = useState<CommWhatsAppCampaign[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<CommWhatsAppAiIntentSuggestion[]>([]);
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
@@ -94,14 +104,24 @@ export default function WhatsAppCampaignsScreen() {
   const [steps, setSteps] = useState<CommWhatsAppCampaignStepDraft[]>([
     { messageText: '', delayAmount: 0, delayUnit: 'minutes' },
   ]);
-  const [leadStatus, setLeadStatus] = useState('');
-  const [leadOwner, setLeadOwner] = useState('');
+  const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
+  const [leadOwnerFilters, setLeadOwnerFilters] = useState<string[]>([]);
   const [csvText, setCsvText] = useState('');
   const [createLeadsFromCsv, setCreateLeadsFromCsv] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
+  const [sendWindowStart, setSendWindowStart] = useState('');
+  const [sendWindowEnd, setSendWindowEnd] = useState('');
   const [pacingPerMinute, setPacingPerMinute] = useState(12);
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
+  const leadStatusOptions = useMemo(
+    () => leadStatuses.filter((status) => status.ativo).map((status) => ({ value: status.nome, label: status.nome })),
+    [leadStatuses],
+  );
+  const leadOwnerOptions = useMemo(
+    () => (options.lead_responsavel || []).filter((option) => option.ativo).map((option) => ({ value: option.value, label: option.label })),
+    [options.lead_responsavel],
+  );
   const firstMessageText = steps.find((step) => step.messageText.trim())?.messageText.trim() || messageText.trim();
   const csvValidTargets = useMemo(
     () => csvTargets.filter((target) => commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber).length > 0),
@@ -144,11 +164,13 @@ export default function WhatsAppCampaignsScreen() {
     setObjective('');
     setMessageText('');
     setSteps([{ messageText: '', delayAmount: 0, delayUnit: 'minutes' }]);
-    setLeadStatus('');
-    setLeadOwner('');
+    setLeadStatusFilters([]);
+    setLeadOwnerFilters([]);
     setCsvText('');
     setCreateLeadsFromCsv(false);
     setScheduledAt('');
+    setSendWindowStart('');
+    setSendWindowEnd('');
     setPacingPerMinute(12);
   };
 
@@ -181,11 +203,13 @@ export default function WhatsAppCampaignsScreen() {
             delayUnit: step.delay_unit,
           }))
         : [{ messageText: campaign.message_text ?? '', delayAmount: 0, delayUnit: 'minutes' }]);
-      setLeadStatus(typeof filters.status === 'string' ? filters.status : '');
-      setLeadOwner(typeof filters.responsavel === 'string' ? filters.responsavel : '');
+      setLeadStatusFilters(readStringArrayFilter(filters, 'statuses', 'status'));
+      setLeadOwnerFilters(readStringArrayFilter(filters, 'responsaveis', 'responsavel'));
       setCsvText('');
       setCreateLeadsFromCsv(campaign.create_leads_from_csv);
       setScheduledAt(campaign.scheduled_at ? campaign.scheduled_at.slice(0, 16) : '');
+      setSendWindowStart(campaign.send_window_start ? campaign.send_window_start.slice(0, 5) : '');
+      setSendWindowEnd(campaign.send_window_end ? campaign.send_window_end.slice(0, 5) : '');
       setPacingPerMinute(campaign.pacing_per_minute || 12);
       setCampaignModalOpen(true);
     } catch (error) {
@@ -217,8 +241,8 @@ export default function WhatsAppCampaignsScreen() {
       const audienceConfig = audienceMode === 'crm'
         ? {
             filters: {
-              status: leadStatus.trim() || null,
-              responsavel: leadOwner.trim() || null,
+              statuses: leadStatusFilters,
+              responsaveis: leadOwnerFilters,
               only_active: true,
               exclude_opt_out: true,
             },
@@ -248,6 +272,8 @@ export default function WhatsAppCampaignsScreen() {
         messageText: firstMessageText,
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         pacingPerMinute,
+        sendWindowStart: sendWindowStart || null,
+        sendWindowEnd: sendWindowEnd || null,
         stopOnReply: true,
         createLeadsFromCsv,
         steps: normalizedSteps,
@@ -434,10 +460,10 @@ export default function WhatsAppCampaignsScreen() {
           {audienceMode === 'crm' ? (
             <div className="grid gap-4 rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4 md:grid-cols-2">
               <LabelledField label="Status do lead">
-                <Input value={leadStatus} onChange={(event) => setLeadStatus(event.target.value)} placeholder="Opcional" />
+                <FilterMultiSelect icon={Filter} options={leadStatusOptions} placeholder="Todos os status" values={leadStatusFilters} onChange={setLeadStatusFilters} />
               </LabelledField>
               <LabelledField label="Responsavel">
-                <Input value={leadOwner} onChange={(event) => setLeadOwner(event.target.value)} placeholder="Opcional" />
+                <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsaveis" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
               </LabelledField>
               <p className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O worker vai materializar os alvos no momento de ativar a campanha, removendo arquivados, duplicados, numeros invalidos e opt-outs.</p>
             </div>
@@ -536,12 +562,18 @@ export default function WhatsAppCampaignsScreen() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-4">
             <LabelledField label="Agendar para">
               <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
             </LabelledField>
             <LabelledField label="Ritmo por minuto">
               <Input type="number" min={1} max={120} value={pacingPerMinute} onChange={(event) => setPacingPerMinute(Number(event.target.value) || 1)} />
+            </LabelledField>
+            <LabelledField label="Janela inicio">
+              <Input type="time" value={sendWindowStart} onChange={(event) => setSendWindowStart(event.target.value)} />
+            </LabelledField>
+            <LabelledField label="Janela fim">
+              <Input type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
             </LabelledField>
           </div>
             </div>

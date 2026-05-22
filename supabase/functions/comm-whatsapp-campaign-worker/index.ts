@@ -44,6 +44,8 @@ type CampaignRow = {
   message_text: string;
   scheduled_at: string | null;
   pacing_per_minute: number;
+  send_window_start: string | null;
+  send_window_end: string | null;
   stop_on_reply: boolean;
   created_by: string | null;
 };
@@ -60,6 +62,9 @@ type TargetRow = {
   status: string;
   current_step_index: number;
   attempts: number;
+  retry_count: number;
+  locked_at: string | null;
+  lock_token: string | null;
   sent_at: string | null;
 };
 
@@ -101,6 +106,12 @@ type IntentClassification = {
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
+const CRM_TARGET_PAGE_SIZE = 1000;
+const CRM_TARGET_INSERT_CHUNK_SIZE = 500;
+const OPT_OUT_LOOKUP_CHUNK_SIZE = 500;
+const MAX_SEND_ATTEMPTS = 3;
+const RETRY_BACKOFF_MINUTES = [5, 30, 120];
+const DEFAULT_CAMPAIGN_TIME_ZONE = 'America/Sao_Paulo';
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -125,6 +136,54 @@ const getNestedRecord = (value: unknown, key: string): Record<string, unknown> =
 };
 
 const getOptionalString = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : null;
+
+const chunkArray = <T,>(items: T[], size: number): T[][] => {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+};
+
+const createLockToken = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `campaign-lock-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+};
+
+const parseTimeOfDayToMinutes = (value: string | null) => {
+  if (!value) return null;
+  const match = value.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+};
+
+const isWithinSendWindow = (campaign: CampaignRow, now = new Date()) => {
+  const start = parseTimeOfDayToMinutes(campaign.send_window_start);
+  const end = parseTimeOfDayToMinutes(campaign.send_window_end);
+  if (start === null || end === null || start === end) return true;
+
+  const timeZone = Deno.env.get('COMM_WHATSAPP_CAMPAIGN_TIME_ZONE') || DEFAULT_CAMPAIGN_TIME_ZONE;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const currentHour = Number(parts.find((part) => part.type === 'hour')?.value ?? now.getUTCHours()) % 24;
+  const currentMinute = Number(parts.find((part) => part.type === 'minute')?.value ?? now.getUTCMinutes());
+  const current = currentHour * 60 + currentMinute;
+  if (start < end) return current >= start && current < end;
+  return current >= start || current < end;
+};
+
+const getNextRetryAt = (attempts: number) => {
+  const retryIndex = Math.max(attempts - 1, 0);
+  const minutes = RETRY_BACKOFF_MINUTES[Math.min(retryIndex, RETRY_BACKOFF_MINUTES.length - 1)] ?? 120;
+  return new Date(Date.now() + minutes * 60 * 1000).toISOString();
+};
 
 const INTENTS = new Set(['opt_out', 'negative_interest', 'angry_or_complaint', 'wrong_number', 'continue_conversation', 'unclear']);
 const RECOMMENDED_ACTIONS = new Set(['suggest_block_whatsapp_campaigns', 'keep_active', 'review']);
@@ -319,7 +378,7 @@ async function authorizeRequest(req: Request, supabaseAdmin: ReturnType<typeof c
 async function getCampaign(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId: string): Promise<CampaignRow> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,stop_on_reply,created_by')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,send_window_start,send_window_end,stop_on_reply,created_by')
     .eq('id', campaignId)
     .maybeSingle();
 
@@ -352,30 +411,40 @@ async function materializeCrmTargets(
   campaign: CampaignRow,
 ) {
   const filters = getNestedRecord(campaign.audience_config, 'filters');
-  const status = getOptionalString(filters.status);
-  const responsavel = getOptionalString(filters.responsavel);
+  const statuses = Array.isArray(filters.statuses)
+    ? filters.statuses.map((value) => toTrimmedString(value)).filter(Boolean)
+    : [getOptionalString(filters.status)].filter((value): value is string => Boolean(value));
+  const responsaveis = Array.isArray(filters.responsaveis)
+    ? filters.responsaveis.map((value) => toTrimmedString(value)).filter(Boolean)
+    : [getOptionalString(filters.responsavel)].filter((value): value is string => Boolean(value));
 
-  let query = supabaseAdmin
-    .from('leads')
-    .select('id,nome_completo,telefone,status,responsavel,responsavel_id,arquivado')
-    .eq('arquivado', false)
-    .not('telefone', 'is', null)
-    .limit(2000);
+  const leads: LeadRow[] = [];
+  for (let from = 0; ; from += CRM_TARGET_PAGE_SIZE) {
+    let query = supabaseAdmin
+      .from('leads')
+      .select('id,nome_completo,telefone,status,responsavel,responsavel_id,arquivado')
+      .eq('arquivado', false)
+      .not('telefone', 'is', null)
+      .order('created_at', { ascending: true })
+      .range(from, from + CRM_TARGET_PAGE_SIZE - 1);
 
-  if (status) {
-    query = query.eq('status', status);
+    if (statuses.length > 0) {
+      query = query.in('status', statuses);
+    }
+
+    if (responsaveis.length > 0) {
+      query = query.in('responsavel', responsaveis);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw new Error(`Erro ao carregar leads da campanha: ${error.message}`);
+    }
+
+    leads.push(...((data ?? []) as LeadRow[]));
+    if (!data || data.length < CRM_TARGET_PAGE_SIZE) break;
   }
 
-  if (responsavel) {
-    query = query.or(`responsavel.ilike.%${responsavel}%,responsavel_id.eq.${responsavel}`);
-  }
-
-  const { data, error } = await query;
-  if (error) {
-    throw new Error(`Erro ao carregar leads da campanha: ${error.message}`);
-  }
-
-  const leads = (data ?? []) as LeadRow[];
   const normalizedRows = leads.flatMap((lead) => {
     const phoneDigits = normalizeCommWhatsAppPhone(lead.telefone);
     if (!phoneDigits) return [];
@@ -397,12 +466,12 @@ async function materializeCrmTargets(
 
   const phoneDigits = Array.from(new Set(normalizedRows.map((row) => row.phone_digits)));
   const blockedPhones = new Set<string>();
-  if (phoneDigits.length > 0) {
+  for (const phoneChunk of chunkArray(phoneDigits, OPT_OUT_LOOKUP_CHUNK_SIZE)) {
     const { data: optOutRows, error: optOutError } = await supabaseAdmin
       .from('comm_whatsapp_opt_outs')
       .select('phone_digits')
       .eq('status', 'blocked')
-      .in('phone_digits', phoneDigits);
+      .in('phone_digits', phoneChunk);
 
     if (optOutError) {
       throw new Error(`Erro ao consultar bloqueios de disparo: ${optOutError.message}`);
@@ -415,10 +484,10 @@ async function materializeCrmTargets(
 
   const validRows = normalizedRows.filter((row) => !blockedPhones.has(row.phone_digits));
 
-  if (validRows.length > 0) {
+  for (const rowsChunk of chunkArray(validRows, CRM_TARGET_INSERT_CHUNK_SIZE)) {
     const { error: insertError } = await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
-      .upsert(validRows, { onConflict: 'campaign_id,phone_digits', ignoreDuplicates: true });
+      .upsert(rowsChunk, { onConflict: 'campaign_id,phone_digits', ignoreDuplicates: true });
 
     if (insertError) {
       throw new Error(`Erro ao criar alvos da campanha: ${insertError.message}`);
@@ -590,14 +659,12 @@ async function listTargetsForProcessing(
   campaign: CampaignRow,
   limit: number,
 ): Promise<TargetRow[]> {
-  const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_campaign_targets')
-    .select('id,campaign_id,lead_id,chat_id,phone_number,phone_digits,display_name,source_kind,status,current_step_index,attempts,sent_at')
-    .eq('campaign_id', campaign.id)
-    .in('status', ['pending', 'scheduled'])
-    .or(`next_send_at.is.null,next_send_at.lte.${getNowIso()}`)
-    .order('created_at', { ascending: true })
-    .limit(limit);
+  const lockToken = createLockToken();
+  const { data, error } = await supabaseAdmin.rpc('claim_comm_whatsapp_campaign_targets', {
+    p_campaign_id: campaign.id,
+    p_limit: limit,
+    p_lock_token: lockToken,
+  });
 
   if (error) {
     throw new Error(`Erro ao carregar fila da campanha: ${error.message}`);
@@ -648,6 +715,30 @@ async function getCampaignSteps(
   }];
 }
 
+async function releaseTargetAfterFailure(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: { target: TargetRow; status?: 'failed' | 'scheduled'; errorMessage: string; retryable?: boolean },
+) {
+  const attempts = Math.max(Number(params.target.attempts) || 0, 0);
+  const canRetry = Boolean(params.retryable) && attempts < MAX_SEND_ATTEMPTS;
+  const nextRetryAt = canRetry ? getNextRetryAt(attempts) : null;
+
+  await supabaseAdmin
+    .from('comm_whatsapp_campaign_targets')
+    .update({
+      status: canRetry ? 'scheduled' : (params.status ?? 'failed'),
+      error_message: params.errorMessage,
+      retry_count: canRetry ? (Number(params.target.retry_count) || 0) + 1 : Number(params.target.retry_count) || 0,
+      next_retry_at: nextRetryAt,
+      locked_at: null,
+      lock_token: null,
+      last_attempt_at: getNowIso(),
+    })
+    .eq('id', params.target.id);
+
+  return { status: canRetry ? 'retry_scheduled' : (params.status ?? 'failed'), retrying: canRetry, nextRetryAt };
+}
+
 async function sendTarget(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   campaign: CampaignRow;
@@ -665,7 +756,7 @@ async function sendTarget(params: {
   if (!phoneDigits || !chatId) {
     await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
-      .update({ status: 'invalid', error_message: 'Telefone invalido.', last_attempt_at: nowIso })
+      .update({ status: 'invalid', error_message: 'Telefone invalido.', last_attempt_at: nowIso, locked_at: null, lock_token: null })
       .eq('id', target.id);
     return { status: 'invalid' };
   }
@@ -680,7 +771,7 @@ async function sendTarget(params: {
   if (optOut) {
     await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
-      .update({ status: 'stopped', stopped_at: nowIso, stopped_reason: 'opt_out', last_attempt_at: nowIso })
+      .update({ status: 'stopped', stopped_at: nowIso, stopped_reason: 'opt_out', last_attempt_at: nowIso, locked_at: null, lock_token: null })
       .eq('id', target.id);
     return { status: 'stopped', reason: 'opt_out' };
   }
@@ -695,15 +786,10 @@ async function sendTarget(params: {
   if (!text) {
     await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
-      .update({ status: 'failed', error_message: 'Mensagem vazia apos aplicar variaveis.', attempts: target.attempts + 1, last_attempt_at: nowIso })
+      .update({ status: 'failed', error_message: 'Mensagem vazia apos aplicar variaveis.', last_attempt_at: nowIso, locked_at: null, lock_token: null })
       .eq('id', target.id);
     return { status: 'failed' };
   }
-
-  await supabaseAdmin
-    .from('comm_whatsapp_campaign_targets')
-    .update({ status: 'sending', attempts: target.attempts + 1, last_attempt_at: nowIso, error_message: null })
-    .eq('id', target.id);
 
   const response = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
     method: 'POST',
@@ -718,12 +804,9 @@ async function sendTarget(params: {
   const payload = await readResponsePayload(response);
   if (!response.ok) {
     const errorMessage = parseWhapiError(payload) || 'Falha ao enviar mensagem na Whapi.';
-    await supabaseAdmin
-      .from('comm_whatsapp_campaign_targets')
-      .update({ status: 'failed', error_message: errorMessage, last_attempt_at: nowIso })
-      .eq('id', target.id);
-    await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: 'target_failed', payload: { error: errorMessage } });
-    return { status: 'failed', error: errorMessage };
+    const failureResult = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage, retryable: response.status >= 429 || response.status >= 500 });
+    await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: failureResult.retrying ? 'target_retry_scheduled' : 'target_failed', payload: { error: errorMessage, nextRetryAt: failureResult.nextRetryAt } });
+    return { status: failureResult.status, error: errorMessage };
   }
 
   const externalMessageId = extractWhapiMessageId(payload);
@@ -775,9 +858,12 @@ async function sendTarget(params: {
       chat_id: persistResult.chatId || target.chat_id,
       current_step_index: nextStep ? nextStep.step_index : step.step_index,
       next_send_at: nextSendAt,
+      next_retry_at: null,
       external_message_id: externalMessageId || null,
       error_message: null,
       last_attempt_at: nowIso,
+      locked_at: null,
+      lock_token: null,
     })
     .eq('id', target.id);
 
@@ -805,7 +891,7 @@ async function processCampaigns(
 
   let query = supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,stop_on_reply,created_by')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,send_window_start,send_window_end,stop_on_reply,created_by')
     .in('status', ['queued', 'running', 'scheduled'])
     .order('created_at', { ascending: true })
     .limit(params.campaignId ? 1 : 5);
@@ -826,21 +912,33 @@ async function processCampaigns(
   let stopped = 0;
 
   for (const campaign of campaigns) {
+    if (!isWithinSendWindow(campaign)) {
+      await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'scheduled', last_error: null }).eq('id', campaign.id);
+      continue;
+    }
+
     await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'running', started_at: getNowIso(), last_error: null }).eq('id', campaign.id);
     const campaignLimit = Math.min(Math.max(campaign.pacing_per_minute || 1, 1), maxLimit - processed);
     if (campaignLimit <= 0) break;
 
     const targets = await listTargetsForProcessing(supabaseAdmin, campaign, campaignLimit);
     for (const target of targets) {
-      const result = await sendTarget({
-        supabaseAdmin,
-        campaign,
-        target,
-        token,
-        channelId: channel.id,
-        senderPhone: channel.phone_number,
-        senderName: channel.connected_user_name,
-      });
+      let result: { status?: string };
+      try {
+        result = await sendTarget({
+          supabaseAdmin,
+          campaign,
+          target,
+          token,
+          channelId: channel.id,
+          senderPhone: channel.phone_number,
+          senderName: channel.connected_user_name,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro inesperado ao enviar mensagem.';
+        result = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage: message, retryable: true });
+        await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: result.status === 'retry_scheduled' ? 'target_retry_scheduled' : 'target_failed', payload: { error: message } });
+      }
       processed += 1;
       if (result.status === 'sent' || result.status === 'scheduled') sent += 1;
       if (result.status === 'failed' || result.status === 'invalid') failed += 1;

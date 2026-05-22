@@ -10,6 +10,7 @@ import {
   type CommWhatsAppAiIntentSuggestion,
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignAudienceSource,
+  type CommWhatsAppCampaignStepDraft,
   type CommWhatsAppCsvTargetDraft,
 } from './commWhatsAppCampaignService';
 
@@ -87,6 +88,9 @@ export default function WhatsAppCampaignsScreen() {
   const [name, setName] = useState('');
   const [objective, setObjective] = useState('');
   const [messageText, setMessageText] = useState('');
+  const [steps, setSteps] = useState<CommWhatsAppCampaignStepDraft[]>([
+    { messageText: '', delayAmount: 0, delayUnit: 'minutes' },
+  ]);
   const [leadStatus, setLeadStatus] = useState('');
   const [leadOwner, setLeadOwner] = useState('');
   const [csvText, setCsvText] = useState('');
@@ -95,6 +99,7 @@ export default function WhatsAppCampaignsScreen() {
   const [pacingPerMinute, setPacingPerMinute] = useState(12);
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
+  const firstMessageText = steps.find((step) => step.messageText.trim())?.messageText.trim() || messageText.trim();
   const csvValidTargets = useMemo(
     () => csvTargets.filter((target) => commWhatsAppCampaignService.normalizePhoneDigits(target.phoneNumber).length > 0),
     [csvTargets],
@@ -135,8 +140,8 @@ export default function WhatsAppCampaignsScreen() {
       return;
     }
 
-    if (!messageText.trim()) {
-      toast.warning('Escreva a mensagem do disparo.');
+    if (!firstMessageText) {
+      toast.warning('Escreva pelo menos uma mensagem do disparo.');
       return;
     }
 
@@ -166,16 +171,25 @@ export default function WhatsAppCampaignsScreen() {
             },
           };
 
+      const normalizedSteps = steps
+        .map((step, index) => ({
+          messageText: step.messageText.trim(),
+          delayAmount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
+          delayUnit: step.delayUnit,
+        }))
+        .filter((step) => step.messageText.length > 0);
+
       await commWhatsAppCampaignService.createDraft({
         name,
         objective,
         audienceSource,
         audienceConfig,
-        messageText,
+        messageText: firstMessageText,
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         pacingPerMinute,
         stopOnReply: true,
         createLeadsFromCsv,
+        steps: normalizedSteps,
         csvTargets: audienceMode === 'csv' ? csvValidTargets : [],
       });
 
@@ -183,6 +197,7 @@ export default function WhatsAppCampaignsScreen() {
       setName('');
       setObjective('');
       setMessageText('');
+      setSteps([{ messageText: '', delayAmount: 0, delayUnit: 'minutes' }]);
       setCsvText('');
       setScheduledAt('');
       await loadCampaigns();
@@ -191,6 +206,18 @@ export default function WhatsAppCampaignsScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const updateStep = (index: number, patch: Partial<CommWhatsAppCampaignStepDraft>) => {
+    setSteps((current) => current.map((step, stepIndex) => stepIndex === index ? { ...step, ...patch } : step));
+  };
+
+  const addStep = () => {
+    setSteps((current) => [...current, { messageText: '', delayAmount: 1, delayUnit: 'days' }]);
+  };
+
+  const removeStep = (index: number) => {
+    setSteps((current) => current.length <= 1 ? current : current.filter((_, stepIndex) => stepIndex !== index));
   };
 
   const handleActivateCampaign = async (campaign: CommWhatsAppCampaign) => {
@@ -368,9 +395,54 @@ export default function WhatsAppCampaignsScreen() {
             </div>
           )}
 
-          <LabelledField label="Mensagem">
-            <Textarea value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente e posso te ajudar a comparar as opcoes." />
-          </LabelledField>
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Pacote de mensagens</span>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure uma sequencia. Cada etapa pode aguardar segundos, minutos, horas ou dias antes de enviar.</p>
+              </div>
+              <Button variant="secondary" size="sm" onClick={addStep}>Adicionar mensagem</Button>
+            </div>
+            <div className="space-y-3">
+              {steps.map((step, index) => (
+                <div key={index} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[color:var(--panel-text)]">Mensagem {index + 1}</p>
+                    {steps.length > 1 && (
+                      <Button variant="ghost" size="sm" onClick={() => removeStep(index)}>Remover</Button>
+                    )}
+                  </div>
+                  {index > 0 && (
+                    <div className="mb-3 grid gap-3 sm:grid-cols-[120px_1fr]">
+                      <LabelledField label="Aguardar">
+                        <Input type="number" min={0} value={step.delayAmount} onChange={(event) => updateStep(index, { delayAmount: Number(event.target.value) || 0 })} />
+                      </LabelledField>
+                      <LabelledField label="Unidade">
+                        <select
+                          value={step.delayUnit}
+                          onChange={(event) => updateStep(index, { delayUnit: event.target.value as CommWhatsAppCampaignStepDraft['delayUnit'] })}
+                          className="h-10 w-full rounded-[var(--kds-radius-sm)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] px-3 text-sm text-[color:var(--panel-text)]"
+                        >
+                          <option value="seconds">segundos</option>
+                          <option value="minutes">minutos</option>
+                          <option value="hours">horas</option>
+                          <option value="days">dias</option>
+                        </select>
+                      </LabelledField>
+                    </div>
+                  )}
+                  <Textarea
+                    value={step.messageText}
+                    onChange={(event) => {
+                      updateStep(index, { messageText: event.target.value });
+                      if (index === 0) setMessageText(event.target.value);
+                    }}
+                    placeholder={index === 0 ? 'Oi {{nome}}, tudo bem? Vi que sua cotacao ficou pendente.' : 'Passando novamente por aqui para saber se posso te ajudar.'}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <LabelledField label="Agendar para">

@@ -36,6 +36,12 @@ export type CommWhatsAppCsvTargetDraft = {
   payload: Record<string, unknown>;
 };
 
+export type CommWhatsAppCampaignStepDraft = {
+  messageText: string;
+  delayAmount: number;
+  delayUnit: 'seconds' | 'minutes' | 'hours' | 'days';
+};
+
 export type CreateCampaignInput = {
   name: string;
   objective?: string;
@@ -48,6 +54,7 @@ export type CreateCampaignInput = {
   sendWindowEnd?: string | null;
   stopOnReply: boolean;
   createLeadsFromCsv: boolean;
+  steps: CommWhatsAppCampaignStepDraft[];
   csvTargets?: CommWhatsAppCsvTargetDraft[];
 };
 
@@ -231,6 +238,26 @@ export const commWhatsAppCampaignService = {
 
       if (updateError) {
         throw new Error(getSupabaseErrorMessage(updateError, 'Os contatos foram salvos, mas os contadores nao foram atualizados.'));
+      }
+    }
+
+    const steps = input.steps
+      .map((step, index) => ({
+        campaign_id: createdCampaign.id,
+        step_index: index,
+        message_text: step.messageText.trim(),
+        delay_amount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
+        delay_unit: step.delayUnit,
+      }))
+      .filter((step) => step.message_text.length > 0);
+
+    if (steps.length > 0) {
+      const { error: stepsError } = await supabase
+        .from('comm_whatsapp_campaign_steps')
+        .insert(steps);
+
+      if (stepsError) {
+        throw new Error(getSupabaseErrorMessage(stepsError, 'O disparo foi criado, mas a sequencia de mensagens nao foi salva.'));
       }
     }
 

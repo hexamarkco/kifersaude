@@ -58,8 +58,18 @@ type TargetRow = {
   display_name: string | null;
   source_kind: string;
   status: string;
+  current_step_index: number;
   attempts: number;
   sent_at: string | null;
+};
+
+type CampaignStepRow = {
+  id: string;
+  campaign_id: string;
+  step_index: number;
+  message_text: string;
+  delay_amount: number;
+  delay_unit: 'seconds' | 'minutes' | 'hours' | 'days';
 };
 
 type LeadRow = {
@@ -118,6 +128,14 @@ const getOptionalString = (value: unknown) => typeof value === 'string' && value
 
 const INTENTS = new Set(['opt_out', 'negative_interest', 'angry_or_complaint', 'wrong_number', 'continue_conversation', 'unclear']);
 const RECOMMENDED_ACTIONS = new Set(['suggest_block_whatsapp_campaigns', 'keep_active', 'review']);
+
+const getDelayMs = (step: CampaignStepRow) => {
+  const amount = Math.max(Number(step.delay_amount) || 0, 0);
+  if (step.delay_unit === 'seconds') return amount * 1000;
+  if (step.delay_unit === 'hours') return amount * 60 * 60 * 1000;
+  if (step.delay_unit === 'days') return amount * 24 * 60 * 60 * 1000;
+  return amount * 60 * 1000;
+};
 
 const resolveMessageText = (template: string, params: { lead?: LeadRow | null; target?: TargetRow | null }) => {
   const lead = params.lead ?? null;
@@ -502,7 +520,7 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
   let query = supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
     .select('id,campaign_id,lead_id,phone_digits,sent_at')
-    .eq('status', 'sent')
+    .in('status', ['sent', 'scheduled', 'sending'])
     .not('sent_at', 'is', null)
     .limit(500);
 
@@ -574,7 +592,7 @@ async function listTargetsForProcessing(
 ): Promise<TargetRow[]> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
-    .select('id,campaign_id,lead_id,chat_id,phone_number,phone_digits,display_name,source_kind,status,attempts,sent_at')
+    .select('id,campaign_id,lead_id,chat_id,phone_number,phone_digits,display_name,source_kind,status,current_step_index,attempts,sent_at')
     .eq('campaign_id', campaign.id)
     .in('status', ['pending', 'scheduled'])
     .or(`next_send_at.is.null,next_send_at.lte.${getNowIso()}`)
@@ -601,6 +619,33 @@ async function getLeadById(supabaseAdmin: ReturnType<typeof createAdminClient>, 
   }
 
   return (data as LeadRow | null | undefined) ?? null;
+}
+
+async function getCampaignSteps(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  campaign: CampaignRow,
+): Promise<CampaignStepRow[]> {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_steps')
+    .select('id,campaign_id,step_index,message_text,delay_amount,delay_unit')
+    .eq('campaign_id', campaign.id)
+    .order('step_index', { ascending: true });
+
+  if (error) {
+    throw new Error(`Erro ao carregar etapas da campanha: ${error.message}`);
+  }
+
+  const steps = (data ?? []) as CampaignStepRow[];
+  if (steps.length > 0) return steps;
+
+  return [{
+    id: 'fallback-message',
+    campaign_id: campaign.id,
+    step_index: 0,
+    message_text: campaign.message_text,
+    delay_amount: 0,
+    delay_unit: 'minutes',
+  }];
 }
 
 async function sendTarget(params: {
@@ -641,7 +686,12 @@ async function sendTarget(params: {
   }
 
   const lead = await getLeadById(supabaseAdmin, target.lead_id);
-  const text = resolveMessageText(campaign.message_text, { lead, target }).trim();
+  const steps = await getCampaignSteps(supabaseAdmin, campaign);
+  const currentStepIndex = Math.max(Number(target.current_step_index) || 0, 0);
+  const step = steps.find((item) => item.step_index === currentStepIndex) ?? steps[currentStepIndex] ?? steps[0];
+  const stepPosition = Math.max(steps.findIndex((item) => item.step_index === step.step_index), 0);
+  const nextStep = steps[stepPosition + 1] ?? null;
+  const text = resolveMessageText(step.message_text, { lead, target }).trim();
   if (!text) {
     await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
@@ -711,23 +761,33 @@ async function sendTarget(params: {
       provider: 'whapi',
       campaign_id: campaign.id,
       campaign_target_id: target.id,
+      campaign_step_index: step.step_index,
     },
   });
+
+  const nextSendAt = nextStep ? new Date(Date.now() + getDelayMs(nextStep)).toISOString() : null;
 
   await supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
     .update({
-      status: 'sent',
+      status: nextStep ? 'scheduled' : 'sent',
       sent_at: nowIso,
       chat_id: persistResult.chatId || target.chat_id,
+      current_step_index: nextStep ? nextStep.step_index : step.step_index,
+      next_send_at: nextSendAt,
       external_message_id: externalMessageId || null,
       error_message: null,
       last_attempt_at: nowIso,
     })
     .eq('id', target.id);
 
-  await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: 'target_sent', payload: { externalMessageId, deliveryStatus } });
-  return { status: 'sent', externalMessageId, deliveryStatus };
+  await insertEvent(supabaseAdmin, {
+    campaignId: campaign.id,
+    targetId: target.id,
+    eventType: nextStep ? 'target_step_sent' : 'target_sent',
+    payload: { externalMessageId, deliveryStatus, stepIndex: step.step_index, nextStepIndex: nextStep?.step_index ?? null, nextSendAt },
+  });
+  return { status: nextStep ? 'scheduled' : 'sent', externalMessageId, deliveryStatus };
 }
 
 async function processCampaigns(
@@ -782,7 +842,7 @@ async function processCampaigns(
         senderName: channel.connected_user_name,
       });
       processed += 1;
-      if (result.status === 'sent') sent += 1;
+      if (result.status === 'sent' || result.status === 'scheduled') sent += 1;
       if (result.status === 'failed' || result.status === 'invalid') failed += 1;
       if (result.status === 'stopped') stopped += 1;
     }

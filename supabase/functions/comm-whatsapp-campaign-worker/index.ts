@@ -1,6 +1,7 @@
 // @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
+import { generateTextWithRouting } from '../_shared/ai-router.ts';
 import {
   WHAPI_BASE_URL,
   buildWhapiDirectChatId,
@@ -71,6 +72,24 @@ type LeadRow = {
   arquivado: boolean | null;
 };
 
+type InboundMessageRow = {
+  id: string;
+  chat_id: string;
+  message_type: string;
+  text_content: string | null;
+  media_caption: string | null;
+  transcription_text: string | null;
+  message_at: string;
+};
+
+type IntentClassification = {
+  intent: 'opt_out' | 'negative_interest' | 'angry_or_complaint' | 'wrong_number' | 'continue_conversation' | 'unclear';
+  confidence: number;
+  recommended_action: 'suggest_block_whatsapp_campaigns' | 'keep_active' | 'review';
+  reason: string;
+  evidence: string;
+};
+
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
 const createAdminClient = () => {
@@ -97,6 +116,9 @@ const getNestedRecord = (value: unknown, key: string): Record<string, unknown> =
 
 const getOptionalString = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : null;
 
+const INTENTS = new Set(['opt_out', 'negative_interest', 'angry_or_complaint', 'wrong_number', 'continue_conversation', 'unclear']);
+const RECOMMENDED_ACTIONS = new Set(['suggest_block_whatsapp_campaigns', 'keep_active', 'review']);
+
 const resolveMessageText = (template: string, params: { lead?: LeadRow | null; target?: TargetRow | null }) => {
   const lead = params.lead ?? null;
   const target = params.target ?? null;
@@ -110,6 +132,146 @@ const resolveMessageText = (template: string, params: { lead?: LeadRow | null; t
 
   return template.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_, key: string) => replacements[key] ?? '');
 };
+
+const extractJsonObject = (value: string): Record<string, unknown> => {
+  const trimmed = value.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start < 0 || end < start) return {};
+
+  try {
+    const parsed = JSON.parse(trimmed.slice(start, end + 1));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {};
+  } catch {
+    return {};
+  }
+};
+
+const normalizeClassification = (value: Record<string, unknown>): IntentClassification => {
+  const rawIntent = toTrimmedString(value.intent);
+  const rawAction = toTrimmedString(value.recommended_action);
+  const numericConfidence = Number(value.confidence);
+
+  return {
+    intent: (INTENTS.has(rawIntent) ? rawIntent : 'unclear') as IntentClassification['intent'],
+    confidence: Number.isFinite(numericConfidence) ? Math.min(Math.max(numericConfidence, 0), 1) : 0,
+    recommended_action: (RECOMMENDED_ACTIONS.has(rawAction) ? rawAction : 'review') as IntentClassification['recommended_action'],
+    reason: toTrimmedString(value.reason).slice(0, 900),
+    evidence: toTrimmedString(value.evidence).slice(0, 500),
+  };
+};
+
+const getInboundMessageText = (message: InboundMessageRow) => (
+  toTrimmedString(message.text_content)
+  || toTrimmedString(message.media_caption)
+  || toTrimmedString(message.transcription_text)
+  || `[${message.message_type || 'mensagem sem texto'}]`
+);
+
+async function classifyInboundCampaignIntent(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  campaignId: string;
+  targetId: string;
+  chatId: string;
+  message: InboundMessageRow;
+  leadId?: string | null;
+  phoneDigits?: string | null;
+}) {
+  const messageText = getInboundMessageText(params.message);
+  if (!messageText || messageText === '[mensagem sem texto]') return null;
+
+  const { data: existingSuggestion, error: existingError } = await params.supabaseAdmin
+    .from('comm_whatsapp_ai_intent_suggestions')
+    .select('id')
+    .eq('message_id', params.message.id)
+    .eq('campaign_id', params.campaignId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(`Erro ao verificar sugestao IA existente: ${existingError.message}`);
+  }
+
+  if (existingSuggestion) return null;
+
+  const systemPrompt = [
+    'Voce classifica a intencao de uma resposta recebida no WhatsApp apos uma campanha comercial da Kifer Saude.',
+    'A tarefa e decidir se o contato pediu para parar disparos, apenas recusou a oferta, esta irritado, informou numero errado, quer seguir conversa ou esta ambiguo.',
+    'Nao bloqueie por simples falta de interesse no produto. Use opt_out apenas quando houver pedido claro para nao receber mais contato, remover numero/lista, parar insistencia, ou equivalente semantico.',
+    'Retorne somente JSON valido, sem markdown.',
+  ].join('\n');
+
+  const userPrompt = [
+    'Mensagem recebida do cliente:',
+    messageText,
+    '',
+    'Classifique com este schema JSON:',
+    '{',
+    '  "intent": "opt_out | negative_interest | angry_or_complaint | wrong_number | continue_conversation | unclear",',
+    '  "confidence": 0.0,',
+    '  "recommended_action": "suggest_block_whatsapp_campaigns | keep_active | review",',
+    '  "reason": "motivo curto em portugues",',
+    '  "evidence": "trecho que sustenta a classificacao"',
+    '}',
+  ].join('\n');
+
+  try {
+    const result = await generateTextWithRouting({
+      supabaseAdmin: params.supabaseAdmin,
+      task: 'follow_up_generation',
+      systemPrompt,
+      userPrompt,
+      temperature: 0.1,
+      maxTokens: 280,
+      preferDefaultModel: true,
+    });
+    const classification = normalizeClassification(extractJsonObject(result.text));
+
+    const shouldSuggest = classification.recommended_action === 'suggest_block_whatsapp_campaigns'
+      || classification.intent === 'opt_out'
+      || classification.intent === 'wrong_number'
+      || classification.intent === 'angry_or_complaint';
+
+    if (!shouldSuggest && classification.confidence < 0.75) return classification;
+
+    const { error: insertError } = await params.supabaseAdmin
+      .from('comm_whatsapp_ai_intent_suggestions')
+      .insert({
+        chat_id: params.chatId,
+        message_id: params.message.id,
+        campaign_id: params.campaignId,
+        lead_id: params.leadId ?? null,
+        phone_digits: params.phoneDigits ?? null,
+        intent: classification.intent,
+        confidence: classification.confidence,
+        recommended_action: classification.recommended_action,
+        reason: classification.reason,
+        evidence: classification.evidence || messageText.slice(0, 500),
+        status: 'pending',
+      });
+
+    if (insertError) {
+      throw new Error(`Erro ao salvar sugestao IA: ${insertError.message}`);
+    }
+
+    await insertEvent(params.supabaseAdmin, {
+      campaignId: params.campaignId,
+      targetId: params.targetId,
+      eventType: 'ai_intent_suggested',
+      payload: classification,
+    });
+
+    return classification;
+  } catch (error) {
+    console.error('[comm-whatsapp-campaign-worker] erro ao classificar intenção de resposta', error);
+    await insertEvent(params.supabaseAdmin, {
+      campaignId: params.campaignId,
+      targetId: params.targetId,
+      eventType: 'ai_intent_classification_failed',
+      payload: { error: error instanceof Error ? error.message : 'Erro inesperado' },
+    });
+    return null;
+  }
+}
 
 async function authorizeRequest(req: Request, supabaseAdmin: ReturnType<typeof createAdminClient>) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -339,7 +501,7 @@ async function activateCampaign(
 async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId?: string) {
   let query = supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
-    .select('id,campaign_id,phone_digits,sent_at')
+    .select('id,campaign_id,lead_id,phone_digits,sent_at')
     .eq('status', 'sent')
     .not('sent_at', 'is', null)
     .limit(500);
@@ -367,11 +529,38 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
 
     if (!chat) continue;
 
+    const { data: inboundMessage, error: inboundMessageError } = await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .select('id,chat_id,message_type,text_content,media_caption,transcription_text,message_at')
+      .eq('chat_id', chat.id)
+      .eq('direction', 'inbound')
+      .gt('message_at', target.sent_at)
+      .order('message_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (inboundMessageError) {
+      throw new Error(`Erro ao carregar mensagem inbound da campanha: ${inboundMessageError.message}`);
+    }
+
     const nowIso = getNowIso();
     await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
       .update({ status: 'responded', responded_at: chat.last_message_at || nowIso, chat_id: chat.id })
       .eq('id', target.id);
+
+    if (inboundMessage) {
+      await classifyInboundCampaignIntent({
+        supabaseAdmin,
+        campaignId: target.campaign_id,
+        targetId: target.id,
+        chatId: chat.id,
+        message: inboundMessage as InboundMessageRow,
+        leadId: target.lead_id,
+        phoneDigits: target.phone_digits,
+      });
+    }
     responded += 1;
   }
 

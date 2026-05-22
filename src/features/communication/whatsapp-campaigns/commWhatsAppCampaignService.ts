@@ -70,6 +70,32 @@ export type CampaignWorkerResult = {
   error?: string;
 };
 
+export type CommWhatsAppAiIntentSuggestion = {
+  id: string;
+  chat_id: string | null;
+  message_id: string | null;
+  campaign_id: string | null;
+  lead_id: string | null;
+  phone_digits: string | null;
+  intent: 'opt_out' | 'negative_interest' | 'angry_or_complaint' | 'wrong_number' | 'continue_conversation' | 'unclear';
+  confidence: number;
+  recommended_action: 'suggest_block_whatsapp_campaigns' | 'keep_active' | 'review';
+  reason: string | null;
+  evidence: string | null;
+  status: 'pending' | 'accepted' | 'dismissed';
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  chat?: {
+    display_name?: string | null;
+    phone_number?: string | null;
+  } | null;
+  campaign?: {
+    name?: string | null;
+  } | null;
+};
+
 const normalizePhoneDigits = (value: string) => {
   const digits = value.replace(/\D/g, '');
   if (!digits) return '';
@@ -130,6 +156,21 @@ export const commWhatsAppCampaignService = {
     ]);
 
     return { total, drafts, scheduled, active, aiSuggestionsPending };
+  },
+
+  async listPendingAiSuggestions(): Promise<CommWhatsAppAiIntentSuggestion[]> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_ai_intent_suggestions')
+      .select('*, chat:comm_whatsapp_chats(display_name,phone_number), campaign:comm_whatsapp_campaigns(name)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as sugestoes de IA.'));
+    }
+
+    return (data ?? []) as CommWhatsAppAiIntentSuggestion[];
   },
 
   async createDraft(input: CreateCampaignInput): Promise<CommWhatsAppCampaign> {
@@ -235,5 +276,51 @@ export const commWhatsAppCampaignService = {
     }
 
     return payload;
+  },
+
+  async acceptAiSuggestion(suggestion: CommWhatsAppAiIntentSuggestion): Promise<void> {
+    const phoneDigits = suggestion.phone_digits?.trim() || '';
+    if (!phoneDigits) {
+      throw new Error('Sugestao sem telefone para bloquear.');
+    }
+
+    const { error: upsertError } = await supabase
+      .from('comm_whatsapp_opt_outs')
+      .upsert({
+        lead_id: suggestion.lead_id,
+        phone_digits: phoneDigits,
+        phone_number: suggestion.chat?.phone_number ?? phoneDigits,
+        status: 'blocked',
+        reason: suggestion.reason || suggestion.evidence || 'Bloqueado a partir de sugestao de IA.',
+        source: 'ai_suggestion',
+        source_campaign_id: suggestion.campaign_id,
+        source_chat_id: suggestion.chat_id,
+        source_message_id: suggestion.message_id,
+        ai_suggestion_id: suggestion.id,
+      }, { onConflict: 'phone_digits' });
+
+    if (upsertError) {
+      throw new Error(getSupabaseErrorMessage(upsertError, 'Nao foi possivel bloquear este telefone para disparos.'));
+    }
+
+    const { error: updateError } = await supabase
+      .from('comm_whatsapp_ai_intent_suggestions')
+      .update({ status: 'accepted', reviewed_at: new Date().toISOString() })
+      .eq('id', suggestion.id);
+
+    if (updateError) {
+      throw new Error(getSupabaseErrorMessage(updateError, 'Bloqueio criado, mas nao foi possivel atualizar a sugestao.'));
+    }
+  },
+
+  async dismissAiSuggestion(suggestionId: string): Promise<void> {
+    const { error } = await supabase
+      .from('comm_whatsapp_ai_intent_suggestions')
+      .update({ status: 'dismissed', reviewed_at: new Date().toISOString() })
+      .eq('id', suggestionId);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel dispensar a sugestao.'));
+    }
   },
 };

@@ -7,6 +7,7 @@ import { cx } from '../../../lib/cx';
 import {
   commWhatsAppCampaignService,
   type CampaignStats,
+  type CommWhatsAppAiIntentSuggestion,
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignAudienceSource,
   type CommWhatsAppCsvTargetDraft,
@@ -76,10 +77,12 @@ const defaultStats: CampaignStats = {
 
 export default function WhatsAppCampaignsScreen() {
   const [campaigns, setCampaigns] = useState<CommWhatsAppCampaign[]>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<CommWhatsAppAiIntentSuggestion[]>([]);
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
+  const [suggestionActionId, setSuggestionActionId] = useState<string | null>(null);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('crm');
   const [name, setName] = useState('');
   const [objective, setObjective] = useState('');
@@ -100,12 +103,14 @@ export default function WhatsAppCampaignsScreen() {
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextCampaigns, nextStats] = await Promise.all([
+      const [nextCampaigns, nextStats, nextSuggestions] = await Promise.all([
         commWhatsAppCampaignService.listCampaigns(),
         commWhatsAppCampaignService.getStats(),
+        commWhatsAppCampaignService.listPendingAiSuggestions(),
       ]);
       setCampaigns(nextCampaigns);
       setStats(nextStats);
+      setAiSuggestions(nextSuggestions);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar os disparos.');
     } finally {
@@ -214,6 +219,32 @@ export default function WhatsAppCampaignsScreen() {
     }
   };
 
+  const handleAcceptSuggestion = async (suggestion: CommWhatsAppAiIntentSuggestion) => {
+    setSuggestionActionId(suggestion.id);
+    try {
+      await commWhatsAppCampaignService.acceptAiSuggestion(suggestion);
+      toast.success('Contato bloqueado para proximos disparos.');
+      await loadCampaigns();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel bloquear este contato.');
+    } finally {
+      setSuggestionActionId(null);
+    }
+  };
+
+  const handleDismissSuggestion = async (suggestion: CommWhatsAppAiIntentSuggestion) => {
+    setSuggestionActionId(suggestion.id);
+    try {
+      await commWhatsAppCampaignService.dismissAiSuggestion(suggestion.id);
+      toast.success('Sugestao dispensada.');
+      await loadCampaigns();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel dispensar a sugestao.');
+    } finally {
+      setSuggestionActionId(null);
+    }
+  };
+
   return (
     <div className="panel-page-shell space-y-6">
       <PageHeader
@@ -239,6 +270,47 @@ export default function WhatsAppCampaignsScreen() {
       <Alert tone="accent" title="MVP com seguranca operacional">
         Esta tela cria a campanha, registra publico CSV quando houver e guarda a configuracao para o worker de envio. A IA entra como sinalizador de possivel opt-out para revisao humana antes de bloquear disparos futuros.
       </Alert>
+
+      {aiSuggestions.length > 0 && (
+        <Card className="space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Sinais de IA para revisar</h2>
+              <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Respostas de campanhas que podem indicar opt-out, numero errado ou reclamacao. A IA apenas sinaliza; o bloqueio depende da sua confirmacao.</p>
+            </div>
+            <Badge tone="warning">{aiSuggestions.length} pendente(s)</Badge>
+          </div>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {aiSuggestions.map((suggestion) => (
+              <article key={suggestion.id} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{suggestion.chat?.display_name || suggestion.chat?.phone_number || suggestion.phone_digits || 'Contato sem nome'}</h3>
+                    <p className="text-xs text-[color:var(--panel-text-muted)]">{suggestion.campaign?.name || 'Campanha sem nome'}</p>
+                  </div>
+                  <Badge tone={suggestion.intent === 'opt_out' || suggestion.intent === 'wrong_number' ? 'danger' : 'warning'} size="sm">
+                    {formatIntentLabel(suggestion.intent)} · {Math.round((suggestion.confidence ?? 0) * 100)}%
+                  </Badge>
+                </div>
+                <p className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{suggestion.reason || 'A IA recomendou revisar esta resposta antes de novos disparos.'}</p>
+                {suggestion.evidence && (
+                  <blockquote className="mt-3 rounded-[var(--kds-radius-md)] border-l-4 border-[color:var(--panel-accent)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[color:var(--panel-text-soft)]">
+                    {suggestion.evidence}
+                  </blockquote>
+                )}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button size="sm" variant="danger" loading={suggestionActionId === suggestion.id} onClick={() => void handleAcceptSuggestion(suggestion)}>
+                    Bloquear disparos
+                  </Button>
+                  <Button size="sm" variant="secondary" loading={suggestionActionId === suggestion.id} onClick={() => void handleDismissSuggestion(suggestion)}>
+                    Dispensar
+                  </Button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
         <Card className="space-y-5">
@@ -427,4 +499,17 @@ function MiniStat({ label, value }: { label: string; value: number }) {
       <span className="block text-[color:var(--panel-text-muted)]">{label}</span>
     </span>
   );
+}
+
+function formatIntentLabel(intent: CommWhatsAppAiIntentSuggestion['intent']) {
+  const labels: Record<CommWhatsAppAiIntentSuggestion['intent'], string> = {
+    opt_out: 'Pedir parar',
+    negative_interest: 'Sem interesse',
+    angry_or_complaint: 'Reclamacao',
+    wrong_number: 'Numero errado',
+    continue_conversation: 'Continuar',
+    unclear: 'Ambiguo',
+  };
+
+  return labels[intent] ?? 'Revisar';
 }

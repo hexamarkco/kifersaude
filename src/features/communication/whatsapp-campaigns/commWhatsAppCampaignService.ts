@@ -59,6 +59,17 @@ export type CampaignStats = {
   aiSuggestionsPending: number;
 };
 
+export type CampaignWorkerResult = {
+  success: boolean;
+  campaignId?: string;
+  status?: string;
+  processed?: number;
+  sent?: number;
+  failed?: number;
+  stopped?: number;
+  error?: string;
+};
+
 const normalizePhoneDigits = (value: string) => {
   const digits = value.replace(/\D/g, '');
   if (!digits) return '';
@@ -183,5 +194,46 @@ export const commWhatsAppCampaignService = {
     }
 
     return createdCampaign;
+  },
+
+  async activateCampaign(campaignId: string): Promise<CampaignWorkerResult> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-campaign-worker', {
+      body: {
+        action: 'activate',
+        campaignId,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel ativar o disparo.'));
+    }
+
+    const payload = (data ?? {}) as CampaignWorkerResult;
+    if (payload.error) {
+      throw new Error(payload.error);
+    }
+
+    return payload;
+  },
+
+  async processCampaign(campaignId: string, limit = 25): Promise<CampaignWorkerResult> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-campaign-worker', {
+      body: {
+        action: 'process',
+        campaignId,
+        limit,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel processar o disparo.'));
+    }
+
+    const payload = (data ?? {}) as CampaignWorkerResult;
+    if (payload.error) {
+      throw new Error(payload.error);
+    }
+
+    return payload;
   },
 };

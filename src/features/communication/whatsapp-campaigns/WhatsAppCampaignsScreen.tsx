@@ -79,6 +79,7 @@ export default function WhatsAppCampaignsScreen() {
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('crm');
   const [name, setName] = useState('');
   const [objective, setObjective] = useState('');
@@ -184,6 +185,32 @@ export default function WhatsAppCampaignsScreen() {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o disparo.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleActivateCampaign = async (campaign: CommWhatsAppCampaign) => {
+    setCampaignActionId(campaign.id);
+    try {
+      const result = await commWhatsAppCampaignService.activateCampaign(campaign.id);
+      toast.success(result.status === 'scheduled' ? 'Disparo agendado e pronto para a fila.' : 'Disparo ativado e colocado na fila.');
+      await loadCampaigns();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel ativar o disparo.');
+    } finally {
+      setCampaignActionId(null);
+    }
+  };
+
+  const handleProcessCampaign = async (campaign: CommWhatsAppCampaign) => {
+    setCampaignActionId(campaign.id);
+    try {
+      const result = await commWhatsAppCampaignService.processCampaign(campaign.id);
+      toast.success(`Processamento concluido: ${result.sent ?? 0} enviado(s), ${result.failed ?? 0} falha(s).`);
+      await loadCampaigns();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel processar o disparo.');
+    } finally {
+      setCampaignActionId(null);
     }
   };
 
@@ -327,6 +354,20 @@ export default function WhatsAppCampaignsScreen() {
                     <MiniStat label="Alvos" value={campaign.total_targets} />
                     <MiniStat label="Enviados" value={campaign.sent_targets} />
                     <MiniStat label="Resp." value={campaign.responded_targets} />
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {['draft', 'scheduled', 'paused'].includes(campaign.status) && (
+                      <Button size="sm" variant="secondary" loading={campaignActionId === campaign.id} onClick={() => void handleActivateCampaign(campaign)}>
+                        <PlayCircle className="h-3.5 w-3.5" />
+                        Ativar
+                      </Button>
+                    )}
+                    {['queued', 'running', 'scheduled'].includes(campaign.status) && (
+                      <Button size="sm" variant="primary" loading={campaignActionId === campaign.id} onClick={() => void handleProcessCampaign(campaign)}>
+                        <Send className="h-3.5 w-3.5" />
+                        Processar lote
+                      </Button>
+                    )}
                   </div>
                 </article>
               ))}

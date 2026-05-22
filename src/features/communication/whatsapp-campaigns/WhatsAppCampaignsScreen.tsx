@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
-import { Bot, CalendarClock, FileSpreadsheet, MessageCircle, PauseCircle, PlayCircle, RefreshCw, Send, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
+import { Bot, CalendarClock, FileSpreadsheet, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, Users, X, type LucideIcon } from 'lucide-react';
 
-import { Alert, Badge, Button, Card, Input, PageHeader, Textarea } from '../../../design-system';
+import { Badge, Button, Card, Input, PageHeader, Textarea } from '../../../design-system';
 import { toast } from '../../../lib/toast';
 import { cx } from '../../../lib/cx';
 import {
@@ -84,6 +84,9 @@ export default function WhatsAppCampaignsScreen() {
   const [saving, setSaving] = useState(false);
   const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
   const [suggestionActionId, setSuggestionActionId] = useState<string | null>(null);
+  const [campaignModalOpen, setCampaignModalOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<CommWhatsAppCampaign | null>(null);
+  const [loadingCampaignEdit, setLoadingCampaignEdit] = useState(false);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('crm');
   const [name, setName] = useState('');
   const [objective, setObjective] = useState('');
@@ -134,6 +137,64 @@ export default function WhatsAppCampaignsScreen() {
     setCsvText(text);
   };
 
+  const resetCampaignForm = () => {
+    setEditingCampaign(null);
+    setAudienceMode('crm');
+    setName('');
+    setObjective('');
+    setMessageText('');
+    setSteps([{ messageText: '', delayAmount: 0, delayUnit: 'minutes' }]);
+    setLeadStatus('');
+    setLeadOwner('');
+    setCsvText('');
+    setCreateLeadsFromCsv(false);
+    setScheduledAt('');
+    setPacingPerMinute(12);
+  };
+
+  const openNewCampaignModal = () => {
+    resetCampaignForm();
+    setCampaignModalOpen(true);
+  };
+
+  const closeCampaignModal = () => {
+    setCampaignModalOpen(false);
+    resetCampaignForm();
+  };
+
+  const openEditCampaignModal = async (campaign: CommWhatsAppCampaign) => {
+    setLoadingCampaignEdit(true);
+    try {
+      const campaignSteps = await commWhatsAppCampaignService.listCampaignSteps(campaign.id);
+      const filters = campaign.audience_config?.filters && typeof campaign.audience_config.filters === 'object'
+        ? campaign.audience_config.filters as Record<string, unknown>
+        : {};
+      setEditingCampaign(campaign);
+      setAudienceMode(campaign.audience_source === 'csv' ? 'csv' : 'crm');
+      setName(campaign.name);
+      setObjective(campaign.objective ?? '');
+      setMessageText(campaign.message_text ?? '');
+      setSteps(campaignSteps.length > 0
+        ? campaignSteps.map((step) => ({
+            messageText: step.message_text,
+            delayAmount: step.delay_amount,
+            delayUnit: step.delay_unit,
+          }))
+        : [{ messageText: campaign.message_text ?? '', delayAmount: 0, delayUnit: 'minutes' }]);
+      setLeadStatus(typeof filters.status === 'string' ? filters.status : '');
+      setLeadOwner(typeof filters.responsavel === 'string' ? filters.responsavel : '');
+      setCsvText('');
+      setCreateLeadsFromCsv(campaign.create_leads_from_csv);
+      setScheduledAt(campaign.scheduled_at ? campaign.scheduled_at.slice(0, 16) : '');
+      setPacingPerMinute(campaign.pacing_per_minute || 12);
+      setCampaignModalOpen(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar este disparo para edicao.');
+    } finally {
+      setLoadingCampaignEdit(false);
+    }
+  };
+
   const handleCreateDraft = async () => {
     if (!name.trim()) {
       toast.warning('Informe um nome para o disparo.');
@@ -145,7 +206,7 @@ export default function WhatsAppCampaignsScreen() {
       return;
     }
 
-    if (audienceMode === 'csv' && csvValidTargets.length === 0) {
+    if (!editingCampaign && audienceMode === 'csv' && csvValidTargets.length === 0) {
       toast.warning('Cole ou importe um CSV com pelo menos um telefone valido.');
       return;
     }
@@ -179,7 +240,7 @@ export default function WhatsAppCampaignsScreen() {
         }))
         .filter((step) => step.messageText.length > 0);
 
-      await commWhatsAppCampaignService.createDraft({
+      const payload = {
         name,
         objective,
         audienceSource,
@@ -190,16 +251,17 @@ export default function WhatsAppCampaignsScreen() {
         stopOnReply: true,
         createLeadsFromCsv,
         steps: normalizedSteps,
-        csvTargets: audienceMode === 'csv' ? csvValidTargets : [],
-      });
+        csvTargets: !editingCampaign && audienceMode === 'csv' ? csvValidTargets : [],
+      };
 
-      toast.success('Disparo salvo como rascunho.');
-      setName('');
-      setObjective('');
-      setMessageText('');
-      setSteps([{ messageText: '', delayAmount: 0, delayUnit: 'minutes' }]);
-      setCsvText('');
-      setScheduledAt('');
+      if (editingCampaign) {
+        await commWhatsAppCampaignService.updateCampaign(editingCampaign.id, payload);
+      } else {
+        await commWhatsAppCampaignService.createDraft(payload);
+      }
+
+      toast.success(editingCampaign ? 'Disparo atualizado.' : 'Disparo salvo.');
+      closeCampaignModal();
       await loadCampaigns();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o disparo.');
@@ -279,10 +341,16 @@ export default function WhatsAppCampaignsScreen() {
         title="Disparos WhatsApp"
         description="Crie campanhas conversacionais para leads do CRM ou contatos importados por CSV, com base preparada para opt-out sinalizado por IA."
         actions={(
-          <Button variant="secondary" onClick={() => void loadCampaigns()} loading={loading}>
-            <RefreshCw className="h-4 w-4" />
-            Atualizar
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" className="whitespace-nowrap" onClick={openNewCampaignModal}>
+              <Plus className="h-4 w-4" />
+              Novo disparo
+            </Button>
+            <Button variant="secondary" className="whitespace-nowrap" onClick={() => void loadCampaigns()} loading={loading}>
+              <RefreshCw className="h-4 w-4" />
+              Atualizar
+            </Button>
+          </div>
         )}
       />
 
@@ -293,10 +361,6 @@ export default function WhatsAppCampaignsScreen() {
         <MetricCard icon={PlayCircle} label="Ativas" value={stats.active} />
         <MetricCard icon={Bot} label="Sugestoes IA" value={stats.aiSuggestionsPending} />
       </div>
-
-      <Alert tone="accent" title="MVP com seguranca operacional">
-        Esta tela cria a campanha, registra publico CSV quando houver e guarda a configuracao para o worker de envio. A IA entra como sinalizador de possivel opt-out para revisao humana antes de bloquear disparos futuros.
-      </Alert>
 
       {aiSuggestions.length > 0 && (
         <Card className="space-y-4">
@@ -339,12 +403,18 @@ export default function WhatsAppCampaignsScreen() {
         </Card>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <Card className="space-y-5">
-          <div>
-            <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Novo disparo</h2>
-            <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure a primeira versao como rascunho. O envio em fila entra na proxima etapa.</p>
-          </div>
+      {campaignModalOpen && (
+        <div className="fixed inset-0 z-[2147482000] flex items-start justify-center overflow-y-auto bg-black/45 px-4 py-6 backdrop-blur-sm">
+          <Card className="w-full max-w-4xl space-y-5" role="dialog" aria-modal="true" aria-labelledby="whatsapp-campaign-modal-title">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 id="whatsapp-campaign-modal-title" className="text-lg font-semibold text-[color:var(--panel-text)]">{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</h2>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure publico, pacote de mensagens, agendamento e ritmo de envio.</p>
+              </div>
+              <Button variant="icon" size="icon" onClick={closeCampaignModal} aria-label="Fechar modal de disparo">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <LabelledField label="Nome da campanha">
@@ -401,7 +471,10 @@ export default function WhatsAppCampaignsScreen() {
                 <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Pacote de mensagens</span>
                 <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure uma sequencia. Cada etapa pode aguardar segundos, minutos, horas ou dias antes de enviar.</p>
               </div>
-              <Button variant="secondary" size="sm" onClick={addStep}>Adicionar mensagem</Button>
+              <Button variant="secondary" size="sm" className="whitespace-nowrap" onClick={addStep}>
+                <Plus className="h-3.5 w-3.5" />
+                Adicionar
+              </Button>
             </div>
             <div className="space-y-3">
               {steps.map((step, index) => (
@@ -458,14 +531,16 @@ export default function WhatsAppCampaignsScreen() {
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent)]" />
               Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.
             </div>
-            <Button onClick={() => void handleCreateDraft()} loading={saving}>
+            <Button className="whitespace-nowrap" onClick={() => void handleCreateDraft()} loading={saving}>
               <Send className="h-4 w-4" />
-              Salvar rascunho
+              Salvar
             </Button>
           </div>
-        </Card>
+          </Card>
+        </div>
+      )}
 
-        <Card className="space-y-4">
+      <Card className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Campanhas recentes</h2>
@@ -500,6 +575,13 @@ export default function WhatsAppCampaignsScreen() {
                     <MiniStat label="Resp." value={campaign.responded_targets} />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" variant="ghost" loading={loadingCampaignEdit && campaignActionId === campaign.id} onClick={() => {
+                      setCampaignActionId(campaign.id);
+                      void openEditCampaignModal(campaign).finally(() => setCampaignActionId(null));
+                    }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar
+                    </Button>
                     {['draft', 'scheduled', 'paused'].includes(campaign.status) && (
                       <Button size="sm" variant="secondary" loading={campaignActionId === campaign.id} onClick={() => void handleActivateCampaign(campaign)}>
                         <PlayCircle className="h-3.5 w-3.5" />
@@ -517,8 +599,7 @@ export default function WhatsAppCampaignsScreen() {
               ))}
             </div>
           )}
-        </Card>
-      </div>
+      </Card>
     </div>
   );
 }

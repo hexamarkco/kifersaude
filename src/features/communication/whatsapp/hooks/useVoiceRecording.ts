@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { CommWhatsAppMediaSendKind } from '../../../../lib/commWhatsAppService';
 import { toast } from '../../../../lib/toast';
 
 export type VoiceRecordingState = 'idle' | 'requesting' | 'recording';
@@ -7,7 +8,7 @@ export type VoiceRecordingState = 'idle' | 'requesting' | 'recording';
 type PendingAttachment = {
   id: string;
   file: File;
-  kind: string;
+  kind: CommWhatsAppMediaSendKind;
   durationSeconds?: number;
   previewUrl?: string | null;
   waveform?: number[];

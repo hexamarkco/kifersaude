@@ -91,6 +91,7 @@ const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending']);
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
+type WhatsAppFormatMatch = { start: number; end: number; marker: string; format: WhatsAppTextFormat };
 type PendingAttachment = {
   id: string;
   file: File;
@@ -547,8 +548,8 @@ const WHATSAPP_TEXT_FORMAT_MARKERS: Array<{ marker: string; format: WhatsAppText
 
 const isWhitespace = (value: string | undefined) => !value || /\s/.test(value);
 
-const findWhatsAppFormatMatch = (text: string, startIndex: number = 0) => {
-  let bestMatch: { start: number; end: number; marker: string; format: WhatsAppTextFormat } | null = null;
+const findWhatsAppFormatMatch = (text: string, startIndex: number = 0): WhatsAppFormatMatch | null => {
+  let bestMatch: WhatsAppFormatMatch | null = null;
 
   for (let index = startIndex; index < text.length; index += 1) {
     for (const candidate of WHATSAPP_TEXT_FORMAT_MARKERS) {

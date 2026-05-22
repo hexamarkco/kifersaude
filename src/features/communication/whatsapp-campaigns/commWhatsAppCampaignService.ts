@@ -42,6 +42,17 @@ export type CommWhatsAppCampaignStepDraft = {
   delayUnit: 'seconds' | 'minutes' | 'hours' | 'days';
 };
 
+export type CommWhatsAppCampaignStep = {
+  id: string;
+  campaign_id: string;
+  step_index: number;
+  message_text: string;
+  delay_amount: number;
+  delay_unit: CommWhatsAppCampaignStepDraft['delayUnit'];
+  created_at: string;
+  updated_at: string;
+};
+
 export type CreateCampaignInput = {
   name: string;
   objective?: string;
@@ -180,6 +191,20 @@ export const commWhatsAppCampaignService = {
     return (data ?? []) as CommWhatsAppAiIntentSuggestion[];
   },
 
+  async listCampaignSteps(campaignId: string): Promise<CommWhatsAppCampaignStep[]> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaign_steps')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .order('step_index', { ascending: true });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a sequencia do disparo.'));
+    }
+
+    return (data ?? []) as CommWhatsAppCampaignStep[];
+  },
+
   async createDraft(input: CreateCampaignInput): Promise<CommWhatsAppCampaign> {
     const userId = await getCurrentUserId();
     const { data: campaign, error } = await supabase
@@ -262,6 +287,58 @@ export const commWhatsAppCampaignService = {
     }
 
     return createdCampaign;
+  },
+
+  async updateCampaign(campaignId: string, input: CreateCampaignInput): Promise<void> {
+    const { error } = await supabase
+      .from('comm_whatsapp_campaigns')
+      .update({
+        name: input.name.trim(),
+        objective: input.objective?.trim() || null,
+        audience_source: input.audienceSource,
+        audience_config: input.audienceConfig,
+        message_text: input.messageText.trim(),
+        scheduled_at: input.scheduledAt || null,
+        pacing_per_minute: input.pacingPerMinute,
+        send_window_start: input.sendWindowStart || null,
+        send_window_end: input.sendWindowEnd || null,
+        stop_on_reply: input.stopOnReply,
+        create_leads_from_csv: input.createLeadsFromCsv,
+      })
+      .eq('id', campaignId);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel atualizar o disparo.'));
+    }
+
+    const { error: deleteStepsError } = await supabase
+      .from('comm_whatsapp_campaign_steps')
+      .delete()
+      .eq('campaign_id', campaignId);
+
+    if (deleteStepsError) {
+      throw new Error(getSupabaseErrorMessage(deleteStepsError, 'O disparo foi atualizado, mas a sequencia anterior nao foi removida.'));
+    }
+
+    const steps = input.steps
+      .map((step, index) => ({
+        campaign_id: campaignId,
+        step_index: index,
+        message_text: step.messageText.trim(),
+        delay_amount: index === 0 ? 0 : Math.max(Math.floor(step.delayAmount || 0), 0),
+        delay_unit: step.delayUnit,
+      }))
+      .filter((step) => step.message_text.length > 0);
+
+    if (steps.length > 0) {
+      const { error: stepsError } = await supabase
+        .from('comm_whatsapp_campaign_steps')
+        .insert(steps);
+
+      if (stepsError) {
+        throw new Error(getSupabaseErrorMessage(stepsError, 'O disparo foi atualizado, mas a nova sequencia nao foi salva.'));
+      }
+    }
   },
 
   async activateCampaign(campaignId: string): Promise<CampaignWorkerResult> {

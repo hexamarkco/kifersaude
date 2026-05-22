@@ -16,6 +16,7 @@ import {
   PiggyBank,
   DollarSign,
   Calendar,
+  Send,
   ChevronLeft,
   ChevronRight,
   Calculator,
@@ -146,6 +147,7 @@ export default function Layout({
 
   const comunicacaoChildren: TabConfig[] = [
     { id: 'whatsapp-inbox', label: 'Inbox', icon: MessageCircle, badge: unreadInboxChats },
+    { id: 'whatsapp-campaigns', label: 'Disparos', icon: Send },
     { id: 'blog', label: 'Blog', icon: BookOpen },
   ].filter(child => canView(child.id));
 

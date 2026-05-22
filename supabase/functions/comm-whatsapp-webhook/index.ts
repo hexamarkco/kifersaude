@@ -14,6 +14,7 @@ import {
   extractWhapiQuotedMessageMeta,
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
+  extractWhapiMessages,
   extractWhapiMediaMeta,
   fetchWhapiChatName,
   fetchWhapiContactName,
@@ -169,6 +170,26 @@ async function findExistingChat(
   return (data ?? null) as ChatRow | null;
 }
 
+const resolveMessageChatId = (message: Record<string, unknown>): string => {
+  const directChatId = normalizeWhapiChatId(message.chat_id);
+  if (directChatId) return directChatId;
+
+  const nestedChat = isRecord(message.chat) ? message.chat : null;
+  const nestedChatId = normalizeWhapiChatId(nestedChat?.id ?? nestedChat?.chat_id);
+  if (nestedChatId) return nestedChatId;
+
+  const candidate = message.from_me === true
+    ? message.to ?? message.recipient_id ?? message.from
+    : message.from ?? message.sender ?? message.author ?? message.to;
+
+  return normalizeWhapiChatId(candidate);
+};
+
+const withResolvedMessageChatId = (message: Record<string, unknown>): Record<string, unknown> => {
+  const chatId = resolveMessageChatId(message);
+  return chatId ? { ...message, chat_id: chatId } : message;
+};
+
 async function persistMessageFromWebhook(
   supabaseAdmin: SupabaseClient,
   channel: ChannelRow,
@@ -176,7 +197,7 @@ async function persistMessageFromWebhook(
   whapiToken: string,
   eventAction: string,
 ) {
-  const externalChatId = normalizeWhapiChatId(message.chat_id);
+  const externalChatId = resolveMessageChatId(message);
   if (!externalChatId || !isDirectWhapiChatId(externalChatId)) {
     return null;
   }
@@ -523,11 +544,13 @@ Deno.serve(async (req: Request) => {
       })
       .eq('id', channel.id);
 
-    if (eventType === 'messages' && Array.isArray(payload.messages)) {
-      for (const item of payload.messages) {
-        if (!isRecord(item)) continue;
+    const messageItems = eventType === 'messages' ? extractWhapiMessages(payload) : [];
 
-        const chatId = normalizeWhapiChatId(item.chat_id);
+    if (messageItems.length > 0) {
+      for (const rawItem of messageItems) {
+        const item = withResolvedMessageChatId(rawItem);
+
+        const chatId = resolveMessageChatId(item);
         if (!chatId || !isDirectWhapiChatId(chatId)) continue;
 
         const eventKey = buildMessageEventKey(eventAction, item);

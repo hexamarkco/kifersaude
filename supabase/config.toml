@@ -1,0 +1,4 @@
+project_id = "eaxvvhamkmovkoqssahj"
+
+[functions.comm-whatsapp-webhook]
+verify_jwt = false

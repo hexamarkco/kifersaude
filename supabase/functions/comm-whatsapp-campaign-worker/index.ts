@@ -33,6 +33,7 @@ type WorkerRequestBody = {
   action?: WorkerAction;
   campaignId?: string;
   limit?: number;
+  source?: 'cron' | 'manual' | 'dashboard' | 'api';
 };
 
 type CampaignRow = {
@@ -105,6 +106,15 @@ type IntentClassification = {
   evidence: string;
 };
 
+type WorkerRunSource = NonNullable<WorkerRequestBody['source']>;
+
+type WorkerRunResult = {
+  processed?: number;
+  sent?: number;
+  failed?: number;
+  stopped?: number;
+};
+
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const CRM_TARGET_PAGE_SIZE = 1000;
 const CRM_TARGET_INSERT_CHUNK_SIZE = 500;
@@ -128,6 +138,62 @@ const createJsonResponse = (payload: unknown, status = 200) => new Response(JSON
   status,
   headers: jsonHeaders,
 });
+
+const normalizeRunSource = (value: unknown): WorkerRunSource => {
+  return value === 'cron' || value === 'manual' || value === 'dashboard' || value === 'api' ? value : 'manual';
+};
+
+async function createWorkerRun(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: { action: WorkerAction; source: WorkerRunSource; campaignId?: string | null },
+) {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_worker_runs')
+    .insert({
+      action: params.action,
+      source: params.source,
+      campaign_id: params.campaignId || null,
+      status: 'running',
+    })
+    .select('id,started_at')
+    .single();
+
+  if (error) {
+    console.error('[comm-whatsapp-campaign-worker] erro ao registrar inicio da execucao', error);
+    return null;
+  }
+
+  return data as { id: string; started_at: string };
+}
+
+async function finishWorkerRun(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  run: { id: string; started_at: string } | null,
+  params: { status: 'success' | 'failed'; result?: WorkerRunResult; errorMessage?: string },
+) {
+  if (!run) return;
+  const finishedAt = new Date();
+  const startedAt = new Date(run.started_at);
+  const durationMs = Number.isNaN(startedAt.getTime()) ? null : Math.max(0, finishedAt.getTime() - startedAt.getTime());
+
+  const { error } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_worker_runs')
+    .update({
+      status: params.status,
+      processed: params.result?.processed ?? 0,
+      sent: params.result?.sent ?? 0,
+      failed: params.result?.failed ?? 0,
+      stopped: params.result?.stopped ?? 0,
+      duration_ms: durationMs,
+      error_message: params.errorMessage ?? null,
+      finished_at: finishedAt.toISOString(),
+    })
+    .eq('id', run.id);
+
+  if (error) {
+    console.error('[comm-whatsapp-campaign-worker] erro ao finalizar registro da execucao', error);
+  }
+}
 
 const getNestedRecord = (value: unknown, key: string): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
@@ -990,16 +1056,33 @@ Deno.serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as WorkerRequestBody;
     const action = body.action || 'process';
     const campaignId = toTrimmedString(body.campaignId);
+    const source = normalizeRunSource(body.source || (isServiceRoleRequest(req, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '') ? 'cron' : 'dashboard'));
 
     if (action === 'activate') {
       if (!campaignId) return createJsonResponse({ error: 'Campanha obrigatoria.' }, 400);
-      const result = await activateCampaign(supabaseAdmin, campaignId, authorization.profileId);
-      return createJsonResponse({ success: true, ...result });
+      const run = await createWorkerRun(supabaseAdmin, { action, source, campaignId });
+      try {
+        const result = await activateCampaign(supabaseAdmin, campaignId, authorization.profileId);
+        await finishWorkerRun(supabaseAdmin, run, { status: 'success' });
+        return createJsonResponse({ success: true, ...result });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro interno no worker de campanhas.';
+        await finishWorkerRun(supabaseAdmin, run, { status: 'failed', errorMessage: message });
+        throw error;
+      }
     }
 
     if (action === 'process') {
-      const result = await processCampaigns(supabaseAdmin, { campaignId: campaignId || undefined, limit: body.limit });
-      return createJsonResponse({ success: true, ...result });
+      const run = await createWorkerRun(supabaseAdmin, { action, source, campaignId: campaignId || null });
+      try {
+        const result = await processCampaigns(supabaseAdmin, { campaignId: campaignId || undefined, limit: body.limit });
+        await finishWorkerRun(supabaseAdmin, run, { status: 'success', result });
+        return createJsonResponse({ success: true, ...result });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Erro interno no worker de campanhas.';
+        await finishWorkerRun(supabaseAdmin, run, { status: 'failed', errorMessage: message });
+        throw error;
+      }
     }
 
     return createJsonResponse({ error: 'Acao invalida.' }, 400);

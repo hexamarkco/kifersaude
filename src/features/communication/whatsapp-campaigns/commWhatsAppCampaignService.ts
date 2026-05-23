@@ -160,6 +160,30 @@ export type CommWhatsAppCampaignActivationPreview = {
   estimatedMinutes: number;
 };
 
+export type CommWhatsAppCampaignWorkerRun = {
+  id: string;
+  action: 'activate' | 'process';
+  source: 'cron' | 'manual' | 'dashboard' | 'api';
+  status: 'running' | 'success' | 'failed';
+  campaign_id: string | null;
+  processed: number;
+  sent: number;
+  failed: number;
+  stopped: number;
+  duration_ms: number | null;
+  error_message: string | null;
+  started_at: string;
+  finished_at: string | null;
+  created_at: string;
+};
+
+export type CommWhatsAppCampaignWorkerHealth = {
+  latestRun: CommWhatsAppCampaignWorkerRun | null;
+  latestSuccess: CommWhatsAppCampaignWorkerRun | null;
+  latestFailure: CommWhatsAppCampaignWorkerRun | null;
+  recentRuns: CommWhatsAppCampaignWorkerRun[];
+};
+
 const normalizePhoneDigits = (value: string) => {
   const digits = value.replace(/\D/g, '');
   if (!digits) return '';
@@ -274,6 +298,26 @@ export const commWhatsAppCampaignService = {
     ]);
 
     return { total, drafts, scheduled, active, aiSuggestionsPending };
+  },
+
+  async getWorkerHealth(): Promise<CommWhatsAppCampaignWorkerHealth> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaign_worker_runs')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(12);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a saude do worker de disparos.'));
+    }
+
+    const recentRuns = (data ?? []) as CommWhatsAppCampaignWorkerRun[];
+    return {
+      latestRun: recentRuns[0] ?? null,
+      latestSuccess: recentRuns.find((run) => run.status === 'success') ?? null,
+      latestFailure: recentRuns.find((run) => run.status === 'failed') ?? null,
+      recentRuns,
+    };
   },
 
   async listPendingAiSuggestions(): Promise<CommWhatsAppAiIntentSuggestion[]> {

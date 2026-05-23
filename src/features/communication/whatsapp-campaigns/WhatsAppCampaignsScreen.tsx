@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import { Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { Activity, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { Badge, Button, Card, Input, PageHeader, Textarea } from '../../../design-system';
@@ -15,6 +15,8 @@ import {
   type CommWhatsAppCampaignAudienceSource,
   type CommWhatsAppCampaignActivationPreview,
   type CommWhatsAppCampaignStepDraft,
+  type CommWhatsAppCampaignWorkerHealth,
+  type CommWhatsAppCampaignWorkerRun,
   type CommWhatsAppCsvTargetDraft,
 } from './commWhatsAppCampaignService';
 
@@ -53,6 +55,34 @@ const formatDateTime = (value: string | null | undefined) => {
 const formatSendWindow = (campaign: CommWhatsAppCampaign) => {
   if (!campaign.send_window_start || !campaign.send_window_end) return 'Sem janela definida';
   return `${campaign.send_window_start.slice(0, 5)} - ${campaign.send_window_end.slice(0, 5)}`;
+};
+
+const formatRelativeRunTime = (value: string | null | undefined) => {
+  if (!value) return 'Nunca';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Nunca';
+  const diffMinutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (diffMinutes < 1) return 'agora mesmo';
+  if (diffMinutes < 60) return `ha ${diffMinutes} min`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `ha ${diffHours}h`;
+  return `ha ${Math.floor(diffHours / 24)}d`;
+};
+
+const getWorkerRunTone = (run: CommWhatsAppCampaignWorkerRun | null): 'neutral' | 'accent' | 'success' | 'warning' | 'danger' => {
+  if (!run) return 'warning';
+  if (run.status === 'failed') return 'danger';
+  if (run.status === 'running') return 'warning';
+  const finishedAt = run.finished_at ? new Date(run.finished_at).getTime() : new Date(run.started_at).getTime();
+  if (!Number.isNaN(finishedAt) && Date.now() - finishedAt > 10 * 60 * 1000) return 'warning';
+  return 'success';
+};
+
+const defaultWorkerHealth: CommWhatsAppCampaignWorkerHealth = {
+  latestRun: null,
+  latestSuccess: null,
+  latestFailure: null,
+  recentRuns: [],
 };
 
 const statusLabels: Record<CommWhatsAppCampaign['status'], string> = {
@@ -140,6 +170,7 @@ export default function WhatsAppCampaignsScreen() {
   const [campaigns, setCampaigns] = useState<CommWhatsAppCampaign[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<CommWhatsAppAiIntentSuggestion[]>([]);
   const [stats, setStats] = useState<CampaignStats>(defaultStats);
+  const [workerHealth, setWorkerHealth] = useState<CommWhatsAppCampaignWorkerHealth>(defaultWorkerHealth);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [campaignActionId, setCampaignActionId] = useState<string | null>(null);
@@ -192,14 +223,16 @@ export default function WhatsAppCampaignsScreen() {
   const loadCampaigns = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextCampaigns, nextStats, nextSuggestions] = await Promise.all([
+      const [nextCampaigns, nextStats, nextSuggestions, nextWorkerHealth] = await Promise.all([
         commWhatsAppCampaignService.listCampaigns(),
         commWhatsAppCampaignService.getStats(),
         commWhatsAppCampaignService.listPendingAiSuggestions(),
+        commWhatsAppCampaignService.getWorkerHealth(),
       ]);
       setCampaigns(nextCampaigns);
       setStats(nextStats);
       setAiSuggestions(nextSuggestions);
+      setWorkerHealth(nextWorkerHealth);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar os disparos.');
     } finally {
@@ -497,6 +530,48 @@ export default function WhatsAppCampaignsScreen() {
         <MetricCard icon={PlayCircle} label="Ativas" value={stats.active} />
         <MetricCard icon={Bot} label="Sugestoes IA" value={stats.aiSuggestionsPending} />
       </div>
+
+      <Card className="space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Activity className="h-5 w-5 text-[color:var(--panel-accent)]" />
+              <h2 className="text-lg font-semibold text-[color:var(--panel-text)]">Saude do worker</h2>
+              <Badge tone={getWorkerRunTone(workerHealth.latestRun)}>
+                {workerHealth.latestRun ? workerHealth.latestRun.status : 'sem execucao'}
+              </Badge>
+            </div>
+            <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">
+              Ultima execucao {formatRelativeRunTime(workerHealth.latestRun?.finished_at ?? workerHealth.latestRun?.started_at)}.
+            </p>
+          </div>
+          <div className="grid gap-2 text-sm sm:grid-cols-3 lg:min-w-[420px]">
+            <WorkerHealthStat label="Processados" value={workerHealth.latestRun?.processed ?? 0} />
+            <WorkerHealthStat label="Enviados" value={workerHealth.latestRun?.sent ?? 0} />
+            <WorkerHealthStat label="Falhas" value={workerHealth.latestRun?.failed ?? 0} />
+          </div>
+        </div>
+        {workerHealth.latestFailure && (
+          <div className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-danger-border,var(--panel-border-subtle))] bg-[color:var(--panel-danger-bg,var(--panel-surface-soft))] px-3 py-2 text-sm text-[color:var(--panel-danger,var(--panel-text-soft))]">
+            Ultima falha {formatRelativeRunTime(workerHealth.latestFailure.finished_at ?? workerHealth.latestFailure.started_at)}: {workerHealth.latestFailure.error_message || 'Erro nao informado.'}
+          </div>
+        )}
+        <div className="grid gap-2 lg:grid-cols-3">
+          {workerHealth.recentRuns.slice(0, 3).map((run) => (
+            <div key={run.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <Badge tone={getWorkerRunTone(run)} size="sm">{run.status}</Badge>
+                <span className="text-xs text-[color:var(--panel-text-muted)]">{run.source} · {run.action}</span>
+              </div>
+              <p className="mt-2 text-xs text-[color:var(--panel-text-muted)]">{formatRelativeRunTime(run.finished_at ?? run.started_at)}</p>
+              <p className="mt-1 text-xs text-[color:var(--panel-text-soft)]">{run.processed} proc. · {run.sent} env. · {run.failed} falha(s)</p>
+            </div>
+          ))}
+          {workerHealth.recentRuns.length === 0 && (
+            <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma execucao registrada ainda. O proximo cron deve aparecer aqui apos rodar.</p>
+          )}
+        </div>
+      </Card>
 
       {aiSuggestions.length > 0 && (
         <Card className="space-y-4">
@@ -913,6 +988,15 @@ function MetricCard({ icon: Icon, label, value }: { icon: LucideIcon; label: str
         <span className="block text-xs text-[color:var(--panel-text-muted)]">{label}</span>
       </span>
     </Card>
+  );
+}
+
+function WorkerHealthStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-surface-soft)] px-3 py-2">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text)]">{value}</p>
+    </div>
   );
 }
 

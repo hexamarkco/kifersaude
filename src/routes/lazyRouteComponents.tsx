@@ -13,6 +13,7 @@ export const ContractsManagerWrapper = lazy(() => import('../pages/routes/Contra
 export const CotadorWrapper = lazy(() => import('../pages/routes/CotadorWrapper'));
 export const WhatsAppInboxWrapper = lazy(() => import('../pages/routes/WhatsAppInboxWrapper'));
 export const WhatsAppCampaignsWrapper = lazy(() => import('../pages/routes/WhatsAppCampaignsWrapper'));
+export const WhatsAppCampaignDetailWrapper = lazy(() => import('../pages/routes/WhatsAppCampaignDetailWrapper'));
 export const RemindersManagerEnhanced = lazy(() => import('../components/RemindersManagerEnhanced'));
 export const BlogTab = lazy(() => import('../components/config/BlogTab'));
 export const ConfigPage = lazy(() => import('../pages/ConfigPage'));

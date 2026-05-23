@@ -53,6 +53,34 @@ export type CommWhatsAppCampaignStep = {
   updated_at: string;
 };
 
+export type CommWhatsAppCampaignTargetStatus = 'pending' | 'scheduled' | 'sending' | 'sent' | 'responded' | 'stopped' | 'failed' | 'invalid' | 'cancelled';
+
+export type CommWhatsAppCampaignTarget = {
+  id: string;
+  campaign_id: string;
+  lead_id: string | null;
+  chat_id: string | null;
+  phone_number: string;
+  phone_digits: string;
+  display_name: string | null;
+  source_kind: 'crm' | 'csv' | 'manual';
+  source_payload: Record<string, unknown>;
+  status: CommWhatsAppCampaignTargetStatus;
+  current_step_index: number;
+  next_send_at: string | null;
+  attempts: number;
+  retry_count?: number;
+  last_attempt_at: string | null;
+  sent_at: string | null;
+  responded_at: string | null;
+  stopped_at: string | null;
+  stopped_reason: string | null;
+  error_message: string | null;
+  external_message_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type CreateCampaignInput = {
   name: string;
   objective?: string;
@@ -162,6 +190,35 @@ export const commWhatsAppCampaignService = {
     }
 
     return (data ?? []) as CommWhatsAppCampaign[];
+  },
+
+  async getCampaign(campaignId: string): Promise<CommWhatsAppCampaign> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaigns')
+      .select('*')
+      .eq('id', campaignId)
+      .single();
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar este disparo.'));
+    }
+
+    return data as CommWhatsAppCampaign;
+  },
+
+  async listCampaignTargets(campaignId: string): Promise<CommWhatsAppCampaignTarget[]> {
+    const { data, error } = await supabase
+      .from('comm_whatsapp_campaign_targets')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .order('created_at', { ascending: true })
+      .limit(500);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os contatos deste disparo.'));
+    }
+
+    return (data ?? []) as CommWhatsAppCampaignTarget[];
   },
 
   async getStats(): Promise<CampaignStats> {
@@ -380,6 +437,59 @@ export const commWhatsAppCampaignService = {
     }
 
     return payload;
+  },
+
+  async pauseCampaign(campaignId: string): Promise<void> {
+    const { error } = await supabase
+      .from('comm_whatsapp_campaigns')
+      .update({ status: 'paused', last_error: null })
+      .eq('id', campaignId)
+      .in('status', ['queued', 'running', 'scheduled']);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel pausar o disparo.'));
+    }
+
+    await supabase
+      .from('comm_whatsapp_campaign_targets')
+      .update({ status: 'scheduled', locked_at: null, lock_token: null })
+      .eq('campaign_id', campaignId)
+      .eq('status', 'sending');
+  },
+
+  async resumeCampaign(campaign: CommWhatsAppCampaign): Promise<void> {
+    const nextStatus = campaign.scheduled_at && new Date(campaign.scheduled_at).getTime() > Date.now() ? 'scheduled' : 'queued';
+    const { error } = await supabase
+      .from('comm_whatsapp_campaigns')
+      .update({ status: nextStatus, last_error: null })
+      .eq('id', campaign.id)
+      .eq('status', 'paused');
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel retomar o disparo.'));
+    }
+  },
+
+  async cancelCampaign(campaignId: string): Promise<void> {
+    const { error } = await supabase
+      .from('comm_whatsapp_campaigns')
+      .update({ status: 'cancelled', completed_at: new Date().toISOString(), last_error: null })
+      .eq('id', campaignId)
+      .in('status', ['draft', 'scheduled', 'queued', 'running', 'paused']);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel cancelar o disparo.'));
+    }
+
+    const { error: targetsError } = await supabase
+      .from('comm_whatsapp_campaign_targets')
+      .update({ status: 'cancelled', locked_at: null, lock_token: null })
+      .eq('campaign_id', campaignId)
+      .in('status', ['pending', 'scheduled', 'sending']);
+
+    if (targetsError) {
+      throw new Error(getSupabaseErrorMessage(targetsError, 'Disparo cancelado, mas nao foi possivel cancelar todos os contatos pendentes.'));
+    }
   },
 
   async acceptAiSuggestion(suggestion: CommWhatsAppAiIntentSuggestion): Promise<void> {

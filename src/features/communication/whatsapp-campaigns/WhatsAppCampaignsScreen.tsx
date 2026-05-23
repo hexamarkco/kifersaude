@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import { Bot, CalendarClock, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { Badge, Button, Card, Input, PageHeader, Textarea } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
@@ -113,6 +114,7 @@ const getVariableAutocompleteState = (value: string, cursorPosition: number, ste
 };
 
 export default function WhatsAppCampaignsScreen() {
+  const navigate = useNavigate();
   const { leadStatuses, options } = useConfig();
   const [campaigns, setCampaigns] = useState<CommWhatsAppCampaign[]>([]);
   const [aiSuggestions, setAiSuggestions] = useState<CommWhatsAppAiIntentSuggestion[]>([]);
@@ -727,6 +729,10 @@ export default function WhatsAppCampaignsScreen() {
                     <MiniStat label="Resp." value={campaign.responded_targets} />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => navigate(`/painel/disparos/${campaign.id}`)}>
+                      <Eye className="h-3.5 w-3.5" />
+                      Detalhe
+                    </Button>
                     <Button size="sm" variant="ghost" loading={loadingCampaignEdit && campaignActionId === campaign.id} onClick={() => {
                       setCampaignActionId(campaign.id);
                       void openEditCampaignModal(campaign).finally(() => setCampaignActionId(null));

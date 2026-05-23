@@ -739,6 +739,18 @@ async function releaseTargetAfterFailure(
   return { status: canRetry ? 'retry_scheduled' : (params.status ?? 'failed'), retrying: canRetry, nextRetryAt };
 }
 
+async function releaseClaimedTarget(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  target: TargetRow,
+  status: 'scheduled' | 'cancelled',
+) {
+  await supabaseAdmin
+    .from('comm_whatsapp_campaign_targets')
+    .update({ status, locked_at: null, lock_token: null })
+    .eq('id', target.id)
+    .eq('status', 'sending');
+}
+
 async function sendTarget(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   campaign: CampaignRow;
@@ -923,6 +935,12 @@ async function processCampaigns(
 
     const targets = await listTargetsForProcessing(supabaseAdmin, campaign, campaignLimit);
     for (const target of targets) {
+      const currentCampaign = await getCampaign(supabaseAdmin, campaign.id);
+      if (currentCampaign.status === 'paused' || currentCampaign.status === 'cancelled') {
+        await releaseClaimedTarget(supabaseAdmin, target, currentCampaign.status === 'cancelled' ? 'cancelled' : 'scheduled');
+        continue;
+      }
+
       let result: { status?: string };
       try {
         result = await sendTarget({

@@ -20,6 +20,7 @@ import {
   ProtectedRoute,
   RouteLoading,
   WhatsAppCampaignsWrapper,
+  WhatsAppCampaignDetailWrapper,
   WhatsAppInboxWrapper,
 } from './routes/lazyRouteComponents';
 import './index.css';
@@ -72,6 +73,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="agenda" element={<FinanceiroAgendaTab />} />
               <Route path="inbox" element={<WhatsAppInboxWrapper />} />
               <Route path="disparos" element={<WhatsAppCampaignsWrapper />} />
+              <Route path="disparos/:campaignId" element={<WhatsAppCampaignDetailWrapper />} />
               <Route path="tarefas" element={<Navigate to="/painel/agenda" replace />} />
               <Route path="lembretes" element={<Navigate to="/painel/agenda" replace />} />
               <Route path="blog" element={<BlogTab />} />

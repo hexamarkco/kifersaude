@@ -142,6 +142,24 @@ export type CommWhatsAppAiIntentSuggestion = {
   } | null;
 };
 
+export type CommWhatsAppCampaignPreviewSample = {
+  name: string;
+  phone: string;
+  status?: string | null;
+  responsavel?: string | null;
+};
+
+export type CommWhatsAppCampaignActivationPreview = {
+  campaign: CommWhatsAppCampaign;
+  steps: CommWhatsAppCampaignStep[];
+  estimatedTargets: number;
+  materializedTargets: number;
+  sample: CommWhatsAppCampaignPreviewSample[];
+  variables: string[];
+  unknownVariables: string[];
+  estimatedMinutes: number;
+};
+
 const normalizePhoneDigits = (value: string) => {
   const digits = value.replace(/\D/g, '');
   if (!digits) return '';
@@ -173,6 +191,31 @@ const getCount = async (table: string, filters: CountFilter[] = []) => {
   }
 
   return count ?? 0;
+};
+
+const getNestedRecord = (value: unknown, key: string): Record<string, unknown> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const nested = (value as Record<string, unknown>)[key];
+  return nested && typeof nested === 'object' && !Array.isArray(nested) ? nested as Record<string, unknown> : {};
+};
+
+const readStringArrayFilter = (filters: Record<string, unknown>, pluralKey: string, legacyKey: string) => {
+  const pluralValue = filters[pluralKey];
+  if (Array.isArray(pluralValue)) return pluralValue.filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  const legacyValue = filters[legacyKey];
+  return typeof legacyValue === 'string' && legacyValue.trim() ? [legacyValue.trim()] : [];
+};
+
+const knownCampaignVariables = new Set(['nome', 'primeiro_nome', 'telefone', 'status', 'responsavel']);
+
+const extractTemplateVariables = (steps: CommWhatsAppCampaignStep[]) => {
+  const variables = new Set<string>();
+  for (const step of steps) {
+    for (const match of step.message_text.matchAll(/{{\s*([a-zA-Z0-9_]+)\s*}}/g)) {
+      variables.add(match[1]);
+    }
+  }
+  return Array.from(variables).sort();
 };
 
 export const commWhatsAppCampaignService = {
@@ -260,6 +303,103 @@ export const commWhatsAppCampaignService = {
     }
 
     return (data ?? []) as CommWhatsAppCampaignStep[];
+  },
+
+  async getActivationPreview(campaignId: string): Promise<CommWhatsAppCampaignActivationPreview> {
+    const campaign = await this.getCampaign(campaignId);
+    const storedSteps = await this.listCampaignSteps(campaignId);
+    const steps = storedSteps.length > 0 ? storedSteps : [{
+      id: 'fallback-message',
+      campaign_id: campaign.id,
+      step_index: 0,
+      message_text: campaign.message_text,
+      delay_amount: 0,
+      delay_unit: 'minutes' as const,
+      created_at: campaign.created_at,
+      updated_at: campaign.updated_at,
+    }];
+    const variables = extractTemplateVariables(steps);
+    const unknownVariables = variables.filter((variable) => !knownCampaignVariables.has(variable));
+
+    const { count: materializedTargetsCount, error: targetCountError } = await supabase
+      .from('comm_whatsapp_campaign_targets')
+      .select('id', { count: 'exact', head: true })
+      .eq('campaign_id', campaignId);
+
+    if (targetCountError) {
+      throw new Error(getSupabaseErrorMessage(targetCountError, 'Nao foi possivel estimar os contatos do disparo.'));
+    }
+
+    let estimatedTargets = materializedTargetsCount ?? 0;
+    let sample: CommWhatsAppCampaignPreviewSample[] = [];
+
+    if (campaign.audience_source === 'crm' || campaign.audience_source === 'mixed') {
+      const filters = getNestedRecord(campaign.audience_config, 'filters');
+      const statuses = readStringArrayFilter(filters, 'statuses', 'status');
+      const responsaveis = readStringArrayFilter(filters, 'responsaveis', 'responsavel');
+
+      let countQuery = supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('arquivado', false)
+        .not('telefone', 'is', null);
+      let sampleQuery = supabase
+        .from('leads')
+        .select('nome_completo,telefone,status,responsavel')
+        .eq('arquivado', false)
+        .not('telefone', 'is', null)
+        .order('created_at', { ascending: true })
+        .limit(5);
+
+      if (statuses.length > 0) {
+        countQuery = countQuery.in('status', statuses);
+        sampleQuery = sampleQuery.in('status', statuses);
+      }
+
+      if (responsaveis.length > 0) {
+        countQuery = countQuery.in('responsavel', responsaveis);
+        sampleQuery = sampleQuery.in('responsavel', responsaveis);
+      }
+
+      const [{ count, error: countError }, { data: sampleRows, error: sampleError }] = await Promise.all([countQuery, sampleQuery]);
+      if (countError) throw new Error(getSupabaseErrorMessage(countError, 'Nao foi possivel estimar o publico do CRM.'));
+      if (sampleError) throw new Error(getSupabaseErrorMessage(sampleError, 'Nao foi possivel carregar amostra do CRM.'));
+
+      estimatedTargets = count ?? 0;
+      sample = (sampleRows ?? []).map((lead) => ({
+        name: lead.nome_completo || 'Lead sem nome',
+        phone: lead.telefone || '',
+        status: lead.status,
+        responsavel: lead.responsavel,
+      }));
+    } else {
+      const { data: targetRows, error: targetRowsError } = await supabase
+        .from('comm_whatsapp_campaign_targets')
+        .select('display_name,phone_number,phone_digits')
+        .eq('campaign_id', campaignId)
+        .order('created_at', { ascending: true })
+        .limit(5);
+
+      if (targetRowsError) {
+        throw new Error(getSupabaseErrorMessage(targetRowsError, 'Nao foi possivel carregar amostra dos contatos.'));
+      }
+
+      sample = (targetRows ?? []).map((target) => ({
+        name: target.display_name || target.phone_number || target.phone_digits || 'Contato sem nome',
+        phone: target.phone_number || target.phone_digits || '',
+      }));
+    }
+
+    return {
+      campaign,
+      steps,
+      estimatedTargets,
+      materializedTargets: materializedTargetsCount ?? 0,
+      sample,
+      variables,
+      unknownVariables,
+      estimatedMinutes: Math.ceil(estimatedTargets / Math.max(campaign.pacing_per_minute || 1, 1)),
+    };
   },
 
   async createDraft(input: CreateCampaignInput): Promise<CommWhatsAppCampaign> {

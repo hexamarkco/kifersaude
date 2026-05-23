@@ -13,6 +13,7 @@ import {
   type CommWhatsAppAiIntentSuggestion,
   type CommWhatsAppCampaign,
   type CommWhatsAppCampaignAudienceSource,
+  type CommWhatsAppCampaignActivationPreview,
   type CommWhatsAppCampaignStepDraft,
   type CommWhatsAppCsvTargetDraft,
 } from './commWhatsAppCampaignService';
@@ -33,6 +34,26 @@ const campaignVariableSuggestions = [
   { key: 'status', label: 'Status', description: 'Status atual do lead no CRM.' },
   { key: 'responsavel', label: 'Responsavel', description: 'Responsavel atual pelo lead.' },
 ];
+
+const formatEstimatedDuration = (minutes: number) => {
+  if (minutes <= 0) return 'menos de 1 min';
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
+};
+
+const formatDateTime = (value: string | null | undefined) => {
+  if (!value) return 'Ao ativar';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Ao ativar';
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
+};
+
+const formatSendWindow = (campaign: CommWhatsAppCampaign) => {
+  if (!campaign.send_window_start || !campaign.send_window_end) return 'Sem janela definida';
+  return `${campaign.send_window_start.slice(0, 5)} - ${campaign.send_window_end.slice(0, 5)}`;
+};
 
 const statusLabels: Record<CommWhatsAppCampaign['status'], string> = {
   draft: 'Rascunho',
@@ -126,6 +147,8 @@ export default function WhatsAppCampaignsScreen() {
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<CommWhatsAppCampaign | null>(null);
   const [loadingCampaignEdit, setLoadingCampaignEdit] = useState(false);
+  const [activationPreview, setActivationPreview] = useState<CommWhatsAppCampaignActivationPreview | null>(null);
+  const [loadingActivationPreview, setLoadingActivationPreview] = useState(false);
   const [audienceMode, setAudienceMode] = useState<AudienceMode>('crm');
   const [name, setName] = useState('');
   const [objective, setObjective] = useState('');
@@ -375,11 +398,31 @@ export default function WhatsAppCampaignsScreen() {
     setSteps((current) => current.length <= 1 ? current : current.filter((_, stepIndex) => stepIndex !== index));
   };
 
-  const handleActivateCampaign = async (campaign: CommWhatsAppCampaign) => {
+  const openActivationPreview = async (campaign: CommWhatsAppCampaign) => {
     setCampaignActionId(campaign.id);
+    setLoadingActivationPreview(true);
     try {
-      const result = await commWhatsAppCampaignService.activateCampaign(campaign.id);
+      const preview = await commWhatsAppCampaignService.getActivationPreview(campaign.id);
+      setActivationPreview(preview);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel montar a revisao do disparo.');
+    } finally {
+      setCampaignActionId(null);
+      setLoadingActivationPreview(false);
+    }
+  };
+
+  const closeActivationPreview = () => {
+    setActivationPreview(null);
+  };
+
+  const handleConfirmActivateCampaign = async () => {
+    if (!activationPreview) return;
+    setCampaignActionId(activationPreview.campaign.id);
+    try {
+      const result = await commWhatsAppCampaignService.activateCampaign(activationPreview.campaign.id);
       toast.success(result.status === 'scheduled' ? 'Disparo agendado e pronto para a fila.' : 'Disparo ativado e colocado na fila.');
+      closeActivationPreview();
       await loadCampaigns();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel ativar o disparo.');
@@ -694,6 +737,103 @@ export default function WhatsAppCampaignsScreen() {
         </div>
       )}
 
+      {activationPreview && (
+        <div className="fixed inset-0 z-[2147482000] flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm">
+          <Card className="flex max-h-[calc(100vh-3rem)] w-full max-w-4xl flex-col overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="activation-preview-title">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[color:var(--panel-border-subtle)] pb-4">
+              <div>
+                <h2 id="activation-preview-title" className="text-lg font-semibold text-[color:var(--panel-text)]">Revisar antes de ativar</h2>
+                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Confirme publico, ritmo, janela e mensagens antes de colocar o disparo na fila.</p>
+              </div>
+              <Button variant="icon" size="icon" onClick={closeActivationPreview} aria-label="Fechar revisao de ativacao">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-5 pr-1">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <PreviewMetric label="Contatos estimados" value={activationPreview.estimatedTargets} />
+                <PreviewMetric label="Mensagens por contato" value={activationPreview.steps.length} />
+                <PreviewMetric label="Ritmo" value={`${activationPreview.campaign.pacing_per_minute}/min`} />
+                <PreviewMetric label="Duracao estimada" value={formatEstimatedDuration(activationPreview.estimatedMinutes)} />
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
+                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Configuracao operacional</h3>
+                  <div className="space-y-2 text-sm text-[color:var(--panel-text-soft)]">
+                    <PreviewRow label="Campanha" value={activationPreview.campaign.name} />
+                    <PreviewRow label="Agendamento" value={formatDateTime(activationPreview.campaign.scheduled_at)} />
+                    <PreviewRow label="Janela" value={formatSendWindow(activationPreview.campaign)} />
+                    <PreviewRow label="Origem" value={activationPreview.campaign.audience_source.toUpperCase()} />
+                    <PreviewRow label="Targets materializados" value={String(activationPreview.materializedTargets)} />
+                  </div>
+                </Card>
+
+                <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
+                  <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Variaveis detectadas</h3>
+                  {activationPreview.variables.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {activationPreview.variables.map((variable) => (
+                        <Badge key={variable} tone={activationPreview.unknownVariables.includes(variable) ? 'danger' : 'neutral'}>{`{{${variable}}}`}</Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma variavel foi usada nas mensagens.</p>
+                  )}
+                  {activationPreview.unknownVariables.length > 0 && (
+                    <p className="text-xs text-[color:var(--panel-danger)]">Ha variaveis nao reconhecidas. Elas podem ser enviadas vazias ou sem substituicao.</p>
+                  )}
+                </Card>
+              </div>
+
+              <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Sequencia de mensagens</h3>
+                <div className="space-y-2">
+                  {activationPreview.steps.map((step, index) => (
+                    <div key={step.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge tone="neutral">Mensagem {index + 1}</Badge>
+                        {index > 0 && <span className="text-xs text-[color:var(--panel-text-muted)]">Apos {step.delay_amount} {step.delay_unit}</span>}
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm text-[color:var(--panel-text-soft)]">{step.message_text}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="space-y-3 bg-[color:var(--panel-surface-soft)]">
+                <h3 className="text-sm font-semibold text-[color:var(--panel-text)]">Amostra do publico</h3>
+                {activationPreview.sample.length > 0 ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {activationPreview.sample.map((sample, index) => (
+                      <div key={`${sample.phone}-${index}`} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3">
+                        <p className="text-sm font-medium text-[color:var(--panel-text)]">{sample.name}</p>
+                        <p className="text-xs text-[color:var(--panel-text-muted)]">{sample.phone}</p>
+                        {(sample.status || sample.responsavel) && <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">{[sample.status, sample.responsavel].filter(Boolean).join(' · ')}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhum contato encontrado para esta configuracao.</p>
+                )}
+              </Card>
+            </div>
+
+            <div className="flex shrink-0 flex-col gap-3 border-t border-[color:var(--panel-border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha sera materializada e processada pelo cron mesmo com o navegador fechado.</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" className="whitespace-nowrap" onClick={closeActivationPreview}>Cancelar</Button>
+                <Button className="whitespace-nowrap" disabled={activationPreview.estimatedTargets <= 0} loading={campaignActionId === activationPreview.campaign.id} onClick={() => void handleConfirmActivateCampaign()}>
+                  <PlayCircle className="h-4 w-4" />
+                  Confirmar ativacao
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
       <Card className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -741,7 +881,7 @@ export default function WhatsAppCampaignsScreen() {
                       Editar
                     </Button>
                     {['draft', 'scheduled', 'paused'].includes(campaign.status) && (
-                      <Button size="sm" variant="secondary" loading={campaignActionId === campaign.id} onClick={() => void handleActivateCampaign(campaign)}>
+                      <Button size="sm" variant="secondary" loading={campaignActionId === campaign.id && loadingActivationPreview} onClick={() => void openActivationPreview(campaign)}>
                         <PlayCircle className="h-3.5 w-3.5" />
                         Ativar
                       </Button>
@@ -809,6 +949,24 @@ function MiniStat({ label, value }: { label: string; value: number }) {
       <span className="block font-semibold text-[color:var(--panel-text)]">{value}</span>
       <span className="block text-[color:var(--panel-text-muted)]">{label}</span>
     </span>
+  );
+}
+
+function PreviewMetric({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-[color:var(--panel-text)]">{value}</p>
+    </div>
+  );
+}
+
+function PreviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-[color:var(--panel-border-subtle)] pb-2 last:border-b-0 last:pb-0">
+      <span className="text-[color:var(--panel-text-muted)]">{label}</span>
+      <span className="text-right font-medium text-[color:var(--panel-text)]">{value}</span>
+    </div>
   );
 }
 

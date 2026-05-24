@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { gsap } from "gsap";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useSearchParams } from "react-router-dom";
-import { supabase, Lead, Contract, fetchAllPages } from "../../lib/supabase";
+import { supabase, Lead, Contract } from "../../lib/supabase";
 import {
   getDateKey,
   parseDateWithoutTimezone,
@@ -440,39 +440,53 @@ export default function DashboardScreen({
     setLoading(true);
     setError(null);
     try {
-      const [leadsData, contractsData, holdersData, dependentsData] =
-        await Promise.all([
-          fetchAllPages<Lead>(async (from, to) => {
-            const response = await supabase
-              .from("leads")
-              .select("*")
-              .order("created_at", { ascending: false })
-              .range(from, to);
-            return { data: response.data, error: response.error };
-          }),
-          fetchAllPages<Contract>(async (from, to) => {
-            const response = await supabase
-              .from("contracts")
-              .select("*")
-              .order("created_at", { ascending: false })
-              .range(from, to);
-            return { data: response.data, error: response.error };
-          }),
-          fetchAllPages<Holder>(async (from, to) => {
-            const response = await supabase
-              .from("contract_holders")
-              .select("*")
-              .range(from, to);
-            return { data: response.data, error: response.error };
-          }),
-          fetchAllPages<Dependent>(async (from, to) => {
-            const response = await supabase
-              .from("dependents")
-              .select("*")
-              .range(from, to);
-            return { data: response.data, error: response.error };
-          }),
-        ]);
+      const dateRange = (() => {
+        if (periodFilter === "mes-atual") {
+          const now = new Date();
+          const start = new Date(now.getFullYear(), now.getMonth(), 1);
+          const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+          return { start: start.toISOString(), end: end.toISOString() };
+        }
+        if (periodFilter === "personalizado" && customStartDate && customEndDate) {
+          return { start: new Date(customStartDate).toISOString(), end: new Date(customEndDate + "T23:59:59").toISOString() };
+        }
+        return null;
+      })();
+
+      const LEAD_COLUMNS = 'id, nome_completo, telefone, email, origem, origem_id, status, status_id, responsavel, responsavel_id, data_criacao, created_at, arquivado, tags, canal, tipo_contratacao, tipo_contratacao_id, cidade, observacoes, ultimo_contato, proximo_retorno';
+      const CONTRACT_COLUMNS = 'id, lead_id, status, modalidade, operadora, responsavel, data_inicio, previsao_recebimento_comissao, created_at, comissao_prevista, mes_reajuste, codigo_contrato, cnpj, razao_social, nome_fantasia';
+      const HOLDER_COLUMNS = 'id, contract_id, nome_completo, data_nascimento, cnpj, razao_social, nome_fantasia';
+      const DEPENDENT_COLUMNS = 'id, contract_id, nome_completo, data_nascimento';
+
+      const buildQuery = (base: any) => {
+        if (!dateRange) return base;
+        return base.gte("created_at", dateRange.start).lte("created_at", dateRange.end);
+      };
+
+      const [leadsResult, contractsResult] = await Promise.all([
+        buildQuery(
+          supabase.from("leads").select(LEAD_COLUMNS).order("created_at", { ascending: false })
+        ).limit(1000),
+        buildQuery(
+          supabase.from("contracts").select(CONTRACT_COLUMNS).order("created_at", { ascending: false })
+        ).limit(1000),
+      ]);
+
+      const contractsData = contractsResult.data || [];
+      const contractIds = contractsData.map((c) => c.id);
+
+      const [holdersResult, dependentsResult] = await Promise.all([
+        contractIds.length > 0
+          ? supabase.from("contract_holders").select(HOLDER_COLUMNS).in("contract_id", contractIds)
+          : { data: [] as Holder[], error: null },
+        contractIds.length > 0
+          ? supabase.from("dependents").select(DEPENDENT_COLUMNS).in("contract_id", contractIds)
+          : { data: [] as Dependent[], error: null },
+      ]);
+
+      const leadsData = leadsResult.data || [];
+      const holdersData = (holdersResult.data || []) as Holder[];
+      const dependentsData = (dependentsResult.data || []) as Dependent[];
 
       const mappedLeads = (leadsData || [])
         .map((lead) => mapLeadWithRelations(lead))
@@ -521,6 +535,9 @@ export default function DashboardScreen({
     isObserver,
     isOriginVisibleToObserver,
     mapLeadWithRelations,
+    periodFilter,
+    customStartDate,
+    customEndDate,
   ]);
 
   useEffect(() => {

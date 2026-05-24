@@ -390,31 +390,68 @@ const updateLocalIntegrationSetting = (
   return updated;
 };
 
+const CACHE_TTL = 5 * 60 * 1000;
+
+type CacheEntry = { data: unknown; expiresAt: number };
+
+const configCache = new Map<string, CacheEntry>();
+
+const getCached = <T>(key: string): T | null => {
+  const entry = configCache.get(key);
+  if (entry && entry.expiresAt > Date.now()) return entry.data as T;
+  configCache.delete(key);
+  return null;
+};
+
+const setCache = <T>(key: string, data: T): void => {
+  configCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL });
+};
+
+const invalidateCache = (prefix?: string): void => {
+  if (prefix) {
+    for (const key of configCache.keys()) {
+      if (key.startsWith(prefix)) configCache.delete(key);
+    }
+  } else {
+    configCache.clear();
+  }
+};
+
+const cachedFetch = async <T>(key: string, fetcher: () => Promise<T>): Promise<T> => {
+  const cached = getCached<T>(key);
+  if (cached !== null) return cached;
+  const data = await fetcher();
+  setCache(key, data);
+  return data;
+};
+
 export const configService = {
   async getAccessProfiles(): Promise<AccessProfile[]> {
-    try {
-      const { data, error, status } = await supabase
-        .from(ACCESS_PROFILES_TABLE)
-        .select('*')
-        .order('is_system', { ascending: false })
-        .order('name', { ascending: true });
+    return cachedFetch('accessProfiles', async () => {
+      try {
+        const { data, error, status } = await supabase
+          .from(ACCESS_PROFILES_TABLE)
+          .select('*')
+          .order('is_system', { ascending: false })
+          .order('name', { ascending: true });
 
-      if (error) {
-        if (status === 404 || isTableMissingError(error, ACCESS_PROFILES_TABLE)) {
+        if (error) {
+          if (status === 404 || isTableMissingError(error, ACCESS_PROFILES_TABLE)) {
+            return [];
+          }
+          throw error;
+        }
+
+        return (data as AccessProfile[] | null) ?? [];
+      } catch (error) {
+        if (isTableMissingError(error, ACCESS_PROFILES_TABLE)) {
           return [];
         }
-        throw error;
-      }
 
-      return (data as AccessProfile[] | null) ?? [];
-    } catch (error) {
-      if (isTableMissingError(error, ACCESS_PROFILES_TABLE)) {
+        console.error('Error loading access profiles:', error);
         return [];
       }
-
-      console.error('Error loading access profiles:', error);
-      return [];
-    }
+    });
   },
 
   async createAccessProfile(
@@ -435,6 +472,7 @@ export const configService = {
         .select()
         .single();
 
+      if (!error) invalidateCache('accessProfiles');
       return { data: (data as AccessProfile) ?? null, error };
     } catch (error) {
       console.error('Error creating access profile:', error);
@@ -457,6 +495,7 @@ export const configService = {
         .select()
         .single();
 
+      if (!error) invalidateCache('accessProfiles');
       return { data: (data as AccessProfile) ?? null, error };
     } catch (error) {
       console.error('Error updating access profile:', error);
@@ -471,6 +510,7 @@ export const configService = {
         .delete()
         .eq('id', id);
 
+      if (!error) invalidateCache('accessProfiles');
       return { error };
     } catch (error) {
       console.error('Error deleting access profile:', error);
@@ -648,18 +688,20 @@ export const configService = {
   },
 
   async getLeadStatusConfig(): Promise<LeadStatusConfig[]> {
-    try {
-      const { data, error } = await supabase
-        .from('lead_status_config')
-        .select('*')
-        .order('ordem', { ascending: true });
+    return cachedFetch('leadStatusConfig', async () => {
+      try {
+        const { data, error } = await supabase
+          .from('lead_status_config')
+          .select('*')
+          .order('ordem', { ascending: true });
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error loading status config:', error);
-      return [];
-    }
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error('Error loading status config:', error);
+        return [];
+      }
+    });
   },
 
   async createLeadStatus(status: Omit<LeadStatusConfig, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: LeadStatusConfig | null; error: unknown }> {
@@ -670,6 +712,7 @@ export const configService = {
         .select()
         .single();
 
+      if (!error) invalidateCache('leadStatusConfig');
       return { data, error };
     } catch (error) {
       console.error('Error creating status:', error);
@@ -684,6 +727,7 @@ export const configService = {
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id);
 
+      if (!error) invalidateCache('leadStatusConfig');
       return { error };
     } catch (error) {
       console.error('Error updating status:', error);
@@ -698,6 +742,7 @@ export const configService = {
         .delete()
         .eq('id', id);
 
+      if (!error) invalidateCache('leadStatusConfig');
       return { error };
     } catch (error) {
       console.error('Error deleting status:', error);
@@ -706,24 +751,26 @@ export const configService = {
   },
 
   async getLeadOrigens(): Promise<LeadOrigem[]> {
-    try {
-      const { data, error } = await supabase
-        .from('lead_origens')
-        .select('*')
-        .order('nome', { ascending: true });
+    return cachedFetch('leadOrigens', async () => {
+      try {
+        const { data, error } = await supabase
+          .from('lead_origens')
+          .select('*')
+          .order('nome', { ascending: true });
 
-      if (error) throw error;
-      return (data || []).map((origem) => ({
-        ...origem,
-        visivel_para_observadores:
-          typeof origem.visivel_para_observadores === 'boolean'
-            ? origem.visivel_para_observadores
-            : true,
-      }));
-    } catch (error) {
-      console.error('Error loading origens:', error);
-      return [];
-    }
+        if (error) throw error;
+        return (data || []).map((origem) => ({
+          ...origem,
+          visivel_para_observadores:
+            typeof origem.visivel_para_observadores === 'boolean'
+              ? origem.visivel_para_observadores
+              : true,
+        }));
+      } catch (error) {
+        console.error('Error loading origens:', error);
+        return [];
+      }
+    });
   },
 
   async createLeadOrigem(origem: Omit<LeadOrigem, 'id' | 'created_at'>): Promise<{ data: LeadOrigem | null; error: unknown }> {
@@ -741,6 +788,7 @@ export const configService = {
         .select()
         .single();
 
+      if (!error) invalidateCache('leadOrigens');
       return {
         data: data
           ? {
@@ -766,6 +814,7 @@ export const configService = {
         .update(updates)
         .eq('id', id);
 
+      if (!error) invalidateCache('leadOrigens');
       return { error };
     } catch (error) {
       console.error('Error updating origem:', error);
@@ -780,6 +829,7 @@ export const configService = {
         .delete()
         .eq('id', id);
 
+      if (!error) invalidateCache('leadOrigens');
       return { error };
     } catch (error) {
       console.error('Error deleting origem:', error);
@@ -788,34 +838,36 @@ export const configService = {
   },
 
   async getConfigOptions(category: ConfigCategory): Promise<ConfigOption[]> {
-    const table = CONFIG_CATEGORY_TABLE_MAP[category];
+    return cachedFetch(`configOptions:${category}`, async () => {
+      const table = CONFIG_CATEGORY_TABLE_MAP[category];
 
-    if (table) {
-      try {
-        const { data, error } = await supabase
-          .from(table)
-          .select('*')
-          .order('ordem', { ascending: true })
-          .order('label', { ascending: true });
+      if (table) {
+        try {
+          const { data, error } = await supabase
+            .from(table)
+            .select('*')
+            .order('ordem', { ascending: true })
+            .order('label', { ascending: true });
 
-        if (error) {
+          if (error) {
+            if (isTableMissingError(error, table)) {
+              return await fetchLegacyConfigOptions(category);
+            }
+            throw error;
+          }
+
+          return (data || []).map(option => normalizeConfigOption(category, option as RawConfigOption));
+        } catch (error) {
           if (isTableMissingError(error, table)) {
             return await fetchLegacyConfigOptions(category);
           }
-          throw error;
+          console.error('Error loading config options:', error);
+          return [];
         }
-
-        return (data || []).map(option => normalizeConfigOption(category, option as RawConfigOption));
-      } catch (error) {
-        if (isTableMissingError(error, table)) {
-          return await fetchLegacyConfigOptions(category);
-        }
-        console.error('Error loading config options:', error);
-        return [];
       }
-    }
 
-    return await fetchLegacyConfigOptions(category);
+      return await fetchLegacyConfigOptions(category);
+    });
   },
 
   async createConfigOption(
@@ -844,6 +896,7 @@ export const configService = {
           return { data: null, error: toPostgrestError(error) };
         }
 
+        if (!error) invalidateCache(`configOptions:${category}`);
         return { data: data ? normalizeConfigOption(category, data as RawConfigOption) : null, error: null };
       } catch (error) {
         if (isTableMissingError(error, table)) {
@@ -902,6 +955,7 @@ export const configService = {
           return { error: toPostgrestError(error) };
         }
 
+        invalidateCache(`configOptions:${category}`);
         return { error: null };
       } catch (error) {
         if (isTableMissingError(error, table)) {
@@ -929,6 +983,7 @@ export const configService = {
           return { error: toPostgrestError(error) };
         }
 
+        invalidateCache(`configOptions:${category}`);
         return { error: null };
       } catch (error) {
         if (isTableMissingError(error, table)) {
@@ -943,29 +998,31 @@ export const configService = {
   },
 
   async getProfilePermissions(): Promise<ProfilePermission[]> {
-    try {
-      const { data, error, status } = await supabase
-        .from(PROFILE_PERMISSIONS_TABLE)
-        .select('*')
-        .order('role', { ascending: true })
-        .order('module', { ascending: true });
+    return cachedFetch('profilePermissions', async () => {
+      try {
+        const { data, error, status } = await supabase
+          .from(PROFILE_PERMISSIONS_TABLE)
+          .select('*')
+          .order('role', { ascending: true })
+          .order('module', { ascending: true });
 
-      if (error) {
-        if (status === 404 || isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+        if (error) {
+          if (status === 404 || isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+            return [];
+          }
+          throw error;
+        }
+
+        return (data as ProfilePermission[] | null) ?? [];
+      } catch (error) {
+        if (isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
           return [];
         }
-        throw error;
-      }
 
-      return (data as ProfilePermission[] | null) ?? [];
-    } catch (error) {
-      if (isTableMissingError(error, PROFILE_PERMISSIONS_TABLE)) {
+        console.error('Error loading profile permissions:', error);
         return [];
       }
-
-      console.error('Error loading profile permissions:', error);
-      return [];
-    }
+    });
   },
 
   async upsertProfilePermission(

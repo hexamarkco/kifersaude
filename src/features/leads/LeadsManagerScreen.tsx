@@ -353,11 +353,12 @@ export default function LeadsManager({
   const loadLeads = useCallback(async () => {
     setLoading(true);
     try {
+      const LEAD_COLUMNS = 'id, nome_completo, telefone, email, status, origem, responsavel, data_criacao, created_at, arquivado, cidade, tags, canal, observacoes, ultimo_contato, proximo_retorno, tipo_contratacao, origem_id, status_id, tipo_contratacao_id, responsavel_id';
       const data = await fetchAllPages<Lead>(
         (from, to) =>
           supabase
             .from("leads")
-            .select("*")
+            .select(LEAD_COLUMNS)
             .order("created_at", { ascending: false })
             .range(from, to) as unknown as Promise<{
             data: Lead[] | null;

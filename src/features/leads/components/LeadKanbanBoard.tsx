@@ -94,7 +94,7 @@ export default function LeadKanbanBoard({
       const data = await fetchAllPages<Lead>((from, to) =>
         supabase
           .from("leads")
-          .select("*")
+          .select('id, nome_completo, telefone, email, status, origem, responsavel, arquivado, proximo_retorno, data_criacao')
           .eq("arquivado", false)
           .in(
             "status",

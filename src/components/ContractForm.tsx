@@ -650,7 +650,7 @@ export default function ContractForm({
   const loadLeads = async () => {
     try {
       const data = await fetchAllPages<Lead>(async (from, to) => {
-        let query = supabase.from("leads").select("*").eq("arquivado", false);
+        let query = supabase.from("leads").select("id, nome_completo").eq("arquivado", false);
 
         if (convertibleLeadStatuses.length > 0) {
           query = query.in("status", convertibleLeadStatuses);

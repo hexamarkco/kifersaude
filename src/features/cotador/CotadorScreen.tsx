@@ -200,7 +200,7 @@ export default function CotadorScreen() {
         fetchAllPages<Lead>(async (from, to) => {
           const response = await supabase
             .from('leads')
-            .select('*')
+            .select('id, nome_completo, telefone, email')
             .eq('arquivado', false)
             .order('nome_completo')
             .range(from, to);

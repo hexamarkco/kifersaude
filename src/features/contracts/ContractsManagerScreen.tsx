@@ -184,12 +184,13 @@ export default function ContractsManager({
   const loadContracts = async () => {
     setLoading(true);
     try {
+      const CONTRACT_COLUMNS = 'id, lead_id, status, modalidade, operadora, produto_plano, responsavel, data_inicio, codigo_contrato, cnpj, razao_social, nome_fantasia, comissao_multiplicador, comissao_recebimento_adiantado, mensalidade_total, comissao_prevista, previsao_recebimento_comissao, previsao_pagamento_bonificacao, created_at';
       const [contractsData, holdersData, dependentsData] = await Promise.all([
         fetchAllPages<Contract>(
           (from, to) =>
             supabase
               .from("contracts")
-              .select("*")
+              .select(CONTRACT_COLUMNS)
               .order("created_at", { ascending: false })
               .range(from, to) as unknown as Promise<{
               data: Contract[] | null;

@@ -218,7 +218,7 @@ export default function RemindersManagerEnhanced() {
           (from, to) =>
             supabase
               .from("reminders")
-              .select("*")
+              .select('id, contract_id, lead_id, titulo, descricao, data_lembrete, lido, prioridade, tipo, tags, tempo_estimado_minutos')
               .order("data_lembrete", { ascending: true })
               .order("id", { ascending: true })
               .range(from, to) as unknown as Promise<{

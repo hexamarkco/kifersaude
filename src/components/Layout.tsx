@@ -224,14 +224,14 @@ export default function Layout({
         = await Promise.all([
           supabase
             .from('reminders')
-            .select('*')
+            .select('id, titulo, data_lembrete')
             .gte('data_lembrete', startOfDay.toISOString())
             .lte('data_lembrete', endOfDay.toISOString())
             .eq('lido', false)
             .order('data_lembrete', { ascending: true }),
           supabase
             .from('contracts')
-            .select('*')
+            .select('id, status, codigo_contrato, previsao_recebimento_comissao, comissao_prevista, comissao_recebimento_adiantado, comissao_parcelas, mensalidade_total, previsao_pagamento_bonificacao, bonus_por_vida_aplicado, bonus_por_vida_configuracoes, bonus_por_vida_valor, vidas, vidas_elegiveis_bonus')
             .eq('status', 'Ativo'),
         ]);
 
@@ -239,22 +239,30 @@ export default function Layout({
       if (contractsError) throw contractsError;
 
       const activeContracts = contractsData || [];
+      const activeContractIds = activeContracts.map((c) => c.id);
 
-      const { data: holdersData, error: holdersError } = await supabase
-        .from('contract_holders')
-        .select('id, contract_id, nome_completo, razao_social, nome_fantasia, data_nascimento');
+      const [{ data: holdersData, error: holdersError }, { data: dependentsData, error: dependentsError }] =
+        await Promise.all([
+          activeContractIds.length > 0
+            ? supabase
+                .from('contract_holders')
+                .select('id, contract_id, nome_completo, data_nascimento, nome_fantasia, razao_social')
+                .in('contract_id', activeContractIds)
+            : { data: [], error: null },
+          activeContractIds.length > 0
+            ? supabase
+                .from('dependents')
+                .select('id, contract_id, nome_completo, data_nascimento')
+                .in('contract_id', activeContractIds)
+            : { data: [], error: null },
+        ]);
 
       if (holdersError) throw holdersError;
-
-      const { data: dependentsData, error: dependentsError } = await supabase
-        .from('dependents')
-        .select('id, contract_id, nome_completo, data_nascimento');
-
       if (dependentsError) throw dependentsError;
 
-      const activeContractIds = new Set(activeContracts.map((contract) => contract.id));
-      const holders = (holdersData || []).filter((holder) => activeContractIds.has(holder.contract_id));
-      const dependents = (dependentsData || []).filter((dependent) => activeContractIds.has(dependent.contract_id));
+      const activeContractsSet = new Set(activeContractIds);
+      const holders = (holdersData || []).filter((holder) => activeContractsSet.has(holder.contract_id));
+      const dependents = (dependentsData || []).filter((dependent) => activeContractsSet.has(dependent.contract_id));
       const holderByContractId = new Map(holders.map((holder) => [holder.contract_id, holder]));
 
       const payments: {

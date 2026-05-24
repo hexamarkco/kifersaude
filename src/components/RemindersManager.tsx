@@ -80,7 +80,7 @@ export default function RemindersManager() {
     try {
       let query = supabase
         .from('reminders')
-        .select('*')
+        .select('id, titulo, descricao, tipo, prioridade, lead_id, contract_id, data_lembrete, lido')
         .order('data_lembrete', { ascending: true });
 
       if (filter === 'nao-lidos') {

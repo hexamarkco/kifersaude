@@ -1815,6 +1815,15 @@ export default function WhatsAppInboxScreen() {
     const filtered = chats.filter((chat) => matchesCurrentSection(chat) && chatMatchesActiveFilters(chat));
     const selected = selectedChatId ? chats.find((chat) => chat.id === selectedChatId) ?? null : null;
 
+    if (chats.length > 0 && filtered.length < 3) {
+      console.log('[WAD:scopedChats]', {
+        chatsLen: chats.length,
+        filteredLen: filtered.length,
+        selected: selected?.id ?? null,
+        archivedSectionOpen,
+      });
+    }
+
     // BUG FIX (BUG #4): so reincluimos o chat selecionado se ele pertence
     // a secao atual. Se ele acabou de ser arquivado/desarquivado, deixar
     // ele sair da lista da secao corrente (e a logica de selecao em
@@ -2453,9 +2462,20 @@ export default function WhatsAppInboxScreen() {
           pendingChatInboxStateRef.current,
         )[0];
         const shouldKeepSelectedChat = selectedChatIdRef.current === hydratedChat.id;
+        const matchesFilters = chatMatchesActiveFilters(hydratedChat);
 
-        if (chatMatchesActiveFilters(hydratedChat) || shouldKeepSelectedChat) {
+        if (matchesFilters || shouldKeepSelectedChat) {
           next = [...next, hydratedChat];
+        } else {
+          console.log('[WAD:realtime] chat removido da lista por filtro', {
+            eventType: payload.eventType,
+            chatId: changedChatId,
+            isUnread: hydratedChat.unread_count > 0,
+            manualUnread: hydratedChat.manual_unread,
+            isArchived: hydratedChat.is_archived,
+            shouldKeepSelectedChat,
+            matchesFilters,
+          });
         }
       }
 
@@ -3819,6 +3839,18 @@ export default function WhatsAppInboxScreen() {
             ? [...refreshedChats, preservedSelectedChat]
             : refreshedChats,
         );
+
+        if (requestedSections.length === 1 && previousChats.length > 0 && hydratedData.length < 3) {
+          console.log('[WAD:loadChats] lista encolheu', {
+            requestedSections,
+            previousChatsLen: previousChats.length,
+            fetchedFlatLen: fetchedFlat.length,
+            preservedLen: preservedFromOtherSections.length,
+            shouldPreserveSelectedChat,
+            hydratedDataLen: hydratedData.length,
+            currentSelectedChatId,
+          });
+        }
 
         const nextSignature = buildChatsSignature(hydratedData);
 

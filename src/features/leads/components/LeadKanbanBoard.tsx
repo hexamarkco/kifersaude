@@ -5,6 +5,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
 import { Badge, Surface } from "../../../design-system";
 import { supabase, Lead, fetchAllPages } from "../../../lib/supabase";
+import { mapLeadRelations } from "../../../lib/leadRelations";
 import { toast } from "../../../lib/toast";
 import { KanbanColumn } from "./KanbanColumn";
 
@@ -19,7 +20,7 @@ export default function LeadKanbanBoard({
   onConvertToContract,
   leads,
 }: LeadKanbanBoardProps) {
-  const { leadStatuses, leadOrigins } = useConfig();
+  const { leadStatuses, leadOrigins, options } = useConfig();
   const { isObserver } = useAuth();
   const [localLeads, setLocalLeads] = useState<Lead[]>(leads ?? []);
   const [loading, setLoading] = useState(true);
@@ -94,7 +95,7 @@ export default function LeadKanbanBoard({
       const data = await fetchAllPages<Lead>((from, to) =>
         supabase
           .from("leads")
-          .select('id, nome_completo, telefone, email, status, origem, responsavel, arquivado, proximo_retorno, data_criacao')
+          .select('id, nome_completo, telefone, email, status, status_id, origem_id, responsavel_id, arquivado, proximo_retorno, data_criacao')
           .eq("arquivado", false)
           .in(
             "status",
@@ -107,7 +108,14 @@ export default function LeadKanbanBoard({
         }>,
       );
 
-      let fetchedLeads: Lead[] = data || [];
+      let fetchedLeads: Lead[] = (data || []).map((lead) =>
+        mapLeadRelations(lead, {
+          origins: leadOrigins,
+          statuses: leadStatuses,
+          tipoContratacao: [],
+          responsaveis: options.lead_responsavel || [],
+        }),
+      );
 
       if (isObserver) {
         fetchedLeads = fetchedLeads.filter((lead) =>
@@ -121,7 +129,7 @@ export default function LeadKanbanBoard({
     } finally {
       setLoading(false);
     }
-  }, [isObserver, isOriginVisibleToObserver, leads, statusColumns]);
+  }, [isObserver, isOriginVisibleToObserver, leads, statusColumns, leadOrigins, leadStatuses, options]);
 
   useEffect(() => {
     void loadLeads();

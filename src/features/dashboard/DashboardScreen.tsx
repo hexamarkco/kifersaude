@@ -429,7 +429,6 @@ export default function DashboardScreen({
   };
 
   const loadData = useCallback(async () => {
-    console.log("[DIAG] Dashboard loadData called, configLoading:", configLoading);
     if (configLoading) {
       return;
     }
@@ -454,7 +453,7 @@ export default function DashboardScreen({
         return null;
       })();
 
-      const LEAD_COLUMNS = 'id, nome_completo, telefone, email, origem, origem_id, status, status_id, responsavel, responsavel_id, data_criacao, created_at, arquivado, tags, canal, tipo_contratacao, tipo_contratacao_id, cidade, observacoes, ultimo_contato, proximo_retorno';
+      const LEAD_COLUMNS = 'id, nome_completo, telefone, email, origem_id, status, status_id, responsavel_id, data_criacao, created_at, arquivado, canal, tipo_contratacao_id, cidade, observacoes, ultimo_contato, proximo_retorno';
       const CONTRACT_COLUMNS = 'id, lead_id, status, modalidade, operadora, responsavel, data_inicio, previsao_recebimento_comissao, created_at, comissao_prevista, mes_reajuste, codigo_contrato, cnpj, razao_social, nome_fantasia';
       const HOLDER_COLUMNS = 'id, contract_id, nome_completo, data_nascimento, cnpj, razao_social, nome_fantasia';
       const DEPENDENT_COLUMNS = 'id, contract_id, nome_completo, data_nascimento';
@@ -472,8 +471,6 @@ export default function DashboardScreen({
           supabase.from("contracts").select(CONTRACT_COLUMNS).order("created_at", { ascending: false })
         ).limit(1000),
       ]);
-
-      console.log("[DIAG] Dashboard leads result:", leadsResult.error ? "ERROR" : "OK", "count:", leadsResult.data?.length ?? 0, leadsResult.error ?? "");
 
       const contractsData = contractsResult.data || [];
       const contractIds = contractsData.map((c) => c.id);
@@ -520,7 +517,7 @@ export default function DashboardScreen({
       setDependents(dependentsData || []);
       setLastUpdated(new Date());
     } catch (error) {
-      console.error("[DIAG] Erro ao carregar dados:", error);
+      console.error("Erro ao carregar dados:", error);
       const message =
         error instanceof Error ? error.message : "Erro desconhecido.";
       setError(`Não foi possível carregar os dados. ${message}`);

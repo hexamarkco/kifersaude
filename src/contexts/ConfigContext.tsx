@@ -86,7 +86,6 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         loadProfilePermissions(),
       ]);
       if (mounted) {
-        console.log("[DIAG] ConfigContext finished loading");
         setLoading(false);
       }
     };

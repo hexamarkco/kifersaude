@@ -1,8 +1,8 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
 import {
-  fetchAllPages,
   supabase,
+  waitForSupabaseSession,
   SystemSettings,
   Operadora,
   ProdutoPlano,
@@ -306,6 +306,18 @@ const normalizeIntegrationSetting = (row: IntegrationSetting): IntegrationSettin
 };
 
 const LOCAL_INTEGRATIONS_KEY = 'integration_settings_fallback';
+const AUTH_REQUIRED_INTEGRATION_SLUGS = new Set([
+  'whatsapp_auto_contact',
+  'comm_whatsapp_inbox',
+  'whatsapp_quick_replies',
+  'whatsapp_followup_flows',
+  'ai_provider_openai',
+  'ai_provider_gemini',
+  'ai_provider_claude',
+  'ai_routing',
+  'ai_follow_up_prompt',
+  'gpt_transcription',
+]);
 
 const canUseLocalStorage = () => typeof window !== 'undefined' && !!window.localStorage;
 
@@ -1126,6 +1138,10 @@ export const configService = {
     const localIntegration = getLocalIntegrationSetting(slug);
 
     try {
+      if (AUTH_REQUIRED_INTEGRATION_SLUGS.has(slug)) {
+        await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as integrações.' });
+      }
+
       const { data, error } = await supabase
         .from('integration_settings')
         .select('*')
@@ -1163,6 +1179,8 @@ export const configService = {
     payload: Pick<IntegrationSetting, 'slug' | 'name'> & Partial<Pick<IntegrationSetting, 'description' | 'settings'>>,
   ): Promise<{ data: IntegrationSetting | null; error: unknown }> {
     try {
+      await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para criar integrações.' });
+
       const insertPayload = {
         ...payload,
         created_at: new Date().toISOString(),
@@ -1201,6 +1219,8 @@ export const configService = {
     updates: Partial<Pick<IntegrationSetting, 'name' | 'description' | 'settings'>>,
   ): Promise<{ data: IntegrationSetting | null; error: unknown }> {
     try {
+      await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para salvar integrações.' });
+
       const payload: Record<string, unknown> = { ...updates, updated_at: new Date().toISOString() };
       const { data, error } = await supabase
         .from('integration_settings')

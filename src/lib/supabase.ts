@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { User } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -120,6 +120,36 @@ export const getSupabaseErrorMessage = (error: unknown, fallbackMessage: string)
 
   return fallbackMessage;
 };
+
+export async function waitForSupabaseSession(options: {
+  timeoutMs?: number;
+  errorMessage?: string;
+} = {}): Promise<Session> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown = null;
+
+  while (Date.now() <= deadline) {
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession();
+
+    if (error) {
+      lastError = error;
+    } else if (session?.access_token) {
+      return session;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+  }
+
+  if (lastError) {
+    throw new Error(getSupabaseErrorMessage(lastError, options.errorMessage ?? 'Não foi possível validar sua sessão.'));
+  }
+
+  throw new Error(options.errorMessage ?? 'Sua sessão ainda não está pronta. Atualize a página ou entre novamente.');
+}
 
 export function getUserManagementId(user: Pick<User, 'id' | 'user_metadata' | 'app_metadata'> | null | undefined): string | null {
   if (!user) {

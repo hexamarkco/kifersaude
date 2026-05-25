@@ -338,6 +338,37 @@ const COMM_WHATSAPP_CHAT_SELECT = `
   updated_at
 `;
 
+const COMM_WHATSAPP_CHANNEL_SELECT = `
+  id,
+  slug,
+  name,
+  enabled,
+  whapi_channel_id,
+  connection_status,
+  health_status,
+  phone_number,
+  connected_user_name,
+  last_health_check_at,
+  last_webhook_received_at,
+  last_error,
+  health_snapshot,
+  limits_snapshot,
+  created_at,
+  updated_at
+`;
+
+const getTruthySetting = (value: unknown): boolean => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value.trim().toLowerCase() === 'true';
+  return false;
+};
+
+const getSettingsCredential = (settings: Record<string, unknown>): string => {
+  const token = typeof settings.token === 'string' ? settings.token.trim() : '';
+  if (token) return token;
+  return typeof settings.apiKey === 'string' ? settings.apiKey.trim() : '';
+};
+
 const getFunctionInvokeErrorMessage = async (error: unknown, fallbackMessage: string): Promise<string> => {
   const context = error && typeof error === 'object' && 'context' in error
     ? (error as { context?: unknown }).context
@@ -573,7 +604,46 @@ export const commWhatsAppService = {
 
     if (!row) {
       console.warn('[CommWhatsApp] getOperationalState: RPC returned no rows');
-      throw new Error('Nao foi possivel confirmar permissao ou canal do WhatsApp. Atualize a pagina e tente novamente.');
+
+      const [channelResult, settingsResult] = await Promise.all([
+        supabase
+          .from('comm_whatsapp_channels')
+          .select(COMM_WHATSAPP_CHANNEL_SELECT)
+          .eq('slug', 'primary')
+          .maybeSingle(),
+        supabase
+          .from('integration_settings')
+          .select('settings')
+          .eq('slug', 'whatsapp_auto_contact')
+          .maybeSingle(),
+      ]);
+
+      if (channelResult.error) {
+        throw new Error(getSupabaseErrorMessage(channelResult.error, 'Nao foi possivel carregar o canal do WhatsApp.'));
+      }
+
+      if (settingsResult.error) {
+        throw new Error(getSupabaseErrorMessage(settingsResult.error, 'Nao foi possivel carregar a configuracao do WhatsApp.'));
+      }
+
+      if (!channelResult.data) {
+        throw new Error('Canal principal do WhatsApp nao encontrado.');
+      }
+
+      const settings = toRecord(settingsResult.data?.settings);
+      const fallbackState = {
+        channel: channelResult.data as CommWhatsAppChannel,
+        configEnabled: getTruthySetting(settings.enabled),
+        tokenConfigured: getSettingsCredential(settings).length > 0,
+      };
+
+      console.warn('[CommWhatsApp] getOperationalState: using direct fallback', {
+        configEnabled: fallbackState.configEnabled,
+        tokenConfigured: fallbackState.tokenConfigured,
+        connectionStatus: fallbackState.channel.connection_status,
+      });
+
+      return fallbackState;
     }
 
     return {

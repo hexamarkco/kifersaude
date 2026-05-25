@@ -3852,11 +3852,17 @@ export default function WhatsAppInboxScreen() {
           });
         }
 
-        const nextSignature = buildChatsSignature(hydratedData);
+        const skipUpdate = requestedSections.length === 1 && fetchedFlat.length === 0 && previousChats.length > 5;
+
+        const nextSignature = skipUpdate ? chatsSignatureRef.current : buildChatsSignature(hydratedData);
 
         if (nextSignature !== chatsSignatureRef.current) {
           chatsSignatureRef.current = nextSignature;
           setChats(hydratedData);
+        }
+
+        if (skipUpdate) {
+          return;
         }
 
         const requestedChatId = chatIdFromUrlRef.current;

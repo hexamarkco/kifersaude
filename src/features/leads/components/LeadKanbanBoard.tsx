@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Calendar, Mail, Phone, Users } from "lucide-react";
+import { Users } from "lucide-react";
 
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
-import { Badge, Button, Input, Surface } from "../../../design-system";
-import { formatDateTimeFullBR } from "../../../lib/dateUtils";
+import { Badge, Surface } from "../../../design-system";
 import { supabase, Lead, fetchAllPages } from "../../../lib/supabase";
 import { toast } from "../../../lib/toast";
+import { KanbanColumn } from "./KanbanColumn";
 
 type LeadKanbanBoardProps = {
   onLeadClick?: (lead: Lead) => void;
@@ -345,171 +345,20 @@ export default function LeadKanbanBoard({
               const isOverLimit = wipLimit > 0 && columnLeads.length > wipLimit;
 
               return (
-                <Surface
+                <KanbanColumn
                   key={column.id}
-                  variant={isOverLimit ? "danger" : "muted"}
-                  padding="sm"
-                  className="w-80 flex-shrink-0 snap-start rounded-[1.6rem] border p-4"
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={() => void handleDrop(column.id)}
-                >
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-3 w-3 rounded-full"
-                          style={{ backgroundColor: chipColor }}
-                        />
-                        <h4
-                          className="truncate text-sm font-semibold"
-                          style={{ color: "var(--panel-text)" }}
-                        >
-                          {column.nome}
-                        </h4>
-                      </div>
-                      {wipLimit > 0 && (
-                        <p
-                          className="mt-1 text-xs font-medium"
-                          style={{
-                            color: isOverLimit
-                              ? "var(--panel-accent-red-text)"
-                              : "var(--panel-text-muted)",
-                          }}
-                        >
-                          Limite WIP: {wipLimit}
-                        </p>
-                      )}
-                    </div>
-
-                    <Badge tone={isOverLimit ? "danger" : "neutral"}>
-                      {columnLeads.length}
-                    </Badge>
-                  </div>
-
-                  <label
-                    className="kds-surface kds-surface-default mb-4 flex items-center justify-between gap-3 rounded-[1.15rem] px-3 py-2 text-xs font-medium"
-                  >
-                    <span style={{ color: "var(--panel-text-muted)" }}>
-                      Limite WIP
-                    </span>
-                    <div className="w-20">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={wipLimit}
-                        onChange={(event) =>
-                          updateWipLimit(column.id, Number(event.target.value))
-                        }
-                        size="compact"
-                        className="text-right"
-                      />
-                    </div>
-                  </label>
-
-                  <div className="max-h-[calc(100vh-320px)] space-y-3 overflow-y-auto pr-1">
-                    {columnLeads.length === 0 ? (
-                      <Surface
-                        variant="muted"
-                        className="border-dashed px-4 py-8 text-center"
-                      >
-                        <Users className="mx-auto mb-2 h-8 w-8 opacity-70" />
-                        <p className="text-sm font-medium">Nenhum lead</p>
-                      </Surface>
-                    ) : (
-                      columnLeads.map((lead) => {
-                        const responsavelLabel = getResponsavelLabel(lead);
-
-                        return (
-                          <div
-                            key={lead.id}
-                            draggable
-                            onDragStart={() => setDraggedLead(lead)}
-                            onClick={() => onLeadClick?.(lead)}
-                            className="kds-surface kds-surface-default kds-action-surface cursor-move rounded-[1.35rem] p-4 transition-all"
-                          >
-                            <div className="mb-3">
-                              <h5
-                                className="truncate text-base font-semibold"
-                                style={{ color: "var(--panel-text)" }}
-                              >
-                                {lead.nome_completo}
-                              </h5>
-                            </div>
-
-                            <div
-                              className="space-y-2 text-sm"
-                              style={{ color: "var(--panel-text-soft)" }}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Phone className="h-3.5 w-3.5 flex-shrink-0" />
-                                <span className="truncate">{lead.telefone}</span>
-                              </div>
-                              {lead.email && (
-                                <div className="flex items-center gap-2">
-                                  <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span className="truncate">{lead.email}</span>
-                                </div>
-                              )}
-                              {lead.proximo_retorno && (
-                                <div
-                                  className="flex items-center gap-2"
-                                  style={{
-                                    color: "var(--panel-accent-ink)",
-                                  }}
-                                >
-                                  <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
-                                  <span>{formatDateTimeFullBR(lead.proximo_retorno)}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div
-                              className="mt-4 flex items-center justify-between gap-3 border-t pt-3 text-xs"
-                              style={{
-                                borderColor:
-                                  "var(--panel-border-subtle)",
-                                color: "var(--panel-text-muted)",
-                              }}
-                            >
-                              <span>
-                                Responsavel:{" "}
-                                <strong
-                                  style={{
-                                    color: "var(--panel-text-soft)",
-                                  }}
-                                >
-                                  {responsavelLabel}
-                                </strong>
-                              </span>
-                              <span>
-                                {lead.data_criacao
-                                  ? new Date(lead.data_criacao).toLocaleDateString(
-                                      "pt-BR",
-                                    )
-                                  : ""}
-                              </span>
-                            </div>
-
-                            {onConvertToContract && (
-                              <Button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  onConvertToContract(lead);
-                                }}
-                                variant="soft"
-                                size="sm"
-                                className="mt-4 w-full justify-center"
-                              >
-                                Converter em contrato
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </Surface>
+                  column={column}
+                  leads={columnLeads}
+                  wipLimit={wipLimit}
+                  isOverLimit={isOverLimit}
+                  chipColor={chipColor}
+                  onDrop={handleDrop}
+                  onDragStart={setDraggedLead}
+                  onUpdateWipLimit={updateWipLimit}
+                  onLeadClick={onLeadClick}
+                  onConvertToContract={onConvertToContract}
+                  getResponsavelLabel={getResponsavelLabel}
+                />
               );
             })}
           </div>

@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+﻿import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent } from 'react';
+
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
+import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Images, Info, Loader2, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
 import Button from '../../../components/ui/Button';
 import LeadForm from '../../../components/LeadForm';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
-import { getPanelButtonClass } from '../../../components/ui/standards';
+
 import ReminderSchedulerModal from '../../../components/ReminderSchedulerModal';
 import StatusDropdown from '../../../components/StatusDropdown';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -56,6 +56,18 @@ import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
+import { WaveformBars } from './components/WaveformBars';
+import { DeliveryStatusIndicator } from './components/DeliveryStatusIndicator';
+import { RetryMediaButton } from './components/RetryMediaButton';
+import { InboxFilterChip } from './components/InboxFilterChip';
+import { InboxFilterGroup } from './components/InboxFilterGroup';
+import { InboxMultiFilterGroup } from './components/InboxMultiFilterGroup';
+import { WhatsAppMediaGroupBody } from './components/WhatsAppMediaGroupBody';
+import { WhatsAppMediaViewer } from './components/WhatsAppMediaViewer';
+import { InboxChatListItem } from './components/InboxChatListItem';
+import { InboxMessageSearchListItem } from './components/InboxMessageSearchListItem';
+import { WhatsAppMessageBody } from './components/WhatsAppMessageBody';
+import { LinkifiedText } from './components/InboxComponentsShared';
 import { useCommWhatsAppMessageRealtime } from './hooks/useCommWhatsAppMessageRealtime';
 import { useWhatsAppInboxDeepLink } from './hooks/useWhatsAppInboxDeepLink';
 import { useWindowPollingState } from './hooks/useWindowPollingState';
@@ -82,8 +94,8 @@ const CHAT_IDENTITY_LOOKUP_BATCH_SIZE = 10;
 const CHAT_IDENTITY_LOOKUP_MAX_CHATS_PER_CYCLE = 30;
 const CHAT_IDENTITY_LOOKUP_FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
 const DEFAULT_TRANSCRIPT_TIME_ZONE = 'America/Sao_Paulo';
-const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
-const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Ãudio sem transcriÃ§Ã£o]';
+const REACTION_OPTIONS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ™'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
 const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000];
@@ -319,53 +331,9 @@ const getVisiblePreviewText = (value?: string | null, messageType?: string) => (
   isHiddenTechnicalMessageMarker(value, messageType) ? '' : String(value ?? '').trim()
 );
 
-type ChatPreviewIconType = 'image' | 'video' | 'audio' | 'document' | 'link' | 'location' | 'sticker' | 'contact' | 'poll' | 'interactive';
 
-const getChatPreviewIconType = (value: string | null | undefined): ChatPreviewIconType | null => {
-  const normalized = normalizeTechnicalMarker(value);
 
-  if (normalized === '[imagem]' || normalized.startsWith('[imagem] ')) return 'image';
-  if (normalized === '[video]' || normalized.startsWith('[video] ')) return 'video';
-  if (normalized === '[audio]' || normalized.startsWith('[audio] ')) return 'audio';
-  if (normalized === '[documento]' || normalized.startsWith('[documento] ')) return 'document';
-  if (normalized === '[link]' || normalized.startsWith('[link] ')) return 'link';
-  if (normalized === '[localizacao]' || normalized.startsWith('[localizacao] ')) return 'location';
-  if (normalized === '[sticker]' || normalized.startsWith('[sticker] ')) return 'sticker';
-  if (normalized === '[contato]' || normalized.startsWith('[contato] ')) return 'contact';
-  if (normalized === '[enquete]' || normalized.startsWith('[enquete] ')) return 'poll';
-  if (normalized === '[resposta]' || normalized.startsWith('[resposta] ')) return 'interactive';
-  if (normalized === '[mensagem interativa]' || normalized.startsWith('[mensagem interativa] ')) return 'interactive';
-  return null;
-};
-
-const CHAT_PREVIEW_ICON_CONFIG: Record<ChatPreviewIconType, { label: string; Icon: typeof FileImage }> = {
-  image: { label: 'foto', Icon: FileImage },
-  video: { label: 'vídeo', Icon: Images },
-  audio: { label: 'áudio', Icon: FileAudio },
-  document: { label: 'documento', Icon: FileText },
-  link: { label: 'link', Icon: Link2 },
-  location: { label: 'localização', Icon: MapPin },
-  sticker: { label: 'figurinha', Icon: Sticker },
-  contact: { label: 'contato', Icon: UserRound },
-  poll: { label: 'enquete', Icon: Vote },
-  interactive: { label: 'mensagem', Icon: MessageCircle },
-};
-
-function ChatPreviewIcon({ type }: { type: ChatPreviewIconType }) {
-  const { label, Icon } = CHAT_PREVIEW_ICON_CONFIG[type];
-
-  return (
-    <span
-      aria-label={label}
-      className="inline-flex items-center gap-1 align-middle text-[var(--panel-text-muted,#8a735f)]"
-      role="img"
-      title={label}
-    >
-      <Icon aria-hidden="true" className="h-4 w-4" />
-      <span>{label}</span>
-    </span>
-  );
-}
+// ChatPreviewIcon moved to ./components/ChatPreviewIcon
 
 const isVideoLikeMessageType = (messageType: string) => VIDEO_LIKE_MESSAGE_TYPES.has(messageType.trim().toLowerCase());
 
@@ -400,29 +368,7 @@ const getMessageEditableText = (message: CommWhatsAppMessage) => {
   return getMessageVisibleCaption(message);
 };
 
-const normalizeComparableMessageText = (messageType: string, value: unknown) => {
-  const text = String(value ?? '').trim();
-  if (!text) return '';
 
-  if (messageType.trim().toLowerCase() === 'text') {
-    return text;
-  }
-
-  const marker = getMessageSummaryMarker(messageType);
-  if (!marker) {
-    return text;
-  }
-
-  if (text === marker) {
-    return '';
-  }
-
-  if (text.startsWith(`${marker} `)) {
-    return text.slice(marker.length).trim();
-  }
-
-  return text;
-};
 
 const getMessageSearchPreviewText = (message: CommWhatsAppMessage) => {
   const text = getVisiblePreviewText(getMessageEditableText(message), message.message_type);
@@ -507,34 +453,9 @@ const normalizeInboxSearch = (value: string) =>
     .toLowerCase()
     .trim();
 
-const URL_PATTERN = /https?:\/\/[^\s<]+/gi;
 
-const normalizeRenderableUrl = (value: string) => value.replace(/[),.;!?]+$/g, '');
 
-const extractRenderableUrls = (value: string) => {
-  return Array.from(value.matchAll(URL_PATTERN))
-    .map((match) => {
-      const raw = match[0] ?? '';
-      const url = normalizeRenderableUrl(raw);
-      const index = match.index ?? 0;
-      if (!url) {
-        return null;
-      }
 
-      return {
-        index,
-        raw,
-        url,
-      };
-    })
-    .filter((item): item is { index: number; raw: string; url: string } => Boolean(item));
-};
-
-type LinkifiedTextProps = {
-  text: string;
-  className?: string;
-  linkClassName?: string;
-};
 
 type WhatsAppTextFormat = 'bold' | 'italic' | 'strike';
 
@@ -583,87 +504,14 @@ const findWhatsAppFormatMatch = (text: string, startIndex: number = 0): WhatsApp
 
 const hasWhatsAppTextFormatting = (text: string) => findWhatsAppFormatMatch(text) !== null;
 
-const renderWhatsAppFormattedText = (text: string, keyPrefix: string, depth: number = 0): ReactNode[] => {
-  if (!text || depth > 8) {
-    return text ? [text] : [];
-  }
 
-  const nodes: ReactNode[] = [];
-  let cursor = 0;
-  let matchIndex = 0;
-
-  while (cursor < text.length) {
-    const match = findWhatsAppFormatMatch(text, cursor);
-    if (!match) {
-      nodes.push(text.slice(cursor));
-      break;
-    }
-
-    if (match.start > cursor) {
-      nodes.push(text.slice(cursor, match.start));
-    }
-
-    const contentStart = match.start + match.marker.length;
-    const content = text.slice(contentStart, match.end);
-    const children = renderWhatsAppFormattedText(content, `${keyPrefix}-${matchIndex}`, depth + 1);
-    const key = `${keyPrefix}-${match.format}-${match.start}-${matchIndex}`;
-
-    if (match.format === 'bold') {
-      nodes.push(<strong key={key}>{children}</strong>);
-    } else if (match.format === 'italic') {
-      nodes.push(<em key={key}>{children}</em>);
-    } else {
-      nodes.push(<s key={key}>{children}</s>);
-    }
-
-    cursor = match.end + match.marker.length;
-    matchIndex += 1;
-  }
-
-  return nodes;
-};
 
 type PointerAnchor = {
   x: number;
   y: number;
 };
 
-function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
-  const matches = extractRenderableUrls(text);
-
-  if (matches.length === 0) {
-    return <p className={className}>{renderWhatsAppFormattedText(text, 'text')}</p>;
-  }
-
-  const parts: ReactNode[] = [];
-  let cursor = 0;
-
-  matches.forEach((match, index) => {
-    if (match.index > cursor) {
-      parts.push(...renderWhatsAppFormattedText(text.slice(cursor, match.index), `text-${index}`));
-    }
-
-    parts.push(
-      <a
-        key={`${match.url}-${index}`}
-        href={match.url}
-        target="_blank"
-        rel="noreferrer"
-        className={cx('underline underline-offset-2 decoration-[rgba(255,255,255,0.38)] hover:decoration-current break-all', linkClassName)}
-      >
-        {match.url}
-      </a>,
-    );
-
-    cursor = match.index + match.raw.length;
-  });
-
-  if (cursor < text.length) {
-    parts.push(...renderWhatsAppFormattedText(text.slice(cursor), 'text-tail'));
-  }
-
-  return <p className={className}>{parts}</p>;
-}
+// LinkifiedText moved to ./components/InboxComponentsShared
 
 const readRecord = (value: unknown): Record<string, unknown> | null => (
   value && typeof value === 'object' && !Array.isArray(value)
@@ -1209,13 +1057,6 @@ const getMessageBubbleClasses = (direction: CommWhatsAppMessage['direction']) =>
   return 'message-bubble message-bubble-inbound mr-auto';
 };
 
-const DEFAULT_WAVEFORM = [0.24, 0.36, 0.52, 0.72, 0.46, 0.62, 0.28, 0.54, 0.4, 0.66, 0.32, 0.58, 0.42, 0.74, 0.38, 0.5, 0.3, 0.64, 0.44, 0.56];
-
-const inboxInlineActionClassName = getPanelButtonClass({
-  variant: 'soft',
-  size: 'sm',
-  className: 'h-8 rounded-xl px-3 text-[11px] font-semibold',
-});
 
 const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage) => {
   const aTime = getComparableMessageTimestampMs(a) ?? 0;
@@ -1251,12 +1092,12 @@ const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMe
 
 const REDUNDANT_ACTION_MESSAGE_MARKERS = new Set([
   '[acao]',
-  '[ação]',
+  '[aÃ§Ã£o]',
   '[reacao]',
-  '[reação]',
+  '[reaÃ§Ã£o]',
   '[mensagem apagada]',
   '[atualizacao de midia]',
-  '[atualização de mídia]',
+  '[atualizaÃ§Ã£o de mÃ­dia]',
   '[voto em enquete]',
 ]);
 
@@ -1349,68 +1190,7 @@ const formatFileSize = (value?: number | null) => {
   return `${value} B`;
 };
 
-const getEditedMessageInfo = (message?: CommWhatsAppMessage | null) => {
-  if (!message) {
-    return {
-      edited: false,
-      originalText: null,
-      previousText: null,
-      currentText: null,
-      editedAt: null,
-    };
-  }
 
-  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
-    ? message.metadata as Record<string, unknown>
-    : {};
-  const messageType = message.message_type.trim().toLowerCase();
-  const currentText = getMessageEditableText(message) || normalizeComparableMessageText(message.message_type, message.text_content);
-  const originalText = normalizeComparableMessageText(message.message_type, metadata.original_text_content);
-  const editHistory = Array.isArray(metadata.edit_history)
-    ? metadata.edit_history.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
-    : [];
-  const lastEdit = editHistory.length > 0 ? editHistory[editHistory.length - 1] : null;
-  const previousText = normalizeComparableMessageText(message.message_type, lastEdit?.previous_text) || originalText || null;
-  const visibleCurrentText = getMessageEditableText(message) || currentText || null;
-  const editedAt = String(metadata.edited_at ?? '').trim() || null;
-  const inferredTextEdit = messageType === 'text' && Boolean(originalText && originalText !== visibleCurrentText);
-  const edited = metadata.edited === true || Boolean(editedAt) || editHistory.length > 0 || inferredTextEdit;
-
-  return {
-    edited,
-    originalText: originalText && originalText !== currentText ? originalText : null,
-    previousText: previousText && previousText !== visibleCurrentText ? previousText : null,
-    currentText: visibleCurrentText,
-    editedAt,
-  };
-};
-
-const getDeletedMessageInfo = (message?: CommWhatsAppMessage | null) => {
-  if (!message) {
-    return {
-      deleted: false,
-      deletedAt: null,
-      deletedBy: null,
-      preservedText: '[Mensagem apagada]',
-    };
-  }
-
-  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
-    ? message.metadata as Record<string, unknown>
-    : {};
-  const currentText = String(message.text_content ?? message.media_caption ?? '').trim();
-  const originalText = String(metadata.deleted_original_text_content ?? '').trim();
-  const deletedAt = String(metadata.deleted_at ?? '').trim() || null;
-  const deletedBy = String(metadata.deleted_by ?? '').trim() || null;
-  const deleted = message.delivery_status.trim().toLowerCase() === 'deleted' || metadata.deleted === true;
-
-  return {
-    deleted,
-    deletedAt,
-    deletedBy,
-    preservedText: originalText || currentText || getDeletedMessageMarker(message.message_type),
-  };
-};
 
 const getMessageReactions = (message?: CommWhatsAppMessage | null) => {
   if (!message) {
@@ -1429,7 +1209,7 @@ const getMessageReactions = (message?: CommWhatsAppMessage | null) => {
       fromMe: item.from_me === true,
       reactedAt: String(item.reacted_at ?? '').trim(),
       actorLabel: item.from_me === true
-        ? 'Você'
+        ? 'VocÃª'
         : String(item.from_name ?? item.from ?? '').trim() || 'Contato',
     }))
     .filter((item) => Boolean(item.emoji));
@@ -1589,34 +1369,7 @@ const mergeUniqueChats = (...collections: CommWhatsAppChat[][]) => {
   return Array.from(chatsById.values());
 };
 
-const getDeliveryStatusMetaFromValues = (deliveryStatus?: string | null, messageType?: string | null) => {
-  const status = String(deliveryStatus ?? '').trim().toLowerCase();
 
-  switch (status) {
-    case 'pending':
-      return { icon: Clock3, label: 'Enviando', tone: 'pending' as const };
-    case 'sent':
-      return { icon: Check, label: 'Enviado', tone: 'sent' as const };
-    case 'delivered':
-      return { icon: CheckCheck, label: 'Entregue', tone: 'delivered' as const };
-    case 'read':
-      return { icon: CheckCheck, label: 'Vista', tone: 'read' as const };
-    case 'played':
-      return {
-        icon: Volume2,
-        label: messageType === 'voice' ? 'Ouvida' : 'Reproduzida',
-        tone: 'played' as const,
-      };
-    case 'failed':
-      return { icon: AlertCircle, label: 'Falhou', tone: 'failed' as const };
-    case 'deleted':
-      return { icon: AlertTriangle, label: 'Apagada', tone: 'deleted' as const };
-    default:
-      return { icon: Clock3, label: status || 'Pendente', tone: 'pending' as const };
-  }
-};
-
-const getDeliveryStatusMeta = (message: CommWhatsAppMessage) => getDeliveryStatusMetaFromValues(message.delivery_status, message.message_type);
 
 const formatDurationLabel = (seconds: number) => {
   const mins = Math.floor(seconds / 60)
@@ -1629,1196 +1382,35 @@ const formatDurationLabel = (seconds: number) => {
   return `${mins}:${secs}`;
 };
 
-function WaveformBars({ bars, active = false }: { bars?: number[]; active?: boolean }) {
-  const resolvedBars = bars && bars.length > 0 ? bars : DEFAULT_WAVEFORM;
+// WaveformBars moved to ./components/WaveformBars
 
-  return (
-    <div className={`whatsapp-inbox-waveform ${active ? 'is-active' : ''}`} aria-hidden="true">
-      {resolvedBars.map((bar, index) => (
-        <span
-          key={`${index}-${bar}`}
-          className="whatsapp-inbox-waveform-bar"
-          style={{
-            height: `${Math.max(16, Math.round(bar * 34))}px`,
-            animationDelay: `${index * 24}ms`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function useResolvedMediaUrl(message: CommWhatsAppMessage) {
-  const [mediaUrl, setMediaUrl] = useState<string | null>(commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id) ?? (!message.media_id ? message.media_url ?? null : null));
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    const rememberedPreview = commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id);
-    if (rememberedPreview) {
-      setMediaUrl(rememberedPreview);
-      setLoading(false);
-      setError(null);
-
-      if (!message.media_id || (message.external_message_id && message.media_id === message.external_message_id)) {
-        return () => {
-          active = false;
-        };
-      }
-    }
-
-    if (message.media_id && message.external_message_id && message.media_id === message.external_message_id) {
-      setMediaUrl(null);
-      setLoading(false);
-      setError(null);
-      return () => {
-        active = false;
-      };
-    }
-
-    if (!message.media_id) {
-      setMediaUrl(message.media_url?.trim() || null);
-      setLoading(false);
-      setError(null);
-      return () => {
-        active = false;
-      };
-    }
-
-    setLoading(true);
-    setError(null);
-
-    void commWhatsAppService
-      .resolveMediaObjectUrl({ mediaId: message.media_id, mediaUrl: message.media_url })
-      .then((resolved) => {
-        if (!active) return;
-        setMediaUrl(resolved);
-      })
-      .catch((resolveError) => {
-        if (!active) return;
-        const resolvedMessage = resolveError instanceof Error ? resolveError.message : 'Não foi possível carregar a mídia.';
-        setError(resolvedMessage.includes('specified media not found') ? 'Arquivo indisponível no momento.' : resolvedMessage);
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [message.external_message_id, message.media_id, message.media_url]);
-
-  return { mediaUrl, loading, error };
-}
+// useResolvedMediaUrl moved to ./components/useResolvedMediaUrl
 
 const isChatMediaViewerMessage = (message: CommWhatsAppMessage) => {
   const kind = message.message_type.trim().toLowerCase();
   return (kind === 'image' || isVideoLikeMessageType(kind)) && message.delivery_status.trim().toLowerCase() !== 'deleted';
 };
 
-function WhatsAppMediaViewerThumb({
-  message,
-  active,
-  onSelect,
-}: {
-  message: CommWhatsAppMessage;
-  active: boolean;
-  onSelect: (messageId: string) => void;
-}) {
-  const { mediaUrl, loading } = useResolvedMediaUrl(message);
-  const isVideo = isVideoLikeMessageType(message.message_type);
+// WhatsAppMediaViewerThumb moved to ./components/WhatsAppMediaViewerThumb
 
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(message.id)}
-      className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition ${active ? 'is-active' : ''}`}
-      aria-label="Abrir mídia"
-      aria-current={active ? 'true' : undefined}
-    >
-      {mediaUrl ? (
-        isVideo ? (
-          <video muted playsInline preload="metadata" className="h-full w-full object-cover">
-            <source src={mediaUrl} type={message.media_mime_type || undefined} />
-          </video>
-        ) : (
-          <img src={mediaUrl} alt={message.media_file_name || 'Imagem'} className="h-full w-full object-cover" loading="lazy" />
-        )
-      ) : (
-        <span className="flex h-full w-full items-center justify-center bg-white/5 text-[10px] text-white/60">
-          {loading ? '...' : 'Mídia'}
-        </span>
-      )}
-      {isVideo ? (
-        <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
-          <Play className="h-4 w-4 fill-current" />
-        </span>
-      ) : null}
-    </button>
-  );
-}
+// WhatsAppMediaViewer moved to ./components/WhatsAppMediaViewer
 
-function WhatsAppMediaViewer({
-  messages,
-  selectedMessageId,
-  contactName,
-  onSelect,
-  onClose,
-}: {
-  messages: CommWhatsAppMessage[];
-  selectedMessageId: string;
-  contactName: string;
-  onSelect: (messageId: string) => void;
-  onClose: () => void;
-}) {
-  const selectedIndex = Math.max(0, messages.findIndex((message) => message.id === selectedMessageId));
-  const selectedMessage = messages[selectedIndex] ?? messages[0];
-  const { mediaUrl, loading, error } = useResolvedMediaUrl(selectedMessage);
-  const isVideo = selectedMessage ? isVideoLikeMessageType(selectedMessage.message_type) : false;
-  const canGoPrevious = selectedIndex > 0;
-  const canGoNext = selectedIndex < messages.length - 1;
-  const selectedName = selectedMessage?.media_file_name || (isVideo ? 'Vídeo' : 'Imagem');
-  const selectedAuthor = selectedMessage?.direction === 'outbound' ? 'Você' : contactName;
-  const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
+// DeliveryStatusIndicator moved to ./components/DeliveryStatusIndicator
 
-  const goToIndex = useCallback((nextIndex: number) => {
-    const nextMessage = messages[nextIndex];
-    if (nextMessage) {
-      onSelect(nextMessage.id);
-    }
-  }, [messages, onSelect]);
+// WhatsAppAudioPlayerCard moved to ./components/WhatsAppAudioPlayerCard
 
-  const scrollThumbnails = useCallback((direction: 'previous' | 'next') => {
-    const target = thumbnailStripRef.current;
-    if (!target) {
-      return;
-    }
+// RetryMediaButton moved to ./components/RetryMediaButton
 
-    const amount = Math.max(260, target.clientWidth * 0.72);
-    target.scrollBy({ left: direction === 'previous' ? -amount : amount, behavior: 'smooth' });
-  }, []);
+// InboxFilterChip moved to ./components/InboxFilterChip
 
-  useEffect(() => {
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-        return;
-      }
+// InboxFilterGroup moved to ./components/InboxFilterGroup
 
-      if (event.key === 'ArrowLeft' && canGoPrevious) {
-        event.preventDefault();
-        goToIndex(selectedIndex - 1);
-      }
+// InboxMultiFilterGroup moved to ./components/InboxMultiFilterGroup
 
-      if (event.key === 'ArrowRight' && canGoNext) {
-        event.preventDefault();
-        goToIndex(selectedIndex + 1);
-      }
-    };
+// WhatsAppGalleryMediaTile moved to ./components/WhatsAppGalleryMediaTile
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canGoNext, canGoPrevious, goToIndex, onClose, selectedIndex]);
+// WhatsAppMediaGroupBody moved to ./components/WhatsAppMediaGroupBody
 
-  if (!selectedMessage) {
-    return null;
-  }
-
-  const viewer = (
-    <div className="whatsapp-inbox-media-viewer fixed inset-0 z-[2147483000] flex flex-col bg-[#111413] text-white" role="dialog" aria-modal="true">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-4 py-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{selectedAuthor}</p>
-          <p className="mt-0.5 truncate text-xs text-white/65">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {mediaUrl ? (
-            <a
-              href={mediaUrl}
-              download={selectedName}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
-              aria-label="Baixar mídia"
-              title="Baixar"
-            >
-              <Download className="h-5 w-5" />
-            </a>
-          ) : null}
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
-            aria-label="Fechar"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-      </header>
-
-      <main className="relative flex min-h-0 flex-1 items-center justify-center px-4 py-5">
-        {canGoPrevious ? (
-          <button
-            type="button"
-            onClick={() => goToIndex(selectedIndex - 1)}
-            className="whatsapp-inbox-media-viewer-nav left-4"
-            aria-label="Mídia anterior"
-          >
-            <ChevronLeft className="h-7 w-7" />
-          </button>
-        ) : null}
-
-        <div className="flex h-full w-full items-center justify-center">
-          {loading ? (
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Carregando mídia...
-            </div>
-          ) : mediaUrl ? (
-            isVideo ? (
-              <video controls autoPlay className="max-h-full max-w-full bg-black object-contain">
-                <source src={mediaUrl} type={selectedMessage.media_mime_type || undefined} />
-              </video>
-            ) : (
-              <img src={mediaUrl} alt={selectedName} className="max-h-full max-w-full object-contain" />
-            )
-          ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/70">
-              {error || 'Mídia indisponível no momento.'}
-            </div>
-          )}
-        </div>
-
-        {canGoNext ? (
-          <button
-            type="button"
-            onClick={() => goToIndex(selectedIndex + 1)}
-            className="whatsapp-inbox-media-viewer-nav right-4"
-            aria-label="Próxima mídia"
-          >
-            <ChevronRight className="h-7 w-7" />
-          </button>
-        ) : null}
-      </main>
-
-      {messages.length > 1 ? (
-        <footer className="whatsapp-inbox-media-viewer-strip relative shrink-0 border-t border-white/10 px-16 py-4">
-          <button
-            type="button"
-            onClick={() => scrollThumbnails('previous')}
-            className="whatsapp-inbox-media-viewer-strip-nav left-4"
-            aria-label="Rolar miniaturas para trás"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <div ref={thumbnailStripRef} className="flex gap-3 overflow-x-auto py-1">
-            {messages.map((message) => (
-              <WhatsAppMediaViewerThumb
-                key={message.id}
-                message={message}
-                active={message.id === selectedMessage.id}
-                onSelect={onSelect}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => scrollThumbnails('next')}
-            className="whatsapp-inbox-media-viewer-strip-nav right-4"
-            aria-label="Rolar miniaturas para frente"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </footer>
-      ) : null}
-    </div>
-  );
-
-  return typeof document === 'undefined' ? viewer : createPortal(viewer, document.body);
-}
-
-function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) {
-  const meta = getDeliveryStatusMeta(message);
-  const Icon = meta.icon;
-
-  return (
-    <span className={`whatsapp-inbox-status-meta whatsapp-inbox-status-meta-${meta.tone}`}>
-      <Icon className="h-3.5 w-3.5" />
-      <span>{meta.label}</span>
-    </span>
-  );
-}
-
-function WhatsAppAudioPlayerCard({
-  kind,
-  mediaUrl,
-  mediaMimeType,
-  fileName,
-  durationSeconds,
-  loading,
-  error,
-}: {
-  kind: 'audio' | 'voice';
-  mediaUrl: string | null;
-  mediaMimeType?: string | null;
-  fileName?: string | null;
-  durationSeconds?: number | null;
-  loading: boolean;
-  error: string | null;
-}) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [resolvedDuration, setResolvedDuration] = useState(durationSeconds ?? 0);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
-    const handleLoadedMetadata = () => {
-      if (Number.isFinite(audio.duration) && audio.duration > 0) {
-        setResolvedDuration(audio.duration);
-      }
-    };
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-      audio.currentTime = 0;
-    };
-
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.pause();
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, [mediaUrl]);
-
-  const handleTogglePlayback = () => {
-    const audio = audioRef.current;
-    if (!audio || !mediaUrl) return;
-
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-      return;
-    }
-
-    void audio.play().then(() => setIsPlaying(true)).catch(() => undefined);
-  };
-
-  const duration = Math.max(resolvedDuration || 0, durationSeconds || 0);
-  const waveformBars =
-    kind === 'voice'
-      ? DEFAULT_WAVEFORM
-      : DEFAULT_WAVEFORM.map((value, index) => (index % 3 === 0 ? value * 0.62 : value * 0.92));
-  const playedBars = duration > 0 ? Math.min(waveformBars.length, Math.ceil((currentTime / duration) * waveformBars.length)) : 0;
-
-  if (!mediaUrl) {
-    return (
-      <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-        <div className={`whatsapp-inbox-audio-native-badge ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-          {kind === 'voice' ? <Mic className="h-5 w-5" /> : <Headphones className="h-5 w-5" />}
-        </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          {kind !== 'voice' ? <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p> : null}
-          <p className="text-xs opacity-75">{loading ? 'Carregando áudio...' : error || 'Áudio indisponível'}</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`whatsapp-inbox-audio-native-card ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-      <audio ref={audioRef} preload="metadata">
-        <source src={mediaUrl} type={mediaMimeType || undefined} />
-      </audio>
-
-      <div className={`whatsapp-inbox-audio-native-badge ${kind === 'voice' ? 'is-voice' : 'is-audio'}`}>
-        {kind === 'voice' ? <Mic className="h-4 w-4" /> : <Headphones className="h-4 w-4" />}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleTogglePlayback}
-            className="whatsapp-inbox-audio-native-play"
-            aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
-          >
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
-          </button>
-
-          <div className={`min-w-0 flex-1 ${kind === 'voice' ? 'space-y-1.5' : 'space-y-2'}`}>
-            {kind !== 'voice' ? (
-              <div className="flex items-center justify-between gap-3">
-                <p className="truncate text-sm font-semibold">{fileName || 'Arquivo de áudio'}</p>
-                <span className="text-[11px] font-medium opacity-70">Áudio enviado</span>
-              </div>
-            ) : null}
-            <div className="whatsapp-inbox-audio-native-waveform">
-              {waveformBars.map((bar, index) => (
-                <span
-                  key={`${kind}-${index}-${bar}`}
-                  className={`whatsapp-inbox-audio-native-waveform-bar ${index < playedBars ? 'is-played' : ''} ${isPlaying ? 'is-active' : ''}`}
-                  style={{ height: `${Math.max(10, Math.round(bar * 22))}px` }}
-                />
-              ))}
-            </div>
-            <div className="flex items-center justify-between gap-3 text-xs opacity-80">
-              <span>{formatDurationLabel(Math.round(currentTime))}</span>
-              <span>{formatDurationLabel(Math.round(duration))}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RetryMediaButton({
-  loading,
-  onRetry,
-}: {
-  loading: boolean;
-  onRetry: () => void;
-}) {
-  return (
-    <Button
-      type="button"
-      onClick={onRetry}
-      disabled={loading}
-      variant="soft"
-      size="sm"
-      className="whatsapp-inbox-retry-button h-8 rounded-xl px-3 text-[11px]"
-    >
-      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SendHorizontal className="h-3.5 w-3.5" />}
-      Reenviar
-    </Button>
-  );
-}
-
-function InboxFilterChip({
-  active,
-  label,
-  onClick,
-  compact = false,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-  compact?: boolean;
-}) {
-  return (
-    <Button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      variant={active ? 'soft' : 'secondary'}
-      size="sm"
-      className={compact ? 'h-8 rounded-xl px-3 text-[11px]' : 'h-9 rounded-xl px-3.5 text-xs'}
-    >
-      {label}
-    </Button>
-  );
-}
-
-function InboxFilterGroup<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-  compact = false,
-}: {
-  label: string;
-  value: T;
-  options: Array<{ value: T; label: string }>;
-  onChange: (value: T) => void;
-  compact?: boolean;
-}) {
-  return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
-      <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
-        {options.map((option) => (
-          <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} compact={compact} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function InboxMultiFilterGroup({
-  label,
-  values,
-  options,
-  onChange,
-  compact = false,
-}: {
-  label: string;
-  values: string[];
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string[]) => void;
-  compact?: boolean;
-}) {
-  const normalizedValues = values.map((value) => value.toLowerCase());
-
-  const toggleValue = (value: string) => {
-    const normalized = value.toLowerCase();
-    const next = normalizedValues.includes(normalized)
-      ? values.filter((item) => item.toLowerCase() !== normalized)
-      : [...values, value];
-    onChange(next);
-  };
-
-  return (
-    <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
-      <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
-        <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} compact={compact} />
-        {options.map((option) => (
-          <InboxFilterChip
-            key={option.value}
-            active={normalizedValues.includes(option.value.toLowerCase())}
-            label={option.label}
-            onClick={() => toggleValue(option.value)}
-            compact={compact}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function WhatsAppGalleryMediaTile({
-  message,
-  onOpenImage,
-  className,
-  overlayLabel,
-}: {
-  message: CommWhatsAppMessage;
-  onOpenImage: (messageId: string) => void;
-  className?: string;
-  overlayLabel?: string;
-}) {
-  const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
-  const normalizedKind = isVideoLikeMessageType(message.message_type) ? 'video' : 'image';
-  const baseClassName = `relative block overflow-hidden rounded-[1.15rem] bg-[rgba(26,18,13,0.08)] ${className ?? ''}`.trim();
-
-  if (normalizedKind === 'image') {
-    return mediaUrl ? (
-      <button
-        type="button"
-        onClick={() => onOpenImage(message.id)}
-        className={baseClassName}
-      >
-        <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
-        {overlayLabel ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-base font-semibold text-white">
-            {overlayLabel}
-          </span>
-        ) : null}
-      </button>
-    ) : (
-      <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--panel-text-muted,#8a735f)]`}>
-        {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
-      </div>
-    );
-  }
-
-  const secondaryLabel = message.media_duration_seconds && message.media_duration_seconds > 0
-    ? formatDurationLabel(Math.round(message.media_duration_seconds))
-    : formatFileSize(message.media_size_bytes) || 'Video';
-
-  return mediaUrl ? (
-    <button type="button" onClick={() => onOpenImage(message.id)} className={baseClassName}>
-      <video muted playsInline preload="metadata" className="h-full w-full object-cover">
-        <source src={mediaUrl} type={message.media_mime_type || undefined} />
-      </video>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 via-black/10 to-transparent px-3 py-2 text-xs font-medium text-white">
-        <span className="inline-flex items-center gap-1.5 truncate">
-          <Play className="h-3.5 w-3.5 fill-current" />
-          <span className="truncate">{secondaryLabel}</span>
-        </span>
-        {overlayLabel ? <span className="text-sm font-semibold">{overlayLabel}</span> : null}
-      </div>
-    </button>
-  ) : (
-    <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--panel-text-muted,#8a735f)]`}>
-      {loading ? 'Carregando video...' : error || 'Video indisponivel'}
-    </div>
-  );
-}
-
-function WhatsAppMediaGroupBody({
-  messages,
-  onOpenImage,
-}: {
-  messages: CommWhatsAppMessage[];
-  onOpenImage: (messageId: string) => void;
-}) {
-  const visibleMessages = messages.slice(0, 4);
-  const hiddenCount = Math.max(0, messages.length - visibleMessages.length);
-
-  return (
-    <div className="grid grid-cols-2 gap-1.5">
-      {visibleMessages.map((message, index) => {
-        const isWideHero = messages.length === 3 && index === 0;
-        const overlayLabel = hiddenCount > 0 && index === visibleMessages.length - 1 ? `+${hiddenCount}` : undefined;
-
-        return (
-          <WhatsAppGalleryMediaTile
-            key={message.id}
-            message={message}
-            onOpenImage={onOpenImage}
-            className={isWideHero ? 'col-span-2 aspect-[16/9]' : 'aspect-square'}
-            overlayLabel={overlayLabel}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function InboxChatListItem({
-  chat,
-  selected,
-  connectedUserName,
-  draftPreview,
-  onSelect,
-  menuOpen,
-  menuBusy,
-  onToggleMenu,
-  onOpenContextMenu,
-  menuTriggerRef,
-}: {
-  chat: CommWhatsAppChat;
-  selected: boolean;
-  connectedUserName: string | null;
-  draftPreview: string;
-  onSelect: (chatId: string) => void;
-  menuOpen: boolean;
-  menuBusy: boolean;
-  onToggleMenu: (chatId: string) => void;
-  onOpenContextMenu: (chatId: string, anchor: PointerAnchor) => void;
-  menuTriggerRef: (node: HTMLButtonElement | null) => void;
-}) {
-  const rawLastMessageText = String(chat.last_message_text ?? '').trim();
-  const visibleLastMessageText = getVisiblePreviewText(chat.last_message_text);
-  const previewIconType = getChatPreviewIconType(visibleLastMessageText);
-  const outboundPreviewStatusMeta = chat.last_message_direction === 'outbound'
-    ? getDeliveryStatusMetaFromValues(chat.last_message_delivery_status)
-    : null;
-  const OutboundPreviewStatusIcon = outboundPreviewStatusMeta?.icon;
-  const hasUnreadBadge = chat.unread_count > 0 || chat.manual_unread;
-
-  return (
-    <div
-      className={`group/chat relative whatsapp-inbox-chat-card border-b transition ${selected ? 'is-active' : ''}`}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        onOpenContextMenu(chat.id, { x: event.clientX, y: event.clientY });
-      }}
-    >
-      <div className="px-4 py-3">
-        <button type="button" onClick={() => onSelect(chat.id)} className="min-w-0 w-full text-left">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">
-                  {getSafeChatDisplayName(chat, connectedUserName)}
-                </p>
-                {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--panel-accent-strong,#c86f1d)]" /> : null}
-                {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--panel-text-muted,#8a735f)]" /> : null}
-                {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--panel-text-muted,#8a735f)]" /> : null}
-              </div>
-            </div>
-            <div className="flex shrink-0 items-start">
-              <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
-            </div>
-          </div>
-          <p className={`mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
-            {draftPreview ? (
-              <>
-                <span className="mr-1 font-semibold text-[var(--panel-accent-red-text,#d9776b)]">Rascunho:</span>
-                <span>{draftPreview}</span>
-              </>
-            ) : visibleLastMessageText ? (
-              <>
-                {OutboundPreviewStatusIcon && outboundPreviewStatusMeta ? (
-                  <span className={`mr-1 inline-flex align-middle whatsapp-inbox-preview-status whatsapp-inbox-preview-status-${outboundPreviewStatusMeta.tone}`} title={outboundPreviewStatusMeta.label} aria-label={outboundPreviewStatusMeta.label}>
-                    <OutboundPreviewStatusIcon className="h-3.5 w-3.5" />
-                  </span>
-                ) : null}
-                {previewIconType ? (
-                  <ChatPreviewIcon type={previewIconType} />
-                ) : (
-                  <span>{visibleLastMessageText}</span>
-                )}
-              </>
-            ) : rawLastMessageText ? null : (
-              'Sem mensagens ainda'
-            )}
-          </p>
-          {hasUnreadBadge ? (
-            <span className="whatsapp-inbox-unread-badge absolute right-4 top-1/2 inline-flex min-h-5 min-w-6 -translate-y-1/2 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
-              {chat.unread_count > 0 ? chat.unread_count : '•'}
-            </span>
-          ) : null}
-        </button>
-      </div>
-
-      <button
-        ref={menuTriggerRef}
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onToggleMenu(chat.id);
-        }}
-        className={cx(
-          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--panel-text-muted,#8a735f)] transition hover:bg-[rgba(255,248,240,0.08)] hover:text-[var(--panel-text,#f3e6d7)]',
-          menuOpen ? 'bg-[rgba(255,248,240,0.08)] text-[var(--panel-text,#f3e6d7)] opacity-100' : 'opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100',
-          selected ? 'opacity-100' : '',
-        )}
-        aria-label="Abrir menu da conversa"
-        aria-expanded={menuOpen}
-        disabled={menuBusy}
-      >
-        {menuBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronDown className={`h-3.5 w-3.5 transition ${menuOpen ? 'rotate-180' : ''}`} />}
-      </button>
-    </div>
-  );
-}
-
-function InboxMessageSearchListItem({
-  result,
-  selected,
-  connectedUserName,
-  onSelect,
-}: {
-  result: CommWhatsAppMessageSearchResult;
-  selected: boolean;
-  connectedUserName?: string | null;
-  onSelect: (chatId: string) => void;
-}) {
-  const messagePreviewText = getMessageSearchPreviewText(result.message);
-  const messagePreviewIconType = getChatPreviewIconType(messagePreviewText);
-
-  if (!messagePreviewText) {
-    return null;
-  }
-
-  return (
-    <div className={`relative border-b transition ${selected ? 'is-active' : ''}`}>
-      <div className="px-4 py-3">
-        <button type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">
-                {getSafeChatDisplayName(result.chat, connectedUserName)}
-              </p>
-              {messagePreviewText ? (
-                <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
-                  {messagePreviewIconType ? (
-                    <ChatPreviewIcon type={messagePreviewIconType} />
-                  ) : (
-                    messagePreviewText
-                  )}
-                </p>
-              ) : null}
-            </div>
-            <span className="whatsapp-inbox-chat-meta shrink-0 pt-0.5 text-[11px] font-medium leading-none">
-              {formatMessageTime(result.message.message_at)}
-            </span>
-          </div>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function WhatsAppMessageBody({
-  message,
-  onOpenImage,
-  onTranscribe,
-  onOpenSharedContactChat,
-  onSaveSharedContact,
-  sharedContactActionKey,
-  transcribing,
-}: {
-  message: CommWhatsAppMessage;
-  onOpenImage: (messageId: string) => void;
-  onTranscribe: (message: CommWhatsAppMessage) => void;
-  onOpenSharedContactChat: (contact: { name: string | null; phoneNumber: string | null }) => void;
-  onSaveSharedContact: (contact: { name: string | null; phoneNumber: string | null }) => void;
-  sharedContactActionKey: string | null;
-  transcribing: boolean;
-}) {
-  const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
-  const [showOriginalText, setShowOriginalText] = useState(false);
-  const kind = message.message_type.trim().toLowerCase();
-  const caption = getMessageVisibleCaption(message);
-  const editInfo = useMemo(() => getEditedMessageInfo(message), [message]);
-  const deletedInfo = useMemo(() => getDeletedMessageInfo(message), [message]);
-  const linkPreview = useMemo(() => getMessageLinkPreview(message), [message]);
-  const quoteInfo = useMemo(() => getMessageQuoteInfo(message), [message]);
-  const contactCardInfo = useMemo(() => getMessageContactCardInfo(message), [message]);
-  const visibleTextContent = getVisiblePreviewText(message.text_content, message.message_type);
-
-  useEffect(() => {
-    setShowOriginalText(false);
-  }, [message.id, editInfo.originalText, message.text_content, message.media_caption]);
-
-  const editInfoNode = editInfo.edited ? (
-    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-3 py-2.5">
-      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
-        <span>Editada</span>
-        {editInfo.previousText ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowOriginalText((current) => !current)}
-            className="h-7 rounded-xl px-2.5 text-[11px] normal-case tracking-normal"
-          >
-            {showOriginalText ? 'Ocultar alteracoes' : 'Ver antes e depois'}
-          </Button>
-        ) : null}
-      </div>
-      {showOriginalText && editInfo.previousText ? (
-        <div className="mt-2 grid gap-2">
-          <div className="rounded-xl border border-[rgba(215,154,143,0.24)] bg-[rgba(122,33,24,0.04)] px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Antes</p>
-            <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-muted,#876f5c)] line-through opacity-85" text={editInfo.previousText} />
-          </div>
-          {editInfo.currentText ? (
-            <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Depois</p>
-              <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]" text={editInfo.currentText} />
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  ) : null;
-  const linkPreviewContent = linkPreview ? (
-    <>
-      {linkPreview.previewImage ? (
-        <div className="overflow-hidden border-b border-[var(--panel-border-subtle,#e7dac8)] bg-black/10">
-          <img src={linkPreview.previewImage} alt={linkPreview.title || linkPreview.domain || 'Preview do link'} className="max-h-[220px] w-full object-cover" loading="lazy" />
-        </div>
-      ) : null}
-      <div className="space-y-1.5 px-3 py-3">
-        {linkPreview.title ? <p className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--panel-text,#1f2937)]">{linkPreview.title}</p> : null}
-        {linkPreview.description ? <p className="line-clamp-3 text-sm leading-5 text-[var(--panel-text-muted,#6b7280)]">{linkPreview.description}</p> : null}
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#8a735f)]">{linkPreview.domain || 'Link'}</p>
-      </div>
-    </>
-  ) : null;
-  const linkPreviewNode = linkPreviewContent
-    ? linkPreview?.url
-      ? (
-        <a
-          href={linkPreview.url}
-          target="_blank"
-          rel="noreferrer"
-          className="block overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)] transition hover:border-[rgba(212,192,167,0.56)]"
-        >
-          {linkPreviewContent}
-        </a>
-      )
-      : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)]">
-          {linkPreviewContent}
-        </div>
-      )
-    : null;
-  const quotePreviewNode = quoteInfo ? (
-    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-black/10 px-3 py-2.5">
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-current/50 opacity-70" />
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Resposta</p>
-          <p className="mt-1 whitespace-pre-wrap break-words text-xs leading-5 opacity-85">{quoteInfo.previewText}</p>
-        </div>
-      </div>
-    </div>
-  ) : null;
-  const visibleContactItems = contactCardInfo?.items.slice(0, 3) ?? [];
-  const hiddenContactCount = contactCardInfo ? Math.max(0, contactCardInfo.count - visibleContactItems.length) : 0;
-  const contactCardNode = contactCardInfo ? (
-    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)] px-3 py-3">
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)]">
-          <UserRound className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
-            {contactCardInfo.kind === 'contact'
-              ? 'Contato compartilhado'
-              : contactCardInfo.count > 0
-                ? `${contactCardInfo.count} contatos compartilhados`
-                : 'Contatos compartilhados'}
-          </p>
-          {visibleContactItems.length > 0 ? (
-            <div className="space-y-2">
-              {visibleContactItems.map((item, index) => (
-                <div key={`${item.name ?? 'contact'}:${item.phoneNumber ?? index}`} className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2.5">
-                  <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{item.name || 'Contato sem nome'}</p>
-                  {item.phoneNumber ? (
-                    <p className="mt-1 text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</p>
-                  ) : null}
-                  {item.phoneNumber ? (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onOpenSharedContactChat(item)}
-                        disabled={sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
-                        className={inboxInlineActionClassName}
-                      >
-                        {sharedContactActionKey === `open:${item.phoneNumber}` ? 'Abrindo...' : 'Abrir chat'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onSaveSharedContact(item)}
-                        disabled={!item.name || sharedContactActionKey === `open:${item.phoneNumber}` || sharedContactActionKey === `save:${item.phoneNumber}`}
-                        className={inboxInlineActionClassName}
-                        title={item.name ? 'Salvar contato' : 'Contato sem nome para salvar'}
-                      >
-                        {sharedContactActionKey === `save:${item.phoneNumber}` ? 'Salvando...' : 'Salvar contato'}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm leading-6 text-[var(--panel-text-soft,#5b4635)]">{message.text_content || '[Contato]'}</p>
-          )}
-          {hiddenContactCount > 0 ? (
-            <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">+{hiddenContactCount} contato(s)</p>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  ) : null;
-
-  if (deletedInfo.deleted) {
-    const deletedByLabel = deletedInfo.deletedBy === 'self'
-      ? 'Você apagou esta mensagem no WhatsApp.'
-      : deletedInfo.deletedBy === 'contact'
-        ? 'O contato apagou esta mensagem no WhatsApp.'
-        : 'Mensagem apagada no WhatsApp.';
-
-    return (
-      <div className="rounded-2xl border border-[rgba(215,154,143,0.45)] bg-[rgba(122,33,24,0.08)] px-3 py-3 text-[var(--panel-accent-red-text,#b4534a)]">
-        <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          <span>Mensagem apagada</span>
-        </div>
-        <p className="mt-2 text-xs text-[var(--panel-text-muted,#876f5c)]">{deletedByLabel}</p>
-        <LinkifiedText className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-soft,#5b4635)] line-through opacity-85" text={deletedInfo.preservedText} />
-      </div>
-    );
-  }
-
-  if (kind === 'image' || kind === 'sticker') {
-    const isSticker = kind === 'sticker';
-    const mediaLabel = isSticker ? 'Figurinha' : 'Imagem';
-    const unavailableLabel = isSticker ? 'Figurinha indisponível' : 'Imagem indisponível';
-    const loadingLabel = isSticker ? 'Carregando figurinha...' : 'Carregando imagem...';
-    const altLabel = message.media_file_name || (isSticker ? 'Figurinha enviada' : 'Imagem enviada');
-
-    return (
-      <div className="space-y-3">
-        {quotePreviewNode}
-        {mediaUrl ? (
-          <button
-            type="button"
-            onClick={() => onOpenImage(message.id)}
-            className={isSticker
-              ? 'block w-fit max-w-[180px] overflow-hidden rounded-2xl border border-transparent bg-transparent text-left transition hover:border-current/15'
-              : 'whatsapp-inbox-image-card block w-full overflow-hidden rounded-2xl border text-left'}
-          >
-            <img
-              src={mediaUrl}
-              alt={altLabel}
-              className={isSticker ? 'max-h-[180px] max-w-[180px] object-contain' : 'max-h-[280px] w-full object-cover'}
-              loading="lazy"
-            />
-            {!isSticker ? (
-              <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
-                <span className="truncate font-medium">{message.media_file_name || mediaLabel}</span>
-                <span className="shrink-0 opacity-80">Toque para ampliar</span>
-              </div>
-            ) : null}
-          </button>
-        ) : (
-          <div className={isSticker
-            ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 px-3 text-center text-sm opacity-80'
-            : 'flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80'}
-          >
-            {loading ? loadingLabel : error || unavailableLabel}
-          </div>
-        )}
-        {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (isVideoLikeMessageType(kind)) {
-    return (
-      <div className="space-y-3">
-        {quotePreviewNode}
-        <div className="whatsapp-inbox-image-card overflow-hidden rounded-2xl border">
-          {mediaUrl ? (
-            <video controls preload="metadata" className="max-h-[320px] w-full bg-black object-contain">
-              <source src={mediaUrl} type={message.media_mime_type || undefined} />
-            </video>
-          ) : (
-            <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
-              {loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}
-            </div>
-          )}
-          <div className="whatsapp-inbox-image-card-footer flex items-center justify-between gap-3 px-3 py-2 text-xs">
-              <span className="truncate font-medium">{message.media_file_name || 'Video'}</span>
-              <span className="shrink-0 opacity-80">{formatFileSize(message.media_size_bytes) || 'Midia'}</span>
-            </div>
-          </div>
-          {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
-          {editInfoNode}
-        </div>
-    );
-  }
-
-  if (kind === 'document') {
-    const extension = message.media_file_name?.split('.').pop()?.toUpperCase() || 'DOC';
-
-    return (
-      <div className="space-y-3">
-        {quotePreviewNode}
-        <div className="whatsapp-inbox-document-card flex items-center gap-3 rounded-2xl border px-3 py-3">
-          <div className="whatsapp-inbox-document-thumb flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-xs font-semibold tracking-[0.08em]">
-            {extension.slice(0, 4)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{message.media_file_name || 'Documento'}</p>
-            <p className="text-xs opacity-75">{formatFileSize(message.media_size_bytes) || 'Documento anexo'}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {mediaUrl ? (
-              <>
-                <a href={mediaUrl} target="_blank" rel="noreferrer" className={inboxInlineActionClassName}>
-                  Abrir
-                </a>
-                <a
-                  href={mediaUrl}
-                  download={message.media_file_name || 'documento'}
-                  className={inboxInlineActionClassName}
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Baixar
-                </a>
-              </>
-            ) : (
-              <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
-            )}
-          </div>
-        </div>
-        {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (kind === 'audio' || kind === 'voice') {
-    const transcriptionStatus = message.transcription_status || 'idle';
-    const canTranscribe = Boolean(message.media_id || message.media_url);
-
-    return (
-      <div className="space-y-3">
-        {quotePreviewNode}
-        <WhatsAppAudioPlayerCard
-          kind={kind}
-          mediaUrl={mediaUrl}
-          mediaMimeType={message.media_mime_type}
-          fileName={message.media_file_name}
-          durationSeconds={message.media_duration_seconds}
-          loading={loading}
-          error={error}
-        />
-        <div className="space-y-2">
-          {transcriptionStatus === 'completed' && message.transcription_text?.trim() ? (
-            <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-3 py-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Transcrição</p>
-                {message.transcription_provider ? (
-                  <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--panel-text-subtle,#9a8573)]">
-                    {message.transcription_provider}
-                  </span>
-                ) : null}
-              </div>
-              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]">
-                {message.transcription_text}
-              </p>
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap items-center gap-2">
-            {transcriptionStatus === 'processing' || transcribing ? (
-              <span className="inline-flex items-center gap-2 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1.5 text-[11px] font-semibold text-[var(--panel-text-soft,#5b4635)]">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Transcrevendo...
-              </span>
-            ) : canTranscribe ? (
-              <Button
-                type="button"
-                variant="soft"
-                size="sm"
-                onClick={() => onTranscribe(message)}
-                className="h-8 rounded-xl px-3 text-[11px]"
-              >
-                {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
-              </Button>
-            ) : null}
-
-            {transcriptionStatus === 'failed' && message.transcription_error ? (
-              <span className="text-xs text-[var(--panel-accent-red-text,#d9776b)]">{message.transcription_error}</span>
-            ) : null}
-          </div>
-        </div>
-        {caption ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={caption} /> : null}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  if (kind === 'contact' || kind === 'contact_list') {
-    return (
-      <div className="space-y-3">
-        {quotePreviewNode}
-        {contactCardNode || <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={message.text_content || '[Contato]'} />}
-        {editInfoNode}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {quotePreviewNode}
-      {linkPreviewNode}
-      {visibleTextContent ? <LinkifiedText className="whitespace-pre-wrap break-words text-sm leading-6" text={visibleTextContent} /> : null}
-      {editInfoNode}
-    </div>
-  );
-}
 
 export default function WhatsAppInboxScreen() {
   const navigate = useNavigate();
@@ -3063,15 +1655,15 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (operationalStateError && !operationalState) {
-      return 'Não foi possível verificar o canal do WhatsApp agora.';
+      return 'N├úo foi poss├¡vel verificar o canal do WhatsApp agora.';
     }
 
     if (!operationalState?.tokenConfigured) {
-      return 'Token da Whapi não configurado em /painel/config.';
+      return 'Token da Whapi n├úo configurado em /painel/config.';
     }
 
     if (!operationalState.configEnabled) {
-      return 'Envio do WhatsApp está desabilitado em /painel/config.';
+      return 'Envio do WhatsApp est├í desabilitado em /painel/config.';
     }
 
     if (!isChannelConnected) {
@@ -3947,7 +2539,7 @@ export default function WhatsAppInboxScreen() {
             emoji,
             from_me: true,
             from: null,
-            from_name: 'Você',
+            from_name: 'Voc├¬',
             reacted_at: new Date().toISOString(),
             target_external_message_id: message.external_message_id ?? null,
           },
@@ -3987,7 +2579,7 @@ export default function WhatsAppInboxScreen() {
       }
       console.error('[WhatsAppInbox] erro ao carregar contratos do lead', error);
       setLeadContracts([]);
-      setLeadContractsError(error instanceof Error ? error.message : 'Não foi possível carregar os contratos do lead.');
+      setLeadContractsError(error instanceof Error ? error.message : 'N├úo foi poss├¡vel carregar os contratos do lead.');
     } finally {
       if (requestId === leadContractsRequestIdRef.current) {
         setLeadContractsLoading(false);
@@ -4224,7 +2816,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (voiceRecordingState !== 'idle') {
-      return 'Finalize a gravação de áudio antes de gerar um follow-up.';
+      return 'Finalize a grava├º├úo de ├íudio antes de gerar um follow-up.';
     }
 
     if (pendingAttachments.length > 0) {
@@ -4262,7 +2854,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (voiceRecordingState !== 'idle') {
-      return 'Finalize a gravação de áudio antes de sugerir resposta.';
+      return 'Finalize a grava├º├úo de ├íudio antes de sugerir resposta.';
     }
 
     if (pendingAttachments.length > 0) {
@@ -4326,11 +2918,11 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (generatingFollowUp) {
-      return 'Aguarde a geração do follow-up terminar.';
+      return 'Aguarde a gera├º├úo do follow-up terminar.';
     }
 
     if (voiceRecordingState !== 'idle') {
-      return 'Finalize a gravação de áudio antes de enviar mídia da gaveta.';
+      return 'Finalize a grava├º├úo de ├íudio antes de enviar m├¡dia da gaveta.';
     }
 
     if (pendingAttachments.length > 0) {
@@ -4349,7 +2941,7 @@ export default function WhatsAppInboxScreen() {
       return {
         tone: 'danger' as const,
         icon: AlertTriangle,
-        title: 'Não foi possível verificar o canal do WhatsApp',
+        title: 'N├úo foi poss├¡vel verificar o canal do WhatsApp',
         description: operationalStateError,
       };
     }
@@ -4377,7 +2969,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'warning' as const,
         icon: AlertTriangle,
         title: 'Envio desabilitado',
-        description: 'O canal está configurado, mas o envio foi desativado em /painel/config.',
+        description: 'O canal est├í configurado, mas o envio foi desativado em /painel/config.',
       };
     }
 
@@ -4386,7 +2978,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'danger' as const,
         icon: WifiOff,
         title: `WhatsApp ${formatConnectionStatusLabel(connectionStatus)}`,
-        description: 'Reconecte o canal na Whapi ou valide a sessão antes de atender por aqui.',
+        description: 'Reconecte o canal na Whapi ou valide a sess├úo antes de atender por aqui.',
       };
     }
 
@@ -4395,7 +2987,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'info' as const,
         icon: Clock3,
         title: 'Webhook ainda sem eventos',
-        description: 'O canal está conectado, mas ainda não recebemos nenhum evento do webhook neste inbox.',
+        description: 'O canal est├í conectado, mas ainda n├úo recebemos nenhum evento do webhook neste inbox.',
       };
     }
 
@@ -4404,7 +2996,7 @@ export default function WhatsAppInboxScreen() {
         tone: 'info' as const,
         icon: Clock3,
         title: 'Webhook sem eventos recentes',
-        description: `Último evento recebido em ${formatMessageTime(channelState.last_webhook_received_at)}. Se isso não for esperado, valide o webhook na Whapi.`,
+        description: `├Ültimo evento recebido em ${formatMessageTime(channelState.last_webhook_received_at)}. Se isso n├úo for esperado, valide o webhook na Whapi.`,
       };
     }
 
@@ -4424,8 +3016,8 @@ export default function WhatsAppInboxScreen() {
     }
 
     const reminder = chatAgendaSummary.nextReminder;
-    const prefix = isOverdue(reminder.data_lembrete) ? 'Próximo lembrete atrasado' : 'Próximo lembrete';
-    return `${prefix}: ${reminder.titulo} · ${formatDateTimeFullBR(reminder.data_lembrete)}`;
+    const prefix = isOverdue(reminder.data_lembrete) ? 'Pr├│ximo lembrete atrasado' : 'Pr├│ximo lembrete';
+    return `${prefix}: ${reminder.titulo} ┬À ${formatDateTimeFullBR(reminder.data_lembrete)}`;
   }, [chatAgendaSummary, chatAgendaSummaryLoading, leadPanel?.id]);
 
   useEffect(() => {
@@ -4459,7 +3051,7 @@ export default function WhatsAppInboxScreen() {
         setQuickReplies(normalized.quickReplies);
       })
       .catch((error) => {
-        console.error('[WhatsAppInbox] erro ao carregar mensagens rápidas', error);
+        console.error('[WhatsAppInbox] erro ao carregar mensagens r├ípidas', error);
         if (active) {
           setQuickReplyIntegration(null);
           setQuickReplies(DEFAULT_QUICK_REPLIES);
@@ -4975,7 +3567,7 @@ export default function WhatsAppInboxScreen() {
 
       console.error('[WhatsAppInbox] erro ao carregar estado operacional', error);
       setOperationalStateError(
-        error instanceof Error ? error.message : 'Não foi possível carregar o estado operacional do WhatsApp.',
+        error instanceof Error ? error.message : 'N├úo foi poss├¡vel carregar o estado operacional do WhatsApp.',
       );
       setOperationalStateLoaded(true);
     }
@@ -5237,7 +3829,7 @@ export default function WhatsAppInboxScreen() {
         }
 
         console.error('[WhatsAppInbox] erro ao carregar chats', error);
-        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
+        toast.error(error instanceof Error ? error.message : 'N├úo foi poss├¡vel carregar as conversas do WhatsApp.');
       }
     })().finally(() => {
       latestChatsLoadedAtRef.current = Date.now();
@@ -5392,7 +3984,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       console.error('[WhatsAppInbox] erro ao carregar mensagens', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as mensagens da conversa.');
+      toast.error(error instanceof Error ? error.message : 'N├úo foi poss├¡vel carregar as mensagens da conversa.');
     } finally {
       if (shouldShowBlockingLoader && requestId === messagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
         setLoadingMessages(false);
@@ -5450,7 +4042,7 @@ export default function WhatsAppInboxScreen() {
 
       pendingMessageSearchChatIdRef.current = null;
       console.error('[WhatsAppInbox] erro ao carregar contexto da mensagem buscada', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível abrir a mensagem encontrada.');
+      toast.error(error instanceof Error ? error.message : 'N├úo foi poss├¡vel abrir a mensagem encontrada.');
       void loadMessages(targetChat, 'initial');
     }).finally(() => {
       if (requestId === messageSearchSelectionRequestIdRef.current && selectedChatIdRef.current === targetChat.id) {
@@ -5858,7 +4450,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       console.error('[WhatsAppInbox] erro ao carregar mensagens antigas', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mensagens mais antigas.');
+      toast.error(error instanceof Error ? error.message : 'N├úo foi poss├¡vel carregar mensagens mais antigas.');
     } finally {
       if (requestId === olderMessagesRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
         setLoadingOlderMessages(false);
@@ -5995,7 +4587,6 @@ export default function WhatsAppInboxScreen() {
       void handleSendMessage();
     }
   };
-
   const sendTextSegments = useCallback((chat: CommWhatsAppChat, textSegments: string[], quotePayload: OutgoingQuotePayload | null = null) => {
     if (textSegments.length === 0) {
       return;
@@ -6057,7 +4648,7 @@ export default function WhatsAppInboxScreen() {
           }
           localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
+          const message = error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel enviar a mensagem.';
           patchLocalOutgoingMessage(queued.optimisticMessage.id, {
             delivery_status: 'failed',
             status_updated_at: new Date().toISOString(),
@@ -6218,7 +4809,7 @@ export default function WhatsAppInboxScreen() {
                 }
                 localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
               } catch (error) {
-                const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia.';
+                const message = error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel enviar a mÃ­dia.';
                 firstErrorMessage = firstErrorMessage || message;
                 patchLocalOutgoingMessage(queued.optimisticMessage.id, {
                   delivery_status: 'failed',
@@ -6245,7 +4836,7 @@ export default function WhatsAppInboxScreen() {
           }
 
           if (firstErrorMessage) {
-            if (firstErrorMessage === 'Envio de mídia cancelado.') {
+            if (firstErrorMessage === 'Envio de mÃ­dia cancelado.') {
               toast.info('Upload interrompido. As mensagens que falharam permaneceram no chat para reenvio.');
             } else {
               toast.error(firstErrorMessage);
@@ -6258,7 +4849,7 @@ export default function WhatsAppInboxScreen() {
       setReplyTargetMessage(null);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar mensagem', error);
-      const message = error instanceof Error ? error.message : 'Não foi possível enviar a mensagem.';
+      const message = error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel enviar a mensagem.';
       toast.error(message);
     }
   }, [allocateOptimisticMessageTimestamps, appendLocalOutgoingMessage, applyOptimisticChatSummary, buildOptimisticOutgoingMessage, enqueueChatSend, loadChats, loadMessages, messageDraft, patchLocalOutgoingMessage, pendingAttachments, releaseComposerQueueSnapshotKeySoon, replyTargetMessage, resetComposerAfterQueue, resolveComposerVariables, scheduleMessageStatusRefresh, selectedChat, sendDisabledReason, sendTextSegments, updateOptimisticChatPreviewStatus]);
@@ -6382,7 +4973,7 @@ export default function WhatsAppInboxScreen() {
 
       if (!message.media_id) {
         removeLocalOutgoingMessage(message.id);
-        toast.error('Não foi possível reenviar esta mensagem local.');
+        toast.error('NÃ£o foi possÃ­vel reenviar esta mensagem local.');
         return;
       }
 
@@ -6393,8 +4984,8 @@ export default function WhatsAppInboxScreen() {
         await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
       }
     } catch (error) {
-      console.error('[WhatsAppInbox] erro ao reenviar mídia', error);
-      const messageText = error instanceof Error ? error.message : 'Não foi possível reenviar a mensagem.';
+      console.error('[WhatsAppInbox] erro ao reenviar mÃ­dia', error);
+      const messageText = error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel reenviar a mensagem.';
       if (localOutgoingRetryPayloadRef.current.has(message.id)) {
         patchLocalOutgoingMessage(message.id, {
           delivery_status: 'failed',
@@ -6422,7 +5013,7 @@ export default function WhatsAppInboxScreen() {
 
     const chatId = String(message.metadata?.chat_id ?? selectedChat?.external_chat_id ?? '').trim();
     if (!chatId) {
-      toast.error('Não foi possível identificar a conversa desta mensagem.');
+      toast.error('NÃ£o foi possÃ­vel identificar a conversa desta mensagem.');
       return;
     }
 
@@ -6441,8 +5032,8 @@ export default function WhatsAppInboxScreen() {
       });
     } catch (error) {
       patchMessageReactionLocally(message, currentOwnReaction);
-      console.error('[WhatsAppInbox] erro ao reagir à mensagem', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível reagir à mensagem.');
+      console.error('[WhatsAppInbox] erro ao reagir Ã  mensagem', error);
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel reagir Ã  mensagem.');
     } finally {
       setReactingMessageId(null);
     }
@@ -6463,6 +5054,16 @@ export default function WhatsAppInboxScreen() {
   const handleCloseEditMessageModal = useCallback(() => {
     setEditingMessage(null);
     setEditingMessageDraft('');
+  }, []);
+
+  const handleCloseMediaViewer = useCallback(() => {
+    setLightboxMessageId(null);
+  }, []);
+
+  const handleClearAllFilters = useCallback(() => {
+    setChatActivityFilter('all');
+    setLeadStatusFilters([]);
+    setAdvancedFiltersOpen(false);
   }, []);
 
   const handleReplyToMessage = useCallback((message: CommWhatsAppMessage) => {
@@ -6638,7 +5239,7 @@ export default function WhatsAppInboxScreen() {
     }
   }, [patchMessageLocally]);
 
-  const handleTranscribeMessage = async (message: CommWhatsAppMessage) => {
+  const handleTranscribeMessage = useCallback(async (message: CommWhatsAppMessage) => {
     setTranscribingMessageId(message.id);
     patchMessageLocally(message.id, {
       transcription_status: 'processing',
@@ -6669,7 +5270,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setTranscribingMessageId(null);
     }
-  };
+  }, [patchMessageLocally, setTranscribingMessageId]);
 
   const handleRefreshLeadContracts = useCallback(() => {
     void loadLeadContracts(leadPanel?.id ?? null);
@@ -6765,7 +5366,7 @@ export default function WhatsAppInboxScreen() {
       console.error('[WhatsAppInbox] erro ao vincular lead', error);
       autoLinkedLeadKeyRef.current = null;
       if (!options.silent) {
-        toast.error(error instanceof Error ? error.message : 'Não foi possível vincular o lead ao chat.');
+        toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel vincular o lead ao chat.');
       }
     } finally {
       setLinkLoadingLeadId(null);
@@ -6797,7 +5398,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Lead desvinculado da conversa.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao desvincular lead', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível desvincular o lead do chat.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel desvincular o lead do chat.');
     }
   };
 
@@ -6819,7 +5420,7 @@ export default function WhatsAppInboxScreen() {
 
       if (shouldPromptFirstReminderAfterQuote(newStatus)) {
         setStatusReminderLead(statusReminderLeadSnapshot);
-        setStatusReminderPromptMessage('Deseja agendar o primeiro lembrete após a proposta enviada?');
+        setStatusReminderPromptMessage('Deseja agendar o primeiro lembrete apÃ³s a proposta enviada?');
       } else if (normalizedStatus === 'perdido' || normalizedStatus === 'convertido') {
         const { error: deleteRemindersError } = await supabase
           .from('reminders')
@@ -6849,7 +5450,7 @@ export default function WhatsAppInboxScreen() {
       ]);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao atualizar status do lead', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar o status do lead.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel atualizar o status do lead.');
       throw error;
     }
   };
@@ -7037,7 +5638,7 @@ export default function WhatsAppInboxScreen() {
           }
         }
       } catch (error) {
-        console.error('[WhatsAppInbox] erro ao pré-carregar nomes do CRM para chats', error);
+        console.error('[WhatsAppInbox] erro ao prÃ©-carregar nomes do CRM para chats', error);
       }
     })();
   }, [applyPrefetchedLeadNames, chats]);
@@ -7065,7 +5666,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Conversa pronta para atendimento.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao iniciar chat por contato salvo', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa a partir do contato salvo.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel iniciar a conversa a partir do contato salvo.');
     } finally {
       setStartingChatKey((current) => (current === actionKey ? null : current));
     }
@@ -7092,7 +5693,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Conversa do lead aberta no inbox.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao iniciar chat por lead do CRM', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa a partir do lead do CRM.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel iniciar a conversa a partir do lead do CRM.');
     } finally {
       setStartingChatKey((current) => (current === actionKey ? null : current));
     }
@@ -7183,10 +5784,10 @@ export default function WhatsAppInboxScreen() {
       setSelectedChatId(result.chat.id);
       setStartChatModalOpen(false);
       setManualStartPhone('');
-      toast.success('Conversa aberta pelo número informado.');
+      toast.success('Conversa aberta pelo nÃºmero informado.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao iniciar chat manual', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a conversa pelo número informado.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel iniciar a conversa pelo nÃºmero informado.');
     } finally {
       setStartingChatKey((current) => (current === actionKey ? null : current));
     }
@@ -7195,13 +5796,13 @@ export default function WhatsAppInboxScreen() {
   const handleOpenSharedContactChat = useCallback(async (contact: { name: string | null; phoneNumber: string | null }) => {
     const phoneNumber = contact.phoneNumber?.trim() ?? '';
     if (!phoneNumber) {
-      toast.error('Este contato compartilhado não possui telefone válido.');
+      toast.error('Este contato compartilhado nÃ£o possui telefone vÃ¡lido.');
       return;
     }
 
     const phoneKeys = collectPhoneLookupKeys(phoneNumber);
     if (phoneKeys.length === 0) {
-      toast.error('Este contato compartilhado não possui telefone válido.');
+      toast.error('Este contato compartilhado nÃ£o possui telefone vÃ¡lido.');
       return;
     }
 
@@ -7238,7 +5839,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Conversa aberta com o contato compartilhado.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao abrir contato compartilhado', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível abrir a conversa do contato compartilhado.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel abrir a conversa do contato compartilhado.');
     } finally {
       setSharedContactActionKey((current) => (current === actionKey ? null : current));
     }
@@ -7254,7 +5855,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (!phoneNumber) {
-      toast.error('Este contato compartilhado não possui telefone válido.');
+      toast.error('Este contato compartilhado nÃ£o possui telefone vÃ¡lido.');
       return;
     }
 
@@ -7272,7 +5873,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Contato salvo com sucesso.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao salvar contato compartilhado', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar o contato compartilhado.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel salvar o contato compartilhado.');
     } finally {
       setSharedContactActionKey((current) => (current === actionKey ? null : current));
     }
@@ -7393,10 +5994,10 @@ export default function WhatsAppInboxScreen() {
       setQuickReplies(normalized.quickReplies);
       setQuickRepliesModalOpen(false);
       setDismissedQuickReplyKey(null);
-      toast.success('Mensagens rápidas salvas com sucesso.');
+      toast.success('Mensagens rÃ¡pidas salvas com sucesso.');
     } catch (error) {
-      console.error('[WhatsAppInbox] erro ao salvar mensagens rápidas', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível salvar as mensagens rápidas.');
+      console.error('[WhatsAppInbox] erro ao salvar mensagens rÃ¡pidas', error);
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel salvar as mensagens rÃ¡pidas.');
     } finally {
       setSavingQuickReplies(false);
     }
@@ -7614,7 +6215,7 @@ export default function WhatsAppInboxScreen() {
         return;
       }
       console.error('[WhatsAppInbox] erro ao gerar follow-up', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível gerar o follow-up com IA.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel gerar o follow-up com IA.');
     } finally {
       if (requestId === followUpGenerationRequestIdRef.current && selectedChatIdRef.current === targetChatId) {
         setGeneratingFollowUp(false);
@@ -7651,7 +6252,7 @@ export default function WhatsAppInboxScreen() {
         .join('\n');
 
       if (!transcript) {
-        toast.error('Não há histórico útil suficiente para copiar.');
+        toast.error('NÃ£o hÃ¡ histÃ³rico Ãºtil suficiente para copiar.');
         return;
       }
 
@@ -7659,7 +6260,7 @@ export default function WhatsAppInboxScreen() {
       toast.success('Conversa copiada no formato do follow-up.');
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao copiar conversa formatada', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível copiar a conversa.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel copiar a conversa.');
     } finally {
       setCopyingTranscript(false);
     }
@@ -7910,8 +6511,8 @@ export default function WhatsAppInboxScreen() {
           console.error('[WhatsAppInbox] erro ao atualizar conversa apos midia da gaveta', error);
         });
       } catch (error) {
-        console.error('[WhatsAppInbox] erro ao enviar mídia da gaveta', error);
-        const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia agora.';
+        console.error('[WhatsAppInbox] erro ao enviar mÃ­dia da gaveta', error);
+        const message = error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel enviar a mÃ­dia agora.';
         patchLocalOutgoingMessage(optimisticMessage.id, {
           delivery_status: 'failed',
           status_updated_at: new Date().toISOString(),
@@ -7964,12 +6565,12 @@ export default function WhatsAppInboxScreen() {
 
     const leadId = selectedChat.lead_id ?? leadPanel?.id ?? null;
     if (!leadId) {
-      toast.error('Vincule um lead antes de agendar a próxima ação.');
+      toast.error('Vincule um lead antes de agendar a prÃ³xima aÃ§Ã£o.');
       return;
     }
 
     if (!canEditAgenda) {
-      toast.error('Você não tem permissão para editar a agenda.');
+      toast.error('VocÃª nÃ£o tem permissÃ£o para editar a agenda.');
       return;
     }
 
@@ -7992,11 +6593,11 @@ export default function WhatsAppInboxScreen() {
 
       await loadChatAgendaSummary(leadId, leadContracts.map((contract) => contract.id));
       const result = Array.isArray(data) ? data[0] as { inserted?: boolean } | undefined : undefined;
-      toast.success(result?.inserted === false ? 'Este follow-up já estava agendado.' : 'Próximo follow-up agendado.');
+      toast.success(result?.inserted === false ? 'Este follow-up jÃ¡ estava agendado.' : 'PrÃ³ximo follow-up agendado.');
       setFollowUpNextAction(null);
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao agendar proxima acao do follow-up', error);
-      toast.error('Não foi possível agendar a próxima ação.');
+      toast.error('NÃ£o foi possÃ­vel agendar a prÃ³xima aÃ§Ã£o.');
     } finally {
       setSchedulingFollowUpNextAction(false);
     }
@@ -8023,7 +6624,7 @@ export default function WhatsAppInboxScreen() {
       handleCloseFollowUpModal();
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao enviar follow-up', error);
-      toast.error(error instanceof Error ? error.message : 'Não foi possível enviar o follow-up.');
+      toast.error(error instanceof Error ? error.message : 'NÃ£o foi possÃ­vel enviar o follow-up.');
     }
   }, [followUpDraft, handleCloseFollowUpModal, resetFollowUpComposer, selectedChat, sendDisabledReason, sendTextSegments]);
 
@@ -8191,11 +6792,7 @@ export default function WhatsAppInboxScreen() {
                 <InboxFilterChip
                   active={!hasActiveChatFilters}
                   label="Todas"
-                  onClick={() => {
-                    setChatActivityFilter('all');
-                    setLeadStatusFilters([]);
-                    setAdvancedFiltersOpen(false);
-                  }}
+                  onClick={handleClearAllFilters}
                 />
 
                 <div className="relative shrink-0">
@@ -8312,7 +6909,7 @@ export default function WhatsAppInboxScreen() {
                   <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">
                     {archivedSectionOpen
                       ? 'Arquive uma conversa para ela aparecer nesta lista separada.'
-                      : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}
+                      : 'Assim que o webhook da Whapi receber mensagens, elas aparecerÃ£o aqui.'}
                   </p>
                 </div>
               </div>
@@ -8354,7 +6951,7 @@ export default function WhatsAppInboxScreen() {
                 <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
                   <p className="whatsapp-inbox-heading text-base font-semibold text-[var(--panel-text,#1f2937)]">Selecione uma conversa</p>
-                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</p>
+                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Abra um chat na coluna da esquerda para acompanhar o histÃ³rico e responder.</p>
                 </div>
               </div>
           ) : (
@@ -8379,7 +6976,7 @@ export default function WhatsAppInboxScreen() {
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--panel-text-muted,#6b7280)]">
                     <span>{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
-                    {leadPanel?.responsavel_label ? <span>Responsável: {leadPanel.responsavel_label}</span> : null}
+                    {leadPanel?.responsavel_label ? <span>ResponsÃ¡vel: {leadPanel.responsavel_label}</span> : null}
                   </div>
                   {nextChatReminderSummary ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--panel-text-muted,#8a735f)]">
@@ -8455,8 +7052,8 @@ export default function WhatsAppInboxScreen() {
                       variant="soft"
                       size="icon"
                       className="rounded-xl"
-                      aria-label="Abrir informações do lead"
-                      title={selectedChat.lead_id ? 'Abrir informações do lead' : 'Vincular lead do CRM'}
+                      aria-label="Abrir informaÃ§Ãµes do lead"
+                      title={selectedChat.lead_id ? 'Abrir informaÃ§Ãµes do lead' : 'Vincular lead do CRM'}
                     >
                       <span className="relative inline-flex">
                         <Info className="h-4 w-4" />
@@ -8600,7 +7197,7 @@ export default function WhatsAppInboxScreen() {
                                 type="button"
                                 onClick={() => handleToggleReactionPicker(message.id)}
                                 className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100`}
-                                aria-label="Reagir à mensagem"
+                                aria-label="Reagir Ã  mensagem"
                                 title="Reagir"
                               >
                                 <Smile className="h-4 w-4" />
@@ -8777,7 +7374,7 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={handleCancelVoiceRecording}
                         className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
-                        aria-label="Descartar gravação"
+                        aria-label="Descartar gravaÃ§Ã£o"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -8798,7 +7395,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={() => handleStopVoiceRecording()}
                           className="whatsapp-inbox-voice-side-action inline-flex items-center justify-center rounded-full transition"
-                          aria-label="Parar gravação"
+                          aria-label="Parar gravaÃ§Ã£o"
                         >
                           <Pause className="h-4 w-4" />
                         </button>
@@ -8845,7 +7442,7 @@ export default function WhatsAppInboxScreen() {
                             <p className="truncate text-xs font-semibold text-[var(--panel-text-soft,#5b4635)]">
                               {nonVoiceAttachments.length === 1 ? '1 anexo pronto para envio' : `${nonVoiceAttachments.length} anexos prontos para envio`}
                             </p>
-                            <p className="text-[11px] text-[var(--panel-text-muted,#6b7280)]">Serão enviados em sequência</p>
+                            <p className="text-[11px] text-[var(--panel-text-muted,#6b7280)]">SerÃ£o enviados em sequÃªncia</p>
                           </div>
                         </div>
                         <Button
@@ -8863,7 +7460,7 @@ export default function WhatsAppInboxScreen() {
                       {nonVoiceAttachments.map((attachment) => {
                         const isUploadingThisAttachment = sending && mediaUploadProgress?.attachmentId === attachment.id;
                         const compactCard = nonVoiceAttachments.length > 1;
-                        const attachmentLabel = attachment.kind === 'image' ? 'Imagem' : attachment.kind === 'video' ? 'Vídeo' : attachment.kind === 'audio' ? 'Áudio' : 'Documento';
+                        const attachmentLabel = attachment.kind === 'image' ? 'Imagem' : attachment.kind === 'video' ? 'VÃ­deo' : attachment.kind === 'audio' ? 'Ãudio' : 'Documento';
 
                         return (
                           <div key={attachment.id} className={cx('whatsapp-inbox-attachment-card rounded-2xl border px-3 py-3', compactCard && 'whatsapp-inbox-attachment-card-compact p-2.5')}>
@@ -8950,7 +7547,7 @@ export default function WhatsAppInboxScreen() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
-                              Sugestão da IA
+                              SugestÃ£o da IA
                             </p>
                             {replySuggestionText ? (
                               <span className="hidden text-[11px] text-[var(--panel-text-muted,#8a735f)] sm:inline">Tab para aplicar</span>
@@ -8961,7 +7558,7 @@ export default function WhatsAppInboxScreen() {
                           ) : replySuggestionError ? (
                             <p className="mt-1 text-sm leading-6 text-[var(--panel-accent-red-text,#d9776b)]">{replySuggestionError}</p>
                           ) : (
-                            <p className="mt-1 text-sm leading-6 text-[var(--panel-text-muted,#8a735f)]">Analisando histórico e padrão de atendimento...</p>
+                            <p className="mt-1 text-sm leading-6 text-[var(--panel-text-muted,#8a735f)]">Analisando histÃ³rico e padrÃ£o de atendimento...</p>
                           )}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {replySuggestionText ? (
@@ -8977,7 +7574,7 @@ export default function WhatsAppInboxScreen() {
                               onClick={() => void handleGenerateReplySuggestion(true)}
                               disabled={replySuggestionLoading}
                             >
-                              {replySuggestionText ? 'Gerar outra' : 'Gerar sugestão'}
+                              {replySuggestionText ? 'Gerar outra' : 'Gerar sugestÃ£o'}
                             </Button>
                             <Button
                               type="button"
@@ -9016,7 +7613,7 @@ export default function WhatsAppInboxScreen() {
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
                               <Images className="h-4 w-4" />
                             </span>
-                            <span>Fotos e vídeos</span>
+                            <span>Fotos e vÃ­deos</span>
                           </button>
                           <button
                             type="button"
@@ -9026,7 +7623,7 @@ export default function WhatsAppInboxScreen() {
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-ink,#8b4d12)]">
                               <FileAudio className="h-4 w-4" />
                             </span>
-                            <span>Áudio</span>
+                            <span>Ãudio</span>
                           </button>
                           <button
                             type="button"
@@ -9092,7 +7689,7 @@ export default function WhatsAppInboxScreen() {
                         <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
                           <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
                             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
-                              Mensagens rápidas por atalho
+                              Mensagens rÃ¡pidas por atalho
                             </span>
                             <Button
                               type="button"
@@ -9107,7 +7704,7 @@ export default function WhatsAppInboxScreen() {
                               Gerenciar
                             </Button>
                           </div>
-                          <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rápidas">
+                          <div className="max-h-64 overflow-y-auto py-1" role="listbox" aria-label="Mensagens rÃ¡pidas">
                             {quickReplyMenuHasResults ? (
                               filteredQuickReplyOptions.map((option, index) => {
                                 const isActive = index === quickReplyActiveIndex;
@@ -9140,7 +7737,7 @@ export default function WhatsAppInboxScreen() {
                               <div className="px-4 py-4 text-sm text-[var(--panel-text-soft,#5b4635)]">
                                 <p className="font-medium">{quickReplyEmptyStateMessage}</p>
                                 <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
-                                  Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair do inbox.
+                                  Use o botÃ£o <strong>Gerenciar</strong> para criar e editar suas mensagens rÃ¡pidas sem sair do inbox.
                                 </p>
                               </div>
                             )}
@@ -9169,7 +7766,7 @@ export default function WhatsAppInboxScreen() {
                       />
                       {hasComposerFormattingPreview ? (
                         <div className="whatsapp-inbox-composer-format-preview mt-2 rounded-xl px-3 py-2 text-xs leading-5">
-                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Prévia</span>
+                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">PrÃ©via</span>
                           <LinkifiedText className="whitespace-pre-wrap break-words" text={messageDraft} />
                         </div>
                       ) : null}
@@ -9181,7 +7778,7 @@ export default function WhatsAppInboxScreen() {
                         onClick={handleComposerSubmit}
                         disabled={generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
                         className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-xl transition ${hasSendPayload ? 'is-active' : ''} ${generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
-                        aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar áudio'}
+                        aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar Ã¡udio'}
                         title={sendDisabledReason ?? undefined}
                       >
                         {voiceRecordingState === 'requesting' ? (
@@ -9209,7 +7806,7 @@ export default function WhatsAppInboxScreen() {
             selectedMessageId={lightboxMessageId}
             contactName={selectedChatDisplayName}
             onSelect={setLightboxMessageId}
-            onClose={() => setLightboxMessageId(null)}
+            onClose={handleCloseMediaViewer}
           />
         ) : null}
 
@@ -9369,7 +7966,7 @@ export default function WhatsAppInboxScreen() {
               setStatusReminderLead(null);
               setStatusReminderPromptMessage(null);
             }}
-            promptMessage={statusReminderPromptMessage ?? 'Deseja agendar o primeiro lembrete após a proposta enviada?'}
+            promptMessage={statusReminderPromptMessage ?? 'Deseja agendar o primeiro lembrete apÃ³s a proposta enviada?'}
             defaultType="Follow-up"
           />
         ) : null}
@@ -9621,7 +8218,7 @@ export default function WhatsAppInboxScreen() {
           isOpen={advancedFiltersOpen}
           position={advancedFiltersPosition}
           onClose={() => setAdvancedFiltersOpen(false)}
-          ariaLabel="Filtros avançados do inbox"
+          ariaLabel="Filtros avanÃ§ados do inbox"
           className="w-[272px] border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2.5 shadow-2xl"
         >
           <div className="space-y-2.5">
@@ -9632,7 +8229,7 @@ export default function WhatsAppInboxScreen() {
               compact
               options={[
                 { value: 'all', label: 'Todas' },
-                { value: 'unread', label: 'Não lidas' },
+                { value: 'unread', label: 'NÃ£o lidas' },
               ]}
             />
 
@@ -9669,3 +8266,4 @@ export default function WhatsAppInboxScreen() {
     </WhatsAppInboxSelectionProvider>
   );
 }
+

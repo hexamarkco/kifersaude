@@ -44,16 +44,15 @@ export default function CommissionCalendarScreen() {
       try {
         const { data, error: fetchError } = await supabase
           .from("contracts")
-          .select("*")
+          .select('id, status, previsao_recebimento_comissao, comissao_prevista, comissao_recebimento_adiantado, comissao_parcelas, mensalidade_total, codigo_contrato')
+          .eq("status", "Ativo")
           .order("previsao_recebimento_comissao", { ascending: true });
 
         if (fetchError) {
           throw fetchError;
         }
 
-        setContracts(
-          (data || []).filter((contract) => contract.status === "Ativo"),
-        );
+        setContracts(data || []);
       } catch (fetchContractsError) {
         console.error("Erro ao carregar comissoes:", fetchContractsError);
         setError("Nao foi possivel carregar as informacoes financeiras.");

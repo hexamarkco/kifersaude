@@ -59,7 +59,7 @@ export default function TodoCalendarScreen() {
     try {
       const { data, error: fetchError } = await supabase
         .from("reminders")
-        .select("*")
+        .select('id, titulo, descricao, data_lembrete, lido, tipo, concluido_em')
         .eq("tipo", "Tarefa")
         .order("data_lembrete", { ascending: true });
 

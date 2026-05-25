@@ -559,26 +559,22 @@ export const configService = {
   },
 
   async getOperadoras(throwOnError = false): Promise<Operadora[]> {
-    try {
-      const data = await fetchAllPages<Operadora>(async (from, to) => {
-        const response = await supabase
+    return cachedFetch('operadoras', async () => {
+      try {
+        const { data, error } = await supabase
           .from('operadoras')
           .select('*')
           .order('nome', { ascending: true })
-          .order('id', { ascending: true })
-          .range(from, to);
+          .order('id', { ascending: true });
 
-        return { data: response.data as Operadora[] | null, error: response.error };
-      });
-
-      return data || [];
-    } catch (error) {
-      console.error('Error loading operadoras:', error);
-      if (throwOnError) {
-        throw error;
+        if (error) throw error;
+        return (data as Operadora[]) || [];
+      } catch (error) {
+        console.error('Error loading operadoras:', error);
+        if (throwOnError) throw error;
+        return [];
       }
-      return [];
-    }
+    });
   },
 
   async createOperadora(operadora: Omit<Operadora, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: Operadora | null; error: unknown }> {
@@ -589,6 +585,7 @@ export const configService = {
         .select()
         .single();
 
+      if (!error) invalidateCache('operadoras');
       return { data, error };
     } catch (error) {
       console.error('Error creating operadora:', error);
@@ -603,6 +600,7 @@ export const configService = {
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id);
 
+      if (!error) invalidateCache('operadoras');
       return { error: toPostgrestError(error) };
     } catch (error) {
       console.error('Error updating operadora:', error);
@@ -617,6 +615,7 @@ export const configService = {
         .delete()
         .eq('id', id);
 
+      if (!error) invalidateCache('operadoras');
       return { error };
     } catch (error) {
       console.error('Error deleting operadora:', error);
@@ -625,23 +624,21 @@ export const configService = {
   },
 
   async getProdutosPlanos(): Promise<ProdutoPlano[]> {
-    try {
-      const data = await fetchAllPages<ProdutoPlano>(async (from, to) => {
-        const response = await supabase
+    return cachedFetch('produtosPlanos', async () => {
+      try {
+        const { data, error } = await supabase
           .from('produtos_planos')
           .select('*')
           .order('nome', { ascending: true })
-          .order('id', { ascending: true })
-          .range(from, to);
+          .order('id', { ascending: true });
 
-        return { data: response.data as ProdutoPlano[] | null, error: response.error };
-      });
-
-      return data || [];
-    } catch (error) {
-      console.error('Error loading produtos:', error);
-      return [];
-    }
+        if (error) throw error;
+        return (data as ProdutoPlano[]) || [];
+      } catch (error) {
+        console.error('Error loading produtos:', error);
+        return [];
+      }
+    });
   },
 
   async createProdutoPlano(produto: Omit<ProdutoPlano, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: ProdutoPlano | null; error: unknown }> {
@@ -652,6 +649,7 @@ export const configService = {
         .select()
         .single();
 
+      if (!error) invalidateCache('produtosPlanos');
       return { data, error };
     } catch (error) {
       console.error('Error creating produto:', error);
@@ -666,6 +664,7 @@ export const configService = {
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id);
 
+      if (!error) invalidateCache('produtosPlanos');
       return { error: toPostgrestError(error) };
     } catch (error) {
       console.error('Error updating produto:', error);
@@ -680,6 +679,7 @@ export const configService = {
         .delete()
         .eq('id', id);
 
+      if (!error) invalidateCache('produtosPlanos');
       return { error };
     } catch (error) {
       console.error('Error deleting produto:', error);

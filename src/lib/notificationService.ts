@@ -113,7 +113,7 @@ class NotificationService {
       ] = await Promise.all([
         supabase
           .from('reminders')
-          .select('*')
+          .select('id, data_lembrete')
           .eq('lido', false)
           .order('data_lembrete', { ascending: true }),
         commWhatsAppService.getUnreadChatsCount(),

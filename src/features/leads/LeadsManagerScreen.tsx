@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { gsap } from "gsap";
 import { supabase, Lead, fetchAllPages } from "../../lib/supabase";
 import {
@@ -734,6 +735,14 @@ export default function LeadsManager({
     startIndex,
     startIndex + itemsPerPage,
   );
+  const leadsScrollRef = useRef<HTMLDivElement | null>(null);
+  const leadsVirtualizer = useVirtualizer({
+    count: paginatedLeads.length,
+    getScrollElement: () => leadsScrollRef.current,
+    estimateSize: () => 200,
+    overscan: 5,
+    measureElement: (element) => element.getBoundingClientRect().height,
+  });
   const selectedLeadIdsSet = useMemo(
     () => new Set(selectedLeadIds),
     [selectedLeadIds],
@@ -1971,231 +1980,193 @@ export default function LeadsManager({
                   </div>
                 </Surface>
             )}
-            <div className="grid grid-cols-1 gap-4 p-4 sm:p-5">
-              {paginatedLeads.map((lead) => (
-                <Surface
-                  key={lead.id}
-                  variant="muted"
-                  padding="sm"
-                  className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] transition-all sm:p-6"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="flex-1 space-y-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            {canSelectLeads && (
-                              <Checkbox
-                                checked={selectedLeadIdsSet.has(lead.id)}
-                                onChange={() => toggleLeadSelection(lead.id)}
-                                aria-label={`Selecionar lead ${lead.nome_completo}`}
-                              />
-                            )}
-                            <h3 className="text-lg font-semibold" style={{ color: "var(--panel-text)" }}>
-                              {lead.nome_completo}
-                            </h3>
-                            {leadContractIds.has(lead.id) && (
-                              <span
-                                className="comm-badge comm-badge-contract inline-flex min-h-[30px] items-center gap-2 px-3 py-1 text-xs font-medium leading-none"
-                                title="Contrato cadastrado para este lead"
-                              >
-                                <FileText className="h-3.5 w-3.5" />
-                                Contrato
-                              </span>
-                            )}
-                            {canEditLeads ? (
-                              <StatusDropdown
-                                currentStatus={lead.status ?? ""}
-                                leadId={lead.id}
-                                onStatusChange={handleStatusChange}
-                                disabled={isBulkUpdating}
-                                statusOptions={activeLeadStatuses}
-                              />
-                            ) : (
-                              <Badge
-                                tone="neutral"
-                                size="sm"
-                                className="px-2 py-1 text-xs"
-                                style={getStatusBadgeStyles(lead.status)}
-                              >
-                                {lead.status ?? "Sem status"}
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4" style={{ color: "var(--panel-text-soft)" }}>
-                            <div className="flex items-center gap-2 break-words">
-                              {lead.telefone && (
-                                <a
-                                  href={
-                                    getWhatsappLink(lead.telefone) || undefined
-                                  }
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="comm-icon-chip comm-icon-chip-success inline-flex h-8 w-8 items-center justify-center transition-colors"
-                                  aria-label={`Abrir WhatsApp para ${lead.nome_completo}`}
-                                >
-                                  <MessageCircle className="w-4 h-4" />
-                                </a>
-                              )}
-                              <span>{lead.telefone}</span>
-                            </div>
-                            {lead.email && (
-                              <div className="flex items-center gap-2 truncate">
-                                <Button
-                                  type="button"
-                                  onClick={() => handleEmailContact(lead)}
-                                  variant="icon"
-                                  size="icon"
-                                  className="comm-icon-chip comm-icon-chip-brand h-8 w-8 rounded-full"
-                                  title="Enviar e-mail"
-                                  aria-label={`Enviar e-mail para ${lead.nome_completo}`}
-                                >
-                                  <Mail className="h-4 w-4" />
-                                </Button>
-                                <span className="truncate">{lead.email}</span>
+            <div ref={leadsScrollRef} className="overflow-y-auto p-4 sm:p-5" style={{ maxHeight: 'calc(100vh - 420px)' }}>
+              {paginatedLeads.length > 0 ? (
+                <div style={{ height: `${leadsVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                  {leadsVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const lead = paginatedLeads[virtualItem.index];
+                    return (
+                      <div
+                        key={lead.id}
+                        ref={leadsVirtualizer.measureElement}
+                        data-index={virtualItem.index}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${virtualItem.size}px`,
+                          transform: `translateY(${virtualItem.start}px)`,
+                          paddingBottom: '1rem',
+                        }}
+                      >
+                        <Surface
+                          variant="muted"
+                          padding="sm"
+                          className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] transition-all sm:p-6"
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="flex-1 space-y-3">
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                                    {canSelectLeads && (
+                                      <Checkbox
+                                        checked={selectedLeadIdsSet.has(lead.id)}
+                                        onChange={() => toggleLeadSelection(lead.id)}
+                                        aria-label={`Selecionar lead ${lead.nome_completo}`}
+                                      />
+                                    )}
+                                    <h3 className="text-lg font-semibold" style={{ color: "var(--panel-text)" }}>
+                                      {lead.nome_completo}
+                                    </h3>
+                                    {leadContractIds.has(lead.id) && (
+                                      <span
+                                        className="comm-badge comm-badge-contract inline-flex min-h-[30px] items-center gap-2 px-3 py-1 text-xs font-medium leading-none"
+                                        title="Contrato cadastrado para este lead"
+                                      >
+                                        <FileText className="h-3.5 w-3.5" />
+                                        Contrato
+                                      </span>
+                                    )}
+                                    {canEditLeads ? (
+                                      <StatusDropdown
+                                        currentStatus={lead.status ?? ""}
+                                        leadId={lead.id}
+                                        onStatusChange={handleStatusChange}
+                                        disabled={isBulkUpdating}
+                                        statusOptions={activeLeadStatuses}
+                                      />
+                                    ) : (
+                                      <Badge
+                                        tone="neutral"
+                                        size="sm"
+                                        className="px-2 py-1 text-xs"
+                                        style={getStatusBadgeStyles(lead.status)}
+                                      >
+                                        {lead.status ?? "Sem status"}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4" style={{ color: "var(--panel-text-soft)" }}>
+                                    <div className="flex items-center gap-2 break-words">
+                                      {lead.telefone && (
+                                        <a
+                                          href={getWhatsappLink(lead.telefone) || undefined}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="comm-icon-chip comm-icon-chip-success inline-flex h-8 w-8 items-center justify-center transition-colors"
+                                          aria-label={`Abrir WhatsApp para ${lead.nome_completo}`}
+                                        >
+                                          <MessageCircle className="w-4 h-4" />
+                                        </a>
+                                      )}
+                                      <span>{lead.telefone}</span>
+                                    </div>
+                                    {lead.email && (
+                                      <div className="flex items-center gap-2 truncate">
+                                        <Button
+                                          type="button"
+                                          onClick={() => handleEmailContact(lead)}
+                                          variant="icon"
+                                          size="icon"
+                                          className="comm-icon-chip comm-icon-chip-brand h-8 w-8 rounded-full"
+                                          title="Enviar e-mail"
+                                          aria-label={`Enviar e-mail para ${lead.nome_completo}`}
+                                        >
+                                          <Mail className="h-4 w-4" />
+                                        </Button>
+                                        <span className="truncate">{lead.email}</span>
+                                      </div>
+                                    )}
+                                    <div>
+                                      <span className="font-medium">Origem:</span>{" "}
+                                      {lead.origem}
+                                    </div>
+                                    <div>
+                                      <span className="font-medium">Tipo:</span>{" "}
+                                      {lead.tipo_contratacao}
+                                    </div>
+                                  </div>
+                                  {lead.cidade && (
+                                    <div className="mt-2 text-sm" style={{ color: "var(--panel-text-soft)" }}>
+                                      <span className="font-medium">Cidade:</span>{" "}
+                                      {lead.cidade}
+                                    </div>
+                                  )}
+                                  {nextReminderByLeadId.get(lead.id) && (
+                                    <div className="mt-2 flex items-center space-x-2 text-sm" style={{ color: "var(--panel-accent-ink)" }}>
+                                      <Calendar className="h-4 w-4" />
+                                      <span className="font-medium">
+                                        Retorno:{" "}
+                                        {formatDateTimeFullBR(nextReminderByLeadId.get(lead.id) ?? "")}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-sm lg:text-right" style={{ color: "var(--panel-text-muted)" }}>
+                                  <div>
+                                    Responsável:{" "}
+                                    <span className="font-medium" style={{ color: "var(--panel-text-soft)" }}>
+                                      {lead.responsavel}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1">
+                                    Criado:{" "}
+                                    {new Date(lead.data_criacao).toLocaleDateString("pt-BR")}
+                                  </div>
+                                </div>
                               </div>
-                            )}
-                            <div>
-                              <span className="font-medium">Origem:</span>{" "}
-                              {lead.origem}
-                            </div>
-                            <div>
-                              <span className="font-medium">Tipo:</span>{" "}
-                              {lead.tipo_contratacao}
                             </div>
                           </div>
-                          {lead.cidade && (
-                            <div className="mt-2 text-sm" style={{ color: "var(--panel-text-soft)" }}>
-                              <span className="font-medium">Cidade:</span>{" "}
-                              {lead.cidade}
-                            </div>
-                          )}
-                          {nextReminderByLeadId.get(lead.id) && (
-                            <div
-                              className="mt-2 flex items-center space-x-2 text-sm"
-                              style={{ color: "var(--panel-accent-ink)" }}
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t pt-3" style={{ borderColor: "var(--panel-border-subtle)" }}>
+                            <Button
+                              onClick={() => setSelectedLead(lead)}
+                              variant="secondary"
+                              size="sm"
+                              className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
+                              aria-label={canEditLeads ? "Ver e editar lead" : "Ver detalhes do lead"}
                             >
-                              <Calendar className="h-4 w-4" />
-                              <span className="font-medium">
-                                Retorno:{" "}
-                                {formatDateTimeFullBR(
-                                  nextReminderByLeadId.get(lead.id) ?? "",
+                              <MessageCircle className="h-4 w-4" />
+                              <span className="hidden sm:inline">{canEditLeads ? "Ver/Editar" : "Ver Detalhes"}</span>
+                            </Button>
+                            {canEditLeads && (
+                              <>
+                                <Button onClick={() => handleConvertToContract(lead)} variant="soft" size="sm" className="hidden h-[30px] px-2.5 text-[11px] md:inline-flex space-x-1.5">
+                                  <FileText className="h-4 w-4" />
+                                  <span>Converter em Contrato</span>
+                                </Button>
+                                <Button onClick={() => openReminderScheduler(lead)} variant="soft" size="sm" className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5" aria-label="Agendar lembrete" type="button">
+                                  <Bell className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Agendar Lembrete</span>
+                                </Button>
+                                <Button onClick={() => handleDeleteLead(lead)} variant="danger" size="sm" className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5" aria-label="Excluir lead" type="button">
+                                  <Trash2 className="h-4 w-4" />
+                                  <span className="hidden sm:inline">Excluir</span>
+                                </Button>
+                                {!showArchived ? (
+                                  <Button onClick={() => handleArchive(lead.id)} variant="warning" size="sm" className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5 sm:ml-auto" aria-label="Arquivar lead">
+                                    <Archive className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Arquivar</span>
+                                  </Button>
+                                ) : (
+                                  <Button onClick={() => handleUnarchive(lead.id)} variant="secondary" size="sm" className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5 sm:ml-auto" aria-label="Reativar lead">
+                                    <Users className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Reativar</span>
+                                  </Button>
                                 )}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-sm lg:text-right" style={{ color: "var(--panel-text-muted)" }}>
-                          <div>
-                            Responsável:{" "}
-                            <span className="font-medium" style={{ color: "var(--panel-text-soft)" }}>
-                              {lead.responsavel}
-                            </span>
-                          </div>
-                          <div className="mt-1">
-                            Criado:{" "}
-                            {new Date(lead.data_criacao).toLocaleDateString(
-                              "pt-BR",
+                              </>
                             )}
                           </div>
-                        </div>
+                        </Surface>
                       </div>
-                    </div>
-                  </div>
-                  <div
-                    className="mt-3 flex flex-wrap items-center gap-1.5 border-t pt-3"
-                    style={{ borderColor: "var(--panel-border-subtle)" }}
-                  >
-                    <Button
-                      onClick={() => setSelectedLead(lead)}
-                      variant="secondary"
-                      size="sm"
-                      className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
-                      aria-label={
-                        canEditLeads
-                          ? "Ver e editar lead"
-                          : "Ver detalhes do lead"
-                      }
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      <span className="hidden sm:inline">
-                        {canEditLeads ? "Ver/Editar" : "Ver Detalhes"}
-                      </span>
-                    </Button>
-                    {canEditLeads && (
-                      <>
-                        <Button
-                          onClick={() => handleConvertToContract(lead)}
-                          variant="soft"
-                          size="sm"
-                          className="hidden h-[30px] px-2.5 text-[11px] md:inline-flex space-x-1.5"
-                        >
-                          <FileText className="h-4 w-4" />
-                          <span>Converter em Contrato</span>
-                        </Button>
-                        <Button
-                          onClick={() => openReminderScheduler(lead)}
-                          variant="soft"
-                          size="sm"
-                          className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
-                          aria-label="Agendar lembrete"
-                          type="button"
-                        >
-                          <Bell className="h-4 w-4" />
-                          <span className="hidden sm:inline">
-                            Agendar Lembrete
-                          </span>
-                        </Button>
-                        <Button
-                          onClick={() => handleDeleteLead(lead)}
-                          variant="danger"
-                          size="sm"
-                          className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
-                          aria-label="Excluir lead"
-                          type="button"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="hidden sm:inline">Excluir</span>
-                        </Button>
-                        {!showArchived ? (
-                          <Button
-                            onClick={() => handleArchive(lead.id)}
-                            variant="warning"
-                            size="sm"
-                            className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5 sm:ml-auto"
-                            aria-label="Arquivar lead"
-                          >
-                            <Archive className="h-4 w-4" />
-                            <span className="hidden sm:inline">Arquivar</span>
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => handleUnarchive(lead.id)}
-                            variant="secondary"
-                            size="sm"
-                            className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5 sm:ml-auto"
-                            aria-label="Reativar lead"
-                          >
-                            <Users className="h-4 w-4" />
-                            <span className="hidden sm:inline">Reativar</span>
-                          </Button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </Surface>
-              ))}
-
-              {filteredLeads.length === 0 && (
+                    );
+                  })}
+                </div>
+              ) : (
                 <Surface variant="muted" className="panel-glass-panel rounded-[1.7rem] py-12 text-center" data-panel-animate>
-                  <Users
-                    className="mx-auto mb-4 h-16 w-16"
-                    style={{ color: "var(--panel-text-muted)" }}
-                  />
-                  <h3
-                    className="mb-2 text-lg font-medium"
-                    style={{ color: "var(--panel-text)" }}
-                  >
+                  <Users className="mx-auto mb-4 h-16 w-16" style={{ color: "var(--panel-text-muted)" }} />
+                  <h3 className="mb-2 text-lg font-medium" style={{ color: "var(--panel-text)" }}>
                     Nenhum lead encontrado
                   </h3>
                   <p style={{ color: "var(--panel-text-soft)" }}>

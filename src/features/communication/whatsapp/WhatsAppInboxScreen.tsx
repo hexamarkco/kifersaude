@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, ChevronDown, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Images, Info, Loader2, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Trash2, UserRound, WifiOff, X } from 'lucide-react';
@@ -1535,6 +1536,7 @@ export default function WhatsAppInboxScreen() {
   const [sharedContactActionKey, setSharedContactActionKey] = useState<string | null>(null);
   const { pollingEnabled } = useWindowPollingState();
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
@@ -1839,6 +1841,12 @@ export default function WhatsAppInboxScreen() {
     () => (search ? mergeUniqueChats(localChatSearchResults, remoteChatSearchResults) : scopedChats),
     [localChatSearchResults, remoteChatSearchResults, scopedChats, search],
   );
+  const sidebarVirtualizer = useVirtualizer({
+    count: sidebarChats.length,
+    getScrollElement: () => sidebarScrollRef.current,
+    estimateSize: () => 80,
+    overscan: 5,
+  });
   const forwardTargetChats = useMemo(() => {
     const normalizedSearch = normalizeInboxSearch(forwardSearch);
     const candidates = chats.filter((chat) => chat.external_chat_id?.trim());
@@ -2339,6 +2347,21 @@ export default function WhatsAppInboxScreen() {
 
     return items;
   }, [visibleMessages]);
+
+  const messageTimelineVirtualizer = useVirtualizer({
+    count: messageTimelineItems.length,
+    getScrollElement: () => messagesContainerRef.current,
+    estimateSize: (index) => {
+      const item = messageTimelineItems[index];
+      if (!item) return 140;
+      if (item.type === 'day') return 36;
+      if (item.type === 'media-group') return 320;
+      return 140;
+    },
+    overscan: 5,
+    getItemKey: (index) => messageTimelineItems[index]?.key ?? index,
+    measureElement: (element) => element.getBoundingClientRect().height,
+  });
 
   const openReactionPickerMessage = useMemo(() => {
     if (!openReactionPickerMessageId) {
@@ -4358,27 +4381,24 @@ export default function WhatsAppInboxScreen() {
   }, [selectedChatId]);
 
   useLayoutEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
     if (pendingScrollModeRef.current === 'bottom') {
-      container.scrollTop = container.scrollHeight;
+      messageTimelineVirtualizer.scrollToIndex(messageTimelineItems.length - 1, { align: 'end', behavior: 'instant' });
       isNearBottomRef.current = true;
     } else if (pendingScrollModeRef.current === 'preserve' && pendingScrollTopRef.current !== null) {
-      container.scrollTop = pendingScrollTopRef.current;
+      messageTimelineVirtualizer.scrollToOffset(pendingScrollTopRef.current, { align: 'start', behavior: 'instant' });
     } else if (
       pendingScrollModeRef.current === 'prepend' &&
       pendingScrollTopRef.current !== null &&
       pendingScrollHeightRef.current !== null
     ) {
-      const delta = container.scrollHeight - pendingScrollHeightRef.current;
-      container.scrollTop = pendingScrollTopRef.current + Math.max(delta, 0);
+      const delta = messageTimelineVirtualizer.getTotalSize() - pendingScrollHeightRef.current;
+      messageTimelineVirtualizer.scrollToOffset(pendingScrollTopRef.current + Math.max(delta, 0), { align: 'start', behavior: 'instant' });
     }
 
     pendingScrollModeRef.current = null;
     pendingScrollTopRef.current = null;
     pendingScrollHeightRef.current = null;
-  }, [localOutgoingMessages, messages, selectedChatId]);
+  }, [localOutgoingMessages, messages, messageTimelineItems, selectedChatId]);
 
   useLayoutEffect(() => {
     if (!highlightedMessageId) {
@@ -6812,7 +6832,7 @@ export default function WhatsAppInboxScreen() {
             </div>
           </div>
 
-          <div className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-0">
+          <div ref={sidebarScrollRef} className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-0">
             {archivedSectionOpen ? (
               <div className="sticky top-0 z-[1] flex items-center gap-2 border-b bg-[var(--panel-surface,#fff8f0)] px-4 py-3 text-sm font-semibold text-[var(--panel-text,#1f2937)]">
                 <Archive className="h-4 w-4 text-[var(--panel-text-muted,#8a735f)]" />
@@ -6914,33 +6934,47 @@ export default function WhatsAppInboxScreen() {
                 </div>
               </div>
             ) : (
-              <>
-                {sidebarChats.map((chat) => (
-                  <InboxChatListItem
-                    key={chat.id}
-                    chat={chat}
-                    selected={chat.id === selectedChatId}
-                    connectedUserName={channelState?.connected_user_name ?? null}
-                    draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
-                    onSelect={(chatId) => {
-                      setChatMenuPointerAnchor(null);
-                      setOpenChatMenuChatId(null);
-                      setSelectedChatId(chatId);
-                    }}
-                    menuOpen={openChatMenuChatId === chat.id}
-                    menuBusy={updatingChatStateId === chat.id}
-                    onToggleMenu={handleToggleChatMenu}
-                    onOpenContextMenu={handleOpenChatMenuFromContext}
-                    menuTriggerRef={(node) => {
-                      if (node) {
-                        chatMenuTriggerRefs.current[chat.id] = node;
-                      } else {
-                        delete chatMenuTriggerRefs.current[chat.id];
-                      }
-                    }}
-                  />
-                ))}
-              </>
+              <div style={{ height: `${sidebarVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                {sidebarVirtualizer.getVirtualItems().map((virtualItem) => {
+                  const chat = sidebarChats[virtualItem.index];
+                  return (
+                    <div
+                      key={chat.id}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualItem.size}px`,
+                        transform: `translateY(${virtualItem.start}px)`,
+                      }}
+                    >
+                      <InboxChatListItem
+                        chat={chat}
+                        selected={chat.id === selectedChatId}
+                        connectedUserName={channelState?.connected_user_name ?? null}
+                        draftPreview={normalizeChatDraftPreview(composerDraftsByChatId[chat.id] ?? '')}
+                        onSelect={(chatId) => {
+                          setChatMenuPointerAnchor(null);
+                          setOpenChatMenuChatId(null);
+                          setSelectedChatId(chatId);
+                        }}
+                        menuOpen={openChatMenuChatId === chat.id}
+                        menuBusy={updatingChatStateId === chat.id}
+                        onToggleMenu={handleToggleChatMenu}
+                        onOpenContextMenu={handleOpenChatMenuFromContext}
+                        menuTriggerRef={(node) => {
+                          if (node) {
+                            chatMenuTriggerRefs.current[chat.id] = node;
+                          } else {
+                            delete chatMenuTriggerRefs.current[chat.id];
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -7107,194 +7141,195 @@ export default function WhatsAppInboxScreen() {
                     Nenhuma mensagem carregada para esta conversa.
                   </div>
                 ) : (
-                  messageTimelineItems.map((item) => {
-                    if (item.type === 'day') {
-                      return (
-                        <div key={item.key} className="flex w-full justify-center py-1">
-                          <div className="rounded-full border px-3 py-1 text-[12px] font-semibold shadow-sm" style={{
-                            borderColor: 'rgba(212, 192, 167, 0.56)',
-                            background: 'color-mix(in srgb, var(--panel-surface,#fffdfa) 82%, rgba(26,18,13,0.18) 18%)',
-                            color: 'var(--panel-text-soft,#5b4635)',
-                          }}>
-                            {item.label}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    if (item.type === 'media-group') {
-                      const groupMessages = item.messages.filter(Boolean);
-                      if (groupMessages.length === 0) {
-                        return null;
-                      }
-
-                      const lastMessage = groupMessages[groupMessages.length - 1];
-
-                      const groupHighlighted = groupMessages.some((message) => message.id === highlightedMessageId);
-
+                  <div style={{ height: `${messageTimelineVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                    {messageTimelineVirtualizer.getVirtualItems().map((virtualItem) => {
+                      const item = messageTimelineItems[virtualItem.index];
                       return (
                         <div
                           key={item.key}
-                          ref={(node) => {
-                            for (const groupMessage of groupMessages) {
-                              if (node) {
-                                messageBubbleRefs.current[groupMessage.id] = node;
-                              } else {
-                                delete messageBubbleRefs.current[groupMessage.id];
-                              }
-                            }
+                          ref={messageTimelineVirtualizer.measureElement}
+                          data-index={virtualItem.index}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: `${virtualItem.size}px`,
+                            transform: `translateY(${virtualItem.start}px)`,
                           }}
-                          className={`message-bubble-row flex w-full ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div className="relative max-w-[82%] pb-2">
-                            <div className={`rounded-[2rem] px-2 py-2 shadow-sm ${getMessageBubbleClasses(lastMessage.direction)} ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
-                              <WhatsAppMediaGroupBody messages={groupMessages} onOpenImage={setLightboxMessageId} />
-                              <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 px-2 text-[11px] font-medium">
-                                <span>{formatMessageTime(lastMessage.message_at)}</span>
-                                {lastMessage.direction === 'outbound' && <DeliveryStatusIndicator message={lastMessage} />}
+                          {item.type === 'day' ? (
+                            <div className="flex w-full justify-center py-1">
+                              <div className="rounded-full border px-3 py-1 text-[12px] font-semibold shadow-sm" style={{
+                                borderColor: 'rgba(212, 192, 167, 0.56)',
+                                background: 'color-mix(in srgb, var(--panel-surface,#fffdfa) 82%, rgba(26,18,13,0.18) 18%)',
+                                color: 'var(--panel-text-soft,#5b4635)',
+                              }}>
+                                {item.label}
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    }
+                          ) : item.type === 'media-group' ? (
+                            (() => {
+                              const groupMessages = item.messages.filter(Boolean);
+                              if (groupMessages.length === 0) return null;
 
-                    const { message } = item;
-                    if (!message) {
-                      return null;
-                    }
+                              const lastMessage = groupMessages[groupMessages.length - 1];
+                              const groupHighlighted = groupMessages.some((message) => message.id === highlightedMessageId);
 
-                    const reactions = getMessageReactions(message);
-                    const reactionTooltipText = getReactionTooltipText(message);
-                    const showEditAction = canEditOutboundMessage(message);
-                    const showDeleteAction = canDeleteOutboundMessage(message);
-                    const showReplyForwardActions = canReplyOrForwardMessage(message);
-
-                    return (
-                      <div key={item.key} className={`message-bubble-row group/message flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
-                        <div
-                          ref={(node) => {
-                            if (node) {
-                              reactionAnchorRefs.current[message.id] = node;
-                              messageBubbleRefs.current[message.id] = node;
-                            } else {
-                              delete reactionAnchorRefs.current[message.id];
-                              delete messageBubbleRefs.current[message.id];
-                            }
-                          }}
-                          className={`relative max-w-[80%] ${reactions.length > 0 ? 'pb-5' : ''}`}
-                        >
-                          {message.direction !== 'system' && message.external_message_id ? (
-                            <>
-                              <button
-                                ref={(node) => {
-                                  if (node) {
-                                    reactionTriggerRefs.current[message.id] = node;
-                                  } else {
-                                    delete reactionTriggerRefs.current[message.id];
-                                  }
-                                }}
-                                type="button"
-                                onClick={() => handleToggleReactionPicker(message.id)}
-                                className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100`}
-                                aria-label="Reagir Ã  mensagem"
-                                title="Reagir"
-                              >
-                                <Smile className="h-4 w-4" />
-                              </button>
-
-                            </>
-                          ) : null}
-
-                          <div
-                            className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)} ${highlightedMessageId === message.id ? 'message-bubble-search-highlight' : ''}`}
-                            onContextMenu={(event) => {
-                              if (!showEditAction && !showDeleteAction && !showReplyForwardActions) {
-                                return;
-                              }
-
-                              event.preventDefault();
-                              handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
-                            }}
-                          >
-                            <WhatsAppMessageBody
-                              message={message}
-                              onOpenImage={setLightboxMessageId}
-                              onTranscribe={(target) => void handleTranscribeMessage(target)}
-                              onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}
-                              onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
-                              sharedContactActionKey={sharedContactActionKey}
-                              transcribing={transcribingMessageId === message.id}
-                            />
-                            <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-medium">
-                              {showEditAction || showDeleteAction || showReplyForwardActions ? (
-                                <button
+                              return (
+                                <div
                                   ref={(node) => {
-                                    if (node) {
-                                      messageActionTriggerRefs.current[message.id] = node;
-                                    } else {
-                                      delete messageActionTriggerRefs.current[message.id];
+                                    for (const groupMessage of groupMessages) {
+                                      if (node) {
+                                        messageBubbleRefs.current[groupMessage.id] = node;
+                                      } else {
+                                        delete messageBubbleRefs.current[groupMessage.id];
+                                      }
                                     }
                                   }}
-                                  type="button"
-                                  onClick={() => handleToggleMessageActionMenu(message.id)}
-                                  className={cx(
-                                    'inline-flex h-5 w-5 items-center justify-center rounded-md text-[var(--panel-text-soft,#f7efe3)] transition hover:bg-black/15 focus:bg-black/15',
-                                    openMessageActionMenuMessageId === message.id
-                                      ? 'bg-black/15 opacity-100'
-                                      : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
-                                  )}
-                                  aria-label="Mais acoes da mensagem"
-                                  aria-expanded={openMessageActionMenuMessageId === message.id}
-                                  title="Mais acoes"
+                                  className={`message-bubble-row flex w-full ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
                                 >
-                                  <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
-                                </button>
-                              ) : null}
-                              <span>{formatMessageTime(message.message_at)}</span>
-                              {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
-                              {message.direction === 'outbound' && mediaUploadProgress?.attachmentId === message.id ? (
-                                <>
-                                  <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending">
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    <span>{mediaUploadProgress.progress === null ? 'Enviando' : `${mediaUploadProgress.progress}%`}</span>
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={handleCancelMediaUpload}
-                                    className="whatsapp-inbox-retry-button h-8 rounded-xl px-3 text-[11px]"
-                                  >
-                                    Cancelar
-                                  </button>
-                                </>
-                              ) : null}
-                              {message.direction === 'outbound' && message.delivery_status === 'failed' && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
-                                <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
-                              ) : null}
-                            </div>
-                          </div>
+                                  <div className="relative max-w-[82%] pb-2">
+                                    <div className={`rounded-[2rem] px-2 py-2 shadow-sm ${getMessageBubbleClasses(lastMessage.direction)} ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
+                                      <WhatsAppMediaGroupBody messages={groupMessages} onOpenImage={setLightboxMessageId} />
+                                      <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 px-2 text-[11px] font-medium">
+                                        <span>{formatMessageTime(lastMessage.message_at)}</span>
+                                        {lastMessage.direction === 'outbound' && <DeliveryStatusIndicator message={lastMessage} />}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()
+                          ) : (() => {
+                            const { message } = item;
+                            if (!message) return null;
 
-                          {reactions.length > 0 ? (
-                            <div
-                              className={`absolute -bottom-1 z-[2] flex max-w-[90%] flex-wrap gap-1 ${message.direction === 'outbound' ? 'right-3 justify-end' : 'left-3 justify-start'}`}
-                              title={reactionTooltipText || undefined}
-                            >
-                              {reactions.map((reaction) => (
-                                <span
-                                  key={`${message.id}:${reaction.emoji}`}
-                                  className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)]' : 'bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]'}`}
-                                  style={{ borderColor: 'rgba(212, 192, 167, 0.56)' }}
+                            const reactions = getMessageReactions(message);
+                            const reactionTooltipText = getReactionTooltipText(message);
+                            const showEditAction = canEditOutboundMessage(message);
+                            const showDeleteAction = canDeleteOutboundMessage(message);
+                            const showReplyForwardActions = canReplyOrForwardMessage(message);
+
+                            return (
+                              <div className={`message-bubble-row group/message flex w-full ${message.direction === 'outbound' ? 'justify-end' : message.direction === 'system' ? 'justify-center' : 'justify-start'}`}>
+                                <div
+                                  ref={(node) => {
+                                    if (node) {
+                                      reactionAnchorRefs.current[message.id] = node;
+                                      messageBubbleRefs.current[message.id] = node;
+                                    } else {
+                                      delete reactionAnchorRefs.current[message.id];
+                                      delete messageBubbleRefs.current[message.id];
+                                    }
+                                  }}
+                                  className={`relative max-w-[80%] ${reactions.length > 0 ? 'pb-5' : ''}`}
                                 >
-                                  <span className="text-sm leading-none">{reaction.emoji}</span>
-                                  {reaction.count > 1 ? <span>{reaction.count}</span> : null}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
+                                  {message.direction !== 'system' && message.external_message_id ? (
+                                    <>
+                                      <button
+                                        ref={(node) => {
+                                          if (node) {
+                                            reactionTriggerRefs.current[message.id] = node;
+                                          } else {
+                                            delete reactionTriggerRefs.current[message.id];
+                                          }
+                                        }}
+                                        type="button"
+                                        onClick={() => handleToggleReactionPicker(message.id)}
+                                        className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100`}
+                                        aria-label="Reagir à mensagem"
+                                        title="Reagir"
+                                      >
+                                        <Smile className="h-4 w-4" />
+                                      </button>
+                                    </>
+                                  ) : null}
+
+                                  <div
+                                    className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)} ${highlightedMessageId === message.id ? 'message-bubble-search-highlight' : ''}`}
+                                    onContextMenu={(event) => {
+                                      if (!showEditAction && !showDeleteAction && !showReplyForwardActions) return;
+                                      event.preventDefault();
+                                      handleOpenMessageActionMenuFromContext(message.id, { x: event.clientX, y: event.clientY });
+                                    }}
+                                  >
+                                    <WhatsAppMessageBody
+                                      message={message}
+                                      onOpenImage={setLightboxMessageId}
+                                      onTranscribe={(target) => void handleTranscribeMessage(target)}
+                                      onOpenSharedContactChat={(contact) => void handleOpenSharedContactChat(contact)}
+                                      onSaveSharedContact={(contact) => void handleSaveSharedContact(contact)}
+                                      sharedContactActionKey={sharedContactActionKey}
+                                      transcribing={transcribingMessageId === message.id}
+                                    />
+                                    <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-1.5 text-[11px] font-medium">
+                                      {showEditAction || showDeleteAction || showReplyForwardActions ? (
+                                        <button
+                                          ref={(node) => {
+                                            if (node) {
+                                              messageActionTriggerRefs.current[message.id] = node;
+                                            } else {
+                                              delete messageActionTriggerRefs.current[message.id];
+                                            }
+                                          }}
+                                          type="button"
+                                          onClick={() => handleToggleMessageActionMenu(message.id)}
+                                          className={cx(
+                                            'inline-flex h-5 w-5 items-center justify-center rounded-md text-[var(--panel-text-soft,#f7efe3)] transition hover:bg-black/15 focus:bg-black/15',
+                                            openMessageActionMenuMessageId === message.id
+                                              ? 'bg-black/15 opacity-100'
+                                              : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
+                                          )}
+                                          aria-label="Mais acoes da mensagem"
+                                          aria-expanded={openMessageActionMenuMessageId === message.id}
+                                          title="Mais acoes"
+                                        >
+                                          <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
+                                        </button>
+                                      ) : null}
+                                      <span>{formatMessageTime(message.message_at)}</span>
+                                      {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
+                                      {message.direction === 'outbound' && mediaUploadProgress?.attachmentId === message.id ? (
+                                        <>
+                                          <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending">
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            <span>{mediaUploadProgress.progress === null ? 'Enviando' : `${mediaUploadProgress.progress}%`}</span>
+                                          </span>
+                                          <button type="button" onClick={handleCancelMediaUpload} className="whatsapp-inbox-retry-button h-8 rounded-xl px-3 text-[11px]">Cancelar</button>
+                                        </>
+                                      ) : null}
+                                      {message.direction === 'outbound' && message.delivery_status === 'failed' && (localOutgoingRetryPayloadRef.current.has(message.id) || Boolean(message.media_id)) ? (
+                                        <RetryMediaButton loading={retryingMessageId === message.id} onRetry={() => void handleRetryMediaMessage(message)} />
+                                      ) : null}
+                                    </div>
+                                  </div>
+
+                                  {reactions.length > 0 ? (
+                                    <div
+                                      className={`absolute -bottom-1 z-[2] flex max-w-[90%] flex-wrap gap-1 ${message.direction === 'outbound' ? 'right-3 justify-end' : 'left-3 justify-start'}`}
+                                      title={reactionTooltipText || undefined}
+                                    >
+                                      {reactions.map((reaction) => (
+                                        <span
+                                          key={`${message.id}:${reaction.emoji}`}
+                                          className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)]' : 'bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]'}`}
+                                          style={{ borderColor: 'rgba(212, 192, 167, 0.56)' }}
+                                        >
+                                          <span className="text-sm leading-none">{reaction.emoji}</span>
+                                          {reaction.count > 1 ? <span>{reaction.count}</span> : null}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 

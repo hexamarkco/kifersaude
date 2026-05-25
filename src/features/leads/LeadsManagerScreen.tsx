@@ -351,6 +351,7 @@ export default function LeadsManager({
   );
 
   const loadLeads = useCallback(async () => {
+    console.log("[DIAG] LeadsManager loadLeads called");
     setLoading(true);
     try {
       const LEAD_COLUMNS = 'id, nome_completo, telefone, email, status, origem, responsavel, data_criacao, created_at, arquivado, cidade, tags, canal, observacoes, ultimo_contato, proximo_retorno, tipo_contratacao, origem_id, status_id, tipo_contratacao_id, responsavel_id';
@@ -365,6 +366,7 @@ export default function LeadsManager({
             error: unknown;
           }>,
       );
+      console.log("[DIAG] LeadsManager fetchAllPages returned", data?.length ?? 0, "leads");
       const mappedLeads = (data || []).map((lead) =>
         mapLeadRelations(lead, {
           origins: leadOrigins,
@@ -411,7 +413,7 @@ export default function LeadsManager({
       }
       setLastUpdated(new Date());
     } catch (error) {
-      console.error("Erro ao carregar leads:", error);
+      console.error("[DIAG] Erro ao carregar leads:", error);
     } finally {
       setLoading(false);
     }

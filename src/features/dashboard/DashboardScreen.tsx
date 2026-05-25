@@ -429,6 +429,7 @@ export default function DashboardScreen({
   };
 
   const loadData = useCallback(async () => {
+    console.log("[DIAG] Dashboard loadData called, configLoading:", configLoading);
     if (configLoading) {
       return;
     }
@@ -471,6 +472,8 @@ export default function DashboardScreen({
           supabase.from("contracts").select(CONTRACT_COLUMNS).order("created_at", { ascending: false })
         ).limit(1000),
       ]);
+
+      console.log("[DIAG] Dashboard leads result:", leadsResult.error ? "ERROR" : "OK", "count:", leadsResult.data?.length ?? 0, leadsResult.error ?? "");
 
       const contractsData = contractsResult.data || [];
       const contractIds = contractsData.map((c) => c.id);
@@ -517,7 +520,7 @@ export default function DashboardScreen({
       setDependents(dependentsData || []);
       setLastUpdated(new Date());
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.error("[DIAG] Erro ao carregar dados:", error);
       const message =
         error instanceof Error ? error.message : "Erro desconhecido.";
       setError(`Não foi possível carregar os dados. ${message}`);

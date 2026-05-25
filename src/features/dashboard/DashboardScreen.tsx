@@ -2,7 +2,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import { gsap } from "gsap";
 import { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useSearchParams } from "react-router-dom";
-import { supabase, Lead, Contract } from "../../lib/supabase";
+import { supabase, Lead, Contract, fetchAllPages } from "../../lib/supabase";
 import {
   getDateKey,
   parseDateWithoutTimezone,
@@ -463,10 +463,16 @@ export default function DashboardScreen({
         return base.gte("created_at", dateRange.start).lte("created_at", dateRange.end);
       };
 
-      const [leadsResult, contractsResult] = await Promise.all([
-        buildQuery(
-          supabase.from("leads").select(LEAD_COLUMNS).order("created_at", { ascending: false })
-        ).limit(1000),
+      const [leadsData, contractsResult] = await Promise.all([
+        fetchAllPages<Lead>(
+          (from, to) =>
+            buildQuery(
+              supabase.from("leads").select(LEAD_COLUMNS).order("created_at", { ascending: false })
+            ).range(from, to) as unknown as Promise<{
+              data: Lead[] | null;
+              error: unknown;
+            }>,
+        ),
         buildQuery(
           supabase.from("contracts").select(CONTRACT_COLUMNS).order("created_at", { ascending: false })
         ).limit(1000),
@@ -484,11 +490,10 @@ export default function DashboardScreen({
           : { data: [] as Dependent[], error: null },
       ]);
 
-      const leadsData = leadsResult.data || [];
       const holdersData = (holdersResult.data || []) as Holder[];
       const dependentsData = (dependentsResult.data || []) as Dependent[];
 
-      const mappedLeads = (leadsData || [])
+      const mappedLeads = leadsData
         .map((lead) => mapLeadWithRelations(lead))
         .filter((lead): lead is Lead => Boolean(lead));
 

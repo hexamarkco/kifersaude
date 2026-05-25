@@ -329,7 +329,6 @@ const COMM_WHATSAPP_CHAT_SELECT = `
   last_message_text,
   last_message_direction,
   last_message_at,
-  last_message_delivery_status,
   unread_count,
   status,
   last_read_at,

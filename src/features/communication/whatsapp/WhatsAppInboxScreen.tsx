@@ -2006,6 +2006,7 @@ export default function WhatsAppInboxScreen() {
 
       const sorted = sortChatsByInboxOrder(updated);
       chatsSignatureRef.current = buildChatsSignature(sorted);
+      latestChatsRef.current = sorted;
       return sorted;
     });
   }, [buildChatsSignature]);
@@ -3800,7 +3801,9 @@ export default function WhatsAppInboxScreen() {
         }
 
         // Combinar fetched com chats que ja temos da(s) outra(s) secao(oes).
+        const previousChats = latestChatsRef.current;
         const fetchedSectionSet = new Set(requestedSections);
+        const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
         const fetchedChatIds = new Set<string>();
         const fetchedFlat: CommWhatsAppChat[] = [];
         for (const bucket of fetchedSections) {
@@ -3810,7 +3813,29 @@ export default function WhatsAppInboxScreen() {
           }
         }
 
-        const previousChats = latestChatsRef.current;
+        const unexpectedlyEmptySections = new Set(
+          fetchedSections
+            .filter(({ section, data }) => {
+              if (data.length > 0 || hasLoadFilters) {
+                return false;
+              }
+
+              return previousChats.some((chat) => (
+                !chat.deleted_at
+                && (chat.is_archived ? 'archived' : 'active') === section
+              ));
+            })
+            .map(({ section }) => section),
+        );
+
+        if (unexpectedlyEmptySections.size > 0) {
+          console.warn('[WhatsAppInbox] refetch de chats retornou secao vazia; preservando cache local', {
+            sections: Array.from(unexpectedlyEmptySections),
+            requestedSections,
+            previousChatsLen: previousChats.length,
+          });
+        }
+
         const preservedFromOtherSections = previousChats.filter((chat) => {
           if (chat.deleted_at) {
             return false;
@@ -3819,7 +3844,9 @@ export default function WhatsAppInboxScreen() {
           const sectionOfChat = chat.is_archived ? 'archived' : 'active';
           if (fetchedSectionSet.has(sectionOfChat)) {
             // se a secao foi recarregada, removemos chats antigos que nao vieram
-            return false;
+            // exceto quando a resposta veio vazia de forma transitória; nesse
+            // caso manter o cache evita a sidebar colapsar para o chat aberto.
+            return unexpectedlyEmptySections.has(sectionOfChat) && !fetchedChatIds.has(chat.id);
           }
           return !fetchedChatIds.has(chat.id);
         });
@@ -3856,17 +3883,12 @@ export default function WhatsAppInboxScreen() {
           });
         }
 
-        const skipUpdate = requestedSections.length === 1 && fetchedFlat.length === 0 && previousChats.length > 5;
-
-        const nextSignature = skipUpdate ? chatsSignatureRef.current : buildChatsSignature(hydratedData);
+        const nextSignature = buildChatsSignature(hydratedData);
 
         if (nextSignature !== chatsSignatureRef.current) {
           chatsSignatureRef.current = nextSignature;
+          latestChatsRef.current = hydratedData;
           setChats(hydratedData);
-        }
-
-        if (skipUpdate) {
-          return;
         }
 
         const requestedChatId = chatIdFromUrlRef.current;

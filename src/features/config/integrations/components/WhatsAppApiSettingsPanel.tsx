@@ -307,12 +307,16 @@ export default function WhatsAppApiSettingsPanel() {
                   </Button>
                 </div>
 
-                <div className="mt-3 flex flex-col gap-2 md:flex-row">
-                  <Input readOnly value={webhookUrl} className="font-mono text-xs" />
-                  <Button variant="secondary" onClick={handleCopyWebhook} disabled={!webhookUrl}>
+                <div className="mt-3 relative">
+                  <Input readOnly value={webhookUrl} className="font-mono text-xs pr-10" />
+                  <button
+                    type="button"
+                    onClick={handleCopyWebhook}
+                    disabled={!webhookUrl}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[color:var(--panel-text-muted,#876f5c)] hover:text-[color:var(--panel-text,#3b2b20)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
                     <Copy className="w-4 h-4" />
-                    Copiar webhook
-                  </Button>
+                  </button>
                 </div>
               </div>
 

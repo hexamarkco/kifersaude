@@ -1816,11 +1816,15 @@ export default function WhatsAppInboxScreen() {
     const selected = selectedChatId ? chats.find((chat) => chat.id === selectedChatId) ?? null : null;
 
     if (chats.length > 0 && filtered.length < 3) {
+      const sample = chats.slice(0, 3).map((c) => ({ id: c.id, archived: c.is_archived, unread: c.unread_count, manualUnread: c.manual_unread }));
       console.log('[WAD:scopedChats]', {
         chatsLen: chats.length,
         filteredLen: filtered.length,
         selected: selected?.id ?? null,
         archivedSectionOpen,
+        chatActivityFilter,
+        leadStatusFiltersLen: leadStatusFilters.length,
+        sample,
       });
     }
 

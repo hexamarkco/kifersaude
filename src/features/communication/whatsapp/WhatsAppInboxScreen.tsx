@@ -4168,7 +4168,26 @@ export default function WhatsAppInboxScreen() {
 
     const bootstrap = async () => {
       setLoading(true);
-      await Promise.all([loadChats({ sections: ['active', 'archived'] }), loadOperationalState()]);
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await Promise.all([loadChats({ sections: ['active', 'archived'] }), loadOperationalState()]);
+
+        if (!active) {
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        if (latestChatsRef.current.length > 0) {
+          break;
+        }
+
+        if (attempt < 3) {
+          console.log(`[WhatsAppInbox] bootstrap: sem chats na tentativa ${attempt}, re-tentando em 3s...`);
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+      }
+
       if (active) {
         setLoading(false);
       }

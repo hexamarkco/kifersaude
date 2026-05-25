@@ -1660,7 +1660,11 @@ export default function WhatsAppInboxScreen() {
       return 'N├úo foi poss├¡vel verificar o canal do WhatsApp agora.';
     }
 
-    if (!operationalState?.tokenConfigured) {
+    if (!operationalState) {
+      return 'Nao foi possivel confirmar permissao ou canal do WhatsApp agora.';
+    }
+
+    if (!operationalState.tokenConfigured) {
       return 'Token da Whapi n├úo configurado em /painel/config.';
     }
 
@@ -4196,7 +4200,7 @@ export default function WhatsAppInboxScreen() {
       setLoading(true);
 
       for (let attempt = 1; attempt <= 3; attempt++) {
-        await Promise.all([loadChats({ sections: ['active', 'archived'] }), loadOperationalState()]);
+        await Promise.all([loadChats({ sections: ['active'] }), loadOperationalState()]);
 
         if (!active) {
           return;

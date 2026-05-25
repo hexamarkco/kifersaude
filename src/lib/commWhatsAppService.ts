@@ -308,6 +308,36 @@ const sanitizeSearch = (value: string) =>
     .replace(/[,%]/g, ' ')
     .replace(/\s+/g, ' ');
 
+const COMM_WHATSAPP_CHAT_SELECT = `
+  id,
+  channel_id,
+  external_chat_id,
+  phone_number,
+  phone_digits,
+  display_name,
+  saved_contact_name,
+  push_name,
+  lead_id,
+  is_archived,
+  archived_at,
+  is_muted,
+  muted_at,
+  is_pinned,
+  pinned_at,
+  manual_unread,
+  manual_unread_at,
+  last_message_text,
+  last_message_direction,
+  last_message_at,
+  last_message_delivery_status,
+  unread_count,
+  status,
+  last_read_at,
+  deleted_at,
+  created_at,
+  updated_at
+`;
+
 const getFunctionInvokeErrorMessage = async (error: unknown, fallbackMessage: string): Promise<string> => {
   const context = error && typeof error === 'object' && 'context' in error
     ? (error as { context?: unknown }).context
@@ -525,7 +555,9 @@ export const commWhatsAppService = {
   },
 
   async getOperationalState(): Promise<CommWhatsAppOperationalState | null> {
-    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para verificar o status do WhatsApp.' });
+    const session = await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para verificar o status do WhatsApp.' });
+
+    console.debug('[CommWhatsApp] getOperationalState: session ready', { userId: session.user.id });
 
     const { data, error } = await supabase.rpc('comm_whatsapp_get_operational_state');
 
@@ -540,7 +572,8 @@ export const commWhatsAppService = {
     }) | null;
 
     if (!row) {
-      return null;
+      console.warn('[CommWhatsApp] getOperationalState: RPC returned no rows');
+      throw new Error('Nao foi possivel confirmar permissao ou canal do WhatsApp. Atualize a pagina e tente novamente.');
     }
 
     return {
@@ -597,7 +630,7 @@ export const commWhatsAppService = {
 
     const search = sanitizeSearch(params.search ?? '');
 
-    const { data, error } = await supabase.rpc('comm_whatsapp_list_chats', {
+    const rpcParams = {
       p_search: search || null,
       p_activity_filter: activityFilter,
       p_lead_filter: leadFilter,
@@ -606,13 +639,77 @@ export const commWhatsAppService = {
       p_lead_status_filters: leadStatusFilters.length > 0 ? leadStatusFilters : null,
       p_limit: limit,
       p_offset: offset,
-    });
+    };
+
+    const { data, error } = await supabase.rpc('comm_whatsapp_list_chats', rpcParams);
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as conversas do WhatsApp.'));
     }
 
-    return (Array.isArray(data) ? data : []) as CommWhatsAppChat[];
+    const rows = (Array.isArray(data) ? data : []) as CommWhatsAppChat[];
+
+    console.debug('[CommWhatsApp] listChats result', {
+      archivedFilter,
+      activityFilter,
+      leadFilter,
+      savedFilter,
+      hasSearch: Boolean(search),
+      leadStatusFilterCount: leadStatusFilters.length,
+      limit,
+      offset,
+      count: rows.length,
+    });
+
+    const canUseDirectFallback = rows.length === 0
+      && !search
+      && activityFilter === 'all'
+      && leadFilter === 'all'
+      && savedFilter === 'all'
+      && leadStatusFilters.length === 0
+      && (archivedFilter === 'active' || archivedFilter === 'archived' || archivedFilter === 'all');
+
+    if (!canUseDirectFallback) {
+      return rows;
+    }
+
+    let fallbackQuery = supabase
+      .from('comm_whatsapp_chats')
+      .select(COMM_WHATSAPP_CHAT_SELECT)
+      .is('deleted_at', null)
+      .order('is_pinned', { ascending: false })
+      .order('pinned_at', { ascending: false, nullsFirst: false })
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .order('updated_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (archivedFilter === 'active') {
+      fallbackQuery = fallbackQuery.eq('is_archived', false);
+    } else if (archivedFilter === 'archived') {
+      fallbackQuery = fallbackQuery.eq('is_archived', true);
+    }
+
+    const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+
+    if (fallbackError) {
+      console.warn('[CommWhatsApp] listChats fallback failed', {
+        archivedFilter,
+        message: fallbackError.message,
+      });
+      return rows;
+    }
+
+    const fallbackRows = (Array.isArray(fallbackData) ? fallbackData : []) as CommWhatsAppChat[];
+    if (fallbackRows.length > 0) {
+      console.warn('[CommWhatsApp] listChats RPC empty; using direct fallback', {
+        archivedFilter,
+        limit,
+        offset,
+        count: fallbackRows.length,
+      });
+    }
+
+    return fallbackRows;
   },
 
   async updateChatInboxState(chatId: string, options: {

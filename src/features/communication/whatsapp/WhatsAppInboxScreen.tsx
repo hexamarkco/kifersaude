@@ -365,10 +365,21 @@ const preserveUsefulChatPreview = (incoming: CommWhatsAppChat, previous?: CommWh
   const previousPreview = getVisiblePreviewText(previous.last_message_text);
   const incomingAt = getMessageTimestampMs(incoming.last_message_at);
   const previousAt = getMessageTimestampMs(previous.last_message_at);
+  const incomingIsOlder = incomingAt !== null && previousAt !== null && incomingAt < previousAt;
   const incomingIsNotNewer = incomingAt === null || previousAt === null || incomingAt <= previousAt;
   const stableDeliveryStatus = incomingIsNotNewer
     ? resolveStableDeliveryStatus(incoming.last_message_delivery_status, previous.last_message_delivery_status)
     : incoming.last_message_delivery_status;
+
+  if (incomingIsOlder && previousPreview) {
+    return {
+      ...incoming,
+      last_message_text: previous.last_message_text,
+      last_message_direction: previous.last_message_direction || incoming.last_message_direction,
+      last_message_delivery_status: stableDeliveryStatus ?? previous.last_message_delivery_status,
+      last_message_at: previous.last_message_at,
+    };
+  }
 
   if (incomingPreview || !previousPreview) {
     return {

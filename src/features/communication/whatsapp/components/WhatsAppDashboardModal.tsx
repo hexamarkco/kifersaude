@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Inbox, Link2, Loader2, MessageCircle, RefreshCw, SendHorizontal, WifiOff } from 'lucide-react';
+import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, SendHorizontal, WifiOff } from 'lucide-react';
 
 import Button from '../../../../components/ui/Button';
 import ModalShell from '../../../../components/ui/ModalShell';
@@ -9,6 +9,7 @@ import {
   type CommWhatsAppDashboardMetrics,
   type CommWhatsAppDashboardRecentChat,
 } from '../../../../lib/commWhatsAppService';
+import { toast } from '../../../../lib/toast';
 
 type WhatsAppDashboardModalProps = {
   isOpen: boolean;
@@ -246,6 +247,8 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   const [metrics, setMetrics] = useState<CommWhatsAppDashboardMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [exportingInbox, setExportingInbox] = useState(false);
+  const [exportProgress, setExportProgress] = useState<string | null>(null);
 
   const loadMetrics = useCallback(async () => {
     setLoading(true);
@@ -270,6 +273,47 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   const channelHealth = getChannelHealth(metrics);
   const priorities = metrics ? buildPriorityItems(metrics) : [];
 
+  const handleExportInboxJson = useCallback(async () => {
+    if (exportingInbox) {
+      return;
+    }
+
+    setExportingInbox(true);
+    setExportProgress('Preparando conversas...');
+
+    try {
+      const payload = await commWhatsAppService.exportInboxConversations({
+        onProgress: (progress) => {
+          if (progress.chatsExported > 0 || progress.messagesExported > 0) {
+            setExportProgress(`Exportando ${progress.chatsExported}/${progress.chatsLoaded} conversas (${progress.messagesExported} mensagens)`);
+            return;
+          }
+
+          setExportProgress(`${progress.chatsLoaded} conversas encontradas`);
+        },
+      });
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      const fileDate = new Date().toISOString().slice(0, 10);
+      anchor.href = objectUrl;
+      anchor.download = `whatsapp-inbox-export-${fileDate}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(objectUrl);
+
+      toast.success(`Exportacao concluida: ${payload.summary.chats} conversas e ${payload.summary.messages} mensagens.`);
+    } catch (exportError) {
+      console.error('[WhatsAppDashboardModal] erro ao exportar inbox', exportError);
+      toast.error(exportError instanceof Error ? exportError.message : 'Nao foi possivel exportar as conversas do inbox.');
+    } finally {
+      setExportingInbox(false);
+      setExportProgress(null);
+    }
+  }, [exportingInbox]);
+
   return (
     <ModalShell
       isOpen={isOpen}
@@ -281,9 +325,13 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-[var(--panel-text-muted,#876f5c)]">
-            Atualizado: {formatDateTime(metrics?.generatedAt)}
+            {exportProgress ?? `Atualizado: ${formatDateTime(metrics?.generatedAt)}`}
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="secondary" onClick={() => void handleExportInboxJson()} loading={exportingInbox}>
+              <Download className="h-4 w-4" />
+              Exportar JSON
+            </Button>
             <Button variant="secondary" onClick={() => void loadMetrics()} loading={loading}>
               <RefreshCw className="h-4 w-4" />
               Atualizar

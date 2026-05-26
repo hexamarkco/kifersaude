@@ -88,6 +88,9 @@ const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
 const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending']);
+const CHAT_LIST_CACHE_KEY = 'kifer.comm.whatsapp.inbox.chats.v1';
+const CHAT_LIST_CACHE_TTL_MS = 10 * 60 * 1000;
+const EMPTY_CHAT_LIST_RETRY_DELAYS_MS = [700, 1500];
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -122,6 +125,10 @@ type QuickReplyOption = {
 type ChatAgendaSummary = {
   pendingCount: number;
   nextReminder: Reminder | null;
+};
+type CachedChatListPayload = {
+  cachedAt: number;
+  chats: CommWhatsAppChat[];
 };
 type CreateLeadDraft = {
   chatId: string;
@@ -1303,6 +1310,48 @@ const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
 };
 
 const sortChatsByInboxOrder = (items: CommWhatsAppChat[]) => [...items].sort(compareChatsByInboxOrder);
+
+const readCachedChatList = (): CommWhatsAppChat[] => {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(CHAT_LIST_CACHE_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw) as Partial<CachedChatListPayload>;
+    if (!parsed.cachedAt || Date.now() - parsed.cachedAt > CHAT_LIST_CACHE_TTL_MS || !Array.isArray(parsed.chats)) {
+      window.localStorage.removeItem(CHAT_LIST_CACHE_KEY);
+      return [];
+    }
+
+    return sortChatsByInboxOrder(parsed.chats.filter((chat): chat is CommWhatsAppChat => Boolean(chat?.id)));
+  } catch {
+    window.localStorage.removeItem(CHAT_LIST_CACHE_KEY);
+    return [];
+  }
+};
+
+const writeCachedChatList = (chats: CommWhatsAppChat[]) => {
+  if (typeof window === 'undefined' || chats.length === 0) {
+    return;
+  }
+
+  try {
+    const payload: CachedChatListPayload = {
+      cachedAt: Date.now(),
+      chats: sortChatsByInboxOrder(chats).slice(0, 500),
+    };
+    window.localStorage.setItem(CHAT_LIST_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // Cache local e apenas uma protecao contra respostas vazias transitorias.
+  }
+};
+
+const waitForChatListRetry = (delayMs: number) => new Promise((resolve) => window.setTimeout(resolve, delayMs));
 
 const inferAttachmentKind = (file: File): CommWhatsAppMediaSendKind => {
   if (file.type.startsWith('image/')) {
@@ -2841,7 +2890,7 @@ export default function WhatsAppInboxScreen() {
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [attachmentInputAccept, setAttachmentInputAccept] = useState(DEFAULT_ATTACHMENT_ACCEPT);
-  const [chats, setChats] = useState<CommWhatsAppChat[]>([]);
+  const [chats, setChats] = useState<CommWhatsAppChat[]>(() => readCachedChatList());
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommWhatsAppMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -5134,18 +5183,38 @@ export default function WhatsAppInboxScreen() {
     const requestId = ++chatsRequestIdRef.current;
     const loadPromise = (async () => {
       try {
+        const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
         const fetchChatSection = async (archivedFilter: 'active' | 'archived') => {
           const all: CommWhatsAppChat[] = [];
           let offset = 0;
 
           while (true) {
-            const page = await commWhatsAppService.listChats({
-              activityFilter: chatActivityFilter,
-              leadStatusFilters,
-              archivedFilter,
-              limit: CHAT_PAGE_SIZE,
-              offset,
-            });
+            let page: CommWhatsAppChat[] = [];
+            for (let attempt = 0; attempt <= EMPTY_CHAT_LIST_RETRY_DELAYS_MS.length; attempt += 1) {
+              page = await commWhatsAppService.listChats({
+                activityFilter: chatActivityFilter,
+                leadStatusFilters,
+                archivedFilter,
+                limit: CHAT_PAGE_SIZE,
+                offset,
+              });
+
+              const shouldRetryEmptyFirstPage = page.length === 0
+                && offset === 0
+                && !hasLoadFilters
+                && archivedFilter === 'active'
+                && attempt < EMPTY_CHAT_LIST_RETRY_DELAYS_MS.length;
+
+              if (!shouldRetryEmptyFirstPage) {
+                break;
+              }
+
+              console.warn('[WhatsAppInbox] lista ativa veio vazia; tentando novamente antes de aceitar estado vazio', {
+                attempt: attempt + 1,
+                delayMs: EMPTY_CHAT_LIST_RETRY_DELAYS_MS[attempt],
+              });
+              await waitForChatListRetry(EMPTY_CHAT_LIST_RETRY_DELAYS_MS[attempt]);
+            }
 
             all.push(...page);
 
@@ -5168,7 +5237,6 @@ export default function WhatsAppInboxScreen() {
         }
 
         const fetchedSectionSet = new Set(requestedSections);
-        const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
         const fetchedChatIds = new Set<string>();
         const fetchedFlat: CommWhatsAppChat[] = [];
         for (const bucket of fetchedSections) {
@@ -5202,6 +5270,14 @@ export default function WhatsAppInboxScreen() {
           });
         }
 
+        const cachedChats = !hasLoadFilters && fetchedFlat.length === 0 ? readCachedChatList() : [];
+        if (cachedChats.length > 0) {
+          console.warn('[WhatsAppInbox] resposta de chats vazia; restaurando ultimo cache local valido', {
+            cachedChatsLen: cachedChats.length,
+            requestedSections,
+          });
+        }
+
         const preservedFromOtherSections = previousChats.filter((chat) => {
           if (chat.deleted_at) {
             return false;
@@ -5217,7 +5293,9 @@ export default function WhatsAppInboxScreen() {
           return !fetchedChatIds.has(chat.id);
         });
 
-        const mergedData = [...fetchedFlat, ...preservedFromOtherSections];
+        const mergedData = cachedChats.length > 0
+          ? mergeUniqueChats(cachedChats, preservedFromOtherSections)
+          : [...fetchedFlat, ...preservedFromOtherSections];
 
         const refreshedChats = applyPendingChatInboxState(
           applyPrefetchedLeadNames(mergedData),
@@ -5242,6 +5320,10 @@ export default function WhatsAppInboxScreen() {
         if (nextSignature !== chatsSignatureRef.current) {
           chatsSignatureRef.current = nextSignature;
           setChats(hydratedData);
+        }
+
+        if (fetchedFlat.length > 0 && !hasLoadFilters) {
+          writeCachedChatList(hydratedData);
         }
 
         const requestedChatId = chatIdFromUrlRef.current;

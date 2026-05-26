@@ -663,8 +663,6 @@ const findWhatsAppFormatMatch = (text: string, startIndex: number = 0): WhatsApp
   return bestMatch;
 };
 
-const hasWhatsAppTextFormatting = (text: string) => findWhatsAppFormatMatch(text) !== null;
-
 const renderWhatsAppFormattedText = (text: string, keyPrefix: string, depth: number = 0): ReactNode[] => {
   if (!text || depth > 8) {
     return text ? [text] : [];
@@ -3143,7 +3141,6 @@ export default function WhatsAppInboxScreen() {
   } = useComposerDraft(selectedChatId);
   const hasTypedMessage = messageDraft.trim().length > 0;
   const hasSendPayload = hasTypedMessage || pendingAttachments.length > 0;
-  const hasComposerFormattingPreview = hasTypedMessage && hasWhatsAppTextFormatting(messageDraft);
   const channelState = operationalState?.channel ?? null;
   const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
   const connectionStatusLabel = useMemo(
@@ -9457,12 +9454,6 @@ export default function WhatsAppInboxScreen() {
                         disabled={generatingFollowUp}
                         className="whatsapp-inbox-composer-input block w-full resize-none border-none bg-transparent px-0 py-0 text-sm leading-6 focus:outline-none"
                       />
-                      {hasComposerFormattingPreview ? (
-                        <div className="whatsapp-inbox-composer-format-preview mt-2 rounded-xl px-3 py-2 text-xs leading-5">
-                          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] opacity-70">Prévia</span>
-                          <LinkifiedText className="whitespace-pre-wrap break-words" text={messageDraft} />
-                        </div>
-                      ) : null}
                     </div>
 
                     <div className={`flex shrink-0 ${isComposerExpanded ? 'items-end pb-0.5' : 'items-center'}`}>

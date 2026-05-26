@@ -2,6 +2,7 @@ import {
   getSupabaseErrorMessage,
   supabase,
   supabaseFunctionsUrl,
+  waitForSupabaseSession,
   type CommWhatsAppChannel,
   type CommWhatsAppChat,
   type CommWhatsAppMessage,
@@ -492,6 +493,8 @@ const invokeFollowUpAgendaOrganizer = async (body: Record<string, unknown>) => {
 
 export const commWhatsAppService = {
   async getUnreadChatsCount(params: { includeArchived?: boolean } = {}): Promise<number> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as conversas não lidas do WhatsApp.' });
+
     let query = supabase
       .from('comm_whatsapp_chats')
       .select('*', { count: 'exact', head: true })
@@ -522,6 +525,8 @@ export const commWhatsAppService = {
   },
 
   async getOperationalState(): Promise<CommWhatsAppOperationalState | null> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para verificar o status do WhatsApp.' });
+
     const { data, error } = await supabase.rpc('comm_whatsapp_get_operational_state');
 
     if (error) {
@@ -563,6 +568,8 @@ export const commWhatsAppService = {
   },
 
   async getDashboardMetrics(): Promise<CommWhatsAppDashboardMetrics> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para visualizar o Painel WhatsApp.' });
+
     const { data, error } = await supabase.rpc('comm_whatsapp_get_dashboard_metrics' as never);
 
     if (error) {
@@ -578,6 +585,8 @@ export const commWhatsAppService = {
   },
 
   async listChats(params: ListChatsParams = {}): Promise<CommWhatsAppChat[]> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as conversas do WhatsApp.' });
+
     const limit = Math.min(Math.max(params.limit ?? 80, 1), 500);
     const offset = Math.max(params.offset ?? 0, 0);
     const activityFilter = params.activityFilter ?? (params.onlyUnread ? 'unread' : 'all');
@@ -612,6 +621,8 @@ export const commWhatsAppService = {
     isPinned?: boolean | null;
     markAsUnread?: boolean | null;
   }): Promise<CommWhatsAppChat> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para atualizar esta conversa.' });
+
     const { data, error } = await supabase.rpc('comm_whatsapp_update_chat_inbox_state', {
       p_chat_id: chatId,
       p_is_archived: typeof options.isArchived === 'boolean' ? options.isArchived : null,
@@ -896,6 +907,8 @@ export const commWhatsAppService = {
   },
 
   async listMessagesPage(chatId: string, params: ListMessagesPageParams = {}): Promise<CommWhatsAppMessagesPage> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar as mensagens do WhatsApp.' });
+
     const safeLimit = Math.min(Math.max(params.limit ?? 50, 1), 200);
     const { data, error } = await supabase.rpc('comm_whatsapp_list_messages_page', {
       p_chat_id: chatId,
@@ -1009,6 +1022,8 @@ export const commWhatsAppService = {
   },
 
   async markChatRead(chatId: string, cursor: { messageAt?: string | null; messageId?: string | null } = {}): Promise<void> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para marcar a conversa como lida.' });
+
     const { error } = await supabase.rpc('comm_whatsapp_mark_chat_read', {
       p_chat_id: chatId,
       p_last_seen_message_at: cursor.messageAt ?? null,

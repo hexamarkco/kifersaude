@@ -3925,7 +3925,7 @@ export default function WhatsAppInboxScreen() {
     }
   }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder]);
 
-  const messageRealtimeReadyChatId = useCommWhatsAppMessageRealtime(selectedChatId, applyRealtimeMessageChange);
+  useCommWhatsAppMessageRealtime(selectedChatId, applyRealtimeMessageChange);
 
   const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
     setMessages((current) => current.map((message) => (message.id === messageId ? { ...message, ...patch } : message)));
@@ -5160,8 +5160,8 @@ export default function WhatsAppInboxScreen() {
           return;
         }
 
-        // Combinar fetched com chats que ja temos da(s) outra(s) secao(oes).
         const fetchedSectionSet = new Set(requestedSections);
+        const hasLoadFilters = chatActivityFilter !== 'all' || leadStatusFilters.length > 0;
         const fetchedChatIds = new Set<string>();
         const fetchedFlat: CommWhatsAppChat[] = [];
         for (const bucket of fetchedSections) {
@@ -5172,6 +5172,29 @@ export default function WhatsAppInboxScreen() {
         }
 
         const previousChats = latestChatsRef.current;
+        const unexpectedlyEmptySections = new Set(
+          fetchedSections
+            .filter(({ section, data }) => {
+              if (data.length > 0 || hasLoadFilters) {
+                return false;
+              }
+
+              return previousChats.some((chat) => (
+                !chat.deleted_at
+                && (chat.is_archived ? 'archived' : 'active') === section
+              ));
+            })
+            .map(({ section }) => section),
+        );
+
+        if (unexpectedlyEmptySections.size > 0) {
+          console.warn('[WhatsAppInbox] refetch de chats retornou secao vazia; preservando cache local', {
+            sections: Array.from(unexpectedlyEmptySections),
+            requestedSections,
+            previousChatsLen: previousChats.length,
+          });
+        }
+
         const preservedFromOtherSections = previousChats.filter((chat) => {
           if (chat.deleted_at) {
             return false;
@@ -5180,7 +5203,9 @@ export default function WhatsAppInboxScreen() {
           const sectionOfChat = chat.is_archived ? 'archived' : 'active';
           if (fetchedSectionSet.has(sectionOfChat)) {
             // se a secao foi recarregada, removemos chats antigos que nao vieram
-            return false;
+            // exceto quando a resposta veio vazia de forma transitória; nesse
+            // caso manter o cache evita a sidebar colapsar para o chat aberto.
+            return unexpectedlyEmptySections.has(sectionOfChat) && !fetchedChatIds.has(chat.id);
           }
           return !fetchedChatIds.has(chat.id);
         });
@@ -5515,7 +5540,7 @@ export default function WhatsAppInboxScreen() {
 
     const bootstrap = async () => {
       setLoading(true);
-      await Promise.all([loadChats({ sections: ['active', 'archived'] }), loadOperationalState()]);
+      await Promise.all([loadChats({ sections: ['active'] }), loadOperationalState()]);
       if (active) {
         setLoading(false);
       }
@@ -5581,16 +5606,8 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    // BUG FIX (BUG #12): evita carregar a primeira pagina antes da assinatura
-    // realtime do chat estar pronta. Isso reduz a janela em que uma mensagem
-    // inserida exatamente durante a troca de conversa ficaria invisivel ate o
-    // proximo polling.
-    if (messageRealtimeReadyChatId !== selectedChatId) {
-      return;
-    }
-
     void loadMessages(getSelectedChatSnapshot(selectedChatId), 'initial');
-  }, [getSelectedChatSnapshot, loadMessages, messageRealtimeReadyChatId, selectedChatId]);
+  }, [getSelectedChatSnapshot, loadMessages, selectedChatId]);
 
   useEffect(
     () => () => {

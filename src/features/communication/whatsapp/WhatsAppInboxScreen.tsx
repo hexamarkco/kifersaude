@@ -1176,8 +1176,12 @@ const formatMessageDaySeparatorLabel = (value?: string | null) => {
   }).format(date);
 };
 
-const formatConnectionStatusLabel = (value?: string | null) => {
+const formatConnectionStatusLabel = (value?: string | null, fallback = 'Indisponível') => {
   const normalized = String(value ?? '').trim().toUpperCase();
+
+  if (!normalized) {
+    return fallback;
+  }
 
   switch (normalized) {
     case 'AUTH':
@@ -1193,7 +1197,7 @@ const formatConnectionStatusLabel = (value?: string | null) => {
     case 'DISCONNECTED':
       return 'Desconectado';
     default:
-      return normalized || 'Desconhecido';
+      return normalized;
   }
 };
 
@@ -2975,7 +2979,6 @@ export default function WhatsAppInboxScreen() {
   const optimisticMessageTimestampByChatIdRef = useRef<Map<string, number>>(new Map());
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
   const resolvedIdentityPhoneKeysRef = useRef<Set<string>>(new Set());
-  const hydratedChatsRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const archivedSectionOpenRef = useRef<boolean>(false);
   const latestChatsLoadedAtRef = useRef<number>(0);
@@ -3051,6 +3054,10 @@ export default function WhatsAppInboxScreen() {
   const hasComposerFormattingPreview = hasTypedMessage && hasWhatsAppTextFormatting(messageDraft);
   const channelState = operationalState?.channel ?? null;
   const connectionStatus = String(channelState?.connection_status ?? '').trim().toUpperCase();
+  const connectionStatusLabel = useMemo(
+    () => formatConnectionStatusLabel(connectionStatus, operationalStateLoaded ? 'Indisponível' : 'Verificando'),
+    [connectionStatus, operationalStateLoaded],
+  );
   const isChannelConnected = connectionStatus === 'AUTH';
   const hasWebhookEver = Boolean(channelState?.last_webhook_received_at);
   const webhookAgeMs = channelState?.last_webhook_received_at
@@ -3075,11 +3082,11 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (!isChannelConnected) {
-      return `Canal WhatsApp ${formatConnectionStatusLabel(connectionStatus).toLowerCase()}.`;
+      return `Canal WhatsApp ${connectionStatusLabel.toLowerCase()}.`;
     }
 
     return null;
-  }, [connectionStatus, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
+  }, [connectionStatusLabel, isChannelConnected, operationalState, operationalStateError, operationalStateLoaded]);
   const {
     voiceRecordingState,
     voiceRecordingSeconds,
@@ -4385,7 +4392,7 @@ export default function WhatsAppInboxScreen() {
       return {
         tone: 'danger' as const,
         icon: WifiOff,
-        title: `WhatsApp ${formatConnectionStatusLabel(connectionStatus)}`,
+        title: `WhatsApp ${connectionStatusLabel}`,
         description: 'Reconecte o canal na Whapi ou valide a sessão antes de atender por aqui.',
       };
     }
@@ -4409,7 +4416,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     return null;
-  }, [channelState, connectionStatus, hasWebhookEver, isChannelConnected, isWebhookStale, operationalState, operationalStateError, operationalStateLoaded]);
+  }, [channelState, connectionStatusLabel, hasWebhookEver, isChannelConnected, isWebhookStale, operationalState, operationalStateError, operationalStateLoaded]);
   const nextChatReminderSummary = useMemo(() => {
     if (chatAgendaSummaryLoading && chatAgendaSummary.pendingCount === 0 && !chatAgendaSummary.nextReminder) {
       return 'Agenda: carregando lembretes...';
@@ -4965,7 +4972,7 @@ export default function WhatsAppInboxScreen() {
         return;
       }
 
-      setOperationalState(state);
+      setOperationalState((current) => state ?? current);
       setOperationalStateError(null);
       setOperationalStateLoaded(true);
     } catch (error) {
@@ -5331,24 +5338,12 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      let page = await commWhatsAppService.listMessagesPage(chat.id, {
+      const page = await commWhatsAppService.listMessagesPage(chat.id, {
         limit: MESSAGE_PAGE_SIZE,
       });
 
-      let data = page.messages;
-      let hasMore = page.hasMore;
-
-      const externalChatId = chat.external_chat_id?.trim();
-      if (data.length === 0 && externalChatId && !hydratedChatsRef.current.has(externalChatId)) {
-        hydratedChatsRef.current.add(externalChatId);
-        await commWhatsAppService.syncChatHistory(externalChatId);
-        page = await commWhatsAppService.listMessagesPage(chat.id, {
-          limit: MESSAGE_PAGE_SIZE,
-        });
-        data = page.messages;
-        hasMore = page.hasMore;
-        await loadChats();
-      }
+      const data = page.messages;
+      const hasMore = page.hasMore;
 
       if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
@@ -5427,7 +5422,7 @@ export default function WhatsAppInboxScreen() {
         pollingMessagesChatIdRef.current = null;
       }
     }
-  }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, loadChats, rememberOutgoingMessageOrder]);
+  }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder]);
 
   const handleSelectMessageSearchResult = useCallback((result: CommWhatsAppMessageSearchResult) => {
     const targetChat = result.chat;
@@ -6085,8 +6080,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       if (hadSuccessfulSend) {
-        hydratedChatsRef.current.add(chat.external_chat_id);
-        // BUG FIX (BUG #13): erro de pos-sincronizacao agora avisa o usuario
+        // BUG FIX (BUG #13): erro de pós-envio agora avisa o usuário
         // de forma discreta (warning), em vez de falhar silenciosamente.
         void Promise.all([loadMessages(chat, 'send'), loadChats()]).catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de texto', error);
@@ -6253,8 +6247,6 @@ export default function WhatsAppInboxScreen() {
 
           if (hadSuccessfulSend) {
             void (async () => {
-              await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
-              hydratedChatsRef.current.add(selectedChat.external_chat_id);
               await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
             })().catch((error) => {
               console.error('[WhatsAppInbox] erro ao atualizar conversa apos envio de midia', error);
@@ -6391,7 +6383,6 @@ export default function WhatsAppInboxScreen() {
 
         localOutgoingRetryPayloadRef.current.delete(message.id);
         if (selectedChat) {
-          hydratedChatsRef.current.add(selectedChat.external_chat_id);
           await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
         }
         return;
@@ -6521,7 +6512,6 @@ export default function WhatsAppInboxScreen() {
 
     try {
       await commWhatsAppService.forwardMessage(forwardingMessage.id, targetChat.external_chat_id);
-      hydratedChatsRef.current.add(targetChat.external_chat_id);
       await Promise.all([loadChats(), targetChat.id === selectedChatIdRef.current ? loadMessages(targetChat, 'send') : Promise.resolve()]);
       toast.success('Mensagem encaminhada.');
       handleCloseForwardMessageModal();
@@ -7697,7 +7687,6 @@ export default function WhatsAppInboxScreen() {
 
     try {
       const result = await commWhatsAppService.syncChatHistory(targetChat.external_chat_id);
-      hydratedChatsRef.current.add(targetChat.external_chat_id);
       await Promise.all([loadMessages(targetChat, 'initial'), loadChats()]);
 
       if (result.imported > 0) {
@@ -7920,8 +7909,6 @@ export default function WhatsAppInboxScreen() {
         localOutgoingRetryPayloadRef.current.delete(optimisticMessage.id);
 
         void (async () => {
-          await commWhatsAppService.syncChatHistory(selectedChat.external_chat_id).catch(() => undefined);
-          hydratedChatsRef.current.add(selectedChat.external_chat_id);
           await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
         })().catch((error) => {
           console.error('[WhatsAppInbox] erro ao atualizar conversa apos midia da gaveta', error);
@@ -8421,7 +8408,7 @@ export default function WhatsAppInboxScreen() {
                   <div className="flex shrink-0 flex-col items-end gap-1 text-right">
                     <span className={`whatsapp-inbox-status-pill whatsapp-inbox-status-pill-${isChannelConnected ? 'success' : 'warning'}`}>
                       <span className="whatsapp-inbox-status-pill-dot" aria-hidden="true" />
-                      {formatConnectionStatusLabel(connectionStatus)}
+                      {connectionStatusLabel}
                     </span>
                     {channelState?.last_webhook_received_at && (
                       <span className="text-xs text-[var(--panel-text-muted,#6b7280)]">

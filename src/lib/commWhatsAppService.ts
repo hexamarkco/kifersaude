@@ -125,6 +125,14 @@ export type CommWhatsAppMessagesPage = {
   hasMore: boolean;
 };
 
+export type CommWhatsAppChatThread = {
+  chat: CommWhatsAppChat;
+  lead: CommWhatsAppLeadPanel | null;
+  messages: CommWhatsAppMessage[];
+  hasMore: boolean;
+  generatedAt?: string | null;
+};
+
 export type CommWhatsAppRefreshedMessageStatus = {
   id: string;
   external_message_id: string;
@@ -723,6 +731,38 @@ export const commWhatsAppService = {
 
     const rows = Array.isArray(data) ? data : [];
     return (rows[0] as CommWhatsAppLeadPanel | undefined) ?? null;
+  },
+
+  async getChatThread(chatId: string, params: { limit?: number } = {}): Promise<CommWhatsAppChatThread> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar esta conversa do WhatsApp.' });
+
+    const safeLimit = Math.min(Math.max(params.limit ?? 50, 1), 200);
+    const { data, error } = await supabase.rpc('comm_whatsapp_get_chat_thread' as never, {
+      p_chat_id: chatId,
+      p_limit: safeLimit,
+    } as never);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a conversa do WhatsApp.'));
+    }
+
+    const payload = toRecord(data);
+    const chat = toRecord(payload.chat) as CommWhatsAppChat;
+    if (!chat.id) {
+      throw new Error('A conversa do WhatsApp nao retornou dados suficientes.');
+    }
+
+    const leadPayload = toRecord(payload.lead);
+    const lead = leadPayload.id ? (leadPayload as CommWhatsAppLeadPanel) : null;
+    const messages = Array.isArray(payload.messages) ? payload.messages as CommWhatsAppMessage[] : [];
+
+    return {
+      chat,
+      lead,
+      messages,
+      hasMore: payload.hasMore === true || payload.has_more === true,
+      generatedAt: readString(payload.generatedAt) || readString(payload.generated_at) || null,
+    };
   },
 
   async listLeadContracts(leadId: string): Promise<CommWhatsAppLeadContractSummary[]> {

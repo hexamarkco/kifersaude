@@ -88,9 +88,8 @@ const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
 const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending']);
-const CHAT_LIST_CACHE_KEY = 'kifer.comm.whatsapp.inbox.chats.v1';
-const CHAT_LIST_CACHE_TTL_MS = 10 * 60 * 1000;
 const EMPTY_CHAT_LIST_RETRY_DELAYS_MS = [700, 1500];
+const EMPTY_THREAD_RETRY_DELAYS_MS = [350, 900, 1800];
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -125,10 +124,6 @@ type QuickReplyOption = {
 type ChatAgendaSummary = {
   pendingCount: number;
   nextReminder: Reminder | null;
-};
-type CachedChatListPayload = {
-  cachedAt: number;
-  chats: CommWhatsAppChat[];
 };
 type CreateLeadDraft = {
   chatId: string;
@@ -1310,46 +1305,6 @@ const compareChatsByInboxOrder = (a: CommWhatsAppChat, b: CommWhatsAppChat) => {
 };
 
 const sortChatsByInboxOrder = (items: CommWhatsAppChat[]) => [...items].sort(compareChatsByInboxOrder);
-
-const readCachedChatList = (): CommWhatsAppChat[] => {
-  if (typeof window === 'undefined') {
-    return [];
-  }
-
-  try {
-    const raw = window.localStorage.getItem(CHAT_LIST_CACHE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw) as Partial<CachedChatListPayload>;
-    if (!parsed.cachedAt || Date.now() - parsed.cachedAt > CHAT_LIST_CACHE_TTL_MS || !Array.isArray(parsed.chats)) {
-      window.localStorage.removeItem(CHAT_LIST_CACHE_KEY);
-      return [];
-    }
-
-    return sortChatsByInboxOrder(parsed.chats.filter((chat): chat is CommWhatsAppChat => Boolean(chat?.id)));
-  } catch {
-    window.localStorage.removeItem(CHAT_LIST_CACHE_KEY);
-    return [];
-  }
-};
-
-const writeCachedChatList = (chats: CommWhatsAppChat[]) => {
-  if (typeof window === 'undefined' || chats.length === 0) {
-    return;
-  }
-
-  try {
-    const payload: CachedChatListPayload = {
-      cachedAt: Date.now(),
-      chats: sortChatsByInboxOrder(chats).slice(0, 500),
-    };
-    window.localStorage.setItem(CHAT_LIST_CACHE_KEY, JSON.stringify(payload));
-  } catch {
-    // Cache local e apenas uma protecao contra respostas vazias transitorias.
-  }
-};
 
 const waitForChatListRetry = (delayMs: number) => new Promise((resolve) => window.setTimeout(resolve, delayMs));
 
@@ -2890,10 +2845,11 @@ export default function WhatsAppInboxScreen() {
   const [leadStatusFilters, setLeadStatusFilters] = useState<string[]>([]);
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false);
   const [attachmentInputAccept, setAttachmentInputAccept] = useState(DEFAULT_ATTACHMENT_ACCEPT);
-  const [chats, setChats] = useState<CommWhatsAppChat[]>(() => readCachedChatList());
+  const [chats, setChats] = useState<CommWhatsAppChat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommWhatsAppMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [threadReconcileChatId, setThreadReconcileChatId] = useState<string | null>(null);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [archivedSectionOpen, setArchivedSectionOpen] = useState(false);
@@ -5209,7 +5165,7 @@ export default function WhatsAppInboxScreen() {
                 break;
               }
 
-              console.warn('[WhatsAppInbox] lista ativa veio vazia; tentando novamente antes de aceitar estado vazio', {
+              console.debug('[WhatsAppInbox] lista ativa veio vazia; tentando novamente antes de aceitar estado vazio', {
                 attempt: attempt + 1,
                 delayMs: EMPTY_CHAT_LIST_RETRY_DELAYS_MS[attempt],
               });
@@ -5263,18 +5219,10 @@ export default function WhatsAppInboxScreen() {
         );
 
         if (unexpectedlyEmptySections.size > 0) {
-          console.warn('[WhatsAppInbox] refetch de chats retornou secao vazia; preservando cache local', {
+          console.debug('[WhatsAppInbox] refetch de chats retornou secao vazia; preservando lista atual', {
             sections: Array.from(unexpectedlyEmptySections),
             requestedSections,
             previousChatsLen: previousChats.length,
-          });
-        }
-
-        const cachedChats = !hasLoadFilters && fetchedFlat.length === 0 ? readCachedChatList() : [];
-        if (cachedChats.length > 0) {
-          console.warn('[WhatsAppInbox] resposta de chats vazia; restaurando ultimo cache local valido', {
-            cachedChatsLen: cachedChats.length,
-            requestedSections,
           });
         }
 
@@ -5293,9 +5241,7 @@ export default function WhatsAppInboxScreen() {
           return !fetchedChatIds.has(chat.id);
         });
 
-        const mergedData = cachedChats.length > 0
-          ? mergeUniqueChats(cachedChats, preservedFromOtherSections)
-          : [...fetchedFlat, ...preservedFromOtherSections];
+        const mergedData = [...fetchedFlat, ...preservedFromOtherSections];
 
         const refreshedChats = applyPendingChatInboxState(
           applyPrefetchedLeadNames(mergedData),
@@ -5320,10 +5266,6 @@ export default function WhatsAppInboxScreen() {
         if (nextSignature !== chatsSignatureRef.current) {
           chatsSignatureRef.current = nextSignature;
           setChats(hydratedData);
-        }
-
-        if (fetchedFlat.length > 0 && !hasLoadFilters) {
-          writeCachedChatList(hydratedData);
         }
 
         const requestedChatId = chatIdFromUrlRef.current;
@@ -5397,12 +5339,12 @@ export default function WhatsAppInboxScreen() {
   });
 
   const loadMessages = useCallback(async (chat: CommWhatsAppChat | null, reason: MessageLoadReason = 'poll') => {
-    if (!chat) {
+    const targetChatId = chat?.id ?? selectedChatIdRef.current;
+    if (!targetChatId) {
       setMessages([]);
       return;
     }
 
-    const targetChatId = chat.id;
     if (reason === 'poll' && pollingMessagesChatIdRef.current === targetChatId) {
       return;
     }
@@ -5420,16 +5362,64 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      const page = await commWhatsAppService.listMessagesPage(chat.id, {
-        limit: MESSAGE_PAGE_SIZE,
-      });
+      let data: CommWhatsAppMessage[] = [];
+      let hasMore = false;
+      let threadChat: CommWhatsAppChat | null = null;
+      let threadLead: CommWhatsAppLeadPanel | null = null;
 
-      const data = page.messages;
-      const hasMore = page.hasMore;
+      if (reason === 'initial') {
+        for (let attempt = 0; attempt <= EMPTY_THREAD_RETRY_DELAYS_MS.length; attempt += 1) {
+          const thread = await commWhatsAppService.getChatThread(targetChatId, {
+            limit: MESSAGE_PAGE_SIZE,
+          });
+
+          data = thread.messages;
+          hasMore = thread.hasMore;
+          threadChat = thread.chat;
+          threadLead = thread.lead;
+
+          const hasThreadPreview = Boolean(thread.chat.last_message_at || thread.chat.last_message_text?.trim());
+          const shouldRetryEmptyThread = data.length === 0
+            && hasThreadPreview
+            && attempt < EMPTY_THREAD_RETRY_DELAYS_MS.length;
+
+          if (!shouldRetryEmptyThread) {
+            break;
+          }
+
+          setThreadReconcileChatId(targetChatId);
+          console.warn('[WhatsAppInbox] thread retornou vazio apesar de preview; tentando novamente', {
+            chatId: targetChatId,
+            attempt: attempt + 1,
+            delayMs: EMPTY_THREAD_RETRY_DELAYS_MS[attempt],
+          });
+          await waitForChatListRetry(EMPTY_THREAD_RETRY_DELAYS_MS[attempt]);
+        }
+      } else {
+        const page = await commWhatsAppService.listMessagesPage(targetChatId, {
+          limit: MESSAGE_PAGE_SIZE,
+        });
+
+        data = page.messages;
+        hasMore = page.hasMore;
+      }
 
       if (requestId !== messagesRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
         return;
       }
+
+      if (threadChat) {
+        upsertChatLocally(threadChat);
+      }
+
+      if (threadLead) {
+        setLeadPanel(threadLead);
+      }
+
+      const stillEmptyDespitePreview = reason === 'initial'
+        && data.length === 0
+        && Boolean(threadChat?.last_message_at || threadChat?.last_message_text?.trim());
+      setThreadReconcileChatId(stillEmptyDespitePreview ? targetChatId : null);
 
       const orderedData = data.map(applyOutgoingOrderToServerMessage);
       const nextMessages = reason === 'initial' ? orderedData : mergeMessages(latestMessagesRef.current, orderedData);
@@ -5504,7 +5494,7 @@ export default function WhatsAppInboxScreen() {
         pollingMessagesChatIdRef.current = null;
       }
     }
-  }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder]);
+  }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder, upsertChatLocally]);
 
   const handleSelectMessageSearchResult = useCallback((result: CommWhatsAppMessageSearchResult) => {
     const targetChat = result.chat;
@@ -5657,6 +5647,7 @@ export default function WhatsAppInboxScreen() {
     if (!selectedChatId) {
       setMessages([]);
       setLoadingMessages(false);
+      setThreadReconcileChatId(null);
       setLoadingOlderMessages(false);
       setHasOlderMessages(false);
       setPendingAttachments([]);
@@ -5677,6 +5668,7 @@ export default function WhatsAppInboxScreen() {
     cancelVoiceRecordingRef.current();
     setLoadingOlderMessages(false);
     setHasOlderMessages(false);
+    setThreadReconcileChatId(null);
     setMessages([]);
 
     if (pendingMessageSearchChatIdRef.current === selectedChatId) {
@@ -8590,6 +8582,11 @@ export default function WhatsAppInboxScreen() {
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Carregando mensagens...
+                  </div>
+                ) : threadReconcileChatId === selectedChat.id && messages.length === 0 ? (
+                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Atualizando histórico desta conversa...
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FocusEventHandler, type KeyboardEvent } from 'react';
 import Textarea, { type TextareaSize } from './Textarea';
 import type { TemplateVariableSuggestion } from '../../lib/templateVariableSuggestions';
 
@@ -11,6 +11,7 @@ type VariableAutocompleteTextareaProps = {
   size?: TextareaSize;
   className?: string;
   disabled?: boolean;
+  onBlur?: FocusEventHandler<HTMLTextAreaElement>;
 };
 
 export default function VariableAutocompleteTextarea({
@@ -22,6 +23,7 @@ export default function VariableAutocompleteTextarea({
   size = 'default',
   className,
   disabled = false,
+  onBlur,
 }: VariableAutocompleteTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -113,6 +115,7 @@ export default function VariableAutocompleteTextarea({
         ref={textareaRef}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
         onKeyDown={handleKeyDown}
         onClick={() => setActiveIndex(0)}
         rows={rows}

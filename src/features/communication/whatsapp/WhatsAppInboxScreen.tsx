@@ -2971,6 +2971,8 @@ export default function WhatsAppInboxScreen() {
   const [replySuggestionLoading, setReplySuggestionLoading] = useState(false);
   const [replySuggestionError, setReplySuggestionError] = useState<string | null>(null);
   const [copyingTranscript, setCopyingTranscript] = useState(false);
+  const [exportingInbox, setExportingInbox] = useState(false);
+  const [inboxExportProgress, setInboxExportProgress] = useState<string | null>(null);
   const [syncingHistoryChatId, setSyncingHistoryChatId] = useState<string | null>(null);
   const [mediaDrawerOpen, setMediaDrawerOpen] = useState(false);
   const [mediaDrawerPosition, setMediaDrawerPosition] = useState<{ top: number; left: number; width?: number; maxHeight?: number } | null>(null);
@@ -7878,6 +7880,47 @@ export default function WhatsAppInboxScreen() {
     }
   }, [copyingTranscript, selectedChat, selectedChatTranscriptLabel]);
 
+  const handleExportInboxJson = useCallback(async () => {
+    if (exportingInbox) {
+      return;
+    }
+
+    setExportingInbox(true);
+    setInboxExportProgress('Preparando conversas...');
+
+    try {
+      const payload = await commWhatsAppService.exportInboxConversations({
+        onProgress: (progress) => {
+          if (progress.chatsExported > 0 || progress.messagesExported > 0) {
+            setInboxExportProgress(`Exportando ${progress.chatsExported}/${progress.chatsLoaded} conversas (${progress.messagesExported} mensagens)`);
+            return;
+          }
+
+          setInboxExportProgress(`${progress.chatsLoaded} conversas encontradas`);
+        },
+      });
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      const fileDate = new Date().toISOString().slice(0, 10);
+      anchor.href = objectUrl;
+      anchor.download = `whatsapp-inbox-export-${fileDate}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(objectUrl);
+
+      toast.success(`Exportacao concluida: ${payload.summary.chats} conversas e ${payload.summary.messages} mensagens.`);
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao exportar inbox', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel exportar as conversas do inbox.');
+    } finally {
+      setExportingInbox(false);
+      setInboxExportProgress(null);
+    }
+  }, [exportingInbox]);
+
   const handleRecoverChatHistory = useCallback(async () => {
     if (!selectedChat) {
       return;
@@ -8158,8 +8201,8 @@ export default function WhatsAppInboxScreen() {
     setFollowUpManualContext((current) => ({ ...current, tone: true }));
   }, []);
 
-  const handleRegenerateFollowUp = useCallback((options: { variantCount?: number } = {}) => {
-    void handleGenerateFollowUp(followUpCustomInstructions, followUpTone, {
+  const handleRegenerateFollowUp = useCallback((options: { variantCount?: number; customInstructions?: string } = {}) => {
+    void handleGenerateFollowUp(options.customInstructions ?? followUpCustomInstructions, followUpTone, {
       ...options,
       salesTechniques: followUpSelectedSalesTechniques,
       situationPresetIds: followUpSelectedSituationPresetIds,
@@ -8337,6 +8380,17 @@ export default function WhatsAppInboxScreen() {
                 <div className="flex items-center gap-2">
                   <Button
                     size="icon"
+                    variant="secondary"
+                    onClick={() => void handleExportInboxJson()}
+                    className="rounded-xl"
+                    aria-label="Exportar conversas em JSON"
+                    title="Exportar todas as conversas em JSON"
+                    disabled={exportingInbox}
+                  >
+                    {exportingInbox ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    size="icon"
                     variant={archivedSectionOpen ? 'soft' : 'secondary'}
                     onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
                     className="rounded-xl"
@@ -8388,6 +8442,13 @@ export default function WhatsAppInboxScreen() {
                   </Button>
                 </div>
               </div>
+
+              {inboxExportProgress ? (
+                <div className="flex items-center gap-2 rounded-2xl border border-[rgba(212,192,167,0.56)] bg-[color:var(--panel-surface-soft,#f8f2e9)] px-3 py-2 text-xs font-medium text-[var(--panel-text-soft,#5b4635)]">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--panel-accent-strong,#c86f1d)]" />
+                  <span className="truncate">{inboxExportProgress}</span>
+                </div>
+              ) : null}
 
               <Input
                 value={searchDraft}

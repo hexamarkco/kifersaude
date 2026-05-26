@@ -85,7 +85,7 @@ type WhatsAppFollowUpModalProps = {
   onChangeTone: (value: CommWhatsAppFollowUpTone) => void;
   onToggleSituationPreset: (presetId: string) => void;
   onToggleSalesTechnique: (techniqueId: string) => void;
-  onGenerate: (options?: { variantCount?: number }) => void;
+  onGenerate: (options?: { variantCount?: number; customInstructions?: string }) => void;
   onScheduleNextAction: () => void;
   onSend: () => void;
 };
@@ -172,10 +172,47 @@ export default function WhatsAppFollowUpModal({
   const [isCorrecting, setIsCorrecting] = useState(false);
   const [refiningActionId, setRefiningActionId] = useState<string | null>(null);
   const [currentTranscript, setCurrentTranscript] = useState("");
+  const [localCustomInstructions, setLocalCustomInstructions] = useState(customInstructions);
   const recognitionRef = useRef<unknown>(null);
+  const wasOpenRef = useRef(false);
   const messageSegments = useMemo(() => splitWhatsAppMessageSegments(value), [value]);
   const hasVariations = variations.length > 0;
   const selectedToneOption = followUpToneOptions.find((option) => option.value === tone) ?? followUpToneOptions[0];
+
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      setLocalCustomInstructions(customInstructions);
+    }
+    wasOpenRef.current = isOpen;
+  }, [customInstructions, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || localCustomInstructions === customInstructions) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      onChangeCustomInstructions(localCustomInstructions);
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [customInstructions, isOpen, localCustomInstructions, onChangeCustomInstructions]);
+
+  const commitCustomInstructions = (nextValue = localCustomInstructions) => {
+    if (nextValue !== customInstructions) {
+      onChangeCustomInstructions(nextValue);
+    }
+  };
+
+  const handleGenerateClick = (options: { variantCount?: number } = {}) => {
+    commitCustomInstructions();
+    onGenerate({ ...options, customInstructions: localCustomInstructions });
+  };
+
+  const handleClose = () => {
+    commitCustomInstructions();
+    onClose();
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined' || (!window.SpeechRecognition && !window.webkitSpeechRecognition)) return;
@@ -269,9 +306,13 @@ export default function WhatsAppFollowUpModal({
             message: transcript,
             tone: 'grammar',
           });
-          onChangeCustomInstructions(customInstructions + (customInstructions ? ' ' : '') + corrected.text);
+          const nextInstructions = localCustomInstructions + (localCustomInstructions ? ' ' : '') + corrected.text;
+          setLocalCustomInstructions(nextInstructions);
+          onChangeCustomInstructions(nextInstructions);
         } catch {
-          onChangeCustomInstructions(customInstructions + (customInstructions ? ' ' : '') + transcript);
+          const nextInstructions = localCustomInstructions + (localCustomInstructions ? ' ' : '') + transcript;
+          setLocalCustomInstructions(nextInstructions);
+          onChangeCustomInstructions(nextInstructions);
         } finally {
           setIsCorrecting(false);
         }
@@ -287,7 +328,7 @@ export default function WhatsAppFollowUpModal({
   return (
     <ModalShell
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Gerar follow-up"
       description="Escolha um cenário, gere uma sugestão e envie. Os ajustes avançados continuam disponíveis quando precisar."
       size="xl"
@@ -298,14 +339,14 @@ export default function WhatsAppFollowUpModal({
             Use <code>{WHATSAPP_MESSAGE_BREAK_DELIMITER}</code> em uma linha isolada para separar em várias mensagens.
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button variant="secondary" onClick={onClose} disabled={generating || submitting || Boolean(refiningActionId)}>
+            <Button variant="secondary" onClick={handleClose} disabled={generating || submitting || Boolean(refiningActionId)}>
               Fechar
             </Button>
-            <Button variant={value.trim() ? 'secondary' : 'primary'} onClick={() => onGenerate()} loading={generating} disabled={submitting}>
+            <Button variant={value.trim() ? 'secondary' : 'primary'} onClick={() => handleGenerateClick()} loading={generating} disabled={submitting}>
               {!generating && <Sparkles className="h-4 w-4" />}
               <span>{value.trim() ? 'Gerar novamente' : 'Gerar agora'}</span>
             </Button>
-            <Button variant="secondary" onClick={() => onGenerate({ variantCount: 3 })} loading={generating} disabled={submitting}>
+            <Button variant="secondary" onClick={() => handleGenerateClick({ variantCount: 3 })} loading={generating} disabled={submitting}>
               {!generating && <Sparkles className="h-4 w-4" />}
               <span>{hasVariations ? 'Novas opções' : 'Gerar 3 opções'}</span>
             </Button>
@@ -386,14 +427,14 @@ export default function WhatsAppFollowUpModal({
                 </div>
               </div>
 
-              <details className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3" open={Boolean(customInstructions.trim())}>
+              <details className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3" open={Boolean(localCustomInstructions.trim())}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                   <div>
                     <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Ajustes extras</h3>
                     <p className="mt-0.5 text-xs text-[var(--panel-text-muted,#876f5c)]">Instruções, variáveis e áudio ficam aqui.</p>
                   </div>
                   <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
-                    {customInstructions.trim() ? 'Ativo' : 'Abrir'}
+                    {localCustomInstructions.trim() ? 'Ativo' : 'Abrir'}
                   </span>
                 </summary>
                 <div className="mt-3">
@@ -402,8 +443,9 @@ export default function WhatsAppFollowUpModal({
                     <span className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">Digite {'{{'} para variáveis</span>
                   </div>
                   <VariableAutocompleteTextarea
-                    value={customInstructions}
-                    onChange={onChangeCustomInstructions}
+                    value={localCustomInstructions}
+                    onChange={setLocalCustomInstructions}
+                    onBlur={() => commitCustomInstructions()}
                     suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
                     rows={5}
                     size="compact"

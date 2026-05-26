@@ -152,6 +152,25 @@ export type CommWhatsAppMessageSearchResult = {
   chat: CommWhatsAppChat;
 };
 
+export type CommWhatsAppInboxExportProgress = {
+  chatsLoaded: number;
+  chatsExported: number;
+  messagesExported: number;
+};
+
+export type CommWhatsAppInboxExportPayload = {
+  schema: 'kifer.comm_whatsapp_inbox_export.v1';
+  generatedAt: string;
+  summary: {
+    chats: number;
+    messages: number;
+  };
+  conversations: Array<{
+    chat: CommWhatsAppChat;
+    messages: CommWhatsAppMessage[];
+  }>;
+};
+
 export type CommWhatsAppLeadSearchResult = {
   id: string;
   nome_completo: string;
@@ -621,6 +640,59 @@ export const commWhatsAppService = {
     }
 
     return (Array.isArray(data) ? data : []) as CommWhatsAppChat[];
+  },
+
+  async exportInboxConversations(params: {
+    onProgress?: (progress: CommWhatsAppInboxExportProgress) => void;
+  } = {}): Promise<CommWhatsAppInboxExportPayload> {
+    const chats: CommWhatsAppChat[] = [];
+    let offset = 0;
+
+    while (true) {
+      const page = await this.listChats({
+        archivedFilter: 'all',
+        limit: 500,
+        offset,
+      });
+
+      chats.push(...page);
+      params.onProgress?.({
+        chatsLoaded: chats.length,
+        chatsExported: 0,
+        messagesExported: 0,
+      });
+
+      if (page.length < 500) {
+        break;
+      }
+
+      offset += page.length;
+    }
+
+    const conversations: CommWhatsAppInboxExportPayload['conversations'] = [];
+    let messagesExported = 0;
+
+    for (const chat of chats) {
+      const messages = await this.listAllMessages(chat.id);
+      messagesExported += messages.length;
+      conversations.push({ chat, messages });
+
+      params.onProgress?.({
+        chatsLoaded: chats.length,
+        chatsExported: conversations.length,
+        messagesExported,
+      });
+    }
+
+    return {
+      schema: 'kifer.comm_whatsapp_inbox_export.v1',
+      generatedAt: new Date().toISOString(),
+      summary: {
+        chats: conversations.length,
+        messages: messagesExported,
+      },
+      conversations,
+    };
   },
 
   async updateChatInboxState(chatId: string, options: {

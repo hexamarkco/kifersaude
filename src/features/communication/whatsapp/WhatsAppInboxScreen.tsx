@@ -321,6 +321,34 @@ const getVisiblePreviewText = (value?: string | null, messageType?: string) => (
   isHiddenTechnicalMessageMarker(value, messageType) ? '' : String(value ?? '').trim()
 );
 
+const preserveUsefulChatPreview = (incoming: CommWhatsAppChat, previous?: CommWhatsAppChat | null): CommWhatsAppChat => {
+  if (!previous) {
+    return incoming;
+  }
+
+  const incomingPreview = getVisiblePreviewText(incoming.last_message_text);
+  const previousPreview = getVisiblePreviewText(previous.last_message_text);
+  if (incomingPreview || !previousPreview) {
+    return incoming;
+  }
+
+  const incomingAt = getMessageTimestampMs(incoming.last_message_at);
+  const previousAt = getMessageTimestampMs(previous.last_message_at);
+  const incomingIsNotNewer = incomingAt === null || previousAt === null || incomingAt <= previousAt;
+
+  if (!incomingIsNotNewer && String(incoming.last_message_text ?? '').trim()) {
+    return incoming;
+  }
+
+  return {
+    ...incoming,
+    last_message_text: previous.last_message_text,
+    last_message_direction: incoming.last_message_direction || previous.last_message_direction,
+    last_message_delivery_status: incoming.last_message_delivery_status ?? previous.last_message_delivery_status,
+    last_message_at: incoming.last_message_at ?? previous.last_message_at,
+  };
+};
+
 type ChatPreviewIconType = 'image' | 'video' | 'audio' | 'document' | 'link' | 'location' | 'sticker' | 'contact' | 'poll' | 'interactive';
 
 const getChatPreviewIconType = (value: string | null | undefined): ChatPreviewIconType | null => {
@@ -2370,9 +2398,7 @@ function InboxChatListItem({
                   <span>{visibleLastMessageText}</span>
                 )}
               </>
-            ) : rawLastMessageText ? null : (
-              'Sem mensagens ainda'
-            )}
+            ) : rawLastMessageText ? 'Mensagem' : 'Sem mensagens ainda'}
           </p>
           {hasUnreadBadge ? (
             <span className="whatsapp-inbox-unread-badge absolute right-4 top-1/2 inline-flex min-h-5 min-w-6 -translate-y-1/2 items-center justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
@@ -3398,10 +3424,12 @@ export default function WhatsAppInboxScreen() {
 
   const upsertChatLocally = useCallback((nextChat: CommWhatsAppChat) => {
     setChats((current) => {
-      const exists = current.some((chat) => chat.id === nextChat.id);
+      const previousChat = current.find((chat) => chat.id === nextChat.id) ?? null;
+      const hydratedNextChat = preserveUsefulChatPreview(nextChat, previousChat);
+      const exists = Boolean(previousChat);
       const updated = exists
-        ? current.map((chat) => (chat.id === nextChat.id ? { ...chat, ...nextChat } : chat))
-        : [nextChat, ...current];
+        ? current.map((chat) => (chat.id === nextChat.id ? preserveUsefulChatPreview({ ...chat, ...hydratedNextChat }, chat) : chat))
+        : [hydratedNextChat, ...current];
 
       const sorted = sortChatsByInboxOrder(updated);
       chatsSignatureRef.current = buildChatsSignature(sorted);
@@ -3844,11 +3872,12 @@ export default function WhatsAppInboxScreen() {
     setChats((current) => {
       let next = current.filter((chat) => chat.id !== changedChatId);
 
-      if (payload.eventType !== 'DELETE' && incomingChat && !incomingChat.deleted_at) {
-        const hydratedChat = applyPendingChatInboxState(
-          applyPrefetchedLeadNames([incomingChat]),
-          pendingChatInboxStateRef.current,
-        )[0];
+        if (payload.eventType !== 'DELETE' && incomingChat && !incomingChat.deleted_at) {
+          const existingChat = current.find((chat) => chat.id === incomingChat.id) ?? null;
+          const hydratedChat = applyPendingChatInboxState(
+            applyPrefetchedLeadNames([preserveUsefulChatPreview(incomingChat, existingChat)]),
+            pendingChatInboxStateRef.current,
+          )[0];
         const shouldKeepSelectedChat = selectedChatIdRef.current === hydratedChat.id;
 
         if (chatMatchesActiveFilters(hydratedChat) || shouldKeepSelectedChat) {
@@ -5203,6 +5232,7 @@ export default function WhatsAppInboxScreen() {
         }
 
         const previousChats = latestChatsRef.current;
+        const previousChatsById = new Map(previousChats.map((chat) => [chat.id, chat] as const));
         const unexpectedlyEmptySections = new Set(
           fetchedSections
             .filter(({ section, data }) => {
@@ -5244,7 +5274,7 @@ export default function WhatsAppInboxScreen() {
         const mergedData = [...fetchedFlat, ...preservedFromOtherSections];
 
         const refreshedChats = applyPendingChatInboxState(
-          applyPrefetchedLeadNames(mergedData),
+          applyPrefetchedLeadNames(mergedData.map((chat) => preserveUsefulChatPreview(chat, previousChatsById.get(chat.id) ?? null))),
           pendingChatInboxStateRef.current,
         );
         const currentSelectedChatId = selectedChatIdRef.current;

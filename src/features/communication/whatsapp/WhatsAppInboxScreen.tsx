@@ -6596,7 +6596,7 @@ export default function WhatsAppInboxScreen() {
         await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
       }
     } catch (error) {
-      console.error('[WhatsAppInbox] erro ao reenviar mídia', error);
+      console.error('[WhatsAppInbox] erro ao reenviar mensagem', error);
       const messageText = error instanceof Error ? error.message : 'Não foi possível reenviar a mensagem.';
       if (localOutgoingRetryPayloadRef.current.has(message.id)) {
         patchLocalOutgoingMessage(message.id, {

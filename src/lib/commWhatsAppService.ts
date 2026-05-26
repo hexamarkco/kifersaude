@@ -1095,7 +1095,7 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel enviar a mensagem no WhatsApp.'));
+      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel enviar a mensagem no WhatsApp.'));
     }
 
     return parseSendResponse(data);

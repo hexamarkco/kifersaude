@@ -783,15 +783,31 @@ Deno.serve(async (req: Request) => {
         },
         body: JSON.stringify(textPayload),
       });
+
+      if (whapiResponse.status >= 500) {
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(textPayload),
+        });
+      }
     }
 
     const whapiPayload = await readResponsePayload(whapiResponse);
 
     if (!whapiResponse.ok) {
       const errorMessage = parseWhapiError(whapiPayload);
-      await failSendRequest(supabaseAdmin, sendRequest.row?.id, errorMessage || 'Falha ao enviar mensagem na Whapi.');
+      const detailedErrorMessage = errorMessage
+        ? `Whapi retornou erro HTTP ${whapiResponse.status}: ${errorMessage}`
+        : `Whapi retornou erro HTTP ${whapiResponse.status}.`;
+      await failSendRequest(supabaseAdmin, sendRequest.row?.id, detailedErrorMessage);
 
-      return new Response(JSON.stringify({ error: errorMessage || 'Falha ao enviar mensagem na Whapi.' }), {
+      return new Response(JSON.stringify({ error: detailedErrorMessage }), {
         status: whapiResponse.status,
         headers: jsonHeaders,
       });

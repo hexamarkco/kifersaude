@@ -321,6 +321,41 @@ const getVisiblePreviewText = (value?: string | null, messageType?: string) => (
   isHiddenTechnicalMessageMarker(value, messageType) ? '' : String(value ?? '').trim()
 );
 
+const DELIVERY_STATUS_RANKS: Record<string, number> = {
+  pending: 0,
+  queued: 0,
+  sending: 0,
+  sent: 1,
+  delivered: 2,
+  read: 3,
+  seen: 3,
+  viewed: 3,
+  played: 4,
+};
+
+const normalizeDeliveryStatus = (value?: string | null) => String(value ?? '').trim().toLowerCase();
+
+const resolveStableDeliveryStatus = (incoming?: string | null, previous?: string | null) => {
+  const incomingStatus = normalizeDeliveryStatus(incoming);
+  const previousStatus = normalizeDeliveryStatus(previous);
+
+  if (!previousStatus) {
+    return incoming ?? previous ?? null;
+  }
+
+  if (!incomingStatus) {
+    return previous;
+  }
+
+  const incomingRank = DELIVERY_STATUS_RANKS[incomingStatus];
+  const previousRank = DELIVERY_STATUS_RANKS[previousStatus];
+  if (incomingRank !== undefined && previousRank !== undefined && incomingRank < previousRank) {
+    return previous;
+  }
+
+  return incoming;
+};
+
 const preserveUsefulChatPreview = (incoming: CommWhatsAppChat, previous?: CommWhatsAppChat | null): CommWhatsAppChat => {
   if (!previous) {
     return incoming;
@@ -328,13 +363,19 @@ const preserveUsefulChatPreview = (incoming: CommWhatsAppChat, previous?: CommWh
 
   const incomingPreview = getVisiblePreviewText(incoming.last_message_text);
   const previousPreview = getVisiblePreviewText(previous.last_message_text);
-  if (incomingPreview || !previousPreview) {
-    return incoming;
-  }
-
   const incomingAt = getMessageTimestampMs(incoming.last_message_at);
   const previousAt = getMessageTimestampMs(previous.last_message_at);
   const incomingIsNotNewer = incomingAt === null || previousAt === null || incomingAt <= previousAt;
+  const stableDeliveryStatus = incomingIsNotNewer
+    ? resolveStableDeliveryStatus(incoming.last_message_delivery_status, previous.last_message_delivery_status)
+    : incoming.last_message_delivery_status;
+
+  if (incomingPreview || !previousPreview) {
+    return {
+      ...incoming,
+      last_message_delivery_status: stableDeliveryStatus,
+    };
+  }
 
   if (!incomingIsNotNewer && String(incoming.last_message_text ?? '').trim()) {
     return incoming;
@@ -344,7 +385,7 @@ const preserveUsefulChatPreview = (incoming: CommWhatsAppChat, previous?: CommWh
     ...incoming,
     last_message_text: previous.last_message_text,
     last_message_direction: incoming.last_message_direction || previous.last_message_direction,
-    last_message_delivery_status: incoming.last_message_delivery_status ?? previous.last_message_delivery_status,
+    last_message_delivery_status: stableDeliveryStatus ?? previous.last_message_delivery_status,
     last_message_at: incoming.last_message_at ?? previous.last_message_at,
   };
 };
@@ -1095,6 +1136,10 @@ const buildDeletedMessageSummary = (messageType: string, preservedText?: string 
 };
 
 const buildTranscriptContent = (message: CommWhatsAppMessage) => {
+  if (shouldHideTechnicalMessage(message)) {
+    return '';
+  }
+
   if (message.direction === 'system') {
     return '';
   }
@@ -1108,6 +1153,8 @@ const buildTranscriptContent = (message: CommWhatsAppMessage) => {
   const transcription = normalizeTranscriptText(message.transcription_text);
   const kind = message.message_type.trim().toLowerCase();
   const isDeleted = message.delivery_status.trim().toLowerCase() === 'deleted';
+  const visibleText = isHiddenTechnicalMessageMarker(text, message.message_type) ? '' : text;
+  const visibleCaption = isHiddenTechnicalMessageMarker(caption, message.message_type) ? '' : caption;
 
   const withDeletedFlag = (content: string) => {
     if (!isDeleted) {
@@ -1118,31 +1165,31 @@ const buildTranscriptContent = (message: CommWhatsAppMessage) => {
   };
 
   if (kind === 'text') {
-    return withDeletedFlag(text);
+    return withDeletedFlag(visibleText);
   }
 
   if (kind === 'image') {
-    return withDeletedFlag(caption ? `[Imagem] ${caption}` : '[Imagem]');
+    return withDeletedFlag(visibleCaption ? `[Imagem] ${visibleCaption}` : '[Imagem]');
   }
 
   if (kind === 'video' || kind === 'gif' || kind === 'short') {
-    return withDeletedFlag(caption ? `[Video] ${caption}` : '[Video]');
+    return withDeletedFlag(visibleCaption ? `[Video] ${visibleCaption}` : '[Video]');
   }
 
   if (kind === 'document') {
-    return withDeletedFlag(caption ? `[Documento] ${caption}` : '[Documento]');
+    return withDeletedFlag(visibleCaption ? `[Documento] ${visibleCaption}` : '[Documento]');
   }
 
   if (kind === 'audio' || kind === 'voice') {
     return withDeletedFlag(transcription || AUDIO_WITHOUT_TRANSCRIPTION_MARKER);
   }
 
-  if (caption) {
-    return withDeletedFlag(caption);
+  if (visibleCaption) {
+    return withDeletedFlag(visibleCaption);
   }
 
-  if (text) {
-    return withDeletedFlag(text);
+  if (visibleText) {
+    return withDeletedFlag(visibleText);
   }
 
   if (transcription) {
@@ -3673,14 +3720,14 @@ export default function WhatsAppInboxScreen() {
     if (pendingState?.last_message_at === messageAt) {
       pendingChatInboxStateRef.current.set(chatId, {
         ...pendingState,
-        last_message_delivery_status: deliveryStatus,
+        last_message_delivery_status: resolveStableDeliveryStatus(deliveryStatus, pendingState.last_message_delivery_status),
       });
     }
 
     setChats((current) => {
       const next = current.map((chat) => (
         chat.id === chatId && chat.last_message_at === messageAt
-          ? { ...chat, last_message_delivery_status: deliveryStatus }
+          ? { ...chat, last_message_delivery_status: resolveStableDeliveryStatus(deliveryStatus, chat.last_message_delivery_status) }
           : chat
       ));
       chatsSignatureRef.current = buildChatsSignature(next);

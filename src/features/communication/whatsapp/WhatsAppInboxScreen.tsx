@@ -3047,6 +3047,7 @@ export default function WhatsAppInboxScreen() {
   const sendQueueByChatIdRef = useRef<Map<string, Promise<void>>>(new Map());
   const statusRefreshTimeoutsRef = useRef<number[]>([]);
   const lastPendingStatusRefreshKeyRef = useRef('');
+  const lastSelectedChatPreviewRefreshKeyRef = useRef('');
   const activeSendOperationsRef = useRef(0);
   const composerQueueSnapshotKeysRef = useRef<Set<string>>(new Set());
   const retryingMessageIdsRef = useRef<Set<string>>(new Set());
@@ -5725,6 +5726,7 @@ export default function WhatsAppInboxScreen() {
       setMessages([]);
       setLoadingMessages(false);
       setThreadReconcileChatId(null);
+      lastSelectedChatPreviewRefreshKeyRef.current = '';
       setLoadingOlderMessages(false);
       setHasOlderMessages(false);
       setPendingAttachments([]);
@@ -5746,6 +5748,7 @@ export default function WhatsAppInboxScreen() {
     setLoadingOlderMessages(false);
     setHasOlderMessages(false);
     setThreadReconcileChatId(null);
+    lastSelectedChatPreviewRefreshKeyRef.current = '';
     setMessages([]);
 
     if (pendingMessageSearchChatIdRef.current === selectedChatId) {
@@ -5806,6 +5809,42 @@ export default function WhatsAppInboxScreen() {
 
     return () => window.clearInterval(intervalId);
   }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, pollingEnabled, selectedChat]);
+
+  useEffect(() => {
+    if (!selectedChat || loadingOlderMessages) {
+      return;
+    }
+
+    const previewKey = [
+      selectedChat.id,
+      selectedChat.last_message_at ?? '',
+      selectedChat.last_message_text ?? '',
+      selectedChat.last_message_direction ?? '',
+    ].join(':');
+
+    if (!selectedChat.last_message_at || messagesSignatureRef.current === '' || previewKey === lastSelectedChatPreviewRefreshKeyRef.current) {
+      return;
+    }
+
+    const selectedLastMessageAtMs = getMessageTimestampMs(selectedChat.last_message_at);
+    const latestRenderedMessageAtMs = latestMessagesRef.current
+      .filter((message) => message.chat_id === selectedChat.id)
+      .reduce<number | null>((latest, message) => {
+        const messageAt = getMessageTimestampMs(message.message_at);
+        if (messageAt === null) {
+          return latest;
+        }
+        return latest === null || messageAt > latest ? messageAt : latest;
+      }, null);
+
+    if (selectedLastMessageAtMs !== null && latestRenderedMessageAtMs !== null && latestRenderedMessageAtMs >= selectedLastMessageAtMs) {
+      lastSelectedChatPreviewRefreshKeyRef.current = previewKey;
+      return;
+    }
+
+    lastSelectedChatPreviewRefreshKeyRef.current = previewKey;
+    void loadMessages(getSelectedChatSnapshot(selectedChat.id), 'poll');
+  }, [getSelectedChatSnapshot, loadMessages, loadingOlderMessages, selectedChat]);
 
   useEffect(() => {
     if (!pollingEnabled || !selectedChat) {
@@ -5889,6 +5928,11 @@ export default function WhatsAppInboxScreen() {
     const latestRenderedMessage = renderedMessagesForChat[renderedMessagesForChat.length - 1];
     const latestRenderedMessageAtMs = getMessageTimestampMs(latestRenderedMessage?.message_at);
     const selectedChatLastMessageAtMs = getMessageTimestampMs(selectedChat.last_message_at);
+
+    if (selectedChatLastMessageAtMs !== null && (latestRenderedMessageAtMs === null || latestRenderedMessageAtMs < selectedChatLastMessageAtMs)) {
+      return;
+    }
+
     const readAt = selectedChatLastMessageAtMs !== null && (latestRenderedMessageAtMs === null || selectedChatLastMessageAtMs >= latestRenderedMessageAtMs)
       ? selectedChat.last_message_at
       : latestRenderedMessage?.message_at ?? new Date().toISOString();

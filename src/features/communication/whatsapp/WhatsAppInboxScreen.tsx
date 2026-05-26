@@ -2966,6 +2966,7 @@ export default function WhatsAppInboxScreen() {
   const [composerRewriteDraft, setComposerRewriteDraft] = useState('');
   const [composerRewriteCustomInstructions, setComposerRewriteCustomInstructions] = useState('');
   const [composerRewriteTone, setComposerRewriteTone] = useState<CommWhatsAppRewriteTone>('grammar');
+  const [composerAiMenuOpen, setComposerAiMenuOpen] = useState(false);
   const [rewritingComposer, setRewritingComposer] = useState(false);
   const [replySuggestionText, setReplySuggestionText] = useState('');
   const [replySuggestionLoading, setReplySuggestionLoading] = useState(false);
@@ -3042,6 +3043,7 @@ export default function WhatsAppInboxScreen() {
   const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersTriggerRef = useRef<HTMLButtonElement | null>(null);
   const mediaDrawerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const composerAiMenuRef = useRef<HTMLDivElement | null>(null);
   const reactionPickerRef = useRef<HTMLDivElement | null>(null);
   const messageActionMenuRef = useRef<HTMLDivElement | null>(null);
   const chatMenuRef = useRef<HTMLDivElement | null>(null);
@@ -4633,6 +4635,22 @@ export default function WhatsAppInboxScreen() {
     window.addEventListener('mousedown', handlePointerDown);
     return () => window.removeEventListener('mousedown', handlePointerDown);
   }, [attachmentMenuOpen]);
+
+  useEffect(() => {
+    if (!composerAiMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (composerAiMenuRef.current && target && !composerAiMenuRef.current.contains(target)) {
+        setComposerAiMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('mousedown', handlePointerDown);
+    return () => window.removeEventListener('mousedown', handlePointerDown);
+  }, [composerAiMenuOpen]);
 
   useEffect(() => {
     if (!openReactionPickerMessageId) {
@@ -7798,6 +7816,18 @@ export default function WhatsAppInboxScreen() {
     };
     const requestId = ++followUpGenerationRequestIdRef.current;
     const targetChatId = selectedChat.id;
+    const followUpRequestPayload = {
+      chatId: selectedChat.id,
+      customInstructions,
+      tone,
+      variantCount: options.variantCount,
+      salesTechniques: normalizedSalesTechniques,
+      situationPresetIds: normalizedSituationPresetIds,
+      autoSelectContext: true,
+      manualContext: activeManualContext,
+      selectedChat,
+    };
+    console.debug('[FollowUpAI][inbox] request', followUpRequestPayload);
     setGeneratingFollowUp(true);
 
     try {
@@ -7810,7 +7840,18 @@ export default function WhatsAppInboxScreen() {
         autoSelectContext: true,
         manualContext: activeManualContext,
       });
+      console.debug('[FollowUpAI][inbox] response', {
+        requestId,
+        chatId: selectedChat.id,
+        result,
+      });
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        console.debug('[FollowUpAI][inbox] response ignored due to stale request', {
+          requestId,
+          activeRequestId: followUpGenerationRequestIdRef.current,
+          targetChatId,
+          selectedChatId: selectedChatIdRef.current,
+        });
         return;
       }
       setFollowUpDraft(result.text.trim());
@@ -7824,6 +7865,13 @@ export default function WhatsAppInboxScreen() {
       setFollowUpNextAction(result.nextAction ?? null);
     } catch (error) {
       if (requestId !== followUpGenerationRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
+        console.debug('[FollowUpAI][inbox] error ignored due to stale request', {
+          requestId,
+          activeRequestId: followUpGenerationRequestIdRef.current,
+          targetChatId,
+          selectedChatId: selectedChatIdRef.current,
+          error,
+        });
         return;
       }
       console.error('[WhatsAppInbox] erro ao gerar follow-up', error);
@@ -9279,27 +9327,54 @@ export default function WhatsAppInboxScreen() {
                       >
                         <Smile className="h-5 w-5" />
                       </button>
-                        <button
-                          type="button"
-                          onClick={handleOpenComposerRewriteModal}
-                          disabled={Boolean(composerRewriteDisabledReason)}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${composerRewriteModalOpen ? 'is-open' : ''}`}
-                          aria-label="Reescrever mensagem com IA"
-                          aria-expanded={composerRewriteModalOpen}
-                          title={composerRewriteDisabledReason ?? 'Reescrever mensagem com IA'}
-                        >
-                          <Sparkles className="h-4.5 w-4.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleGenerateReplySuggestion(true)}
-                          disabled={Boolean(replySuggestionDisabledReason) || replySuggestionLoading}
-                          className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
-                          aria-label="Sugerir resposta com IA"
-                          title={replySuggestionDisabledReason ?? 'Sugerir resposta com IA'}
-                        >
-                          {replySuggestionLoading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <MessageCircle className="h-4.5 w-4.5" />}
-                        </button>
+                    </div>
+
+                    <div ref={composerAiMenuRef} className={`relative flex shrink-0 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
+                      {composerAiMenuOpen ? (
+                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-3 min-w-[238px] overflow-hidden rounded-2xl border p-2 shadow-2xl">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setComposerAiMenuOpen(false);
+                              handleOpenComposerRewriteModal();
+                            }}
+                            disabled={Boolean(composerRewriteDisabledReason)}
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                            title={composerRewriteDisabledReason ?? 'Reescrever mensagem com IA'}
+                          >
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
+                              <Sparkles className="h-4 w-4" />
+                            </span>
+                            <span>Reescrever texto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setComposerAiMenuOpen(false);
+                              void handleGenerateReplySuggestion(true);
+                            }}
+                            disabled={Boolean(replySuggestionDisabledReason) || replySuggestionLoading}
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                            title={replySuggestionDisabledReason ?? 'Sugerir resposta com IA'}
+                          >
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-ink,#8b4d12)]">
+                              {replySuggestionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                            </span>
+                            <span>Sugerir resposta</span>
+                          </button>
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setComposerAiMenuOpen((current) => !current)}
+                        disabled={Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)}
+                        className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
+                        aria-label="Ações com IA"
+                        aria-expanded={composerAiMenuOpen}
+                        title="Ações com IA"
+                      >
+                        {replySuggestionLoading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Sparkles className="h-4.5 w-4.5" />}
+                      </button>
                     </div>
 
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>

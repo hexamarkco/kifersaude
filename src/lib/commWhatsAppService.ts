@@ -1194,18 +1194,23 @@ export const commWhatsAppService = {
   },
 
   async generateFollowUp(chatId: string, options: { customInstructions?: string; tone?: CommWhatsAppFollowUpTone; variantCount?: number; salesTechniques?: string[]; situationPresetIds?: string[]; autoSelectContext?: boolean; manualContext?: { tone?: boolean; situationPresetIds?: boolean; salesTechniques?: boolean } } = {}): Promise<CommWhatsAppFollowUpSuggestion> {
+    const requestBody = {
+      chatId,
+      customInstructions: options.customInstructions?.trim() || '',
+      tone: options.tone ?? 'consultivo',
+      variantCount: options.variantCount,
+      salesTechniques: options.salesTechniques ?? [],
+      situationPresetIds: options.situationPresetIds ?? [],
+      autoSelectContext: options.autoSelectContext !== false,
+      manualContext: options.manualContext ?? {},
+    };
+    console.debug('[FollowUpAI][service] invoke request', requestBody);
+
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-generate-follow-up', {
-      body: {
-        chatId,
-        customInstructions: options.customInstructions?.trim() || '',
-        tone: options.tone ?? 'consultivo',
-        variantCount: options.variantCount,
-        salesTechniques: options.salesTechniques ?? [],
-        situationPresetIds: options.situationPresetIds ?? [],
-        autoSelectContext: options.autoSelectContext !== false,
-        manualContext: options.manualContext ?? {},
-      },
+      body: requestBody,
     });
+
+    console.debug('[FollowUpAI][service] invoke response', { data, error });
 
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel gerar o follow-up com IA.'));

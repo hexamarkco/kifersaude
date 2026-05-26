@@ -941,6 +941,24 @@ Deno.serve(async (req: Request) => {
       salesTechniques: isManualContextFlagEnabled(body.manualContext, 'salesTechniques'),
     };
 
+    console.log('[FollowUpAI][edge] request body', {
+      body,
+      parsed: {
+        chatId,
+        customInstructions,
+        requestedTone,
+        refinementMode,
+        currentMessage,
+        adjustmentInstruction,
+        variantCount,
+        shouldGenerateVariations,
+        requestedSalesTechniqueIds,
+        requestedSituationPresetIds,
+        autoSelectContext,
+        manualContext,
+      },
+    });
+
     if (!chatId) {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para gerar follow-up.' }), {
         status: 400,
@@ -1004,6 +1022,20 @@ Deno.serve(async (req: Request) => {
       .map((message) => buildTranscriptLine(message, leadContext.nome, systemTimeZone))
       .filter((line): line is string => Boolean(line));
 
+    console.log('[FollowUpAI][edge] loaded context', {
+      chat,
+      lead,
+      systemSettings,
+      promptIntegration,
+      systemTimeZone,
+      companyName,
+      leadContext,
+      rawMessagesCount: messages.length,
+      rawMessages: messages,
+      transcriptLinesCount: transcriptLines.length,
+      transcriptLines,
+    });
+
     if (transcriptLines.length === 0) {
       return new Response(JSON.stringify({ error: 'Nao ha historico util suficiente para gerar follow-up.' }), {
         status: 400,
@@ -1037,27 +1069,38 @@ Deno.serve(async (req: Request) => {
 
     if (autoSelectContext) {
       try {
+        const recommendationSystemPrompt = [
+          'Voce classifica o contexto de uma conversa comercial de planos de saude para configurar um follow-up.',
+          'Retorne apenas JSON valido, sem markdown, no formato {"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"rationale":"...","nextAction":{"type":"schedule|wait|mark_lost_recommended","reason":"...","priority":"baixa|normal|alta"}}.',
+          `Cenarios permitidos: ${FOLLOW_UP_SITUATION_PRESETS.map((preset) => `${preset.id} (${preset.label})`).join(', ')}. Use no maximo 2 e somente quando fizer sentido claro no historico.`,
+          `Tons permitidos: ${FOLLOW_UP_TONES.join(', ')}.`,
+          `Tecnicas permitidas: ${FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => technique.id).join(', ')}. Use entre 1 e 3 tecnicas.`,
+          'Decida nextAction lendo a conversa inteira, nao por quantidade bruta de mensagens. Varios envios seguidos da mesma proposta/cotacao contam como um unico bloco de contexto, nao como varias tentativas de follow-up.',
+          'Use mark_lost_recommended somente quando houver sinais claros de varias tentativas reais em dias/momentos diferentes sem resposta util do cliente. Se a proposta acabou de ser enviada ou ainda e o primeiro retorno apos proposta, use schedule.',
+          'Use wait quando o cliente ja respondeu, existe combinado pendente, ou ainda nao cabe nova cobranca.',
+          'Nao invente objeções, combinados ou fatos. Se o contexto estiver neutro, prefira consultivo com rapport e assumptive-close e nextAction schedule.',
+        ].join('\n');
+        console.log('[FollowUpAI][edge] auto-context prompt', {
+          systemPrompt: recommendationSystemPrompt,
+          userPrompt: baseContextPrompt,
+          temperature: 0.2,
+          maxTokens: 260,
+          preferDefaultModel: true,
+        });
         const recommendationResult = await generateTextWithRouting({
           supabaseAdmin,
           task: 'follow_up_generation',
-          systemPrompt: [
-            'Voce classifica o contexto de uma conversa comercial de planos de saude para configurar um follow-up.',
-            'Retorne apenas JSON valido, sem markdown, no formato {"situationPresetIds":["..."],"tone":"...","salesTechniques":["..."],"rationale":"...","nextAction":{"type":"schedule|wait|mark_lost_recommended","reason":"...","priority":"baixa|normal|alta"}}.',
-            `Cenarios permitidos: ${FOLLOW_UP_SITUATION_PRESETS.map((preset) => `${preset.id} (${preset.label})`).join(', ')}. Use no maximo 2 e somente quando fizer sentido claro no historico.`,
-            `Tons permitidos: ${FOLLOW_UP_TONES.join(', ')}.`,
-            `Tecnicas permitidas: ${FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => technique.id).join(', ')}. Use entre 1 e 3 tecnicas.`,
-            'Decida nextAction lendo a conversa inteira, nao por quantidade bruta de mensagens. Varios envios seguidos da mesma proposta/cotacao contam como um unico bloco de contexto, nao como varias tentativas de follow-up.',
-            'Use mark_lost_recommended somente quando houver sinais claros de varias tentativas reais em dias/momentos diferentes sem resposta util do cliente. Se a proposta acabou de ser enviada ou ainda e o primeiro retorno apos proposta, use schedule.',
-            'Use wait quando o cliente ja respondeu, existe combinado pendente, ou ainda nao cabe nova cobranca.',
-            'Nao invente objeções, combinados ou fatos. Se o contexto estiver neutro, prefira consultivo com rapport e assumptive-close e nextAction schedule.',
-          ].join('\n'),
+          systemPrompt: recommendationSystemPrompt,
           userPrompt: baseContextPrompt,
           temperature: 0.2,
           maxTokens: 260,
           preferDefaultModel: true,
         });
 
+        console.log('[FollowUpAI][edge] auto-context response', recommendationResult);
+
         aiContext = parseAiContextRecommendation(recommendationResult.text);
+        console.log('[FollowUpAI][edge] parsed auto-context', aiContext);
       } catch (error) {
         console.error('[comm-whatsapp-generate-follow-up] erro ao classificar contexto automatico', error);
       }
@@ -1158,6 +1201,22 @@ Deno.serve(async (req: Request) => {
         ].join('\n')
       : baseUserPrompt;
 
+    console.log('[FollowUpAI][edge] final generation prompt', {
+      configuredPromptBase,
+      configuredInstructions,
+      selectedContextPromptSection,
+      generationCustomInstructions,
+      salesTechniques,
+      effectiveSituationPresetIds,
+      effectiveTone,
+      effectiveSalesTechniqueIds,
+      aiContext,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.5,
+      maxTokens: shouldGenerateVariations ? Math.min(900, 260 * variantCount) : 320,
+    });
+
     const result = await generateTextWithRouting({
       supabaseAdmin,
       task: 'follow_up_generation',
@@ -1178,6 +1237,14 @@ Deno.serve(async (req: Request) => {
       effectiveSituationPresetIds,
       aiContext,
       now,
+    });
+
+    console.log('[FollowUpAI][edge] final generation response', {
+      result,
+      generatedText,
+      variations,
+      responseText,
+      nextAction,
     });
 
     return new Response(

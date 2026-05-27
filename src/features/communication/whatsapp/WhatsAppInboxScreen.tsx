@@ -2957,6 +2957,7 @@ export default function WhatsAppInboxScreen() {
   const [localOutgoingMessages, setLocalOutgoingMessages] = useState<CommWhatsAppMessage[]>([]);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [selectedMediaComposerAttachmentId, setSelectedMediaComposerAttachmentId] = useState<string | null>(null);
+  const [selectedDocumentComposerAttachmentId, setSelectedDocumentComposerAttachmentId] = useState<string | null>(null);
   const [mediaUploadProgress, setMediaUploadProgress] = useState<MediaUploadProgress | null>(null);
   const [isComposerExpanded, setIsComposerExpanded] = useState(false);
   const [operationalState, setOperationalState] = useState<CommWhatsAppOperationalState | null>(null);
@@ -3099,6 +3100,10 @@ export default function WhatsAppInboxScreen() {
   const selectedMediaComposerAttachment = useMemo(
     () => visualComposerAttachments.find((attachment) => attachment.id === selectedMediaComposerAttachmentId) ?? visualComposerAttachments[0] ?? null,
     [selectedMediaComposerAttachmentId, visualComposerAttachments],
+  );
+  const selectedDocumentComposerAttachment = useMemo(
+    () => documentComposerAttachments.find((attachment) => attachment.id === selectedDocumentComposerAttachmentId) ?? documentComposerAttachments[0] ?? null,
+    [documentComposerAttachments, selectedDocumentComposerAttachmentId],
   );
   const {
     messageDraft,
@@ -8359,6 +8364,19 @@ export default function WhatsAppInboxScreen() {
     }
   }, [selectedMediaComposerAttachmentId, visualComposerAttachments]);
 
+  useEffect(() => {
+    if (documentComposerAttachments.length === 0) {
+      if (selectedDocumentComposerAttachmentId !== null) {
+        setSelectedDocumentComposerAttachmentId(null);
+      }
+      return;
+    }
+
+    if (!selectedDocumentComposerAttachmentId || !documentComposerAttachments.some((attachment) => attachment.id === selectedDocumentComposerAttachmentId)) {
+      setSelectedDocumentComposerAttachmentId(documentComposerAttachments[0].id);
+    }
+  }, [documentComposerAttachments, selectedDocumentComposerAttachmentId]);
+
   const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (quickReplyMenuOpen && quickReplyMenuHasResults) {
       if (event.key === 'ArrowDown') {
@@ -9151,110 +9169,151 @@ export default function WhatsAppInboxScreen() {
                     </div>
                   ) : null}
 
-                  {documentComposerAttachments.length > 0 && (
-                    <div className="whatsapp-inbox-attachment-tray mb-3 max-h-[min(42vh,22rem)] space-y-2 overflow-y-auto pr-1">
-                      <div className="whatsapp-inbox-attachment-tray-header flex flex-wrap items-center justify-between gap-2 rounded-2xl border px-3 py-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span className="whatsapp-inbox-attachment-tray-count inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[11px] font-semibold">
-                            {documentComposerAttachments.length}
-                          </span>
+                  {documentComposerAttachments.length > 0 && selectedDocumentComposerAttachment ? (() => {
+                    const selectedExtension = selectedDocumentComposerAttachment.file.name.split('.').pop()?.toUpperCase() || 'DOC';
+                    const selectedIsPdf = selectedDocumentComposerAttachment.file.type === 'application/pdf' || selectedExtension === 'PDF';
+                    const selectedUploading = sending && mediaUploadProgress?.attachmentId === selectedDocumentComposerAttachment.id;
+
+                    return (
+                      <div className="whatsapp-inbox-document-composer mb-3 overflow-hidden rounded-2xl border">
+                        <div className="whatsapp-inbox-document-composer-header flex items-center justify-between gap-3 border-b px-3 py-2.5">
                           <div className="min-w-0">
-                            <p className="truncate text-xs font-semibold text-[var(--panel-text-soft,#5b4635)]">
-                              {documentComposerAttachments.length === 1 ? '1 anexo pronto para envio' : `${documentComposerAttachments.length} anexos prontos para envio`}
+                            <p className="truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">{selectedDocumentComposerAttachment.file.name}</p>
+                            <p className="text-xs text-[var(--panel-text-muted,#8a735f)]">
+                              {formatFileSize(selectedDocumentComposerAttachment.file.size) || 'Documento'} · {selectedExtension}
                             </p>
-                            <p className="text-[11px] text-[var(--panel-text-muted,#6b7280)]">Serão enviados em sequência</p>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => handleClearAttachment()}
+                            className="whatsapp-inbox-media-composer-close inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition"
+                            aria-label="Remover documentos"
+                            title="Remover documentos"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
                         </div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => handleClearAttachment()}
-                          className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          Limpar
-                        </Button>
-                      </div>
-                      <div className={documentComposerAttachments.length > 1 ? 'grid grid-cols-2 gap-2 xl:grid-cols-3' : 'space-y-2'}>
-                      {documentComposerAttachments.map((attachment) => {
-                        const isUploadingThisAttachment = sending && mediaUploadProgress?.attachmentId === attachment.id;
-                        const compactCard = documentComposerAttachments.length > 1;
-                        const attachmentLabel = attachment.kind === 'image' ? 'Imagem' : attachment.kind === 'video' ? 'Vídeo' : attachment.kind === 'audio' ? 'Áudio' : 'Documento';
 
-                        return (
-                          <div key={attachment.id} className={cx('whatsapp-inbox-attachment-card rounded-2xl border px-3 py-3', compactCard && 'whatsapp-inbox-attachment-card-compact p-2.5')}>
-                            <div className={cx('flex items-start gap-3', compactCard && 'flex-col gap-2')}>
-                              <div className={cx('relative overflow-hidden rounded-2xl', compactCard ? 'w-full' : 'shrink-0')}>
-                                <div className={cx('whatsapp-inbox-attachment-preview flex items-center justify-center overflow-hidden rounded-2xl', compactCard ? 'h-28 w-full' : 'max-h-[220px] min-h-[140px] min-w-[140px]')}>
-                                  {attachment.kind === 'image' && attachment.previewUrl ? (
-                                    <img src={attachment.previewUrl} alt={attachment.file.name} className="h-full w-full object-cover" />
-                                  ) : attachment.kind === 'video' && attachment.previewUrl ? (
-                                    <video controls preload="metadata" className="h-full w-full bg-black object-cover">
-                                      <source src={attachment.previewUrl} type={attachment.file.type || undefined} />
-                                    </video>
-                                  ) : attachment.kind === 'audio' ? (
-                                    <FileAudio className="h-7 w-7 opacity-80" />
-                                  ) : attachment.kind === 'image' ? (
-                                    <FileImage className="h-7 w-7 opacity-80" />
-                                  ) : attachment.kind === 'video' ? (
-                                    <Images className="h-7 w-7 opacity-80" />
-                                  ) : (
-                                    <FileText className="h-7 w-7 opacity-80" />
-                                  )}
-                                </div>
-                                <span className="whatsapp-inbox-attachment-kind-badge absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]">
-                                  {attachmentLabel}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleClearAttachment(attachment.id)}
-                                  className="whatsapp-inbox-attachment-dismiss absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full transition"
-                                  aria-label="Remover anexo"
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </button>
+                        <div className="whatsapp-inbox-document-composer-stage relative flex min-h-[min(48vh,30rem)] items-center justify-center p-3 sm:p-4">
+                          {selectedIsPdf && selectedDocumentComposerAttachment.previewUrl ? (
+                            <iframe
+                              src={`${selectedDocumentComposerAttachment.previewUrl}#toolbar=1&navpanes=0`}
+                              title={selectedDocumentComposerAttachment.file.name}
+                              className="whatsapp-inbox-document-composer-pdf h-[min(46vh,28rem)] w-full rounded-xl border"
+                            />
+                          ) : (
+                            <div className="whatsapp-inbox-document-composer-fallback flex max-w-md flex-col items-center gap-3 rounded-2xl border px-6 py-8 text-center">
+                              <div className="whatsapp-inbox-document-composer-extension flex h-16 min-w-16 items-center justify-center rounded-2xl border px-3 text-sm font-bold tracking-[0.08em]">
+                                {selectedExtension.slice(0, 4)}
                               </div>
-
-                              <div className="min-w-0 flex-1 space-y-2">
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{attachment.file.name}</p>
-                                  <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">{formatFileSize(attachment.file.size)}</p>
-                                </div>
-
-                                {isUploadingThisAttachment ? (
-                                  <div className="space-y-1.5">
-                                    <div className="h-1.5 overflow-hidden rounded-full bg-black/10">
-                                      <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress?.progress ?? 0}%` }} />
-                                    </div>
-                                    <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">
-                                      Enviando anexo {mediaUploadProgress?.currentIndex} de {mediaUploadProgress?.total}... {mediaUploadProgress?.progress ?? 0}%
-                                    </p>
-                                  </div>
-                                ) : null}
-
-                                {isUploadingThisAttachment ? (
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <Button
-                                      type="button"
-                                      variant="secondary"
-                                      size="sm"
-                                      onClick={handleCancelMediaUpload}
-                                      className="whatsapp-inbox-attachment-action h-8 rounded-xl px-3 text-[11px]"
-                                    >
-                                      <X className="h-3.5 w-3.5" />
-                                      Cancelar upload
-                                    </Button>
-                                  </div>
-                                ) : null}
+                              <div>
+                                <p className="text-sm font-semibold text-[var(--panel-text,#1f2937)]">Preview indisponível para este formato</p>
+                                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
+                                  O arquivo será enviado normalmente. PDFs podem ser visualizados antes do envio.
+                                </p>
                               </div>
                             </div>
+                          )}
+
+                          {selectedUploading ? (
+                            <div className="absolute bottom-3 left-4 right-4 rounded-full bg-black/25 p-1 backdrop-blur">
+                              <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
+                                <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress?.progress ?? 0}%` }} />
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="whatsapp-inbox-document-composer-caption flex items-center gap-2 border-t px-3 py-2.5">
+                          <button
+                            type="button"
+                            onClick={handleToggleMediaDrawer}
+                            disabled={!selectedChat}
+                            className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${mediaDrawerOpen ? 'is-open' : ''}`}
+                            aria-label="Emojis"
+                            aria-expanded={mediaDrawerOpen}
+                            title="Emoji, GIF e figurinha"
+                          >
+                            <Smile className="h-5 w-5" />
+                          </button>
+                          <textarea
+                            ref={composerTextareaRef}
+                            rows={1}
+                            value={messageDraft}
+                            onChange={handleComposerChange}
+                            onPaste={handleComposerPaste}
+                            onKeyDown={handleComposerKeyDown}
+                            onClick={(event) => syncComposerSelection(event.currentTarget)}
+                            onKeyUp={(event) => syncComposerSelection(event.currentTarget)}
+                            onSelect={(event) => syncComposerSelection(event.currentTarget)}
+                            onFocus={(event) => {
+                              setComposerFocused(true);
+                              syncComposerSelection(event.currentTarget);
+                            }}
+                            onBlur={() => setComposerFocused(false)}
+                            placeholder="Digite uma mensagem"
+                            disabled={generatingFollowUp || sending}
+                            className="whatsapp-inbox-composer-input min-h-10 flex-1 resize-none border-none bg-transparent px-0 py-2 text-sm leading-6 focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleComposerSubmit}
+                            disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
+                            className="whatsapp-inbox-composer-action is-active inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60"
+                            aria-label="Enviar documento"
+                            title={sendDisabledReason ?? undefined}
+                          >
+                            {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <SendHorizontal className="h-5 w-5" />}
+                          </button>
+                        </div>
+
+                        <div className="whatsapp-inbox-document-composer-strip flex items-center justify-center gap-2 border-t px-3 py-3">
+                          <div className="flex max-w-full items-center gap-2 overflow-x-auto pb-1">
+                            {documentComposerAttachments.map((attachment) => {
+                              const extension = attachment.file.name.split('.').pop()?.toUpperCase() || 'DOC';
+                              const selected = attachment.id === selectedDocumentComposerAttachment.id;
+                              return (
+                                <div key={attachment.id} className={`whatsapp-inbox-document-composer-item relative flex h-14 min-w-[12rem] max-w-[16rem] shrink-0 items-center gap-2 overflow-hidden rounded-xl border px-2.5 transition ${selected ? 'is-selected' : ''}`}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedDocumentComposerAttachmentId(attachment.id)}
+                                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                                    aria-label="Selecionar documento"
+                                  >
+                                    <span className="whatsapp-inbox-document-composer-mini-extension flex h-9 min-w-9 items-center justify-center rounded-lg border px-1 text-[10px] font-bold tracking-[0.08em]">
+                                      {extension.slice(0, 4)}
+                                    </span>
+                                    <span className="min-w-0">
+                                      <span className="block truncate text-xs font-semibold">{attachment.file.name}</span>
+                                      <span className="block truncate text-[11px] opacity-70">{formatFileSize(attachment.file.size) || extension}</span>
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleClearAttachment(attachment.id)}
+                                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black"
+                                    aria-label="Remover documento"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                            <button
+                              type="button"
+                              onClick={() => handleAttachmentMenuAction('document')}
+                              disabled={voiceRecordingState !== 'idle' || generatingFollowUp || sending}
+                              className="whatsapp-inbox-media-composer-add inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border transition disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label="Adicionar documento"
+                              title="Adicionar documento"
+                            >
+                              <Plus className="h-5 w-5" />
+                            </button>
                           </div>
-                        );
-                      })}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })() : null}
 
                   {visualComposerAttachments.length > 0 && selectedMediaComposerAttachment ? (
                     <div className="whatsapp-inbox-media-composer mb-3 overflow-hidden rounded-2xl border">

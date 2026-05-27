@@ -37,3 +37,5 @@ scripts/__pycache__/
 scripts/*.pyc
 scripts/hospital_location_report.json
 scripts/hospital_location_report.csv
+
+.vercel

@@ -7649,10 +7649,29 @@ export default function WhatsAppInboxScreen() {
     setComposerRewriteTone('grammar');
   }, []);
 
+  const applyTextToComposer = useCallback((nextValue: string) => {
+    const nextCursor = nextValue.length;
+
+    setMessageDraft(nextValue);
+    setComposerSelection({ start: nextCursor, end: nextCursor });
+    setComposerFocused(true);
+
+    requestAnimationFrame(() => {
+      const target = composerTextareaRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [setComposerFocused, setComposerSelection, setMessageDraft]);
+
   const rewriteComposerText = useCallback(async (
     sourceText: string,
     tone: CommWhatsAppRewriteTone,
     customInstructions: string,
+    options: { applyToComposer?: boolean; successMessage?: string } = {},
   ) => {
     if (!sourceText.trim()) {
       toast.error('Digite uma mensagem para reescrever com IA.');
@@ -7668,14 +7687,34 @@ export default function WhatsAppInboxScreen() {
         tone,
         customInstructions,
       });
-      setComposerRewriteDraft(result.text.trim());
+      const rewrittenText = result.text.trim();
+      if (options.applyToComposer) {
+        applyTextToComposer(rewrittenText);
+        if (options.successMessage) {
+          toast.success(options.successMessage);
+        }
+      } else {
+        setComposerRewriteDraft(rewrittenText);
+      }
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao reescrever mensagem do composer', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel reescrever a mensagem com IA.');
     } finally {
       setRewritingComposer(false);
     }
-  }, [selectedChat?.id]);
+  }, [applyTextToComposer, selectedChat?.id]);
+
+  const handleQuickRewriteComposerText = useCallback((tone: CommWhatsAppRewriteTone) => {
+    if (composerRewriteDisabledReason) {
+      toast.error(composerRewriteDisabledReason);
+      return;
+    }
+
+    const successMessage = tone === 'adapt_context'
+      ? 'Mensagem adaptada ao contexto.'
+      : 'Mensagem corrigida.';
+    void rewriteComposerText(messageDraft, tone, '', { applyToComposer: true, successMessage });
+  }, [composerRewriteDisabledReason, messageDraft, rewriteComposerText]);
 
   const handleOpenComposerRewriteModal = useCallback(() => {
     if (composerRewriteDisabledReason) {
@@ -7700,24 +7739,9 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const nextValue = composerRewriteDraft;
-    const nextCursor = nextValue.length;
-
-    setMessageDraft(nextValue);
-    setComposerSelection({ start: nextCursor, end: nextCursor });
-    setComposerFocused(true);
+    applyTextToComposer(composerRewriteDraft);
     handleCloseComposerRewriteModal();
-
-    requestAnimationFrame(() => {
-      const target = composerTextareaRef.current;
-      if (!target) {
-        return;
-      }
-
-      target.focus();
-      target.setSelectionRange(nextCursor, nextCursor);
-    });
-  }, [composerRewriteDraft, handleCloseComposerRewriteModal, setComposerFocused, setComposerSelection, setMessageDraft]);
+  }, [applyTextToComposer, composerRewriteDraft, handleCloseComposerRewriteModal]);
 
   const handleGenerateReplySuggestion = useCallback(async (manual = false) => {
     if (!selectedChatId || replySuggestionDisabledReason) {
@@ -9340,16 +9364,46 @@ export default function WhatsAppInboxScreen() {
                             type="button"
                             onClick={() => {
                               setComposerAiMenuOpen(false);
+                              handleQuickRewriteComposerText('grammar');
+                            }}
+                            disabled={Boolean(composerRewriteDisabledReason) || rewritingComposer}
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                            title={composerRewriteDisabledReason ?? 'Corrigir texto com IA'}
+                          >
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
+                              {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                            </span>
+                            <span>Corrigir texto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setComposerAiMenuOpen(false);
+                              handleQuickRewriteComposerText('adapt_context');
+                            }}
+                            disabled={Boolean(composerRewriteDisabledReason) || rewritingComposer}
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                            title={composerRewriteDisabledReason ?? 'Adaptar texto ao contexto'}
+                          >
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
+                              {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            </span>
+                            <span>Adaptar ao contexto</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setComposerAiMenuOpen(false);
                               handleOpenComposerRewriteModal();
                             }}
                             disabled={Boolean(composerRewriteDisabledReason)}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
-                            title={composerRewriteDisabledReason ?? 'Reescrever mensagem com IA'}
+                            title={composerRewriteDisabledReason ?? 'Abrir opções de reescrita'}
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
-                              <Sparkles className="h-4 w-4" />
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-ink,#8b4d12)]">
+                              <SlidersHorizontal className="h-4 w-4" />
                             </span>
-                            <span>Reescrever texto</span>
+                            <span>Mais opções</span>
                           </button>
                           <button
                             type="button"
@@ -9366,6 +9420,51 @@ export default function WhatsAppInboxScreen() {
                             </span>
                             <span>Sugerir resposta</span>
                           </button>
+                          <div className="my-1 border-t border-[var(--panel-border-subtle,#e7dac8)]" />
+                          <div className="grid grid-cols-3 gap-1 px-1 pb-1" aria-label="Formatacao do texto">
+                            <button
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                setComposerAiMenuOpen(false);
+                                handleApplyComposerTextFormat('bold');
+                              }}
+                              disabled={generatingFollowUp}
+                              className="whatsapp-inbox-composer-icon inline-flex h-8 items-center justify-center rounded-xl text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label="Negrito"
+                              title="Negrito"
+                            >
+                              B
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                setComposerAiMenuOpen(false);
+                                handleApplyComposerTextFormat('italic');
+                              }}
+                              disabled={generatingFollowUp}
+                              className="whatsapp-inbox-composer-icon inline-flex h-8 items-center justify-center rounded-xl text-sm italic transition disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label="Italico"
+                              title="Italico"
+                            >
+                              I
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => {
+                                setComposerAiMenuOpen(false);
+                                handleApplyComposerTextFormat('strike');
+                              }}
+                              disabled={generatingFollowUp}
+                              className="whatsapp-inbox-composer-icon inline-flex h-8 items-center justify-center rounded-xl text-sm line-through transition disabled:cursor-not-allowed disabled:opacity-50"
+                              aria-label="Riscado"
+                              title="Riscado"
+                            >
+                              S
+                            </button>
+                          </div>
                         </div>
                       ) : null}
                       <button
@@ -9378,42 +9477,6 @@ export default function WhatsAppInboxScreen() {
                         title="Ações com IA"
                       >
                         {replySuggestionLoading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Sparkles className="h-4.5 w-4.5" />}
-                      </button>
-                    </div>
-
-                    <div className={`flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`} aria-label="Formatacao do texto">
-                      <button
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => handleApplyComposerTextFormat('bold')}
-                        disabled={generatingFollowUp}
-                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold transition"
-                        aria-label="Negrito"
-                        title="Negrito"
-                      >
-                        B
-                      </button>
-                      <button
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => handleApplyComposerTextFormat('italic')}
-                        disabled={generatingFollowUp}
-                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-xl text-sm italic transition"
-                        aria-label="Italico"
-                        title="Italico"
-                      >
-                        I
-                      </button>
-                      <button
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => handleApplyComposerTextFormat('strike')}
-                        disabled={generatingFollowUp}
-                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-xl text-sm line-through transition"
-                        aria-label="Riscado"
-                        title="Riscado"
-                      >
-                        S
                       </button>
                     </div>
 

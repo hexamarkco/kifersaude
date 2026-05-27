@@ -11,6 +11,11 @@ const SUPABASE_NETWORK_HELP =
 
 const DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS = 15000;
 const AUTH_SUPABASE_REQUEST_TIMEOUT_MS = 30000;
+const DEFAULT_SUPABASE_FUNCTION_REQUEST_TIMEOUT_MS = 60000;
+const LONG_SUPABASE_FUNCTION_REQUEST_TIMEOUT_MS = 180000;
+const LONG_RUNNING_FUNCTION_PATHS = new Set([
+  '/functions/v1/comm-whatsapp-sync-chat',
+]);
 
 const isSupabaseRequestUrl = (value: string): boolean =>
   value.startsWith(supabaseUrl) || value.startsWith(supabaseFunctionsUrl);
@@ -18,6 +23,13 @@ const isSupabaseRequestUrl = (value: string): boolean =>
 const getSupabaseRequestTimeoutMs = (requestUrl: string): number => {
   if (requestUrl.includes('/auth/v1/')) {
     return AUTH_SUPABASE_REQUEST_TIMEOUT_MS;
+  }
+
+  if (requestUrl.startsWith(supabaseFunctionsUrl)) {
+    const pathname = new URL(requestUrl).pathname;
+    return LONG_RUNNING_FUNCTION_PATHS.has(pathname)
+      ? LONG_SUPABASE_FUNCTION_REQUEST_TIMEOUT_MS
+      : DEFAULT_SUPABASE_FUNCTION_REQUEST_TIMEOUT_MS;
   }
 
   return DEFAULT_SUPABASE_REQUEST_TIMEOUT_MS;

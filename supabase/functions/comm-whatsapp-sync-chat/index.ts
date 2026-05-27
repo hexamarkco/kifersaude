@@ -5,6 +5,7 @@ import {
   applyCommWhatsAppMessageEdit,
   cacheCommWhatsAppMedia,
   COMM_WHATSAPP_MODULE,
+  corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiContactCardMeta,
@@ -56,9 +57,7 @@ const isOwnChannelName = (value: string | null | undefined, connectedUserName: s
 };
 
 const jsonHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  ...corsHeaders,
   'Content-Type': 'application/json',
 };
 

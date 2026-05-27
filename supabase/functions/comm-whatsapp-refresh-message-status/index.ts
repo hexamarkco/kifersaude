@@ -51,11 +51,13 @@ type RefreshedStatus = {
   external_message_id: string;
   previous_status: string;
   delivery_status: string;
+  whapi_delivery_status: string;
   updated: boolean;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
-const REFRESHABLE_STATUSES = ['pending', 'queued', 'sending'];
+const REFRESHABLE_STATUSES = ['pending', 'queued', 'sending', 'sent'];
+const normalizeStatus = (value: unknown) => toTrimmedString(value).toLowerCase();
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -139,6 +141,23 @@ async function loadRefreshableMessages(
   }
 
   return (data ?? []) as MessageRow[];
+}
+
+async function loadMessageStatusById(
+  supabaseAdmin: SupabaseClient,
+  messageId: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_messages')
+    .select('delivery_status')
+    .eq('id', messageId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Erro ao carregar status persistido da mensagem: ${error.message}`);
+  }
+
+  return toTrimmedString(data?.delivery_status);
 }
 
 async function loadChatsById(
@@ -275,7 +294,7 @@ Deno.serve(async (req: Request) => {
       const deliveryStatus = extractWhapiMessageStatus(whapiMessage);
       if (!deliveryStatus) continue;
 
-      const updated = await updateCommWhatsAppMessageStatus(supabaseAdmin, {
+      await updateCommWhatsAppMessageStatus(supabaseAdmin, {
         channelId: channel.id,
         externalMessageId,
         deliveryStatus,
@@ -283,12 +302,15 @@ Deno.serve(async (req: Request) => {
         errorMessage: toTrimmedString(whapiMessage.error) || toTrimmedString(whapiMessage.details) || null,
       });
 
+      const persistedStatus = await loadMessageStatusById(supabaseAdmin, row.id) || deliveryStatus;
+
       refreshed.push({
         id: row.id,
         external_message_id: externalMessageId,
         previous_status: row.delivery_status,
-        delivery_status: deliveryStatus,
-        updated,
+        delivery_status: persistedStatus,
+        whapi_delivery_status: deliveryStatus,
+        updated: normalizeStatus(persistedStatus) !== normalizeStatus(row.delivery_status),
       });
     }
 

@@ -63,6 +63,13 @@ import { useComposerDraft, type ComposerSelection } from './hooks/useComposerDra
 import { useVoiceRecording } from './hooks/useVoiceRecording';
 import { useChatSearch } from './hooks/useChatSearch';
 import {
+  mergeCommWhatsAppMessage,
+  mergeCommWhatsAppMessages,
+  messagesReferToSameDelivery,
+  normalizeDeliveryStatus,
+  resolveDeliveryStatus,
+} from './messageStatus';
+import {
   applyPendingChatInboxState,
   buildPendingChatInboxStatePatch,
   clearPendingChatReadState,
@@ -86,8 +93,8 @@ const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 const REACTION_PICKER_WIDTH_PX = 252;
 const REACTION_PICKER_HEIGHT_PX = 52;
-const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000];
-const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending']);
+const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000, 30000, 60000, 120000, 300000];
+const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent']);
 const EMPTY_CHAT_LIST_RETRY_DELAYS_MS = [700, 1500];
 const EMPTY_THREAD_RETRY_DELAYS_MS = [350, 900, 1800];
 
@@ -321,39 +328,8 @@ const getVisiblePreviewText = (value?: string | null, messageType?: string) => (
   isHiddenTechnicalMessageMarker(value, messageType) ? '' : String(value ?? '').trim()
 );
 
-const DELIVERY_STATUS_RANKS: Record<string, number> = {
-  pending: 0,
-  queued: 0,
-  sending: 0,
-  sent: 1,
-  delivered: 2,
-  read: 3,
-  seen: 3,
-  viewed: 3,
-  played: 4,
-};
-
-const normalizeDeliveryStatus = (value?: string | null) => String(value ?? '').trim().toLowerCase();
-
 const resolveStableDeliveryStatus = (incoming?: string | null, previous?: string | null) => {
-  const incomingStatus = normalizeDeliveryStatus(incoming);
-  const previousStatus = normalizeDeliveryStatus(previous);
-
-  if (!previousStatus) {
-    return incoming ?? previous ?? null;
-  }
-
-  if (!incomingStatus) {
-    return previous;
-  }
-
-  const incomingRank = DELIVERY_STATUS_RANKS[incomingStatus];
-  const previousRank = DELIVERY_STATUS_RANKS[previousStatus];
-  if (incomingRank !== undefined && previousRank !== undefined && incomingRank < previousRank) {
-    return previous;
-  }
-
-  return incoming;
+  return resolveDeliveryStatus(previous, incoming);
 };
 
 const preserveUsefulChatPreview = (incoming: CommWhatsAppChat, previous?: CommWhatsAppChat | null): CommWhatsAppChat => {
@@ -764,15 +740,7 @@ const getMessageClientOrderAt = (message?: CommWhatsAppMessage | null) => {
 };
 
 const messagesReferToSameOutgoing = (left: CommWhatsAppMessage, right: CommWhatsAppMessage) => {
-  const leftExternalId = String(left.external_message_id ?? '').trim();
-  const rightExternalId = String(right.external_message_id ?? '').trim();
-  if (leftExternalId && rightExternalId && leftExternalId === rightExternalId) {
-    return true;
-  }
-
-  const leftClientRequestId = getMessageClientRequestId(left);
-  const rightClientRequestId = getMessageClientRequestId(right);
-  return Boolean(leftClientRequestId && rightClientRequestId && leftClientRequestId === rightClientRequestId);
+  return messagesReferToSameDelivery(left, right);
 };
 
 const getMessageQuoteInfo = (message?: CommWhatsAppMessage | null): MessageQuoteInfo | null => {
@@ -1326,17 +1294,7 @@ const compareMessageChronology = (a: CommWhatsAppMessage, b: CommWhatsAppMessage
 };
 
 const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMessage[]) => {
-  const map = new Map<string, CommWhatsAppMessage>();
-
-  for (const message of existing) {
-    map.set(message.id, message);
-  }
-
-  for (const message of incoming) {
-    map.set(message.id, message);
-  }
-
-  return Array.from(map.values()).sort(compareMessageChronology);
+  return mergeCommWhatsAppMessages(existing, incoming).sort(compareMessageChronology);
 };
 
 const REDUNDANT_ACTION_MESSAGE_MARKERS = new Set([
@@ -3547,7 +3505,7 @@ export default function WhatsAppInboxScreen() {
         return message;
       }
 
-      const nextMessage = {
+      const patchMessage = {
         ...message,
         ...patch,
         metadata: {
@@ -3555,6 +3513,7 @@ export default function WhatsAppInboxScreen() {
           ...(patch.metadata ?? {}),
         },
       };
+      const nextMessage = mergeCommWhatsAppMessage(message, patchMessage);
       rememberOutgoingMessageOrder(nextMessage);
       return nextMessage;
     }));
@@ -3663,9 +3622,7 @@ export default function WhatsAppInboxScreen() {
       return filteredMessages;
     }
 
-    const localVisible = localForChat.filter((message) => !filteredMessages.some((serverMessage) => messagesReferToSameOutgoing(message, serverMessage)));
-
-    return mergeMessages(filteredMessages, localVisible);
+    return mergeMessages(filteredMessages, localForChat);
   }, [applyOutgoingOrderToServerMessage, localOutgoingMessages, messages, selectedChatId]);
 
   const mediaViewerMessages = useMemo(
@@ -4027,7 +3984,20 @@ export default function WhatsAppInboxScreen() {
   useCommWhatsAppMessageRealtime(selectedChatId, applyRealtimeMessageChange);
 
   const patchMessageLocally = useCallback((messageId: string, patch: Partial<CommWhatsAppMessage>) => {
-    setMessages((current) => current.map((message) => (message.id === messageId ? { ...message, ...patch } : message)));
+    setMessages((current) => current.map((message) => {
+      if (message.id !== messageId) {
+        return message;
+      }
+
+      return mergeCommWhatsAppMessage(message, {
+        ...message,
+        ...patch,
+        metadata: {
+          ...message.metadata,
+          ...(patch.metadata ?? {}),
+        },
+      });
+    }));
   }, []);
 
   const patchMessageReactionLocally = useCallback((message: CommWhatsAppMessage, emoji: string | null) => {
@@ -5681,18 +5651,23 @@ export default function WhatsAppInboxScreen() {
           setLocalOutgoingMessages((current) => current.map((message) => {
             const externalMessageId = String(message.external_message_id ?? '').trim();
             const refreshed = externalMessageId ? refreshedByExternalId.get(externalMessageId) : null;
-            if (!refreshed || message.delivery_status === refreshed.delivery_status) {
+            if (!refreshed) {
+              return message;
+            }
+
+            const resolvedStatus = resolveDeliveryStatus(message.delivery_status, refreshed.delivery_status) ?? message.delivery_status;
+            if (message.delivery_status === resolvedStatus) {
               return message;
             }
 
             return {
               ...message,
-              delivery_status: refreshed.delivery_status,
+              delivery_status: resolvedStatus,
               status_updated_at: new Date().toISOString(),
             };
           }));
 
-          if (result.updated > 0 || result.refreshed.some((item) => !REFRESHABLE_OUTBOUND_STATUSES.has(item.delivery_status.trim().toLowerCase()))) {
+          if (result.updated > 0 || result.refreshed.some((item) => !REFRESHABLE_OUTBOUND_STATUSES.has(normalizeDeliveryStatus(item.delivery_status)))) {
             void Promise.all([loadMessages(params.chat, 'send'), loadChats()]).catch((error) => {
               console.error('[WhatsAppInbox] erro ao recarregar apos atualizar status ativo', error);
             });
@@ -7590,6 +7565,38 @@ export default function WhatsAppInboxScreen() {
     });
   }, [composerSelection, messageDraft, setComposerFocused, setComposerSelection, setMessageDraft]);
 
+  const handleApplyComposerTextFormat = useCallback((format: WhatsAppTextFormat) => {
+    const textarea = composerTextareaRef.current;
+    const nextSelection = textarea
+      ? {
+          start: textarea.selectionStart ?? composerSelection.start,
+          end: textarea.selectionEnd ?? composerSelection.end,
+        }
+      : composerSelection;
+    const marker = format === 'strike' ? '~' : format === 'italic' ? '_' : '*';
+    const selectedText = messageDraft.slice(nextSelection.start, nextSelection.end);
+    const hasSelection = nextSelection.end > nextSelection.start;
+    const insertion = hasSelection ? `${marker}${selectedText}${marker}` : `${marker}${marker}`;
+    const nextValue = `${messageDraft.slice(0, nextSelection.start)}${insertion}${messageDraft.slice(nextSelection.end)}`;
+    const nextCursor = hasSelection
+      ? nextSelection.end + marker.length * 2
+      : nextSelection.start + marker.length;
+
+    setMessageDraft(nextValue);
+    setComposerSelection({ start: nextCursor, end: nextCursor });
+    setComposerFocused(true);
+
+    requestAnimationFrame(() => {
+      const target = composerTextareaRef.current;
+      if (!target) {
+        return;
+      }
+
+      target.focus();
+      target.setSelectionRange(nextCursor, nextCursor);
+    });
+  }, [composerSelection, messageDraft, setComposerFocused, setComposerSelection, setMessageDraft]);
+
   const handleOpenQuickReplySettings = useCallback(() => {
     setQuickRepliesModalOpen(true);
   }, []);
@@ -7657,6 +7664,7 @@ export default function WhatsAppInboxScreen() {
     try {
       const result = await commWhatsAppService.rewriteMessage({
         message: sourceText,
+        chatId: selectedChat?.id ?? null,
         tone,
         customInstructions,
       });
@@ -7667,7 +7675,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setRewritingComposer(false);
     }
-  }, []);
+  }, [selectedChat?.id]);
 
   const handleOpenComposerRewriteModal = useCallback(() => {
     if (composerRewriteDisabledReason) {
@@ -7681,8 +7689,7 @@ export default function WhatsAppInboxScreen() {
     setComposerRewriteCustomInstructions('');
     setComposerRewriteTone('grammar');
     setComposerRewriteModalOpen(true);
-    void rewriteComposerText(sourceText, 'grammar', '');
-  }, [composerRewriteDisabledReason, messageDraft, rewriteComposerText]);
+  }, [composerRewriteDisabledReason, messageDraft]);
 
   const handleRegenerateComposerRewrite = useCallback(() => {
     void rewriteComposerText(composerRewriteSource, composerRewriteTone, composerRewriteCustomInstructions);
@@ -9371,6 +9378,42 @@ export default function WhatsAppInboxScreen() {
                         title="Ações com IA"
                       >
                         {replySuggestionLoading ? <Loader2 className="h-4.5 w-4.5 animate-spin" /> : <Sparkles className="h-4.5 w-4.5" />}
+                      </button>
+                    </div>
+
+                    <div className={`flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`} aria-label="Formatacao do texto">
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => handleApplyComposerTextFormat('bold')}
+                        disabled={generatingFollowUp}
+                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-xl text-sm font-bold transition"
+                        aria-label="Negrito"
+                        title="Negrito"
+                      >
+                        B
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => handleApplyComposerTextFormat('italic')}
+                        disabled={generatingFollowUp}
+                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-xl text-sm italic transition"
+                        aria-label="Italico"
+                        title="Italico"
+                      >
+                        I
+                      </button>
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => handleApplyComposerTextFormat('strike')}
+                        disabled={generatingFollowUp}
+                        className="whatsapp-inbox-composer-icon inline-flex h-8 w-8 items-center justify-center rounded-xl text-sm line-through transition"
+                        aria-label="Riscado"
+                        title="Riscado"
+                      >
+                        S
                       </button>
                     </div>
 

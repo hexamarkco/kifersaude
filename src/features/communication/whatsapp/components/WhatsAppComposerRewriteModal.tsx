@@ -5,6 +5,11 @@ import type { CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppServic
 
 const TONE_OPTIONS: Array<{ value: CommWhatsAppRewriteTone; label: string; description: string }> = [
   {
+    value: 'adapt_context',
+    label: 'Adaptar ao contexto',
+    description: 'Ajusta a mensagem ao histórico da conversa, como plural, nomes, combinados e momento atual.',
+  },
+  {
     value: 'grammar',
     label: 'Corrigir',
     description: 'Corrige gramatica, ortografia e clareza sem mudar o sentido.',
@@ -67,7 +72,7 @@ export default function WhatsAppComposerRewriteModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Reescrever mensagem com IA"
-      description="Ajuste o tom, refine com instrucoes extras e aplique o texto final no composer quando estiver bom."
+      description="Ajuste o objetivo, clique em reescrever e aplique o texto final no composer quando estiver bom."
       size="xl"
       panelClassName="max-w-5xl"
       footer={(
@@ -89,7 +94,7 @@ export default function WhatsAppComposerRewriteModal({
           <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
             <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Objetivo da reescrita</h3>
             <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
-              Escolha o ajuste principal. A IA preserva a intencao da mensagem.
+              Escolha o ajuste principal. A IA preserva a intencao da mensagem e dados confirmados.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
               {TONE_OPTIONS.map((option) => {

@@ -138,6 +138,7 @@ export type CommWhatsAppRefreshedMessageStatus = {
   external_message_id: string;
   previous_status: string;
   delivery_status: string;
+  whapi_delivery_status?: string;
   updated: boolean;
 };
 
@@ -305,7 +306,7 @@ export type FollowUpAgendaOrganizerApplyResult = {
   skipped: number;
 };
 
-export type CommWhatsAppRewriteTone = 'grammar' | 'professional' | 'friendly' | 'shorter' | 'assertive';
+export type CommWhatsAppRewriteTone = 'grammar' | 'professional' | 'friendly' | 'shorter' | 'assertive' | 'adapt_context';
 
 export type CommWhatsAppFollowUpRefinementSuggestion = CommWhatsAppFollowUpSuggestion;
 
@@ -1298,12 +1299,14 @@ export const commWhatsAppService = {
 
   async rewriteMessage(options: {
     message: string;
+    chatId?: string | null;
     tone?: CommWhatsAppRewriteTone;
     customInstructions?: string;
   }): Promise<CommWhatsAppRewriteSuggestion> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-rewrite-message', {
       body: {
         message: options.message,
+        chatId: options.chatId ?? null,
         tone: options.tone ?? 'grammar',
         customInstructions: options.customInstructions?.trim() || '',
       },

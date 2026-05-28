@@ -5925,6 +5925,12 @@ export default function WhatsAppInboxScreen() {
       : null;
 
     if (!currentChat || !isNearBottomRef.current) {
+      console.debug('[WhatsAppInbox][mark-read] skip:not-ready-or-not-bottom', {
+        source,
+        selectedChatId: selectedChatIdRef.current,
+        hasCurrentChat: Boolean(currentChat),
+        isNearBottom: isNearBottomRef.current,
+      });
       return;
     }
 
@@ -5933,16 +5939,36 @@ export default function WhatsAppInboxScreen() {
       && currentChat.unread_count <= 0;
 
     if (source !== 'scroll' && skipManualUnreadRead) {
+      console.debug('[WhatsAppInbox][mark-read] skip:manual-unread-protection', {
+        source,
+        chatId: currentChat.id,
+        unreadCount: currentChat.unread_count,
+        manualUnread: currentChat.manual_unread,
+      });
       return;
     }
 
     // Manual unread is an explicit reminder; selecting/opening the chat should
     // not clear it until the user reaches the end of the message timeline.
     if (source !== 'scroll' && currentChat.manual_unread && currentChat.unread_count <= 0) {
+      console.debug('[WhatsAppInbox][mark-read] skip:manual-unread-await-scroll', {
+        source,
+        chatId: currentChat.id,
+        unreadCount: currentChat.unread_count,
+        manualUnread: currentChat.manual_unread,
+      });
       return;
     }
 
     if (currentChat.unread_count <= 0 && !currentChat.manual_unread) {
+      console.debug('[WhatsAppInbox][mark-read] skip:already-read', {
+        source,
+        chatId: currentChat.id,
+        unreadCount: currentChat.unread_count,
+        manualUnread: currentChat.manual_unread,
+        lastReadAt: currentChat.last_read_at,
+        lastMessageAt: currentChat.last_message_at,
+      });
       return;
     }
 
@@ -5954,6 +5980,15 @@ export default function WhatsAppInboxScreen() {
     const selectedChatLastMessageAtMs = getMessageTimestampMs(currentChat.last_message_at);
 
     if (selectedChatLastMessageAtMs !== null && (latestRenderedMessageAtMs === null || latestRenderedMessageAtMs < selectedChatLastMessageAtMs)) {
+      console.debug('[WhatsAppInbox][mark-read] skip:last-message-not-rendered', {
+        source,
+        chatId: currentChat.id,
+        selectedChatLastMessageAt: currentChat.last_message_at,
+        selectedChatLastMessageAtMs,
+        latestRenderedMessageAt: latestRenderedMessage?.message_at ?? null,
+        latestRenderedMessageAtMs,
+        renderedMessagesForChat: renderedMessagesForChat.length,
+      });
       return;
     }
 
@@ -5971,11 +6006,33 @@ export default function WhatsAppInboxScreen() {
     const retryCooldownActive = Date.now() - lastAttemptAt < CHAT_READ_RETRY_COOLDOWN_MS;
 
     if (pendingChatReadKeysRef.current.has(readKey) || retryCooldownActive) {
+      console.debug('[WhatsAppInbox][mark-read] skip:in-flight-or-cooldown', {
+        source,
+        chatId: currentChat.id,
+        readAt,
+        readKey,
+        inFlight: pendingChatReadKeysRef.current.has(readKey),
+        retryCooldownActive,
+        msSinceLastAttempt: lastAttemptAt > 0 ? Date.now() - lastAttemptAt : null,
+      });
       return;
     }
 
     pendingChatReadKeysRef.current.add(readKey);
     attemptedChatReadAtByKeyRef.current.set(readKey, Date.now());
+
+    console.debug('[WhatsAppInbox][mark-read] request:start', {
+      source,
+      chatId: currentChat.id,
+      readAt,
+      readKey,
+      unreadCountBefore: currentChat.unread_count,
+      manualUnreadBefore: currentChat.manual_unread,
+      lastReadAtBefore: currentChat.last_read_at,
+      lastMessageAt: currentChat.last_message_at,
+      latestRenderedMessageAt: latestRenderedMessage?.message_at ?? null,
+      isNearBottom: isNearBottomRef.current,
+    });
 
     mergePendingChatInboxState(pendingChatInboxStateRef.current, currentChat.id, readPatch);
     upsertChatLocally({ ...currentChat, ...readPatch });
@@ -5988,6 +6045,21 @@ export default function WhatsAppInboxScreen() {
       messageAt: readAt,
     }).then((result) => {
       const latestChat = latestChatsRef.current.find((chat) => chat.id === currentChat.id) ?? currentChat;
+
+      console.debug('[WhatsAppInbox][mark-read] request:success', {
+        source,
+        chatId: currentChat.id,
+        readAt,
+        result,
+        latestChatBeforePatch: {
+          unreadCount: latestChat.unread_count,
+          manualUnread: latestChat.manual_unread,
+          manualUnreadAt: latestChat.manual_unread_at,
+          lastReadAt: latestChat.last_read_at,
+          lastMessageAt: latestChat.last_message_at,
+        },
+      });
+
       const confirmedPatch: PendingChatInboxStatePatch = {
         unread_count: result.unreadCount,
         manual_unread: result.unreadCount > 0 ? latestChat.manual_unread : false,
@@ -6002,6 +6074,13 @@ export default function WhatsAppInboxScreen() {
         ...confirmedPatch,
       });
 
+      console.debug('[WhatsAppInbox][mark-read] local:patched-from-confirmation', {
+        source,
+        chatId: currentChat.id,
+        readAt,
+        confirmedPatch,
+      });
+
       if (result.unreadCount > 0) {
         console.warn('[WhatsAppInbox] leitura confirmada com nao lidas remanescentes', {
           chatId: currentChat.id,
@@ -6013,13 +6092,25 @@ export default function WhatsAppInboxScreen() {
       }
     }).catch((error) => {
       clearPendingChatReadState(pendingChatInboxStateRef.current, currentChat.id);
-      console.error('[WhatsAppInbox] erro ao marcar chat como lido', error);
+      console.error('[WhatsAppInbox][mark-read] request:error', {
+        source,
+        chatId: currentChat.id,
+        readAt,
+        readKey,
+        error,
+      });
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel marcar a conversa como lida.');
       void loadChats().catch((loadError) => {
-        console.error('[WhatsAppInbox] erro ao recarregar chats apos falha de leitura', loadError);
+        console.error('[WhatsAppInbox][mark-read] reload-after-error:error', loadError);
       });
     }).finally(() => {
       pendingChatReadKeysRef.current.delete(readKey);
+      console.debug('[WhatsAppInbox][mark-read] request:finished', {
+        source,
+        chatId: currentChat.id,
+        readAt,
+        readKey,
+      });
     });
   }, [loadChats, upsertChatLocally]);
 

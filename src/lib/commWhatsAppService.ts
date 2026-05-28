@@ -1143,10 +1143,21 @@ export const commWhatsAppService = {
   async markChatRead(chatId: string, cursor: { messageAt?: string | null; messageId?: string | null } = {}): Promise<CommWhatsAppMarkChatReadResult> {
     await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para marcar a conversa como lida.' });
 
+    console.debug('[WhatsAppInbox][mark-read][service] rpc:start', {
+      chatId,
+      cursor,
+    });
+
     const { data, error } = await supabase.rpc('comm_whatsapp_mark_chat_read', {
       p_chat_id: chatId,
       p_last_seen_message_at: cursor.messageAt ?? null,
       p_last_seen_message_id: cursor.messageId ?? null,
+    });
+
+    console.debug('[WhatsAppInbox][mark-read][service] rpc:result', {
+      chatId,
+      data,
+      error,
     });
 
     if (error) {
@@ -1155,11 +1166,23 @@ export const commWhatsAppService = {
 
     const row = Array.isArray(data) ? data[0] : data;
     if (!row || typeof row !== 'object') {
+      console.warn('[WhatsAppInbox][mark-read][service] rpc:empty-result:fallback-chat-select', {
+        chatId,
+        cursor,
+        data,
+      });
+
       const { data: chat, error: chatError } = await supabase
         .from('comm_whatsapp_chats')
         .select('id, unread_count, last_read_at')
         .eq('id', chatId)
         .maybeSingle();
+
+      console.debug('[WhatsAppInbox][mark-read][service] fallback-chat-select:result', {
+        chatId,
+        chat,
+        chatError,
+      });
 
       if (chatError) {
         throw new Error(getSupabaseErrorMessage(chatError, 'A confirmacao de leitura nao retornou resultado do banco.'));
@@ -1169,11 +1192,14 @@ export const commWhatsAppService = {
         throw new Error('A confirmacao de leitura nao retornou resultado do banco.');
       }
 
-      return {
+      const fallbackResult = {
         id: chat.id,
         unreadCount: typeof chat.unread_count === 'number' && Number.isFinite(chat.unread_count) ? chat.unread_count : 0,
         lastReadAt: typeof chat.last_read_at === 'string' ? chat.last_read_at : null,
       };
+
+      console.debug('[WhatsAppInbox][mark-read][service] fallback:return', fallbackResult);
+      return fallbackResult;
     }
 
     const payload = row as { id?: unknown; unread_count?: unknown; unreadCount?: unknown; last_read_at?: unknown; lastReadAt?: unknown };
@@ -1182,11 +1208,14 @@ export const commWhatsAppService = {
     const unreadCount = typeof unreadCountRaw === 'number' && Number.isFinite(unreadCountRaw) ? unreadCountRaw : 0;
     const lastReadAtRaw = payload.last_read_at ?? payload.lastReadAt;
 
-    return {
+    const result = {
       id: resultId,
       unreadCount,
       lastReadAt: typeof lastReadAtRaw === 'string' ? lastReadAtRaw : null,
     };
+
+    console.debug('[WhatsAppInbox][mark-read][service] rpc:return', result);
+    return result;
   },
 
   async sendTextMessage(chatId: string, text: string, options: {

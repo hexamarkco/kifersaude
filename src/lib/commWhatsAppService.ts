@@ -78,6 +78,12 @@ export type CommWhatsAppDashboardMetrics = {
   recentChats: CommWhatsAppDashboardRecentChat[];
 };
 
+export type CommWhatsAppMarkChatReadResult = {
+  id: string;
+  unreadCount: number;
+  lastReadAt?: string | null;
+};
+
 export type CommWhatsAppFollowUpIntensity = 'leve' | 'moderada' | 'direta' | 'ultima_tentativa';
 
 type ListChatsParams = {
@@ -1134,10 +1140,10 @@ export const commWhatsAppService = {
     };
   },
 
-  async markChatRead(chatId: string, cursor: { messageAt?: string | null; messageId?: string | null } = {}): Promise<void> {
+  async markChatRead(chatId: string, cursor: { messageAt?: string | null; messageId?: string | null } = {}): Promise<CommWhatsAppMarkChatReadResult> {
     await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para marcar a conversa como lida.' });
 
-    const { error } = await supabase.rpc('comm_whatsapp_mark_chat_read', {
+    const { data, error } = await supabase.rpc('comm_whatsapp_mark_chat_read', {
       p_chat_id: chatId,
       p_last_seen_message_at: cursor.messageAt ?? null,
       p_last_seen_message_id: cursor.messageId ?? null,
@@ -1146,6 +1152,23 @@ export const commWhatsAppService = {
     if (error) {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel marcar a conversa como lida.'));
     }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row || typeof row !== 'object') {
+      throw new Error('A confirmacao de leitura nao retornou resultado do banco.');
+    }
+
+    const payload = row as { id?: unknown; unread_count?: unknown; unreadCount?: unknown; last_read_at?: unknown; lastReadAt?: unknown };
+    const resultId = typeof payload.id === 'string' ? payload.id : chatId;
+    const unreadCountRaw = payload.unread_count ?? payload.unreadCount;
+    const unreadCount = typeof unreadCountRaw === 'number' && Number.isFinite(unreadCountRaw) ? unreadCountRaw : 0;
+    const lastReadAtRaw = payload.last_read_at ?? payload.lastReadAt;
+
+    return {
+      id: resultId,
+      unreadCount,
+      lastReadAt: typeof lastReadAtRaw === 'string' ? lastReadAtRaw : null,
+    };
   },
 
   async sendTextMessage(chatId: string, text: string, options: {

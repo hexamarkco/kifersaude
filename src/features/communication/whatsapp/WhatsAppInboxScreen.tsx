@@ -5973,11 +5973,38 @@ export default function WhatsAppInboxScreen() {
 
     void commWhatsAppService.markChatRead(currentChat.id, {
       messageAt: readAt,
+    }).then((result) => {
+      const latestChat = latestChatsRef.current.find((chat) => chat.id === currentChat.id) ?? currentChat;
+      const confirmedPatch: PendingChatInboxStatePatch = {
+        unread_count: result.unreadCount,
+        manual_unread: result.unreadCount > 0 ? latestChat.manual_unread : false,
+        manual_unread_at: result.unreadCount > 0 ? latestChat.manual_unread_at : null,
+        last_read_at: result.lastReadAt ?? readAt,
+      };
+
+      clearPendingChatReadState(pendingChatInboxStateRef.current, currentChat.id);
+
+      upsertChatLocally({
+        ...latestChat,
+        ...confirmedPatch,
+      });
+
+      if (result.unreadCount > 0) {
+        console.warn('[WhatsAppInbox] leitura confirmada com nao lidas remanescentes', {
+          chatId: currentChat.id,
+          readAt,
+          result,
+        });
+      }
     }).catch((error) => {
       clearPendingChatReadState(pendingChatInboxStateRef.current, currentChat.id);
       console.error('[WhatsAppInbox] erro ao marcar chat como lido', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel marcar a conversa como lida.');
+      void loadChats().catch((loadError) => {
+        console.error('[WhatsAppInbox] erro ao recarregar chats apos falha de leitura', loadError);
+      });
     });
-  }, [upsertChatLocally]);
+  }, [loadChats, upsertChatLocally]);
 
   useEffect(() => {
     markSelectedChatReadIfEligible('auto');

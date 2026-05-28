@@ -5916,44 +5916,46 @@ export default function WhatsAppInboxScreen() {
     }
   }, [getSelectedChatSnapshot, loadChats, loadMessages, loadOperationalState, loading, loadingOlderMessages, pollingEnabled]);
 
-  useEffect(() => {
-    if (!selectedChat) {
+  const markSelectedChatReadIfEligible = useCallback((source: 'auto' | 'scroll') => {
+    const currentChat = selectedChatIdRef.current
+      ? latestChatsRef.current.find((chat) => chat.id === selectedChatIdRef.current) ?? null
+      : null;
+
+    if (!currentChat || !isNearBottomRef.current) {
       return;
     }
 
-    const skipManualUnreadRead = manualUnreadSkipReadChatIdRef.current === selectedChat.id
-      && selectedChat.manual_unread
-      && selectedChat.unread_count <= 0;
+    const skipManualUnreadRead = manualUnreadSkipReadChatIdRef.current === currentChat.id
+      && currentChat.manual_unread
+      && currentChat.unread_count <= 0;
 
-    if (skipManualUnreadRead) {
+    if (source !== 'scroll' && skipManualUnreadRead) {
       return;
     }
 
-    // BUG FIX (BUG #2/#11): se o chat foi marcado como nao lido manualmente
-    // e nao ha mensagens novas reais (unread_count == 0), nao disparar
-    // mark-as-read so porque o chat foi selecionado. So zeramos o
-    // manual_unread quando o usuario realmente le (scroll-to-bottom).
-    if (selectedChat.manual_unread && selectedChat.unread_count <= 0) {
+    // Manual unread is an explicit reminder; selecting/opening the chat should
+    // not clear it until the user reaches the end of the message timeline.
+    if (source !== 'scroll' && currentChat.manual_unread && currentChat.unread_count <= 0) {
       return;
     }
 
-    if (selectedChat.unread_count <= 0 && !selectedChat.manual_unread) {
+    if (currentChat.unread_count <= 0 && !currentChat.manual_unread) {
       return;
     }
 
     const renderedMessagesForChat = latestMessagesRef.current
-      .filter((message) => message.chat_id === selectedChat.id)
+      .filter((message) => message.chat_id === currentChat.id)
       .sort(compareMessageChronology);
     const latestRenderedMessage = renderedMessagesForChat[renderedMessagesForChat.length - 1];
     const latestRenderedMessageAtMs = getMessageTimestampMs(latestRenderedMessage?.message_at);
-    const selectedChatLastMessageAtMs = getMessageTimestampMs(selectedChat.last_message_at);
+    const selectedChatLastMessageAtMs = getMessageTimestampMs(currentChat.last_message_at);
 
     if (selectedChatLastMessageAtMs !== null && (latestRenderedMessageAtMs === null || latestRenderedMessageAtMs < selectedChatLastMessageAtMs)) {
       return;
     }
 
     const readAt = selectedChatLastMessageAtMs !== null && (latestRenderedMessageAtMs === null || selectedChatLastMessageAtMs >= latestRenderedMessageAtMs)
-      ? selectedChat.last_message_at
+      ? currentChat.last_message_at
       : latestRenderedMessage?.message_at ?? new Date().toISOString();
     const readPatch: PendingChatInboxStatePatch = {
       unread_count: 0,
@@ -5962,28 +5964,24 @@ export default function WhatsAppInboxScreen() {
       last_read_at: readAt,
     };
 
-    mergePendingChatInboxState(pendingChatInboxStateRef.current, selectedChat.id, readPatch);
+    mergePendingChatInboxState(pendingChatInboxStateRef.current, currentChat.id, readPatch);
+    upsertChatLocally({ ...currentChat, ...readPatch });
 
-    setChats((current) =>
-      current.map((chat) => (chat.id === selectedChat.id
-        ? {
-            ...chat,
-            ...readPatch,
-          }
-        : chat)),
-    );
-
-    if (manualUnreadSkipReadChatIdRef.current === selectedChat.id) {
+    if (manualUnreadSkipReadChatIdRef.current === currentChat.id) {
       manualUnreadSkipReadChatIdRef.current = null;
     }
 
-    void commWhatsAppService.markChatRead(selectedChat.id, {
+    void commWhatsAppService.markChatRead(currentChat.id, {
       messageAt: readAt,
     }).catch((error) => {
-      clearPendingChatReadState(pendingChatInboxStateRef.current, selectedChat.id);
+      clearPendingChatReadState(pendingChatInboxStateRef.current, currentChat.id);
       console.error('[WhatsAppInbox] erro ao marcar chat como lido', error);
     });
-  }, [selectedChat]);
+  }, [upsertChatLocally]);
+
+  useEffect(() => {
+    markSelectedChatReadIfEligible('auto');
+  }, [markSelectedChatReadIfEligible, selectedChat, visibleMessages]);
 
   useEffect(() => {
     if (manualUnreadSkipReadChatIdRef.current && manualUnreadSkipReadChatIdRef.current !== selectedChatId) {
@@ -6096,7 +6094,10 @@ export default function WhatsAppInboxScreen() {
     const container = messagesContainerRef.current;
     if (!container) return;
     isNearBottomRef.current = isScrolledNearBottom(container);
-  }, [isScrolledNearBottom]);
+    if (isNearBottomRef.current) {
+      markSelectedChatReadIfEligible('scroll');
+    }
+  }, [isScrolledNearBottom, markSelectedChatReadIfEligible]);
 
   useEffect(() => {
     const textarea = composerTextareaRef.current;

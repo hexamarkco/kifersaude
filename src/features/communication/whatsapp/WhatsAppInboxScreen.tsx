@@ -97,6 +97,7 @@ const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000, 30000, 60000,
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent']);
 const EMPTY_CHAT_LIST_RETRY_DELAYS_MS = [700, 1500];
 const EMPTY_THREAD_RETRY_DELAYS_MS = [350, 900, 1800];
+const CHAT_READ_RETRY_COOLDOWN_MS = 30_000;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
 type ScrollMode = 'bottom' | 'preserve' | 'prepend' | null;
@@ -3026,6 +3027,8 @@ export default function WhatsAppInboxScreen() {
   const autoLinkSuppressedChatIdRef = useRef<string | null>(null);
   const pendingChatInboxStateRef = useRef<Map<string, PendingChatInboxStatePatch>>(new Map());
   const manualUnreadSkipReadChatIdRef = useRef<string | null>(null);
+  const pendingChatReadKeysRef = useRef<Set<string>>(new Set());
+  const attemptedChatReadAtByKeyRef = useRef<Map<string, number>>(new Map());
   const optimisticMessageTimestampByChatIdRef = useRef<Map<string, number>>(new Map());
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
   const resolvedIdentityPhoneKeysRef = useRef<Set<string>>(new Set());
@@ -5963,6 +5966,16 @@ export default function WhatsAppInboxScreen() {
       manual_unread_at: null,
       last_read_at: readAt,
     };
+    const readKey = `${currentChat.id}:${readAt ?? ''}`;
+    const lastAttemptAt = attemptedChatReadAtByKeyRef.current.get(readKey) ?? 0;
+    const retryCooldownActive = Date.now() - lastAttemptAt < CHAT_READ_RETRY_COOLDOWN_MS;
+
+    if (pendingChatReadKeysRef.current.has(readKey) || retryCooldownActive) {
+      return;
+    }
+
+    pendingChatReadKeysRef.current.add(readKey);
+    attemptedChatReadAtByKeyRef.current.set(readKey, Date.now());
 
     mergePendingChatInboxState(pendingChatInboxStateRef.current, currentChat.id, readPatch);
     upsertChatLocally({ ...currentChat, ...readPatch });
@@ -5995,6 +6008,8 @@ export default function WhatsAppInboxScreen() {
           readAt,
           result,
         });
+      } else {
+        attemptedChatReadAtByKeyRef.current.delete(readKey);
       }
     }).catch((error) => {
       clearPendingChatReadState(pendingChatInboxStateRef.current, currentChat.id);
@@ -6003,6 +6018,8 @@ export default function WhatsAppInboxScreen() {
       void loadChats().catch((loadError) => {
         console.error('[WhatsAppInbox] erro ao recarregar chats apos falha de leitura', loadError);
       });
+    }).finally(() => {
+      pendingChatReadKeysRef.current.delete(readKey);
     });
   }, [loadChats, upsertChatLocally]);
 

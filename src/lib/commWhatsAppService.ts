@@ -1155,7 +1155,25 @@ export const commWhatsAppService = {
 
     const row = Array.isArray(data) ? data[0] : data;
     if (!row || typeof row !== 'object') {
-      throw new Error('A confirmacao de leitura nao retornou resultado do banco.');
+      const { data: chat, error: chatError } = await supabase
+        .from('comm_whatsapp_chats')
+        .select('id, unread_count, last_read_at')
+        .eq('id', chatId)
+        .maybeSingle();
+
+      if (chatError) {
+        throw new Error(getSupabaseErrorMessage(chatError, 'A confirmacao de leitura nao retornou resultado do banco.'));
+      }
+
+      if (!chat) {
+        throw new Error('A confirmacao de leitura nao retornou resultado do banco.');
+      }
+
+      return {
+        id: chat.id,
+        unreadCount: typeof chat.unread_count === 'number' && Number.isFinite(chat.unread_count) ? chat.unread_count : 0,
+        lastReadAt: typeof chat.last_read_at === 'string' ? chat.last_read_at : null,
+      };
     }
 
     const payload = row as { id?: unknown; unread_count?: unknown; unreadCount?: unknown; last_read_at?: unknown; lastReadAt?: unknown };

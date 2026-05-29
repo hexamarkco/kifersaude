@@ -8468,6 +8468,7 @@ export default function WhatsAppInboxScreen() {
     textSegments: string[];
     reminderId: string;
     leadId: string;
+    phone: string | null;
     nextAction: {
       suggestedDateTime: string | null;
       priority: string;
@@ -8487,12 +8488,21 @@ export default function WhatsAppInboxScreen() {
     }> = [];
 
     for (const [index, result] of results.entries()) {
-      const chat = chats.find((c) => c.id === result.chatId);
-      if (!chat) {
-        console.warn('[WhatsAppInbox] chat nao encontrado para lead', result.leadId, 'chatId', result.chatId);
+      const chat = chats.find((c) => c.lead_id === result.leadId) ?? chats.find((c) => c.id === result.chatId);
+
+      if (chat) {
+        sendTextSegments(chat, result.textSegments);
+      } else if (result.phone) {
+        const normalizedPhone = result.phone.replace(/\D/g, '');
+        const externalChatId = `${normalizedPhone}@c.us`;
+        for (const segment of result.textSegments) {
+          void commWhatsAppService.sendTextMessage(externalChatId, segment);
+        }
+      } else {
+        console.warn('[WhatsAppInbox] sem chat e sem telefone para lead', result.leadId);
         continue;
       }
-      sendTextSegments(chat, result.textSegments);
+
       sentIds.push(result.reminderId);
       if (result.nextAction?.suggestedDateTime) {
         nextActions.push({ leadId: result.leadId, nextAction: result.nextAction });
@@ -8510,7 +8520,7 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (sentIds.length === 0) {
-      throw new Error('Nenhum chat encontrado para os leads selecionados. Os leads podem ter sido arquivados ou removidos.');
+      throw new Error('Nenhum lead possui chat ou telefone valido para envio.');
     }
 
     const { error: remindersError } = await supabase.from('reminders').update({ lido: true }).in('id', sentIds);

@@ -76,6 +76,7 @@ type WhatsAppAgendaModalProps = {
     textSegments: string[];
     reminderId: string;
     leadId: string;
+    phone: string | null;
     nextAction: {
       suggestedDateTime: string | null;
       priority: string;
@@ -1270,6 +1271,7 @@ export default function WhatsAppAgendaModal({
         textSegments: splitWhatsAppMessageSegments(item.generatedText),
         reminderId: item.reminderId,
         leadId: item.leadId,
+        phone: item.leadPhone,
         nextAction: item.nextAction
           ? {
               suggestedDateTime: item.nextAction.suggestedDateTime,

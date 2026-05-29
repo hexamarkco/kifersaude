@@ -3480,6 +3480,20 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      if (!event) {
+        logWithContext('Ignorando atualização de lead sem evento acionável para automação', {
+          leadId: record.id,
+          payloadType,
+          hasOldRecord,
+          isStatusChange,
+        });
+
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: 'non_status_update' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const lookups = await getLookups();
 
       const mapLeadForMatch = (lead: any) => {

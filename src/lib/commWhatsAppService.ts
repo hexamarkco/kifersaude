@@ -314,6 +314,20 @@ export type FollowUpAgendaOrganizerApplyResult = {
 
 export type CommWhatsAppRewriteTone = 'grammar' | 'professional' | 'friendly' | 'shorter' | 'assertive' | 'adapt_context';
 
+export type CommWhatsAppPendingFollowUpChat = {
+  chat_id: string;
+  external_chat_id: string;
+  lead_id: string;
+  lead_name: string | null;
+  lead_phone: string | null;
+  reminder_id: string;
+  reminder_title: string;
+  reminder_due_at: string;
+  reminder_priority: string | null;
+  last_message_at: string | null;
+  last_message_text: string | null;
+};
+
 export type CommWhatsAppFollowUpRefinementSuggestion = CommWhatsAppFollowUpSuggestion;
 
 export type CommWhatsAppRewriteSuggestion = {
@@ -1311,6 +1325,14 @@ export const commWhatsAppService = {
       model: payload.model ?? null,
       fallback_used: payload.fallback_used === true,
     };
+  },
+
+  async getPendingFollowUpChats(): Promise<CommWhatsAppPendingFollowUpChat[]> {
+    const { data, error } = await supabase.rpc('comm_whatsapp_pending_follow_up_chats');
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os follow-ups pendentes.'));
+    }
+    return (Array.isArray(data) ? data : []) as CommWhatsAppPendingFollowUpChat[];
   },
 
   async refineFollowUp(chatId: string, options: {

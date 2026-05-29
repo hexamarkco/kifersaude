@@ -45,6 +45,7 @@ import {
 } from '../../../lib/whatsAppQuickReplies';
 import { fetchAllPages, isSupabaseConnectivityError, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
+import WhatsAppBatchFollowUpModal from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
@@ -2902,6 +2903,7 @@ export default function WhatsAppInboxScreen() {
   const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
   const [savingQuickReplies, setSavingQuickReplies] = useState(false);
   const [whatsAppAgendaOpen, setWhatsAppAgendaOpen] = useState(false);
+  const [batchFollowUpModalOpen, setBatchFollowUpModalOpen] = useState(false);
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
@@ -8463,6 +8465,17 @@ export default function WhatsAppInboxScreen() {
     }
   }, [canEditAgenda, channelState?.connected_user_name, followUpNextAction, leadContracts, leadPanel?.id, loadChatAgendaSummary, selectedChat]);
 
+  const handleBatchSendFollowUp = useCallback((results: Array<{ chatId: string; textSegments: string[] }>) => {
+    const chats = latestChatsRef.current;
+    for (const result of results) {
+      const chat = chats.find((c) => c.id === result.chatId);
+      if (chat) {
+        sendTextSegments(chat, result.textSegments);
+      }
+    }
+    toast.success(`${results.length} follow-up(s) enviado(s).`);
+  }, [sendTextSegments]);
+
   const handleSendFollowUpDraft = useCallback(async () => {
     if (!selectedChat) {
       return;
@@ -8643,6 +8656,16 @@ export default function WhatsAppInboxScreen() {
                     disabled={!canViewAgenda}
                   >
                     <CalendarDays className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    onClick={() => setBatchFollowUpModalOpen(true)}
+                    className="rounded-xl"
+                    aria-label="Follow-ups pendentes"
+                    title="Follow-ups pendentes"
+                  >
+                    <Sparkles className="h-4 w-4" />
                   </Button>
                   <Button
                     size="icon"
@@ -10073,6 +10096,12 @@ export default function WhatsAppInboxScreen() {
           canEdit={canEditAgenda}
           onGenerateFollowUp={selectedChat ? handleOpenFollowUpModal : undefined}
           onOpenLeadChat={handleOpenAgendaLeadChat}
+        />
+
+        <WhatsAppBatchFollowUpModal
+          isOpen={batchFollowUpModalOpen}
+          onClose={() => setBatchFollowUpModalOpen(false)}
+          onSendBatch={handleBatchSendFollowUp}
         />
 
         <WhatsAppDashboardModal

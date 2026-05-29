@@ -57,6 +57,7 @@ type BatchFollowUpItem = {
   reminderId: string;
   reminderTitle: string;
   status: 'pending' | 'generating' | 'ready' | 'failed';
+  selected: boolean;
   generatedText: string;
   error: string | null;
   nextAction: CommWhatsAppFollowUpNextAction | null;
@@ -225,7 +226,7 @@ export default function WhatsAppAgendaModal({
   const [onlyCurrentLead, setOnlyCurrentLead] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [batchItems, setBatchItems] = useState<BatchFollowUpItem[]>([]);
-  const [batchPhase, setBatchPhase] = useState<'idle' | 'loading' | 'generating' | 'review'>('idle');
+  const [batchPhase, setBatchPhase] = useState<'idle' | 'loading' | 'select' | 'generating' | 'review'>('idle');
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const loadRemindersRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -1073,59 +1074,82 @@ export default function WhatsAppAgendaModal({
         return;
       }
 
-      const initialItems: BatchFollowUpItem[] = pendingChats.map((chat) => ({
+      const items: BatchFollowUpItem[] = pendingChats.map((chat) => ({
         chatId: chat.chat_id,
         leadId: chat.lead_id,
         leadName: chat.lead_name,
         leadPhone: chat.lead_phone,
         reminderId: chat.reminder_id,
         reminderTitle: chat.reminder_title,
-        status: 'generating',
+        status: 'pending',
+        selected: true,
         generatedText: '',
         error: null,
         nextAction: null,
       }));
 
-      setBatchItems(initialItems);
-      setBatchPhase('generating');
-
-      const updatedItems = [...initialItems];
-      let allReady = true;
-
-      for (let i = 0; i < updatedItems.length; i += 1) {
-        try {
-          const result = await commWhatsAppService.generateFollowUp(initialItems[i].chatId, {
-            autoSelectContext: true,
-          });
-          updatedItems[i] = {
-            ...updatedItems[i],
-            status: 'ready',
-            generatedText: result.text,
-            nextAction: result.nextAction ?? null,
-          };
-        } catch (error) {
-          allReady = false;
-          updatedItems[i] = {
-            ...updatedItems[i],
-            status: 'failed',
-            error: error instanceof Error ? error.message : 'Erro ao gerar follow-up.',
-          };
-        }
-        setBatchItems([...updatedItems]);
-      }
-
-      setBatchPhase('review');
-      if (allReady) {
-        toast.success('Todos os follow-ups foram gerados.');
-      } else {
-        toast.warning('Alguns follow-ups falharam.');
-      }
+      setBatchItems(items);
+      setBatchPhase('select');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao carregar follow-ups pendentes.';
       toast.error(message);
       setBatchPhase('idle');
     }
   }, [batchPhase]);
+
+  const handleBatchToggleAll = useCallback(() => {
+    const allSelected = batchItems.every((item) => item.selected);
+    setBatchItems((prev) => prev.map((item) => ({ ...item, selected: !allSelected })));
+  }, [batchItems]);
+
+  const handleBatchToggleItem = useCallback((chatId: string) => {
+    setBatchItems((prev) => prev.map((item) => (item.chatId === chatId ? { ...item, selected: !item.selected } : item)));
+  }, []);
+
+  const handleBatchGenerateSelected = useCallback(async () => {
+    const selectedItems = batchItems.filter((item) => item.selected);
+    if (selectedItems.length === 0) {
+      toast.warning('Selecione ao menos um lead para gerar follow-up.');
+      return;
+    }
+
+    setBatchPhase('generating');
+    const updatedItems = [...selectedItems];
+    let allReady = true;
+
+    for (let i = 0; i < updatedItems.length; i += 1) {
+      updatedItems[i] = { ...updatedItems[i], status: 'generating', error: null };
+      setBatchItems([...updatedItems]);
+
+      try {
+        const result = await commWhatsAppService.generateFollowUp(updatedItems[i].chatId, {
+          autoSelectContext: true,
+        });
+        updatedItems[i] = {
+          ...updatedItems[i],
+          status: 'ready',
+          generatedText: result.text,
+          nextAction: result.nextAction ?? null,
+        };
+      } catch (error) {
+        allReady = false;
+        updatedItems[i] = {
+          ...updatedItems[i],
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Erro ao gerar follow-up.',
+        };
+      }
+      setBatchItems([...updatedItems]);
+    }
+
+    setBatchItems(updatedItems);
+    setBatchPhase('review');
+    if (allReady) {
+      toast.success('Todos os follow-ups foram gerados.');
+    } else {
+      toast.warning('Alguns follow-ups falharam.');
+    }
+  }, [batchItems]);
 
   const handleBatchSendAll = useCallback(() => {
     const readyItems = batchItems.filter((item) => item.status === 'ready');
@@ -1573,7 +1597,61 @@ export default function WhatsAppAgendaModal({
               </div>
             </section>
 
-            {batchPhase !== 'idle' && batchPhase !== 'loading' ? (
+            {batchPhase === 'select' ? (
+              <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
+                    <span className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                      Follow-ups com IA
+                    </span>
+                  </div>
+                  <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={handleBatchToggleAll}>
+                    {batchItems.every((item) => item.selected) ? 'Desmarcar todos' : 'Selecionar todos'}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {batchItems.map((item) => (
+                    <div key={item.chatId}
+                      className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition-all"
+                      style={{
+                        borderColor: item.selected ? 'var(--panel-accent-border,#d5a25c)' : 'var(--panel-border-subtle,#e4d5c0)',
+                        background: item.selected ? 'color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 30%, transparent)' : undefined,
+                      }}
+                      onClick={() => handleBatchToggleItem(item.chatId)}
+                    >
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
+                        style={{
+                          borderColor: item.selected ? 'var(--panel-accent-strong,#c86f1d)' : 'var(--panel-border,#d4c0a7)',
+                          background: item.selected ? 'var(--panel-accent-strong,#c86f1d)' : 'transparent',
+                        }}
+                      >
+                        {item.selected && <Check className="h-3.5 w-3.5 text-white" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{item.leadName || 'Sem nome'}</p>
+                        {item.leadPhone && (
+                          <p className="truncate text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>{item.leadPhone}</p>
+                        )}
+                      </div>
+                      <span className="ml-auto shrink-0 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        {item.reminderTitle}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-end pt-3">
+                  <Button variant="primary" size="sm" className="rounded-xl" onClick={() => void handleBatchGenerateSelected()}>
+                    <Sparkles className="mr-1.5 h-4 w-4" />
+                    Gerar selecionados ({batchItems.filter((item) => item.selected).length})
+                  </Button>
+                </div>
+              </section>
+            ) : null}
+
+            {batchPhase === 'generating' ? (
               <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
                 <div className="mb-3 flex items-center gap-2">
                   <Sparkles className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
@@ -1581,99 +1659,104 @@ export default function WhatsAppAgendaModal({
                     Follow-ups com IA
                   </span>
                 </div>
+                <div className="space-y-2">
+                  {batchItems.map((item) => (
+                    <div key={item.chatId} className="flex items-center gap-3 rounded-xl border p-3 text-sm"
+                      style={{
+                        borderColor: item.status === 'failed' ? 'var(--panel-danger,#d9775a)' : 'var(--panel-border-subtle,#e4d5c0)',
+                      }}
+                    >
+                      {item.status === 'generating' && <Loader2 className="h-4 w-4 animate-spin shrink-0" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />}
+                      {item.status === 'ready' && <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />}
+                      {item.status === 'failed' && <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />}
+                      <span className="min-w-0 truncate font-medium">{item.leadName || 'Sem nome'}</span>
+                      {item.status === 'failed' && item.error && (
+                        <span className="ml-auto shrink-0 text-xs text-red-600">{item.error}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
-                {batchPhase === 'generating' && (
-                  <div className="space-y-2">
-                    {batchItems.map((item) => (
-                      <div key={item.chatId} className="flex items-center gap-3 rounded-xl border p-3 text-sm"
+            {batchPhase === 'review' ? (
+              <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                <div className="mb-3 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
+                  <span className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                    Follow-ups com IA
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {batchItems.map((item, index) => {
+                    const isReady = item.status === 'ready';
+                    const isFailed = item.status === 'failed';
+                    return (
+                      <div key={item.chatId} className="rounded-xl border p-3 text-sm"
                         style={{
-                          borderColor: item.status === 'failed' ? 'var(--panel-danger,#d9775a)' : 'var(--panel-border-subtle,#e4d5c0)',
+                          borderColor: isReady ? 'var(--panel-accent-border,#d5a25c)' : isFailed ? 'var(--panel-danger,#d9775a)' : 'var(--panel-border-subtle,#e4d5c0)',
                         }}
                       >
-                        {item.status === 'generating' && <Loader2 className="h-4 w-4 animate-spin shrink-0" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />}
-                        {item.status === 'ready' && <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />}
-                        {item.status === 'failed' && <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />}
-                        <span className="min-w-0 truncate font-medium">{item.leadName || 'Sem nome'}</span>
-                        {item.status === 'failed' && item.error && (
-                          <span className="ml-auto shrink-0 text-xs text-red-600">{item.error}</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {batchPhase === 'review' && (
-                  <div className="space-y-3">
-                    {batchItems.map((item, index) => {
-                      const isReady = item.status === 'ready';
-                      const isFailed = item.status === 'failed';
-                      return (
-                        <div key={item.chatId} className="rounded-xl border p-3 text-sm"
-                          style={{
-                            borderColor: isReady ? 'var(--panel-accent-border,#d5a25c)' : isFailed ? 'var(--panel-danger,#d9775a)' : 'var(--panel-border-subtle,#e4d5c0)',
-                          }}
-                        >
-                          <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className="flex items-center gap-2 font-medium truncate">
-                              {isReady && <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />}
-                              {isFailed && <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />}
-                              {item.leadName || 'Sem nome'}
-                            </span>
-                            {isFailed && (
-                              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 rounded-lg" onClick={() => void handleBatchRetryChat(index)} aria-label="Tentar novamente">
-                                <RefreshCw className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                          {isReady && (
-                            <div>
-                              <textarea
-                                value={item.generatedText}
-                                onChange={(e) => {
-                                  setBatchItems((prev) =>
-                                    prev.map((p, idx) => (idx === index ? { ...p, generatedText: e.target.value } : p)),
-                                  );
-                                }}
-                                rows={3}
-                                className="w-full resize-y rounded-lg border bg-transparent p-2 text-xs"
-                                style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)' }}
-                              />
-                              {(() => {
-                                const segments = splitWhatsAppMessageSegments(item.generatedText);
-                                return segments.length > 1 ? (
-                                  <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                                    {segments.length} mensagens
-                                  </p>
-                                ) : null;
-                              })()}
-                              {item.nextAction && (
-                                <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
-                                  {item.nextAction.suggestedDateTime ? `Proximo: ${formatDateTimeFullBR(item.nextAction.suggestedDateTime)}` : item.nextAction.reason}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                          {isFailed && item.error && (
-                            <p className="text-xs text-red-600">{item.error}</p>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span className="flex items-center gap-2 font-medium truncate">
+                            {isReady && <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />}
+                            {isFailed && <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />}
+                            {item.leadName || 'Sem nome'}
+                          </span>
+                          {isFailed && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 rounded-lg" onClick={() => void handleBatchRetryChat(index)} aria-label="Tentar novamente">
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            </Button>
                           )}
                         </div>
-                      );
-                    })}
+                        {isReady && (
+                          <div>
+                            <textarea
+                              value={item.generatedText}
+                              onChange={(e) => {
+                                setBatchItems((prev) =>
+                                  prev.map((p, idx) => (idx === index ? { ...p, generatedText: e.target.value } : p)),
+                                );
+                              }}
+                              rows={3}
+                              className="w-full resize-y rounded-lg border bg-transparent p-2 text-xs"
+                              style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)' }}
+                            />
+                            {(() => {
+                              const segments = splitWhatsAppMessageSegments(item.generatedText);
+                              return segments.length > 1 ? (
+                                <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                                  {segments.length} mensagens
+                                </p>
+                              ) : null;
+                            })()}
+                            {item.nextAction && (
+                              <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                                {item.nextAction.suggestedDateTime ? `Proximo: ${formatDateTimeFullBR(item.nextAction.suggestedDateTime)}` : item.nextAction.reason}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {isFailed && item.error && (
+                          <p className="text-xs text-red-600">{item.error}</p>
+                        )}
+                      </div>
+                    );
+                  })}
 
-                    <div className="flex justify-end pt-2">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        className="rounded-xl"
-                        onClick={handleBatchSendAll}
-                        disabled={!batchItems.some((item) => item.status === 'ready')}
-                      >
-                        <Send className="mr-1.5 h-4 w-4" />
-                        Enviar todos ({batchItems.filter((item) => item.status === 'ready').length})
-                      </Button>
-                    </div>
+                  <div className="flex justify-end pt-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="rounded-xl"
+                      onClick={handleBatchSendAll}
+                      disabled={!batchItems.some((item) => item.status === 'ready')}
+                    >
+                      <Send className="mr-1.5 h-4 w-4" />
+                      Enviar todos ({batchItems.filter((item) => item.status === 'ready').length})
+                    </Button>
                   </div>
-                )}
+                </div>
               </section>
             ) : null}
 

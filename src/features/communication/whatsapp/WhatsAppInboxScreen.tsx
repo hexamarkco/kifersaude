@@ -8488,7 +8488,10 @@ export default function WhatsAppInboxScreen() {
 
     for (const [index, result] of results.entries()) {
       const chat = chats.find((c) => c.id === result.chatId);
-      if (!chat) continue;
+      if (!chat) {
+        console.warn('[WhatsAppInbox] chat nao encontrado para lead', result.leadId, 'chatId', result.chatId);
+        continue;
+      }
       sendTextSegments(chat, result.textSegments);
       sentIds.push(result.reminderId);
       if (result.nextAction?.suggestedDateTime) {
@@ -8506,34 +8509,37 @@ export default function WhatsAppInboxScreen() {
       }
     }
 
-    if (sentIds.length > 0) {
-      try {
-        await supabase.from('reminders').update({ lido: true }).in('id', sentIds);
+    if (sentIds.length === 0) {
+      throw new Error('Nenhum chat encontrado para os leads selecionados. Os leads podem ter sido arquivados ou removidos.');
+    }
 
-        for (const { leadId, nextAction } of nextActions) {
-          await supabase.rpc('schedule_follow_up_reminder', {
-            p_lead_id: leadId,
-            p_title: nextAction.title,
-            p_description: nextAction.reason,
-            p_due_at: nextAction.suggestedDateTime,
-            p_priority: nextAction.priority,
-          });
-        }
+    const { error: remindersError } = await supabase.from('reminders').update({ lido: true }).in('id', sentIds);
+    if (remindersError) {
+      throw new Error(`Erro ao marcar lembretes como lidos: ${remindersError.message}`);
+    }
 
-        try {
-          await supabase.from('comm_follow_up_audit_log').insert(auditEntries);
-        } catch (auditError) {
-          console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
-        }
-
-        const scheduledCount = nextActions.length;
-        const msg = `${sentIds.length} follow-up(s) enviado(s)${scheduledCount > 0 ? ` e ${scheduledCount} novo(s) agendado(s)` : ''}.`;
-        toast.success(msg);
-      } catch (error) {
-        console.error('[WhatsAppInbox] erro ao atualizar lembretes', error);
-        toast.warning('Follow-ups enviados, mas houve erro ao atualizar a agenda.');
+    for (const { leadId, nextAction } of nextActions) {
+      const { error: scheduleError } = await supabase.rpc('schedule_follow_up_reminder', {
+        p_lead_id: leadId,
+        p_title: nextAction.title,
+        p_description: nextAction.reason,
+        p_due_at: nextAction.suggestedDateTime,
+        p_priority: nextAction.priority,
+      });
+      if (scheduleError) {
+        throw new Error(`Erro ao agendar proximo follow-up para lead ${leadId}: ${scheduleError.message}`);
       }
     }
+
+    try {
+      await supabase.from('comm_follow_up_audit_log').insert(auditEntries);
+    } catch (auditError) {
+      console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
+    }
+
+    const scheduledCount = nextActions.length;
+    const msg = `${sentIds.length} follow-up(s) enviado(s)${scheduledCount > 0 ? ` e ${scheduledCount} novo(s) agendado(s)` : ''}.`;
+    toast.success(msg);
   }, [sendTextSegments]);
 
   const handleSendFollowUpDraft = useCallback(async () => {

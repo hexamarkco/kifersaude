@@ -227,7 +227,7 @@ export default function WhatsAppAgendaModal({
   const [showCompleted, setShowCompleted] = useState(false);
   const [batchItems, setBatchItems] = useState<BatchFollowUpItem[]>([]);
   const [batchPhase, setBatchPhase] = useState<'idle' | 'loading' | 'select' | 'generating' | 'review' | 'sent'>('idle');
-  const [sentSummary, setSentSummary] = useState<{ sentCount: number; scheduledCount: number; failedCount: number } | null>(null);
+  const [sentSummary, setSentSummary] = useState<{ sentCount: number; scheduledCount: number; failedCount: number; errorMessage?: string } | null>(null);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [batchExpanded, setBatchExpanded] = useState(true);
   const cancelRequestedRef = useRef(false);
@@ -1292,6 +1292,7 @@ export default function WhatsAppAgendaModal({
         sentCount: 0,
         scheduledCount: 0,
         failedCount: readyItems.length,
+        errorMessage: error instanceof Error ? error.message : 'Erro desconhecido ao enviar.',
       });
       setBatchPhase('sent');
     }
@@ -1983,10 +1984,13 @@ export default function WhatsAppAgendaModal({
                       {sentSummary.failedCount > 0 ? (
                         <div className="flex items-center gap-2 rounded-xl border bg-red-50 px-4 py-3 text-sm font-medium text-red-800" style={{ borderColor: 'var(--panel-accent-red-border,#d79a8f)' }}>
                           <AlertCircle className="h-4 w-4" />
-                          {sentSummary.failedCount} falha(s)
+                          <span>{sentSummary.failedCount} falha(s)</span>
                         </div>
                       ) : null}
                     </div>
+                    {sentSummary.errorMessage ? (
+                      <p className="mt-2 text-xs text-red-700">{sentSummary.errorMessage}</p>
+                    ) : null}
                     <div className="flex justify-end">
                       <Button variant="secondary" size="sm" className="rounded-xl" onClick={handleBatchCancel}>
                         Fechar

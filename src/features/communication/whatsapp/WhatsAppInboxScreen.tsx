@@ -8478,14 +8478,31 @@ export default function WhatsAppInboxScreen() {
     const chats = latestChatsRef.current;
     const sentIds: string[] = [];
     const nextActions: Array<{ leadId: string; nextAction: NonNullable<typeof results[number]['nextAction']> }> = [];
+    const auditEntries: Array<{
+      lead_id: string;
+      chat_id: string;
+      text_content: string;
+      next_action_title: string | null;
+      next_action_due_at: string | null;
+    }> = [];
 
-    for (const result of results) {
+    for (const [index, result] of results.entries()) {
       const chat = chats.find((c) => c.id === result.chatId);
       if (!chat) continue;
       sendTextSegments(chat, result.textSegments);
       sentIds.push(result.reminderId);
       if (result.nextAction?.suggestedDateTime) {
         nextActions.push({ leadId: result.leadId, nextAction: result.nextAction });
+      }
+      auditEntries.push({
+        lead_id: result.leadId,
+        chat_id: result.chatId,
+        text_content: result.textSegments.join('\n\n'),
+        next_action_title: result.nextAction?.title ?? null,
+        next_action_due_at: result.nextAction?.suggestedDateTime ?? null,
+      });
+      if (index < results.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     }
 
@@ -8501,6 +8518,12 @@ export default function WhatsAppInboxScreen() {
             p_due_at: nextAction.suggestedDateTime,
             p_priority: nextAction.priority,
           });
+        }
+
+        try {
+          await supabase.from('comm_follow_up_audit_log').insert(auditEntries);
+        } catch (auditError) {
+          console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
         }
 
         const scheduledCount = nextActions.length;

@@ -8489,18 +8489,16 @@ export default function WhatsAppInboxScreen() {
 
     for (const [index, result] of results.entries()) {
       const chat = chats.find((c) => c.lead_id === result.leadId) ?? chats.find((c) => c.id === result.chatId);
+      const externalChatId = chat?.external_chat_id
+        ?? (result.phone ? `${result.phone.replace(/\D/g, '')}@c.us` : null);
 
-      if (chat) {
-        sendTextSegments(chat, result.textSegments);
-      } else if (result.phone) {
-        const normalizedPhone = result.phone.replace(/\D/g, '');
-        const externalChatId = `${normalizedPhone}@c.us`;
-        for (const segment of result.textSegments) {
-          void commWhatsAppService.sendTextMessage(externalChatId, segment);
-        }
-      } else {
-        console.warn('[WhatsAppInbox] sem chat e sem telefone para lead', result.leadId);
+      if (!externalChatId) {
+        console.warn('[WhatsAppInbox] sem external_chat_id e sem telefone para lead', result.leadId);
         continue;
+      }
+
+      for (const segment of result.textSegments) {
+        void commWhatsAppService.sendTextMessage(externalChatId, segment);
       }
 
       sentIds.push(result.reminderId);
@@ -8550,7 +8548,7 @@ export default function WhatsAppInboxScreen() {
     const scheduledCount = nextActions.length;
     const msg = `${sentIds.length} follow-up(s) enviado(s)${scheduledCount > 0 ? ` e ${scheduledCount} novo(s) agendado(s)` : ''}.`;
     toast.success(msg);
-  }, [sendTextSegments]);
+  }, []);
 
   const handleSendFollowUpDraft = useCallback(async () => {
     if (!selectedChat) {

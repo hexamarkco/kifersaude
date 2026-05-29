@@ -31,7 +31,7 @@ AS $$
     cwc.last_message_at,
     cwc.last_message_text
   FROM reminders r
-  JOIN leads l ON l.id = r.lead_id AND l.deleted_at IS NULL
+  JOIN leads l ON l.id = r.lead_id AND COALESCE(l.arquivado, false) = false
   JOIN comm_whatsapp_chats cwc ON cwc.lead_id = l.id AND cwc.deleted_at IS NULL
   WHERE r.lido = false
     AND r.tipo = 'Follow-up'

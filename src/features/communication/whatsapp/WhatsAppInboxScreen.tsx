@@ -45,7 +45,6 @@ import {
 } from '../../../lib/whatsAppQuickReplies';
 import { fetchAllPages, isSupabaseConnectivityError, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
-import WhatsAppBatchFollowUpModal from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
@@ -2903,7 +2902,6 @@ export default function WhatsAppInboxScreen() {
   const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
   const [savingQuickReplies, setSavingQuickReplies] = useState(false);
   const [whatsAppAgendaOpen, setWhatsAppAgendaOpen] = useState(false);
-  const [batchFollowUpModalOpen, setBatchFollowUpModalOpen] = useState(false);
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
   const [followUpDraft, setFollowUpDraft] = useState('');
@@ -8660,16 +8658,6 @@ export default function WhatsAppInboxScreen() {
                   <Button
                     size="icon"
                     variant="secondary"
-                    onClick={() => setBatchFollowUpModalOpen(true)}
-                    className="rounded-xl"
-                    aria-label="Follow-ups pendentes"
-                    title="Follow-ups pendentes"
-                  >
-                    <Sparkles className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="secondary"
                     onClick={() => setWhatsAppDashboardOpen(true)}
                     className="rounded-xl"
                     aria-label="Painel WhatsApp"
@@ -10096,12 +10084,7 @@ export default function WhatsAppInboxScreen() {
           canEdit={canEditAgenda}
           onGenerateFollowUp={selectedChat ? handleOpenFollowUpModal : undefined}
           onOpenLeadChat={handleOpenAgendaLeadChat}
-        />
-
-        <WhatsAppBatchFollowUpModal
-          isOpen={batchFollowUpModalOpen}
-          onClose={() => setBatchFollowUpModalOpen(false)}
-          onSendBatch={handleBatchSendFollowUp}
+          onSendBatchFollowUps={handleBatchSendFollowUp}
         />
 
         <WhatsAppDashboardModal

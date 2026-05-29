@@ -43,7 +43,7 @@ import {
   sanitizeWhatsAppQuickReplyShortcut,
   type WhatsAppQuickReply,
 } from '../../../lib/whatsAppQuickReplies';
-import { fetchAllPages, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
+import { fetchAllPages, isSupabaseConnectivityError, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
@@ -79,6 +79,7 @@ import {
 } from './pendingChatInboxState';
 
 const CHAT_POLL_INTERVAL_MS = 8000;
+const MAX_CHAT_POLL_BACKOFF_MS = 60000;
 const MESSAGE_POLL_INTERVAL_MS = 5000;
 const OPERATIONAL_STATE_POLL_INTERVAL_MS = 30000;
 const MESSAGE_PAGE_SIZE = 50;
@@ -3050,6 +3051,7 @@ export default function WhatsAppInboxScreen() {
   const selectedChatIdRef = useRef<string | null>(null);
   const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
+  const chatPollBackoffRef = useRef(0);
   const messageSearchSelectionRequestIdRef = useRef(0);
   const pendingMessageSearchChatIdRef = useRef<string | null>(null);
   const messagesRequestIdRef = useRef(0);
@@ -5382,12 +5384,19 @@ export default function WhatsAppInboxScreen() {
 
           return hydratedData.find((chat) => !chat.is_archived)?.id ?? hydratedData[0]?.id ?? null;
         });
+        chatPollBackoffRef.current = 0;
       } catch (error) {
         if (requestId !== chatsRequestIdRef.current) {
           return;
         }
 
         console.error('[WhatsAppInbox] erro ao carregar chats', error);
+
+        if (isSupabaseConnectivityError(error)) {
+          chatPollBackoffRef.current = Math.min(chatPollBackoffRef.current + 1, 10);
+          return;
+        }
+
         toast.error(error instanceof Error ? error.message : 'Não foi possível carregar as conversas do WhatsApp.');
       }
     })().finally(() => {
@@ -5797,11 +5806,23 @@ export default function WhatsAppInboxScreen() {
       return;
     }
 
-    const intervalId = window.setInterval(() => {
-      void loadChats();
-    }, CHAT_POLL_INTERVAL_MS);
+    let timeoutId: number;
 
-    return () => window.clearInterval(intervalId);
+    const scheduleNext = () => {
+      const backoffLevel = chatPollBackoffRef.current;
+      const delay = backoffLevel > 0
+        ? Math.min(CHAT_POLL_INTERVAL_MS * Math.pow(2, backoffLevel), MAX_CHAT_POLL_BACKOFF_MS)
+        : CHAT_POLL_INTERVAL_MS;
+
+      timeoutId = window.setTimeout(() => {
+        void loadChats();
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadChats, pollingEnabled]);
 
   useEffect(() => {

@@ -36,7 +36,6 @@ AS $$
   WHERE r.lido = false
     AND r.tipo = 'Follow-up'
     AND r.data_lembrete <= CURRENT_DATE
-    AND r.deleted_at IS NULL
   ORDER BY r.prioridade DESC, r.data_lembrete ASC, l.nome_completo ASC;
 $$;
 

@@ -8463,15 +8463,54 @@ export default function WhatsAppInboxScreen() {
     }
   }, [canEditAgenda, channelState?.connected_user_name, followUpNextAction, leadContracts, leadPanel?.id, loadChatAgendaSummary, selectedChat]);
 
-  const handleBatchSendFollowUp = useCallback((results: Array<{ chatId: string; textSegments: string[] }>) => {
+  const handleBatchSendFollowUp = useCallback(async (results: Array<{
+    chatId: string;
+    textSegments: string[];
+    reminderId: string;
+    leadId: string;
+    nextAction: {
+      suggestedDateTime: string | null;
+      priority: string;
+      title: string;
+      reason: string;
+    } | null;
+  }>) => {
     const chats = latestChatsRef.current;
+    const sentIds: string[] = [];
+    const nextActions: Array<{ leadId: string; nextAction: NonNullable<typeof results[number]['nextAction']> }> = [];
+
     for (const result of results) {
       const chat = chats.find((c) => c.id === result.chatId);
-      if (chat) {
-        sendTextSegments(chat, result.textSegments);
+      if (!chat) continue;
+      sendTextSegments(chat, result.textSegments);
+      sentIds.push(result.reminderId);
+      if (result.nextAction?.suggestedDateTime) {
+        nextActions.push({ leadId: result.leadId, nextAction: result.nextAction });
       }
     }
-    toast.success(`${results.length} follow-up(s) enviado(s).`);
+
+    if (sentIds.length > 0) {
+      try {
+        await supabase.from('reminders').update({ lido: true }).in('id', sentIds);
+
+        for (const { leadId, nextAction } of nextActions) {
+          await supabase.rpc('schedule_follow_up_reminder', {
+            p_lead_id: leadId,
+            p_title: nextAction.title,
+            p_description: nextAction.reason,
+            p_due_at: nextAction.suggestedDateTime,
+            p_priority: nextAction.priority,
+          });
+        }
+
+        const scheduledCount = nextActions.length;
+        const msg = `${sentIds.length} follow-up(s) enviado(s)${scheduledCount > 0 ? ` e ${scheduledCount} novo(s) agendado(s)` : ''}.`;
+        toast.success(msg);
+      } catch (error) {
+        console.error('[WhatsAppInbox] erro ao atualizar lembretes', error);
+        toast.warning('Follow-ups enviados, mas houve erro ao atualizar a agenda.');
+      }
+    }
   }, [sendTextSegments]);
 
   const handleSendFollowUpDraft = useCallback(async () => {

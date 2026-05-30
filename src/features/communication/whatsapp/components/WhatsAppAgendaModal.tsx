@@ -1034,6 +1034,11 @@ export default function WhatsAppAgendaModal({
   };
 
 
+  const handleCloseBatchModal = useCallback(() => {
+    setIsBatchModalOpen(false);
+    void loadReminders();
+  }, [loadReminders]);
+
   const getReminderPriorityStyle = (priority: string) => {
     const tones = {
       baixa: 'info',
@@ -1714,7 +1719,7 @@ export default function WhatsAppAgendaModal({
 
       <WhatsAppBatchFollowUpModal
         isOpen={isBatchModalOpen}
-        onClose={() => { setIsBatchModalOpen(false); void loadReminders(); }}
+        onClose={handleCloseBatchModal}
         onSendBatchFollowUps={onSendBatchFollowUps}
       />
       {ConfirmationDialog}

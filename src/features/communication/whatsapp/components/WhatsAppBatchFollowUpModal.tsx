@@ -199,7 +199,8 @@ export default function WhatsAppBatchFollowUpModal({
         onClose();
       }
     })();
-  }, [isOpen, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onClose não pode estar aqui porque a referência muda a cada render do modal de agenda, causando flash/refetch
+  }, [isOpen]);
 
   const activeItem = activeItemIndex !== null ? items[activeItemIndex] : null;
   const activeMessageSegments = useMemo(

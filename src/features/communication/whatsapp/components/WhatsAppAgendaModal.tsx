@@ -17,7 +17,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Send,
   Sparkles,
   Tag,
   Timer,
@@ -25,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 
+import WhatsAppBatchFollowUpModal from './WhatsAppBatchFollowUpModal';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import FilterSingleSelect from '../../../../components/FilterSingleSelect';
 import Button from '../../../../components/ui/Button';
@@ -40,28 +40,13 @@ import {
 } from '../../../../components/ui/panelStyles';
 import { useConfirmationModal } from '../../../../hooks/useConfirmationModal';
 import { formatDateTimeFullBR, getDateKey, isOverdue } from '../../../../lib/dateUtils';
-import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
-import { commWhatsAppService, formatCommWhatsAppPhoneLabel, type CommWhatsAppFollowUpNextAction, type CommWhatsAppLeadContractSummary, type CommWhatsAppLeadPanel } from '../../../../lib/commWhatsAppService';
+import { commWhatsAppService, formatCommWhatsAppPhoneLabel, type CommWhatsAppLeadContractSummary, type CommWhatsAppLeadPanel } from '../../../../lib/commWhatsAppService';
 import { addBusinessDaysSkippingWeekends, formatEstimatedTime } from '../../../../lib/reminderUtils';
 import { getReminderWhatsappLink, isReminderPriority } from '../../../reminders/shared/reminderHelpers';
 import type { ManualReminderPrompt } from '../../../reminders/shared/reminderTypes';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { supabase, type Contract, type Lead, type Reminder, fetchAllPages } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
-
-type BatchFollowUpItem = {
-  chatId: string;
-  leadId: string;
-  leadName: string | null;
-  leadPhone: string | null;
-  reminderId: string;
-  reminderTitle: string;
-  status: 'pending' | 'generating' | 'ready' | 'failed';
-  selected: boolean;
-  generatedText: string;
-  error: string | null;
-  nextAction: CommWhatsAppFollowUpNextAction | null;
-};
 
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
@@ -226,12 +211,8 @@ export default function WhatsAppAgendaModal({
   const [openingLeadChatId, setOpeningLeadChatId] = useState<string | null>(null);
   const [onlyCurrentLead, setOnlyCurrentLead] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
-  const [batchItems, setBatchItems] = useState<BatchFollowUpItem[]>([]);
-  const [batchPhase, setBatchPhase] = useState<'idle' | 'loading' | 'select' | 'generating' | 'review' | 'sent'>('idle');
-  const [sentSummary, setSentSummary] = useState<{ sentCount: number; scheduledCount: number; failedCount: number; errorMessage?: string } | null>(null);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [pendingCount, setPendingCount] = useState<number | null>(null);
-  const [batchExpanded, setBatchExpanded] = useState(true);
-  const cancelRequestedRef = useRef(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
   const loadRemindersRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
@@ -1052,255 +1033,6 @@ export default function WhatsAppAgendaModal({
     setOnlyCurrentLead(false);
   };
 
-  const handleBatchRetryChat = useCallback(async (index: number) => {
-      setBatchItems((prev) => prev.map((item, idx) => (idx === index ? { ...item, status: 'generating', error: null } : item)));
-
-      try {
-        const result = await commWhatsAppService.generateFollowUp(batchItems[index].chatId, {
-          autoSelectContext: true,
-        });
-        setBatchItems((prev) =>
-          prev.map((item, idx) => (idx === index ? {
-            ...item,
-            status: 'ready',
-            generatedText: result.text,
-            error: null,
-            nextAction: result.nextAction ?? null,
-          } : item)),
-        );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao gerar follow-up.';
-      setBatchItems((prev) => prev.map((item, idx) => (idx === index ? { ...item, status: 'failed', error: message } : item)));
-    }
-  }, [batchItems]);
-
-  const handleBatchStart = useCallback(async () => {
-    if (batchPhase !== 'idle') return;
-
-    setBatchPhase('loading');
-    setBatchItems([]);
-
-    try {
-      const pendingChats = await commWhatsAppService.getPendingFollowUpChats();
-
-      if (pendingChats.length === 0) {
-        toast.info('Nenhum follow-up pendente para hoje.');
-        setBatchPhase('idle');
-        return;
-      }
-
-      const items: BatchFollowUpItem[] = pendingChats.map((chat) => ({
-        chatId: chat.chat_id,
-        leadId: chat.lead_id,
-        leadName: chat.lead_name,
-        leadPhone: chat.lead_phone,
-        reminderId: chat.reminder_id,
-        reminderTitle: chat.reminder_title,
-        status: 'pending',
-        selected: true,
-        generatedText: '',
-        error: null,
-        nextAction: null,
-      }));
-
-      setBatchItems(items);
-      setBatchPhase('select');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao carregar follow-ups pendentes.';
-      toast.error(message);
-      setBatchPhase('idle');
-    }
-  }, [batchPhase]);
-
-  const handleBatchToggleAll = useCallback(() => {
-    const allSelected = batchItems.every((item) => item.selected);
-    setBatchItems((prev) => prev.map((item) => ({ ...item, selected: !allSelected })));
-  }, [batchItems]);
-
-  const handleBatchToggleItem = useCallback((chatId: string) => {
-    setBatchItems((prev) => prev.map((item) => (item.chatId === chatId ? { ...item, selected: !item.selected } : item)));
-  }, []);
-
-  const handleBatchCancel = useCallback(() => {
-    cancelRequestedRef.current = true;
-    setBatchPhase('idle');
-    setBatchItems([]);
-    setSentSummary(null);
-  }, []);
-
-  const handleBatchRetryAll = useCallback(async () => {
-    const failedItems = batchItems.filter((item) => item.status === 'failed');
-    if (failedItems.length === 0) return;
-
-    cancelRequestedRef.current = false;
-    setBatchPhase('generating');
-    const CONCURRENCY = 3;
-    const updatedItems = [...batchItems];
-    const failedIndices = updatedItems
-      .map((item, idx) => (item.status === 'failed' ? idx : -1))
-      .filter((idx) => idx !== -1);
-    let allReady = true;
-
-    for (let i = 0; i < failedIndices.length; i += CONCURRENCY) {
-      if (cancelRequestedRef.current) break;
-
-      const batchIndices = failedIndices.slice(i, i + CONCURRENCY);
-      batchIndices.forEach((idx) => {
-        updatedItems[idx] = { ...updatedItems[idx], status: 'generating', error: null };
-      });
-      setBatchItems([...updatedItems]);
-
-      const results = await Promise.allSettled(
-        batchIndices.map((idx) =>
-          commWhatsAppService.generateFollowUp(updatedItems[idx].chatId, {
-            autoSelectContext: true,
-          }),
-        ),
-      );
-
-      results.forEach((result, pos) => {
-        const idx = batchIndices[pos];
-        if (result.status === 'fulfilled') {
-          updatedItems[idx] = {
-            ...updatedItems[idx],
-            status: 'ready',
-            generatedText: result.value.text,
-            nextAction: result.value.nextAction ?? null,
-          };
-        } else {
-          allReady = false;
-          updatedItems[idx] = {
-            ...updatedItems[idx],
-            status: 'failed',
-            error:
-              result.reason instanceof Error
-                ? result.reason.message
-                : 'Erro ao gerar follow-up.',
-          };
-        }
-      });
-      setBatchItems([...updatedItems]);
-    }
-
-    setBatchItems(updatedItems);
-    setBatchPhase('review');
-    if (cancelRequestedRef.current) {
-      toast.info('Geracao cancelada.');
-    } else if (allReady) {
-      toast.success('Follow-ups regenerados com sucesso.');
-    } else {
-      toast.warning('Alguns follow-ups ainda tem falha.');
-    }
-  }, [batchItems]);
-
-  const handleBatchGenerateSelected = useCallback(async () => {
-    const selectedItems = batchItems.filter((item) => item.selected);
-    if (selectedItems.length === 0) {
-      toast.warning('Selecione ao menos um lead para gerar follow-up.');
-      return;
-    }
-
-    cancelRequestedRef.current = false;
-    setBatchPhase('generating');
-    const CONCURRENCY = 3;
-    const updatedItems = selectedItems.map((item) => ({ ...item }));
-    let allReady = true;
-
-    for (let i = 0; i < updatedItems.length; i += CONCURRENCY) {
-      if (cancelRequestedRef.current) break;
-
-      const batch = updatedItems.slice(i, i + CONCURRENCY);
-      batch.forEach((item) => {
-        item.status = 'generating';
-        item.error = null;
-      });
-      setBatchItems([...updatedItems]);
-
-      const results = await Promise.allSettled(
-        batch.map((item) =>
-          commWhatsAppService.generateFollowUp(item.chatId, {
-            autoSelectContext: true,
-          }),
-        ),
-      );
-
-      results.forEach((result, idx) => {
-        const globalIdx = i + idx;
-        if (result.status === 'fulfilled') {
-          updatedItems[globalIdx] = {
-            ...updatedItems[globalIdx],
-            status: 'ready',
-            generatedText: result.value.text,
-            nextAction: result.value.nextAction ?? null,
-          };
-        } else {
-          allReady = false;
-          updatedItems[globalIdx] = {
-            ...updatedItems[globalIdx],
-            status: 'failed',
-            error:
-              result.reason instanceof Error
-                ? result.reason.message
-                : 'Erro ao gerar follow-up.',
-          };
-        }
-      });
-      setBatchItems([...updatedItems]);
-    }
-
-    setBatchItems(updatedItems);
-    setBatchPhase('review');
-    if (cancelRequestedRef.current) {
-      toast.info('Geracao cancelada.');
-    } else if (allReady) {
-      toast.success('Todos os follow-ups foram gerados.');
-    } else {
-      toast.warning('Alguns follow-ups falharam.');
-    }
-  }, [batchItems]);
-
-  const handleBatchSendAll = useCallback(async () => {
-    const readyItems = batchItems.filter((item) => item.status === 'ready' && item.selected);
-    if (readyItems.length === 0 || !onSendBatchFollowUps) return;
-
-    const scheduledCount = readyItems.filter((item) => item.nextAction?.suggestedDateTime).length;
-
-    try {
-      await onSendBatchFollowUps(readyItems.map((item) => ({
-        chatId: item.chatId,
-        textSegments: splitWhatsAppMessageSegments(item.generatedText),
-        reminderId: item.reminderId,
-        leadId: item.leadId,
-        phone: item.leadPhone,
-        nextAction: item.nextAction
-          ? {
-              suggestedDateTime: item.nextAction.suggestedDateTime,
-              priority: item.nextAction.priority,
-              title: item.nextAction.title,
-              reason: item.nextAction.reason,
-            }
-          : null,
-      })));
-
-      setSentSummary({
-        sentCount: readyItems.length,
-        scheduledCount,
-        failedCount: 0,
-      });
-      setBatchPhase('sent');
-    } catch (error) {
-      console.error('[WhatsAppAgendaModal] erro ao enviar follow-ups em lote:', error);
-      setSentSummary({
-        sentCount: 0,
-        scheduledCount: 0,
-        failedCount: readyItems.length,
-        errorMessage: error instanceof Error ? error.message : 'Erro desconhecido ao enviar.',
-      });
-      setBatchPhase('sent');
-    }
-
-    void loadReminders();
-  }, [batchItems, loadReminders, onSendBatchFollowUps]);
 
   const getReminderPriorityStyle = (priority: string) => {
     const tones = {
@@ -1698,14 +1430,10 @@ export default function WhatsAppAgendaModal({
                   </Button>
                   {onSendBatchFollowUps ? (
                     <div className="relative inline-flex">
-                      <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => void handleBatchStart()} aria-label="Follow-ups com IA" title="Follow-ups com IA">
-                        {batchPhase === 'loading' || batchPhase === 'generating' ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-4 w-4" />
-                        )}
+                      <Button variant="secondary" size="icon" className="h-11 w-11" onClick={() => setIsBatchModalOpen(true)} aria-label="Follow-ups com IA" title="Follow-ups com IA">
+                        <Sparkles className="h-4 w-4" />
                       </Button>
-                      {pendingCount !== null && pendingCount > 0 && batchPhase === 'idle' ? (
+                      {pendingCount !== null && pendingCount > 0 ? (
                         <span className="absolute -right-1.5 -top-1.5 flex min-w-[20px] items-center justify-center rounded-full bg-orange-600 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-sm">
                           {pendingCount}
                         </span>
@@ -1731,277 +1459,6 @@ export default function WhatsAppAgendaModal({
                 </div>
               </div>
             </section>
-
-            {batchPhase === 'select' ? (
-              <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
-                    <span className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                      Follow-ups com IA
-                    </span>
-                    <span className="rounded-full border px-2 py-0.5 text-[11px] font-semibold" style={{ color: 'var(--panel-text-muted,#876f5c)', borderColor: 'var(--panel-border,#d4c0a7)' }}>
-                      {batchItems.length} pendentes
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={() => setBatchExpanded((prev) => !prev)}>
-                      {batchExpanded ? 'Ocultar' : 'Mostrar'}
-                    </Button>
-                    <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={handleBatchToggleAll}>
-                      {batchItems.every((item) => item.selected) ? 'Desmarcar todos' : 'Selecionar todos'}
-                    </Button>
-                  </div>
-                </div>
-
-                {batchExpanded ? (
-                  <>
-                    <div className="space-y-2">
-                      {batchItems.map((item) => (
-                        <div key={item.chatId}
-                          className="flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition-all"
-                          style={{
-                            borderColor: item.selected ? 'var(--panel-accent-border,#d5a25c)' : 'var(--panel-border-subtle,#e4d5c0)',
-                            background: item.selected ? 'color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 30%, transparent)' : undefined,
-                          }}
-                          onClick={() => handleBatchToggleItem(item.chatId)}
-                        >
-                          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded border"
-                            style={{
-                              borderColor: item.selected ? 'var(--panel-accent-strong,#c86f1d)' : 'var(--panel-border,#d4c0a7)',
-                              background: item.selected ? 'var(--panel-accent-strong,#c86f1d)' : 'transparent',
-                            }}
-                          >
-                            {item.selected && <Check className="h-3.5 w-3.5 text-white" />}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-medium">{item.leadName || 'Sem nome'}</p>
-                            {item.leadPhone && (
-                              <p className="truncate text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>{item.leadPhone}</p>
-                            )}
-                          </div>
-                          <span className="ml-auto shrink-0 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                            {item.reminderTitle}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex justify-end gap-2 pt-3">
-                      <Button variant="secondary" size="sm" className="rounded-xl" onClick={handleBatchCancel}>
-                        Cancelar
-                      </Button>
-                      <Button variant="primary" size="sm" className="rounded-xl" onClick={() => void handleBatchGenerateSelected()}>
-                        <Sparkles className="mr-1.5 h-4 w-4" />
-                        Gerar selecionados ({batchItems.filter((item) => item.selected).length})
-                      </Button>
-                    </div>
-                  </>
-                ) : null}
-              </section>
-            ) : null}
-
-            {batchPhase === 'generating' ? (
-              <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
-                    <span className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                      Follow-ups com IA
-                    </span>
-                    <Loader2 className="h-4 w-4 animate-spin" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
-                  </div>
-                  <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={() => setBatchExpanded((prev) => !prev)}>
-                    {batchExpanded ? 'Ocultar' : 'Mostrar'}
-                  </Button>
-                </div>
-                {batchExpanded ? (
-                  <>
-                    <div className="space-y-2">
-                      {batchItems.map((item) => (
-                        <div key={item.chatId} className="flex items-center gap-3 rounded-xl border p-3 text-sm"
-                          style={{
-                            borderColor: item.status === 'failed' ? 'var(--panel-danger,#d9775a)' : 'var(--panel-border-subtle,#e4d5c0)',
-                          }}
-                        >
-                          {item.status === 'generating' && <Loader2 className="h-4 w-4 animate-spin shrink-0" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />}
-                          {item.status === 'ready' && <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />}
-                          {item.status === 'failed' && <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />}
-                          <span className="min-w-0 truncate font-medium">{item.leadName || 'Sem nome'}</span>
-                          {item.status === 'failed' && item.error && (
-                            <span className="ml-auto shrink-0 text-xs text-red-600">{item.error}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-end pt-3">
-                      <Button variant="secondary" size="sm" className="rounded-xl" onClick={handleBatchCancel}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  </>
-                ) : null}
-              </section>
-            ) : null}
-
-            {batchPhase === 'review' ? (
-              <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
-                    <span className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                      Follow-ups com IA
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={() => setBatchExpanded((prev) => !prev)}>
-                    {batchExpanded ? 'Ocultar' : 'Mostrar'}
-                  </Button>
-                </div>
-                {batchExpanded ? (
-                  <div className="space-y-3">
-                    {batchItems.map((item, index) => {
-                      const isReady = item.status === 'ready';
-                      const isFailed = item.status === 'failed';
-                      const isSelected = item.selected;
-                      return (
-                        <div key={item.chatId} className="rounded-xl border p-3 text-sm"
-                          style={{
-                            borderColor: isReady ? 'var(--panel-accent-border,#d5a25c)' : isFailed ? 'var(--panel-danger,#d9775a)' : 'var(--panel-border-subtle,#e4d5c0)',
-                            opacity: isReady && !isSelected ? 0.5 : 1,
-                          }}
-                        >
-                          <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className="flex items-center gap-2 font-medium truncate">
-                              {isReady && (
-                                <div
-                                  className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded border"
-                                  style={{
-                                    borderColor: isSelected ? 'var(--panel-accent-strong,#c86f1d)' : 'var(--panel-border,#d4c0a7)',
-                                    background: isSelected ? 'var(--panel-accent-strong,#c86f1d)' : 'transparent',
-                                  }}
-                                  onClick={() => handleBatchToggleItem(item.chatId)}
-                                >
-                                  {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
-                                </div>
-                              )}
-                              {isReady && <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />}
-                              {isFailed && <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />}
-                              {item.leadName || 'Sem nome'}
-                            </span>
-                            {isFailed && (
-                              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 rounded-lg" onClick={() => void handleBatchRetryChat(index)} aria-label="Tentar novamente">
-                                <RefreshCw className="h-3.5 w-3.5" />
-                              </Button>
-                            )}
-                          </div>
-                          {isReady && (
-                            <div>
-                              <textarea
-                                value={item.generatedText}
-                                onChange={(e) => {
-                                  setBatchItems((prev) =>
-                                    prev.map((p, idx) => (idx === index ? { ...p, generatedText: e.target.value } : p)),
-                                  );
-                                }}
-                                rows={3}
-                                className="w-full resize-y rounded-lg border bg-transparent p-2 text-xs"
-                                style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)' }}
-                              />
-                              {(() => {
-                                const segments = splitWhatsAppMessageSegments(item.generatedText);
-                                return segments.length > 1 ? (
-                                  <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
-                                    {segments.length} mensagens
-                                  </p>
-                                ) : null;
-                              })()}
-                              {item.nextAction && (
-                                <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
-                                  {item.nextAction.suggestedDateTime ? `Proximo: ${formatDateTimeFullBR(item.nextAction.suggestedDateTime)}` : item.nextAction.reason}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                          {isFailed && item.error && (
-                            <p className="text-xs text-red-600">{item.error}</p>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
-                      {batchItems.filter((item) => item.status === 'failed').length > 0 ? (
-                        <Button
-                          variant="warning"
-                          size="sm"
-                          className="rounded-xl"
-                          onClick={() => void handleBatchRetryAll()}
-                        >
-                          <RefreshCw className="mr-1.5 h-4 w-4" />
-                          Tentar novamente ({batchItems.filter((item) => item.status === 'failed').length})
-                        </Button>
-                      ) : null}
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        className="rounded-xl"
-                        onClick={() => void handleBatchSendAll()}
-                        disabled={!batchItems.some((item) => item.status === 'ready' && item.selected)}
-                      >
-                        <Send className="mr-1.5 h-4 w-4" />
-                        Enviar selecionados ({batchItems.filter((item) => item.status === 'ready' && item.selected).length})
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-
-            {batchPhase === 'sent' && sentSummary ? (
-              <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <span className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
-                      Follow-ups enviados
-                    </span>
-                  </div>
-                  <Button variant="ghost" size="sm" className="rounded-xl text-xs" onClick={() => setBatchExpanded((prev) => !prev)}>
-                    {batchExpanded ? 'Ocultar' : 'Mostrar'}
-                  </Button>
-                </div>
-                {batchExpanded ? (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex flex-wrap gap-3">
-                      <div className="flex items-center gap-2 rounded-xl border bg-green-50 px-4 py-3 text-sm font-medium text-green-800" style={{ borderColor: 'var(--panel-accent-green-border,#a8c9a0)' }}>
-                        <CheckCircle2 className="h-4 w-4" />
-                        {sentSummary.sentCount} enviado(s)
-                      </div>
-                      {sentSummary.scheduledCount > 0 ? (
-                        <div className="flex items-center gap-2 rounded-xl border bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800" style={{ borderColor: 'var(--panel-accent-blue-border,#9bb8d4)' }}>
-                          <CalendarDays className="h-4 w-4" />
-                          {sentSummary.scheduledCount} agendado(s)
-                        </div>
-                      ) : null}
-                      {sentSummary.failedCount > 0 ? (
-                        <div className="flex items-center gap-2 rounded-xl border bg-red-50 px-4 py-3 text-sm font-medium text-red-800" style={{ borderColor: 'var(--panel-accent-red-border,#d79a8f)' }}>
-                          <AlertCircle className="h-4 w-4" />
-                          <span>{sentSummary.failedCount} falha(s)</span>
-                        </div>
-                      ) : null}
-                    </div>
-                    {sentSummary.errorMessage ? (
-                      <p className="mt-2 text-xs text-red-700">{sentSummary.errorMessage}</p>
-                    ) : null}
-                    <div className="flex justify-end">
-                      <Button variant="secondary" size="sm" className="rounded-xl" onClick={handleBatchCancel}>
-                        Fechar
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
 
             <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
               <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px_auto_auto]">
@@ -2255,6 +1712,11 @@ export default function WhatsAppAgendaModal({
         />
       ) : null}
 
+      <WhatsAppBatchFollowUpModal
+        isOpen={isBatchModalOpen}
+        onClose={() => { setIsBatchModalOpen(false); void loadReminders(); }}
+        onSendBatchFollowUps={onSendBatchFollowUps}
+      />
       {ConfirmationDialog}
     </>
   );

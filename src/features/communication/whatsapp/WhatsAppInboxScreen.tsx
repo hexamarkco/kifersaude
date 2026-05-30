@@ -3034,6 +3034,8 @@ export default function WhatsAppInboxScreen() {
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
   const resolvedIdentityPhoneKeysRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
+  const loadChatsRef = useRef<() => Promise<unknown> | void>(() => {});
+  const loadMessagesRef = useRef<(chat: CommWhatsAppChat | null, reason?: MessageLoadReason) => Promise<unknown> | void>(() => {});
   const archivedSectionOpenRef = useRef<boolean>(false);
   const latestChatsLoadedAtRef = useRef<number>(0);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
@@ -5411,6 +5413,8 @@ export default function WhatsAppInboxScreen() {
     return loadPromise;
   }, [applyPrefetchedLeadNames, buildChatsSignature, chatActivityFilter, leadStatusFilters]);
 
+  loadChatsRef.current = loadChats;
+
   const handleSwitchArchivedSection = useCallback((nextArchivedSectionOpen: boolean) => {
     setArchivedSectionOpen(nextArchivedSectionOpen);
 
@@ -5599,6 +5603,8 @@ export default function WhatsAppInboxScreen() {
       }
     }
   }, [applyOutgoingOrderToServerMessage, buildMessagesSignature, rememberOutgoingMessageOrder, upsertChatLocally]);
+
+  loadMessagesRef.current = loadMessages;
 
   const handleSelectMessageSearchResult = useCallback((result: CommWhatsAppMessageSearchResult) => {
     const targetChat = result.chat;
@@ -8498,7 +8504,7 @@ export default function WhatsAppInboxScreen() {
       }
 
       for (const segment of result.textSegments) {
-        void commWhatsAppService.sendTextMessage(externalChatId, segment);
+        await commWhatsAppService.sendTextMessage(externalChatId, segment);
       }
 
       sentIds.push(result.reminderId);
@@ -8544,6 +8550,11 @@ export default function WhatsAppInboxScreen() {
     } catch (auditError) {
       console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
     }
+
+    void Promise.all([loadChatsRef.current(), loadMessagesRef.current(null, 'send')]).catch((refreshError) => {
+      console.error('[WhatsAppInbox] erro ao atualizar conversas apos envio batch', refreshError);
+      toast.warning('Follow-ups enviados, mas houve um erro ao atualizar a lista. Atualize a pagina se necessario.');
+    });
 
     const scheduledCount = nextActions.length;
     const msg = `${sentIds.length} follow-up(s) enviado(s)${scheduledCount > 0 ? ` e ${scheduledCount} novo(s) agendado(s)` : ''}.`;

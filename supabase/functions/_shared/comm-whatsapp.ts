@@ -1412,7 +1412,12 @@ export const extractWhapiMessageId = (payload: unknown): string => {
 
 export const extractWhapiMessageStatus = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
-  return toTrimmedString(payload.status) || toTrimmedString(payload.state);
+  const top = toTrimmedString(payload.status) || toTrimmedString(payload.state);
+  if (top) return top;
+  if (isRecord(payload.message)) {
+    return toTrimmedString(payload.message.status) || toTrimmedString(payload.message.state);
+  }
+  return '';
 };
 
 export const extractWhapiMediaId = (payload: unknown): string => {

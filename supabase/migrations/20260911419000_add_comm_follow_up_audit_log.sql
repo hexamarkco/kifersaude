@@ -14,10 +14,14 @@ create index if not exists idx_comm_follow_up_audit_log_lead
 
 alter table comm_follow_up_audit_log enable row level security;
 
+drop policy if exists "Usuarios autenticados podem inserir na auditoria" on comm_follow_up_audit_log;
+
 create policy "Usuarios autenticados podem inserir na auditoria"
   on comm_follow_up_audit_log for insert
   to authenticated
   with check (true);
+
+drop policy if exists "Usuarios autenticados podem ler auditoria" on comm_follow_up_audit_log;
 
 create policy "Usuarios autenticados podem ler auditoria"
   on comm_follow_up_audit_log for select

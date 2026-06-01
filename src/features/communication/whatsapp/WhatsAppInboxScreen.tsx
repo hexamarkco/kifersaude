@@ -1299,6 +1299,63 @@ const mergeMessages = (existing: CommWhatsAppMessage[], incoming: CommWhatsAppMe
   return mergeCommWhatsAppMessages(existing, incoming).sort(compareMessageChronology);
 };
 
+const getObviousDuplicateMessageKey = (message: CommWhatsAppMessage) => {
+  if (message.direction === 'system') {
+    return '';
+  }
+
+  const messageAtMs = getMessageTimestampMs(message.message_at);
+  if (messageAtMs === null) {
+    return '';
+  }
+
+  const text = normalizeQuickReplyLookup(getMessageSearchPreviewText(message)).replace(/\s+/g, ' ').trim();
+  if (text.length < 12) {
+    return '';
+  }
+
+  const messageAtSecond = Math.floor(messageAtMs / 1000);
+  const sender = normalizeQuickReplyLookup(String(message.sender_phone ?? message.sender_name ?? ''));
+  return [message.chat_id, message.direction, message.message_type.trim().toLowerCase(), messageAtSecond, sender, text].join(':');
+};
+
+const pickMoreCompleteDuplicateMessage = (current: CommWhatsAppMessage, candidate: CommWhatsAppMessage) => {
+  const currentExternalId = String(current.external_message_id ?? '').trim();
+  const candidateExternalId = String(candidate.external_message_id ?? '').trim();
+
+  if (!currentExternalId && candidateExternalId) {
+    return candidate;
+  }
+
+  if (!current.media_id && candidate.media_id) {
+    return candidate;
+  }
+
+  if (!current.transcription_text && candidate.transcription_text) {
+    return candidate;
+  }
+
+  return current;
+};
+
+const dedupeObviousDuplicateMessages = (items: CommWhatsAppMessage[]) => {
+  const bySemanticKey = new Map<string, CommWhatsAppMessage>();
+  const passthrough: CommWhatsAppMessage[] = [];
+
+  for (const message of items) {
+    const key = getObviousDuplicateMessageKey(message);
+    if (!key) {
+      passthrough.push(message);
+      continue;
+    }
+
+    const current = bySemanticKey.get(key);
+    bySemanticKey.set(key, current ? pickMoreCompleteDuplicateMessage(current, message) : message);
+  }
+
+  return [...passthrough, ...bySemanticKey.values()].sort(compareMessageChronology);
+};
+
 const REDUNDANT_ACTION_MESSAGE_MARKERS = new Set([
   '[acao]',
   '[ação]',
@@ -3652,10 +3709,10 @@ export default function WhatsAppInboxScreen() {
 
     const localForChat = localOutgoingMessages.filter((message) => message.chat_id === selectedChatId);
     if (localForChat.length === 0) {
-      return filteredMessages;
+      return dedupeObviousDuplicateMessages(filteredMessages);
     }
 
-    return mergeMessages(filteredMessages, localForChat);
+    return dedupeObviousDuplicateMessages(mergeMessages(filteredMessages, localForChat));
   }, [applyOutgoingOrderToServerMessage, localOutgoingMessages, messages, selectedChatId]);
 
   const mediaViewerMessages = useMemo(

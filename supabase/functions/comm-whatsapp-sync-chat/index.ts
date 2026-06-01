@@ -13,6 +13,7 @@ import {
   extractWhapiEditedMessageEvent,
   extractWhapiLinkPreviewMeta,
   extractWhapiQuotedMessageMeta,
+  extractWhapiMessageId,
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
@@ -70,6 +71,49 @@ const createAdminClient = () => {
   }
 
   return createClient(supabaseUrl, serviceRoleKey);
+};
+
+const normalizeSemanticText = (value: unknown) => toTrimmedString(value).replace(/\s+/g, ' ').toLowerCase();
+
+const buildWhapiHistoryMessageKey = (message: Record<string, unknown>) => {
+  const externalMessageId = extractWhapiMessageId(message);
+  if (externalMessageId) {
+    return `external:${externalMessageId}`;
+  }
+
+  const direction = message.from_me === true ? 'outbound' : 'inbound';
+  const messageAt = unixTimestampToIso(message.timestamp) || '';
+  const messageType = toTrimmedString(message.type) || 'text';
+  const text = normalizeSemanticText(summarizeWhapiMessage(message));
+  const mediaId = extractWhapiMediaMeta(message).mediaId || '';
+  const sender = toTrimmedString(message.from) || toTrimmedString(message.from_name) || '';
+
+  if (!mediaId && text.length < 12) {
+    return '';
+  }
+
+  return `semantic:${direction}:${messageType}:${messageAt}:${sender}:${mediaId}:${text}`;
+};
+
+const dedupeWhapiHistoryMessages = (messages: Array<Record<string, unknown>>) => {
+  const byKey = new Map<string, Record<string, unknown>>();
+  const passthrough: Array<Record<string, unknown>> = [];
+
+  for (const message of messages) {
+    const key = buildWhapiHistoryMessageKey(message);
+    if (!key) {
+      passthrough.push(message);
+      continue;
+    }
+
+    if (byKey.has(key)) {
+      continue;
+    }
+
+    byKey.set(key, message);
+  }
+
+  return [...passthrough, ...byKey.values()];
 };
 
 async function findExistingChat(
@@ -197,7 +241,7 @@ Deno.serve(async (req: Request) => {
       throw new Error(chatError?.message || 'Nao foi possivel preparar a conversa para sincronizacao.');
     }
 
-    const messages = await fetchWhapiChatMessages({ token: settings.token, chatId: externalChatId });
+    const messages = dedupeWhapiHistoryMessages(await fetchWhapiChatMessages({ token: settings.token, chatId: externalChatId }));
     const orderedMessages = [...messages].sort((a, b) => {
       const aTime = Number(a.timestamp ?? 0);
       const bTime = Number(b.timestamp ?? 0);
@@ -309,12 +353,47 @@ Deno.serve(async (req: Request) => {
 
       const direction = message.from_me === true ? 'outbound' : 'inbound';
       const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
-      const externalMessageId = toTrimmedString(message.id);
+      const externalMessageId = extractWhapiMessageId(message);
       const mediaMeta = extractWhapiMediaMeta(message);
       const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
       const quoteMeta = extractWhapiQuotedMessageMeta(message);
       const contactCardMeta = extractWhapiContactCardMeta(message);
       const summaryText = summarizeWhapiMessage(message);
+
+      if (!externalMessageId) {
+        const normalizedSummaryText = normalizeSemanticText(summaryText);
+        const canCheckSemanticDuplicate = Boolean(mediaMeta.mediaId || normalizedSummaryText.length >= 12);
+
+        if (canCheckSemanticDuplicate) {
+          let existingMessageQuery = supabaseAdmin
+            .from('comm_whatsapp_messages')
+            .select('id')
+            .eq('chat_id', chat.id)
+            .eq('direction', direction)
+            .eq('message_type', toTrimmedString(message.type) || 'text')
+            .eq('message_at', messageAt);
+
+          if (mediaMeta.mediaId) {
+            existingMessageQuery = existingMessageQuery.eq('media_id', mediaMeta.mediaId);
+          } else {
+            existingMessageQuery = existingMessageQuery.eq('text_content', summaryText);
+          }
+
+          const { data: existingMessage, error: existingMessageError } = await existingMessageQuery
+            .limit(1)
+            .maybeSingle();
+
+          if (existingMessageError) {
+            throw new Error(`Erro ao verificar duplicata sem ID externo: ${existingMessageError.message}`);
+          }
+
+          if (existingMessage) {
+            updatedCount += 1;
+            continue;
+          }
+        }
+      }
+
       const persisted = await persistCommWhatsAppMessage(supabaseAdmin, {
         channelId: channel.id,
         externalChatId,

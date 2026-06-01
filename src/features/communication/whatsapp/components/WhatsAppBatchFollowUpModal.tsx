@@ -165,7 +165,15 @@ export default function WhatsAppBatchFollowUpModal({
     void (async () => {
       try {
         const pendingChats = await commWhatsAppService.getPendingFollowUpChats();
-        const mapped: BatchItemState[] = pendingChats.map((chat) => ({
+        const seenReminderIds = new Set<string>();
+        const mapped: BatchItemState[] = pendingChats.filter((chat) => {
+          if (seenReminderIds.has(chat.reminder_id)) {
+            return false;
+          }
+
+          seenReminderIds.add(chat.reminder_id);
+          return true;
+        }).map((chat) => ({
           chatId: chat.chat_id,
           leadId: chat.lead_id,
           leadName: chat.lead_name,

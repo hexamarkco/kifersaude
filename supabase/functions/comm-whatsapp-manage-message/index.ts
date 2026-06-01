@@ -39,6 +39,7 @@ type ManageMessageBody = {
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const EDITABLE_MESSAGE_TYPES = new Set(['text', 'image', 'video', 'gif', 'short', 'document']);
+const MEDIA_EDIT_MESSAGE_TYPES = new Set(['image', 'video', 'gif', 'short', 'document']);
 
 const createAdminClient = () => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -123,7 +124,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: message, error: messageError } = await supabaseAdmin
       .from('comm_whatsapp_messages')
-      .select('id, chat_id, channel_id, external_message_id, direction, message_type, delivery_status, text_content, media_caption, metadata')
+      .select('id, chat_id, channel_id, external_message_id, direction, message_type, delivery_status, text_content, media_id, media_url, media_file_name, media_caption, metadata')
       .eq('id', messageId)
       .maybeSingle();
 
@@ -201,18 +202,44 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const response = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
+      const isMediaEdit = MEDIA_EDIT_MESSAGE_TYPES.has(messageType);
+      const mediaReference = isMediaEdit
+        ? toTrimmedString(message.media_id) || toTrimmedString(message.media_url)
+        : '';
+
+      if (isMediaEdit && !mediaReference) {
+        return new Response(JSON.stringify({ error: 'Esta mensagem nao possui midia reutilizavel para editar a legenda na Whapi.' }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      const editPayload: Record<string, unknown> = isMediaEdit
+        ? {
+            to: externalChatId,
+            media: mediaReference,
+            caption: nextText,
+            edit: externalMessageId,
+          }
+        : {
+            to: externalChatId,
+            body: nextText,
+            edit: externalMessageId,
+          };
+
+      const mediaFileName = toTrimmedString(message.media_file_name);
+      if (isMediaEdit && messageType === 'document' && mediaFileName) {
+        editPayload.filename = mediaFileName;
+      }
+
+      const response = await fetch(`${WHAPI_BASE_URL}/messages/${isMediaEdit ? messageType : 'text'}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          to: externalChatId,
-          body: nextText,
-          edit: externalMessageId,
-        }),
+        body: JSON.stringify(editPayload),
       });
       const payload = await readResponsePayload(response);
 

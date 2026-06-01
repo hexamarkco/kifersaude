@@ -2891,6 +2891,10 @@ export default function WhatsAppInboxScreen() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<CommWhatsAppMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [chatMessageSearchOpen, setChatMessageSearchOpen] = useState(false);
+  const [chatMessageSearchDraft, setChatMessageSearchDraft] = useState('');
+  const [chatMessageSearchResults, setChatMessageSearchResults] = useState<CommWhatsAppMessageSearchResult[]>([]);
+  const [searchingChatMessages, setSearchingChatMessages] = useState(false);
   const [threadReconcileChatId, setThreadReconcileChatId] = useState<string | null>(null);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
@@ -2998,6 +3002,7 @@ export default function WhatsAppInboxScreen() {
   const { pollingEnabled } = useWindowPollingState();
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const chatMessageSearchInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const attachmentMenuRef = useRef<HTMLDivElement | null>(null);
   const advancedFiltersRef = useRef<HTMLDivElement | null>(null);
@@ -3055,6 +3060,7 @@ export default function WhatsAppInboxScreen() {
   const chatsRequestIdRef = useRef(0);
   const chatPollBackoffRef = useRef(0);
   const messageSearchSelectionRequestIdRef = useRef(0);
+  const chatMessageSearchRequestIdRef = useRef(0);
   const pendingMessageSearchChatIdRef = useRef<string | null>(null);
   const messagesRequestIdRef = useRef(0);
   const chatsLoadPromiseRef = useRef<Promise<void> | null>(null);
@@ -3278,6 +3284,8 @@ export default function WhatsAppInboxScreen() {
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
     [chats, selectedChatId],
   );
+
+  const chatMessageSearch = chatMessageSearchDraft.trim();
 
   const chatMatchesActiveFilters = useCallback((chat: CommWhatsAppChat) => {
     if (chatActivityFilter === 'unread' && chat.unread_count <= 0 && !chat.manual_unread) {
@@ -5660,6 +5668,98 @@ export default function WhatsAppInboxScreen() {
       }
     });
   }, [buildMessagesSignature, loadMessages, upsertChatLocally]);
+
+  const handleToggleChatMessageSearch = useCallback(() => {
+    setChatMessageSearchOpen((current) => {
+      const nextOpen = !current;
+      if (nextOpen) {
+        window.setTimeout(() => chatMessageSearchInputRef.current?.focus(), 0);
+      }
+      return nextOpen;
+    });
+  }, []);
+
+  const handleSelectChatMessageSearchResult = useCallback((result: CommWhatsAppMessageSearchResult) => {
+    handleSelectMessageSearchResult(result);
+    window.setTimeout(() => composerTextareaRef.current?.focus(), 0);
+  }, [handleSelectMessageSearchResult]);
+
+  useEffect(() => {
+    chatMessageSearchRequestIdRef.current += 1;
+    setChatMessageSearchDraft('');
+    setChatMessageSearchResults([]);
+    setSearchingChatMessages(false);
+    setChatMessageSearchOpen(false);
+  }, [selectedChatId]);
+
+  useEffect(() => {
+    if (!chatMessageSearchOpen || !selectedChat?.id || !chatMessageSearch) {
+      chatMessageSearchRequestIdRef.current += 1;
+      setChatMessageSearchResults([]);
+      setSearchingChatMessages(false);
+      return;
+    }
+
+    const requestId = ++chatMessageSearchRequestIdRef.current;
+    setSearchingChatMessages(true);
+
+    const timeoutId = window.setTimeout(() => {
+      void commWhatsAppService.searchMessages({
+        search: chatMessageSearch,
+        chatIds: [selectedChat.id],
+        archivedFilter: 'all',
+        limit: 50,
+      }).then((results) => {
+        if (requestId !== chatMessageSearchRequestIdRef.current || selectedChatIdRef.current !== selectedChat.id) {
+          return;
+        }
+
+        const seen = new Set<string>();
+        setChatMessageSearchResults(results.filter((result) => {
+          if (seen.has(result.message.id)) {
+            return false;
+          }
+
+          seen.add(result.message.id);
+          return true;
+        }));
+      }).catch((error) => {
+        if (requestId !== chatMessageSearchRequestIdRef.current || selectedChatIdRef.current !== selectedChat.id) {
+          return;
+        }
+
+        console.error('[WhatsAppInbox] erro ao buscar mensagens no chat', error);
+        setChatMessageSearchResults([]);
+      }).finally(() => {
+        if (requestId === chatMessageSearchRequestIdRef.current && selectedChatIdRef.current === selectedChat.id) {
+          setSearchingChatMessages(false);
+        }
+      });
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [chatMessageSearch, chatMessageSearchOpen, selectedChat?.id]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (!selectedChatIdRef.current || (!event.ctrlKey && !event.metaKey) || event.key.toLowerCase() !== 'f') {
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const editableTarget = target?.closest('input, textarea, [contenteditable="true"]');
+      if (editableTarget && editableTarget !== chatMessageSearchInputRef.current) {
+        return;
+      }
+
+      event.preventDefault();
+      setChatMessageSearchOpen(true);
+      window.setTimeout(() => chatMessageSearchInputRef.current?.focus(), 0);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const scheduleMessageStatusRefresh = useCallback((params: {
     chat: CommWhatsAppChat;
@@ -9000,6 +9100,17 @@ export default function WhatsAppInboxScreen() {
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
                       type="button"
+                      onClick={handleToggleChatMessageSearch}
+                      variant={chatMessageSearchOpen ? 'secondary' : 'soft'}
+                      size="icon"
+                      className="rounded-xl"
+                      aria-label="Pesquisar mensagens neste chat"
+                      title="Pesquisar neste chat"
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
                       onClick={() => void handleCopyChatTranscript()}
                       variant="soft"
                       size="icon"
@@ -9059,6 +9170,98 @@ export default function WhatsAppInboxScreen() {
                   </div>
                 </div>
               </div>
+
+              {chatMessageSearchOpen ? (
+                <div className="border-b bg-[color:var(--panel-surface-soft,#f7efe3)]/70 px-5 py-3">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        ref={chatMessageSearchInputRef}
+                        value={chatMessageSearchDraft}
+                        onChange={(event) => setChatMessageSearchDraft(event.target.value)}
+                        leftIcon={Search}
+                        placeholder="Pesquisar mensagens neste chat"
+                        size="compact"
+                        autoComplete="off"
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            setChatMessageSearchOpen(false);
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setChatMessageSearchDraft('');
+                          setChatMessageSearchResults([]);
+                          setChatMessageSearchOpen(false);
+                        }}
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-xl"
+                        aria-label="Fechar busca no chat"
+                        title="Fechar busca"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {chatMessageSearch ? (
+                      <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+                        <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2 text-xs text-[var(--panel-text-muted,#8a735f)]">
+                          <span>
+                            {searchingChatMessages
+                              ? 'Buscando neste chat...'
+                              : `${chatMessageSearchResults.length} resultado${chatMessageSearchResults.length === 1 ? '' : 's'}`}
+                          </span>
+                          {searchingChatMessages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                        </div>
+
+                        {!searchingChatMessages && chatMessageSearchResults.length === 0 ? (
+                          <div className="px-3 py-3 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                            Nenhuma mensagem encontrada neste chat.
+                          </div>
+                        ) : (
+                          <div className="max-h-52 overflow-y-auto py-1">
+                            {chatMessageSearchResults.map((result) => {
+                              const messagePreviewText = getMessageSearchPreviewText(result.message);
+                              const messagePreviewIconType = getChatPreviewIconType(messagePreviewText);
+                              if (!messagePreviewText) {
+                                return null;
+                              }
+
+                              return (
+                                <button
+                                  key={result.message.id}
+                                  type="button"
+                                  onClick={() => handleSelectChatMessageSearchResult(result)}
+                                  className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition hover:bg-[var(--panel-surface-soft,#f7efe3)] focus:bg-[var(--panel-surface-soft,#f7efe3)] focus:outline-none"
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">
+                                      {messagePreviewIconType ? <ChatPreviewIcon type={messagePreviewIconType} /> : messagePreviewText}
+                                    </span>
+                                    <span className="mt-0.5 block text-xs text-[var(--panel-text-muted,#8a735f)]">
+                                      {result.message.direction === 'outbound' ? 'Você' : 'Contato'}
+                                    </span>
+                                  </span>
+                                  <span className="shrink-0 pt-0.5 text-[11px] font-medium text-[var(--panel-text-muted,#8a735f)]">
+                                    {formatMessageTime(result.message.message_at)}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[var(--panel-text-muted,#8a735f)]">
+                        Digite um trecho da mensagem, legenda ou transcrição para localizar no histórico deste chat.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
 
               <div
                 ref={messagesContainerRef}

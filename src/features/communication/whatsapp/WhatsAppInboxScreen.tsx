@@ -8628,6 +8628,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleBatchSendFollowUp = useCallback(async (results: Array<{
     chatId: string;
+    externalChatId: string | null;
     textSegments: string[];
     reminderId: string;
     leadId: string;
@@ -8641,6 +8642,8 @@ export default function WhatsAppInboxScreen() {
   }>) => {
     const chats = latestChatsRef.current;
     const sentIds: string[] = [];
+    const failures: string[] = [];
+    const warnings: string[] = [];
     const nextActions: Array<{ leadId: string; nextAction: NonNullable<typeof results[number]['nextAction']> }> = [];
     const auditEntries: Array<{
       lead_id: string;
@@ -8651,17 +8654,37 @@ export default function WhatsAppInboxScreen() {
     }> = [];
 
     for (const [index, result] of results.entries()) {
-      const chat = chats.find((c) => c.lead_id === result.leadId) ?? chats.find((c) => c.id === result.chatId);
-      const externalChatId = chat?.external_chat_id
-        ?? (result.phone ? `${result.phone.replace(/\D/g, '')}@c.us` : null);
+      const chat = chats.find((c) => c.id === result.chatId)
+        ?? (result.externalChatId ? chats.find((c) => c.external_chat_id === result.externalChatId) : null)
+        ?? chats.find((c) => c.lead_id === result.leadId);
+      const phoneDigits = result.phone?.replace(/\D/g, '') ?? '';
+      const externalChatId = result.externalChatId?.trim()
+        || chat?.external_chat_id
+        || (phoneDigits ? `${phoneDigits}@c.us` : null);
 
       if (!externalChatId) {
-        console.warn('[WhatsAppInbox] sem external_chat_id e sem telefone para lead', result.leadId);
+        failures.push(`Lead ${result.leadId}: sem conversa externa ou telefone valido.`);
         continue;
       }
 
-      for (const segment of result.textSegments) {
-        await commWhatsAppService.sendTextMessage(externalChatId, segment);
+      if (result.textSegments.length === 0) {
+        failures.push(`Lead ${result.leadId}: mensagem vazia.`);
+        continue;
+      }
+
+      try {
+        for (const [segmentIndex, segment] of result.textSegments.entries()) {
+          await commWhatsAppService.sendTextMessage(externalChatId, segment, {
+            clientRequestId: `follow-up:${result.reminderId}:${segmentIndex}`,
+          });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Nao foi possivel enviar o follow-up.';
+        failures.push(`Lead ${result.leadId}: ${message}`);
+        if (index < results.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+        continue;
       }
 
       sentIds.push(result.reminderId);
@@ -8681,14 +8704,15 @@ export default function WhatsAppInboxScreen() {
     }
 
     if (sentIds.length === 0) {
-      throw new Error('Nenhum lead possui chat ou telefone valido para envio.');
+      throw new Error(failures[0] || 'Nenhum lead possui chat ou telefone valido para envio.');
     }
 
     const { error: remindersError } = await supabase.from('reminders').update({ lido: true }).in('id', sentIds);
     if (remindersError) {
-      throw new Error(`Erro ao marcar lembretes como lidos: ${remindersError.message}`);
+      warnings.push(`Erro ao marcar lembretes como lidos: ${remindersError.message}`);
     }
 
+    let scheduledCount = 0;
     for (const { leadId, nextAction } of nextActions) {
       const { error: scheduleError } = await supabase.rpc('schedule_follow_up_reminder', {
         p_lead_id: leadId,
@@ -8698,14 +8722,19 @@ export default function WhatsAppInboxScreen() {
         p_priority: nextAction.priority,
       });
       if (scheduleError) {
-        throw new Error(`Erro ao agendar proximo follow-up para lead ${leadId}: ${scheduleError.message}`);
+        warnings.push(`Erro ao agendar proximo follow-up para lead ${leadId}: ${scheduleError.message}`);
+      } else {
+        scheduledCount += 1;
       }
     }
 
-    try {
-      await supabase.from('comm_follow_up_audit_log').insert(auditEntries);
-    } catch (auditError) {
-      console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
+    if (auditEntries.length > 0) {
+      try {
+        await supabase.from('comm_follow_up_audit_log').insert(auditEntries);
+      } catch (auditError) {
+        console.error('[WhatsAppInbox] erro ao registrar auditoria', auditError);
+        warnings.push('Follow-ups enviados, mas nao foi possivel registrar a auditoria.');
+      }
     }
 
     void Promise.all([loadChatsRef.current(), loadMessagesRef.current(null, 'send')]).catch((refreshError) => {
@@ -8713,9 +8742,21 @@ export default function WhatsAppInboxScreen() {
       toast.warning('Follow-ups enviados, mas houve um erro ao atualizar a lista. Atualize a pagina se necessario.');
     });
 
-    const scheduledCount = nextActions.length;
     const msg = `${sentIds.length} follow-up(s) enviado(s)${scheduledCount > 0 ? ` e ${scheduledCount} novo(s) agendado(s)` : ''}.`;
-    toast.success(msg);
+    if (failures.length > 0) {
+      toast.warning(`${msg} ${failures.length} falharam.`);
+    } else if (warnings.length > 0) {
+      toast.warning(msg);
+    } else {
+      toast.success(msg);
+    }
+
+    return {
+      sentCount: sentIds.length,
+      scheduledCount,
+      failedCount: failures.length,
+      errorMessage: [...failures, ...warnings].slice(0, 3).join('\n') || undefined,
+    };
   }, []);
 
   const handleSendFollowUpDraft = useCallback(async () => {

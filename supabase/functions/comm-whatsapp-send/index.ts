@@ -341,6 +341,19 @@ const buildDuplicateSendResponse = (row: SendRequestRow | null) => new Response(
   },
 );
 
+const failMissingWhapiMessageId = async (
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  requestId: string | null | undefined,
+) => {
+  const errorMessage = 'A Whapi confirmou a requisicao, mas nao retornou o ID da mensagem.';
+  await failSendRequest(supabaseAdmin, requestId, errorMessage);
+
+  return new Response(JSON.stringify({ error: errorMessage }), {
+    status: 502,
+    headers: jsonHeaders,
+  });
+};
+
 const deriveVoiceFileName = (mimeType: string, originalName: string) => {
   const safeName = sanitizeFileName(originalName, 'voice-note');
   if (/\.(ogg|opus|oga|webm)$/i.test(safeName)) {
@@ -689,6 +702,10 @@ Deno.serve(async (req: Request) => {
 
         const externalMessageId = extractWhapiMessageId(whapiPayload);
         const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
+        if (!externalMessageId) {
+          return await failMissingWhapiMessageId(supabaseAdmin, sendRequest.row?.id);
+        }
+
         const nowIso = getNowIso();
         const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
         const phoneDigits = extractPhoneFromChatId(chatId);
@@ -826,6 +843,10 @@ Deno.serve(async (req: Request) => {
 
     const externalMessageId = extractWhapiMessageId(whapiPayload);
     const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
+    if (!externalMessageId) {
+      return await failMissingWhapiMessageId(supabaseAdmin, sendRequest.row?.id);
+    }
+
     uploadedMediaId = uploadedMediaId || extractWhapiMediaId(whapiPayload);
     const nowIso = getNowIso();
     const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);

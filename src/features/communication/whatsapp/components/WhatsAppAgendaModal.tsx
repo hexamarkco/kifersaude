@@ -58,6 +58,7 @@ type WhatsAppAgendaModalProps = {
   onOpenLeadChat?: (lead: Pick<Lead, 'id' | 'nome_completo' | 'telefone'>) => Promise<void> | void;
   onSendBatchFollowUps?: (results: Array<{
     chatId: string;
+    externalChatId: string | null;
     textSegments: string[];
     reminderId: string;
     leadId: string;
@@ -68,7 +69,7 @@ type WhatsAppAgendaModalProps = {
       title: string;
       reason: string;
     } | null;
-  }>) => Promise<void>;
+  }>) => Promise<{ sentCount: number; scheduledCount: number; failedCount: number; errorMessage?: string }>;
 };
 
 type SchedulerDraft = {

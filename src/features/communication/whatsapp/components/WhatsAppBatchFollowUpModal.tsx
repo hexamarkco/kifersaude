@@ -120,6 +120,7 @@ type WhatsAppBatchFollowUpModalProps = {
   onClose: () => void;
   onSendBatchFollowUps?: (results: Array<{
     chatId: string;
+    externalChatId: string | null;
     textSegments: string[];
     reminderId: string;
     leadId: string;
@@ -130,7 +131,7 @@ type WhatsAppBatchFollowUpModalProps = {
       title: string;
       reason: string;
     } | null;
-  }>) => Promise<void>;
+  }>) => Promise<SentSummary>;
 };
 
 // ---- Helpers ----
@@ -428,13 +429,13 @@ export default function WhatsAppBatchFollowUpModal({
       return;
     }
 
-    const scheduledCount = readyItems.filter((it) => it.nextAction?.suggestedDateTime).length;
     setPhase('sending');
 
     try {
-      await onSendBatchFollowUps(
+      const summary = await onSendBatchFollowUps(
         readyItems.map((it) => ({
           chatId: it.chatId,
+          externalChatId: it.externalChatId,
           textSegments: splitWhatsAppMessageSegments(it.generatedText),
           reminderId: it.reminderId,
           leadId: it.leadId,
@@ -450,7 +451,7 @@ export default function WhatsAppBatchFollowUpModal({
         })),
       );
 
-      setSentSummary({ sentCount: readyItems.length, scheduledCount, failedCount: 0 });
+      setSentSummary(summary);
     } catch (error) {
       console.error('[WhatsAppBatchFollowUpModal] erro ao enviar:', error);
       setSentSummary({

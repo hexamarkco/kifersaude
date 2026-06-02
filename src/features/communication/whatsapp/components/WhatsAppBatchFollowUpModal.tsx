@@ -106,12 +106,24 @@ type BatchItemState = {
   nextAction: CommWhatsAppFollowUpNextAction | null;
   error: string | null;
   selected: boolean;
+  sendStatus: 'idle' | 'queued' | 'sending' | 'sent' | 'failed';
+  sendError: string | null;
+  sendSegmentsSent: number;
+  sendSegmentsTotal: number;
 };
 
 type SentSummary = {
   sentCount: number;
   scheduledCount: number;
   failedCount: number;
+  errorMessage?: string;
+};
+
+export type WhatsAppBatchFollowUpSendProgress = {
+  reminderId: string;
+  status: 'queued' | 'sending' | 'sent' | 'failed';
+  sentSegments: number;
+  totalSegments: number;
   errorMessage?: string;
 };
 
@@ -131,7 +143,9 @@ type WhatsAppBatchFollowUpModalProps = {
       title: string;
       reason: string;
     } | null;
-  }>) => Promise<SentSummary>;
+  }>, options?: {
+    onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
+  }) => Promise<SentSummary>;
 };
 
 // ---- Helpers ----
@@ -193,6 +207,10 @@ export default function WhatsAppBatchFollowUpModal({
           nextAction: null,
           error: null,
           selected: true,
+          sendStatus: 'idle',
+          sendError: null,
+          sendSegmentsSent: 0,
+          sendSegmentsTotal: 0,
         }));
         setItems(mapped);
         if (mapped.length > 0) {
@@ -219,6 +237,13 @@ export default function WhatsAppBatchFollowUpModal({
 
   const pendingCount = items.filter((i) => i.status === 'pending' && i.selected).length;
   const readyCount = items.filter((i) => i.status === 'ready' && i.selected).length;
+  const sendingItems = items.filter((i) => i.selected && ['queued', 'sending', 'sent', 'failed'].includes(i.sendStatus));
+  const sentItemsCount = sendingItems.filter((i) => i.sendStatus === 'sent').length;
+  const failedItemsCount = sendingItems.filter((i) => i.sendStatus === 'failed').length;
+  const currentSendingItem = items.find((i) => i.sendStatus === 'sending') ?? null;
+  const sendingTotal = sendingItems.length;
+  const sendingFinished = sentItemsCount + failedItemsCount;
+  const sendingProgressPercent = sendingTotal > 0 ? Math.round((sendingFinished / sendingTotal) * 100) : 0;
 
   // ---- Generate single item ----
 
@@ -438,6 +463,19 @@ export default function WhatsAppBatchFollowUpModal({
     }
 
     setPhase('sending');
+    setItems((prev) => prev.map((item) => {
+      if (!readyItems.some((readyItem) => readyItem.reminderId === item.reminderId)) {
+        return item;
+      }
+
+      return {
+        ...item,
+        sendStatus: 'queued',
+        sendError: null,
+        sendSegmentsSent: 0,
+        sendSegmentsTotal: splitWhatsAppMessageSegments(item.generatedText).length,
+      };
+    }));
 
     try {
       const summary = await onSendBatchFollowUps(
@@ -457,11 +495,35 @@ export default function WhatsAppBatchFollowUpModal({
               }
             : null,
         })),
+        {
+          onProgress: (progress) => {
+            setItems((prev) => prev.map((item) => (
+              item.reminderId === progress.reminderId
+                ? {
+                    ...item,
+                    sendStatus: progress.status,
+                    sendError: progress.errorMessage ?? null,
+                    sendSegmentsSent: progress.sentSegments,
+                    sendSegmentsTotal: progress.totalSegments,
+                  }
+                : item
+            )));
+          },
+        },
       );
 
       setSentSummary(summary);
     } catch (error) {
       console.error('[WhatsAppBatchFollowUpModal] erro ao enviar:', error);
+      setItems((prev) => prev.map((item) => (
+        item.sendStatus === 'queued' || item.sendStatus === 'sending'
+          ? {
+              ...item,
+              sendStatus: 'failed',
+              sendError: error instanceof Error ? error.message : 'Erro desconhecido ao enviar.',
+            }
+          : item
+      )));
       setSentSummary({
         sentCount: 0,
         scheduledCount: 0,
@@ -553,7 +615,26 @@ export default function WhatsAppBatchFollowUpModal({
       footer={
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            {phase === 'generating' ? (
+            {phase === 'sending' ? (
+              <div className="min-w-[280px] max-w-[520px] space-y-1.5">
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                  <span>
+                    Enviando {sendingFinished} de {sendingTotal}
+                    {currentSendingItem ? ` - ${currentSendingItem.leadName || 'Sem nome'}` : ''}
+                  </span>
+                  <span>{sendingProgressPercent}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full" style={{ background: 'var(--panel-surface-soft,#f8f2e9)' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${sendingProgressPercent}%`,
+                      background: 'var(--panel-accent-strong,#c86f1d)',
+                    }}
+                  />
+                </div>
+              </div>
+            ) : phase === 'generating' ? (
               <Button variant="secondary" size="sm" className="rounded-xl" onClick={() => { cancelRequestedRef.current = true; }}>
                 Cancelar
               </Button>
@@ -563,7 +644,7 @@ export default function WhatsAppBatchFollowUpModal({
                 size="sm"
                 className="rounded-xl"
                 onClick={() => void handleGenerateAll()}
-                disabled={pendingCount === 0 || phase === 'sending'}
+                disabled={pendingCount === 0}
               >
                 <Sparkles className="mr-1.5 h-4 w-4" />
                 Gerar pendentes ({pendingCount})
@@ -579,11 +660,11 @@ export default function WhatsAppBatchFollowUpModal({
               size="sm"
               className="rounded-xl"
               onClick={() => void handleSendSelected()}
-              disabled={readyCount === 0 || phase === 'sending'}
-              loading={phase === 'sending'}
-            >
-              <Send className="mr-1.5 h-4 w-4" />
-              Enviar selecionados ({readyCount})
+                disabled={readyCount === 0 || phase === 'sending'}
+                loading={phase === 'sending'}
+              >
+                <Send className="mr-1.5 h-4 w-4" />
+              {phase === 'sending' ? `Enviando (${sendingFinished}/${sendingTotal})` : `Enviar selecionados (${readyCount})`}
             </Button>
           </div>
         </div>
@@ -608,7 +689,15 @@ export default function WhatsAppBatchFollowUpModal({
           <div className="max-h-[480px] space-y-1 overflow-y-auto pr-2">
             {items.map((item, index) => {
               const isActive = activeItemIndex === index;
-              const statusIcon = item.status === 'generating' ? (
+              const statusIcon = phase === 'sending' && item.sendStatus === 'sending' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
+              ) : phase === 'sending' && item.sendStatus === 'sent' ? (
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
+              ) : phase === 'sending' && item.sendStatus === 'failed' ? (
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+              ) : phase === 'sending' && item.sendStatus === 'queued' ? (
+                <Clock3 className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--panel-text-muted,#876f5c)' }} />
+              ) : item.status === 'generating' ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
               ) : item.status === 'ready' ? (
                 <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
@@ -617,14 +706,16 @@ export default function WhatsAppBatchFollowUpModal({
               ) : null;
 
               return (
-                <div key={item.chatId} className="flex items-center gap-2">
+                <div key={item.reminderId} className="flex items-center gap-2">
                   <div
-                    className="flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded border"
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${phase === 'sending' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                     style={{
                       borderColor: item.selected ? 'var(--panel-accent-strong,#c86f1d)' : 'var(--panel-border,#d4c0a7)',
                       background: item.selected ? 'var(--panel-accent-strong,#c86f1d)' : 'transparent',
                     }}
-                    onClick={() => handleToggleSelect(item.chatId)}
+                    onClick={() => {
+                      if (phase !== 'sending') handleToggleSelect(item.chatId);
+                    }}
                   >
                     {item.selected && <Check className="h-3 w-3 text-white" />}
                   </div>
@@ -638,7 +729,12 @@ export default function WhatsAppBatchFollowUpModal({
                     }`}
                   >
                     {statusIcon}
-                    <span className="min-w-0 truncate font-medium">{item.leadName || 'Sem nome'}</span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{item.leadName || 'Sem nome'}</span>
+                    {phase === 'sending' && item.sendStatus === 'sending' && item.sendSegmentsTotal > 1 ? (
+                      <span className="shrink-0 text-[10px] font-semibold" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        {item.sendSegmentsSent}/{item.sendSegmentsTotal}
+                      </span>
+                    ) : null}
                   </button>
                 </div>
               );

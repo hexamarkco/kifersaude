@@ -45,6 +45,7 @@ import {
 } from '../../../lib/whatsAppQuickReplies';
 import { fetchAllPages, isSupabaseConnectivityError, supabase, type CommWhatsAppChat, type CommWhatsAppMessage, type CommWhatsAppPhoneContact, type IntegrationSetting, type Lead, type Reminder } from '../../../lib/supabase';
 import WhatsAppAgendaModal from './components/WhatsAppAgendaModal';
+import type { WhatsAppBatchFollowUpSendProgress } from './components/WhatsAppBatchFollowUpModal';
 import WhatsAppComposerRewriteModal from './components/WhatsAppComposerRewriteModal';
 import WhatsAppDashboardModal from './components/WhatsAppDashboardModal';
 import WhatsAppEditMessageModal from './components/WhatsAppEditMessageModal';
@@ -8639,7 +8640,9 @@ export default function WhatsAppInboxScreen() {
       title: string;
       reason: string;
     } | null;
-  }>) => {
+  }>, options?: {
+    onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
+  }) => {
     const chats = latestChatsRef.current;
     const sentIds: string[] = [];
     const failures: string[] = [];
@@ -8654,6 +8657,14 @@ export default function WhatsAppInboxScreen() {
     }> = [];
 
     for (const [index, result] of results.entries()) {
+      const totalSegments = result.textSegments.length;
+      options?.onProgress?.({
+        reminderId: result.reminderId,
+        status: 'sending',
+        sentSegments: 0,
+        totalSegments,
+      });
+
       const chat = chats.find((c) => c.id === result.chatId)
         ?? (result.externalChatId ? chats.find((c) => c.external_chat_id === result.externalChatId) : null)
         ?? chats.find((c) => c.lead_id === result.leadId);
@@ -8663,12 +8674,28 @@ export default function WhatsAppInboxScreen() {
         || (phoneDigits ? `${phoneDigits}@c.us` : null);
 
       if (!externalChatId) {
-        failures.push(`Lead ${result.leadId}: sem conversa externa ou telefone valido.`);
+        const errorMessage = 'Sem conversa externa ou telefone valido.';
+        failures.push(`Lead ${result.leadId}: ${errorMessage}`);
+        options?.onProgress?.({
+          reminderId: result.reminderId,
+          status: 'failed',
+          sentSegments: 0,
+          totalSegments,
+          errorMessage,
+        });
         continue;
       }
 
       if (result.textSegments.length === 0) {
-        failures.push(`Lead ${result.leadId}: mensagem vazia.`);
+        const errorMessage = 'Mensagem vazia.';
+        failures.push(`Lead ${result.leadId}: ${errorMessage}`);
+        options?.onProgress?.({
+          reminderId: result.reminderId,
+          status: 'failed',
+          sentSegments: 0,
+          totalSegments,
+          errorMessage,
+        });
         continue;
       }
 
@@ -8677,10 +8704,23 @@ export default function WhatsAppInboxScreen() {
           await commWhatsAppService.sendTextMessage(externalChatId, segment, {
             clientRequestId: `follow-up:${result.reminderId}:${segmentIndex}`,
           });
+          options?.onProgress?.({
+            reminderId: result.reminderId,
+            status: 'sending',
+            sentSegments: segmentIndex + 1,
+            totalSegments,
+          });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Nao foi possivel enviar o follow-up.';
         failures.push(`Lead ${result.leadId}: ${message}`);
+        options?.onProgress?.({
+          reminderId: result.reminderId,
+          status: 'failed',
+          sentSegments: 0,
+          totalSegments,
+          errorMessage: message,
+        });
         if (index < results.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 1500));
         }
@@ -8688,6 +8728,12 @@ export default function WhatsAppInboxScreen() {
       }
 
       sentIds.push(result.reminderId);
+      options?.onProgress?.({
+        reminderId: result.reminderId,
+        status: 'sent',
+        sentSegments: totalSegments,
+        totalSegments,
+      });
       if (result.nextAction?.suggestedDateTime) {
         nextActions.push({ leadId: result.leadId, nextAction: result.nextAction });
       }

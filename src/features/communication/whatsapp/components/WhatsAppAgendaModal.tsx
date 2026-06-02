@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 import WhatsAppBatchFollowUpModal from './WhatsAppBatchFollowUpModal';
+import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpModal';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import FilterSingleSelect from '../../../../components/FilterSingleSelect';
 import Button from '../../../../components/ui/Button';
@@ -69,7 +70,9 @@ type WhatsAppAgendaModalProps = {
       title: string;
       reason: string;
     } | null;
-  }>) => Promise<{ sentCount: number; scheduledCount: number; failedCount: number; errorMessage?: string }>;
+  }>, options?: {
+    onProgress?: (progress: WhatsAppBatchFollowUpSendProgress) => void;
+  }) => Promise<{ sentCount: number; scheduledCount: number; failedCount: number; errorMessage?: string }>;
 };
 
 type SchedulerDraft = {

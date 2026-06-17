@@ -78,6 +78,7 @@ import {
   stripPendingChatInboxMetadata,
   type PendingChatInboxStatePatch,
 } from './pendingChatInboxState';
+import { normalizeWhapiDirectChatId } from './whatsAppChatId';
 
 const CHAT_POLL_INTERVAL_MS = 8000;
 const MAX_CHAT_POLL_BACKOFF_MS = 60000;
@@ -8668,10 +8669,10 @@ export default function WhatsAppInboxScreen() {
       const chat = chats.find((c) => c.id === result.chatId)
         ?? (result.externalChatId ? chats.find((c) => c.external_chat_id === result.externalChatId) : null)
         ?? chats.find((c) => c.lead_id === result.leadId);
-      const phoneDigits = result.phone?.replace(/\D/g, '') ?? '';
-      const externalChatId = result.externalChatId?.trim()
-        || chat?.external_chat_id
-        || (phoneDigits ? `${phoneDigits}@c.us` : null);
+      const phoneChatId = normalizeWhapiDirectChatId(result.phone);
+      const externalChatId = phoneChatId
+        || normalizeWhapiDirectChatId(result.externalChatId)
+        || normalizeWhapiDirectChatId(chat?.external_chat_id);
 
       if (!externalChatId) {
         const errorMessage = 'Sem conversa externa ou telefone valido.';

@@ -237,12 +237,12 @@ export const normalizeWhapiChatId = (value: unknown): string => {
   const raw = toTrimmedString(value);
   if (!raw) return '';
 
-  if (/@c\.us$/i.test(raw)) {
-    return raw.replace(/@c\.us$/i, '@s.whatsapp.net');
-  }
-
-  if (/@s\.whatsapp\.net$/i.test(raw)) {
-    return raw.replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
+  if (/@c\.us$/i.test(raw) || /@s\.whatsapp\.net$/i.test(raw)) {
+    const normalizedDomain = raw
+      .replace(/@c\.us$/i, '@s.whatsapp.net')
+      .replace(/(@s\.whatsapp\.net)+$/i, '@s.whatsapp.net');
+    const phone = normalizeCommWhatsAppPhone(normalizedDomain.replace(/@s\.whatsapp\.net$/i, ''));
+    return phone ? `${phone}@s.whatsapp.net` : normalizedDomain;
   }
 
   if (raw.includes('@')) {

@@ -99,7 +99,6 @@ const REACTION_PICKER_HEIGHT_PX = 52;
 const MESSAGE_STATUS_REFRESH_DELAYS_MS = [1000, 3000, 7000, 15000, 30000, 60000, 120000, 300000];
 const REFRESHABLE_OUTBOUND_STATUSES = new Set(['pending', 'queued', 'sending', 'sent']);
 const EMPTY_CHAT_LIST_RETRY_DELAYS_MS = [700, 1500];
-const EMPTY_THREAD_RETRY_DELAYS_MS = [350, 900, 1800];
 const CHAT_READ_RETRY_COOLDOWN_MS = 30_000;
 
 type MessageLoadReason = 'initial' | 'poll' | 'send';
@@ -5447,6 +5446,10 @@ export default function WhatsAppInboxScreen() {
             return requestedChat.id;
           }
 
+          if (requestedChatId && current === requestedChatId) {
+            return current;
+          }
+
           if (current && hydratedData.some((chat) => chat.id === current)) {
             return current;
           }
@@ -5543,32 +5546,20 @@ export default function WhatsAppInboxScreen() {
       let threadLead: CommWhatsAppLeadPanel | null = null;
 
       if (reason === 'initial') {
-        for (let attempt = 0; attempt <= EMPTY_THREAD_RETRY_DELAYS_MS.length; attempt += 1) {
-          const thread = await commWhatsAppService.getChatThread(targetChatId, {
-            limit: MESSAGE_PAGE_SIZE,
-          });
+        const thread = await commWhatsAppService.getChatThread(targetChatId, {
+          limit: MESSAGE_PAGE_SIZE,
+        });
 
-          data = thread.messages;
-          hasMore = thread.hasMore;
-          threadChat = thread.chat;
-          threadLead = thread.lead;
+        data = thread.messages;
+        hasMore = thread.hasMore;
+        threadChat = thread.chat;
+        threadLead = thread.lead;
 
-          const hasThreadPreview = Boolean(thread.chat.last_message_at || thread.chat.last_message_text?.trim());
-          const shouldRetryEmptyThread = data.length === 0
-            && hasThreadPreview
-            && attempt < EMPTY_THREAD_RETRY_DELAYS_MS.length;
-
-          if (!shouldRetryEmptyThread) {
-            break;
-          }
-
+        if (data.length === 0 && Boolean(thread.chat.last_message_at || thread.chat.last_message_text?.trim())) {
           setThreadReconcileChatId(targetChatId);
-          console.warn('[WhatsAppInbox] thread retornou vazio apesar de preview; tentando novamente', {
+          console.warn('[WhatsAppInbox] thread retornou vazio apesar de preview', {
             chatId: targetChatId,
-            attempt: attempt + 1,
-            delayMs: EMPTY_THREAD_RETRY_DELAYS_MS[attempt],
           });
-          await waitForChatListRetry(EMPTY_THREAD_RETRY_DELAYS_MS[attempt]);
         }
       } else {
         const page = await commWhatsAppService.listMessagesPage(targetChatId, {

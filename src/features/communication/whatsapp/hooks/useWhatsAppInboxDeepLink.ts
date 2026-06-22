@@ -56,6 +56,7 @@ export const useWhatsAppInboxDeepLink = ({
       return;
     }
 
+    setSelectedChatId(requestedChatId);
     void loadChats({ sections: ['active', 'archived'] });
   }, [chatIdFromUrlRef, latestChatsRef, loadChats, searchParams, setArchivedSectionOpen, setSelectedChatId]);
 

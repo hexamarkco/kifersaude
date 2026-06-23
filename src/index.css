@@ -4693,7 +4693,7 @@ html {
   border-radius: 9999px;
   background: color-mix(in srgb, var(--panel-accent-strong) 78%, var(--panel-text-soft) 22%);
   opacity: 0.84;
-  transition: height 120ms ease, opacity 120ms ease, transform 120ms ease;
+  transition: height 120ms ease;
 }
 
 .painel-theme .whatsapp-inbox-voice-composer .whatsapp-inbox-waveform-bar {

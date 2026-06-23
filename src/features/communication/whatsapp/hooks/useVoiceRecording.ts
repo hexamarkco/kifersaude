@@ -15,7 +15,7 @@ type PendingAttachment = {
   waveformPayload?: string | null;
 };
 
-const DEFAULT_WAVEFORM = [4, 6, 8, 6, 4, 6, 8, 6, 4, 6, 8, 6, 4];
+const DEFAULT_WAVEFORM = [0.4, 0.6, 0.8, 0.6, 0.4, 0.6, 0.8, 0.6, 0.4, 0.6, 0.8, 0.6, 0.4];
 
 const getSupportedVoiceMimeType = (): string | undefined => {
   const types = ['audio/ogg;codecs=opus', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
@@ -33,7 +33,7 @@ const buildWaveformBars = (data: Uint8Array): number[] => {
   for (let i = 0; i < 13; i++) {
     const slice = data.slice(i * step, (i + 1) * step);
     const avg = slice.reduce((sum, v) => sum + Math.abs(v - 128), 0) / slice.length;
-    bars.push(Math.round((avg / 128) * 10));
+    bars.push(Math.min(1, Math.max(0.08, (avg / 128))));
   }
   return bars;
 };

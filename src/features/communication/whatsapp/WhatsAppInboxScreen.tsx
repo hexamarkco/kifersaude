@@ -1746,7 +1746,7 @@ function WaveformBars({ bars, active = false }: { bars?: number[]; active?: bool
     <div className={`whatsapp-inbox-waveform ${active ? 'is-active' : ''}`} aria-hidden="true">
       {resolvedBars.map((bar, index) => (
         <span
-          key={`${index}-${bar}`}
+          key={index}
           className="whatsapp-inbox-waveform-bar"
           style={{
             height: `${Math.max(16, Math.round(bar * 34))}px`,

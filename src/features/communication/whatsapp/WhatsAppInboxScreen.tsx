@@ -1603,7 +1603,7 @@ const getOwnReactionEmoji = (message?: CommWhatsAppMessage | null) => {
   return ownReaction ? String(ownReaction.emoji ?? '').trim() || null : null;
 };
 
-const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName?: string | null) => {
+const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName?: string | null, leadName?: string | null) => {
   if (!chat) {
     return 'Conversa';
   }
@@ -1611,6 +1611,11 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
   const savedContactName = String(chat.saved_contact_name ?? '').trim();
   if (savedContactName) {
     return savedContactName;
+  }
+
+  const resolvedLeadName = String(leadName ?? '').trim();
+  if (resolvedLeadName) {
+    return resolvedLeadName;
   }
 
   const displayName = String(chat.display_name ?? '').trim();
@@ -3940,14 +3945,7 @@ export default function WhatsAppInboxScreen() {
 
   const applyPrefetchedLeadNames = useCallback((items: CommWhatsAppChat[]) => {
     return items.map((chat) => {
-      if (chat.lead_id || chat.saved_contact_name?.trim()) {
-        return chat;
-      }
-
-      const fallbackPhoneLabel = formatCommWhatsAppPhoneLabel(chat.phone_number);
-      const currentLabel = chat.display_name?.trim() || '';
-      const usingPhoneFallback = !currentLabel || currentLabel === fallbackPhoneLabel || currentLabel === chat.phone_number.trim();
-      if (!usingPhoneFallback) {
+      if (chat.saved_contact_name?.trim()) {
         return chat;
       }
 
@@ -4188,6 +4186,15 @@ export default function WhatsAppInboxScreen() {
           lead_status: nextLeadStatus,
         });
       }
+      if (lead?.nome_completo) {
+        const phoneKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
+        for (const key of phoneKeys) {
+          prefetchedLeadNameByPhoneRef.current.set(key, lead.nome_completo);
+        }
+        if (phoneKeys.length > 0) {
+          setChats((current) => applyPrefetchedLeadNames(current));
+        }
+      }
       await loadLeadContracts(lead?.id ?? null);
     } catch (error) {
       if (requestId !== leadPanelRequestIdRef.current || selectedChatIdRef.current !== targetChatId) {
@@ -4203,7 +4210,7 @@ export default function WhatsAppInboxScreen() {
         setLeadPanelLoading(false);
       }
     }
-  }, [loadLeadContracts, upsertChatLocally]);
+  }, [applyPrefetchedLeadNames, loadLeadContracts, upsertChatLocally]);
 
   const loadChatAgendaSummary = useCallback(async (leadId: string | null, contractIds: string[] = []) => {
     const requestId = ++chatAgendaSummaryRequestIdRef.current;
@@ -4367,8 +4374,8 @@ export default function WhatsAppInboxScreen() {
   }, [leadDrawerOpen, leadSearchQuery, leadSearchResults, selectedChat?.lead_id]);
   const selectedChatWasAutoLinked = Boolean(selectedChat?.id && autoLinkedChatIds[selectedChat.id]);
   const selectedChatDisplayName = useMemo(
-    () => getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null),
-    [channelState?.connected_user_name, selectedChat],
+    () => getSafeChatDisplayName(selectedChat, channelState?.connected_user_name ?? null, leadPanel?.nome_completo),
+    [channelState?.connected_user_name, selectedChat, leadPanel?.nome_completo],
   );
   const followUpGenerationDisabledReason = useMemo(() => {
     if (!selectedChat) {
@@ -7454,14 +7461,7 @@ export default function WhatsAppInboxScreen() {
     };
 
     const unresolvedChats = chats.filter((chat) => {
-      if (chat.lead_id || chat.saved_contact_name?.trim()) {
-        return false;
-      }
-
-      const fallbackPhoneLabel = formatCommWhatsAppPhoneLabel(chat.phone_number);
-      const currentLabel = chat.display_name?.trim() || '';
-      const usingPhoneFallback = !currentLabel || currentLabel === fallbackPhoneLabel || currentLabel === chat.phone_number.trim();
-      if (!usingPhoneFallback) {
+      if (chat.saved_contact_name?.trim()) {
         return false;
       }
 

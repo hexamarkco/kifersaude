@@ -27,7 +27,7 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
-type ContactsAction = 'listContacts' | 'startChat' | 'saveContact';
+type ContactsAction = 'listContacts' | 'lookupContactsByPhones' | 'startChat' | 'saveContact';
 
 type ContactsRequestBody = {
   action?: ContactsAction;
@@ -37,6 +37,7 @@ type ContactsRequestBody = {
   pageSize?: number;
   source?: 'saved_contact' | 'crm' | 'manual';
   phoneNumber?: string;
+  phoneNumbers?: string[];
   displayName?: string;
   contactId?: string;
   leadId?: string;
@@ -222,6 +223,39 @@ async function findCachedContactByPhone(params: {
   return (data as SavedContactRow | null | undefined) ?? null;
 }
 
+async function lookupCachedContactsByPhones(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  channelId: string;
+  phoneNumbers: string[];
+}) {
+  const phoneLookupKeys = Array.from(
+    new Set(
+      params.phoneNumbers
+        .flatMap((phoneNumber) => getCommWhatsAppPhoneLookupKeys(phoneNumber))
+        .filter(Boolean),
+    ),
+  );
+
+  if (phoneLookupKeys.length === 0) {
+    return [] as SavedContactRow[];
+  }
+
+  const { data, error } = await params.supabaseAdmin
+    .from('comm_whatsapp_phone_contacts_cache')
+    .select('*')
+    .eq('channel_id', params.channelId)
+    .eq('saved', true)
+    .in('phone_digits', phoneLookupKeys)
+    .order('updated_at', { ascending: false })
+    .limit(500);
+
+  if (error) {
+    throw new Error(`Erro ao localizar contatos salvos do WhatsApp: ${error.message}`);
+  }
+
+  return (data ?? []) as SavedContactRow[];
+}
+
 async function saveContactToCache(params: {
   supabaseAdmin: ReturnType<typeof createAdminClient>;
   channelId: string;
@@ -319,7 +353,7 @@ Deno.serve(async (req: Request) => {
       supabaseAnonKey,
       supabaseAdmin,
       module: COMM_WHATSAPP_MODULE,
-      requiredPermission: action === 'listContacts' ? 'view' : 'edit',
+      requiredPermission: action === 'startChat' || action === 'saveContact' ? 'edit' : 'view',
     });
 
     if (!authResult.authorized) {
@@ -376,6 +410,22 @@ Deno.serve(async (req: Request) => {
       const hasMore = contacts.total > Math.max(1, Number(body.page) || 1) * Math.min(100, Math.max(1, Number(body.pageSize) || 50));
 
       return new Response(JSON.stringify({ success: true, contacts: contacts.contacts, total: contacts.total, hasMore }), {
+        status: 200,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (action === 'lookupContactsByPhones') {
+      const phoneNumbers = Array.isArray(body.phoneNumbers)
+        ? body.phoneNumbers.map((phoneNumber) => toTrimmedString(phoneNumber)).filter(Boolean).slice(0, 120)
+        : [];
+      const contacts = await lookupCachedContactsByPhones({
+        supabaseAdmin,
+        channelId: channel.id,
+        phoneNumbers,
+      });
+
+      return new Response(JSON.stringify({ success: true, contacts }), {
         status: 200,
         headers: jsonHeaders,
       });

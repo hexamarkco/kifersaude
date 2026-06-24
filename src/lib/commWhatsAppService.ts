@@ -953,6 +953,23 @@ export const commWhatsAppService = {
     };
   },
 
+  async lookupSavedContactsByPhones(params: { phoneNumbers: string[]; forceSync?: boolean }): Promise<CommWhatsAppPhoneContact[]> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-contacts', {
+      body: {
+        action: 'lookupContactsByPhones',
+        phoneNumbers: params.phoneNumbers,
+        forceSync: params.forceSync === true,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel localizar contatos salvos do WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[] };
+    return (payload.contacts ?? []) as CommWhatsAppPhoneContact[];
+  },
+
   async startChat(params:
     | { source: 'saved_contact'; phoneNumber: string; displayName?: string | null; contactId?: string | null }
     | { source: 'crm'; leadId: string }

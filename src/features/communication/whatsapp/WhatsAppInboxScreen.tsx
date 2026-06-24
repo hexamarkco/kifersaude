@@ -91,6 +91,7 @@ const STALE_WEBHOOK_THRESHOLD_MS = 6 * 60 * 60 * 1000;
 const CHAT_IDENTITY_LOOKUP_BATCH_SIZE = 10;
 const CHAT_IDENTITY_LOOKUP_MAX_CHATS_PER_CYCLE = 30;
 const CHAT_IDENTITY_LOOKUP_FAILURE_COOLDOWN_MS = 5 * 60 * 1000;
+const SAVED_CONTACT_FORCE_SYNC_COOLDOWN_MS = 5 * 60 * 1000;
 const DEFAULT_TRANSCRIPT_TIME_ZONE = 'America/Sao_Paulo';
 const AUDIO_WITHOUT_TRANSCRIPTION_MARKER = '[Áudio sem transcrição]';
 const REACTION_OPTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -3129,6 +3130,7 @@ export default function WhatsAppInboxScreen() {
   const savedContactLookupInFlightKeysRef = useRef<Set<string>>(new Set());
   const savedContactLookupFailedAtByKeyRef = useRef<Map<string, number>>(new Map());
   const resolvedSavedContactPhoneKeysRef = useRef<Set<string>>(new Set());
+  const lastSavedContactForceSyncAtRef = useRef(0);
   const chatsSignatureRef = useRef('');
   const messagesSignatureRef = useRef('');
   const pendingScrollModeRef = useRef<ScrollMode>(null);
@@ -4018,13 +4020,21 @@ export default function WhatsAppInboxScreen() {
       return !failedAt || now - failedAt >= CHAT_IDENTITY_LOOKUP_FAILURE_COOLDOWN_MS;
     };
 
+    const selectedLookupKeys = selectedChat && !selectedChat.saved_contact_name?.trim()
+      ? collectPhoneLookupKeys(selectedChat.phone_digits || selectedChat.phone_number)
+      : [];
+    const canForceSyncSelectedContact = selectedLookupKeys.length > 0
+      && now - lastSavedContactForceSyncAtRef.current >= SAVED_CONTACT_FORCE_SYNC_COOLDOWN_MS;
+    const forceSyncKeys = new Set(canForceSyncSelectedContact ? selectedLookupKeys : []);
+
     const targetChats = chats.filter((chat) => {
       if (chat.saved_contact_name?.trim()) {
         return false;
       }
 
       const lookupKeys = collectPhoneLookupKeys(chat.phone_digits || chat.phone_number);
-      return lookupKeys.length > 0 && lookupKeys.some(shouldAttemptLookupKey);
+      const isSelectedChat = Boolean(selectedChat?.id && chat.id === selectedChat.id);
+      return lookupKeys.length > 0 && (lookupKeys.some(shouldAttemptLookupKey) || (isSelectedChat && canForceSyncSelectedContact));
     }).slice(0, CHAT_IDENTITY_LOOKUP_MAX_CHATS_PER_CYCLE);
 
     if (targetChats.length === 0) {
@@ -4033,7 +4043,7 @@ export default function WhatsAppInboxScreen() {
 
     const requestKeys = Array.from(
       new Set(targetChats.flatMap((chat) => collectPhoneLookupKeys(chat.phone_digits || chat.phone_number))),
-    ).filter(shouldAttemptLookupKey);
+    ).filter((key) => shouldAttemptLookupKey(key) || forceSyncKeys.has(key));
     const phoneNumbers = Array.from(
       new Set(targetChats.flatMap((chat) => [chat.phone_number, chat.phone_digits].filter(Boolean))),
     );
@@ -4043,9 +4053,14 @@ export default function WhatsAppInboxScreen() {
     }
 
     let cancelled = false;
+    const forceSync = requestKeys.some((key) => forceSyncKeys.has(key));
+
+    if (forceSync) {
+      lastSavedContactForceSyncAtRef.current = now;
+    }
 
     requestKeys.forEach((key) => savedContactLookupInFlightKeysRef.current.add(key));
-    void commWhatsAppService.lookupSavedContactsByPhones({ phoneNumbers }).then((contacts) => {
+    void commWhatsAppService.lookupSavedContactsByPhones({ phoneNumbers, forceSync }).then((contacts) => {
       if (cancelled) return;
 
       const matchedKeys = new Set(contacts.flatMap((contact) => collectPhoneLookupKeys(contact.phone_digits || contact.phone_number)));
@@ -4074,7 +4089,7 @@ export default function WhatsAppInboxScreen() {
     });
 
     return () => { cancelled = true; };
-  }, [applyFrontendSavedContactNames, chats]);
+  }, [applyFrontendSavedContactNames, chats, selectedChat]);
 
   const applyRealtimeChatChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppChat>) => {
     const incomingChat = payload.new as CommWhatsAppChat | null;

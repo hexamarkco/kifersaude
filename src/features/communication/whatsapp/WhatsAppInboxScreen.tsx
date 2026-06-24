@@ -1613,11 +1613,6 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
     return savedContactName;
   }
 
-  const cachedSavedContactName = savedContactNameByPhoneRef.current.get(chat.phone_digits || chat.phone_number);
-  if (cachedSavedContactName) {
-    return cachedSavedContactName;
-  }
-
   const resolvedLeadName = String(leadName ?? '').trim();
   if (resolvedLeadName) {
     return resolvedLeadName;
@@ -1641,7 +1636,6 @@ const getChatSearchCandidates = (chat: CommWhatsAppChat, connectedUserName?: str
     chat.saved_contact_name,
     chat.display_name,
     chat.push_name,
-    savedContactNameByPhoneRef.current.get(chat.phone_digits || chat.phone_number),
   ];
 
   const uniqueValues = new Set<string>();
@@ -3286,9 +3280,10 @@ export default function WhatsAppInboxScreen() {
         }
       }
       savedContactNameByPhoneRef.current = map;
+      setChats((current) => applyFrontendSavedContactNames(current));
     }).catch(() => undefined);
     return () => { cancelled = true; };
-  }, []);
+  }, [applyFrontendSavedContactNames]);
 
   const enqueueChatSend = useCallback((chatId: string, task: () => Promise<void>) => {
     const previous = sendQueueByChatIdRef.current.get(chatId) ?? Promise.resolve();
@@ -3424,7 +3419,7 @@ export default function WhatsAppInboxScreen() {
     const normalizedSearch = normalizeInboxSearch(forwardSearch);
     const candidates = chats.filter((chat) => chat.external_chat_id?.trim());
     const filtered = normalizedSearch
-      ? candidates.filter((chat) => normalizeInboxSearch(`${chat.display_name} ${chat.saved_contact_name ?? ''} ${savedContactNameByPhoneRef.current.get(chat.phone_digits || chat.phone_number) ?? ''} ${chat.phone_number}`).includes(normalizedSearch))
+      ? candidates.filter((chat) => normalizeInboxSearch(`${chat.display_name} ${chat.saved_contact_name ?? ''} ${chat.phone_number}`).includes(normalizedSearch))
       : candidates;
 
     return sortChatsByInboxOrder(filtered).slice(0, 30);
@@ -3983,6 +3978,25 @@ export default function WhatsAppInboxScreen() {
       return {
         ...chat,
         display_name: matchedLeadName,
+      };
+    });
+  }, []);
+
+  const applyFrontendSavedContactNames = useCallback((items: CommWhatsAppChat[]) => {
+    return items.map((chat) => {
+      if (chat.saved_contact_name?.trim()) {
+        return chat;
+      }
+
+      const phoneDigits = chat.phone_digits || chat.phone_number;
+      const savedName = savedContactNameByPhoneRef.current.get(phoneDigits);
+      if (!savedName) {
+        return chat;
+      }
+
+      return {
+        ...chat,
+        saved_contact_name: savedName,
       };
     });
   }, []);
@@ -5320,7 +5334,8 @@ export default function WhatsAppInboxScreen() {
       }
     }
     savedContactNameByPhoneRef.current = map;
-  }, [savedContacts]);
+    setChats((current) => applyFrontendSavedContactNames(current));
+  }, [applyFrontendSavedContactNames, savedContacts]);
 
   const loadChats = useCallback(async (loadOptions: { sections?: Array<'active' | 'archived'> } = {}) => {
     // BUG FIX (BUG #7): por default carregamos APENAS a secao que o usuario

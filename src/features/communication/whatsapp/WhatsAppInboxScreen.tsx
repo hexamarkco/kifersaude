@@ -1613,6 +1613,11 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
     return savedContactName;
   }
 
+  const cachedSavedContactName = savedContactNameByPhoneRef.current.get(chat.phone_digits || chat.phone_number);
+  if (cachedSavedContactName) {
+    return cachedSavedContactName;
+  }
+
   const resolvedLeadName = String(leadName ?? '').trim();
   if (resolvedLeadName) {
     return resolvedLeadName;
@@ -1636,6 +1641,7 @@ const getChatSearchCandidates = (chat: CommWhatsAppChat, connectedUserName?: str
     chat.saved_contact_name,
     chat.display_name,
     chat.push_name,
+    savedContactNameByPhoneRef.current.get(chat.phone_digits || chat.phone_number),
   ];
 
   const uniqueValues = new Set<string>();
@@ -3100,6 +3106,7 @@ export default function WhatsAppInboxScreen() {
   const attemptedChatReadAtByKeyRef = useRef<Map<string, number>>(new Map());
   const optimisticMessageTimestampByChatIdRef = useRef<Map<string, number>>(new Map());
   const prefetchedLeadNameByPhoneRef = useRef<Map<string, string>>(new Map());
+  const savedContactNameByPhoneRef = useRef<Map<string, string>>(new Map());
   const resolvedIdentityPhoneKeysRef = useRef<Set<string>>(new Set());
   const latestChatsRef = useRef<CommWhatsAppChat[]>([]);
   const loadChatsRef = useRef<() => Promise<unknown> | void>(() => {});
@@ -3267,6 +3274,22 @@ export default function WhatsAppInboxScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void commWhatsAppService.listSavedContacts({ query: '', page: 1, pageSize: 500 }).then((result) => {
+      if (cancelled) return;
+      const map = new Map<string, string>();
+      for (const contact of result.contacts) {
+        const name = contact.display_name?.trim();
+        if (name && contact.phone_digits) {
+          map.set(contact.phone_digits, name);
+        }
+      }
+      savedContactNameByPhoneRef.current = map;
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
   const enqueueChatSend = useCallback((chatId: string, task: () => Promise<void>) => {
     const previous = sendQueueByChatIdRef.current.get(chatId) ?? Promise.resolve();
     const next = previous
@@ -3401,7 +3424,7 @@ export default function WhatsAppInboxScreen() {
     const normalizedSearch = normalizeInboxSearch(forwardSearch);
     const candidates = chats.filter((chat) => chat.external_chat_id?.trim());
     const filtered = normalizedSearch
-      ? candidates.filter((chat) => normalizeInboxSearch(`${chat.display_name} ${chat.saved_contact_name ?? ''} ${chat.phone_number}`).includes(normalizedSearch))
+      ? candidates.filter((chat) => normalizeInboxSearch(`${chat.display_name} ${chat.saved_contact_name ?? ''} ${savedContactNameByPhoneRef.current.get(chat.phone_digits || chat.phone_number) ?? ''} ${chat.phone_number}`).includes(normalizedSearch))
       : candidates;
 
     return sortChatsByInboxOrder(filtered).slice(0, 30);
@@ -5287,6 +5310,17 @@ export default function WhatsAppInboxScreen() {
 
     void refreshStartChatSources(startChatQuery, savedContactsPage + 1, true);
   }, [refreshStartChatSources, savedContactsHasMore, savedContactsLoading, savedContactsLoadingMore, savedContactsPage, startChatQuery]);
+
+  useEffect(() => {
+    const map = new Map<string, string>();
+    for (const contact of savedContacts) {
+      const name = contact.display_name?.trim();
+      if (name && contact.phone_digits) {
+        map.set(contact.phone_digits, name);
+      }
+    }
+    savedContactNameByPhoneRef.current = map;
+  }, [savedContacts]);
 
   const loadChats = useCallback(async (loadOptions: { sections?: Array<'active' | 'archived'> } = {}) => {
     // BUG FIX (BUG #7): por default carregamos APENAS a secao que o usuario

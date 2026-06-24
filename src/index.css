@@ -4837,6 +4837,8 @@ html {
   border: 0 !important;
   margin: 0;
   min-height: 1.5rem;
+  max-height: 8rem;
+  overflow-y: auto;
   color: var(--panel-input-text);
 }
 

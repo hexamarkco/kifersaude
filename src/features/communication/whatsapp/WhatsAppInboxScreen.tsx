@@ -3268,23 +3268,6 @@ export default function WhatsAppInboxScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    void commWhatsAppService.listSavedContacts({ query: '', page: 1, pageSize: 500 }).then((result) => {
-      if (cancelled) return;
-      const map = new Map<string, string>();
-      for (const contact of result.contacts) {
-        const name = contact.display_name?.trim();
-        if (name && contact.phone_digits) {
-          map.set(contact.phone_digits, name);
-        }
-      }
-      savedContactNameByPhoneRef.current = map;
-      setChats((current) => applyFrontendSavedContactNames(current));
-    }).catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [applyFrontendSavedContactNames]);
-
   const enqueueChatSend = useCallback((chatId: string, task: () => Promise<void>) => {
     const previous = sendQueueByChatIdRef.current.get(chatId) ?? Promise.resolve();
     const next = previous
@@ -4000,6 +3983,23 @@ export default function WhatsAppInboxScreen() {
       };
     });
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void commWhatsAppService.listSavedContacts({ query: '', page: 1, pageSize: 500 }).then((result) => {
+      if (cancelled) return;
+      const map = new Map<string, string>();
+      for (const contact of result.contacts) {
+        const name = contact.display_name?.trim();
+        if (name && contact.phone_digits) {
+          map.set(contact.phone_digits, name);
+        }
+      }
+      savedContactNameByPhoneRef.current = map;
+      setChats((current) => applyFrontendSavedContactNames(current));
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [applyFrontendSavedContactNames]);
 
   const applyRealtimeChatChange = useCallback((payload: RealtimePostgresChangesPayload<CommWhatsAppChat>) => {
     const incomingChat = payload.new as CommWhatsAppChat | null;
@@ -7884,6 +7884,13 @@ export default function WhatsAppInboxScreen() {
     setMessageDraft(event.target.value);
     syncComposerSelection(event.target);
   };
+
+  useEffect(() => {
+    const textarea = composerTextareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [messageDraft]);
 
   const handleInsertQuickReply = useCallback((option: QuickReplyOption) => {
     const textarea = composerTextareaRef.current;

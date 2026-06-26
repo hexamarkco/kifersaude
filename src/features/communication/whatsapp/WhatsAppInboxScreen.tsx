@@ -1781,6 +1781,7 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
   const [mediaUrl, setMediaUrl] = useState<string | null>(commWhatsAppService.getRememberedLocalMediaPreview(message.external_message_id) ?? (!message.media_id ? message.media_url ?? null : null));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -1838,9 +1839,14 @@ function useResolvedMediaUrl(message: CommWhatsAppMessage) {
     return () => {
       active = false;
     };
-  }, [message.external_message_id, message.media_id, message.media_url]);
+  }, [message.external_message_id, message.media_id, message.media_url, retryNonce]);
 
-  return { mediaUrl, loading, error };
+  const retry = useCallback(() => {
+    setError(null);
+    setRetryNonce((current) => current + 1);
+  }, []);
+
+  return { mediaUrl, loading, error, retry };
 }
 
 const isChatMediaViewerMessage = (message: CommWhatsAppMessage) => {
@@ -2587,7 +2593,7 @@ function WhatsAppMessageBody({
   sharedContactActionKey: string | null;
   transcribing: boolean;
 }) {
-  const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
+  const { mediaUrl, loading, error, retry } = useResolvedMediaUrl(message);
   const [showOriginalText, setShowOriginalText] = useState(false);
   const kind = message.message_type.trim().toLowerCase();
   const caption = getMessageVisibleCaption(message);
@@ -2855,7 +2861,14 @@ function WhatsAppMessageBody({
                 </a>
               </>
             ) : (
-              <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs opacity-75">{loading ? 'Carregando...' : error || 'Sem arquivo'}</span>
+                {error ? (
+                  <button type="button" onClick={retry} disabled={loading} className={inboxInlineActionClassName}>
+                    Tentar novamente
+                  </button>
+                ) : null}
+              </div>
             )}
           </div>
         </div>

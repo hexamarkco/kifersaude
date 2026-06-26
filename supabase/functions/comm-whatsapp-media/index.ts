@@ -27,6 +27,17 @@ const createAdminClient = () => {
   return createClient(supabaseUrl, serviceRoleKey);
 };
 
+const buildContentDisposition = (fileName: string) => {
+  const fallbackName = fileName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\x20-\x7E]/g, '')
+    .replace(/["\\\r\n]/g, '')
+    .trim()
+    || 'media';
+  return `inline; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -100,7 +111,7 @@ Deno.serve(async (req: Request) => {
 
     const headers = new Headers(corsHeaders);
     headers.set('Content-Type', media.mimeType);
-    headers.set('Content-Disposition', `inline; filename="${media.fileName.replace(/["\r\n]/g, '')}"`);
+    headers.set('Content-Disposition', buildContentDisposition(media.fileName));
     headers.set('Cache-Control', media.cached ? 'private, max-age=86400' : 'private, max-age=3600');
 
     return new Response(media.blob, {

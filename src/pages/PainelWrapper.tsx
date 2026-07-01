@@ -122,7 +122,6 @@ export default function PainelWrapper() {
       browserNotificationService.show({
         title: `WhatsApp: ${notification.displayName}`,
         body: notification.messagePreview,
-        tag: `whatsapp-inbox-${notification.chatId}`,
         onClick: () => navigate(`/painel/inbox?chatId=${encodeURIComponent(notification.chatId)}`),
       });
     });

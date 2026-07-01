@@ -3,7 +3,6 @@ export type BrowserNotificationPermission = NotificationPermission | 'unsupporte
 type ShowBrowserNotificationOptions = {
   title: string;
   body: string;
-  tag?: string;
   icon?: string;
   onClick?: () => void;
 };
@@ -29,7 +28,7 @@ class BrowserNotificationService {
     return window.Notification.requestPermission();
   }
 
-  show({ title, body, tag, icon = '/image.png', onClick }: ShowBrowserNotificationOptions) {
+  show({ title, body, icon = '/image.png', onClick }: ShowBrowserNotificationOptions) {
     if (this.getPermission() !== 'granted') {
       return null;
     }
@@ -38,7 +37,6 @@ class BrowserNotificationService {
       const notification = new window.Notification(title, {
         body,
         icon,
-        tag,
       });
 
       notification.onclick = () => {

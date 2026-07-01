@@ -1,7 +1,4 @@
-import type { CSSProperties } from 'react';
-
 import type { TabItem } from '../../../components/ui/Tabs';
-import { PANEL_PILL_STYLE } from '../../../components/ui/panelStyles';
 import type { DashboardChartDatum, DashboardMetric } from './dashboardTypes';
 
 export const DASHBOARD_METRIC_TABS: TabItem<DashboardMetric>[] = [
@@ -20,23 +17,6 @@ export const DASHBOARD_CHART_RANGE_OPTIONS = [
   { value: '6', label: 'Ultimos 6 meses' },
   { value: '12', label: 'Ultimos 12 meses' },
 ] as const;
-
-export const DASHBOARD_PILL_STYLE: CSSProperties = PANEL_PILL_STYLE;
-
-export const CALENDAR_LEGEND_STYLES = {
-  adjustment: {
-    dot: 'var(--brand-primary)',
-    background: 'var(--brand-primary-soft)',
-    border: 'var(--brand-primary-border)',
-    text: 'var(--accent-gold-hover)',
-  },
-  birthday: {
-    dot: 'var(--border-strong)',
-    background: 'color-mix(in srgb, var(--bg-elevated) 82%, white)',
-    border: 'var(--border-default)',
-    text: 'var(--text-secondary)',
-  },
-} as const;
 
 export const DASHBOARD_METRIC_COLORS: Record<DashboardMetric, string> = {
   leads: '#cf7b32',

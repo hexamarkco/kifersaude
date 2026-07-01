@@ -35,8 +35,6 @@ import { DashboardHeroCard } from "./components/DashboardHeroCard";
 import { DashboardSummaryCards } from "./components/DashboardSummaryCards";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
 import {
-  CALENDAR_LEGEND_STYLES,
-  DASHBOARD_PILL_STYLE,
   mapOperadoraChartData,
 } from "./shared/dashboardConstants";
 import {
@@ -2305,13 +2303,13 @@ export default function DashboardScreen({
                   </Badge>
                   <Badge
                     tone="accent"
-                    icon={<span className="h-2 w-2 rounded-full" style={{ background: CALENDAR_LEGEND_STYLES.adjustment.dot }} />}
+                    icon={<span className="h-2 w-2 rounded-full bg-[var(--brand-primary)]" />}
                   >
                     Reajustes
                   </Badge>
                   <Badge
                     tone="neutral"
-                    icon={<span className="h-2 w-2 rounded-full" style={{ background: CALENDAR_LEGEND_STYLES.birthday.dot }} />}
+                    icon={<span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />}
                   >
                     Aniversarios
                   </Badge>

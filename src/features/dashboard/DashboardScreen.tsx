@@ -2250,9 +2250,6 @@ export default function DashboardScreen({
           comissaoTotal={comissaoTotal}
           conversionRate={conversionRate}
           ticketMedio={ticketMedio}
-          onOpenLeads={() => onNavigateToTab?.("leads")}
-          onOpenContracts={() => onNavigateToTab?.("contracts")}
-          onOpenCommissions={() => onNavigateToTab?.("financeiro-comissoes")}
         />
         <DashboardTrendSection
           periodFilter={periodFilter}

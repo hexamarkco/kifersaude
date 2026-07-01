@@ -10,9 +10,6 @@ type DashboardSummaryCardsProps = {
   comissaoTotal: number;
   conversionRate: number;
   ticketMedio: number;
-  onOpenLeads?: () => void;
-  onOpenContracts?: () => void;
-  onOpenCommissions?: () => void;
 };
 
 export function DashboardSummaryCards({
@@ -23,9 +20,6 @@ export function DashboardSummaryCards({
   comissaoTotal,
   conversionRate,
   ticketMedio,
-  onOpenLeads,
-  onOpenContracts,
-  onOpenCommissions,
 }: DashboardSummaryCardsProps) {
   const gridClassName = isObserver
     ? 'grid grid-cols-1 gap-5 sm:grid-cols-2'
@@ -39,10 +33,6 @@ export function DashboardSummaryCards({
         icon={Users}
         tone="brand"
         subtitle="Base de leads"
-        contextLabel="Base"
-        contextValue={`${totalLeads} leads`}
-        footerLabel="Abrir carteira de leads"
-        onClick={onOpenLeads}
       />
 
       {!isObserver && (
@@ -52,10 +42,6 @@ export function DashboardSummaryCards({
           icon={FileText}
           tone="earth"
           subtitle="Vigentes"
-          contextLabel="Status"
-          contextValue="Em operação"
-          footerLabel="Abrir contratos ativos"
-          onClick={onOpenContracts}
         />
       )}
 
@@ -67,10 +53,6 @@ export function DashboardSummaryCards({
           tone="forest"
           prefix="R$"
           subtitle="Mensal"
-          contextLabel="Recorte"
-          contextValue="Previsão"
-          footerLabel="Abrir painel de comissões"
-          onClick={onOpenCommissions}
         />
       )}
 
@@ -81,9 +63,6 @@ export function DashboardSummaryCards({
         tone="plum"
         suffix="%"
         subtitle="Leads convertidos"
-        contextLabel="Leitura"
-        contextValue="Eficiência"
-        footerLabel="Acompanhar performance"
       />
 
       {!isObserver && (
@@ -94,9 +73,6 @@ export function DashboardSummaryCards({
           tone="copper"
           prefix="R$"
           subtitle="Por contrato"
-          contextLabel="Base"
-          contextValue={`${contratosAtivosCount} ativos`}
-          footerLabel="Ver ticket médio"
         />
       )}
     </div>

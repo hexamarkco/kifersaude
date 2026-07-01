@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronRight, Minus, MoreVertical, TrendingUp, type LucideIcon } from 'lucide-react';
+import { Minus, MoreVertical, TrendingUp, type LucideIcon } from 'lucide-react';
 import { gsap } from 'gsap';
 import { usePanelMotion } from '../hooks/usePanelMotion';
-import { ActionSurface, Surface } from '../design-system';
+import { Surface } from '../design-system';
 
 type AnimatedStatCardTone = 'brand' | 'earth' | 'forest' | 'plum' | 'copper';
 
@@ -14,14 +14,10 @@ type AnimatedStatCardProps = {
   prefix?: string;
   suffix?: string;
   subtitle?: string;
-  contextLabel?: string;
-  contextValue?: string;
-  footerLabel?: string;
   trend?: {
     value: number;
     isPositive: boolean;
   };
-  onClick?: () => void;
 };
 
 const toneStyles: Record<
@@ -98,11 +94,7 @@ export default function AnimatedStatCard({
   prefix = '',
   suffix = '',
   subtitle,
-  contextLabel,
-  contextValue,
-  footerLabel,
   trend,
-  onClick,
 }: AnimatedStatCardProps) {
   const [displayValue, setDisplayValue] = useState<number | string>(0);
   const isNumeric = typeof value === 'number';
@@ -178,7 +170,7 @@ export default function AnimatedStatCard({
     : 'max-w-full text-[clamp(2.7rem,3.35vw,3.55rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)] tabular-nums';
 
   const cardContent = (
-    <div className="relative flex h-full min-h-[18.75rem] flex-col overflow-hidden p-5 sm:p-6">
+    <div className="relative flex h-full min-h-[15.5rem] flex-col overflow-hidden p-5 sm:p-6">
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: toneMeta.halo }}
@@ -189,25 +181,25 @@ export default function AnimatedStatCard({
         <div className="flex min-w-0 items-start gap-3.5">
           <div className="relative shrink-0">
             <div
-              className="relative flex h-16 w-16 items-center justify-center rounded-[var(--radius-xl)] border"
+              className="relative flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] border"
               style={{
                 borderColor: toneMeta.accent,
                 background: toneMeta.iconShell,
-                boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, var(--stat-icon-shadow)`,
+                boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, 0 0 18px ${toneMeta.accentSoft}`,
               }}
             >
               <div
-                className="absolute inset-1.5 rounded-[var(--radius-lg)] border"
+                className="absolute inset-1 rounded-[var(--radius-md)] border"
                 style={{
                   borderColor: 'var(--stat-icon-inset-border)',
                   background: toneMeta.iconInset,
                 }}
               />
-              <Icon className="relative h-7 w-7" style={{ color: toneMeta.iconColor }} />
+              <Icon className="relative h-6 w-6" strokeWidth={1.75} style={{ color: toneMeta.iconColor }} />
             </div>
           </div>
 
-          <div className="min-w-0 pt-2">
+          <div className="min-w-0 pt-0.5">
             <p className="text-[1.05rem] font-bold leading-tight" style={{ color: toneMeta.iconColor }}>
               {label}
             </p>
@@ -219,25 +211,19 @@ export default function AnimatedStatCard({
           </div>
         </div>
 
-        <MoreVertical className="mt-1 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+        <span
+          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-secondary)]"
+          style={{
+            borderColor: 'var(--border-subtle)',
+            background: 'var(--bg-inset)',
+          }}
+          aria-hidden="true"
+        >
+          <MoreVertical className="h-5 w-5" strokeWidth={1.75} />
+        </span>
       </div>
 
-      {contextLabel && contextValue && (
-        <div className="relative mt-3 flex justify-end">
-          <div
-            className="rounded-full border px-3 py-1.5 text-xs font-semibold leading-none"
-            style={{
-              borderColor: toneMeta.accent,
-              background: toneMeta.accentSoft,
-              color: toneMeta.iconColor,
-            }}
-          >
-            <span>{contextValue}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="relative mt-7 min-w-0">
+      <div className="relative mt-6 min-w-0">
         {splitValueMatch ? (
           <>
             <div className="flex min-w-0 items-end gap-2.5">
@@ -251,7 +237,7 @@ export default function AnimatedStatCard({
                 {splitTotalValue}
               </span>
             </div>
-            <div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--bg-hover)]">
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--bg-hover)]">
               <div
                 className="h-full rounded-full"
                 style={{
@@ -296,7 +282,7 @@ export default function AnimatedStatCard({
               color: trendTone.color,
             }}
           >
-            <TrendingUp className="h-4 w-4" aria-hidden="true" />
+            <TrendingUp className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
             {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
           </span>
           <span className="text-sm text-[var(--text-secondary)]">
@@ -315,7 +301,7 @@ export default function AnimatedStatCard({
               color: toneMeta.iconColor,
             }}
           >
-            <Minus className="h-4 w-4" aria-hidden="true" />
+            <Minus className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
             0%
           </span>
           <span className="text-sm text-[var(--text-secondary)]">
@@ -324,50 +310,9 @@ export default function AnimatedStatCard({
         </div>
       )}
 
-      <div className="relative mt-auto border-t border-[var(--border-subtle)] pt-5">
-        <div
-          className="flex items-center justify-between gap-3 rounded-[var(--radius-xl)] border p-3"
-          style={{
-            borderColor: toneMeta.accentSoft,
-            background: `linear-gradient(135deg, ${toneMeta.accentSoft} 0%, var(--bg-surface) 100%)`,
-          }}
-        >
-          <div className="flex min-w-0 items-center gap-3">
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] border"
-              style={{
-                borderColor: toneMeta.accent,
-                background: toneMeta.accentSoft,
-                color: toneMeta.iconColor,
-              }}
-            >
-              <Icon className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <span className="text-sm font-bold leading-snug text-[var(--text-primary)]">
-              {footerLabel || 'Ver detalhes'}
-            </span>
-          </div>
-          {onClick && (
-            <ChevronRight className="h-6 w-6 shrink-0" style={{ color: toneMeta.iconColor }} aria-hidden="true" />
-          )}
-        </div>
-      </div>
+      <div className="relative mt-auto h-px bg-[var(--border-subtle)]" />
     </div>
   );
-
-  if (onClick) {
-    return (
-      <ActionSurface
-        type="button"
-        onClick={onClick}
-        padding="none"
-        className="group h-full overflow-hidden"
-        style={shellStyle}
-      >
-        {cardContent}
-      </ActionSurface>
-    );
-  }
 
   return (
     <Surface padding="none" className="group h-full overflow-hidden" style={shellStyle}>

@@ -23,57 +23,67 @@ export function DashboardSummaryCards({
 }: DashboardSummaryCardsProps) {
   const gridClassName = isObserver
     ? 'grid grid-cols-1 gap-5 sm:grid-cols-2'
-    : 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3';
+    : 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-6';
 
   return (
     <div data-panel-animate className={gridClassName}>
-      <AnimatedStatCard
-        label="Leads em negociação"
-        value={`${leadsAtivos} / ${totalLeads}`}
-        icon={Users}
-        tone="brand"
-        subtitle="Base de leads"
-      />
+      <div className={!isObserver ? 'lg:col-span-2' : undefined}>
+        <AnimatedStatCard
+          label="Leads em negociação"
+          value={`${leadsAtivos} / ${totalLeads}`}
+          icon={Users}
+          tone="brand"
+          subtitle="Base de leads"
+        />
+      </div>
 
       {!isObserver && (
+        <div className="lg:col-span-2">
+          <AnimatedStatCard
+            label="Contratos ativos"
+            value={contratosAtivosCount}
+            icon={FileText}
+            tone="earth"
+            subtitle="Vigentes"
+          />
+        </div>
+      )}
+
+      {!isObserver && (
+        <div className="lg:col-span-2">
+          <AnimatedStatCard
+            label="Comissão"
+            value={comissaoTotal}
+            icon={DollarSign}
+            tone="copper"
+            prefix="R$"
+            subtitle="Mensal"
+          />
+        </div>
+      )}
+
+      <div className={!isObserver ? 'lg:col-span-3' : undefined}>
         <AnimatedStatCard
-          label="Contratos ativos"
-          value={contratosAtivosCount}
-          icon={FileText}
+          label="Taxa de eficiência"
+          value={conversionRate}
+          icon={Target}
           tone="earth"
-          subtitle="Vigentes"
+          suffix="%"
+          subtitle="Leads convertidos"
         />
-      )}
+      </div>
 
       {!isObserver && (
-        <AnimatedStatCard
-          label="Comissão"
-          value={comissaoTotal}
-          icon={DollarSign}
-          tone="forest"
-          prefix="R$"
-          subtitle="Mensal"
-        />
-      )}
-
-      <AnimatedStatCard
-        label="Taxa de eficiência"
-        value={conversionRate}
-        icon={Target}
-        tone="plum"
-        suffix="%"
-        subtitle="Leads convertidos"
-      />
-
-      {!isObserver && (
-        <AnimatedStatCard
-          label="Ticket médio"
-          value={ticketMedio}
-          icon={Activity}
-          tone="copper"
-          prefix="R$"
-          subtitle="Por contrato"
-        />
+        <div className="lg:col-span-3">
+          <AnimatedStatCard
+            label="Ticket médio"
+            value={ticketMedio}
+            icon={Activity}
+            tone="copper"
+            prefix="R$"
+            subtitle="Por contrato"
+          />
+        </div>
       )}
     </div>
   );

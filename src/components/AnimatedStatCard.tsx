@@ -251,7 +251,7 @@ export default function AnimatedStatCard({
               <TrendingUp className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
               {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
             </span>
-            <span className="text-sm text-[var(--text-secondary)]">
+            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
               vs mês anterior
             </span>
           </>
@@ -266,14 +266,12 @@ export default function AnimatedStatCard({
               <Minus className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
               0%
             </span>
-            <span className="text-sm text-[var(--text-secondary)]">
+            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
               vs mês anterior
             </span>
           </>
         ) : null}
       </div>
-
-      <div className="relative mt-auto h-px bg-[var(--border-subtle)]" />
     </div>
   );
 

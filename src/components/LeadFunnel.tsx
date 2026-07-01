@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { TrendingDown, Users } from 'lucide-react';
+import { ArrowDownRight, CircleDot, TrendingDown, Users } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
 import { SectionHeader, Surface } from '../design-system';
 import type { Lead } from '../lib/supabase';
@@ -44,6 +44,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
   };
 
   const totalLeads = funnelLeads.length;
+  const widestStageCount = Math.max(...stages.map((_stage, index) => getStageCount(index)), 0);
 
   if (stages.length === 0) {
     return (
@@ -59,116 +60,148 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
         className="absolute inset-0 opacity-100"
         style={{
           background:
-            'radial-gradient(circle at top right, color-mix(in srgb, var(--brand-primary) 14%, transparent) 0%, transparent 34%), radial-gradient(circle at bottom left, color-mix(in srgb, var(--brand-primary) 9%, transparent) 0%, transparent 40%)',
+            'radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--brand-primary) 14%, transparent) 0%, transparent 34%), radial-gradient(circle at 92% 10%, color-mix(in srgb, var(--accent-gold) 10%, transparent) 0%, transparent 32%)',
         }}
       />
 
       <div className="relative">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <SectionHeader
             eyebrow="Panorama"
             title="Funil comercial"
             description="Leitura do pipeline ativo e da conversao entre etapas."
           />
 
-          <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--badge-neutral-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]">
-            <Users className="h-4 w-4 text-[var(--brand-primary)]" />
-            <span>{totalLeads}</span>
-            <span className="text-[var(--text-muted)]">leads ativos</span>
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[360px]">
+            <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                <Users className="h-4 w-4 text-[var(--brand-primary)]" />
+                Pipeline ativo
+              </div>
+              <p className="mt-2 font-[var(--font-sans)] text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
+                {totalLeads}
+              </p>
+            </div>
+
+            <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                <TrendingDown className="h-4 w-4 text-[var(--accent-copper)]" />
+                Etapas ativas
+              </div>
+              <p className="mt-2 font-[var(--font-sans)] text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
+                {stages.length}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="mb-7 overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-1">
+          <div className="flex h-4 overflow-hidden rounded-full bg-[var(--bg-inset)]">
+            {stages.map((stage, index) => {
+              const count = getStageCount(index);
+              const width = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
+              const color = stage.cor || 'var(--brand-primary)';
+
+              return (
+                <div
+                  key={stage.id}
+                  className="h-full min-w-[2px] transition-all duration-500 ease-out"
+                  style={{
+                    width: `${width}%`,
+                    background: count > 0 ? color : 'transparent',
+                  }}
+                  title={`${stage.nome}: ${count}`}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-3">
           {stages.map((stage, index) => {
             const stageLeads = getLeadsByStatus(stage.id);
             const count = stageLeads.length;
             const percentage = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
-            const width = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
             const conversionRate = calculateConversionRate(index);
-            const color = stage.cor || '#cf7b32';
-            const progressWidth = count > 0 ? Math.max(width, 8) : 0;
+            const color = stage.cor || 'var(--brand-primary)';
+            const progressWidth = widestStageCount > 0 ? Math.max((count / widestStageCount) * 100, count > 0 ? 8 : 0) : 0;
 
             return (
-              <Surface
+              <div
                 key={stage.id}
-                variant="muted"
-                padding="sm"
+                className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4"
               >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="h-3.5 w-3.5 rounded-full"
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-3">
+                      <span
+                        className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border"
                         style={{
-                          backgroundColor: color,
-                          boxShadow: `0 0 0 7px color-mix(in srgb, ${color} 16%, transparent)`,
+                          borderColor: `color-mix(in srgb, ${color} 42%, var(--border-subtle))`,
+                          background: `color-mix(in srgb, ${color} 10%, var(--bg-surface))`,
                         }}
-                      />
-                      <span className="text-base font-semibold text-[var(--text-primary)]">
-                        {stage.nome}
+                      >
+                        <CircleDot className="h-[18px] w-[18px]" strokeWidth={1.75} style={{ color }} />
                       </span>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                            Etapa {index + 1}
+                          </span>
+                          {index > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-semibold leading-none text-[var(--text-secondary)]">
+                              <ArrowDownRight className="h-3.5 w-3.5" strokeWidth={1.75} />
+                              {conversionRate.toFixed(0)}% conversao
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="mt-1 text-lg font-semibold leading-tight tracking-[-0.01em] text-[var(--text-primary)]">
+                          {stage.nome}
+                        </h3>
+                      </div>
                     </div>
 
-                    <div
-                      className="mt-4 h-3 overflow-hidden rounded-full"
-                      style={{ background: 'color-mix(in srgb, var(--bg-surface) 78%, var(--border-default))' }}
-                    >
-                      <div
-                        className="h-full rounded-full transition-all duration-500 ease-out"
-                        style={{
-                          width: `${progressWidth}%`,
-                          background: `linear-gradient(90deg, ${color} 0%, color-mix(in srgb, ${color} 78%, white) 100%)`,
-                          boxShadow: `0 10px 18px -16px ${color}`,
-                        }}
-                      />
+                    <div className="mt-4 grid grid-cols-[1fr_auto] items-center gap-3">
+                      <div className="h-2.5 overflow-hidden rounded-full bg-[var(--bg-hover)]">
+                        <div
+                          className="h-full rounded-full transition-all duration-500 ease-out"
+                          style={{
+                            width: `${progressWidth}%`,
+                            background: `linear-gradient(90deg, ${color} 0%, color-mix(in srgb, ${color} 76%, var(--accent-gold)) 100%)`,
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm font-semibold tabular-nums text-[var(--text-secondary)]">
+                        {percentage.toFixed(1)}%
+                      </span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:min-w-[320px]">
-                    <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                        Volume
-                      </p>
-                      <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Volume</p>
+                      <p className="mt-1 font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.03em] text-[var(--text-primary)] tabular-nums">
                         {count}
                       </p>
                     </div>
 
-                    <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                        Participacao
-                      </p>
-                      <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Participacao</p>
+                      <p className="mt-1 font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.03em] text-[var(--text-primary)] tabular-nums">
                         {percentage.toFixed(1)}%
                       </p>
                     </div>
 
-                    <div
-                      className="rounded-[var(--radius-lg)] border px-3 py-2"
-                      style={{
-                        borderColor: index === 0 ? 'var(--border-default)' : color,
-                        background:
-                          index === 0
-                            ? 'var(--bg-surface)'
-                            : `color-mix(in srgb, ${color} 12%, var(--bg-surface))`,
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <TrendingDown
-                          className="h-3.5 w-3.5"
-                          style={{ color: index === 0 ? 'var(--text-muted)' : color }}
-                        />
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                          Conversao
-                        </p>
-                      </div>
-                      <p className="mt-1 text-xl font-bold text-[var(--text-primary)]">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Conversao</p>
+                      <p className="mt-1 font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.03em] text-[var(--text-primary)] tabular-nums">
                         {index === 0 ? 'Base' : `${conversionRate.toFixed(0)}%`}
                       </p>
                     </div>
                   </div>
                 </div>
-              </Surface>
+              </div>
             );
           })}
         </div>

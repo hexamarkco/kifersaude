@@ -34,11 +34,11 @@ export function DashboardSummaryCards({
   return (
     <div data-panel-animate className={gridClassName}>
       <AnimatedStatCard
-        label="Leads Ativos"
+        label="Leads em negociação"
         value={`${leadsAtivos} / ${totalLeads}`}
         icon={Users}
         tone="brand"
-        subtitle="Em negociacao / Total"
+        subtitle="Base de leads"
         contextLabel="Base"
         contextValue={`${totalLeads} leads`}
         footerLabel="Abrir carteira de leads"
@@ -47,13 +47,13 @@ export function DashboardSummaryCards({
 
       {!isObserver && (
         <AnimatedStatCard
-          label="Contratos Ativos"
+          label="Contratos ativos"
           value={contratosAtivosCount}
           icon={FileText}
           tone="earth"
           subtitle="Vigentes"
           contextLabel="Status"
-          contextValue="Em operacao"
+          contextValue="Em operação"
           footerLabel="Abrir contratos ativos"
           onClick={onOpenContracts}
         />
@@ -61,34 +61,34 @@ export function DashboardSummaryCards({
 
       {!isObserver && (
         <AnimatedStatCard
-          label="Comissao Prevista"
+          label="Comissão"
           value={comissaoTotal}
           icon={DollarSign}
           tone="forest"
           prefix="R$"
           subtitle="Mensal"
           contextLabel="Recorte"
-          contextValue="Previsao"
-          footerLabel="Abrir painel de comissoes"
+          contextValue="Previsão"
+          footerLabel="Abrir painel de comissões"
           onClick={onOpenCommissions}
         />
       )}
 
       <AnimatedStatCard
-        label="Taxa de Conversao"
+        label="Taxa de eficiência"
         value={conversionRate}
         icon={Target}
         tone="plum"
         suffix="%"
-        subtitle="Leads com status Convertido"
+        subtitle="Leads convertidos"
         contextLabel="Leitura"
-        contextValue="Eficiencia"
-        footerLabel="Acompanhe a performance comercial"
+        contextValue="Eficiência"
+        footerLabel="Acompanhar performance"
       />
 
       {!isObserver && (
         <AnimatedStatCard
-          label="Ticket Medio"
+          label="Ticket médio"
           value={ticketMedio}
           icon={Activity}
           tone="copper"
@@ -96,7 +96,7 @@ export function DashboardSummaryCards({
           subtitle="Por contrato"
           contextLabel="Base"
           contextValue={`${contratosAtivosCount} ativos`}
-          footerLabel="Valor medio por contrato vigente"
+          footerLabel="Ver ticket médio"
         />
       )}
     </div>

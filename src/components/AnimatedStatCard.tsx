@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { ChevronRight, Minus, MoreVertical, TrendingUp, type LucideIcon } from 'lucide-react';
 import { gsap } from 'gsap';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { ActionSurface, Surface } from '../design-system';
@@ -163,112 +163,189 @@ export default function AnimatedStatCard({
   }, [displayValue, isNumeric, prefix]);
 
   const trendTone = trend?.isPositive ? trendToneStyles.positive : trendToneStyles.negative;
+  const formattedValueText = String(formattedValue);
+  const splitValueMatch = formattedValueText.match(/^\s*(\d+)\s*\/\s*(\d+)\s*$/);
+  const splitCurrentValue = splitValueMatch ? Number(splitValueMatch[1]) : null;
+  const splitTotalValue = splitValueMatch ? Number(splitValueMatch[2]) : null;
+  const splitProgress = splitCurrentValue !== null && splitTotalValue && splitTotalValue > 0
+    ? Math.min(100, Math.max(0, (splitCurrentValue / splitTotalValue) * 100))
+    : 0;
+  const shellStyle = {
+    borderColor: toneMeta.accent,
+  };
 
   const cardContent = (
-    <div className="relative flex h-full min-h-[12rem] flex-col overflow-hidden p-5 sm:p-6">
+    <div className="relative flex h-full min-h-[19.5rem] flex-col overflow-hidden p-6 sm:p-7">
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: toneMeta.halo }}
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
 
-      <div className="relative flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <div
-            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border"
-            style={{
-              borderColor: 'var(--border-accent)',
-              background: toneMeta.iconShell,
-              boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, var(--stat-icon-shadow)`,
-            }}
-          >
+      <div className="relative flex items-start justify-between gap-5">
+        <div className="flex min-w-0 items-start gap-4">
+          <div className="relative shrink-0">
             <div
-              className="absolute inset-1 rounded-[var(--radius-md)] border"
+              className="relative flex h-[4.75rem] w-[4.75rem] items-center justify-center rounded-[var(--radius-xl)] border"
               style={{
-                borderColor: 'var(--stat-icon-inset-border)',
-                background: toneMeta.iconInset,
+                borderColor: toneMeta.accent,
+                background: toneMeta.iconShell,
+                boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, var(--stat-icon-shadow)`,
               }}
-            />
-            <Icon className="relative h-5 w-5" style={{ color: toneMeta.iconColor }} />
+            >
+              <div
+                className="absolute inset-1.5 rounded-[var(--radius-lg)] border"
+                style={{
+                  borderColor: 'var(--stat-icon-inset-border)',
+                  background: toneMeta.iconInset,
+                }}
+              />
+              <Icon className="relative h-8 w-8" style={{ color: toneMeta.iconColor }} />
+            </div>
           </div>
 
-          <div className="min-w-0 pt-0.5">
-            <p className="truncate text-sm font-semibold leading-tight text-[var(--brand-primary-hover)]">
+          <div className="min-w-0 pt-3">
+            <p className="text-lg font-bold leading-tight" style={{ color: toneMeta.iconColor }}>
               {label}
             </p>
             {subtitle && (
-              <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
+              <p className="mt-1.5 text-sm leading-snug text-[var(--text-secondary)]">
                 {subtitle}
               </p>
             )}
           </div>
         </div>
 
-        {contextLabel && contextValue && (
-          <div
-            className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold leading-none"
-            style={{
-              borderColor: 'var(--border-subtle)',
-              background: 'var(--badge-neutral-bg)',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            <span className="text-[var(--text-muted)]">{contextLabel}</span>{' '}
-            <span className="text-[var(--text-primary)]">{contextValue}</span>
-          </div>
-        )}
+        <MoreVertical className="mt-1 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
       </div>
 
-      <div className="relative mt-6 flex items-end gap-2">
-        {prefix && (
-          <span className="pb-1 text-sm font-semibold text-[var(--text-secondary)]">
-            {prefix}
-          </span>
-        )}
-        <p className="text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] sm:text-[2rem]">
-          {formattedValue}
-        </p>
-        {suffix && (
-          <span className="pb-1 text-sm font-semibold text-[var(--text-muted)]">
-            {suffix}
-          </span>
+      {contextLabel && contextValue && (
+        <div className="relative mt-4 flex justify-end">
+          <div
+            className="rounded-full border px-3 py-1.5 text-xs font-semibold leading-none"
+            style={{
+              borderColor: toneMeta.accent,
+              background: toneMeta.accentSoft,
+              color: toneMeta.iconColor,
+            }}
+          >
+            <span>{contextValue}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="relative mt-8">
+        {splitValueMatch ? (
+          <>
+            <div className="flex items-end gap-3">
+              <span className="text-[4.25rem] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)]">
+                {splitCurrentValue}
+              </span>
+              <span className="pb-2 text-[3.25rem] font-semibold leading-none tracking-[-0.05em] text-[var(--text-subtle)]">
+                /
+              </span>
+              <span className="text-[3.25rem] font-semibold leading-none tracking-[-0.05em]" style={{ color: toneMeta.iconColor }}>
+                {splitTotalValue}
+              </span>
+            </div>
+            <div className="mt-6 h-2 overflow-hidden rounded-full bg-[var(--bg-hover)]">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${splitProgress}%`,
+                  background: `linear-gradient(90deg, ${toneMeta.iconColor} 0%, ${toneMeta.accent} 100%)`,
+                  boxShadow: `0 0 18px ${toneMeta.accentSoft}`,
+                }}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-end gap-3">
+              {prefix && (
+                <span className="pb-2 text-2xl font-semibold text-[var(--text-secondary)]">
+                  {prefix}
+                </span>
+              )}
+              <p className="text-[4rem] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)]">
+                {formattedValue}
+              </p>
+              {suffix && (
+                <span className="pb-2 text-3xl font-semibold text-[var(--text-primary)]">
+                  {suffix}
+                </span>
+              )}
+            </div>
+            <p className="mt-4 text-base font-medium text-[var(--text-muted)]">
+              {label.toLocaleLowerCase('pt-BR')}
+            </p>
+          </>
         )}
       </div>
 
       {trend && trendTone && (
-        <div className="relative mt-4 flex items-center gap-2">
+        <div className="relative mt-5 flex items-center gap-2">
           <span
-            className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
             style={{
               background: trendTone.background,
               borderColor: trendTone.border,
               color: trendTone.color,
             }}
           >
+            <TrendingUp className="h-4 w-4" aria-hidden="true" />
             {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
           </span>
-          <span className="text-xs text-[var(--text-muted)]">
-            vs. mês anterior
+          <span className="text-sm text-[var(--text-secondary)]">
+            vs mês anterior
           </span>
         </div>
       )}
 
-      <div className="relative mt-auto border-t border-[var(--border-subtle)] pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--text-muted)]">
+      {!trend && !splitValueMatch && (
+        <div className="relative mt-5 flex items-center gap-2">
+          <span
+            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
+            style={{
+              borderColor: toneMeta.accentSoft,
+              background: 'var(--bg-hover)',
+              color: toneMeta.iconColor,
+            }}
+          >
+            <Minus className="h-4 w-4" aria-hidden="true" />
+            0%
+          </span>
+          <span className="text-sm text-[var(--text-secondary)]">
+            vs mês anterior
+          </span>
+        </div>
+      )}
+
+      <div className="relative mt-auto border-t border-[var(--border-subtle)] pt-6">
+        <div
+          className="flex items-center justify-between gap-4 rounded-[var(--radius-xl)] border p-3.5"
+          style={{
+            borderColor: toneMeta.accentSoft,
+            background: `linear-gradient(135deg, ${toneMeta.accentSoft} 0%, var(--bg-surface) 100%)`,
+          }}
+        >
+          <div className="flex min-w-0 items-center gap-3">
             <span
-              className="h-2 w-2 shrink-0 rounded-full"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border"
               style={{
-                background: toneMeta.accent,
-                boxShadow: `0 0 0 5px ${toneMeta.accentSoft}`,
+                borderColor: toneMeta.accent,
+                background: toneMeta.accentSoft,
+                color: toneMeta.iconColor,
               }}
-            />
-            <span className="truncate">{footerLabel || 'Ver detalhes'}</span>
+            >
+              <Icon className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="text-sm font-bold leading-snug text-[var(--text-primary)]">
+              {footerLabel || 'Ver detalhes'}
+            </span>
           </div>
           {onClick && (
-            <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand-primary-hover)]">
-              Abrir
-            </span>
+            <ChevronRight className="h-6 w-6 shrink-0" style={{ color: toneMeta.iconColor }} aria-hidden="true" />
           )}
         </div>
       </div>
@@ -282,6 +359,7 @@ export default function AnimatedStatCard({
         onClick={onClick}
         padding="none"
         className="group h-full overflow-hidden"
+        style={shellStyle}
       >
         {cardContent}
       </ActionSurface>
@@ -289,7 +367,7 @@ export default function AnimatedStatCard({
   }
 
   return (
-    <Surface padding="none" className="group h-full overflow-hidden">
+    <Surface padding="none" className="group h-full overflow-hidden" style={shellStyle}>
       {cardContent}
     </Surface>
   );

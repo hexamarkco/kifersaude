@@ -113,7 +113,7 @@ export function DashboardTrendSection({
             <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
               {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : 'Sem dados'}
             </p>
-            <p className="mt-1 text-xs font-semibold" style={monthlyVariationTone}>
+            <p className={`mt-1 text-xs font-semibold ${monthlyVariationTone}`}>
               {latestMonthlyPoint?.variation !== null && latestMonthlyPoint?.variation !== undefined
                 ? `${latestMonthlyPoint.variation > 0 ? '+' : ''}${latestMonthlyPoint.variation.toFixed(1)}% ${
                     previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : 'vs mes anterior'
@@ -124,7 +124,7 @@ export function DashboardTrendSection({
 
           <Surface variant="muted" padding="sm">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <BadgePercent className="h-4 w-4 text-[var(--border-strong)]" />
+              <BadgePercent className="h-4 w-4 text-[var(--accent-gold)]" />
               <span>Media do periodo</span>
             </div>
             <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
@@ -137,7 +137,7 @@ export function DashboardTrendSection({
 
           <Surface variant="muted" padding="sm">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <Calendar className="h-4 w-4 text-[var(--border-strong)]" />
+              <Calendar className="h-4 w-4 text-[var(--brand-primary)]" />
               <span>Pico do periodo</span>
             </div>
             <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">

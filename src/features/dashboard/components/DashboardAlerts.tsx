@@ -28,8 +28,7 @@ export function DashboardAlerts({
         >
           <div className="flex items-start space-x-3">
             <div
-              className="mt-1 h-2.5 w-2.5 rounded-full"
-              style={{ background: 'var(--danger-text)' }}
+              className="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--danger-text)]"
             />
             <p className="text-sm text-[var(--danger-text)]">
               {error}

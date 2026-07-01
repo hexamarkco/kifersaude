@@ -117,14 +117,14 @@ export const formatDashboardMetricValue = (value: number, metric: DashboardMetri
   return value.toLocaleString('pt-BR');
 };
 
-export const resolveDashboardVariationTone = (variation?: number | null) => {
+export const resolveDashboardVariationTone = (variation?: number | null): string => {
   if ((variation || 0) > 0) {
-    return { color: 'var(--success-text)' };
+    return 'text-[var(--success-text)]';
   }
 
   if ((variation || 0) < 0) {
-    return { color: 'var(--danger-text)' };
+    return 'text-[var(--danger-text)]';
   }
 
-  return { color: 'var(--text-secondary)' };
+  return 'text-[var(--text-secondary)]';
 };

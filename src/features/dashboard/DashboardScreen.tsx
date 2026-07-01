@@ -2370,8 +2370,7 @@ export default function DashboardScreen({
                       Navegue os meses para consultar reajustes e aniversários.
                     </span>
                     <div
-                      className="inline-flex items-center gap-1 rounded-[1rem] border p-1"
-                      style={DASHBOARD_PILL_STYLE}
+                      className="inline-flex items-center gap-1 rounded-[1rem] border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1"
                     >
                       <Button
                         type="button"
@@ -2494,9 +2493,8 @@ export default function DashboardScreen({
                             <Surface
                               key={event.id}
                               padding="md"
+                              className="border-[var(--brand-primary-border)]"
                               style={{
-                                borderColor:
-                                  CALENDAR_LEGEND_STYLES.adjustment.border,
                                 background:
                                   "linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-soft) 50%, var(--bg-surface)) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%)",
                               }}
@@ -2616,9 +2614,8 @@ export default function DashboardScreen({
                           <Surface
                             key={event.id}
                             padding="md"
+                            className="border-[var(--border-default)]"
                             style={{
-                              borderColor:
-                                CALENDAR_LEGEND_STYLES.birthday.border,
                               background:
                                 "linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 64%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%)",
                             }}
@@ -2675,11 +2672,7 @@ export default function DashboardScreen({
                               </div>
                             )}
                             <div
-                              className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3"
-                              style={{
-                                borderColor:
-                                  "var(--border-subtle)",
-                              }}
+                              className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3"
                             >
                               {birthday.contract && (
                                 <Button

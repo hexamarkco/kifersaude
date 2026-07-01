@@ -160,7 +160,7 @@ const testimonials: Testimonial[] = [
 const audienceCards: AudienceCard[] = [
   {
     eyebrow: 'MEI / Empresa pequena',
-    title: 'Plano empresarial com entrada mais inteligente para quem tem CNPJ.',
+    title: 'Plano empresarial com melhor custo-benefício para quem tem CNPJ.',
     description: 'Sabia que como MEI você pode acessar plano empresarial com melhor custo-benefício? A Kifer compara opções e explica a elegibilidade certa para o seu caso.',
     ctaLabel: 'Quero cotar para empresa',
     contractKind: 'MEI',
@@ -909,10 +909,10 @@ export default function HomePage() {
         <section id="prova-social" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">prova social rápida</p>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">confiança em números</p>
               <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Confiança construída no atendimento real.</h2>
               <p className="mt-4 text-lg leading-relaxed text-slate-600">
-                A Kifer cruza cenário de uso, operadora e custo com linguagem simples. O foco não é empurrar plano, é ajudar você a decidir melhor.
+                A Kifer compara operadoras, custos e rede de atendimento com linguagem simples. O foco não é empurrar plano, é ajudar você a decidir.
               </p>
             </div>
 
@@ -957,7 +957,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">para quem é</p>
-              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">A home te leva para o próximo passo certo.</h2>
+              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">O plano certo para cada perfil: PF, MEI ou empresa.</h2>
               <p className="mt-4 text-lg leading-relaxed text-slate-600">
                 Se você quer cotar como pessoa física ou entender se existe uma via mais inteligente via CNPJ, a Kifer orienta o caminho sem enrolação.
               </p>
@@ -1212,7 +1212,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl rounded-[2.4rem] border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#172033] to-[#1e293b] p-8 shadow-[0_38px_80px_-52px_rgba(15,23,42,0.7)] md:p-12">
             <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-200">cta final</p>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-200">fale agora</p>
                 <h2 className="mt-4 text-4xl font-bold md:text-5xl">Quer resolver isso hoje pelo WhatsApp?</h2>
                 <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-300">
                   Se preferir, pule direto para a conversa. A Kifer entende seu cenário, compara as opções e te acompanha até a contratação acontecer de verdade.

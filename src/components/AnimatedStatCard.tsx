@@ -173,20 +173,23 @@ export default function AnimatedStatCard({
   const shellStyle = {
     borderColor: toneMeta.accent,
   };
+  const numericValueClassName = prefix === 'R$'
+    ? 'max-w-full text-[clamp(2.35rem,2.75vw,3rem)] font-semibold leading-none tracking-[-0.055em] text-[var(--text-primary)] tabular-nums'
+    : 'max-w-full text-[clamp(2.7rem,3.35vw,3.55rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)] tabular-nums';
 
   const cardContent = (
-    <div className="relative flex h-full min-h-[19.5rem] flex-col overflow-hidden p-6 sm:p-7">
+    <div className="relative flex h-full min-h-[18.75rem] flex-col overflow-hidden p-5 sm:p-6">
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: toneMeta.halo }}
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
 
-      <div className="relative flex items-start justify-between gap-5">
-        <div className="flex min-w-0 items-start gap-4">
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3.5">
           <div className="relative shrink-0">
             <div
-              className="relative flex h-[4.75rem] w-[4.75rem] items-center justify-center rounded-[var(--radius-xl)] border"
+              className="relative flex h-16 w-16 items-center justify-center rounded-[var(--radius-xl)] border"
               style={{
                 borderColor: toneMeta.accent,
                 background: toneMeta.iconShell,
@@ -200,16 +203,16 @@ export default function AnimatedStatCard({
                   background: toneMeta.iconInset,
                 }}
               />
-              <Icon className="relative h-8 w-8" style={{ color: toneMeta.iconColor }} />
+              <Icon className="relative h-7 w-7" style={{ color: toneMeta.iconColor }} />
             </div>
           </div>
 
-          <div className="min-w-0 pt-3">
-            <p className="text-lg font-bold leading-tight" style={{ color: toneMeta.iconColor }}>
+          <div className="min-w-0 pt-2">
+            <p className="text-[1.05rem] font-bold leading-tight" style={{ color: toneMeta.iconColor }}>
               {label}
             </p>
             {subtitle && (
-              <p className="mt-1.5 text-sm leading-snug text-[var(--text-secondary)]">
+              <p className="mt-1.5 text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
                 {subtitle}
               </p>
             )}
@@ -220,7 +223,7 @@ export default function AnimatedStatCard({
       </div>
 
       {contextLabel && contextValue && (
-        <div className="relative mt-4 flex justify-end">
+        <div className="relative mt-3 flex justify-end">
           <div
             className="rounded-full border px-3 py-1.5 text-xs font-semibold leading-none"
             style={{
@@ -234,21 +237,21 @@ export default function AnimatedStatCard({
         </div>
       )}
 
-      <div className="relative mt-8">
+      <div className="relative mt-7 min-w-0">
         {splitValueMatch ? (
           <>
-            <div className="flex items-end gap-3">
-              <span className="text-[4.25rem] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)]">
+            <div className="flex min-w-0 items-end gap-2.5">
+              <span className="text-[clamp(3rem,3.65vw,3.85rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)] tabular-nums">
                 {splitCurrentValue}
               </span>
-              <span className="pb-2 text-[3.25rem] font-semibold leading-none tracking-[-0.05em] text-[var(--text-subtle)]">
+              <span className="pb-1.5 text-[clamp(2.35rem,2.85vw,3rem)] font-semibold leading-none tracking-[-0.05em] text-[var(--text-subtle)]">
                 /
               </span>
-              <span className="text-[3.25rem] font-semibold leading-none tracking-[-0.05em]" style={{ color: toneMeta.iconColor }}>
+              <span className="text-[clamp(2.35rem,2.85vw,3rem)] font-semibold leading-none tracking-[-0.05em] tabular-nums" style={{ color: toneMeta.iconColor }}>
                 {splitTotalValue}
               </span>
             </div>
-            <div className="mt-6 h-2 overflow-hidden rounded-full bg-[var(--bg-hover)]">
+            <div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--bg-hover)]">
               <div
                 className="h-full rounded-full"
                 style={{
@@ -261,22 +264,22 @@ export default function AnimatedStatCard({
           </>
         ) : (
           <>
-            <div className="flex items-end gap-3">
+            <div className="flex min-w-0 items-end gap-2.5 overflow-visible">
               {prefix && (
-                <span className="pb-2 text-2xl font-semibold text-[var(--text-secondary)]">
+                <span className="pb-1.5 text-[clamp(1.1rem,1.35vw,1.5rem)] font-semibold text-[var(--text-secondary)]">
                   {prefix}
                 </span>
               )}
-              <p className="text-[4rem] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)]">
+              <p className={numericValueClassName}>
                 {formattedValue}
               </p>
               {suffix && (
-                <span className="pb-2 text-3xl font-semibold text-[var(--text-primary)]">
+                <span className="pb-1.5 text-[clamp(1.4rem,1.85vw,2rem)] font-semibold text-[var(--text-primary)]">
                   {suffix}
                 </span>
               )}
             </div>
-            <p className="mt-4 text-base font-medium text-[var(--text-muted)]">
+            <p className="mt-3 text-sm font-medium text-[var(--text-muted)]">
               {label.toLocaleLowerCase('pt-BR')}
             </p>
           </>
@@ -284,9 +287,9 @@ export default function AnimatedStatCard({
       </div>
 
       {trend && trendTone && (
-        <div className="relative mt-5 flex items-center gap-2">
+        <div className="relative mt-4 flex items-center gap-2">
           <span
-            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
+            className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold"
             style={{
               background: trendTone.background,
               borderColor: trendTone.border,
@@ -303,9 +306,9 @@ export default function AnimatedStatCard({
       )}
 
       {!trend && !splitValueMatch && (
-        <div className="relative mt-5 flex items-center gap-2">
+        <div className="relative mt-4 flex items-center gap-2">
           <span
-            className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold"
+            className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold"
             style={{
               borderColor: toneMeta.accentSoft,
               background: 'var(--bg-hover)',
@@ -321,9 +324,9 @@ export default function AnimatedStatCard({
         </div>
       )}
 
-      <div className="relative mt-auto border-t border-[var(--border-subtle)] pt-6">
+      <div className="relative mt-auto border-t border-[var(--border-subtle)] pt-5">
         <div
-          className="flex items-center justify-between gap-4 rounded-[var(--radius-xl)] border p-3.5"
+          className="flex items-center justify-between gap-3 rounded-[var(--radius-xl)] border p-3"
           style={{
             borderColor: toneMeta.accentSoft,
             background: `linear-gradient(135deg, ${toneMeta.accentSoft} 0%, var(--bg-surface) 100%)`,
@@ -331,7 +334,7 @@ export default function AnimatedStatCard({
         >
           <div className="flex min-w-0 items-center gap-3">
             <span
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] border"
               style={{
                 borderColor: toneMeta.accent,
                 background: toneMeta.accentSoft,

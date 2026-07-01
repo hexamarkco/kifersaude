@@ -24,8 +24,6 @@ const toneStyles: Record<
   AnimatedStatCardTone,
   {
     halo: string;
-    iconShell: string;
-    iconInset: string;
     iconColor: string;
     accent: string;
     accentSoft: string;
@@ -33,40 +31,30 @@ const toneStyles: Record<
 > = {
   brand: {
     halo: 'var(--stat-brand-halo)',
-    iconShell: 'var(--stat-brand-icon-bg)',
-    iconInset: 'var(--stat-brand-icon-inset)',
     iconColor: 'var(--stat-brand-icon)',
     accent: 'var(--stat-brand-accent)',
     accentSoft: 'var(--stat-brand-soft)',
   },
   earth: {
     halo: 'var(--stat-earth-halo)',
-    iconShell: 'var(--stat-earth-icon-bg)',
-    iconInset: 'var(--stat-earth-icon-inset)',
     iconColor: 'var(--stat-earth-icon)',
     accent: 'var(--stat-earth-accent)',
     accentSoft: 'var(--stat-earth-soft)',
   },
   forest: {
     halo: 'var(--stat-forest-halo)',
-    iconShell: 'var(--stat-forest-icon-bg)',
-    iconInset: 'var(--stat-forest-icon-inset)',
     iconColor: 'var(--stat-forest-icon)',
     accent: 'var(--stat-forest-accent)',
     accentSoft: 'var(--stat-forest-soft)',
   },
   plum: {
     halo: 'var(--stat-plum-halo)',
-    iconShell: 'var(--stat-plum-icon-bg)',
-    iconInset: 'var(--stat-plum-icon-inset)',
     iconColor: 'var(--stat-plum-icon)',
     accent: 'var(--stat-plum-accent)',
     accentSoft: 'var(--stat-plum-soft)',
   },
   copper: {
     halo: 'var(--stat-copper-halo)',
-    iconShell: 'var(--stat-copper-icon-bg)',
-    iconInset: 'var(--stat-copper-icon-inset)',
     iconColor: 'var(--stat-copper-icon)',
     accent: 'var(--stat-copper-accent)',
     accentSoft: 'var(--stat-copper-soft)',
@@ -75,13 +63,9 @@ const toneStyles: Record<
 
 const trendToneStyles = {
   positive: {
-    background: 'var(--success-soft)',
-    border: 'var(--success-border)',
     color: 'var(--success-text)',
   },
   negative: {
-    background: 'var(--danger-soft)',
-    border: 'var(--danger-border)',
     color: 'var(--danger-text)',
   },
 } as const;
@@ -183,19 +167,12 @@ export default function AnimatedStatCard({
             <div
               className="relative flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] border"
               style={{
-                borderColor: toneMeta.accent,
-                background: toneMeta.iconShell,
-                boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, 0 0 18px ${toneMeta.accentSoft}`,
+                borderColor: toneMeta.accentSoft,
+                background: 'transparent',
+                boxShadow: `0 10px 24px -20px ${toneMeta.accent}`,
               }}
             >
-              <div
-                className="absolute inset-1 rounded-[var(--radius-md)] border"
-                style={{
-                  borderColor: 'var(--stat-icon-inset-border)',
-                  background: toneMeta.iconInset,
-                }}
-              />
-              <Icon className="relative h-6 w-6" strokeWidth={1.75} style={{ color: toneMeta.iconColor }} />
+              <Icon className="h-6 w-6" strokeWidth={1.75} style={{ color: toneMeta.iconColor }} />
             </div>
           </div>
 
@@ -212,11 +189,7 @@ export default function AnimatedStatCard({
         </div>
 
         <span
-          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[var(--radius-md)] border text-[var(--text-secondary)]"
-          style={{
-            borderColor: 'var(--border-subtle)',
-            background: 'var(--bg-inset)',
-          }}
+          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)]"
           aria-hidden="true"
         >
           <MoreVertical className="h-5 w-5" strokeWidth={1.75} />
@@ -275,10 +248,8 @@ export default function AnimatedStatCard({
       {trend && trendTone && (
         <div className="relative mt-4 flex items-center gap-2">
           <span
-            className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold"
             style={{
-              background: trendTone.background,
-              borderColor: trendTone.border,
               color: trendTone.color,
             }}
           >
@@ -294,10 +265,8 @@ export default function AnimatedStatCard({
       {!trend && !splitValueMatch && (
         <div className="relative mt-4 flex items-center gap-2">
           <span
-            className="inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-semibold"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold"
             style={{
-              borderColor: toneMeta.accentSoft,
-              background: 'var(--bg-hover)',
               color: toneMeta.iconColor,
             }}
           >

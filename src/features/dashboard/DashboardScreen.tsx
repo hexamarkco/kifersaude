@@ -10,7 +10,7 @@ import {
   SAO_PAULO_TIMEZONE,
 } from "../../lib/dateUtils";
 import { useAuth } from "../../contexts/AuthContext";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, Cake, ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import LeadFunnel from "../../components/LeadFunnel";
 import ContractDetails from "../../components/ContractDetails";
 import LeadDetails from "../../components/LeadDetails";
@@ -1975,22 +1975,22 @@ export default function DashboardScreen({
           onClick={() => setSelectedCalendarDate(date)}
           padding="none"
           selected={isSelected}
-          className="group relative aspect-square rounded-2xl p-2 transition-all duration-200 hover:-translate-y-px"
+          className="group relative aspect-square rounded-[var(--radius-xl)] p-2 text-left transition-all duration-200 hover:-translate-y-px"
           style={
             isSelected
               ? undefined
               : isToday
                 ? {
-                    borderColor: "var(--border-strong)",
+                    borderColor: "var(--brand-primary-border)",
                     background:
-                      "linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 88%, transparent) 0%, var(--bg-surface) 100%)",
+                      "linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-muted) 78%, var(--bg-surface)) 0%, var(--bg-surface) 100%)",
                     color: "var(--text-primary)",
                   }
                 : dayEvents.length > 0
                   ? {
                       borderColor: "var(--border-subtle)",
                       background:
-                        "linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 56%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%)",
+                        "linear-gradient(180deg, color-mix(in srgb, var(--accent-gold-muted) 72%, var(--bg-surface)) 0%, var(--bg-surface) 100%)",
                       color: "var(--text-secondary)",
                     }
                   : {
@@ -2001,9 +2001,14 @@ export default function DashboardScreen({
                     }
           }
         >
-          <div className="text-sm font-medium">{day}</div>
+          <div className="font-[var(--font-sans)] text-sm font-semibold tabular-nums">{day}</div>
+          {dayEvents.length > 0 && (
+            <div className="absolute right-1.5 top-1.5 rounded-full bg-[var(--bg-hover)] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[var(--text-secondary)]">
+              {dayEvents.length}
+            </div>
+          )}
           {kinds.length > 0 && (
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
+            <div className="absolute bottom-2 left-2 flex gap-1">
               {kinds.map((kind) => (
                 <span
                   key={kind}
@@ -2278,7 +2283,14 @@ export default function DashboardScreen({
 
         {!isObserver && (
           <>
-            <Surface data-panel-animate className="space-y-6">
+            <Surface data-panel-animate className="space-y-6 overflow-hidden">
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--brand-primary) 12%, transparent) 0%, transparent 34%), radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--accent-gold) 10%, transparent) 0%, transparent 30%)",
+                }}
+              />
               <SectionHeader
                 title="Calendário de eventos"
                 description="Reajustes e aniversários agrupados pelo período selecionado."
@@ -2307,9 +2319,9 @@ export default function DashboardScreen({
                 as="h3"
               />
 
-              <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-stretch">
-                <Surface variant="muted" padding="sm" className="rounded-[var(--radius-2xl)] sm:p-5">
-                  <div className="flex items-center justify-between mb-4">
+              <div className="relative grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
+                <Surface variant="muted" padding="sm" className="rounded-[var(--radius-2xl)] border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] sm:p-5">
+                  <div className="mb-5 flex items-center justify-between gap-3">
                     <Button
                       type="button"
                       onClick={() =>
@@ -2328,11 +2340,14 @@ export default function DashboardScreen({
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <h4
-                      className="text-sm font-semibold capitalize text-[var(--text-primary)]"
-                    >
-                      {calendarMonthLabel}
-                    </h4>
+                    <div className="text-center">
+                      <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--brand-primary)]">
+                        <CalendarDays className="h-5 w-5" strokeWidth={1.75} />
+                      </div>
+                      <h4 className="text-base font-semibold capitalize leading-tight text-[var(--text-primary)]">
+                        {calendarMonthLabel}
+                      </h4>
+                    </div>
                     <Button
                       type="button"
                       onClick={() =>
@@ -2353,7 +2368,7 @@ export default function DashboardScreen({
                     </Button>
                   </div>
                   <div
-                    className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]"
+                    className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-xs text-[var(--text-muted)]"
                   >
                     <span>
                       Navegue os meses para consultar reajustes e aniversários.
@@ -2408,11 +2423,11 @@ export default function DashboardScreen({
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-7 gap-2">
+                  <div className="grid grid-cols-7 gap-2 rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
                     {calendarDays.weekDays.map((day) => (
                       <div
                         key={day}
-                        className="py-1 text-center text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+                        className="py-1 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"
                       >
                         {day}
                       </div>
@@ -2421,19 +2436,24 @@ export default function DashboardScreen({
                   </div>
                 </Surface>
 
-                <Surface variant="muted" padding="sm" className="flex flex-col rounded-[var(--radius-2xl)] sm:p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
+                <Surface variant="muted" padding="sm" className="flex flex-col rounded-[var(--radius-2xl)] border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] sm:p-5">
+                  <div className="mb-5 flex items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--accent-copper)]">
+                        <Sparkles className="h-5 w-5" strokeWidth={1.75} />
+                      </span>
+                      <div className="min-w-0">
                       <div
                         className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]"
                       >
                         Período selecionado
                       </div>
-                      <h4 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
+                      <h4 className="mt-1 text-base font-semibold leading-tight text-[var(--text-primary)]">
                         {calendarViewLabel}
                       </h4>
+                      </div>
                     </div>
-                    <span className="text-xs text-[var(--text-muted)]">
+                    <span className="shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
                       {calendarViewEvents.length} evento
                       {calendarViewEvents.length === 1 ? "" : "s"}
                     </span>
@@ -2483,17 +2503,21 @@ export default function DashboardScreen({
                             <Surface
                               key={event.id}
                               padding="md"
-                              className="border-[var(--brand-primary-border)]"
+                              className="overflow-hidden border-[var(--brand-primary-border)]"
                               style={{
                                 background:
-                                  "linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-soft) 50%, var(--bg-surface)) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%)",
+                                  "linear-gradient(135deg, color-mix(in srgb, var(--brand-primary-muted) 84%, var(--bg-surface)) 0%, var(--bg-surface) 100%)",
                               }}
                             >
                               <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1">
-                                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-gold-hover)]">
-                                    Reajuste
-                                  </div>
+                                <div className="flex min-w-0 gap-3">
+                                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
+                                    <Sparkles className="h-5 w-5" strokeWidth={1.75} />
+                                  </span>
+                                  <div className="min-w-0 space-y-1">
+                                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--brand-primary)]">
+                                      Reajuste
+                                    </div>
                                   {adjustment.tipo === "idade" ? (
                                     <div>
                                       <p className="text-sm font-semibold text-[var(--text-primary)]">
@@ -2535,8 +2559,9 @@ export default function DashboardScreen({
                                           {adjustment.contract.responsavel}
                                         </p>
                                       )}
-                                    </div>
-                                  )}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="text-right text-xs text-[var(--text-muted)]">
                                   <p className="font-semibold text-[var(--text-primary)]">
@@ -2604,17 +2629,21 @@ export default function DashboardScreen({
                           <Surface
                             key={event.id}
                             padding="md"
-                            className="border-[var(--border-default)]"
+                            className="overflow-hidden border-[var(--border-subtle)]"
                             style={{
                               background:
-                                "linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 64%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%)",
+                                "linear-gradient(135deg, color-mix(in srgb, var(--accent-gold-muted) 72%, var(--bg-surface)) 0%, var(--bg-surface) 100%)",
                             }}
                           >
                             <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-                                  Aniversário
-                                </div>
+                              <div className="flex min-w-0 gap-3">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--accent-copper)]">
+                                  <Cake className="h-5 w-5" strokeWidth={1.75} />
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-copper)]">
+                                    Aniversário
+                                  </div>
                                 <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                                   {birthday.nome}
                                 </p>
@@ -2638,6 +2667,7 @@ export default function DashboardScreen({
                                         birthday.holder.nome_fantasia}
                                     </p>
                                   )}
+                                </div>
                               </div>
                               <div className="text-right text-xs text-[var(--text-muted)]">
                                 <p className="font-semibold text-[var(--text-primary)]">

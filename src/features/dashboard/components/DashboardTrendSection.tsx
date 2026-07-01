@@ -47,14 +47,58 @@ export function DashboardTrendSection({
   const monthlyVariationTone = resolveDashboardVariationTone(latestMonthlyPoint?.variation);
   const formatSelectedMetricValue = (value: number) => formatDashboardMetricValue(value, selectedMetric);
 
+  const insightCards = [
+    {
+      label: 'Ultimo mes',
+      icon: TrendingUp,
+      iconColor: 'var(--brand-primary)',
+      value: latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : 'Sem dados',
+      caption:
+        latestMonthlyPoint?.variation !== null && latestMonthlyPoint?.variation !== undefined
+          ? `${latestMonthlyPoint.variation > 0 ? '+' : ''}${latestMonthlyPoint.variation.toFixed(1)}% ${
+              previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : 'vs mes anterior'
+            }`
+          : 'Primeiro mes exibido no recorte',
+      captionClassName: monthlyVariationTone,
+      meta: latestMonthlyPoint?.label || 'Sem dados',
+    },
+    {
+      label: 'Media do periodo',
+      icon: BadgePercent,
+      iconColor: 'var(--accent-gold)',
+      value: displayedMonthlySeries.length > 0 ? formatSelectedMetricValue(averageMonthlyValue) : 'Sem dados',
+      caption: `Baseado nos ultimos ${displayedMonthlySeries.length} meses exibidos`,
+      captionClassName: 'text-[var(--text-muted)]',
+      meta: 'Media',
+    },
+    {
+      label: 'Pico do periodo',
+      icon: Calendar,
+      iconColor: 'var(--accent-copper)',
+      value: highestMonthlyPoint ? formatSelectedMetricValue(highestMonthlyPoint.value) : 'Sem dados',
+      caption: highestMonthlyPoint ? `${highestMonthlyPoint.label} foi o melhor mes` : 'Aguardando historico suficiente',
+      captionClassName: 'text-[var(--text-muted)]',
+      meta: highestMonthlyPoint?.label || 'Sem dados',
+    },
+  ];
+
   return (
-    <Surface data-panel-animate>
-      <SectionHeader
-        eyebrow="Analytics"
-        title="Evolucao mensal"
-        description="Tendencia por mes considerando o periodo selecionado e os filtros atuais."
-        action={(
-          <div className="flex flex-wrap gap-2 sm:justify-end">
+    <Surface data-panel-animate className="overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--brand-primary) 12%, transparent) 0%, transparent 34%), radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--accent-gold) 10%, transparent) 0%, transparent 30%)',
+        }}
+      />
+
+      <div className="relative">
+        <SectionHeader
+          eyebrow="Analytics"
+          title="Evolucao mensal"
+          description="Tendencia por mes considerando o periodo selecionado e os filtros atuais."
+          action={(
+            <div className="flex flex-wrap gap-2 sm:justify-end">
             <div className="w-full sm:w-44">
               <FilterSingleSelect
                 icon={Filter}
@@ -90,70 +134,50 @@ export function DashboardTrendSection({
                 }))}
               />
             </div>
-          </div>
-        )}
-      />
-
-      <div className="mt-8 space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Surface variant="muted" padding="sm" className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <TrendingUp className="h-4 w-4 text-[var(--brand-primary)]" />
-                <span className="text-[var(--text-secondary)]">Ultimo mes</span>
-              </div>
-              <span className="text-xs text-[var(--text-muted)]">
-                {latestMonthlyPoint?.label || 'Sem dados'}
-              </span>
             </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">
-              {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : 'Sem dados'}
-            </p>
-            <p className={`mt-1 text-xs font-semibold ${monthlyVariationTone}`}>
-              {latestMonthlyPoint?.variation !== null && latestMonthlyPoint?.variation !== undefined
-                ? `${latestMonthlyPoint.variation > 0 ? '+' : ''}${latestMonthlyPoint.variation.toFixed(1)}% ${
-                    previousMonthlyPoint ? `vs ${previousMonthlyPoint.label}` : 'vs mes anterior'
-                  }`
-                : 'Primeiro mes exibido no recorte'}
-            </p>
-          </Surface>
-
-          <Surface variant="muted" padding="sm" className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <BadgePercent className="h-4 w-4 text-[var(--accent-gold)]" />
-              <span className="text-[var(--text-secondary)]">Media do periodo</span>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">
-              {displayedMonthlySeries.length > 0 ? formatSelectedMetricValue(averageMonthlyValue) : 'Sem dados'}
-            </p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
-              Baseado nos ultimos {displayedMonthlySeries.length} meses exibidos
-            </p>
-          </Surface>
-
-          <Surface variant="muted" padding="sm" className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <Calendar className="h-4 w-4 text-[var(--brand-primary)]" />
-              <span className="text-[var(--text-secondary)]">Pico do periodo</span>
-            </div>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">
-              {highestMonthlyPoint ? formatSelectedMetricValue(highestMonthlyPoint.value) : 'Sem dados'}
-            </p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">
-              {highestMonthlyPoint ? `${highestMonthlyPoint.label} foi o melhor mes do recorte` : 'Aguardando historico suficiente'}
-            </p>
-          </Surface>
-        </div>
-
-        <MonthlyTrendChart
-          data={displayedMonthlySeries.map((point) => ({
-            label: point.label,
-            value: point.value,
-          }))}
-          color={DASHBOARD_METRIC_COLORS[selectedMetric]}
-          formatValue={formatSelectedMetricValue}
-          height={210}
+          )}
         />
+
+        <div className="mt-8 grid gap-6 xl:grid-cols-[0.92fr_1.6fr] xl:items-stretch">
+          <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
+            {insightCards.map((card) => {
+              const Icon = card.icon;
+
+              return (
+                <div
+                  key={card.label}
+                  className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+                        <Icon className="h-5 w-5" strokeWidth={1.75} style={{ color: card.iconColor }} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold leading-tight text-[var(--text-primary)]">{card.label}</p>
+                        <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">{card.meta}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-4 font-[var(--font-sans)] text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
+                    {card.value}
+                  </p>
+                  <p className={`mt-3 text-xs font-semibold leading-snug ${card.captionClassName}`}>{card.caption}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <MonthlyTrendChart
+            data={displayedMonthlySeries.map((point) => ({
+              label: point.label,
+              value: point.value,
+            }))}
+            color={DASHBOARD_METRIC_COLORS[selectedMetric]}
+            formatValue={formatSelectedMetricValue}
+            height={300}
+          />
+        </div>
       </div>
     </Surface>
   );

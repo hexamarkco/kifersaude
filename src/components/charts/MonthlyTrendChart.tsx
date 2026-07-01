@@ -81,11 +81,11 @@ export default function MonthlyTrendChart({
   if (!chart) {
     return (
       <div
-        className="flex items-center justify-center rounded-[var(--radius-2xl)] border text-sm"
+        className="flex items-center justify-center rounded-[var(--radius-2xl)] border border-dashed text-sm"
         style={{
           height,
-          borderColor: 'var(--border-default)',
-          background: 'var(--surface-muted-bg)',
+          borderColor: 'var(--border-subtle)',
+          background: 'var(--bg-surface-muted)',
           color: 'var(--text-muted)',
         }}
       >
@@ -98,24 +98,19 @@ export default function MonthlyTrendChart({
   const latestPoint = chart.points[chart.points.length - 1];
 
   return (
-    <div
-      className="w-full rounded-[var(--radius-2xl)] border p-5"
-      style={{
-        borderColor: 'var(--border-default)',
-        background: 'var(--surface-muted-bg)',
-      }}
-    >
+    <div className="relative h-full overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4 sm:p-5">
       <div
-        className="rounded-[var(--radius-xl)] border p-4"
+        className="pointer-events-none absolute inset-0"
         style={{
-          borderColor: 'var(--border-subtle)',
-          background: 'color-mix(in srgb, var(--bg-surface) 92%, transparent)',
+          background: `radial-gradient(circle at 80% 0%, color-mix(in srgb, ${color} 14%, transparent) 0%, transparent 36%)`,
         }}
-      >
+      />
+
+      <div className="relative rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
         <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="block w-full" style={{ height }}>
           <defs>
             <linearGradient id="monthlyTrendAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={color} stopOpacity="0.26" />
+              <stop offset="0%" stopColor={color} stopOpacity="0.2" />
               <stop offset="100%" stopColor={color} stopOpacity="0.02" />
             </linearGradient>
             <linearGradient id="monthlyTrendLineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -133,7 +128,7 @@ export default function MonthlyTrendChart({
                 y2={tick.y}
                 stroke="var(--panel-chart-grid)"
                 strokeWidth="1"
-                strokeDasharray={index === TICK_COUNT ? '0' : '6 8'}
+                strokeDasharray={index === TICK_COUNT ? '0' : '4 10'}
               />
               <text
                 x={PADDING.left - 12}
@@ -153,7 +148,7 @@ export default function MonthlyTrendChart({
             d={chart.linePath}
             fill="none"
             stroke="url(#monthlyTrendLineGradient)"
-            strokeWidth="4"
+            strokeWidth="3.5"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -169,7 +164,7 @@ export default function MonthlyTrendChart({
                   r={isLatest ? 7 : 5}
                   fill="var(--bg-surface)"
                   stroke={color}
-                  strokeWidth={isLatest ? 4 : 3}
+                  strokeWidth={isLatest ? 3.5 : 2.5}
                 />
                 {isLatest && (
                   <>
@@ -211,26 +206,25 @@ export default function MonthlyTrendChart({
         </svg>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
+      <div className="relative mt-4 grid gap-3 md:grid-cols-3">
         {recentPoints.map((point) => {
           const isLatest = point.label === latestPoint.label;
 
           return (
             <div
               key={point.label}
-              className="rounded-[var(--radius-lg)] border px-4 py-3"
+              className="rounded-[var(--radius-xl)] border px-4 py-3"
               style={{
-                borderColor: isLatest ? color : 'var(--border-subtle)',
+                borderColor: isLatest ? `color-mix(in srgb, ${color} 56%, var(--border-subtle))` : 'var(--border-subtle)',
                 background: isLatest
-                  ? `linear-gradient(135deg, ${color}20 0%, var(--bg-surface) 100%)`
+                  ? `linear-gradient(135deg, color-mix(in srgb, ${color} 12%, var(--bg-surface)) 0%, var(--bg-surface) 100%)`
                   : 'var(--bg-surface)',
-                boxShadow: isLatest ? `inset 0 0 0 1px ${color}33` : 'none',
               }}
             >
-              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-muted)' }}>
                 {point.label}
               </p>
-              <p className="mt-1 text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+              <p className="mt-2 font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.03em] tabular-nums" style={{ color: 'var(--text-primary)' }}>
                 {formatValue(point.value)}
               </p>
             </div>

@@ -9,6 +9,7 @@ type DonutChartProps = {
   size?: number;
   strokeWidth?: number;
   onSegmentClick?: (label: string) => void;
+  compact?: boolean;
 };
 
 export default function DonutChart({
@@ -16,6 +17,7 @@ export default function DonutChart({
   size = 200,
   strokeWidth = 30,
   onSegmentClick,
+  compact = false,
 }: DonutChartProps) {
   const total = useMemo(() => data.reduce((sum, item) => sum + item.value, 0), [data]);
 
@@ -68,7 +70,7 @@ export default function DonutChart({
         className="flex items-center justify-center rounded-[var(--radius-2xl)] border p-4"
         style={{
           borderColor: 'var(--border-subtle)',
-          background: 'var(--surface-muted-bg)',
+          background: compact ? 'var(--bg-surface)' : 'var(--surface-muted-bg)',
           boxShadow: 'var(--control-inset-shadow)',
         }}
       >
@@ -129,6 +131,7 @@ export default function DonutChart({
         </svg>
       </div>
 
+      {!compact && (
       <div className="mt-5 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
         {segments.map((segment, index) => (
           <button
@@ -162,6 +165,7 @@ export default function DonutChart({
           </button>
         ))}
       </div>
+      )}
     </div>
   );
 }

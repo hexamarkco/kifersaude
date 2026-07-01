@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 
 import Button from './ui/Button';
+import type { BrowserNotificationPermission } from '../lib/browserNotificationService';
 import type { InboxMessageNotification } from '../lib/notificationService';
 
 type WhatsAppInboxNotificationToastProps = {
   notification: InboxMessageNotification;
+  browserNotificationPermission?: BrowserNotificationPermission;
   onClose: () => void;
   onViewChat: () => void;
+  onEnableBrowserNotifications?: () => void;
 };
 
 const truncatePreview = (value: string) => {
@@ -21,8 +24,10 @@ const truncatePreview = (value: string) => {
 
 export default function WhatsAppInboxNotificationToast({
   notification,
+  browserNotificationPermission,
   onClose,
   onViewChat,
+  onEnableBrowserNotifications,
 }: WhatsAppInboxNotificationToastProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
@@ -51,6 +56,9 @@ export default function WhatsAppInboxNotificationToast({
     handleClose();
     onViewChat();
   };
+
+  const canRequestBrowserNotifications =
+    browserNotificationPermission === 'default' && Boolean(onEnableBrowserNotifications);
 
   return (
     <div
@@ -86,9 +94,17 @@ export default function WhatsAppInboxNotificationToast({
 
           <p className="text-sm leading-5 text-slate-700">{truncatePreview(notification.messagePreview)}</p>
 
-          <Button onClick={handleViewChat} fullWidth>
-            Abrir conversa
-          </Button>
+          <div className="space-y-2">
+            <Button onClick={handleViewChat} fullWidth>
+              Abrir conversa
+            </Button>
+
+            {canRequestBrowserNotifications && (
+              <Button variant="secondary" size="sm" onClick={onEnableBrowserNotifications} fullWidth>
+                Ativar notificacoes do navegador
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

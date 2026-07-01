@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
 import WhatsAppInboxNotificationToast from '../components/WhatsAppInboxNotificationToast';
+import { browserNotificationService, type BrowserNotificationPermission } from '../lib/browserNotificationService';
 import { notificationService, type InboxMessageNotification } from '../lib/notificationService';
 import { audioService } from '../lib/audioService';
 import { useAuth } from '../contexts/AuthContext';
@@ -51,6 +52,9 @@ export default function PainelWrapper() {
   const [activeNotifications, setActiveNotifications] = useState<Reminder[]>([]);
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
   const [activeInboxNotifications, setActiveInboxNotifications] = useState<InboxMessageNotification[]>([]);
+  const [browserNotificationPermission, setBrowserNotificationPermission] = useState<BrowserNotificationPermission>(() => (
+    browserNotificationService.getPermission()
+  ));
   const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [leadStatusFilter, setLeadStatusFilter] = useState<string[] | undefined>();
@@ -115,6 +119,12 @@ export default function PainelWrapper() {
     const unsubscribeInboxMessages = notificationService.subscribeToInboxMessages((notification) => {
       setActiveInboxNotifications((prev) => [...prev, notification]);
       audioService.playNotificationSound();
+      browserNotificationService.show({
+        title: `WhatsApp: ${notification.displayName}`,
+        body: notification.messagePreview,
+        tag: `whatsapp-inbox-${notification.chatId}`,
+        onClick: () => navigate(`/painel/inbox?chatId=${encodeURIComponent(notification.chatId)}`),
+      });
     });
 
     return () => {
@@ -124,7 +134,7 @@ export default function PainelWrapper() {
       unsubscribeUnreadCount();
       unsubscribeInboxUnreadCount();
     };
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (configLoading) {
@@ -223,6 +233,11 @@ export default function PainelWrapper() {
     navigate(`/painel/inbox?chatId=${encodeURIComponent(notification.chatId)}`);
   };
 
+  const handleEnableBrowserNotifications = useCallback(async () => {
+    const permission = await browserNotificationService.requestPermission();
+    setBrowserNotificationPermission(permission);
+  }, []);
+
   if (configLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
@@ -279,8 +294,10 @@ export default function PainelWrapper() {
         <WhatsAppInboxNotificationToast
           key={`${notification.chatId}-${notification.messageAt ?? index}-${index}`}
           notification={notification}
+          browserNotificationPermission={browserNotificationPermission}
           onClose={() => handleCloseInboxNotification(index)}
           onViewChat={() => handleViewInboxChat(notification)}
+          onEnableBrowserNotifications={handleEnableBrowserNotifications}
         />
       ))}
     </>

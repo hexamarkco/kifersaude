@@ -137,14 +137,14 @@ export default function FilterDateRange({
         <Icon
           className={cx(
             'absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2',
-            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            'text-[var(--text-muted)]',
           )}
         />
         <div className="flex flex-col gap-0.5">
           <span
             className={cx(
               'text-xs font-semibold uppercase tracking-wide',
-              isDarkTheme ? 'text-slate-400' : 'text-slate-500',
+              'text-[var(--text-muted)]',
             )}
           >
             {label}
@@ -153,12 +153,8 @@ export default function FilterDateRange({
             className={cx(
               'text-sm',
               hasActiveFilter
-                ? isDarkTheme
-                  ? 'text-slate-100'
-                  : 'text-slate-700'
-                : isDarkTheme
-                  ? 'text-slate-400'
-                  : 'text-slate-400',
+                ? 'text-[var(--text-primary)]'
+                : 'text-[var(--text-secondary)]',
             )}
           >
             {displayValue}
@@ -167,7 +163,7 @@ export default function FilterDateRange({
         <ChevronDown
           className={cx(
             'absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-transform',
-            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            'text-[var(--text-muted)]',
             isOpen && 'rotate-180',
           )}
         />
@@ -176,11 +172,15 @@ export default function FilterDateRange({
       {isOpen && position && typeof document !== 'undefined'
         ? createPortal(
         <div
-          className={getDropdownMenuClass({
-            isDark: isDarkTheme,
-            position: 'fixed',
-            className: 'z-[120] p-4 space-y-3',
-          })}
+          className={cx(
+            'painel-theme kifer-ds',
+            isDarkTheme ? 'theme-dark' : 'theme-light',
+            getDropdownMenuClass({
+              isDark: isDarkTheme,
+              position: 'fixed',
+              className: 'z-[120] space-y-3 p-4',
+            }),
+          )}
           style={{
             top: position.top,
             left: position.left,
@@ -191,8 +191,8 @@ export default function FilterDateRange({
           aria-label={`Selecionar intervalo de ${label}`}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className={cx('flex flex-col gap-1 text-sm', isDarkTheme ? 'text-slate-300' : 'text-slate-600')}>
-              <span className={cx('text-xs font-semibold uppercase tracking-wide', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 De
               </span>
               <DateTimePicker
@@ -202,8 +202,8 @@ export default function FilterDateRange({
                 placeholder={type === 'date' ? 'Selecionar data inicial' : 'Selecionar data e hora inicial'}
               />
             </label>
-            <label className={cx('flex flex-col gap-1 text-sm', isDarkTheme ? 'text-slate-300' : 'text-slate-600')}>
-              <span className={cx('text-xs font-semibold uppercase tracking-wide', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+            <label className="flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
+              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 Até
               </span>
               <DateTimePicker
@@ -217,7 +217,7 @@ export default function FilterDateRange({
           <div
             className={cx(
               'flex items-center justify-between border-t pt-2',
-              isDarkTheme ? 'border-slate-700' : 'border-slate-100',
+              'border-[var(--border-subtle)]',
             )}
           >
             <button
@@ -225,9 +225,7 @@ export default function FilterDateRange({
               onClick={handleClear}
               className={cx(
                 'text-sm font-medium',
-                isDarkTheme
-                  ? 'text-[var(--panel-accent-foreground,#f7d7b4)] hover:text-[var(--panel-text,#fff7ed)]'
-                  : 'text-[var(--panel-accent-ink,#6f3f16)] hover:text-[var(--panel-accent-ink-strong,#4a2411)]',
+                'text-[var(--brand-primary-hover)] hover:text-[var(--accent-gold-hover)]',
               )}
             >
               Limpar
@@ -235,7 +233,7 @@ export default function FilterDateRange({
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="rounded-lg border border-[var(--panel-border-strong,#9d7f5a)] bg-[color:var(--panel-accent-soft,#f6e4c7)] px-3 py-1.5 text-sm font-semibold text-[var(--panel-accent-ink,#6f3f16)] transition-colors hover:border-[var(--panel-accent-strong,#b85c1f)] hover:bg-[color:var(--panel-accent-hover,#efcf9f)]"
+              className="kds-button kds-button-primary h-9 px-3 text-sm"
             >
               Concluído
             </button>

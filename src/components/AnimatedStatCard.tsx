@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { gsap } from 'gsap';
 import { usePanelMotion } from '../hooks/usePanelMotion';
-import { cx } from '../lib/cx';
-import { ActionSurface } from '../design-system';
+import { ActionSurface, Surface } from '../design-system';
 
 type AnimatedStatCardTone = 'brand' | 'earth' | 'forest' | 'plum' | 'copper';
 
@@ -166,120 +165,108 @@ export default function AnimatedStatCard({
   const trendTone = trend?.isPositive ? trendToneStyles.positive : trendToneStyles.negative;
 
   const cardContent = (
-    <div className="relative flex h-full flex-col p-6 sm:p-7">
+    <div className="relative flex h-full min-h-[12rem] flex-col overflow-hidden p-5 sm:p-6">
       <div
-        className="absolute inset-0"
-        style={{ background: `${toneMeta.halo}, var(--surface-bg)` }}
+        className="pointer-events-none absolute inset-0"
+        style={{ background: toneMeta.halo }}
       />
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
-      <div
-        className="absolute inset-x-6 bottom-0 h-[2px] rounded-full"
-        style={{ background: `linear-gradient(90deg, transparent 0%, ${toneMeta.accent} 20%, ${toneMeta.accent} 80%, transparent 100%)` }}
-      />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
 
       <div className="relative flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
-              Panorama
-            </p>
-            {contextLabel && contextValue && (
-              <div
-                className="rounded-full border px-3 py-1.5 text-[11px] font-semibold"
-                style={{
-                  borderColor: 'var(--border-subtle)',
-                  background: 'var(--bg-hover)',
-                  color: 'var(--text-secondary)',
-                  boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}`,
-                }}
-              >
-                <span className="text-[var(--text-muted)]">{contextLabel}</span>{' '}
-                <span className="text-[var(--text-primary)] font-semibold">{contextValue}</span>
-              </div>
-            )}
-          </div>
-
-          <p className="text-base font-semibold text-[var(--text-secondary)] sm:text-[1.05rem]">
-            {label}
-          </p>
-
-          <div className="mt-5 flex items-end gap-2">
-            {prefix && (
-              <span className="pb-1 text-lg font-bold text-[var(--text-secondary)] sm:text-xl">
-                {prefix}
-              </span>
-            )}
-            <p className="text-[2.15rem] font-black leading-none tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.55rem]">
-              {formattedValue}
-            </p>
-            {suffix && (
-              <span className="pb-1 text-base font-bold text-[var(--text-muted)] sm:text-lg">
-                {suffix}
-              </span>
-            )}
-          </div>
-
-          {subtitle && (
-            <p className="mt-3 text-sm text-[var(--text-muted)]">
-              {subtitle}
-            </p>
-          )}
-
-          {trend && trendTone && (
-            <div className="mt-4 flex items-center gap-2">
-              <span
-                className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
-                style={{
-                  background: trendTone.background,
-                  borderColor: trendTone.border,
-                  color: trendTone.color,
-                }}
-              >
-                {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
-              </span>
-              <span className="text-xs text-[var(--text-muted)]">
-                vs. mês anterior
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div
-          className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border sm:h-[4.5rem] sm:w-[4.5rem]"
-          style={{
-            borderColor: 'var(--border-default)',
-            background: toneMeta.iconShell,
-            boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, var(--stat-icon-shadow)`,
-          }}
-        >
+        <div className="flex min-w-0 items-start gap-3">
           <div
-            className="absolute inset-[5px] rounded-xl border"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border"
             style={{
-              borderColor: 'var(--stat-icon-inset-border)',
-              background: toneMeta.iconInset,
+              borderColor: 'var(--border-accent)',
+              background: toneMeta.iconShell,
+              boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, var(--stat-icon-shadow)`,
             }}
-          />
-          <Icon
-            className="relative h-6 w-6 sm:h-7 sm:w-7"
-            style={{ color: toneMeta.iconColor }}
-          />
-        </div>
-      </div>
-
-      <div className="mt-auto border-t border-[var(--border-subtle)] pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-            <span
-              className="h-2.5 w-2.5 rounded-full"
+          >
+            <div
+              className="absolute inset-1 rounded-[var(--radius-md)] border"
               style={{
-                background: toneMeta.accent,
-                boxShadow: `0 0 0 6px ${toneMeta.accentSoft}`,
+                borderColor: 'var(--stat-icon-inset-border)',
+                background: toneMeta.iconInset,
               }}
             />
-            <span>{footerLabel || 'Toque para abrir detalhes'}</span>
+            <Icon className="relative h-5 w-5" style={{ color: toneMeta.iconColor }} />
+          </div>
+
+          <div className="min-w-0 pt-0.5">
+            <p className="truncate text-sm font-semibold leading-tight text-[var(--brand-primary-hover)]">
+              {label}
+            </p>
+            {subtitle && (
+              <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
+                {subtitle}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {contextLabel && contextValue && (
+          <div
+            className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold leading-none"
+            style={{
+              borderColor: 'var(--border-subtle)',
+              background: 'var(--badge-neutral-bg)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            <span className="text-[var(--text-muted)]">{contextLabel}</span>{' '}
+            <span className="text-[var(--text-primary)]">{contextValue}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="relative mt-6 flex items-end gap-2">
+        {prefix && (
+          <span className="pb-1 text-sm font-semibold text-[var(--text-secondary)]">
+            {prefix}
+          </span>
+        )}
+        <p className="text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] sm:text-[2rem]">
+          {formattedValue}
+        </p>
+        {suffix && (
+          <span className="pb-1 text-sm font-semibold text-[var(--text-muted)]">
+            {suffix}
+          </span>
+        )}
+      </div>
+
+      {trend && trendTone && (
+        <div className="relative mt-4 flex items-center gap-2">
+          <span
+            className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+            style={{
+              background: trendTone.background,
+              borderColor: trendTone.border,
+              color: trendTone.color,
+            }}
+          >
+            {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
+          </span>
+          <span className="text-xs text-[var(--text-muted)]">
+            vs. mês anterior
+          </span>
+        </div>
+      )}
+
+      <div className="relative mt-auto border-t border-[var(--border-subtle)] pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2 text-xs text-[var(--text-muted)]">
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{
+                background: toneMeta.accent,
+                boxShadow: `0 0 0 5px ${toneMeta.accentSoft}`,
+              }}
+            />
+            <span className="truncate">{footerLabel || 'Ver detalhes'}</span>
           </div>
           {onClick && (
-            <span className="text-xs font-black uppercase tracking-[0.18em] text-[var(--brand-primary)]">
+            <span className="shrink-0 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--brand-primary-hover)]">
               Abrir
             </span>
           )}
@@ -294,7 +281,7 @@ export default function AnimatedStatCard({
         type="button"
         onClick={onClick}
         padding="none"
-        className="group relative h-full overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        className="group h-full overflow-hidden"
       >
         {cardContent}
       </ActionSurface>
@@ -302,8 +289,8 @@ export default function AnimatedStatCard({
   }
 
   return (
-    <div className="group relative h-full overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] transition-all duration-200 hover:shadow-lg">
+    <Surface padding="none" className="group h-full overflow-hidden">
       {cardContent}
-    </div>
+    </Surface>
   );
 }

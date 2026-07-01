@@ -819,6 +819,37 @@
   cursor: not-allowed;
 }
 
+.kds-select-trigger {
+  appearance: none;
+  cursor: pointer;
+}
+
+.kds-dropdown-menu {
+  border-color: var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-strong-bg);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-popover);
+}
+
+.kds-dropdown-option {
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+
+.kds-dropdown-option:hover,
+.kds-dropdown-option.is-highlighted {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.kds-dropdown-option.is-selected {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-soft);
+  color: var(--accent-gold-hover);
+}
+
 .kds-input[readonly],
 .kds-textarea[readonly] {
   border-color: var(--border-default);

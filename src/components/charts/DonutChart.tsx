@@ -48,13 +48,13 @@ export default function DonutChart({
   if (total === 0) {
     return (
       <div
-        className="flex items-center justify-center rounded-[1.75rem] border text-sm"
+        className="flex items-center justify-center rounded-[var(--radius-2xl)] border text-sm"
         style={{
           width: size,
           height: size,
-          borderColor: 'var(--panel-border-subtle,#e4d5c0)',
-          background: 'color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 72%, transparent)',
-          color: 'var(--panel-text-muted,#876f5c)',
+          borderColor: 'var(--border-subtle)',
+          background: 'var(--surface-muted-bg)',
+          color: 'var(--text-muted)',
         }}
       >
         Sem dados
@@ -65,12 +65,11 @@ export default function DonutChart({
   return (
     <div className="flex flex-col items-center">
       <div
-        className="flex items-center justify-center rounded-[2rem] border p-4"
+        className="flex items-center justify-center rounded-[var(--radius-2xl)] border p-4"
         style={{
-          borderColor: 'var(--panel-border-subtle,#e4d5c0)',
-          background:
-            'linear-gradient(180deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 94%, white 6%) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 88%, var(--panel-surface-soft,#efe6d8) 12%) 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+          borderColor: 'var(--border-subtle)',
+          background: 'var(--surface-muted-bg)',
+          boxShadow: 'var(--control-inset-shadow)',
         }}
       >
         <svg width={size} height={size} className="transform -rotate-90">
@@ -79,7 +78,7 @@ export default function DonutChart({
             cy={center}
             r={radius}
             fill="none"
-            stroke="var(--panel-chart-grid, #e4d5c0)"
+            stroke="var(--panel-chart-grid, var(--border-default))"
             strokeWidth={strokeWidth}
           />
           {segments.map((segment, index) => (
@@ -109,7 +108,7 @@ export default function DonutChart({
             dominantBaseline="middle"
             fontSize="34"
             fontWeight="800"
-            fill="var(--panel-text,#1c1917)"
+            fill="var(--text-primary)"
             style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}
           >
             {total.toLocaleString('pt-BR')}
@@ -122,7 +121,7 @@ export default function DonutChart({
             fontSize="12"
             fontWeight="700"
             letterSpacing="0.18em"
-            fill="var(--panel-text-muted,#876f5c)"
+            fill="var(--text-muted)"
             style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}
           >
             TOTAL
@@ -135,10 +134,10 @@ export default function DonutChart({
           <button
             key={`${segment.label}-${index}`}
             type="button"
-            className="flex items-center gap-3 rounded-[1.2rem] border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus,#c86f1d)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel-bg,#f8f5ef)]"
+            className="flex items-center gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)]"
             style={{
-              borderColor: 'var(--panel-border-subtle,#e4d5c0)',
-              background: 'color-mix(in srgb, var(--panel-surface,#fffdfa) 94%, transparent)',
+              borderColor: 'var(--border-subtle)',
+              background: 'color-mix(in srgb, var(--bg-surface) 94%, transparent)',
             }}
             onClick={() => onSegmentClick?.(segment.label)}
           >
@@ -152,11 +151,11 @@ export default function DonutChart({
             <div className="min-w-0 flex-1">
               <div
                 className="truncate text-[11px] font-semibold uppercase tracking-[0.16em]"
-                style={{ color: 'var(--panel-text-muted,#876f5c)' }}
+                style={{ color: 'var(--text-muted)' }}
               >
                 {segment.label}
               </div>
-              <div className="mt-1 text-base font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+              <div className="mt-1 text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {segment.value.toLocaleString('pt-BR')} ({segment.percentage.toFixed(0)}%)
               </div>
             </div>

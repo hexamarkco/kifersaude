@@ -173,10 +173,14 @@ export default function StatusDropdown({
         ? createPortal(
             <div
               ref={menuRef}
-              className={getDropdownMenuClass({
-                isDark: isDarkTheme,
-                className: 'fixed z-[70] py-1',
-              })}
+              className={cx(
+                'painel-theme kifer-ds',
+                isDarkTheme ? 'theme-dark' : 'theme-light',
+                getDropdownMenuClass({
+                  isDark: isDarkTheme,
+                  className: 'fixed z-[70]',
+                }),
+              )}
               style={{
                 top: menuPosition.top,
                 left: menuPosition.left,
@@ -190,14 +194,8 @@ export default function StatusDropdown({
                   key={status.id}
                   onClick={() => handleStatusClick(status.nome)}
                   className={cx(
-                    'w-full px-3 py-2 text-left text-sm transition-colors',
-                    status.nome === currentStatus
-                      ? isDarkTheme
-                        ? 'bg-stone-800 font-medium text-stone-100'
-                        : 'bg-slate-100 font-medium text-slate-900'
-                      : isDarkTheme
-                        ? 'text-stone-200 hover:bg-stone-800'
-                        : 'text-slate-700 hover:bg-slate-50',
+                    'kds-dropdown-option w-full px-3 py-2 text-left text-sm transition-colors',
+                    status.nome === currentStatus && 'is-selected font-medium',
                   )}
                 >
                   <span

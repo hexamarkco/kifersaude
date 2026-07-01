@@ -24,7 +24,7 @@ const TICK_COUNT = 4;
 
 export default function MonthlyTrendChart({
   data,
-  color = '#14b8a6',
+  color = '#c55a3d',
   height = 280,
   formatValue = (value) => value.toLocaleString('pt-BR'),
 }: MonthlyTrendChartProps) {
@@ -81,12 +81,12 @@ export default function MonthlyTrendChart({
   if (!chart) {
     return (
       <div
-        className="flex items-center justify-center rounded-[28px] border text-sm"
+        className="flex items-center justify-center rounded-[var(--radius-2xl)] border text-sm"
         style={{
           height,
-          borderColor: 'var(--panel-border)',
-          background: 'var(--panel-surface)',
-          color: 'var(--panel-text-muted)',
+          borderColor: 'var(--border-default)',
+          background: 'var(--surface-muted-bg)',
+          color: 'var(--text-muted)',
         }}
       >
         Sem dados para o periodo
@@ -99,17 +99,17 @@ export default function MonthlyTrendChart({
 
   return (
     <div
-      className="w-full rounded-[28px] border p-5"
+      className="w-full rounded-[var(--radius-2xl)] border p-5"
       style={{
-        borderColor: 'var(--panel-border)',
-        background: 'linear-gradient(180deg, var(--panel-surface-muted) 0%, var(--panel-surface) 100%)',
+        borderColor: 'var(--border-default)',
+        background: 'var(--surface-muted-bg)',
       }}
     >
       <div
-        className="rounded-[24px] border p-4"
+        className="rounded-[var(--radius-xl)] border p-4"
         style={{
-          borderColor: 'var(--panel-border-subtle)',
-          background: 'color-mix(in srgb, var(--panel-surface) 92%, transparent)',
+          borderColor: 'var(--border-subtle)',
+          background: 'color-mix(in srgb, var(--bg-surface) 92%, transparent)',
         }}
       >
         <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="block w-full" style={{ height }}>
@@ -141,7 +141,7 @@ export default function MonthlyTrendChart({
                 textAnchor="end"
                 dominantBaseline="middle"
                 fontSize="12"
-                fill="var(--panel-text-muted)"
+                fill="var(--text-muted)"
               >
                 {formatValue(Math.round(tick.value))}
               </text>
@@ -167,7 +167,7 @@ export default function MonthlyTrendChart({
                   cx={point.x}
                   cy={point.y}
                   r={isLatest ? 7 : 5}
-                  fill="var(--panel-surface)"
+                  fill="var(--bg-surface)"
                   stroke={color}
                   strokeWidth={isLatest ? 4 : 3}
                 />
@@ -180,7 +180,7 @@ export default function MonthlyTrendChart({
                       textAnchor="middle"
                       fontSize="13"
                       fontWeight="700"
-                      fill="var(--panel-text)"
+                      fill="var(--text-primary)"
                     >
                       {formatValue(point.value)}
                     </text>
@@ -191,7 +191,7 @@ export default function MonthlyTrendChart({
                   y={chart.baselineY + 24}
                   textAnchor="middle"
                   fontSize="12"
-                  fill={isLatest ? 'var(--panel-text)' : 'var(--panel-text-muted)'}
+                  fill={isLatest ? 'var(--text-primary)' : 'var(--text-muted)'}
                 >
                   {point.label}
                 </text>
@@ -205,7 +205,7 @@ export default function MonthlyTrendChart({
             y1={chart.baselineY}
             x2={VIEWBOX_WIDTH - PADDING.right}
             y2={chart.baselineY}
-            stroke="var(--panel-border-subtle)"
+            stroke="var(--border-subtle)"
             strokeWidth="1.2"
           />
         </svg>
@@ -218,19 +218,19 @@ export default function MonthlyTrendChart({
           return (
             <div
               key={point.label}
-              className="rounded-2xl border px-4 py-3"
+              className="rounded-[var(--radius-lg)] border px-4 py-3"
               style={{
-                borderColor: isLatest ? color : 'var(--panel-border-subtle)',
+                borderColor: isLatest ? color : 'var(--border-subtle)',
                 background: isLatest
-                  ? `linear-gradient(135deg, ${color}20 0%, var(--panel-surface) 100%)`
-                  : 'var(--panel-surface)',
+                  ? `linear-gradient(135deg, ${color}20 0%, var(--bg-surface) 100%)`
+                  : 'var(--bg-surface)',
                 boxShadow: isLatest ? `inset 0 0 0 1px ${color}33` : 'none',
               }}
             >
-              <p className="text-sm" style={{ color: 'var(--panel-text-muted)' }}>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                 {point.label}
               </p>
-              <p className="mt-1 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
+              <p className="mt-1 text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
                 {formatValue(point.value)}
               </p>
             </div>

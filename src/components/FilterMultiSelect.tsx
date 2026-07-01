@@ -116,19 +116,15 @@ export default function FilterMultiSelect({
         <Icon
           className={cx(
             'absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2',
-            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            'text-[var(--text-muted)]',
           )}
         />
         <span
           className={cx(
             'text-sm',
             selectedOptions.length === 0
-              ? isDarkTheme
-                ? 'text-slate-400'
-                : 'text-slate-400'
-              : isDarkTheme
-                ? 'text-slate-100'
-                : 'text-slate-700',
+              ? 'text-[var(--text-secondary)]'
+              : 'text-[var(--text-primary)]',
           )}
         >
           {displayText}
@@ -136,7 +132,7 @@ export default function FilterMultiSelect({
         <ChevronDown
           className={cx(
             'absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-transform',
-            isDarkTheme ? 'text-slate-500' : 'text-slate-400',
+            'text-[var(--text-muted)]',
             isOpen && 'rotate-180',
           )}
         />
@@ -146,10 +142,14 @@ export default function FilterMultiSelect({
         <div
           ref={dropdownRef}
           role="listbox"
-          className={getDropdownMenuClass({
-            isDark: isDarkTheme,
-            className: 'max-h-60',
-          })}
+          className={cx(
+            'painel-theme kifer-ds',
+            isDarkTheme ? 'theme-dark' : 'theme-light',
+            getDropdownMenuClass({
+              isDark: isDarkTheme,
+              className: 'max-h-60',
+            }),
+          )}
           style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
         >
           <button
@@ -159,15 +159,15 @@ export default function FilterMultiSelect({
           >
             Limpar seleção
           </button>
-          <div className={cx('border-t', isDarkTheme ? 'border-slate-700' : 'border-slate-100')} />
+          <div className="border-t border-[var(--border-subtle)]" />
           {options.map((option) => {
             const isSelected = values.includes(option.value);
             return (
               <label
                 key={option.value}
                 className={cx(
-                  'flex cursor-pointer items-center gap-2 px-3 py-2 text-sm',
-                  isDarkTheme ? 'text-slate-200 hover:bg-slate-800' : 'text-slate-700 hover:bg-slate-100',
+                  'kds-dropdown-option flex cursor-pointer items-center gap-2 px-3 py-2 text-sm',
+                  isSelected && 'is-selected',
                 )}
               >
                 <Checkbox
@@ -180,7 +180,7 @@ export default function FilterMultiSelect({
             );
           })}
           {options.length === 0 && (
-            <div className={cx('px-3 py-2 text-sm', isDarkTheme ? 'text-slate-400' : 'text-slate-500')}>
+            <div className="px-3 py-2 text-sm text-[var(--text-muted)]">
               Nenhuma opção disponível
             </div>
           )}

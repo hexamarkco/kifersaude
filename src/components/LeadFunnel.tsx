@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { TrendingDown, Users } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
-import { SectionHeader } from '../design-system';
+import { SectionHeader, Surface } from '../design-system';
 import type { Lead } from '../lib/supabase';
 
 type LeadFunnelProps = {
@@ -47,14 +47,14 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
 
   if (stages.length === 0) {
     return (
-      <div className="rounded-[2rem] border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] p-12 text-center text-[var(--text-muted)] shadow-lg">
+      <Surface variant="muted" className="border-dashed p-12 text-center text-[var(--text-muted)]">
         Configure os status do funil para visualizar este grafico.
-      </div>
+      </Surface>
     );
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-[var(--border-default)] bg-[var(--bg-surface)] p-6 sm:p-7 shadow-lg">
+    <Surface className="overflow-hidden">
       <div
         className="absolute inset-0 opacity-100"
         style={{
@@ -71,7 +71,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
             description="Leitura do pipeline ativo e da conversao entre etapas."
           />
 
-          <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]">
+          <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--badge-neutral-bg)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)]">
             <Users className="h-4 w-4 text-[var(--brand-primary)]" />
             <span>{totalLeads}</span>
             <span className="text-[var(--text-muted)]">leads ativos</span>
@@ -89,9 +89,10 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
             const progressWidth = count > 0 ? Math.max(width, 8) : 0;
 
             return (
-              <div
+              <Surface
                 key={stage.id}
-                className="rounded-[1.5rem] border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 sm:p-5"
+                variant="muted"
+                padding="sm"
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1">
@@ -124,7 +125,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:min-w-[320px]">
-                    <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2">
+                    <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
                         Volume
                       </p>
@@ -133,7 +134,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
                       </p>
                     </div>
 
-                    <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2">
+                    <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
                         Participacao
                       </p>
@@ -143,7 +144,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
                     </div>
 
                     <div
-                      className="rounded-2xl border px-3 py-2"
+                      className="rounded-[var(--radius-lg)] border px-3 py-2"
                       style={{
                         borderColor: index === 0 ? 'var(--border-default)' : color,
                         background:
@@ -167,11 +168,11 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Surface>
             );
           })}
         </div>
       </div>
-    </div>
+    </Surface>
   );
 }

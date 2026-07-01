@@ -174,7 +174,7 @@ export default function DashboardScreen({
   const statusColorMap = useMemo(() => {
     const map: Record<string, string> = {};
     leadStatuses.forEach((status) => {
-      map[status.nome] = status.cor || "#64748b";
+      map[status.nome] = status.cor || "#8f8176";
     });
     return map;
   }, [leadStatuses]);
@@ -2072,7 +2072,7 @@ export default function DashboardScreen({
       leadStatusData.map((item) => ({
         label: item.status,
         value: item.count,
-        color: statusColorMap[item.status] || "#64748b",
+        color: statusColorMap[item.status] || "#8f8176",
       })),
     [leadStatusData, statusColorMap],
   );
@@ -2311,7 +2311,7 @@ export default function DashboardScreen({
               />
 
               <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-stretch">
-                <Surface variant="muted" padding="sm" className="rounded-[1.75rem] sm:p-5">
+                <Surface variant="muted" padding="sm" className="rounded-[var(--radius-2xl)] sm:p-5">
                   <div className="flex items-center justify-between mb-4">
                     <Button
                       type="button"
@@ -2362,7 +2362,7 @@ export default function DashboardScreen({
                       Navegue os meses para consultar reajustes e aniversários.
                     </span>
                     <div
-                      className="inline-flex items-center gap-1 rounded-[1rem] border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1"
+                      className="inline-flex items-center gap-1 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1"
                     >
                       <Button
                         type="button"
@@ -2424,7 +2424,7 @@ export default function DashboardScreen({
                   </div>
                 </Surface>
 
-                <Surface variant="muted" padding="sm" className="flex flex-col rounded-[1.75rem] sm:p-5">
+                <Surface variant="muted" padding="sm" className="flex flex-col rounded-[var(--radius-2xl)] sm:p-5">
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <div

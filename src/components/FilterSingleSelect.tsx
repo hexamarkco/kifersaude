@@ -280,7 +280,7 @@ export default function FilterSingleSelect({
         <Icon
           className={cx(
             'absolute top-1/2 -translate-y-1/2',
-            isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]',
+            'text-[var(--text-muted)]',
             iconOffsetClass,
             iconSizeClass,
           )}
@@ -290,12 +290,8 @@ export default function FilterSingleSelect({
             'block truncate',
             labelTextClass,
             !isNeutralSelection
-              ? isDarkTheme
-                ? 'font-medium text-stone-100'
-                : 'font-medium text-[var(--panel-input-text,var(--panel-text-soft))]'
-              : isDarkTheme
-                ? 'text-stone-300'
-                : 'text-[var(--panel-placeholder,var(--panel-text-muted))]',
+              ? 'font-medium text-[var(--text-primary)]'
+              : 'text-[var(--text-secondary)]',
           )}
         >
           {selectedLabel}
@@ -305,7 +301,7 @@ export default function FilterSingleSelect({
             isCompact
               ? 'absolute right-2 top-1/2 -translate-y-1/2 transition-transform'
               : 'absolute right-3 top-1/2 -translate-y-1/2 transition-transform',
-            isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]',
+            'text-[var(--text-muted)]',
             chevronSizeClass,
             isOpen && 'rotate-180',
           )}
@@ -316,15 +312,19 @@ export default function FilterSingleSelect({
         <div
           id={listboxId}
           ref={dropdownRef}
-          className={getDropdownMenuClass({
-            isDark: isDarkTheme,
-            className: isCompact ? 'max-h-60 p-1' : 'max-h-72',
-          })}
+          className={cx(
+            'painel-theme kifer-ds',
+            isDarkTheme ? 'theme-dark' : 'theme-light',
+            getDropdownMenuClass({
+              isDark: isDarkTheme,
+              className: isCompact ? 'max-h-60' : 'max-h-72',
+            }),
+          )}
           style={{ top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
           role="listbox"
         >
           {searchable && (
-            <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] p-2 dark:border-[color:rgba(255,255,255,0.08)]">
+            <div className="border-b border-[var(--border-subtle)] p-2">
               <input
                 ref={searchInputRef}
                 type="text"
@@ -333,10 +333,7 @@ export default function FilterSingleSelect({
                 onKeyDown={handleSearchKeyDown}
                 placeholder={searchPlaceholder}
                 className={cx(
-                  'h-10 w-full rounded-xl border px-3 text-sm transition-colors focus:outline-none focus:ring-2',
-                  isDarkTheme
-                    ? 'border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(24,16,12,0.88)] text-stone-100 placeholder:text-stone-400 focus:border-[color:rgba(251,191,36,0.34)] focus:ring-[color:rgba(251,191,36,0.22)]'
-                    : 'border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)] placeholder:text-[color:var(--panel-text-muted,#876f5c)] focus:border-[var(--panel-focus,#c86f1d)] focus:ring-[color:rgba(200,111,29,0.18)]',
+                  'kds-input panel-ui-input h-10 w-full px-3 text-sm',
                 )}
               />
             </div>
@@ -344,7 +341,7 @@ export default function FilterSingleSelect({
           {filteredOptions.length === 0 ? (
             <div className={cx(
               'px-3 py-4 text-sm',
-              isDarkTheme ? 'text-stone-400' : 'text-[color:var(--panel-text-muted,#876f5c)]',
+              'text-[var(--text-muted)]',
             )}>
               {emptyMessage}
             </div>
@@ -374,7 +371,7 @@ export default function FilterSingleSelect({
                   <Check
                     className={cx(
                       'h-4 w-4 flex-shrink-0',
-                      isDarkTheme ? 'text-amber-300' : 'text-amber-700',
+                      'text-[var(--accent-gold-hover)]',
                     )}
                   />
                 )}

@@ -75,7 +75,7 @@ export default function MultiSelectDropdown({
   return (
     <div className="relative" ref={containerRef}>
       {label && (
-        <label className={cx('mb-1 block text-[11px]', isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]')}>
+        <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
           {label}
         </label>
       )}
@@ -90,13 +90,13 @@ export default function MultiSelectDropdown({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
-        <span className={selectedOptions.length === 0 ? (isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]') : isDarkTheme ? 'text-stone-100' : 'text-[var(--panel-input-text,var(--panel-text-soft))]'}>
+        <span className={selectedOptions.length === 0 ? 'text-[var(--text-secondary)]' : 'text-[var(--text-primary)]'}>
           {displayText}
         </span>
         <ChevronDown
           className={cx(
             'h-4 w-4 transition-transform',
-            isDarkTheme ? 'text-stone-400' : 'text-[var(--panel-placeholder,var(--panel-text-muted))]',
+            'text-[var(--text-muted)]',
             isOpen && 'rotate-180',
           )}
         />
@@ -115,7 +115,7 @@ export default function MultiSelectDropdown({
             className={cx(
               getDropdownActionClass(isDarkTheme),
               'border-b text-xs',
-              isDarkTheme ? 'border-amber-700/60' : 'border-slate-100',
+              'border-[var(--border-subtle)]',
             )}
             onClick={() => {
               onChange([]);
@@ -130,18 +130,16 @@ export default function MultiSelectDropdown({
               <label
                 key={option.value}
                 className={cx(
-                  'flex cursor-pointer items-center gap-2 px-3 py-2 text-xs',
-                  isDarkTheme ? 'text-stone-200 hover:bg-stone-800' : 'text-slate-700 hover:bg-slate-100',
+                  'kds-dropdown-option flex cursor-pointer items-center gap-2 px-3 py-2 text-xs',
+                  isSelected && 'is-selected',
                 )}
               >
                   <span
                     className={cx(
                       'flex h-4 w-4 items-center justify-center rounded border',
                       isSelected
-                        ? 'border-amber-500 bg-amber-500'
-                        : isDarkTheme
-                          ? 'border-stone-600'
-                          : 'border-slate-300',
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]'
+                        : 'border-[var(--border-strong)]',
                     )}
                   >
                   {isSelected && <Check className="w-3 h-3 text-white" />}
@@ -157,7 +155,7 @@ export default function MultiSelectDropdown({
             );
           })}
           {options.length === 0 && (
-            <div className={cx('px-3 py-2 text-xs', isDarkTheme ? 'text-stone-400' : 'text-slate-500')}>
+            <div className="px-3 py-2 text-xs text-[var(--text-muted)]">
               Nenhuma opção disponível
             </div>
           )}

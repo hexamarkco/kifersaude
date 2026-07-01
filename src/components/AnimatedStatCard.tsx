@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Minus, MoreVertical, TrendingUp, type LucideIcon } from 'lucide-react';
+import { Minus, TrendingUp, type LucideIcon } from 'lucide-react';
 import { gsap } from 'gsap';
 import { usePanelMotion } from '../hooks/usePanelMotion';
 import { Surface } from '../design-system';
@@ -161,7 +161,7 @@ export default function AnimatedStatCard({
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
 
-      <div className="relative flex items-start justify-between gap-4">
+      <div className="relative flex h-[4.75rem] items-start gap-4">
         <div className="flex min-w-0 items-start gap-3.5">
           <div className="relative shrink-0">
             <div
@@ -188,15 +188,9 @@ export default function AnimatedStatCard({
           </div>
         </div>
 
-        <span
-          className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)]"
-          aria-hidden="true"
-        >
-          <MoreVertical className="h-5 w-5" strokeWidth={1.75} />
-        </span>
       </div>
 
-      <div className="relative mt-6 min-w-0">
+      <div className="relative mt-4 min-h-[5.875rem] min-w-0">
         {splitValueMatch ? (
           <>
             <div className="flex min-w-0 items-end gap-2.5">
@@ -245,39 +239,39 @@ export default function AnimatedStatCard({
         )}
       </div>
 
-      {trend && trendTone && (
-        <div className="relative mt-4 flex items-center gap-2">
-          <span
-            className="inline-flex items-center gap-1.5 text-sm font-semibold"
-            style={{
-              color: trendTone.color,
-            }}
-          >
-            <TrendingUp className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
-            {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
-          </span>
-          <span className="text-sm text-[var(--text-secondary)]">
-            vs mês anterior
-          </span>
-        </div>
-      )}
-
-      {!trend && !splitValueMatch && (
-        <div className="relative mt-4 flex items-center gap-2">
-          <span
-            className="inline-flex items-center gap-1.5 text-sm font-semibold"
-            style={{
-              color: toneMeta.iconColor,
-            }}
-          >
-            <Minus className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
-            0%
-          </span>
-          <span className="text-sm text-[var(--text-secondary)]">
-            vs mês anterior
-          </span>
-        </div>
-      )}
+      <div className="relative mt-4 flex min-h-5 items-center gap-2">
+        {trend && trendTone ? (
+          <>
+            <span
+              className="inline-flex items-center gap-1.5 text-sm font-semibold"
+              style={{
+                color: trendTone.color,
+              }}
+            >
+              <TrendingUp className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+              {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
+            </span>
+            <span className="text-sm text-[var(--text-secondary)]">
+              vs mês anterior
+            </span>
+          </>
+        ) : !splitValueMatch ? (
+          <>
+            <span
+              className="inline-flex items-center gap-1.5 text-sm font-semibold"
+              style={{
+                color: toneMeta.iconColor,
+              }}
+            >
+              <Minus className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
+              0%
+            </span>
+            <span className="text-sm text-[var(--text-secondary)]">
+              vs mês anterior
+            </span>
+          </>
+        ) : null}
+      </div>
 
       <div className="relative mt-auto h-px bg-[var(--border-subtle)]" />
     </div>

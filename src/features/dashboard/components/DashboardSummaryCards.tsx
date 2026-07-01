@@ -23,7 +23,7 @@ export function DashboardSummaryCards({
 }: DashboardSummaryCardsProps) {
   const gridClassName = isObserver
     ? 'grid grid-cols-1 gap-5 sm:grid-cols-2'
-    : 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5';
+    : 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3';
 
   return (
     <div data-panel-animate className={gridClassName}>

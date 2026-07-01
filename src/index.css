@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
 @import './design-system/styles.css';
 
 @tailwind base;
@@ -19,8 +19,8 @@
   --ks-color-border-strong: #c5aa83;
   --ks-color-text: #0c0a09;
   --ks-color-text-soft: #6b5645;
-  --ks-font-heading: 'Space Grotesk', 'DM Sans', 'Segoe UI', sans-serif;
-  --ks-font-body: 'DM Sans', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  --ks-font-heading: 'Cormorant Garamond', serif;
+  --ks-font-body: 'Montserrat', sans-serif;
   --ks-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.08);
   --ks-shadow-md: 0 16px 34px -24px rgba(42, 24, 12, 0.26);
   --ks-shadow-lg: 0 24px 52px -30px rgba(42, 24, 12, 0.36);
@@ -2780,7 +2780,7 @@ html {
   --public-accent-soft: #f3d8b4;
   --public-accent-ink: #7a3e16;
   --public-accent-deep: #5a2d12;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-body);
   background:
     radial-gradient(circle at 12% 0%, rgba(223, 139, 47, 0.22), transparent 30%),
     radial-gradient(circle at 88% 8%, rgba(171, 146, 123, 0.14), transparent 34%),
@@ -2790,7 +2790,7 @@ html {
 }
 
 .public-theme .public-display {
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: var(--ks-font-heading);
   letter-spacing: -0.015em;
 }
 
@@ -2980,7 +2980,7 @@ html {
 .marketing-theme {
   --marketing-bg: #f8f4ed;
   --marketing-line: rgba(122, 62, 22, 0.16);
-  font-family: 'DM Sans', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-body);
   color: #1c1917;
   background:
     radial-gradient(circle at 10% 0%, rgba(200, 111, 29, 0.16), transparent 36%),
@@ -2990,7 +2990,7 @@ html {
 }
 
 .marketing-theme .marketing-display {
-  font-family: 'Space Grotesk', 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-heading);
   letter-spacing: -0.03em;
 }
 
@@ -3000,7 +3000,7 @@ html {
 .marketing-theme h4,
 .marketing-theme h5,
 .marketing-theme h6 {
-  font-family: 'Space Grotesk', 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-heading);
   letter-spacing: -0.02em;
 }
 
@@ -3064,7 +3064,7 @@ html {
   --clinic-line: rgba(122, 62, 22, 0.18);
   --clinic-soft: rgba(255, 247, 236, 0.84);
   color: #1c1917;
-  font-family: 'DM Sans', 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-body);
   background:
     radial-gradient(circle at 7% 0%, rgba(200, 111, 29, 0.18), transparent 34%),
     radial-gradient(circle at 94% 8%, rgba(171, 146, 123, 0.14), transparent 34%),
@@ -3079,7 +3079,7 @@ html {
 .clinic-theme h4,
 .clinic-theme h5,
 .clinic-theme h6 {
-  font-family: 'Space Grotesk', 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-heading);
   letter-spacing: -0.02em;
 }
 
@@ -3149,7 +3149,7 @@ html {
   --home-v2-accent-soft: #f4c995;
   --home-v2-page-max: 72rem;
   color: var(--home-v2-ink);
-  font-family: 'DM Sans', 'Poppins', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-body);
   background:
     radial-gradient(circle at 0% 0%, rgba(197, 107, 37, 0.11), transparent 28%),
     radial-gradient(circle at 100% 12%, rgba(88, 64, 48, 0.08), transparent 24%),
@@ -3159,7 +3159,7 @@ html {
 }
 
 .home-v2-theme .home-v2-heading {
-  font-family: 'Space Grotesk', 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-heading);
   letter-spacing: -0.045em;
 }
 
@@ -3432,7 +3432,7 @@ html {
   --home-conv-whatsapp: #198754;
   --home-conv-whatsapp-deep: #12643d;
   color: var(--home-conv-ink);
-  font-family: 'DM Sans', 'Poppins', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-body);
   background:
     radial-gradient(circle at top left, rgba(183, 99, 42, 0.08), transparent 28%),
     radial-gradient(circle at top right, rgba(23, 20, 18, 0.04), transparent 22%),
@@ -3441,7 +3441,7 @@ html {
 }
 
 .home-conv-theme .home-conv-heading {
-  font-family: 'Space Grotesk', 'DM Sans', 'Segoe UI', sans-serif;
+  font-family: var(--ks-font-heading);
   letter-spacing: -0.045em;
 }
 

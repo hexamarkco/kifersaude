@@ -4,7 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Poppins', 'sans-serif'],
+        sans: ['Montserrat', 'sans-serif'],
+        serif: ['Cormorant Garamond', 'serif'],
       },
       zIndex: {
         '60': '60',

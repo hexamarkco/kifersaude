@@ -50,12 +50,18 @@ export function DashboardDistributionSection({
 
           {data.length > 0 ? (
             <div className="mt-6 grid flex-1 gap-6 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] xl:items-center">
-              <div className="flex flex-col items-center justify-center rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4">
+              <div className="flex flex-col rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">Rosca</p>
+                  <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                    Total {total.toLocaleString('pt-BR')}
+                  </span>
+                </div>
                 <DonutChart data={data} size={210} strokeWidth={30} onSegmentClick={onSegmentClick} compact />
               </div>
 
               <div className="min-w-0 space-y-4">
-                <div className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4">
+                <div className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Maior concentração</p>
                   <p className="mt-2 truncate text-lg font-semibold leading-tight text-[var(--text-primary)]">
                     {leader?.label}
@@ -79,7 +85,7 @@ export function DashboardDistributionSection({
                         key={item.label}
                         type="button"
                         onClick={() => onSegmentClick(item.label)}
-                        className="group w-full rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-left transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)]"
+                        className="group w-full rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-3 text-left transition-transform hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)]"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-3">

@@ -18,13 +18,21 @@ export const DASHBOARD_CHART_RANGE_OPTIONS = [
   { value: '12', label: 'Ultimos 12 meses' },
 ] as const;
 
-export const DASHBOARD_METRIC_COLORS: Record<DashboardMetric, string> = {
-  leads: '#cf7b32',
-  contratos: '#8d6b4d',
-  comissoes: '#b85c1f',
-};
+export const DASHBOARD_CHART_PALETTE = [
+  'var(--brand-primary)',
+  'var(--accent-gold)',
+  'var(--purple-text)',
+  'var(--success-text)',
+  'var(--accent-copper)',
+  'var(--danger-text)',
+  'var(--text-muted)',
+] as const;
 
-export const DASHBOARD_OPERADORA_COLORS = ['#cf7b32', '#9d7f5a', '#d5a25c', '#7a5a44', '#b85c1f'] as const;
+export const DASHBOARD_METRIC_COLORS: Record<DashboardMetric, string> = {
+  leads: DASHBOARD_CHART_PALETTE[0],
+  contratos: DASHBOARD_CHART_PALETTE[1],
+  comissoes: DASHBOARD_CHART_PALETTE[4],
+};
 
 export const mapOperadoraChartData = (
   items: Array<{ operadora: string; count: number }>,
@@ -32,5 +40,5 @@ export const mapOperadoraChartData = (
   items.map((item, index) => ({
     label: item.operadora,
     value: item.count,
-    color: DASHBOARD_OPERADORA_COLORS[index % DASHBOARD_OPERADORA_COLORS.length],
+    color: DASHBOARD_CHART_PALETTE[index % DASHBOARD_CHART_PALETTE.length],
   }));

@@ -35,6 +35,7 @@ import { DashboardHeroCard } from "./components/DashboardHeroCard";
 import { DashboardSummaryCards } from "./components/DashboardSummaryCards";
 import { DashboardTrendSection } from "./components/DashboardTrendSection";
 import {
+  DASHBOARD_CHART_PALETTE,
   mapOperadoraChartData,
 } from "./shared/dashboardConstants";
 import {
@@ -171,14 +172,6 @@ export default function DashboardScreen({
   const deferredDashboardOriginFilter = useDeferredValue(dashboardOriginFilter);
   const deferredDashboardOwnerFilter = useDeferredValue(dashboardOwnerFilter);
   const loadingUi = useAdaptiveLoading(loading);
-  const statusColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    leadStatuses.forEach((status) => {
-      map[status.nome] = status.cor || "#8f8176";
-    });
-    return map;
-  }, [leadStatuses]);
-
   const resolvePeriodFilter = useCallback(() => {
     const urlValue = searchParams.get("periodFilter");
     const validValues = ["mes-atual", "todo-periodo", "personalizado"];
@@ -2074,12 +2067,12 @@ export default function DashboardScreen({
 
   const donutChartData = useMemo(
     () =>
-      leadStatusData.map((item) => ({
+      leadStatusData.map((item, index) => ({
         label: item.status,
         value: item.count,
-        color: statusColorMap[item.status] || "#8f8176",
+        color: DASHBOARD_CHART_PALETTE[index % DASHBOARD_CHART_PALETTE.length],
       })),
-    [leadStatusData, statusColorMap],
+    [leadStatusData],
   );
 
   const latestMonthlyPoint =

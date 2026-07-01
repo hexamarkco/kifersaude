@@ -24,6 +24,7 @@ export default function DonutChart({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
+  const innerRadius = Math.max(radius - strokeWidth / 2 - 2, 0);
 
   const segments = useMemo(() => {
     if (total === 0) return [];
@@ -55,7 +56,7 @@ export default function DonutChart({
           width: size,
           height: size,
           borderColor: 'var(--border-subtle)',
-          background: 'var(--surface-muted-bg)',
+          background: 'var(--bg-inset)',
           color: 'var(--text-muted)',
         }}
       >
@@ -70,7 +71,7 @@ export default function DonutChart({
         className="flex items-center justify-center rounded-[var(--radius-2xl)] border p-4"
         style={{
           borderColor: 'var(--border-subtle)',
-          background: compact ? 'var(--bg-surface)' : 'var(--surface-muted-bg)',
+          background: 'var(--bg-inset)',
           boxShadow: 'var(--control-inset-shadow)',
         }}
       >
@@ -80,7 +81,7 @@ export default function DonutChart({
             cy={center}
             r={radius}
             fill="none"
-            stroke="var(--panel-chart-grid, var(--border-default))"
+            stroke="var(--bg-hover)"
             strokeWidth={strokeWidth}
           />
           {segments.map((segment, index) => (
@@ -93,7 +94,7 @@ export default function DonutChart({
               stroke={segment.color}
               strokeWidth={strokeWidth}
               strokeDasharray={segment.dashArray}
-              strokeLinecap="round"
+              strokeLinecap="butt"
               style={{
                 transform: `rotate(${segment.rotation}deg)`,
                 transformOrigin: 'center',
@@ -103,13 +104,22 @@ export default function DonutChart({
               onClick={() => onSegmentClick?.(segment.label)}
             />
           ))}
+          <circle
+            cx={center}
+            cy={center}
+            r={innerRadius}
+            fill="var(--bg-inset)"
+            stroke="var(--border-subtle)"
+            strokeWidth="1"
+          />
           <text
             x={center}
             y={center - 8}
             textAnchor="middle"
             dominantBaseline="middle"
             fontSize="34"
-            fontWeight="800"
+            fontWeight="700"
+            fontFamily="var(--font-sans)"
             fill="var(--text-primary)"
             style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}
           >
@@ -122,6 +132,7 @@ export default function DonutChart({
             dominantBaseline="middle"
             fontSize="12"
             fontWeight="700"
+            fontFamily="var(--font-sans)"
             letterSpacing="0.18em"
             fill="var(--text-muted)"
             style={{ transform: 'rotate(90deg)', transformOrigin: 'center' }}
@@ -132,7 +143,7 @@ export default function DonutChart({
       </div>
 
       {!compact && (
-      <div className="mt-5 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mt-5 grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
         {segments.map((segment, index) => (
           <button
             key={`${segment.label}-${index}`}
@@ -140,7 +151,7 @@ export default function DonutChart({
             className="flex items-center gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)]"
             style={{
               borderColor: 'var(--border-subtle)',
-              background: 'color-mix(in srgb, var(--bg-surface) 94%, transparent)',
+              background: 'var(--bg-inset)',
             }}
             onClick={() => onSegmentClick?.(segment.label)}
           >
@@ -164,7 +175,7 @@ export default function DonutChart({
             </div>
           </button>
         ))}
-      </div>
+        </div>
       )}
     </div>
   );

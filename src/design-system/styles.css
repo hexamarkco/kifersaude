@@ -2,9 +2,9 @@
 .modal-theme-host.painel-theme.kifer-ds {
   color-scheme: dark;
 
-  --font-display: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
-  --font-sans: 'Inter', 'Plus Jakarta Sans', 'DM Sans', 'Segoe UI', sans-serif;
-  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --font-display: 'Cormorant Garamond', serif;
+  --font-sans: 'Montserrat', sans-serif;
+  --font-mono: 'Montserrat', sans-serif;
 
   --bg-canvas: #0f0c0a;
   --bg-canvas-subtle: #120e0b;

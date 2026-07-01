@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { ArrowDownRight, CircleDot, TrendingDown, Users } from 'lucide-react';
+import { ArrowDownRight, TrendingDown, Users } from 'lucide-react';
 import { useConfig } from '../contexts/ConfigContext';
 import { SectionHeader, Surface } from '../design-system';
+import { DASHBOARD_CHART_PALETTE } from '../features/dashboard/shared/dashboardConstants';
 import type { Lead } from '../lib/supabase';
 
 type LeadFunnelProps = {
@@ -45,6 +46,25 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
 
   const totalLeads = funnelLeads.length;
   const widestStageCount = Math.max(...stages.map((_stage, index) => getStageCount(index)), 0);
+  const stageSummaries = stages.map((stage, index) => {
+    const count = getStageCount(index);
+    const percentage = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
+    const conversionRate = calculateConversionRate(index);
+    const color = DASHBOARD_CHART_PALETTE[index % DASHBOARD_CHART_PALETTE.length];
+    const widthDrop = stages.length > 1 ? (index / (stages.length - 1)) * 46 : 0;
+    const funnelWidth = Math.max(34, 100 - widthDrop);
+    const progressWidth = widestStageCount > 0 ? Math.max((count / widestStageCount) * 100, count > 0 ? 8 : 0) : 0;
+
+    return {
+      stage,
+      count,
+      percentage,
+      conversionRate,
+      color,
+      funnelWidth,
+      progressWidth,
+    };
+  });
 
   if (stages.length === 0) {
     return (
@@ -95,115 +115,89 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
           </div>
         </div>
 
-        <div className="mb-7 overflow-hidden rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] p-1">
-          <div className="flex h-4 overflow-hidden rounded-full bg-[var(--bg-inset)]">
-            {stages.map((stage, index) => {
-              const count = getStageCount(index);
-              const width = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
-              const color = stage.cor || 'var(--brand-primary)';
+        <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1fr)] xl:items-stretch">
+          <div className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-5">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">Funil</p>
+                <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">Volume por etapa ativa</p>
+              </div>
+              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                {totalLeads.toLocaleString('pt-BR')} total
+              </span>
+            </div>
 
-              return (
+            <div className="space-y-1.5">
+              {stageSummaries.map((summary, index) => (
                 <div
-                  key={stage.id}
-                  className="h-full min-w-[2px] transition-all duration-500 ease-out"
+                  key={summary.stage.id}
+                  className="mx-auto flex h-12 items-center justify-between gap-3 px-5 text-sm font-semibold text-[var(--text-on-brand)] shadow-[0_14px_28px_-22px_rgba(0,0,0,0.75)] transition-all duration-500"
                   style={{
-                    width: `${width}%`,
-                    background: count > 0 ? color : 'transparent',
+                    width: `${summary.funnelWidth}%`,
+                    clipPath: 'polygon(5% 0%, 95% 0%, 87% 100%, 13% 100%)',
+                    background: `linear-gradient(180deg, color-mix(in srgb, ${summary.color} 94%, white) 0%, color-mix(in srgb, ${summary.color} 72%, black) 100%)`,
                   }}
-                  title={`${stage.nome}: ${count}`}
-                />
-              );
-            })}
+                  title={`${summary.stage.nome}: ${summary.count}`}
+                >
+                  <span className="font-[var(--font-sans)] tabular-nums">{index + 1}</span>
+                  <span className="font-[var(--font-sans)] tabular-nums">{summary.count.toLocaleString('pt-BR')}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-3">
-          {stages.map((stage, index) => {
-            const stageLeads = getLeadsByStatus(stage.id);
-            const count = stageLeads.length;
-            const percentage = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
-            const conversionRate = calculateConversionRate(index);
-            const color = stage.cor || 'var(--brand-primary)';
-            const progressWidth = widestStageCount > 0 ? Math.max((count / widestStageCount) * 100, count > 0 ? 8 : 0) : 0;
+          <div className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-5">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">Ranking por etapa</p>
+              <span className="text-xs font-medium text-[var(--text-muted)]">participação e conversão</span>
+            </div>
 
-            return (
-              <div
-                key={stage.id}
-                className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4"
-              >
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
-                  <div className="min-w-0">
-                    <div className="flex items-start gap-3">
+            <div className="space-y-3">
+              {stageSummaries.map((summary, index) => (
+                <div key={summary.stage.id} className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <span
-                        className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border"
+                        className="h-3 w-3 shrink-0 rounded-full"
                         style={{
-                          borderColor: `color-mix(in srgb, ${color} 42%, var(--border-subtle))`,
-                          background: `color-mix(in srgb, ${color} 10%, var(--bg-surface))`,
+                          background: summary.color,
+                          boxShadow: `0 0 0 6px color-mix(in srgb, ${summary.color} 13%, transparent)`,
                         }}
-                      >
-                        <CircleDot className="h-[18px] w-[18px]" strokeWidth={1.75} style={{ color }} />
-                      </span>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                            Etapa {index + 1}
-                          </span>
-                          {index > 0 && (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-semibold leading-none text-[var(--text-secondary)]">
-                              <ArrowDownRight className="h-3.5 w-3.5" strokeWidth={1.75} />
-                              {conversionRate.toFixed(0)}% conversao
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="mt-1 text-lg font-semibold leading-tight tracking-[-0.01em] text-[var(--text-primary)]">
-                          {stage.nome}
-                        </h3>
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{summary.stage.nome}</p>
+                        <p className="mt-0.5 text-xs font-medium text-[var(--text-muted)]">Etapa {index + 1}</p>
                       </div>
                     </div>
-
-                    <div className="mt-4 grid grid-cols-[1fr_auto] items-center gap-3">
-                      <div className="h-2.5 overflow-hidden rounded-full bg-[var(--bg-hover)]">
-                        <div
-                          className="h-full rounded-full transition-all duration-500 ease-out"
-                          style={{
-                            width: `${progressWidth}%`,
-                            background: `linear-gradient(90deg, ${color} 0%, color-mix(in srgb, ${color} 76%, var(--accent-gold)) 100%)`,
-                          }}
-                        />
-                      </div>
-                      <span className="text-sm font-semibold tabular-nums text-[var(--text-secondary)]">
-                        {percentage.toFixed(1)}%
-                      </span>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-secondary)]">
+                      {index > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 leading-none">
+                          <ArrowDownRight className="h-3.5 w-3.5" strokeWidth={1.75} />
+                          {summary.conversionRate.toFixed(0)}%
+                        </span>
+                      )}
+                      <span className="font-[var(--font-sans)] tabular-nums">{summary.count.toLocaleString('pt-BR')}</span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Volume</p>
-                      <p className="mt-1 font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.03em] text-[var(--text-primary)] tabular-nums">
-                        {count}
-                      </p>
+                  <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3">
+                    <div className="h-2 overflow-hidden rounded-full bg-[var(--bg-hover)]">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${summary.progressWidth}%`,
+                          background: `linear-gradient(90deg, ${summary.color} 0%, color-mix(in srgb, ${summary.color} 76%, var(--accent-gold)) 100%)`,
+                        }}
+                      />
                     </div>
-
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Participacao</p>
-                      <p className="mt-1 font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.03em] text-[var(--text-primary)] tabular-nums">
-                        {percentage.toFixed(1)}%
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Conversao</p>
-                      <p className="mt-1 font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.03em] text-[var(--text-primary)] tabular-nums">
-                        {index === 0 ? 'Base' : `${conversionRate.toFixed(0)}%`}
-                      </p>
-                    </div>
+                    <span className="text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
+                      {summary.percentage.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </Surface>

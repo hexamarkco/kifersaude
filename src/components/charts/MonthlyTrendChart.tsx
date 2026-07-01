@@ -85,7 +85,7 @@ export default function MonthlyTrendChart({
         style={{
           height,
           borderColor: 'var(--border-subtle)',
-          background: 'var(--bg-surface-muted)',
+          background: 'var(--bg-inset)',
           color: 'var(--text-muted)',
         }}
       >
@@ -98,15 +98,30 @@ export default function MonthlyTrendChart({
   const latestPoint = chart.points[chart.points.length - 1];
 
   return (
-    <div className="relative h-full overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4 sm:p-5">
+    <div className="relative h-full overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4 sm:p-5">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background: `radial-gradient(circle at 80% 0%, color-mix(in srgb, ${color} 14%, transparent) 0%, transparent 36%)`,
+          background: `radial-gradient(circle at 82% 0%, color-mix(in srgb, ${color} 18%, transparent) 0%, transparent 38%), radial-gradient(circle at 10% 100%, color-mix(in srgb, var(--accent-gold) 8%, transparent) 0%, transparent 34%)`,
         }}
       />
 
       <div className="relative rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
+              Série temporal
+            </p>
+            <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">
+              Tendência suavizada do indicador selecionado
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+            Série atual
+          </div>
+        </div>
+
         <svg viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} className="block w-full" style={{ height }}>
           <defs>
             <linearGradient id="monthlyTrendAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -118,6 +133,19 @@ export default function MonthlyTrendChart({
               <stop offset="100%" stopColor={color} stopOpacity="1" />
             </linearGradient>
           </defs>
+
+          {chart.points.map((point, index) => (
+            <line
+              key={`x-grid-${point.label}-${index}`}
+              x1={point.x}
+              y1={PADDING.top}
+              x2={point.x}
+              y2={chart.baselineY}
+              stroke="var(--panel-chart-grid)"
+              strokeWidth="1"
+              opacity="0.55"
+            />
+          ))}
 
           {chart.ticks.map((tick, index) => (
             <g key={`${tick.y}-${index}`}>
@@ -136,6 +164,7 @@ export default function MonthlyTrendChart({
                 textAnchor="end"
                 dominantBaseline="middle"
                 fontSize="12"
+                fontFamily="var(--font-sans)"
                 fill="var(--text-muted)"
               >
                 {formatValue(Math.round(tick.value))}
@@ -175,6 +204,7 @@ export default function MonthlyTrendChart({
                       textAnchor="middle"
                       fontSize="13"
                       fontWeight="700"
+                      fontFamily="var(--font-sans)"
                       fill="var(--text-primary)"
                     >
                       {formatValue(point.value)}
@@ -186,6 +216,7 @@ export default function MonthlyTrendChart({
                   y={chart.baselineY + 24}
                   textAnchor="middle"
                   fontSize="12"
+                  fontFamily="var(--font-sans)"
                   fill={isLatest ? 'var(--text-primary)' : 'var(--text-muted)'}
                 >
                   {point.label}
@@ -217,8 +248,8 @@ export default function MonthlyTrendChart({
               style={{
                 borderColor: isLatest ? `color-mix(in srgb, ${color} 56%, var(--border-subtle))` : 'var(--border-subtle)',
                 background: isLatest
-                  ? `linear-gradient(135deg, color-mix(in srgb, ${color} 12%, var(--bg-surface)) 0%, var(--bg-surface) 100%)`
-                  : 'var(--bg-surface)',
+                  ? `linear-gradient(180deg, color-mix(in srgb, ${color} 16%, var(--bg-surface)) 0%, var(--bg-surface) 100%)`
+                  : 'var(--bg-inset)',
               }}
             >
               <p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-muted)' }}>

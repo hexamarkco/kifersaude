@@ -29,9 +29,9 @@ export function DashboardAlerts({
           <div className="flex items-start space-x-3">
             <div
               className="mt-1 h-2.5 w-2.5 rounded-full"
-              style={{ background: 'var(--panel-accent-red-text,#8a3128)' }}
+              style={{ background: 'var(--danger-text)' }}
             />
-            <p className="text-sm" style={{ color: 'var(--panel-accent-red-text,#8a3128)' }}>
+            <p className="text-sm text-[var(--danger-text)]">
               {error}
             </p>
           </div>
@@ -41,8 +41,8 @@ export function DashboardAlerts({
       {!isCustomPeriodValid && (
         <Alert tone="warning" className="items-start sm:items-center">
           <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }} />
-            <p className="text-sm" style={{ color: 'var(--panel-accent-ink,#6f3f16)' }}>
+            <Calendar className="h-5 w-5 flex-shrink-0 text-[var(--accent-gold-hover)]" />
+            <p className="text-sm text-[var(--accent-gold-hover)]">
               Por favor, preencha as datas de inicio e fim no formato DD/MM/AAAA para visualizar o periodo personalizado.
             </p>
           </div>

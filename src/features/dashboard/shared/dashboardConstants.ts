@@ -40,16 +40,16 @@ export const DASHBOARD_HERO_STYLE: CSSProperties = PANEL_HERO_STYLE;
 
 export const CALENDAR_LEGEND_STYLES = {
   adjustment: {
-    dot: 'var(--panel-accent-strong,#b85c1f)',
-    background: 'var(--panel-accent-soft,#f6e4c7)',
-    border: 'var(--panel-accent-border,#d5a25c)',
-    text: 'var(--panel-accent-ink,#6f3f16)',
+    dot: 'var(--brand-primary)',
+    background: 'var(--brand-primary-soft)',
+    border: 'var(--brand-primary-border)',
+    text: 'var(--accent-gold-hover)',
   },
   birthday: {
-    dot: 'var(--panel-border-strong,#9d7f5a)',
-    background: 'color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 82%, white)',
-    border: 'var(--panel-border,#d4c0a7)',
-    text: 'var(--panel-text-soft,#5b4635)',
+    dot: 'var(--border-strong)',
+    background: 'color-mix(in srgb, var(--bg-elevated) 82%, white)',
+    border: 'var(--border-default)',
+    text: 'var(--text-secondary)',
   },
 } as const;
 

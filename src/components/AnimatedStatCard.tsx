@@ -36,57 +36,57 @@ const toneStyles: Record<
   }
 > = {
   brand: {
-    halo: 'radial-gradient(circle at top right, rgba(212,120,42,0.18), transparent 44%), radial-gradient(circle at bottom left, rgba(120,72,34,0.14), transparent 42%)',
-    iconShell: 'linear-gradient(180deg, rgba(214,130,54,0.18), rgba(132,78,33,0.3))',
-    iconInset: 'rgba(245,197,132,0.14)',
-    iconColor: 'var(--panel-stat-icon-brand,#9f5a21)',
-    accent: 'var(--panel-accent-strong,#b85c1f)',
-    accentSoft: 'rgba(216,135,53,0.18)',
+    halo: 'var(--stat-brand-halo)',
+    iconShell: 'var(--stat-brand-icon-bg)',
+    iconInset: 'var(--stat-brand-icon-inset)',
+    iconColor: 'var(--stat-brand-icon)',
+    accent: 'var(--stat-brand-accent)',
+    accentSoft: 'var(--stat-brand-soft)',
   },
   earth: {
-    halo: 'radial-gradient(circle at top right, rgba(162,111,72,0.16), transparent 44%), radial-gradient(circle at bottom left, rgba(91,70,53,0.12), transparent 42%)',
-    iconShell: 'linear-gradient(180deg, rgba(157,127,90,0.16), rgba(91,70,53,0.26))',
-    iconInset: 'rgba(228,213,192,0.12)',
-    iconColor: 'var(--panel-stat-icon-earth,#6a5240)',
-    accent: 'var(--panel-border-strong,#9d7f5a)',
-    accentSoft: 'rgba(157,127,90,0.16)',
+    halo: 'var(--stat-earth-halo)',
+    iconShell: 'var(--stat-earth-icon-bg)',
+    iconInset: 'var(--stat-earth-icon-inset)',
+    iconColor: 'var(--stat-earth-icon)',
+    accent: 'var(--stat-earth-accent)',
+    accentSoft: 'var(--stat-earth-soft)',
   },
   forest: {
-    halo: 'radial-gradient(circle at top right, rgba(87,133,90,0.18), transparent 44%), radial-gradient(circle at bottom left, rgba(39,92,57,0.14), transparent 42%)',
-    iconShell: 'linear-gradient(180deg, rgba(149,196,161,0.18), rgba(39,92,57,0.28))',
-    iconInset: 'rgba(214,234,216,0.12)',
-    iconColor: 'var(--panel-stat-icon-forest,#2f6a42)',
-    accent: 'var(--panel-accent-green-border,#95c4a1)',
-    accentSoft: 'rgba(149,196,161,0.16)',
+    halo: 'var(--stat-forest-halo)',
+    iconShell: 'var(--stat-forest-icon-bg)',
+    iconInset: 'var(--stat-forest-icon-inset)',
+    iconColor: 'var(--stat-forest-icon)',
+    accent: 'var(--stat-forest-accent)',
+    accentSoft: 'var(--stat-forest-soft)',
   },
   plum: {
-    halo: 'radial-gradient(circle at top right, rgba(134,92,158,0.18), transparent 44%), radial-gradient(circle at bottom left, rgba(91,52,115,0.14), transparent 42%)',
-    iconShell: 'linear-gradient(180deg, rgba(172,140,197,0.18), rgba(96,58,126,0.3))',
-    iconInset: 'rgba(221,205,235,0.12)',
-    iconColor: 'var(--panel-stat-icon-plum,#9b5fd1)',
-    accent: '#9b5fd1',
-    accentSoft: 'rgba(155,95,209,0.18)',
+    halo: 'var(--stat-plum-halo)',
+    iconShell: 'var(--stat-plum-icon-bg)',
+    iconInset: 'var(--stat-plum-icon-inset)',
+    iconColor: 'var(--stat-plum-icon)',
+    accent: 'var(--stat-plum-accent)',
+    accentSoft: 'var(--stat-plum-soft)',
   },
   copper: {
-    halo: 'radial-gradient(circle at top right, rgba(198,108,52,0.18), transparent 44%), radial-gradient(circle at bottom left, rgba(132,63,26,0.16), transparent 42%)',
-    iconShell: 'linear-gradient(180deg, rgba(226,150,92,0.18), rgba(142,70,30,0.32))',
-    iconInset: 'rgba(242,204,171,0.12)',
-    iconColor: 'var(--panel-stat-icon-copper,#c26c2d)',
-    accent: '#cf6a2d',
-    accentSoft: 'rgba(207,106,45,0.18)',
+    halo: 'var(--stat-copper-halo)',
+    iconShell: 'var(--stat-copper-icon-bg)',
+    iconInset: 'var(--stat-copper-icon-inset)',
+    iconColor: 'var(--stat-copper-icon)',
+    accent: 'var(--stat-copper-accent)',
+    accentSoft: 'var(--stat-copper-soft)',
   },
 };
 
 const trendToneStyles = {
   positive: {
-    background: 'var(--panel-accent-green-bg,#edf6ef)',
-    border: 'var(--panel-accent-green-border,#95c4a1)',
-    color: 'var(--panel-accent-green-text,#275c39)',
+    background: 'var(--success-soft)',
+    border: 'var(--success-border)',
+    color: 'var(--success-text)',
   },
   negative: {
-    background: 'var(--panel-accent-red-bg,#faecea)',
-    border: 'var(--panel-accent-red-border,#d79a8f)',
-    color: 'var(--panel-accent-red-text,#8a3128)',
+    background: 'var(--danger-soft)',
+    border: 'var(--danger-border)',
+    color: 'var(--danger-text)',
   },
 } as const;
 
@@ -169,13 +169,12 @@ export default function AnimatedStatCard({
       <div
         className="absolute inset-0 opacity-100"
         style={{
-          background:
-            `linear-gradient(180deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 97%, white 3%) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 92%, var(--panel-surface-soft,#efe6d8) 8%) 100%), ${toneMeta.halo}`,
+          background: `${toneMeta.halo}, var(--surface-bg)`,
         }}
       />
       <div
         className="absolute inset-x-0 top-0 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, var(--panel-border-strong,#9d7f5a) 48%, transparent 100%)' }}
+        style={{ background: 'linear-gradient(90deg, transparent 0%, var(--border-strong) 48%, transparent 100%)' }}
       />
       <div
         className="absolute inset-x-6 bottom-0 h-[2px] rounded-full"
@@ -186,50 +185,50 @@ export default function AnimatedStatCard({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="mb-5 flex items-center justify-between gap-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
                 Panorama
               </p>
               {contextLabel && contextValue && (
                 <div
                   className="rounded-full border px-3 py-1.5 text-[11px] font-semibold"
                   style={{
-                    borderColor: 'var(--panel-border-subtle,#e4d5c0)',
-                    background: 'color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 64%, transparent)',
-                    color: 'var(--panel-text-soft,#5b4635)',
+                    borderColor: 'var(--border-subtle)',
+                    background: 'var(--bg-hover)',
+                    color: 'var(--text-secondary)',
                     boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}`,
                   }}
                 >
-                  <span style={{ color: 'var(--panel-text-muted,#876f5c)' }}>{contextLabel}</span>{' '}
-                  <span style={{ color: 'var(--panel-text,#1c1917)' }}>{contextValue}</span>
+                  <span className="text-[var(--text-muted)]">{contextLabel}</span>{' '}
+                  <span className="text-[var(--text-primary)]">{contextValue}</span>
                 </div>
               )}
             </div>
 
-            <p className="text-base font-semibold sm:text-[1.05rem]" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+            <p className="text-base font-semibold text-[var(--text-secondary)] sm:text-[1.05rem]">
               {label}
             </p>
 
             <div className="mt-5 flex items-end gap-2">
               {prefix && (
-                <span className="pb-1 text-lg font-bold sm:text-xl" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                <span className="pb-1 text-lg font-bold text-[var(--text-secondary)] sm:text-xl">
                   {prefix}
                 </span>
               )}
               <p
                 className="text-[2.15rem] font-black leading-none tracking-[-0.05em] sm:text-[2.55rem]"
-                style={{ color: 'var(--panel-text,#1c1917)' }}
+                style={{ color: 'var(--text-primary)' }}
               >
                 {formattedValue}
               </p>
               {suffix && (
-                <span className="pb-1 text-base font-bold sm:text-lg" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                <span className="pb-1 text-base font-bold text-[var(--text-muted)] sm:text-lg">
                   {suffix}
                 </span>
               )}
             </div>
 
             {subtitle && (
-              <p className="mt-3 text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+              <p className="mt-3 text-sm text-[var(--text-muted)]">
                 {subtitle}
               </p>
             )}
@@ -246,7 +245,7 @@ export default function AnimatedStatCard({
                 >
                   {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
                 </span>
-                <span className="text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                <span className="text-xs text-[var(--text-muted)]">
                   vs. mês anterior
                 </span>
               </div>
@@ -254,17 +253,17 @@ export default function AnimatedStatCard({
           </div>
 
           <div
-            className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.4rem] border sm:h-[4.5rem] sm:w-[4.5rem]"
+            className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border sm:h-[4.5rem] sm:w-[4.5rem]"
             style={{
-              borderColor: 'var(--panel-border,#d4c0a7)',
+              borderColor: 'var(--border-default)',
               background: toneMeta.iconShell,
-              boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, 0 18px 30px -24px rgba(20, 12, 8, 0.52)`,
+              boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, var(--stat-icon-shadow)`,
             }}
           >
             <div
-              className="absolute inset-[5px] rounded-[1.05rem] border"
+              className="absolute inset-[5px] rounded-xl border"
               style={{
-                borderColor: 'rgba(255,255,255,0.08)',
+                borderColor: 'var(--stat-icon-inset-border)',
                 background: toneMeta.iconInset,
               }}
             />
@@ -274,9 +273,9 @@ export default function AnimatedStatCard({
 
         <div
           className="mt-6 flex items-center justify-between gap-3 border-t pt-4"
-          style={{ borderColor: 'var(--panel-border-subtle,#e4d5c0)' }}
+          style={{ borderColor: 'var(--border-subtle)' }}
         >
-          <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
             <span
               className="h-2.5 w-2.5 rounded-full"
               style={{
@@ -289,7 +288,7 @@ export default function AnimatedStatCard({
           {onClick && (
             <span
               className="text-xs font-black uppercase tracking-[0.18em]"
-              style={{ color: 'var(--panel-accent-strong,#b85c1f)' }}
+              style={{ color: 'var(--brand-primary)' }}
             >
               Abrir
             </span>

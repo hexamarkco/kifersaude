@@ -88,10 +88,10 @@ export function DashboardHeader({
                 className="sm:w-32"
                 invalid={isCustomStartInvalid}
               />
-              <span className="text-center text-xs sm:hidden" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+              <span className="text-center text-xs sm:hidden" style={{ color: 'var(--text-muted)' }}>
                 ate
               </span>
-              <span className="hidden text-sm sm:inline" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+              <span className="hidden text-sm sm:inline" style={{ color: 'var(--text-muted)' }}>
                 ate
               </span>
               <Input
@@ -136,7 +136,7 @@ export function DashboardHeader({
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
-            <Clock className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
+            <Clock className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
             <span>{lastUpdatedLabel || 'Aguardando atualizacao...'}</span>
           </Badge>
 

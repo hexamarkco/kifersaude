@@ -1983,23 +1983,23 @@ export default function DashboardScreen({
               ? undefined
               : isToday
                 ? {
-                    borderColor: "var(--panel-border-strong,#9d7f5a)",
+                    borderColor: "var(--border-strong)",
                     background:
-                      "linear-gradient(180deg, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 88%, transparent) 0%, var(--panel-surface,#fffdfa) 100%)",
-                    color: "var(--panel-text,#1c1917)",
+                      "linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 88%, transparent) 0%, var(--bg-surface) 100%)",
+                    color: "var(--text-primary)",
                   }
                 : dayEvents.length > 0
                   ? {
-                      borderColor: "var(--panel-border-subtle,#e4d5c0)",
+                      borderColor: "var(--border-subtle)",
                       background:
-                        "linear-gradient(180deg, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 56%, transparent) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)",
-                      color: "var(--panel-text-soft,#5b4635)",
+                        "linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 56%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%)",
+                      color: "var(--text-secondary)",
                     }
                   : {
-                      borderColor: "var(--panel-border-subtle,#e4d5c0)",
+                      borderColor: "var(--border-subtle)",
                       background:
-                        "color-mix(in srgb, var(--panel-surface,#fffdfa) 92%, transparent)",
-                      color: "var(--panel-text-soft,#5b4635)",
+                        "color-mix(in srgb, var(--bg-surface) 92%, transparent)",
+                      color: "var(--text-secondary)",
                     }
           }
         >
@@ -2012,10 +2012,10 @@ export default function DashboardScreen({
                   className="h-1.5 w-1.5 rounded-full"
                   style={{
                     backgroundColor: isSelected
-                      ? "var(--panel-accent-ink-strong,#4a2411)"
+                      ? "var(--text-on-brand)"
                       : kind === "adjustment"
-                        ? "var(--panel-accent-strong,#b85c1f)"
-                        : "var(--panel-border-strong,#9d7f5a)",
+                        ? "var(--brand-primary)"
+                        : "var(--border-strong)",
                   }}
                 />
               ))}
@@ -2288,38 +2288,38 @@ export default function DashboardScreen({
                 <div>
                   <div
                     className="flex items-center gap-2"
-                    style={{ color: "var(--panel-text,#1c1917)" }}
+                    style={{ color: "var(--text-primary)" }}
                   >
                     <Calendar
                       className="h-5 w-5 flex-shrink-0"
-                      style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
+                      style={{ color: "var(--brand-primary)" }}
                     />
                     <h3
                       className="text-xl font-semibold"
-                      style={{ color: "var(--panel-text,#1c1917)" }}
+                      style={{ color: "var(--text-primary)" }}
                     >
                       Calendário de eventos
                     </h3>
                   </div>
                   <p
                     className="mt-1 text-xs"
-                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                    style={{ color: "var(--text-muted)" }}
                   >
                     Reajustes e aniversários agrupados pelo período selecionado.
                   </p>
                 </div>
                 <div
                   className="flex flex-wrap items-center gap-3 text-xs"
-                  style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                  style={{ color: "var(--text-muted)" }}
                 >
                   <span
                     className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold"
                     style={{
                       ...DASHBOARD_PILL_STYLE,
-                      color: "var(--panel-text-soft,#5b4635)",
+                      color: "var(--text-secondary)",
                     }}
                   >
-                    <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                    <span style={{ color: "var(--text-primary)" }}>
                       {calendarMonthEventCount}
                     </span>
                     <span>eventos no mês</span>
@@ -2382,7 +2382,7 @@ export default function DashboardScreen({
                     </Button>
                     <h4
                       className="text-sm font-semibold capitalize"
-                      style={{ color: "var(--panel-text,#1c1917)" }}
+                      style={{ color: "var(--text-primary)" }}
                     >
                       {calendarMonthLabel}
                     </h4>
@@ -2407,7 +2407,7 @@ export default function DashboardScreen({
                   </div>
                   <div
                     className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs"
-                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                    style={{ color: "var(--text-muted)" }}
                   >
                     <span>
                       Navegue os meses para consultar reajustes e aniversários.
@@ -2471,7 +2471,7 @@ export default function DashboardScreen({
                       <div
                         key={day}
                         className="py-1 text-center text-xs font-semibold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         {day}
                       </div>
@@ -2485,20 +2485,20 @@ export default function DashboardScreen({
                     <div>
                       <div
                         className="text-[11px] font-semibold uppercase tracking-[0.16em]"
-                        style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                        style={{ color: "var(--text-muted)" }}
                       >
                         Período selecionado
                       </div>
                       <h4
                         className="mt-1 text-sm font-semibold"
-                        style={{ color: "var(--panel-text,#1c1917)" }}
+                        style={{ color: "var(--text-primary)" }}
                       >
                         {calendarViewLabel}
                       </h4>
                     </div>
                     <span
                       className="text-xs"
-                      style={{ color: "var(--panel-text-muted,#876f5c)" }}
+                      style={{ color: "var(--text-muted)" }}
                     >
                       {calendarViewEvents.length} evento
                       {calendarViewEvents.length === 1 ? "" : "s"}
@@ -2509,8 +2509,8 @@ export default function DashboardScreen({
                     <div
                       className="flex flex-1 items-center justify-center rounded-[1.4rem] border border-dashed px-4 py-10 text-sm"
                       style={{
-                        borderColor: "var(--panel-border-subtle,#e4d5c0)",
-                        color: "var(--panel-text-muted,#876f5c)",
+                        borderColor: "var(--border-subtle)",
+                        color: "var(--text-muted)",
                       }}
                     >
                       Nenhum evento no período selecionado.
@@ -2558,7 +2558,7 @@ export default function DashboardScreen({
                                 borderColor:
                                   CALENDAR_LEGEND_STYLES.adjustment.border,
                                 background:
-                                  "linear-gradient(180deg, color-mix(in srgb, var(--panel-accent-soft,#f6e4c7) 50%, var(--panel-surface,#fffdfa)) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)",
+                                  "linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-soft) 50%, var(--bg-surface)) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%)",
                               }}
                             >
                               <div className="flex items-start justify-between gap-3">
@@ -2566,7 +2566,7 @@ export default function DashboardScreen({
                                   <div
                                     className="text-xs font-semibold uppercase tracking-[0.16em]"
                                     style={{
-                                      color: "var(--panel-accent-ink,#6f3f16)",
+                                      color: "var(--accent-gold-hover)",
                                     }}
                                   >
                                     Reajuste
@@ -2576,7 +2576,7 @@ export default function DashboardScreen({
                                       <p
                                         className="text-sm font-semibold"
                                         style={{
-                                          color: "var(--panel-text,#1c1917)",
+                                          color: "var(--text-primary)",
                                         }}
                                       >
                                         {adjustment.personName}
@@ -2587,7 +2587,7 @@ export default function DashboardScreen({
                                         className="text-xs"
                                         style={{
                                           color:
-                                            "var(--panel-text-muted,#876f5c)",
+                                            "var(--text-muted)",
                                         }}
                                       >
                                         {adjustment.role}
@@ -2597,7 +2597,7 @@ export default function DashboardScreen({
                                           className="text-xs"
                                           style={{
                                             color:
-                                              "var(--panel-text-muted,#876f5c)",
+                                              "var(--text-muted)",
                                           }}
                                         >
                                           Faixa:{" "}
@@ -2611,7 +2611,7 @@ export default function DashboardScreen({
                                     <p
                                       className="text-sm font-semibold"
                                       style={{
-                                        color: "var(--panel-text,#1c1917)",
+                                        color: "var(--text-primary)",
                                       }}
                                     >
                                       Reajuste contratual
@@ -2622,7 +2622,7 @@ export default function DashboardScreen({
                                       className="text-xs"
                                       style={{
                                         color:
-                                          "var(--panel-text-muted,#876f5c)",
+                                          "var(--text-muted)",
                                       }}
                                     >
                                       {holderName && (
@@ -2646,13 +2646,13 @@ export default function DashboardScreen({
                                 <div
                                   className="text-right text-xs"
                                   style={{
-                                    color: "var(--panel-text-muted,#876f5c)",
+                                    color: "var(--text-muted)",
                                   }}
                                 >
                                   <p
                                     className="font-semibold"
                                     style={{
-                                      color: "var(--panel-text,#1c1917)",
+                                      color: "var(--text-primary)",
                                     }}
                                   >
                                     {adjustment.contract?.codigo_contrato}
@@ -2664,7 +2664,7 @@ export default function DashboardScreen({
                                 className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3"
                                 style={{
                                   borderColor:
-                                    "var(--panel-border-subtle,#e4d5c0)",
+                                    "var(--border-subtle)",
                                 }}
                               >
                                 <Button
@@ -2729,7 +2729,7 @@ export default function DashboardScreen({
                               borderColor:
                                 CALENDAR_LEGEND_STYLES.birthday.border,
                               background:
-                                "linear-gradient(180deg, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 64%, transparent) 0%, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 100%)",
+                                "linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 64%, transparent) 0%, color-mix(in srgb, var(--bg-surface) 96%, transparent) 100%)",
                             }}
                           >
                             <div className="flex items-start justify-between gap-3">
@@ -2737,21 +2737,21 @@ export default function DashboardScreen({
                                 <div
                                   className="text-xs font-semibold uppercase tracking-[0.16em]"
                                   style={{
-                                    color: "var(--panel-text-soft,#5b4635)",
+                                    color: "var(--text-secondary)",
                                   }}
                                 >
                                   Aniversário
                                 </div>
                                 <p
                                   className="mt-1 text-sm font-semibold"
-                                  style={{ color: "var(--panel-text,#1c1917)" }}
+                                  style={{ color: "var(--text-primary)" }}
                                 >
                                   {birthday.nome}
                                 </p>
                                 <p
                                   className="mt-0.5 text-xs"
                                   style={{
-                                    color: "var(--panel-text-muted,#876f5c)",
+                                    color: "var(--text-muted)",
                                   }}
                                 >
                                   {birthday.tipo}
@@ -2760,7 +2760,7 @@ export default function DashboardScreen({
                                       <span
                                         style={{
                                           color:
-                                            "var(--panel-text-muted,#876f5c)",
+                                            "var(--text-muted)",
                                         }}
                                       >
                                         {" "}
@@ -2777,7 +2777,7 @@ export default function DashboardScreen({
                                       className="mt-1 text-xs font-medium"
                                       style={{
                                         color:
-                                          "var(--panel-accent-strong,#b85c1f)",
+                                          "var(--brand-primary)",
                                       }}
                                     >
                                       {birthday.holder.razao_social ||
@@ -2788,12 +2788,12 @@ export default function DashboardScreen({
                               <div
                                 className="text-right text-xs"
                                 style={{
-                                  color: "var(--panel-text-muted,#876f5c)",
+                                  color: "var(--text-muted)",
                                 }}
                               >
                                 <p
                                   className="font-semibold"
-                                  style={{ color: "var(--panel-text,#1c1917)" }}
+                                  style={{ color: "var(--text-primary)" }}
                                 >
                                   {birthday.nextBirthday.toLocaleDateString(
                                     "pt-BR",
@@ -2806,13 +2806,13 @@ export default function DashboardScreen({
                                 className="mt-2 border-t pt-2"
                                 style={{
                                   borderColor:
-                                    "var(--panel-border-subtle,#e4d5c0)",
+                                    "var(--border-subtle)",
                                 }}
                               >
                                 <p
                                   className="text-xs"
                                   style={{
-                                    color: "var(--panel-text-muted,#876f5c)",
+                                    color: "var(--text-muted)",
                                   }}
                                 >
                                   <span className="font-medium">Contrato:</span>{" "}
@@ -2821,7 +2821,7 @@ export default function DashboardScreen({
                                 <p
                                   className="text-xs"
                                   style={{
-                                    color: "var(--panel-text-muted,#876f5c)",
+                                    color: "var(--text-muted)",
                                   }}
                                 >
                                   <span className="font-medium">
@@ -2835,7 +2835,7 @@ export default function DashboardScreen({
                               className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3"
                               style={{
                                 borderColor:
-                                  "var(--panel-border-subtle,#e4d5c0)",
+                                  "var(--border-subtle)",
                               }}
                             >
                               {birthday.contract && (

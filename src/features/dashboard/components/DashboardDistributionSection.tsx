@@ -23,7 +23,7 @@ export function DashboardDistributionSection({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-panel-animate>
       <Surface className="panel-glass-panel">
-        <h3 className="mb-5 text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+        <h3 className="mb-5 text-xl font-semibold text-[var(--text-primary)]">
           Distribuicao de Leads por Status
         </h3>
         {leadStatusData.length > 0 ? (
@@ -44,7 +44,7 @@ export function DashboardDistributionSection({
       </Surface>
 
       <Surface className="panel-glass-panel">
-        <h3 className="mb-5 text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+        <h3 className="mb-5 text-xl font-semibold text-[var(--text-primary)]">
           Contratos por Operadora
         </h3>
         {operadoraChartData.length > 0 ? (

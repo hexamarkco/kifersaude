@@ -51,10 +51,10 @@ export function DashboardTrendSection({
     <Surface className="panel-glass-panel" data-panel-animate>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+          <h3 className="text-xl font-semibold text-[var(--text-primary)]">
             Evolucao mensal
           </h3>
-          <p className="text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+          <p className="text-sm text-[var(--text-muted)]">
             Tendencia por mes considerando o periodo selecionado e os filtros atuais.
           </p>
         </div>
@@ -102,15 +102,15 @@ export function DashboardTrendSection({
         <div className="grid gap-3 md:grid-cols-3">
           <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
-                <TrendingUp className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
+              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)]">
+                <TrendingUp className="h-4 w-4 text-[var(--brand-primary)]" />
                 <span>Ultimo mes</span>
               </div>
-              <span className="text-xs" style={{ color: 'var(--panel-text-muted)' }}>
+              <span className="text-xs text-[var(--text-muted)]">
                 {latestMonthlyPoint?.label || 'Sem dados'}
               </span>
             </div>
-            <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
+            <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
               {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : 'Sem dados'}
             </p>
             <p className="mt-1 text-xs font-semibold" style={monthlyVariationTone}>
@@ -123,27 +123,27 @@ export function DashboardTrendSection({
           </Surface>
 
           <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
-            <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
-              <BadgePercent className="h-4 w-4" style={{ color: 'var(--panel-border-strong,#9d7f5a)' }} />
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)]">
+              <BadgePercent className="h-4 w-4 text-[var(--border-strong)]" />
               <span>Media do periodo</span>
             </div>
-            <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
+            <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
               {displayedMonthlySeries.length > 0 ? formatSelectedMetricValue(averageMonthlyValue) : 'Sem dados'}
             </p>
-            <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted)' }}>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               Baseado nos ultimos {displayedMonthlySeries.length} meses exibidos
             </p>
           </Surface>
 
           <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
-            <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text-soft)' }}>
-              <Calendar className="h-4 w-4" style={{ color: 'var(--panel-border-strong,#9d7f5a)' }} />
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)]">
+              <Calendar className="h-4 w-4 text-[var(--border-strong)]" />
               <span>Pico do periodo</span>
             </div>
-            <p className="mt-3 text-2xl font-bold" style={{ color: 'var(--panel-text)' }}>
+            <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
               {highestMonthlyPoint ? formatSelectedMetricValue(highestMonthlyPoint.value) : 'Sem dados'}
             </p>
-            <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted)' }}>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               {highestMonthlyPoint ? `${highestMonthlyPoint.label} foi o melhor mes do recorte` : 'Aguardando historico suficiente'}
             </p>
           </Surface>

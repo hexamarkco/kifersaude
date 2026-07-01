@@ -119,12 +119,12 @@ export const formatDashboardMetricValue = (value: number, metric: DashboardMetri
 
 export const resolveDashboardVariationTone = (variation?: number | null) => {
   if ((variation || 0) > 0) {
-    return { color: 'var(--panel-accent-green-text,#275c39)' };
+    return { color: 'var(--success-text)' };
   }
 
   if ((variation || 0) < 0) {
-    return { color: 'var(--panel-accent-red-text,#8a3128)' };
+    return { color: 'var(--danger-text)' };
   }
 
-  return { color: 'var(--panel-text-soft,#5b4635)' };
+  return { color: 'var(--text-secondary)' };
 };

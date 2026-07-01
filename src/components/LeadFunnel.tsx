@@ -115,41 +115,33 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(18rem,0.82fr)_minmax(0,1fr)] xl:items-stretch">
-          <div className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-5">
-            <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-5">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">Funil</p>
                 <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">Volume por etapa ativa</p>
               </div>
-              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
-                {totalLeads.toLocaleString('pt-BR')} total
-              </span>
             </div>
-
-            <div className="space-y-1.5">
-              {stageSummaries.map((summary, index) => (
-                <div
-                  key={summary.stage.id}
-                  className="mx-auto flex h-12 items-center justify-between gap-3 px-5 text-sm font-semibold text-[var(--text-on-brand)] shadow-[0_14px_28px_-22px_rgba(0,0,0,0.75)] transition-all duration-500"
-                  style={{
-                    width: `${summary.funnelWidth}%`,
-                    clipPath: 'polygon(5% 0%, 95% 0%, 87% 100%, 13% 100%)',
-                    background: `linear-gradient(180deg, color-mix(in srgb, ${summary.color} 94%, white) 0%, color-mix(in srgb, ${summary.color} 72%, black) 100%)`,
-                  }}
-                  title={`${summary.stage.nome}: ${summary.count}`}
-                >
-                  <span className="font-[var(--font-sans)] tabular-nums">{index + 1}</span>
-                  <span className="font-[var(--font-sans)] tabular-nums">{summary.count.toLocaleString('pt-BR')}</span>
-                </div>
-              ))}
-            </div>
+            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+              {totalLeads.toLocaleString('pt-BR')} total
+            </span>
           </div>
 
-          <div className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-5">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">Ranking por etapa</p>
-              <span className="text-xs font-medium text-[var(--text-muted)]">participação e conversão</span>
+          <div className="grid gap-6 lg:grid-cols-[minmax(15rem,0.78fr)_minmax(0,1fr)] lg:items-center">
+            <div className="mx-auto flex w-full max-w-[34rem] flex-col items-center gap-1.5 py-2 sm:py-4">
+              {stageSummaries.map((summary) => (
+                <div
+                  key={summary.stage.id}
+                  className="h-9 rounded-[0.25rem] shadow-[0_14px_28px_-22px_rgba(0,0,0,0.75)] transition-all duration-500 sm:h-10"
+                  style={{
+                    width: `${summary.funnelWidth}%`,
+                    clipPath: 'polygon(4% 0%, 96% 0%, 88% 100%, 12% 100%)',
+                    background: `linear-gradient(180deg, color-mix(in srgb, ${summary.color} 92%, white) 0%, color-mix(in srgb, ${summary.color} 70%, black) 100%)`,
+                  }}
+                  title={`${summary.stage.nome}: ${summary.count.toLocaleString('pt-BR')}`}
+                />
+              ))}
             </div>
 
             <div className="space-y-3">

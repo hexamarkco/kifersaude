@@ -206,17 +206,17 @@
     radial-gradient(circle at 92% 12%, rgba(212, 175, 55, 0.12), transparent 34%),
     linear-gradient(135deg, rgba(33, 24, 21, 0.96) 0%, rgba(15, 12, 10, 0.98) 100%);
   --surface-selected-bg: linear-gradient(180deg, rgba(212, 175, 55, 0.14) 0%, rgba(33, 24, 21, 0.96) 100%);
-  --control-bg: linear-gradient(180deg, rgba(23, 19, 17, 0.86) 0%, rgba(15, 12, 10, 0.92) 100%);
+  --control-bg: linear-gradient(180deg, rgba(22, 21, 19, 0.92) 0%, rgba(15, 14, 13, 0.96) 100%);
   --control-readonly-bg: var(--bg-inset);
-  --control-addon-bg: rgba(245, 210, 162, 0.04);
-  --control-inset-shadow: inset 0 1px 0 rgba(255, 232, 204, 0.03);
+  --control-addon-bg: rgba(255, 255, 255, 0.025);
+  --control-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), inset 0 -16px 28px rgba(0, 0, 0, 0.1);
   --control-focus-color: var(--warning);
-  --button-primary-border: rgba(255, 164, 118, 0.22);
+  --button-primary-border: rgba(255, 128, 64, 0.48);
   --button-secondary-hover-text: var(--accent-gold-hover);
-  --button-ghost-bg: rgba(15, 12, 10, 0.4);
-  --danger-hover-soft: rgba(239, 68, 68, 0.22);
-  --badge-neutral-bg: rgba(255, 255, 255, 0.055);
-  --badge-neutral-border: rgba(255, 255, 255, 0.16);
+  --button-ghost-bg: rgba(255, 255, 255, 0.025);
+  --danger-hover-soft: rgba(239, 68, 68, 0.2);
+  --badge-neutral-bg: rgba(255, 255, 255, 0.045);
+  --badge-neutral-border: rgba(255, 255, 255, 0.2);
   --badge-accent-text: #ffb387;
   --brand-mark-gradient: linear-gradient(135deg, var(--brand-primary) 0%, #6d2b1b 52%, var(--accent-gold) 140%);
   --sidebar-active-bg: linear-gradient(90deg, rgba(197, 90, 61, 0.22) 0%, rgba(197, 90, 61, 0.08) 100%);
@@ -389,12 +389,12 @@
     radial-gradient(circle at 92% 12%, rgba(212, 175, 55, 0.14), transparent 34%),
     linear-gradient(135deg, #ffffff 0%, #fff7f0 100%);
   --surface-selected-bg: linear-gradient(180deg, #fff4da 0%, #ffffff 100%);
-  --control-bg: linear-gradient(180deg, #ffffff 0%, #fffdf9 100%);
+  --control-bg: linear-gradient(180deg, #ffffff 0%, #fffaf5 100%);
   --control-readonly-bg: #fffaf5;
   --control-addon-bg: #fff7f0;
   --control-inset-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
   --control-focus-color: var(--brand-primary);
-  --button-primary-border: rgba(230, 90, 61, 0.28);
+  --button-primary-border: rgba(230, 90, 61, 0.42);
   --button-secondary-hover-text: var(--brand-primary);
   --button-ghost-bg: #ffffff;
   --danger-hover-soft: #ffe4df;
@@ -626,8 +626,9 @@
 .kds-button {
   border-radius: var(--radius-md);
   font: var(--type-button);
-  letter-spacing: 0.005em;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
 }
 
 .kds-button:hover:not(:disabled) {
@@ -640,50 +641,51 @@
 
 .kds-button:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 0 0 1px var(--control-focus-color), 0 0 0 4px var(--focus-ring), 0 0 24px color-mix(in srgb, var(--control-focus-color) 42%, transparent);
 }
 
 .kds-button:disabled {
   border-color: var(--disabled-border);
-  background: var(--disabled-bg);
+  background: color-mix(in srgb, var(--disabled-bg) 82%, transparent);
   color: var(--disabled-text);
   box-shadow: none;
   transform: none;
+  opacity: 0.72;
 }
 
 .kds-button-primary {
   border-color: var(--button-primary-border);
-  background: var(--brand-primary-gradient);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-hover) 88%, var(--accent-copper)) 0%, color-mix(in srgb, var(--brand-primary-active) 82%, black) 100%);
   color: var(--text-on-brand);
-  box-shadow: var(--shadow-button);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.13), 0 14px 28px -20px color-mix(in srgb, var(--brand-primary) 84%, transparent);
 }
 
 .kds-button-primary:hover:not(:disabled) {
-  background: var(--brand-primary-gradient-hover);
-  box-shadow: var(--shadow-button), var(--glow-terracotta);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-hover) 96%, white) 0%, var(--brand-primary) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 18px 34px -20px color-mix(in srgb, var(--brand-primary) 90%, transparent), var(--glow-terracotta);
 }
 
 .kds-button-primary:active:not(:disabled) {
-  background: var(--brand-primary-gradient-active);
+  background: linear-gradient(180deg, var(--brand-primary-active) 0%, color-mix(in srgb, var(--brand-primary-active) 72%, black) 100%);
 }
 
 .kds-button-secondary {
   border-color: var(--brand-primary-border);
-  background: transparent;
-  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-inset) 78%, transparent);
+  color: var(--accent-gold-hover);
 }
 
 .kds-button-secondary:hover:not(:disabled) {
-  background: var(--brand-primary-muted);
+  background: color-mix(in srgb, var(--brand-primary-muted) 76%, var(--bg-inset));
   border-color: var(--brand-primary-hover);
   color: var(--button-secondary-hover-text);
 }
 
 .kds-button-gold {
   border-color: var(--accent-gold-border);
-  background: var(--accent-gold-gradient);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-gold-hover) 90%, white) 0%, color-mix(in srgb, var(--accent-gold-active) 88%, black) 100%);
   color: var(--text-on-brand);
-  box-shadow: var(--shadow-button-gold);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), var(--shadow-button-gold);
 }
 
 .kds-button-gold:hover:not(:disabled) {
@@ -699,18 +701,20 @@
 .kds-button-text {
   border-color: transparent;
   background: transparent;
-  color: var(--brand-primary-hover);
+  color: var(--accent-gold-hover);
 }
 
 .kds-button-tertiary:hover:not(:disabled),
 .kds-button-text:hover:not(:disabled) {
-  background: var(--brand-primary-muted);
+  background: color-mix(in srgb, var(--brand-primary-muted) 64%, transparent);
   color: var(--accent-gold-hover);
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
 }
 
 .kds-button-ghost,
 .kds-button-icon {
-  border-color: var(--border-default);
+  border-color: var(--border-strong);
   background: var(--button-ghost-bg);
   color: var(--text-secondary);
 }
@@ -725,26 +729,26 @@
 .kds-button-soft,
 .kds-button-warning {
   border-color: var(--warning-border);
-  background: var(--warning-soft);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--warning-soft) 72%, transparent) 0%, color-mix(in srgb, var(--bg-inset) 82%, var(--warning-soft)) 100%);
   color: var(--warning-text);
 }
 
 .kds-button-info {
   border-color: var(--info-border);
-  background: var(--info-soft);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--info-soft) 72%, transparent) 0%, color-mix(in srgb, var(--bg-inset) 82%, var(--info-soft)) 100%);
   color: var(--info-text);
 }
 
 .kds-button-success {
   border-color: var(--success-border);
-  background: var(--success-soft);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--success-soft) 72%, transparent) 0%, color-mix(in srgb, var(--bg-inset) 82%, var(--success-soft)) 100%);
   color: var(--success-text);
 }
 
 .kds-button-destructive,
 .kds-button-danger {
   border-color: var(--danger-border);
-  background: var(--danger-soft);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger-soft) 72%, transparent) 0%, color-mix(in srgb, var(--bg-inset) 82%, var(--danger-soft)) 100%);
   color: var(--danger-text);
 }
 
@@ -760,6 +764,7 @@
   border: 1px solid var(--brand-primary-border);
   border-radius: var(--radius-lg);
   background: var(--bg-inset);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .kds-button-group .kds-button {
@@ -782,10 +787,10 @@
 .kds-textarea {
   width: 100%;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--control-bg);
   color: var(--text-primary);
-  font: var(--type-body);
+  font: 500 0.875rem / 1.4 var(--font-sans);
   box-shadow: var(--control-inset-shadow);
   transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, color 160ms ease;
 }
@@ -799,14 +804,15 @@
 .kds-input:hover:not(:disabled):not([readonly]),
 .kds-select:hover:not(:disabled),
 .kds-textarea:hover:not(:disabled):not([readonly]) {
-  border-color: var(--brand-primary-border);
+  border-color: color-mix(in srgb, var(--control-focus-color) 58%, var(--border-strong));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--control-focus-color) 18%, transparent), var(--control-inset-shadow);
 }
 
 .kds-input:focus,
 .kds-select:focus,
 .kds-textarea:focus {
   border-color: var(--control-focus-color);
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 0 0 1px var(--control-focus-color), 0 0 0 4px var(--focus-ring), 0 16px 40px -30px color-mix(in srgb, var(--control-focus-color) 80%, transparent), var(--control-inset-shadow);
   outline: none;
 }
 
@@ -814,9 +820,10 @@
 .kds-select:disabled,
 .kds-textarea:disabled {
   border-color: var(--disabled-border);
-  background: var(--disabled-bg);
+  background: color-mix(in srgb, var(--disabled-bg) 82%, transparent);
   color: var(--disabled-text);
   cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .kds-select-trigger {
@@ -865,15 +872,17 @@
 .kds-input-invalid {
   border-color: var(--danger);
   color: var(--text-primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger) 35%, transparent), var(--control-inset-shadow);
 }
 
 .kds-input-error:focus,
 .kds-input-invalid:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22), 0 0 22px rgba(239, 68, 68, 0.16);
+  box-shadow: 0 0 0 1px var(--danger), 0 0 0 4px rgba(239, 68, 68, 0.2), 0 0 26px rgba(239, 68, 68, 0.18), var(--control-inset-shadow);
 }
 
 .kds-input-success {
   border-color: var(--success-border);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--success-border) 45%, transparent), var(--control-inset-shadow);
 }
 
 .kds-input-icon,
@@ -903,9 +912,10 @@
   height: 100%;
   align-items: center;
   border-color: var(--border-strong);
+  border-radius: var(--radius-lg);
   background: var(--control-addon-bg);
   color: var(--text-secondary);
-  font: var(--type-body);
+  font: 600 0.8125rem / 1.4 var(--font-sans);
 }
 
 .kds-input-group {
@@ -1034,12 +1044,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.375rem;
+  gap: 0.4rem;
   border: 1px solid var(--badge-border, var(--border-default));
   border-radius: var(--radius-full);
-  background: var(--badge-bg, var(--bg-elevated));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--badge-bg, var(--bg-elevated)) 88%, white) 0%, var(--badge-bg, var(--bg-elevated)) 100%);
   color: var(--badge-text, var(--text-secondary));
   font: var(--type-badge);
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px color-mix(in srgb, var(--badge-border, var(--border-default)) 22%, transparent), 0 12px 24px -22px var(--badge-glow, transparent);
   white-space: nowrap;
 }
 
@@ -1057,6 +1071,7 @@
   --badge-bg: var(--badge-neutral-bg);
   --badge-border: var(--badge-neutral-border);
   --badge-text: var(--text-secondary);
+  --badge-glow: var(--badge-neutral-border);
 }
 
 .kds-badge-accent,
@@ -1071,6 +1086,7 @@
   --badge-bg: var(--brand-primary-soft);
   --badge-border: var(--brand-primary-border);
   --badge-text: var(--badge-accent-text);
+  --badge-glow: var(--brand-primary);
 }
 
 .kds-badge-gold,
@@ -1090,6 +1106,7 @@
   --badge-bg: var(--accent-gold-soft);
   --badge-border: var(--accent-gold-border);
   --badge-text: var(--accent-gold-hover);
+  --badge-glow: var(--accent-gold);
 }
 
 .kds-badge-info,
@@ -1114,6 +1131,7 @@
   --badge-bg: var(--info-soft);
   --badge-border: var(--info-border);
   --badge-text: var(--info-text);
+  --badge-glow: var(--info);
 }
 
 .kds-badge-success,
@@ -1129,6 +1147,7 @@
   --badge-bg: var(--success-soft);
   --badge-border: var(--success-border);
   --badge-text: var(--success-text);
+  --badge-glow: var(--success);
 }
 
 .kds-badge-warning,
@@ -1143,6 +1162,7 @@
   --badge-bg: var(--warning-soft);
   --badge-border: var(--warning-border);
   --badge-text: var(--warning-text);
+  --badge-glow: var(--warning);
 }
 
 .kds-badge-danger,
@@ -1158,6 +1178,7 @@
   --badge-bg: var(--danger-soft);
   --badge-border: var(--danger-border);
   --badge-text: var(--danger-text);
+  --badge-glow: var(--danger);
 }
 
 .kds-badge-purple,
@@ -1170,6 +1191,7 @@
   --badge-bg: var(--purple-soft);
   --badge-border: var(--purple-border);
   --badge-text: var(--purple-text);
+  --badge-glow: var(--purple);
 }
 
 .kds-badge-cyan,
@@ -1182,6 +1204,7 @@
   --badge-bg: var(--cyan-soft);
   --badge-border: var(--cyan-border);
   --badge-text: var(--cyan-text);
+  --badge-glow: var(--cyan);
 }
 
 .kds-alert {

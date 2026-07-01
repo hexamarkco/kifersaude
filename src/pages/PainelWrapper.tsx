@@ -5,7 +5,8 @@ import { Lead, Reminder } from '../lib/supabase';
 import Layout from '../components/Layout';
 import NotificationToast from '../components/NotificationToast';
 import LeadNotificationToast from '../components/LeadNotificationToast';
-import { notificationService } from '../lib/notificationService';
+import WhatsAppInboxNotificationToast from '../components/WhatsAppInboxNotificationToast';
+import { notificationService, type InboxMessageNotification } from '../lib/notificationService';
 import { audioService } from '../lib/audioService';
 import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
@@ -49,6 +50,7 @@ export default function PainelWrapper() {
   const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
   const [activeNotifications, setActiveNotifications] = useState<Reminder[]>([]);
   const [activeLeadNotifications, setActiveLeadNotifications] = useState<Lead[]>([]);
+  const [activeInboxNotifications, setActiveInboxNotifications] = useState<InboxMessageNotification[]>([]);
   const [hasActiveNotification, setHasActiveNotification] = useState(false);
   const [newLeadsCount, setNewLeadsCount] = useState(0);
   const [leadStatusFilter, setLeadStatusFilter] = useState<string[] | undefined>();
@@ -110,9 +112,15 @@ export default function PainelWrapper() {
       audioService.playNotificationSound();
     });
 
+    const unsubscribeInboxMessages = notificationService.subscribeToInboxMessages((notification) => {
+      setActiveInboxNotifications((prev) => [...prev, notification]);
+      audioService.playNotificationSound();
+    });
+
     return () => {
       notificationService.stop();
       unsubscribe();
+      unsubscribeInboxMessages();
       unsubscribeUnreadCount();
       unsubscribeInboxUnreadCount();
     };
@@ -201,9 +209,18 @@ export default function PainelWrapper() {
     setActiveLeadNotifications((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleCloseInboxNotification = (index: number) => {
+    setActiveInboxNotifications((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleViewLead = () => {
     handleTabChange('leads');
     setActiveLeadNotifications([]);
+  };
+
+  const handleViewInboxChat = (notification: InboxMessageNotification) => {
+    setActiveInboxNotifications([]);
+    navigate(`/painel/inbox?chatId=${encodeURIComponent(notification.chatId)}`);
   };
 
   if (configLoading) {
@@ -255,6 +272,15 @@ export default function PainelWrapper() {
           lead={lead}
           onClose={() => handleCloseLeadNotification(index)}
           onViewLead={handleViewLead}
+        />
+      ))}
+
+      {activeInboxNotifications.map((notification, index) => (
+        <WhatsAppInboxNotificationToast
+          key={`${notification.chatId}-${notification.messageAt ?? index}-${index}`}
+          notification={notification}
+          onClose={() => handleCloseInboxNotification(index)}
+          onViewChat={() => handleViewInboxChat(notification)}
         />
       ))}
     </>

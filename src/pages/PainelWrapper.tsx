@@ -119,11 +119,13 @@ export default function PainelWrapper() {
     const unsubscribeInboxMessages = notificationService.subscribeToInboxMessages((notification) => {
       setActiveInboxNotifications((prev) => [...prev, notification]);
       audioService.playNotificationSound();
-      browserNotificationService.show({
-        title: `WhatsApp: ${notification.displayName}`,
-        body: notification.messagePreview,
-        onClick: () => navigate(`/painel/inbox?chatId=${encodeURIComponent(notification.chatId)}`),
-      });
+      if (document.visibilityState === 'hidden') {
+        browserNotificationService.show({
+          title: `WhatsApp: ${notification.displayName}`,
+          body: notification.messagePreview,
+          onClick: () => navigate(`/painel/inbox?chatId=${encodeURIComponent(notification.chatId)}`),
+        });
+      }
     });
 
     return () => {

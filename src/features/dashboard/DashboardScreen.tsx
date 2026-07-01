@@ -16,7 +16,7 @@ import ContractDetails from "../../components/ContractDetails";
 import LeadDetails from "../../components/LeadDetails";
 import LeadForm from "../../components/LeadForm";
 import { toast } from "../../lib/toast";
-import { ActionSurface, Button, Surface } from "../../design-system";
+import { ActionSurface, Badge, Button, Surface } from "../../design-system";
 import {
   calculateConversionRate,
   getLeadStatusDistribution,
@@ -2286,76 +2286,35 @@ export default function DashboardScreen({
             <Surface data-panel-animate>
               <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                 <div>
-                  <div
-                    className="flex items-center gap-2"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    <Calendar
-                      className="h-5 w-5 flex-shrink-0"
-                      style={{ color: "var(--brand-primary)" }}
-                    />
-                    <h3
-                      className="text-xl font-semibold"
-                      style={{ color: "var(--text-primary)" }}
-                    >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 flex-shrink-0 text-[var(--brand-primary)]" />
+                    <h3 className="text-xl font-semibold text-[var(--text-primary)]">
                       Calendário de eventos
                     </h3>
                   </div>
-                  <p
-                    className="mt-1 text-xs"
-                    style={{ color: "var(--text-muted)" }}
-                  >
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
                     Reajustes e aniversários agrupados pelo período selecionado.
                   </p>
                 </div>
-                <div
-                  className="flex flex-wrap items-center gap-3 text-xs"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  <span
-                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold"
-                    style={{
-                      ...DASHBOARD_PILL_STYLE,
-                      color: "var(--text-secondary)",
-                    }}
-                  >
-                    <span style={{ color: "var(--text-primary)" }}>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
+                  <Badge tone="neutral">
+                    <span className="text-[var(--text-primary)]">
                       {calendarMonthEventCount}
-                    </span>
-                    <span>eventos no mês</span>
-                  </span>
-                  <span
-                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold"
-                    style={{
-                      borderColor: CALENDAR_LEGEND_STYLES.adjustment.border,
-                      background: CALENDAR_LEGEND_STYLES.adjustment.background,
-                      color: CALENDAR_LEGEND_STYLES.adjustment.text,
-                    }}
+                    </span>{" "}
+                    eventos no mês
+                  </Badge>
+                  <Badge
+                    tone="accent"
+                    icon={<span className="h-2 w-2 rounded-full" style={{ background: CALENDAR_LEGEND_STYLES.adjustment.dot }} />}
                   >
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{
-                        background: CALENDAR_LEGEND_STYLES.adjustment.dot,
-                      }}
-                    />{" "}
                     Reajustes
-                  </span>
-                  <span
-                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-semibold"
-                    style={{
-                      borderColor: CALENDAR_LEGEND_STYLES.birthday.border,
-                      background: CALENDAR_LEGEND_STYLES.birthday.background,
-                      color: CALENDAR_LEGEND_STYLES.birthday.text,
-                    }}
+                  </Badge>
+                  <Badge
+                    tone="neutral"
+                    icon={<span className="h-2 w-2 rounded-full" style={{ background: CALENDAR_LEGEND_STYLES.birthday.dot }} />}
                   >
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{
-                        background: CALENDAR_LEGEND_STYLES.birthday.dot,
-                      }}
-                    />{" "}
                     Aniversarios
-                  </span>
+                  </Badge>
                 </div>
               </div>
 
@@ -2381,8 +2340,7 @@ export default function DashboardScreen({
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <h4
-                      className="text-sm font-semibold capitalize"
-                      style={{ color: "var(--text-primary)" }}
+                      className="text-sm font-semibold capitalize text-[var(--text-primary)]"
                     >
                       {calendarMonthLabel}
                     </h4>
@@ -2406,8 +2364,7 @@ export default function DashboardScreen({
                     </Button>
                   </div>
                   <div
-                    className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs"
-                    style={{ color: "var(--text-muted)" }}
+                    className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]"
                   >
                     <span>
                       Navegue os meses para consultar reajustes e aniversários.
@@ -2467,8 +2424,7 @@ export default function DashboardScreen({
                     {calendarDays.weekDays.map((day) => (
                       <div
                         key={day}
-                        className="py-1 text-center text-xs font-semibold uppercase tracking-[0.12em]"
-                        style={{ color: "var(--text-muted)" }}
+                        className="py-1 text-center text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]"
                       >
                         {day}
                       </div>
@@ -2481,22 +2437,15 @@ export default function DashboardScreen({
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <div
-                        className="text-[11px] font-semibold uppercase tracking-[0.16em]"
-                        style={{ color: "var(--text-muted)" }}
+                        className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]"
                       >
                         Período selecionado
                       </div>
-                      <h4
-                        className="mt-1 text-sm font-semibold"
-                        style={{ color: "var(--text-primary)" }}
-                      >
+                      <h4 className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                         {calendarViewLabel}
                       </h4>
                     </div>
-                    <span
-                      className="text-xs"
-                      style={{ color: "var(--text-muted)" }}
-                    >
+                    <span className="text-xs text-[var(--text-muted)]">
                       {calendarViewEvents.length} evento
                       {calendarViewEvents.length === 1 ? "" : "s"}
                     </span>
@@ -2554,43 +2503,21 @@ export default function DashboardScreen({
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="space-y-1">
-                                  <div
-                                    className="text-xs font-semibold uppercase tracking-[0.16em]"
-                                    style={{
-                                      color: "var(--accent-gold-hover)",
-                                    }}
-                                  >
+                                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent-gold-hover)]">
                                     Reajuste
                                   </div>
                                   {adjustment.tipo === "idade" ? (
                                     <div>
-                                      <p
-                                        className="text-sm font-semibold"
-                                        style={{
-                                          color: "var(--text-primary)",
-                                        }}
-                                      >
+                                      <p className="text-sm font-semibold text-[var(--text-primary)]">
                                         {adjustment.personName}
                                         {adjustment.age &&
                                           ` • ${adjustment.age} anos`}
                                       </p>
-                                      <p
-                                        className="text-xs"
-                                        style={{
-                                          color:
-                                            "var(--text-muted)",
-                                        }}
-                                      >
+                                      <p className="text-xs text-[var(--text-muted)]">
                                         {adjustment.role}
                                       </p>
                                       {currentAgeBand && previousAgeBand && (
-                                        <p
-                                          className="text-xs"
-                                          style={{
-                                            color:
-                                              "var(--text-muted)",
-                                          }}
-                                        >
+                                        <p className="text-xs text-[var(--text-muted)]">
                                           Faixa:{" "}
                                           {formatBandLabel(previousAgeBand)}{" "}
                                           {"->"}{" "}
@@ -2599,23 +2526,12 @@ export default function DashboardScreen({
                                       )}
                                     </div>
                                   ) : (
-                                    <p
-                                      className="text-sm font-semibold"
-                                      style={{
-                                        color: "var(--text-primary)",
-                                      }}
-                                    >
+                                    <p className="text-sm font-semibold text-[var(--text-primary)]">
                                       Reajuste contratual
                                     </p>
                                   )}
                                   {(adjustment.contract || holderName) && (
-                                    <div
-                                      className="text-xs"
-                                      style={{
-                                        color:
-                                          "var(--text-muted)",
-                                      }}
-                                    >
+                                    <div className="text-xs text-[var(--text-muted)]">
                                       {holderName && (
                                         <p>Titular: {holderName}</p>
                                       )}
@@ -2634,30 +2550,14 @@ export default function DashboardScreen({
                                     </div>
                                   )}
                                 </div>
-                                <div
-                                  className="text-right text-xs"
-                                  style={{
-                                    color: "var(--text-muted)",
-                                  }}
-                                >
-                                  <p
-                                    className="font-semibold"
-                                    style={{
-                                      color: "var(--text-primary)",
-                                    }}
-                                  >
+                                <div className="text-right text-xs text-[var(--text-muted)]">
+                                  <p className="font-semibold text-[var(--text-primary)]">
                                     {adjustment.contract?.codigo_contrato}
                                   </p>
                                   <p>{adjustment.contract?.operadora}</p>
                                 </div>
                               </div>
-                              <div
-                                className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3"
-                                style={{
-                                  borderColor:
-                                    "var(--border-subtle)",
-                                }}
-                              >
+                              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
                                 <Button
                                   type="button"
                                   onClick={() =>
@@ -2725,35 +2625,17 @@ export default function DashboardScreen({
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <div
-                                  className="text-xs font-semibold uppercase tracking-[0.16em]"
-                                  style={{
-                                    color: "var(--text-secondary)",
-                                  }}
-                                >
+                                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
                                   Aniversário
                                 </div>
-                                <p
-                                  className="mt-1 text-sm font-semibold"
-                                  style={{ color: "var(--text-primary)" }}
-                                >
+                                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">
                                   {birthday.nome}
                                 </p>
-                                <p
-                                  className="mt-0.5 text-xs"
-                                  style={{
-                                    color: "var(--text-muted)",
-                                  }}
-                                >
+                                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
                                   {birthday.tipo}
                                   {birthday.tipo === "Dependente" &&
                                     birthday.holder && (
-                                      <span
-                                        style={{
-                                          color:
-                                            "var(--text-muted)",
-                                        }}
-                                      >
+                                      <span className="text-[var(--text-muted)]">
                                         {" "}
                                         • Titular:{" "}
                                         {birthday.holder.nome_completo}
@@ -2764,28 +2646,14 @@ export default function DashboardScreen({
                                   birthday.holder &&
                                   (birthday.holder.razao_social ||
                                     birthday.holder.nome_fantasia) && (
-                                    <p
-                                      className="mt-1 text-xs font-medium"
-                                      style={{
-                                        color:
-                                          "var(--brand-primary)",
-                                      }}
-                                    >
+                                    <p className="mt-1 text-xs font-medium text-[var(--brand-primary)]">
                                       {birthday.holder.razao_social ||
                                         birthday.holder.nome_fantasia}
                                     </p>
                                   )}
                               </div>
-                              <div
-                                className="text-right text-xs"
-                                style={{
-                                  color: "var(--text-muted)",
-                                }}
-                              >
-                                <p
-                                  className="font-semibold"
-                                  style={{ color: "var(--text-primary)" }}
-                                >
+                              <div className="text-right text-xs text-[var(--text-muted)]">
+                                <p className="font-semibold text-[var(--text-primary)]">
                                   {birthday.nextBirthday.toLocaleDateString(
                                     "pt-BR",
                                   )}
@@ -2793,28 +2661,12 @@ export default function DashboardScreen({
                               </div>
                             </div>
                             {birthday.contract && (
-                              <div
-                                className="mt-2 border-t pt-2"
-                                style={{
-                                  borderColor:
-                                    "var(--border-subtle)",
-                                }}
-                              >
-                                <p
-                                  className="text-xs"
-                                  style={{
-                                    color: "var(--text-muted)",
-                                  }}
-                                >
+                              <div className="mt-2 border-t border-[var(--border-subtle)] pt-2">
+                                <p className="text-xs text-[var(--text-muted)]">
                                   <span className="font-medium">Contrato:</span>{" "}
                                   {birthday.contract.codigo_contrato}
                                 </p>
-                                <p
-                                  className="text-xs"
-                                  style={{
-                                    color: "var(--text-muted)",
-                                  }}
-                                >
+                                <p className="text-xs text-[var(--text-muted)]">
                                   <span className="font-medium">
                                     Operadora:
                                   </span>{" "}

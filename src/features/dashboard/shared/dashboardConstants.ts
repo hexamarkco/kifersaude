@@ -1,14 +1,7 @@
 import type { CSSProperties } from 'react';
 
 import type { TabItem } from '../../../components/ui/Tabs';
-import {
-  PANEL_EMPTY_STATE_STYLE,
-  PANEL_HERO_STYLE,
-  PANEL_INSET_STYLE,
-  PANEL_MUTED_INSET_STYLE,
-  PANEL_PILL_STYLE,
-  PANEL_SECTION_STYLE,
-} from '../../../components/ui/panelStyles';
+import { PANEL_PILL_STYLE } from '../../../components/ui/panelStyles';
 import type { DashboardChartDatum, DashboardMetric } from './dashboardTypes';
 
 export const DASHBOARD_METRIC_TABS: TabItem<DashboardMetric>[] = [
@@ -28,15 +21,7 @@ export const DASHBOARD_CHART_RANGE_OPTIONS = [
   { value: '12', label: 'Ultimos 12 meses' },
 ] as const;
 
-export const DASHBOARD_SECTION_STYLE: CSSProperties = PANEL_SECTION_STYLE;
-
-export const DASHBOARD_INSET_STYLE: CSSProperties = PANEL_INSET_STYLE;
-
-export const DASHBOARD_MUTED_INSET_STYLE: CSSProperties = PANEL_MUTED_INSET_STYLE;
-
 export const DASHBOARD_PILL_STYLE: CSSProperties = PANEL_PILL_STYLE;
-
-export const DASHBOARD_HERO_STYLE: CSSProperties = PANEL_HERO_STYLE;
 
 export const CALENDAR_LEGEND_STYLES = {
   adjustment: {
@@ -60,8 +45,6 @@ export const DASHBOARD_METRIC_COLORS: Record<DashboardMetric, string> = {
 };
 
 export const DASHBOARD_OPERADORA_COLORS = ['#cf7b32', '#9d7f5a', '#d5a25c', '#7a5a44', '#b85c1f'] as const;
-
-export const DASHBOARD_EMPTY_DONUT_STATE_STYLE: CSSProperties = PANEL_EMPTY_STATE_STYLE;
 
 export const mapOperadoraChartData = (
   items: Array<{ operadora: string; count: number }>,

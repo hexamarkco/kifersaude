@@ -1,8 +1,5 @@
 import DonutChart from '../../../components/charts/DonutChart';
 import { Surface } from '../../../design-system';
-import {
-  DASHBOARD_EMPTY_DONUT_STATE_STYLE,
-} from '../shared/dashboardConstants';
 import type { DashboardChartDatum, DashboardStatusDistributionItem } from '../shared/dashboardTypes';
 
 type DashboardDistributionSectionProps = {
@@ -34,12 +31,9 @@ export function DashboardDistributionSection({
             onSegmentClick={onLeadStatusSegmentClick}
           />
         ) : (
-          <div
-            className="flex h-64 items-center justify-center rounded-[1.6rem] border border-dashed text-sm"
-            style={DASHBOARD_EMPTY_DONUT_STATE_STYLE}
-          >
+          <Surface variant="muted" className="flex h-64 items-center justify-center border-dashed text-sm">
             Nenhum lead ativo
-          </div>
+          </Surface>
         )}
       </Surface>
 
@@ -55,12 +49,9 @@ export function DashboardDistributionSection({
             onSegmentClick={onOperadoraSegmentClick}
           />
         ) : (
-          <div
-            className="flex h-64 items-center justify-center rounded-[1.6rem] border border-dashed text-sm"
-            style={DASHBOARD_EMPTY_DONUT_STATE_STYLE}
-          >
+          <Surface variant="muted" className="flex h-64 items-center justify-center border-dashed text-sm">
             Nenhum contrato ativo
-          </div>
+          </Surface>
         )}
       </Surface>
     </div>

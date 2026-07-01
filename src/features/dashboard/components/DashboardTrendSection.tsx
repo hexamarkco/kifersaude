@@ -100,9 +100,9 @@ export function DashboardTrendSection({
 
       <div className="mt-4 space-y-6">
         <div className="grid gap-3 md:grid-cols-3">
-          <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
+          <Surface variant="muted" padding="sm">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)]">
+              <div className="flex items-center gap-2 text-sm font-semibold">
                 <TrendingUp className="h-4 w-4 text-[var(--brand-primary)]" />
                 <span>Ultimo mes</span>
               </div>
@@ -122,8 +122,8 @@ export function DashboardTrendSection({
             </p>
           </Surface>
 
-          <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)]">
+          <Surface variant="muted" padding="sm">
+            <div className="flex items-center gap-2 text-sm font-semibold">
               <BadgePercent className="h-4 w-4 text-[var(--border-strong)]" />
               <span>Media do periodo</span>
             </div>
@@ -135,8 +135,8 @@ export function DashboardTrendSection({
             </p>
           </Surface>
 
-          <Surface variant="muted" padding="sm" className="rounded-[1.6rem]">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-secondary)]">
+          <Surface variant="muted" padding="sm">
+            <div className="flex items-center gap-2 text-sm font-semibold">
               <Calendar className="h-4 w-4 text-[var(--border-strong)]" />
               <span>Pico do periodo</span>
             </div>

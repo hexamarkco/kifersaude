@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
@@ -119,7 +119,11 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   }, [toast.id, toast.duration, onDismiss]);
 
   return (
-    <div className={cx('kds-toast', variantClasses[toast.variant])} role="alert">
+    <div
+      className={cx('kds-toast', variantClasses[toast.variant])}
+      role="alert"
+      style={{ '--toast-duration': `${toast.duration}ms` } as CSSProperties}
+    >
       <Icon className="kds-toast-icon" aria-hidden="true" />
       <div className="kds-toast-content">
         {toast.title && <p className="kds-toast-title">{toast.title}</p>}
@@ -133,6 +137,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
       >
         <X className="h-4 w-4" />
       </button>
+      {toast.duration > 0 && <span className="kds-toast-progress" aria-hidden="true" />}
     </div>
   );
 }

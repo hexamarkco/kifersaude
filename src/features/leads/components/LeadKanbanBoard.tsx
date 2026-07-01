@@ -295,7 +295,7 @@ export default function LeadKanbanBoard({
   }
 
   return (
-    <Surface className="p-5 sm:p-6">
+    <Surface className="kds-kanban-board p-5 sm:p-6">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p
@@ -336,7 +336,7 @@ export default function LeadKanbanBoard({
       </div>
 
       <Surface variant="muted" padding="sm" className="p-3 sm:p-4">
-        <div className="overflow-x-auto pb-4 snap-x snap-mandatory">
+        <div className="kds-kanban-scroll overflow-x-auto pb-4 snap-x snap-mandatory">
           <div className="flex min-w-max gap-4">
             {statusColumns.map((column) => {
               const columnLeads = leadsByStatusName.get(column.nome) ?? [];
@@ -349,7 +349,7 @@ export default function LeadKanbanBoard({
                   key={column.id}
                   variant={isOverLimit ? "danger" : "muted"}
                   padding="sm"
-                  className="w-80 flex-shrink-0 snap-start rounded-[1.6rem] border p-4"
+                  className="kds-kanban-column w-80 flex-shrink-0 snap-start rounded-[1.6rem] border p-4"
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={() => void handleDrop(column.id)}
                 >
@@ -425,7 +425,7 @@ export default function LeadKanbanBoard({
                             draggable
                             onDragStart={() => setDraggedLead(lead)}
                             onClick={() => onLeadClick?.(lead)}
-                            className="kds-surface kds-surface-default kds-action-surface cursor-move rounded-[1.35rem] p-4 transition-all"
+                            className="kds-kanban-card kds-surface kds-surface-default kds-action-surface cursor-move rounded-[1.35rem] p-4 transition-all"
                           >
                             <div className="mb-3">
                               <h5

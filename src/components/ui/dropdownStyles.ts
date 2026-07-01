@@ -50,9 +50,9 @@ export const getDropdownTriggerClass = ({
   className,
 }: TriggerOptions) =>
   cx(
-    'kds-select kds-select-trigger panel-ui-input relative w-full border text-left shadow-none',
+    'kds-select kds-select-trigger kds-filter-trigger panel-ui-input relative w-full border text-left shadow-none',
     'focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
-    compact ? 'h-8 pl-7 pr-7 text-xs' : 'h-11 pl-10 pr-10 text-sm',
+    compact ? 'h-9 pl-8 pr-8 text-xs' : 'h-12 pl-10 pr-10 text-sm',
     className,
   );
 
@@ -61,7 +61,7 @@ export const getDropdownMenuClass = ({
   className,
 }: MenuOptions) =>
   cx(
-    'kds-dropdown-menu panel-dropdown-scrollbar z-[160] overflow-y-auto border p-1 shadow-xl',
+    'kds-dropdown-menu panel-dropdown-scrollbar z-[160] overflow-y-auto border p-1.5 shadow-xl',
     position,
     className,
   );
@@ -74,7 +74,7 @@ export const getDropdownOptionClass = ({
 }: OptionOptions) =>
   cx(
     'kds-dropdown-option flex w-full items-center justify-between text-left transition-colors',
-    compact ? 'px-2.5 py-1 text-xs' : 'px-3 py-2 text-sm',
+    compact ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2.5 text-sm',
     selected && 'is-selected font-medium',
     highlighted && 'is-highlighted',
     className,

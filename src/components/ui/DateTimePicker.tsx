@@ -61,7 +61,7 @@ export default function DateTimePicker({
   };
 
   return (
-    <div className={cx('relative', className)}>
+    <div className={cx('kds-date-picker relative', className)}>
       <span className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[var(--panel-text-subtle,#ab927b)]">
         {type === 'datetime-local' ? (
           <Clock className="h-[18px] w-[18px]" />
@@ -87,7 +87,7 @@ export default function DateTimePicker({
           panelInputBaseClass,
           panelInputSizeClasses.default,
           panelInputStateClasses.valid,
-          'panel-interactive-glass pl-10 pr-11',
+          'kds-date-picker-input panel-interactive-glass pl-10 pr-11',
           triggerClassName,
         )}
       />
@@ -97,7 +97,7 @@ export default function DateTimePicker({
         disabled={disabled}
         onMouseDown={(event) => event.preventDefault()}
         onClick={openNativePicker}
-        className="absolute bottom-0.5 right-0.5 top-0.5 inline-flex w-10 items-center justify-center rounded-r-[calc(0.75rem-2px)] rounded-l-none border-l border-[var(--panel-border-subtle,#e4d5c0)] bg-transparent text-[var(--panel-text-subtle,#ab927b)] transition hover:bg-[color:var(--panel-surface-soft,#efe6d8)] hover:text-[var(--panel-text,#1c1917)] focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60"
+        className="kds-date-picker-button absolute bottom-0.5 right-0.5 top-0.5 inline-flex w-10 items-center justify-center rounded-r-[calc(0.75rem-2px)] rounded-l-none border-l border-[var(--panel-border-subtle,#e4d5c0)] bg-transparent text-[var(--panel-text-subtle,#ab927b)] transition hover:bg-[color:var(--panel-surface-soft,#efe6d8)] hover:text-[var(--panel-text,#1c1917)] focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] disabled:cursor-not-allowed disabled:opacity-60"
         aria-label="Abrir seletor nativo de data"
       >
         <ChevronDown className="h-4 w-4" />

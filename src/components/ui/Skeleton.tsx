@@ -6,7 +6,7 @@ type SkeletonProps = HTMLAttributes<HTMLDivElement> & {
   variant?: SkeletonVariant;
 };
 
-const baseStyles = 'panel-skeleton relative overflow-hidden';
+const baseStyles = 'kds-skeleton panel-skeleton relative overflow-hidden';
 const variantStyles: Record<SkeletonVariant, string> = {
   block: 'rounded-2xl',
   line: 'rounded-full',

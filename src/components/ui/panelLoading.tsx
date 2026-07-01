@@ -33,11 +33,12 @@ type PanelAdaptiveLoadingFrameProps = {
 };
 
 function Spinner({ label, className }: { label?: string; className?: string }) {
-  void label;
-
   return (
-    <div className={cx('flex min-h-[48vh] items-center justify-center px-4', className)}>
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-amber-600" />
+    <div className={cx('kds-loading flex min-h-[48vh] items-center justify-center px-4', className)}>
+      <div className="kds-loading-card">
+        <div className="kds-loading-spinner" />
+        {label && <p className="kds-loading-label">{label}</p>}
+      </div>
     </div>
   );
 }

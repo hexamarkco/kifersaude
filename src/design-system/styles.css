@@ -2,9 +2,9 @@
 .modal-theme-host.painel-theme.kifer-ds {
   color-scheme: dark;
 
-  --font-display: 'Cormorant Garamond', serif;
-  --font-sans: 'Montserrat', sans-serif;
-  --font-mono: 'Montserrat', sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'Inter', sans-serif;
 
   --bg-canvas: #0f0c0a;
   --bg-canvas-subtle: #120e0b;
@@ -832,29 +832,33 @@
 }
 
 .kds-dropdown-menu {
-  border-color: var(--border-strong);
+  border-color: color-mix(in srgb, var(--brand-primary-border) 58%, var(--border-strong));
   border-radius: var(--radius-lg);
-  background: var(--surface-strong-bg);
+  background:
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--brand-primary) 12%, transparent), transparent 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 96%, transparent) 0%, color-mix(in srgb, var(--bg-canvas) 96%, transparent) 100%);
   color: var(--text-secondary);
-  box-shadow: var(--shadow-popover);
+  box-shadow: var(--shadow-popover), 0 0 32px -26px var(--brand-primary);
 }
 
 .kds-dropdown-option {
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .kds-dropdown-option:hover,
 .kds-dropdown-option.is-highlighted {
-  background: var(--bg-hover);
+  border-color: var(--brand-primary-border);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--brand-primary) 22%, transparent), color-mix(in srgb, var(--brand-primary-muted) 58%, transparent));
   color: var(--text-primary);
 }
 
 .kds-dropdown-option.is-selected {
   border-color: var(--brand-primary-border);
-  background: var(--brand-primary-soft);
-  color: var(--accent-gold-hover);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--brand-primary) 54%, var(--bg-inset)), color-mix(in srgb, var(--brand-primary-active) 48%, var(--bg-canvas)));
+  color: var(--text-on-brand);
 }
 
 .kds-input[readonly],
@@ -991,39 +995,47 @@
 }
 
 .kds-tabs-list-underline {
-  gap: 0;
+  gap: var(--space-1);
   border-bottom: 1px solid var(--border-default);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-inset) 82%, transparent), transparent);
 }
 
 .kds-tabs-list-pill,
 .kds-tabs-list-panel {
   gap: var(--space-1);
-  border: 1px solid var(--border-default);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
-  background: var(--bg-inset);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-inset) 92%, transparent) 0%, color-mix(in srgb, var(--bg-canvas) 88%, transparent) 100%);
   padding: var(--space-1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 16px 36px -32px rgba(0, 0, 0, 0.8);
 }
 
 .kds-tab {
   color: var(--text-muted);
   font: var(--type-button);
+  min-height: 2.25rem;
+  border: 1px solid transparent;
+  letter-spacing: 0.01em;
 }
 
 .kds-tab:hover:not(:disabled) {
-  color: var(--text-primary);
-  background: var(--brand-primary-muted);
+  color: var(--accent-gold-hover);
+  border-color: var(--brand-primary-border);
+  background: color-mix(in srgb, var(--brand-primary-muted) 62%, transparent);
 }
 
 .kds-tab-active {
-  color: var(--accent-gold-hover);
-  background: var(--brand-primary-soft);
-  box-shadow: inset 0 0 0 1px var(--brand-primary-border);
+  color: var(--text-on-brand);
+  border-color: var(--button-primary-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-hover) 88%, var(--accent-copper)) 0%, color-mix(in srgb, var(--brand-primary-active) 82%, black) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 14px 28px -22px color-mix(in srgb, var(--brand-primary) 90%, transparent);
 }
 
 .kds-tab-underline.kds-tab-active {
   border-bottom-color: var(--brand-primary-hover);
   border-radius: 0;
   background: transparent;
+  color: var(--accent-gold-hover);
   box-shadow: none;
 }
 
@@ -1413,8 +1425,8 @@
 .kds-dialog-backdrop {
   position: fixed;
   inset: 0;
-  background: var(--overlay);
-  backdrop-filter: blur(4px);
+  background: radial-gradient(circle at 50% 12%, rgba(197, 90, 61, 0.12), transparent 36%), rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
 }
 
 .kds-dialog-container {
@@ -1435,10 +1447,12 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-xl);
-  border: 1px solid var(--border-default);
-  background: var(--bg-surface);
+  border: 1px solid color-mix(in srgb, var(--brand-primary-border) 48%, var(--border-default));
+  background:
+    radial-gradient(circle at 16% 0%, color-mix(in srgb, var(--brand-primary) 12%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 96%, transparent), color-mix(in srgb, var(--bg-canvas) 98%, transparent));
   color: var(--text-secondary);
-  box-shadow: var(--shadow-modal);
+  box-shadow: var(--shadow-modal), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   overflow: hidden;
 }
 
@@ -1449,14 +1463,15 @@
   gap: 1rem;
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 58%, transparent), transparent);
 }
 
 .kds-dialog-title {
   font-family: var(--font-display);
-  font-size: 1.125rem;
+  font-size: 1.35rem;
   font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.4;
+  line-height: 1.2;
 }
 
 .kds-dialog-description {
@@ -1469,15 +1484,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: 0.5rem;
   color: var(--text-muted);
-  transition: background 150ms, color 150ms;
+  transition: background 150ms, color 150ms, border-color 150ms, box-shadow 150ms;
   flex-shrink: 0;
 }
 .kds-dialog-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--accent-gold-hover);
 }
 
 .kds-dialog-body {
@@ -1493,6 +1510,7 @@
   gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-inset) 45%, transparent);
 }
 
 /* ── Tooltip ───────────────────────────────────────── */
@@ -1548,18 +1566,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 2rem;
-  width: 2rem;
+  height: 2.35rem;
+  width: 2.35rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-default);
-  background: transparent;
+  background: color-mix(in srgb, var(--bg-inset) 74%, transparent);
   color: var(--text-secondary);
   transition: all 150ms;
 }
 .kds-pagination-button:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--accent-gold-hover);
+  box-shadow: 0 0 18px -12px var(--brand-primary);
 }
 .kds-pagination-button:disabled {
   opacity: 0.4;
@@ -1576,26 +1595,27 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2rem;
-  height: 2rem;
+  min-width: 2.35rem;
+  height: 2.35rem;
   padding: 0 0.5rem;
   border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  background: transparent;
+  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--bg-inset) 74%, transparent);
   color: var(--text-secondary);
   font-size: 0.8125rem;
   font-weight: 600;
   transition: all 150ms;
 }
 .kds-pagination-page:hover:not(.kds-pagination-page-active) {
-  border-color: var(--border-default);
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--accent-gold-hover);
 }
 .kds-pagination-page-active {
-  border-color: var(--brand-primary-border);
-  background: var(--brand-primary-soft);
-  color: var(--brand-primary);
+  border-color: var(--button-primary-border);
+  background: linear-gradient(180deg, var(--brand-primary-hover), var(--brand-primary-active));
+  color: var(--text-on-brand);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 12px 24px -18px var(--brand-primary);
 }
 .kds-pagination-page-active:hover {
   border-color: var(--brand-primary);
@@ -1625,7 +1645,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1639,6 +1659,10 @@
 .kds-breadcrumb-link {
   display: inline-flex;
   align-items: center;
+  min-height: 2.15rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--border-default);
+  background: color-mix(in srgb, var(--bg-inset) 72%, transparent);
   color: var(--text-muted);
   text-decoration: none;
   font-weight: 500;
@@ -1650,13 +1674,17 @@
   font-size: inherit;
 }
 .kds-breadcrumb-link:hover {
-  color: var(--brand-primary);
+  border-color: var(--brand-primary-border);
+  color: var(--accent-gold-hover);
+  background: var(--brand-primary-muted);
 }
 
 .kds-breadcrumb-separator {
   display: inline-flex;
   align-items: center;
   color: var(--text-subtle);
+  margin: 0 -0.15rem;
+  z-index: 1;
 }
 
 .kds-breadcrumb-item-current .kds-breadcrumb-link,
@@ -1705,26 +1733,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.35rem;
+  height: 2.35rem;
   border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 700;
-  border: 2px solid var(--border-default);
-  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  background: radial-gradient(circle at 35% 20%, color-mix(in srgb, var(--bg-elevated) 80%, white), var(--bg-inset));
   color: var(--text-muted);
   transition: all 200ms;
   flex-shrink: 0;
 }
 .kds-stepper-step-completed .kds-stepper-circle {
-  border-color: var(--success);
-  background: var(--success);
+  border-color: var(--success-border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--success) 80%, white), color-mix(in srgb, var(--success) 78%, black));
   color: #fff;
 }
 .kds-stepper-step-active .kds-stepper-circle {
-  border-color: var(--brand-primary);
-  background: var(--brand-primary);
+  border-color: var(--button-primary-border);
+  background: linear-gradient(180deg, var(--brand-primary-hover), var(--brand-primary-active));
   color: var(--text-on-brand);
+  box-shadow: 0 0 0 4px var(--focus-ring), 0 0 24px -10px var(--brand-primary);
 }
 
 .kds-stepper-line {
@@ -1744,7 +1773,7 @@
   margin-left: calc(1rem - 1px);
 }
 .kds-stepper-line-completed {
-  background: var(--success);
+  background: linear-gradient(90deg, var(--success), var(--warning));
 }
 
 .kds-stepper-content {
@@ -2052,9 +2081,10 @@
   z-index: 300;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
   padding: 1rem;
-  max-width: 24rem;
+  width: min(28rem, calc(100vw - 1rem));
+  max-width: 28rem;
 }
 .kds-toast-top-right { top: 0; right: 0; }
 .kds-toast-top-left { top: 0; left: 0; }
@@ -2064,16 +2094,26 @@
 .kds-toast-bottom-center { bottom: 0; left: 50%; transform: translateX(-50%); }
 
 .kds-toast {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  padding: 1rem;
+  overflow: hidden;
+  padding: 1rem 1rem 1.1rem;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-default);
-  background: var(--bg-elevated);
-  box-shadow: var(--shadow-popover);
+  border: 1px solid var(--toast-border, var(--border-default));
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--toast-color, var(--brand-primary)) 14%, transparent), transparent 34%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 96%, transparent), color-mix(in srgb, var(--bg-inset) 96%, transparent));
+  box-shadow: var(--shadow-popover), 0 0 26px -20px var(--toast-color, var(--brand-primary));
   animation: kds-toast-in 200ms ease-out;
 }
+
+.kds-toast-success { --toast-color: var(--success); --toast-border: var(--success-border); }
+.kds-toast-error { --toast-color: var(--danger); --toast-border: var(--danger-border); }
+.kds-toast-warning { --toast-color: var(--warning); --toast-border: var(--warning-border); }
+.kds-toast-info { --toast-color: var(--info); --toast-border: var(--info-border); }
+.kds-toast-default { --toast-color: var(--accent-gold); --toast-border: var(--accent-gold-border); }
 
 @keyframes kds-toast-in {
   from { opacity: 0; transform: translateY(0.5rem); }
@@ -2082,9 +2122,10 @@
 
 .kds-toast-icon {
   flex-shrink: 0;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.55rem;
+  height: 1.55rem;
   margin-top: 0.125rem;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, currentColor 40%, transparent));
 }
 
 .kds-toast-success .kds-toast-icon { color: var(--success); }
@@ -2101,7 +2142,7 @@
 .kds-toast-title {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--toast-color, var(--text-primary));
 }
 
 .kds-toast-description {
@@ -2120,6 +2161,160 @@
   transition: color 150ms;
 }
 .kds-toast-close:hover { color: var(--text-primary); }
+
+.kds-toast-progress {
+  position: absolute;
+  left: 3.3rem;
+  right: 3.5rem;
+  bottom: 0.55rem;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--toast-color, var(--accent-gold));
+  transform-origin: left center;
+  animation: kds-toast-progress var(--toast-duration, 5000ms) linear forwards;
+}
+
+@keyframes kds-toast-progress {
+  from { transform: scaleX(1); opacity: 0.95; }
+  to { transform: scaleX(0); opacity: 0.45; }
+}
+
+/* ── Loading / Empty / Skeleton ────────────────────── */
+.kds-empty {
+  display: grid;
+  place-items: center;
+  gap: var(--space-4);
+  min-height: 16rem;
+  border: 1px solid color-mix(in srgb, var(--accent-gold-border) 42%, var(--border-default));
+  border-radius: var(--radius-xl);
+  background: radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--accent-gold) 11%, transparent), transparent 36%), var(--surface-muted-bg);
+  padding: var(--space-8);
+  text-align: center;
+}
+
+.kds-empty-icon,
+.kds-loading-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kds-empty-icon {
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 1px solid var(--brand-primary-border);
+  border-radius: var(--radius-full);
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--brand-primary) 28%, transparent), color-mix(in srgb, var(--bg-inset) 90%, transparent));
+  color: var(--brand-primary-hover);
+}
+
+.kds-loading-card {
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--text-secondary);
+}
+
+.kds-loading-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid color-mix(in srgb, var(--brand-primary-border) 35%, var(--border-default));
+  border-top-color: var(--brand-primary-hover);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 28px -14px var(--brand-primary);
+  animation: kds-spin 900ms linear infinite;
+}
+
+.kds-loading-label {
+  color: var(--text-secondary);
+  font: var(--type-body);
+}
+
+.kds-skeleton,
+.panel-skeleton {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--bg-elevated) 72%, transparent) 0%, color-mix(in srgb, var(--text-muted) 12%, transparent) 46%, color-mix(in srgb, var(--bg-elevated) 72%, transparent) 100%);
+  background-size: 240% 100%;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+  animation: kds-skeleton-shimmer 1.55s ease-in-out infinite;
+}
+
+@keyframes kds-skeleton-shimmer {
+  0% { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
+@keyframes kds-spin { to { transform: rotate(360deg); } }
+
+/* ── Kanban / Funnel ───────────────────────────────── */
+.kds-kanban-board,
+.kds-funnel-board {
+  background:
+    radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--brand-primary) 10%, transparent), transparent 34%),
+    var(--surface-bg);
+}
+
+.kds-kanban-scroll { scrollbar-color: var(--brand-primary) transparent; }
+
+.kds-kanban-column {
+  border-color: color-mix(in srgb, var(--accent-gold-border) 35%, var(--border-default));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 78%, transparent), color-mix(in srgb, var(--bg-canvas) 92%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 48px -38px rgba(0,0,0,0.9);
+}
+
+.kds-kanban-card {
+  border-color: var(--border-default);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 90%, transparent), color-mix(in srgb, var(--bg-inset) 94%, transparent));
+}
+
+.kds-kanban-card:hover {
+  border-color: var(--brand-primary-border);
+  box-shadow: 0 20px 38px -30px rgba(0,0,0,0.9), 0 0 26px -20px var(--brand-primary);
+}
+
+/* ── Calendar / Date Picker / Agenda ───────────────── */
+.kds-date-picker-input::-webkit-calendar-picker-indicator { opacity: 0; }
+
+.kds-date-picker-button {
+  border-color: var(--border-subtle) !important;
+  color: var(--text-muted) !important;
+}
+
+.kds-date-picker:focus-within .kds-date-picker-button {
+  border-color: var(--brand-primary-border) !important;
+  color: var(--accent-gold-hover) !important;
+}
+
+.kds-calendar,
+.kds-agenda {
+  border: 1px solid color-mix(in srgb, var(--accent-gold-border) 32%, var(--border-default));
+  border-radius: var(--radius-xl);
+  background: var(--surface-muted-bg);
+  box-shadow: var(--shadow-card);
+}
+
+.kds-calendar-day,
+.calendar-day {
+  border-color: var(--border-default) !important;
+  background: color-mix(in srgb, var(--bg-inset) 70%, transparent);
+}
+
+.kds-calendar-day:hover,
+.calendar-day:hover {
+  border-color: var(--brand-primary-border) !important;
+  background: var(--brand-primary-muted) !important;
+}
+
+.kds-calendar-day-selected,
+.calendar-day-selected {
+  border-color: var(--button-primary-border) !important;
+  background: linear-gradient(180deg, var(--brand-primary-hover), var(--brand-primary-active)) !important;
+  color: var(--text-on-brand) !important;
+}
+
+.kds-calendar-day-today,
+.calendar-day-today {
+  border-color: var(--accent-gold-border) !important;
+  box-shadow: inset 0 0 0 1px var(--accent-gold-border), 0 0 24px -18px var(--accent-gold);
+}
 
 @media (min-width: 640px) {
   .kds-alert {

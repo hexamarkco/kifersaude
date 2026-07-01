@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap');
 @import './design-system/styles.css';
 
 @tailwind base;
@@ -19,8 +19,8 @@
   --ks-color-border-strong: #c5aa83;
   --ks-color-text: #0c0a09;
   --ks-color-text-soft: #6b5645;
-  --ks-font-heading: 'Cormorant Garamond', serif;
-  --ks-font-body: 'Montserrat', sans-serif;
+  --ks-font-heading: 'Playfair Display', serif;
+  --ks-font-body: 'Inter', sans-serif;
   --ks-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.08);
   --ks-shadow-md: 0 16px 34px -24px rgba(42, 24, 12, 0.26);
   --ks-shadow-lg: 0 24px 52px -30px rgba(42, 24, 12, 0.36);

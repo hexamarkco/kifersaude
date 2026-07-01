@@ -72,13 +72,13 @@ export function EmptyState({
   return (
     <div
       className={cx(
-        'flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-6 py-12 text-center',
+        'kds-empty flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-6 py-12 text-center',
         className,
       )}
       {...props}
     >
       {icon && (
-        <div className="text-[var(--text-muted)] opacity-60">
+        <div className="kds-empty-icon text-[var(--text-muted)]">
           {icon}
         </div>
       )}

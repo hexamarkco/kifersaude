@@ -10,13 +10,13 @@ import {
   SAO_PAULO_TIMEZONE,
 } from "../../lib/dateUtils";
 import { useAuth } from "../../contexts/AuthContext";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import LeadFunnel from "../../components/LeadFunnel";
 import ContractDetails from "../../components/ContractDetails";
 import LeadDetails from "../../components/LeadDetails";
 import LeadForm from "../../components/LeadForm";
 import { toast } from "../../lib/toast";
-import { ActionSurface, Badge, Button, Surface } from "../../design-system";
+import { ActionSurface, Badge, Button, EmptyState, SectionHeader, Surface } from "../../design-system";
 import {
   calculateConversionRate,
   getLeadStatusDistribution,
@@ -2214,7 +2214,7 @@ export default function DashboardScreen({
     >
       <div
         ref={dashboardRootRef}
-        className="panel-dashboard-immersive panel-page-shell space-y-6"
+        className="panel-dashboard-immersive panel-page-shell space-y-8"
       >
         <DashboardHeader
           periodFilter={periodFilter}
@@ -2281,40 +2281,34 @@ export default function DashboardScreen({
 
         {!isObserver && (
           <>
-            <Surface data-panel-animate>
-              <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 flex-shrink-0 text-[var(--brand-primary)]" />
-                    <h3 className="text-xl font-semibold text-[var(--text-primary)]">
-                      Calendário de eventos
-                    </h3>
+            <Surface data-panel-animate className="space-y-6">
+              <SectionHeader
+                title="Calendário de eventos"
+                description="Reajustes e aniversários agrupados pelo período selecionado."
+                action={(
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
+                    <Badge tone="neutral">
+                      <span className="text-[var(--text-primary)]">
+                        {calendarMonthEventCount}
+                      </span>{" "}
+                      eventos no mês
+                    </Badge>
+                    <Badge
+                      tone="accent"
+                      icon={<span className="h-2 w-2 rounded-full bg-[var(--brand-primary)]" />}
+                    >
+                      Reajustes
+                    </Badge>
+                    <Badge
+                      tone="neutral"
+                      icon={<span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />}
+                    >
+                      Aniversarios
+                    </Badge>
                   </div>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    Reajustes e aniversários agrupados pelo período selecionado.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
-                  <Badge tone="neutral">
-                    <span className="text-[var(--text-primary)]">
-                      {calendarMonthEventCount}
-                    </span>{" "}
-                    eventos no mês
-                  </Badge>
-                  <Badge
-                    tone="accent"
-                    icon={<span className="h-2 w-2 rounded-full bg-[var(--brand-primary)]" />}
-                  >
-                    Reajustes
-                  </Badge>
-                  <Badge
-                    tone="neutral"
-                    icon={<span className="h-2 w-2 rounded-full bg-[var(--border-strong)]" />}
-                  >
-                    Aniversarios
-                  </Badge>
-                </div>
-              </div>
+                )}
+                as="h3"
+              />
 
               <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-stretch">
                 <Surface variant="muted" padding="sm" className="rounded-[1.75rem] sm:p-5">
@@ -2449,9 +2443,10 @@ export default function DashboardScreen({
                   </div>
 
                   {calendarViewEvents.length === 0 ? (
-                    <Surface variant="muted" padding="lg" className="flex flex-1 items-center justify-center border-dashed text-sm text-[var(--text-muted)]">
-                      Nenhum evento no período selecionado.
-                    </Surface>
+                    <EmptyState
+                      title="Nenhum evento no período selecionado."
+                      className="flex-1"
+                    />
                   ) : (
                     <div className="space-y-3 flex-1 overflow-y-auto pr-1">
                       {calendarViewEvents.map((event) => {

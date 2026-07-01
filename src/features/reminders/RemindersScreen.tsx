@@ -50,10 +50,7 @@ import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import ModalShell from "../../components/ui/ModalShell";
 import {
-  PANEL_EMPTY_STATE_STYLE,
   PANEL_INSET_STYLE,
-  PANEL_MUTED_INSET_STYLE,
-  PANEL_PILL_STYLE,
   PANEL_SECTION_STYLE,
   getPanelToneStyle,
 } from "../../components/ui/panelStyles";
@@ -1253,7 +1250,7 @@ export default function RemindersManagerEnhanced() {
     return (
       <div
         key={reminder.id}
-        className="panel-glass-lite panel-interactive-glass rounded-[1.6rem] border p-5 transition-all"
+        className="rounded-[1.6rem] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 transition-all"
         style={getReminderCardStyle(urgency, reminder.lido, isSelected)}
       >
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -1265,15 +1262,9 @@ export default function RemindersManagerEnhanced() {
               className="mt-1 h-8 w-8"
             >
               {isSelected ? (
-                <CheckSquare
-                  className="h-5 w-5"
-                  style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
-                />
+                <CheckSquare className="h-5 w-5 text-[var(--brand-primary)]" />
               ) : (
-                <Square
-                  className="h-5 w-5"
-                  style={{ color: "var(--panel-text-muted,#876f5c)" }}
-                />
+                <Square className="h-5 w-5 text-[var(--text-muted)]" />
               )}
             </Button>
 
@@ -1286,10 +1277,7 @@ export default function RemindersManagerEnhanced() {
 
             <div className="flex-1">
               <div className="mb-2 flex flex-wrap items-center gap-2">
-                <h3
-                  className="text-lg font-semibold"
-                  style={{ color: "var(--panel-text,#1c1917)" }}
-                >
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
                   {reminder.titulo}
                 </h3>
                 <span
@@ -1318,10 +1306,7 @@ export default function RemindersManagerEnhanced() {
               </div>
 
               {reminder.descricao && (
-                <p
-                  className="mb-3 text-sm"
-                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                >
+                <p className="mb-3 text-sm text-[var(--text-secondary)]">
                   {reminder.descricao}
                 </p>
               )}
@@ -1341,10 +1326,7 @@ export default function RemindersManagerEnhanced() {
                 </div>
               )}
 
-              <div
-                className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
-                style={{ color: "var(--panel-text-muted,#876f5c)" }}
-              >
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-muted)]">
                 <div className="flex items-center space-x-1">
                   <Calendar className="h-4 w-4" />
                   <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
@@ -1512,62 +1494,35 @@ export default function RemindersManagerEnhanced() {
         >
           <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
             <div>
-              <p
-                className="text-[11px] font-black uppercase tracking-[0.24em]"
-                style={{ color: "var(--panel-text-muted,#876f5c)" }}
-              >
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
                 Operação de acompanhamento
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <h2
-                  className="text-2xl font-bold sm:text-3xl"
-                  style={{ color: "var(--panel-text,#1c1917)" }}
-                >
+                <h2 className="text-2xl font-bold text-[var(--text-primary)] sm:text-3xl">
                   Lembretes e Notificações
                 </h2>
               </div>
-              <p
-                className="mt-1 max-w-3xl text-sm"
-                style={{ color: "var(--panel-text-muted,#876f5c)" }}
-              >
+              <p className="mt-1 max-w-3xl text-sm text-[var(--text-muted)]">
                 Priorize retornos, acompanhe urgências e avance a carteira sem
                 perder contexto do lead ou contrato vinculado.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                <span className="text-[var(--text-primary)]">
                   {filteredReminders.length}
                 </span>
                 <span>lembretes no recorte</span>
               </span>
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                <span className="text-[var(--text-primary)]">
                   {activeFilterCount}
                 </span>
                 <span>{activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}</span>
               </span>
-              <span
-                className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+                <span className="text-[var(--text-primary)]">
                   {viewMode === "grouped" ? "Agrupado" : "Lista"}
                 </span>
                 <span>modo atual</span>
@@ -1576,17 +1531,8 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-            <div
-              className="flex h-11 items-center gap-2 rounded-xl border px-3 text-sm"
-              style={{
-                ...PANEL_PILL_STYLE,
-                color: "var(--panel-text-soft,#5b4635)",
-              }}
-            >
-              <Clock3
-                className="h-4 w-4"
-                style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
-              />
+            <div className="flex h-11 items-center gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 text-sm text-[var(--text-secondary)]">
+              <Clock3 className="h-4 w-4 text-[var(--brand-primary)]" />
               <span>{lastUpdatedLabel}</span>
             </div>
 
@@ -1646,10 +1592,9 @@ export default function RemindersManagerEnhanced() {
             ].map((item) => (
               <div
                 key={item.label}
-                className="panel-glass-panel rounded-[1.5rem] border p-4 shadow-sm"
-                style={PANEL_SECTION_STYLE}
+                className="rounded-[1.5rem] border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 shadow-sm"
               >
-                <div className="mb-2 text-sm" style={{ color: "var(--panel-text-muted,#876f5c)" }}>
+                <div className="mb-2 text-sm text-[var(--text-muted)]">
                   {item.label}
                 </div>
                 <div
@@ -1664,13 +1609,11 @@ export default function RemindersManagerEnhanced() {
         )}
 
         <div
-          className="panel-glass-panel space-y-5 rounded-[2rem] border p-5 sm:p-6"
-          style={PANEL_SECTION_STYLE}
+          className="space-y-5 rounded-[2rem] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 sm:p-6 shadow-sm"
           data-panel-animate
         >
           <div
-            className="flex flex-col gap-3 rounded-[1.7rem] border p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
-            style={PANEL_INSET_STYLE}
+            className="flex flex-col gap-3 rounded-[1.7rem] border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
           >
             <div className="relative flex-1">
               <Input
@@ -1694,17 +1637,8 @@ export default function RemindersManagerEnhanced() {
             </div>
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div
-                className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-sm"
-                style={{
-                  ...PANEL_PILL_STYLE,
-                  color: "var(--panel-text-soft,#5b4635)",
-                }}
-              >
-                <span
-                  className="font-semibold"
-                  style={{ color: "var(--panel-text,#1c1917)" }}
-                >
+              <div className="flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 text-sm text-[var(--text-secondary)]">
+                <span className="font-semibold text-[var(--text-primary)]">
                   {filteredReminders.length}
                 </span>
                 <span>lembretes</span>
@@ -1774,14 +1708,8 @@ export default function RemindersManagerEnhanced() {
           </div>
 
           {selectedReminders.size > 0 && (
-            <div
-              className="flex flex-col gap-2 rounded-[1.4rem] border px-4 py-3 sm:flex-row sm:items-center sm:gap-3"
-              style={PANEL_MUTED_INSET_STYLE}
-            >
-              <span
-                className="text-sm font-medium"
-                style={{ color: "var(--panel-accent-ink,#6f3f16)" }}
-              >
+            <div className="flex flex-col gap-2 rounded-[1.4rem] border border-[var(--border-default)] bg-[var(--bg-surface-muted)] px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-sm font-medium text-[var(--brand-primary)]">
                 {selectedReminders.size} selecionado(s)
               </span>
               <Button
@@ -1817,21 +1745,14 @@ export default function RemindersManagerEnhanced() {
 
         {filteredReminders.length === 0 ? (
           <div
-            className="panel-glass-panel rounded-[1.7rem] border py-12 text-center shadow-sm"
-            style={PANEL_EMPTY_STATE_STYLE}
+            className="rounded-[1.7rem] border border-[var(--border-default)] bg-[var(--bg-surface)] py-12 text-center shadow-sm"
             data-panel-animate
           >
-            <Bell
-              className="mx-auto mb-4 h-16 w-16"
-              style={{ color: "var(--panel-text-muted,#876f5c)" }}
-            />
-            <h3
-              className="mb-2 text-lg font-medium"
-              style={{ color: "var(--panel-text,#1c1917)" }}
-            >
+            <Bell className="mx-auto mb-4 h-16 w-16 text-[var(--text-muted)]" />
+            <h3 className="mb-2 text-lg font-medium text-[var(--text-primary)]">
               Nenhum lembrete encontrado
             </h3>
-            <p style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+            <p className="text-[var(--text-secondary)]">
               {searchQuery || typeFilter !== "all" || priorityFilter !== "all"
                 ? "Tente ajustar os filtros de busca"
                 : filter === "nao-lidos"
@@ -1861,7 +1782,7 @@ export default function RemindersManagerEnhanced() {
               return (
                 <div
                   key={period}
-                  className="panel-glass-panel panel-interactive-glass rounded-[1.7rem] border"
+                  className="rounded-[1.7rem] border border-[var(--border-default)] bg-[var(--bg-surface)]"
                   style={getReminderGroupStyle(period)}
                 >
                   <Button
@@ -1871,29 +1792,17 @@ export default function RemindersManagerEnhanced() {
                     className="w-full justify-between rounded-[1.7rem] px-6 py-4"
                   >
                     <div className="flex items-center space-x-3">
-                      <h3
-                        className="text-lg font-semibold"
-                        style={{ color: "var(--panel-text,#1c1917)" }}
-                      >
+                      <h3 className="text-lg font-semibold text-[var(--text-primary)]">
                         {getPeriodLabel(period)}
                       </h3>
-                      <span
-                        className="rounded-full border px-3 py-1 text-sm font-medium"
-                        style={PANEL_PILL_STYLE}
-                      >
+                      <span className="rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1 text-sm font-medium text-[var(--text-primary)]">
                         {periodReminders.length}
                       </span>
                     </div>
                     {isExpanded ? (
-                      <ChevronUp
-                        className="h-5 w-5"
-                        style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                      />
+                      <ChevronUp className="h-5 w-5 text-[var(--text-secondary)]" />
                     ) : (
-                      <ChevronDown
-                        className="h-5 w-5"
-                        style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                      />
+                      <ChevronDown className="h-5 w-5 text-[var(--text-secondary)]" />
                     )}
                   </Button>
 
@@ -1949,25 +1858,16 @@ export default function RemindersManagerEnhanced() {
                 <Trash2 className="h-6 w-6" />
               </div>
               <div>
-                <p
-                  className="mt-1 text-sm"
-                  style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                >
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">
                   Tem certeza que deseja remover o lembrete
-                  <span
-                    className="font-semibold"
-                    style={{ color: "var(--panel-text,#1c1917)" }}
-                  >
+                  <span className="font-semibold text-[var(--text-primary)]">
                     {" "}
                     "{reminderPendingDeletion.titulo}"
                   </span>
                   ? Esta ação não pode ser desfeita.
                 </p>
                 {reminderPendingDeletion.descricao && (
-                  <p
-                    className="mt-2 break-words text-xs"
-                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
-                  >
+                  <p className="mt-2 break-words text-xs text-[var(--text-muted)]">
                     {reminderPendingDeletion.descricao}
                   </p>
                 )}
@@ -2018,16 +1918,13 @@ export default function RemindersManagerEnhanced() {
             bodyClassName="flex min-h-[180px] items-center justify-center"
           >
             <div
-              className="panel-glass-strong flex items-center space-x-2 rounded-[1.1rem] border px-4 py-3 shadow-lg"
-              style={PANEL_INSET_STYLE}
+              className="flex items-center space-x-2 rounded-[1.1rem] border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3 shadow-lg"
             >
               <Loader2
-                className="h-5 w-5 animate-spin"
-                style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
+                className="h-5 w-5 animate-spin text-[var(--brand-primary)]"
               />
               <span
-                className="text-sm font-medium"
-                style={{ color: "var(--panel-text-soft,#5b4635)" }}
+                className="text-sm font-medium text-[var(--text-secondary)]"
               >
                 Carregando lead...
               </span>

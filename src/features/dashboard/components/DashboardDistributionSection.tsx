@@ -1,5 +1,5 @@
 import DonutChart from '../../../components/charts/DonutChart';
-import { Surface } from '../../../design-system';
+import { SectionHeader, Surface } from '../../../design-system';
 import type { DashboardChartDatum, DashboardStatusDistributionItem } from '../shared/dashboardTypes';
 
 type DashboardDistributionSectionProps = {
@@ -20,15 +20,12 @@ export function DashboardDistributionSection({
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-panel-animate>
       <Surface className="flex flex-col">
-        <div className="mb-5">
-          <h3 className="text-xl font-semibold text-[var(--text-primary)]">
-            Distribuicao de Leads por Status
-          </h3>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Concentracao por etapa do funil
-          </p>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
+        <SectionHeader
+          title="Distribuicao de Leads por Status"
+          description="Concentracao por etapa do funil"
+          as="h3"
+        />
+        <div className="mt-6 flex flex-1 items-center justify-center">
           {leadStatusData.length > 0 ? (
             <DonutChart
               data={donutChartData}
@@ -37,23 +34,20 @@ export function DashboardDistributionSection({
               onSegmentClick={onLeadStatusSegmentClick}
             />
           ) : (
-            <Surface variant="muted" className="flex h-64 w-full items-center justify-center border-dashed text-sm text-[var(--text-muted)]">
+            <div className="flex h-64 w-full items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] text-sm text-[var(--text-muted)]">
               Nenhum lead ativo
-            </Surface>
+            </div>
           )}
         </div>
       </Surface>
 
       <Surface className="flex flex-col">
-        <div className="mb-5">
-          <h3 className="text-xl font-semibold text-[var(--text-primary)]">
-            Contratos por Operadora
-          </h3>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Distribuicao por operadora
-          </p>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
+        <SectionHeader
+          title="Contratos por Operadora"
+          description="Distribuicao por operadora"
+          as="h3"
+        />
+        <div className="mt-6 flex flex-1 items-center justify-center">
           {operadoraChartData.length > 0 ? (
             <DonutChart
               data={operadoraChartData}
@@ -62,9 +56,9 @@ export function DashboardDistributionSection({
               onSegmentClick={onOperadoraSegmentClick}
             />
           ) : (
-            <Surface variant="muted" className="flex h-64 w-full items-center justify-center border-dashed text-sm text-[var(--text-muted)]">
+            <div className="flex h-64 w-full items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] text-sm text-[var(--text-muted)]">
               Nenhum contrato ativo
-            </Surface>
+            </div>
           )}
         </div>
       </Surface>

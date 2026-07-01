@@ -2,7 +2,7 @@ import { BadgePercent, Calendar, Clock, Filter, TrendingUp } from 'lucide-react'
 
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import MonthlyTrendChart from '../../../components/charts/MonthlyTrendChart';
-import { Surface, Tabs } from '../../../design-system';
+import { SectionHeader, Surface, Tabs } from '../../../design-system';
 import {
   DASHBOARD_CHART_RANGE_OPTIONS,
   DASHBOARD_METRIC_COLORS,
@@ -49,68 +49,64 @@ export function DashboardTrendSection({
 
   return (
     <Surface data-panel-animate>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="text-xl font-semibold text-[var(--text-primary)]">
-            Evolucao mensal
-          </h3>
-          <p className="text-sm text-[var(--text-muted)]">
-            Tendencia por mes considerando o periodo selecionado e os filtros atuais.
-          </p>
-        </div>
+      <SectionHeader
+        eyebrow="Analytics"
+        title="Evolucao mensal"
+        description="Tendencia por mes considerando o periodo selecionado e os filtros atuais."
+        action={(
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            <div className="w-full sm:w-44">
+              <FilterSingleSelect
+                icon={Filter}
+                value={periodFilter}
+                onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
+                placeholder="Mes atual"
+                includePlaceholderOption={false}
+                options={DASHBOARD_PERIOD_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                }))}
+              />
+            </div>
 
-        <div className="flex flex-wrap gap-2 sm:justify-end">
-          <div className="w-full sm:w-44">
-            <FilterSingleSelect
-              icon={Filter}
-              value={periodFilter}
-              onChange={(value) => onPeriodFilterChange(value as DashboardPeriodFilter)}
-              placeholder="Mes atual"
-              includePlaceholderOption={false}
-              options={DASHBOARD_PERIOD_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
+            <Tabs
+              items={DASHBOARD_METRIC_TABS}
+              value={selectedMetric}
+              onChange={onSelectedMetricChange}
+              variant="panel"
+              listClassName="w-full sm:w-auto"
             />
+
+            <div className="w-full sm:w-48">
+              <FilterSingleSelect
+                icon={Clock}
+                value={String(chartRangeInMonths)}
+                onChange={(value) => onChartRangeChange(Number(value) as DashboardChartRange)}
+                placeholder="Ultimos 6 meses"
+                includePlaceholderOption={false}
+                options={DASHBOARD_CHART_RANGE_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: option.label,
+                }))}
+              />
+            </div>
           </div>
+        )}
+      />
 
-          <Tabs
-            items={DASHBOARD_METRIC_TABS}
-            value={selectedMetric}
-            onChange={onSelectedMetricChange}
-            variant="panel"
-            listClassName="w-full sm:w-auto"
-          />
-
-          <div className="w-full sm:w-48">
-            <FilterSingleSelect
-              icon={Clock}
-              value={String(chartRangeInMonths)}
-              onChange={(value) => onChartRangeChange(Number(value) as DashboardChartRange)}
-              placeholder="Ultimos 6 meses"
-              includePlaceholderOption={false}
-              options={DASHBOARD_CHART_RANGE_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 space-y-6">
-        <div className="grid gap-3 md:grid-cols-3">
-          <Surface variant="muted" padding="sm">
+      <div className="mt-8 space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Surface variant="muted" padding="sm" className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <TrendingUp className="h-4 w-4 text-[var(--brand-primary)]" />
-                <span>Ultimo mes</span>
+                <span className="text-[var(--text-secondary)]">Ultimo mes</span>
               </div>
               <span className="text-xs text-[var(--text-muted)]">
                 {latestMonthlyPoint?.label || 'Sem dados'}
               </span>
             </div>
-            <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
+            <p className="text-2xl font-bold text-[var(--text-primary)]">
               {latestMonthlyPoint ? formatSelectedMetricValue(latestMonthlyPoint.value) : 'Sem dados'}
             </p>
             <p className={`mt-1 text-xs font-semibold ${monthlyVariationTone}`}>
@@ -122,12 +118,12 @@ export function DashboardTrendSection({
             </p>
           </Surface>
 
-          <Surface variant="muted" padding="sm">
+          <Surface variant="muted" padding="sm" className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <BadgePercent className="h-4 w-4 text-[var(--accent-gold)]" />
-              <span>Media do periodo</span>
+              <span className="text-[var(--text-secondary)]">Media do periodo</span>
             </div>
-            <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
+            <p className="text-2xl font-bold text-[var(--text-primary)]">
               {displayedMonthlySeries.length > 0 ? formatSelectedMetricValue(averageMonthlyValue) : 'Sem dados'}
             </p>
             <p className="mt-1 text-xs text-[var(--text-muted)]">
@@ -135,12 +131,12 @@ export function DashboardTrendSection({
             </p>
           </Surface>
 
-          <Surface variant="muted" padding="sm">
+          <Surface variant="muted" padding="sm" className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Calendar className="h-4 w-4 text-[var(--brand-primary)]" />
-              <span>Pico do periodo</span>
+              <span className="text-[var(--text-secondary)]">Pico do periodo</span>
             </div>
-            <p className="mt-3 text-2xl font-bold text-[var(--text-primary)]">
+            <p className="text-2xl font-bold text-[var(--text-primary)]">
               {highestMonthlyPoint ? formatSelectedMetricValue(highestMonthlyPoint.value) : 'Sem dados'}
             </p>
             <p className="mt-1 text-xs text-[var(--text-muted)]">

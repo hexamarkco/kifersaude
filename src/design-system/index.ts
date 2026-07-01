@@ -41,6 +41,8 @@ export type { PageHeaderProps } from './components/PageHeader';
 export { default as Pagination, PaginationInfo } from './components/Pagination';
 export type { PaginationProps, PaginationInfoProps } from './components/Pagination';
 export { Radio, RadioGroup } from './components/Radio';
+export { SectionHeader, EmptyState } from './components/SectionHeader';
+export type { SectionHeaderProps, EmptyStateProps } from './components/SectionHeader';
 export type { RadioProps, RadioGroupProps } from './components/Radio';
 export { MultiSelect, default as Select } from './components/Select';
 export type { MultiSelectProps, SelectOption, SelectProps, SelectSize, SelectState } from './components/Select';

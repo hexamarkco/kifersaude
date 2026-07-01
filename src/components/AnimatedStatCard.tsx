@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { gsap } from 'gsap';
 import { usePanelMotion } from '../hooks/usePanelMotion';
-import { ActionSurface, Surface } from '../design-system';
+import { cx } from '../lib/cx';
+import { ActionSurface } from '../design-system';
 
 type AnimatedStatCardTone = 'brand' | 'earth' | 'forest' | 'plum' | 'copper';
 
@@ -165,116 +166,108 @@ export default function AnimatedStatCard({
   const trendTone = trend?.isPositive ? trendToneStyles.positive : trendToneStyles.negative;
 
   const cardContent = (
-    <>
+    <div className="relative flex h-full flex-col p-6 sm:p-7">
       <div
-        className="absolute inset-0 opacity-100"
-        style={{
-          background: `${toneMeta.halo}, var(--surface-bg)`,
-        }}
+        className="absolute inset-0"
+        style={{ background: `${toneMeta.halo}, var(--surface-bg)` }}
       />
-      <div
-        className="absolute inset-x-0 top-0 h-px"
-        style={{ background: 'linear-gradient(90deg, transparent 0%, var(--border-strong) 48%, transparent 100%)' }}
-      />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--border-strong)] to-transparent" />
       <div
         className="absolute inset-x-6 bottom-0 h-[2px] rounded-full"
         style={{ background: `linear-gradient(90deg, transparent 0%, ${toneMeta.accent} 20%, ${toneMeta.accent} 80%, transparent 100%)` }}
       />
 
-      <div className="relative flex h-full flex-col p-6 sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
-                Panorama
-              </p>
-              {contextLabel && contextValue && (
-                <div
-                  className="rounded-full border px-3 py-1.5 text-[11px] font-semibold"
-                  style={{
-                    borderColor: 'var(--border-subtle)',
-                    background: 'var(--bg-hover)',
-                    color: 'var(--text-secondary)',
-                    boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}`,
-                  }}
-                >
-                  <span className="text-[var(--text-muted)]">{contextLabel}</span>{' '}
-                  <span className="text-[var(--text-primary)]">{contextValue}</span>
-                </div>
-              )}
-            </div>
-
-            <p className="text-base font-semibold text-[var(--text-secondary)] sm:text-[1.05rem]">
-              {label}
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
+              Panorama
             </p>
-
-            <div className="mt-5 flex items-end gap-2">
-              {prefix && (
-                <span className="pb-1 text-lg font-bold text-[var(--text-secondary)] sm:text-xl">
-                  {prefix}
-                </span>
-              )}
-              <p
-                className="text-[2.15rem] font-black leading-none tracking-[-0.05em] sm:text-[2.55rem]"
-                style={{ color: 'var(--text-primary)' }}
+            {contextLabel && contextValue && (
+              <div
+                className="rounded-full border px-3 py-1.5 text-[11px] font-semibold"
+                style={{
+                  borderColor: 'var(--border-subtle)',
+                  background: 'var(--bg-hover)',
+                  color: 'var(--text-secondary)',
+                  boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}`,
+                }}
               >
-                {formattedValue}
-              </p>
-              {suffix && (
-                <span className="pb-1 text-base font-bold text-[var(--text-muted)] sm:text-lg">
-                  {suffix}
-                </span>
-              )}
-            </div>
-
-            {subtitle && (
-              <p className="mt-3 text-sm text-[var(--text-muted)]">
-                {subtitle}
-              </p>
-            )}
-
-            {trend && trendTone && (
-              <div className="mt-4 flex items-center gap-2 text-xs sm:text-sm">
-                <span
-                  className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
-                  style={{
-                    background: trendTone.background,
-                    borderColor: trendTone.border,
-                    color: trendTone.color,
-                  }}
-                >
-                  {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
-                </span>
-                <span className="text-xs text-[var(--text-muted)]">
-                  vs. mês anterior
-                </span>
+                <span className="text-[var(--text-muted)]">{contextLabel}</span>{' '}
+                <span className="text-[var(--text-primary)] font-semibold">{contextValue}</span>
               </div>
             )}
           </div>
 
-          <div
-            className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border sm:h-[4.5rem] sm:w-[4.5rem]"
-            style={{
-              borderColor: 'var(--border-default)',
-              background: toneMeta.iconShell,
-              boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, var(--stat-icon-shadow)`,
-            }}
-          >
-            <div
-              className="absolute inset-[5px] rounded-xl border"
-              style={{
-                borderColor: 'var(--stat-icon-inset-border)',
-                background: toneMeta.iconInset,
-              }}
-            />
-            <Icon className="relative h-6 w-6 sm:h-7 sm:w-7" style={{ color: toneMeta.iconColor }} />
+          <p className="text-base font-semibold text-[var(--text-secondary)] sm:text-[1.05rem]">
+            {label}
+          </p>
+
+          <div className="mt-5 flex items-end gap-2">
+            {prefix && (
+              <span className="pb-1 text-lg font-bold text-[var(--text-secondary)] sm:text-xl">
+                {prefix}
+              </span>
+            )}
+            <p className="text-[2.15rem] font-black leading-none tracking-[-0.05em] text-[var(--text-primary)] sm:text-[2.55rem]">
+              {formattedValue}
+            </p>
+            {suffix && (
+              <span className="pb-1 text-base font-bold text-[var(--text-muted)] sm:text-lg">
+                {suffix}
+              </span>
+            )}
           </div>
+
+          {subtitle && (
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {subtitle}
+            </p>
+          )}
+
+          {trend && trendTone && (
+            <div className="mt-4 flex items-center gap-2">
+              <span
+                className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold"
+                style={{
+                  background: trendTone.background,
+                  borderColor: trendTone.border,
+                  color: trendTone.color,
+                }}
+              >
+                {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
+              </span>
+              <span className="text-xs text-[var(--text-muted)]">
+                vs. mês anterior
+              </span>
+            </div>
+          )}
         </div>
 
         <div
-          className="mt-6 flex items-center justify-between gap-3 border-t pt-4"
-          style={{ borderColor: 'var(--border-subtle)' }}
+          className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border sm:h-[4.5rem] sm:w-[4.5rem]"
+          style={{
+            borderColor: 'var(--border-default)',
+            background: toneMeta.iconShell,
+            boxShadow: `inset 0 1px 0 ${toneMeta.accentSoft}, var(--stat-icon-shadow)`,
+          }}
         >
+          <div
+            className="absolute inset-[5px] rounded-xl border"
+            style={{
+              borderColor: 'var(--stat-icon-inset-border)',
+              background: toneMeta.iconInset,
+            }}
+          />
+          <Icon
+            className="relative h-6 w-6 sm:h-7 sm:w-7"
+            style={{ color: toneMeta.iconColor }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-auto border-t border-[var(--border-subtle)] pt-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
             <span
               className="h-2.5 w-2.5 rounded-full"
@@ -286,16 +279,13 @@ export default function AnimatedStatCard({
             <span>{footerLabel || 'Toque para abrir detalhes'}</span>
           </div>
           {onClick && (
-            <span
-              className="text-xs font-black uppercase tracking-[0.18em]"
-              style={{ color: 'var(--brand-primary)' }}
-            >
+            <span className="text-xs font-black uppercase tracking-[0.18em] text-[var(--brand-primary)]">
               Abrir
             </span>
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 
   if (onClick) {
@@ -304,7 +294,7 @@ export default function AnimatedStatCard({
         type="button"
         onClick={onClick}
         padding="none"
-        className="group relative h-full overflow-hidden"
+        className="group relative h-full overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
       >
         {cardContent}
       </ActionSurface>
@@ -312,8 +302,8 @@ export default function AnimatedStatCard({
   }
 
   return (
-    <Surface padding="none" className="panel-glass-panel group relative h-full overflow-hidden transition-all duration-300">
+    <div className="group relative h-full overflow-hidden rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] transition-all duration-200 hover:shadow-lg">
       {cardContent}
-    </Surface>
+    </div>
   );
 }

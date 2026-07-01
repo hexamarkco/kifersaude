@@ -304,7 +304,7 @@ export default function AnimatedStatCard({
         type="button"
         onClick={onClick}
         padding="none"
-        className="panel-glass-panel panel-interactive-glass group relative h-full overflow-hidden"
+        className="group relative h-full overflow-hidden"
       >
         {cardContent}
       </ActionSurface>

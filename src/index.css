@@ -177,24 +177,12 @@ html {
     var(--ks-color-bg);
 }
 
-.kifer-panel-theme {
-  --ks-color-bg: #f6f1e8;
-  --ks-color-surface: #fffdfa;
-  --ks-color-border: #e0d0ba;
-}
-
 .painel-theme.kifer-ds .panel-page-shell h1,
 .painel-theme.kifer-ds .panel-page-shell h2,
 .painel-theme.kifer-ds .panel-page-shell h3,
 .painel-theme.kifer-ds .panel-page-shell h4 {
   font-family: var(--ks-font-heading);
   letter-spacing: -0.012em;
-}
-
-.painel-theme.kifer-ds .panel-page-shell .panel-glass-panel,
-.painel-theme.kifer-ds .panel-page-shell .panel-glass-lite,
-.painel-theme.kifer-ds .panel-page-shell .panel-glass-strong {
-  border-color: rgba(161, 98, 7, 0.24) !important;
 }
 
 .painel-theme.kifer-ds .text-teal-900,
@@ -660,16 +648,16 @@ html {
 .painel-theme .panel-glass-panel,
 .painel-theme .panel-glass-strong,
 .painel-theme .panel-glass-floating {
-  border-color: var(--panel-glass-border) !important;
-  background: var(--panel-glass-bg) !important;
+  border-color: var(--panel-glass-border);
+  background: var(--panel-glass-bg);
   box-shadow: var(--panel-glass-shadow);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 .painel-theme .panel-glass-lite {
-  border-color: var(--panel-glass-border) !important;
-  background: var(--panel-glass-bg-lite) !important;
+  border-color: var(--panel-glass-border);
+  background: var(--panel-glass-bg-lite);
   box-shadow: var(--panel-glass-shadow-lite);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -693,11 +681,11 @@ html {
 }
 
 .painel-theme .panel-glass-strong {
-  background: var(--panel-glass-bg-strong) !important;
+  background: var(--panel-glass-bg-strong);
 }
 
 .painel-theme .panel-glass-floating {
-  background: var(--panel-glass-bg-strong) !important;
+  background: var(--panel-glass-bg-strong);
 }
 
 .painel-theme .panel-interactive-glass {

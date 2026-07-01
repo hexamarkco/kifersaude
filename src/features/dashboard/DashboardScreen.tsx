@@ -2283,7 +2283,7 @@ export default function DashboardScreen({
 
         {!isObserver && (
           <>
-            <Surface className="panel-glass-panel" data-panel-animate>
+            <Surface data-panel-animate>
               <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                 <div>
                   <div
@@ -2431,7 +2431,6 @@ export default function DashboardScreen({
                           calendarView === "day" ? "primary" : "secondary"
                         }
                         size="sm"
-                        className="h-7 rounded-md px-3 text-[11px]"
                       >
                         Hoje
                       </Button>
@@ -2449,7 +2448,6 @@ export default function DashboardScreen({
                           calendarView === "week" ? "primary" : "secondary"
                         }
                         size="sm"
-                        className="h-7 rounded-md px-3 text-[11px]"
                       >
                         Semana
                       </Button>
@@ -2460,7 +2458,6 @@ export default function DashboardScreen({
                           calendarView === "month" ? "primary" : "secondary"
                         }
                         size="sm"
-                        className="h-7 rounded-md px-3 text-[11px]"
                       >
                         Mês
                       </Button>
@@ -2506,15 +2503,9 @@ export default function DashboardScreen({
                   </div>
 
                   {calendarViewEvents.length === 0 ? (
-                    <div
-                      className="flex flex-1 items-center justify-center rounded-[1.4rem] border border-dashed px-4 py-10 text-sm"
-                      style={{
-                        borderColor: "var(--border-subtle)",
-                        color: "var(--text-muted)",
-                      }}
-                    >
+                    <Surface variant="muted" padding="lg" className="flex flex-1 items-center justify-center border-dashed text-sm text-[var(--text-muted)]">
                       Nenhum evento no período selecionado.
-                    </div>
+                    </Surface>
                   ) : (
                     <div className="space-y-3 flex-1 overflow-y-auto pr-1">
                       {calendarViewEvents.map((event) => {
@@ -2551,9 +2542,9 @@ export default function DashboardScreen({
                               ? `${band.min}+`
                               : `${band.min}-${band.max}`;
                           return (
-                            <div
+                            <Surface
                               key={event.id}
-                              className="rounded-[1.4rem] border p-4"
+                              padding="md"
                               style={{
                                 borderColor:
                                   CALENDAR_LEGEND_STYLES.adjustment.border,
@@ -2676,7 +2667,7 @@ export default function DashboardScreen({
                                   }
                                   variant="secondary"
                                   size="sm"
-                                  className="h-8 rounded-md px-3 text-xs"
+                                  
                                 >
                                   Ver contrato
                                 </Button>
@@ -2690,7 +2681,7 @@ export default function DashboardScreen({
                                     }
                                     variant="secondary"
                                     size="sm"
-                                    className="h-8 rounded-md px-3 text-xs"
+                                    
                                   >
                                     Abrir lead
                                   </Button>
@@ -2710,21 +2701,21 @@ export default function DashboardScreen({
                                   }
                                   variant="soft"
                                   size="sm"
-                                  className="h-8 rounded-md px-3 text-xs"
+                                  
                                 >
                                   Criar lembrete
                                 </Button>
                               </div>
-                            </div>
+                            </Surface>
                           );
                         }
 
                         const birthday = event.birthday;
 
                         return (
-                          <div
+                          <Surface
                             key={event.id}
-                            className="rounded-[1.4rem] border p-4"
+                            padding="md"
                             style={{
                               borderColor:
                                 CALENDAR_LEGEND_STYLES.birthday.border,
@@ -2846,7 +2837,7 @@ export default function DashboardScreen({
                                   }
                                   variant="secondary"
                                   size="sm"
-                                  className="h-8 rounded-md px-3 text-xs"
+                                  
                                 >
                                   Ver contrato
                                 </Button>
@@ -2861,7 +2852,7 @@ export default function DashboardScreen({
                                   }
                                   variant="secondary"
                                   size="sm"
-                                  className="h-8 rounded-md px-3 text-xs"
+                                  
                                 >
                                   Abrir lead
                                 </Button>
@@ -2878,12 +2869,12 @@ export default function DashboardScreen({
                                 }
                                 variant="warning"
                                 size="sm"
-                                className="h-8 rounded-md px-3 text-xs"
+                                
                               >
                                 Criar lembrete
                               </Button>
                             </div>
-                          </div>
+                          </Surface>
                         );
                       })}
                     </div>

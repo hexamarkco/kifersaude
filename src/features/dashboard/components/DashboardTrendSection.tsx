@@ -48,7 +48,7 @@ export function DashboardTrendSection({
   const formatSelectedMetricValue = (value: number) => formatDashboardMetricValue(value, selectedMetric);
 
   return (
-    <Surface className="panel-glass-panel" data-panel-animate>
+    <Surface data-panel-animate>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-xl font-semibold text-[var(--text-primary)]">

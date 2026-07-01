@@ -4,7 +4,7 @@ import { Surface } from '../../../design-system';
 
 export function DashboardHeroCard() {
   return (
-    <Surface variant="hero" padding="lg" className="panel-glass-hero" data-panel-animate>
+    <Surface variant="hero" padding="lg" data-panel-animate>
       <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h3 className="text-2xl font-bold text-[var(--text-primary)]">

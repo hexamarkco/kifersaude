@@ -150,11 +150,11 @@ export default function AnimatedStatCard({
     borderColor: toneMeta.accent,
   };
   const numericValueClassName = prefix === 'R$'
-    ? 'max-w-full text-[clamp(2.35rem,2.75vw,3rem)] font-semibold leading-none tracking-[-0.055em] text-[var(--text-primary)] tabular-nums'
-    : 'max-w-full text-[clamp(2.7rem,3.35vw,3.55rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)] tabular-nums';
+    ? 'max-w-full font-[var(--font-sans)] text-[clamp(2.35rem,2.75vw,3rem)] font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums'
+    : 'max-w-full font-[var(--font-sans)] text-[clamp(2.7rem,3.35vw,3.55rem)] font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums';
 
   const cardContent = (
-    <div className="relative flex h-full min-h-[15.5rem] flex-col overflow-hidden p-5 sm:p-6">
+    <div className="relative flex h-full min-h-[15.5rem] flex-col overflow-hidden p-5 font-[var(--font-sans)] sm:p-6">
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: toneMeta.halo }}
@@ -177,11 +177,11 @@ export default function AnimatedStatCard({
           </div>
 
           <div className="min-w-0 pt-0.5">
-            <p className="text-[1.05rem] font-bold leading-tight" style={{ color: toneMeta.iconColor }}>
+            <p className="text-base font-semibold leading-tight tracking-[-0.01em]" style={{ color: toneMeta.iconColor }}>
               {label}
             </p>
             {subtitle && (
-              <p className="mt-1.5 text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
+              <p className="mt-1.5 text-sm font-medium leading-snug text-[var(--text-secondary)]">
                 {subtitle}
               </p>
             )}
@@ -194,13 +194,13 @@ export default function AnimatedStatCard({
         {splitValueMatch ? (
           <>
             <div className="flex min-w-0 items-end gap-2.5">
-              <span className="text-[clamp(3rem,3.65vw,3.85rem)] font-semibold leading-none tracking-[-0.06em] text-[var(--text-primary)] tabular-nums">
+              <span className="font-[var(--font-sans)] text-[clamp(3rem,3.65vw,3.85rem)] font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
                 {splitCurrentValue}
               </span>
-              <span className="pb-1.5 text-[clamp(2.35rem,2.85vw,3rem)] font-semibold leading-none tracking-[-0.05em] text-[var(--text-subtle)]">
+              <span className="pb-1.5 font-[var(--font-sans)] text-[clamp(2.35rem,2.85vw,3rem)] font-semibold leading-none tracking-[-0.04em] text-[var(--text-subtle)]">
                 /
               </span>
-              <span className="text-[clamp(2.35rem,2.85vw,3rem)] font-semibold leading-none tracking-[-0.05em] tabular-nums" style={{ color: toneMeta.iconColor }}>
+              <span className="font-[var(--font-sans)] text-[clamp(2.35rem,2.85vw,3rem)] font-semibold leading-none tracking-[-0.04em] tabular-nums" style={{ color: toneMeta.iconColor }}>
                 {splitTotalValue}
               </span>
             </div>
@@ -219,7 +219,7 @@ export default function AnimatedStatCard({
           <>
             <div className="flex min-w-0 items-end gap-2.5 overflow-visible">
               {prefix && (
-                <span className="pb-1.5 text-[clamp(1.1rem,1.35vw,1.5rem)] font-semibold text-[var(--text-secondary)]">
+                <span className="pb-1.5 font-[var(--font-sans)] text-[clamp(1.1rem,1.35vw,1.5rem)] font-semibold leading-none tracking-[-0.01em] text-[var(--text-secondary)]">
                   {prefix}
                 </span>
               )}
@@ -227,12 +227,12 @@ export default function AnimatedStatCard({
                 {formattedValue}
               </p>
               {suffix && (
-                <span className="pb-1.5 text-[clamp(1.4rem,1.85vw,2rem)] font-semibold text-[var(--text-primary)]">
+                <span className="pb-1.5 font-[var(--font-sans)] text-[clamp(1.4rem,1.85vw,2rem)] font-semibold leading-none tracking-[-0.01em] text-[var(--text-primary)]">
                   {suffix}
                 </span>
               )}
             </div>
-            <p className="mt-3 text-sm font-medium text-[var(--text-muted)]">
+            <p className="mt-3 text-sm font-medium leading-snug text-[var(--text-muted)]">
               {label.toLocaleLowerCase('pt-BR')}
             </p>
           </>
@@ -243,7 +243,7 @@ export default function AnimatedStatCard({
         {trend && trendTone ? (
           <>
             <span
-              className="inline-flex items-center gap-1.5 text-sm font-semibold"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold leading-none tracking-[-0.01em]"
               style={{
                 color: trendTone.color,
               }}
@@ -251,14 +251,14 @@ export default function AnimatedStatCard({
               <TrendingUp className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
               {trend.isPositive ? '+' : '-'} {Math.abs(trend.value).toFixed(1)}%
             </span>
-            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-semibold leading-none text-[var(--text-secondary)]">
               vs mês anterior
             </span>
           </>
         ) : !splitValueMatch ? (
           <>
             <span
-              className="inline-flex items-center gap-1.5 text-sm font-semibold"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold leading-none tracking-[-0.01em]"
               style={{
                 color: toneMeta.iconColor,
               }}
@@ -266,7 +266,7 @@ export default function AnimatedStatCard({
               <Minus className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
               0%
             </span>
-            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)]">
+            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-hover)] px-2.5 py-1 text-xs font-semibold leading-none text-[var(--text-secondary)]">
               vs mês anterior
             </span>
           </>

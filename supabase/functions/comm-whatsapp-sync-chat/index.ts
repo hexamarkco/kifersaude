@@ -4,6 +4,7 @@ import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   applyCommWhatsAppMessageEdit,
   cacheCommWhatsAppMedia,
+  cacheCommWhatsAppChatContactName,
   COMM_WHATSAPP_MODULE,
   corsHeaders,
   ensureCommWhatsAppSettings,
@@ -25,6 +26,7 @@ import {
   getNowIso,
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
+  isValidCommWhatsAppDisplayName,
   markCommWhatsAppMessageDeleted,
   normalizeWhapiChatId,
   persistCommWhatsAppMessage,
@@ -207,6 +209,15 @@ Deno.serve(async (req: Request) => {
     if (whapiName && isPhoneLabelLikeDisplayName(whapiName)) {
       whapiName = '';
     }
+
+    if (isValidCommWhatsAppDisplayName(whapiName) && !isOwnChannelName(whapiName, channel.connected_user_name)) {
+      await cacheCommWhatsAppChatContactName(supabaseAdmin, {
+        channelId: channel.id,
+        phoneNumber: phoneDigits,
+        displayName: whapiName,
+      });
+    }
+
     if (!whapiName) {
       whapiName = await fetchWhapiContactName({ token: settings.token, contactId: phoneDigits }).catch(() => '');
     }

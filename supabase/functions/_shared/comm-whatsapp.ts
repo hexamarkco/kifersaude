@@ -306,6 +306,46 @@ export const stringTimestampToIso = (value: unknown): string | null => {
 
 export const getNowIso = (): string => new Date().toISOString();
 
+export async function cacheCommWhatsAppChatContactName(
+  supabaseAdmin: SupabaseClient,
+  input: {
+    channelId: string;
+    phoneNumber: string | null | undefined;
+    displayName: string | null | undefined;
+  },
+): Promise<boolean> {
+  const phoneNumber = normalizeCommWhatsAppPhone(input.phoneNumber);
+  const displayName = toTrimmedString(input.displayName);
+  if (!phoneNumber || !isValidCommWhatsAppDisplayName(displayName)) {
+    return false;
+  }
+
+  const nowIso = getNowIso();
+  const { error } = await supabaseAdmin
+    .from('comm_whatsapp_phone_contacts_cache')
+    .upsert(
+      {
+        channel_id: input.channelId,
+        contact_id: `chat:${phoneNumber}`,
+        phone_number: phoneNumber,
+        phone_digits: phoneNumber,
+        display_name: displayName,
+        short_name: displayName.split(/\s+/).filter(Boolean).slice(0, 2).join(' ') || null,
+        saved: true,
+        last_synced_at: nowIso,
+        updated_at: nowIso,
+      },
+      { onConflict: 'channel_id,contact_id' },
+    );
+
+  if (error) {
+    console.warn('[comm-whatsapp] failed to cache chat contact name', { phoneNumber, error: error.message });
+    return false;
+  }
+
+  return true;
+}
+
 export const getDirectChatDisplayNameCandidate = (
   message: Record<string, unknown>,
   direction: 'inbound' | 'outbound' | 'system',
@@ -342,11 +382,17 @@ export const isPhoneLabelLikeDisplayName = (value: string): boolean => {
   return /^\+?\d+$/.test(withoutSymbols);
 };
 
+export const isValidCommWhatsAppDisplayName = (value: unknown): value is string => {
+  const trimmed = toTrimmedString(value);
+  if (!trimmed) return false;
+  if (isPhoneLabelLikeDisplayName(trimmed)) return false;
+  return /[\p{L}\p{N}]/u.test(trimmed);
+};
+
 const pickHumanName = (...candidates: unknown[]): string => {
   for (const candidate of candidates) {
     const normalized = toTrimmedString(candidate);
-    if (!normalized) continue;
-    if (isPhoneLabelLikeDisplayName(normalized)) continue;
+    if (!isValidCommWhatsAppDisplayName(normalized)) continue;
     return normalized;
   }
 
@@ -1574,7 +1620,7 @@ export const extractWhapiContactName = (payload: unknown): string => {
   const candidates = [payload.name, payload.short, payload.short_name, payload.pushname, payload.full_name];
   for (const candidate of candidates) {
     const normalized = toTrimmedString(candidate);
-    if (normalized) return normalized;
+    if (isValidCommWhatsAppDisplayName(normalized)) return normalized;
   }
 
   return '';
@@ -1591,7 +1637,7 @@ export const extractWhapiSavedContactName = (payload: unknown): string => {
   const candidates = [payload.name, payload.pushname, payload.short, payload.short_name, payload.full_name];
   for (const candidate of candidates) {
     const normalized = toTrimmedString(candidate);
-    if (normalized) return normalized;
+    if (isValidCommWhatsAppDisplayName(normalized)) return normalized;
   }
 
   return '';
@@ -1599,7 +1645,8 @@ export const extractWhapiSavedContactName = (payload: unknown): string => {
 
 export const extractWhapiContactShortName = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
-  return toTrimmedString(payload.short) || toTrimmedString(payload.short_name) || '';
+  const shortName = toTrimmedString(payload.short) || toTrimmedString(payload.short_name) || '';
+  return isValidCommWhatsAppDisplayName(shortName) ? shortName : '';
 };
 
 export const extractWhapiContactId = (payload: unknown): string => {

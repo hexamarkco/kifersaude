@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 
 import { cx } from '../../lib/cx';
 
-export type SurfaceVariant = 'default' | 'muted' | 'strong' | 'hero' | 'danger' | 'warning' | 'success';
+export type SurfaceVariant = 'default' | 'muted' | 'strong' | 'hero' | 'danger' | 'warning' | 'success' | 'info';
 export type SurfacePadding = 'none' | 'sm' | 'md' | 'lg';
 
 type SurfaceProps = HTMLAttributes<HTMLDivElement> & {

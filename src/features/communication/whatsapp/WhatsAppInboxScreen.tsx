@@ -1617,23 +1617,37 @@ const getOwnReactionEmoji = (message?: CommWhatsAppMessage | null) => {
   return ownReaction ? String(ownReaction.emoji ?? '').trim() || null : null;
 };
 
+const getValidWhatsAppDisplayName = (value: unknown) => {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const withoutPhoneSymbols = normalized.replace(/[\s()+-]/g, '');
+  if (/^\+?\d+$/.test(withoutPhoneSymbols)) {
+    return '';
+  }
+
+  return /[\p{L}\p{N}]/u.test(normalized) ? normalized : '';
+};
+
 const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName?: string | null, leadName?: string | null) => {
   if (!chat) {
     return 'Conversa';
   }
 
-  const savedContactName = String(chat.saved_contact_name ?? '').trim();
+  const savedContactName = getValidWhatsAppDisplayName(chat.saved_contact_name);
   if (savedContactName) {
     return savedContactName;
   }
 
-  const resolvedLeadName = String(leadName ?? '').trim();
+  const resolvedLeadName = getValidWhatsAppDisplayName(leadName);
   if (resolvedLeadName) {
     return resolvedLeadName;
   }
 
-  const displayName = String(chat.display_name ?? '').trim();
-  const pushName = String(chat.push_name ?? '').trim();
+  const displayName = getValidWhatsAppDisplayName(chat.display_name);
+  const pushName = getValidWhatsAppDisplayName(chat.push_name);
   const ownName = String(connectedUserName ?? '').trim().toLowerCase();
   const isOwnNameLeak = !chat.saved_contact_name && !chat.lead_id && displayName && ownName && displayName.toLowerCase() === ownName;
 
@@ -3444,13 +3458,9 @@ export default function WhatsAppInboxScreen() {
         return 'Contato';
       }
 
-      if (selectedChat.lead_id) {
-        return leadPanel?.nome_completo?.trim() || selectedChat.saved_contact_name?.trim() || selectedChat.display_name?.trim() || selectedChat.push_name?.trim() || selectedChat.phone_number?.trim() || 'Contato';
-      }
-
-      return selectedChat.saved_contact_name?.trim() || selectedChat.display_name?.trim() || selectedChat.push_name?.trim() || selectedChat.phone_number?.trim() || 'Contato';
+      return getSafeChatDisplayName(selectedChat, operationalState?.channel?.connected_user_name ?? null, leadPanel?.nome_completo) || selectedChat.phone_number?.trim() || 'Contato';
     },
-    [leadPanel?.nome_completo, selectedChat],
+    [leadPanel?.nome_completo, operationalState?.channel?.connected_user_name, selectedChat],
   );
 
   const quickReplyLead = useMemo<Lead | null>(() => {
@@ -3461,7 +3471,7 @@ export default function WhatsAppInboxScreen() {
     const timestamp = new Date().toISOString();
     return {
       id: leadPanel?.id ?? selectedChat.lead_id ?? selectedChat.id,
-      nome_completo: leadPanel?.nome_completo || selectedChat.saved_contact_name || selectedChat.display_name || '',
+      nome_completo: getSafeChatDisplayName(selectedChat, operationalState?.channel?.connected_user_name ?? null, leadPanel?.nome_completo),
       telefone: leadPanel?.telefone || selectedChat.phone_number || '',
       email: '',
       cidade: '',
@@ -3473,7 +3483,7 @@ export default function WhatsAppInboxScreen() {
       created_at: timestamp,
       updated_at: timestamp,
     };
-  }, [leadPanel, selectedChat]);
+  }, [leadPanel, operationalState?.channel?.connected_user_name, selectedChat]);
   const resolveComposerVariables = useCallback((value: string) => {
     return quickReplyLead ? applyTemplateVariables(value, quickReplyLead) : value;
   }, [quickReplyLead]);
@@ -6567,11 +6577,12 @@ export default function WhatsAppInboxScreen() {
     }
   }, [isScrolledNearBottom, markSelectedChatReadIfEligible]);
 
-  useEffect(() => {
-    const textarea = composerTextareaRef.current;
+  const resizeComposerTextarea = useCallback((target?: HTMLTextAreaElement | null) => {
+    const textarea = target ?? composerTextareaRef.current;
     if (!textarea) return;
 
-    textarea.style.height = '0px';
+    textarea.style.height = 'auto';
+    textarea.style.overflowY = 'hidden';
 
     const styles = window.getComputedStyle(textarea);
     const lineHeight = Number.parseFloat(styles.lineHeight) || 24;
@@ -6586,9 +6597,13 @@ export default function WhatsAppInboxScreen() {
     const expanded = nextHeight > minHeight + 2;
 
     textarea.style.height = `${nextHeight}px`;
-    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight + 1 ? 'auto' : 'hidden';
     setIsComposerExpanded(expanded);
-  }, [messageDraft, pendingAttachments.length, voiceAttachment?.id, selectedChatId]);
+  }, []);
+
+  useLayoutEffect(() => {
+    resizeComposerTextarea();
+  }, [messageDraft, pendingAttachments.length, resizeComposerTextarea, selectedChatId, voiceAttachment?.id]);
 
   const handleAttachmentMenuAction = (action: AttachmentMenuAction) => {
     if (voiceRecordingState !== 'idle') {
@@ -7983,14 +7998,8 @@ export default function WhatsAppInboxScreen() {
   const handleComposerChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setMessageDraft(event.target.value);
     syncComposerSelection(event.target);
+    resizeComposerTextarea(event.target);
   };
-
-  useEffect(() => {
-    const textarea = composerTextareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
-  }, [messageDraft]);
 
   const handleInsertQuickReply = useCallback((option: QuickReplyOption) => {
     const textarea = composerTextareaRef.current;

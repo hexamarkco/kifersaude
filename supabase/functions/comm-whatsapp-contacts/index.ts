@@ -3,6 +3,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   buildWhapiDirectChatId,
+  cacheCommWhatsAppChatContactName,
   checkWhapiContactExists,
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -12,10 +13,12 @@ import {
   extractWhapiContactPhone,
   extractWhapiContactSaved,
   extractWhapiContactShortName,
+  fetchWhapiChatName,
   fetchWhapiContacts,
   getCommWhatsAppPhoneLookupKeys,
   extractWhapiSavedContactName,
   getNowIso,
+  isValidCommWhatsAppDisplayName,
   normalizeCommWhatsAppPhone,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -97,6 +100,18 @@ async function syncContactsToCache(params: {
   channelId: string;
   token: string;
 }) {
+  const { count: previousRemoteSavedCount, error: previousCountError } = await params.supabaseAdmin
+    .from('comm_whatsapp_phone_contacts_cache')
+    .select('id', { count: 'exact', head: true })
+    .eq('channel_id', params.channelId)
+    .eq('saved', true)
+    .not('contact_id', 'like', 'manual:%')
+    .not('contact_id', 'like', 'chat:%');
+
+  if (previousCountError) {
+    throw new Error(`Erro ao contar cache de contatos do WhatsApp: ${previousCountError.message}`);
+  }
+
   const fetchedContacts = await fetchWhapiContacts({ token: params.token });
   const nowIso = getNowIso();
 
@@ -135,20 +150,32 @@ async function syncContactsToCache(params: {
     }
   }
 
-  const syncedContactIds = rows.map((row) => row.contact_id);
-  let cleanupQuery = params.supabaseAdmin
-    .from('comm_whatsapp_phone_contacts_cache')
-    .delete()
-    .eq('channel_id', params.channelId)
-    .not('contact_id', 'like', 'manual:%');
+  const previousCount = previousRemoteSavedCount ?? 0;
+  const looksSuspiciouslyPartial = previousCount >= 25 && rows.length < Math.floor(previousCount * 0.8);
 
-  if (syncedContactIds.length > 0) {
-    cleanupQuery = cleanupQuery.not('contact_id', 'in', `(${syncedContactIds.map((id) => `"${id}"`).join(',')})`);
-  }
+  if (looksSuspiciouslyPartial) {
+    console.warn('[comm-whatsapp-contacts] skipped destructive contact cleanup after suspicious partial sync', {
+      previousCount,
+      nextCount: rows.length,
+      fetchedCount: fetchedContacts.length,
+    });
+  } else {
+    const syncedContactIds = rows.map((row) => row.contact_id);
+    let cleanupQuery = params.supabaseAdmin
+      .from('comm_whatsapp_phone_contacts_cache')
+      .delete()
+      .eq('channel_id', params.channelId)
+      .not('contact_id', 'like', 'manual:%')
+      .not('contact_id', 'like', 'chat:%');
 
-  const { error: cleanupError } = await cleanupQuery;
-  if (cleanupError) {
-    throw new Error(`Erro ao limpar cache obsoleto de contatos do WhatsApp: ${cleanupError.message}`);
+    if (syncedContactIds.length > 0) {
+      cleanupQuery = cleanupQuery.not('contact_id', 'in', `(${syncedContactIds.map((id) => `"${id}"`).join(',')})`);
+    }
+
+    const { error: cleanupError } = await cleanupQuery;
+    if (cleanupError) {
+      throw new Error(`Erro ao limpar cache obsoleto de contatos do WhatsApp: ${cleanupError.message}`);
+    }
   }
 
   await params.supabaseAdmin.rpc('comm_whatsapp_refresh_channel_chat_identities', {
@@ -269,7 +296,7 @@ async function saveContactToCache(params: {
     throw new Error('Numero invalido para salvar o contato.');
   }
 
-  if (!displayName) {
+  if (!isValidCommWhatsAppDisplayName(displayName)) {
     throw new Error('Nome invalido para salvar o contato.');
   }
 
@@ -425,7 +452,49 @@ Deno.serve(async (req: Request) => {
         phoneNumbers,
       });
 
-      return new Response(JSON.stringify({ success: true, contacts }), {
+      const existingKeys = new Set(
+        contacts.flatMap((contact) => getCommWhatsAppPhoneLookupKeys(contact.phone_digits || contact.phone_number)),
+      );
+      const missingPhones = Array.from(new Set(phoneNumbers.map((phoneNumber) => normalizeCommWhatsAppPhone(phoneNumber)).filter(Boolean)))
+        .filter((phoneNumber) => !getCommWhatsAppPhoneLookupKeys(phoneNumber).some((key) => existingKeys.has(key)))
+        .slice(0, 30);
+
+      const chatNameContacts: SavedContactRow[] = [];
+      for (const phoneNumber of missingPhones) {
+        const whapiChatName = await fetchWhapiChatName({ token: settings.token, chatId: buildWhapiDirectChatId(phoneNumber) }).catch(() => '');
+        const isOwnChannelName = channel.connected_user_name && whapiChatName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase();
+        if (!isValidCommWhatsAppDisplayName(whapiChatName) || isOwnChannelName) {
+          continue;
+        }
+
+        const nowIso = getNowIso();
+        await cacheCommWhatsAppChatContactName(supabaseAdmin, {
+          channelId: channel.id,
+          phoneNumber,
+          displayName: whapiChatName,
+        });
+        chatNameContacts.push({
+          id: '',
+          channel_id: channel.id,
+          contact_id: `chat:${phoneNumber}`,
+          phone_number: phoneNumber,
+          phone_digits: phoneNumber,
+          display_name: whapiChatName,
+          short_name: whapiChatName.split(/\s+/).filter(Boolean).slice(0, 2).join(' ') || null,
+          saved: true,
+          last_synced_at: nowIso,
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
+
+      if (chatNameContacts.length > 0) {
+        await supabaseAdmin.rpc('comm_whatsapp_refresh_channel_chat_identities', {
+          p_channel_id: channel.id,
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, contacts: [...contacts, ...chatNameContacts] }), {
         status: 200,
         headers: jsonHeaders,
       });
@@ -489,6 +558,18 @@ Deno.serve(async (req: Request) => {
       }
 
       const directChatId = buildWhapiDirectChatId(phoneNumber);
+      if (!savedContactName) {
+        const whapiChatName = await fetchWhapiChatName({ token: settings.token, chatId: directChatId }).catch(() => '');
+        const isOwnChannelName = channel.connected_user_name && whapiChatName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase();
+        if (isValidCommWhatsAppDisplayName(whapiChatName) && !isOwnChannelName) {
+          savedContactName = whapiChatName;
+          await cacheCommWhatsAppChatContactName(supabaseAdmin, {
+            channelId: channel.id,
+            phoneNumber,
+            displayName: whapiChatName,
+          });
+        }
+      }
 
       const { data, error } = await supabaseUser.rpc('comm_whatsapp_open_or_create_chat', {
         p_external_chat_id: directChatId,

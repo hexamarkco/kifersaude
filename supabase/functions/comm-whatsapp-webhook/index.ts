@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.5
 import {
   applyCommWhatsAppMessageEdit,
   cacheCommWhatsAppMedia,
+  cacheCommWhatsAppChatContactName,
   COMM_WHATSAPP_CHANNEL_SLUG,
   corsHeaders,
   extractWhapiDeletedMessageEvent,
@@ -24,6 +25,7 @@ import {
   getNowIso,
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
+  isValidCommWhatsAppDisplayName,
   isRecord,
   markCommWhatsAppMessageDeleted,
   normalizeCommWhatsAppPhone,
@@ -302,7 +304,11 @@ async function persistMessageFromWebhook(
   const existingChat = await findExistingChat(supabaseAdmin, channel.id, externalChatId);
   const direction = message.from_me === true ? 'outbound' : 'inbound';
   const phoneDigits = extractPhoneFromChatId(externalChatId);
-  let resolvedName = getDirectChatDisplayNameCandidate(message, direction);
+  const messageName = getDirectChatDisplayNameCandidate(message, direction);
+  const whapiChatName = whapiToken
+    ? await fetchWhapiChatName({ token: whapiToken, chatId: externalChatId }).catch(() => '')
+    : '';
+  let resolvedName = whapiChatName || messageName;
 
   if (
     resolvedName &&
@@ -320,8 +326,12 @@ async function persistMessageFromWebhook(
     resolvedName = existingChat.push_name;
   }
 
-  if (!resolvedName && whapiToken) {
-    resolvedName = await fetchWhapiChatName({ token: whapiToken, chatId: externalChatId }).catch(() => '');
+  if (isValidCommWhatsAppDisplayName(whapiChatName) && !isOwnChannelName(whapiChatName, channel.connected_user_name)) {
+    await cacheCommWhatsAppChatContactName(supabaseAdmin, {
+      channelId: channel.id,
+      phoneNumber: phoneDigits,
+      displayName: whapiChatName,
+    });
   }
 
   if (!resolvedName && whapiToken) {

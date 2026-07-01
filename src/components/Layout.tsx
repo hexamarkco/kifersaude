@@ -55,7 +55,7 @@ type LayoutProps = {
 
 type ThemeMode = 'light' | 'dark';
 
-const PANEL_THEME_STORAGE_KEY = 'painel.theme.v1';
+const PANEL_THEME_STORAGE_KEY = 'painel.theme.v2';
 
 const getInitialThemeMode = (): ThemeMode => {
   if (typeof window === 'undefined') {
@@ -67,7 +67,7 @@ const getInitialThemeMode = (): ThemeMode => {
     return storedTheme;
   }
 
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return 'dark';
 };
 
 export default function Layout({

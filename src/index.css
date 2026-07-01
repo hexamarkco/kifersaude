@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import './design-system/styles.css';
 
 @tailwind base;
@@ -520,6 +520,65 @@ html {
   --app-scrollbar-thumb: linear-gradient(180deg, color-mix(in srgb, var(--panel-focus, #df8b2f) 88%, white) 0%, color-mix(in srgb, var(--panel-accent-border, #a96428) 82%, var(--panel-accent-ink, #f4c58f)) 100%);
   --app-scrollbar-thumb-solid: color-mix(in srgb, var(--panel-accent-border, #a96428) 78%, var(--panel-accent-ink, #f4c58f));
   --app-scrollbar-thumb-hover: linear-gradient(180deg, color-mix(in srgb, var(--panel-focus, #df8b2f) 94%, white) 0%, color-mix(in srgb, var(--panel-accent-ink, #f4c58f) 38%, var(--panel-accent-border, #a96428)) 100%);
+}
+
+.painel-theme.kifer-ds,
+.painel-theme.kifer-ds.theme-dark {
+  color-scheme: dark;
+  --panel-bg: var(--bg-canvas);
+  --panel-surface: var(--bg-surface);
+  --panel-surface-muted: var(--bg-inset);
+  --panel-surface-soft: var(--bg-elevated);
+  --panel-surface-soft-2: var(--bg-hover);
+  --panel-border-subtle: var(--border-subtle);
+  --panel-border: var(--border-default);
+  --panel-border-strong: var(--border-strong);
+  --panel-text: var(--text-primary);
+  --panel-text-soft: var(--text-secondary);
+  --panel-text-muted: var(--text-muted);
+  --panel-text-subtle: var(--text-subtle);
+  --panel-input-text: var(--text-primary);
+  --panel-placeholder: var(--text-muted);
+  --panel-chart-grid: var(--border-default);
+  --panel-focus: var(--warning);
+  --panel-accent-strong: var(--brand-primary);
+  --panel-accent-soft: var(--brand-primary-soft);
+  --panel-accent-warm: var(--accent-gold-soft);
+  --panel-accent-hover: var(--brand-primary-hover);
+  --panel-accent-border: var(--brand-primary-border);
+  --panel-accent-ink: var(--accent-gold-hover);
+  --panel-accent-ink-strong: #ffe1bc;
+  --panel-accent-blue-bg: var(--info-soft);
+  --panel-accent-blue-bg-strong: rgba(59, 130, 246, 0.2);
+  --panel-accent-blue-text: var(--info-text);
+  --panel-accent-blue-border: var(--info-border);
+  --panel-accent-red-bg: var(--danger-soft);
+  --panel-accent-red-bg-strong: rgba(239, 68, 68, 0.24);
+  --panel-accent-red-text: var(--danger-text);
+  --panel-accent-red-border: var(--danger-border);
+  --panel-accent-green-bg: var(--success-soft);
+  --panel-accent-green-bg-strong: rgba(34, 197, 94, 0.22);
+  --panel-accent-green-text: var(--success-text);
+  --panel-accent-green-border: var(--success-border);
+  --panel-accent-amber-bg: var(--warning-soft);
+  --panel-accent-amber-bg-strong: rgba(245, 158, 11, 0.22);
+  --panel-accent-amber-text: var(--warning-text);
+  --panel-accent-amber-border: var(--warning-border);
+  --panel-glass-bg: rgba(23, 19, 17, 0.9);
+  --panel-glass-bg-lite: rgba(23, 19, 17, 0.84);
+  --panel-glass-bg-strong: rgba(23, 19, 17, 0.96);
+  --panel-glass-border: rgba(245, 210, 162, 0.12);
+  --panel-glass-highlight: rgba(255, 232, 204, 0.1);
+  --panel-glass-shadow: var(--shadow-popover);
+  --panel-glass-shadow-lite: var(--shadow-card);
+  --panel-aurora-teal: rgba(197, 90, 61, 0.15);
+  --panel-aurora-blue: rgba(212, 175, 55, 0.08);
+  --panel-aurora-orange: rgba(176, 88, 42, 0.14);
+  --app-scrollbar-track: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  --app-scrollbar-track-hover: color-mix(in srgb, var(--bg-hover) 92%, transparent);
+  --app-scrollbar-thumb: linear-gradient(180deg, var(--brand-primary-hover) 0%, var(--brand-primary-active) 100%);
+  --app-scrollbar-thumb-solid: var(--brand-primary);
+  --app-scrollbar-thumb-hover: linear-gradient(180deg, var(--accent-gold-hover) 0%, var(--brand-primary) 100%);
 }
 
 .painel-theme.theme-light .panel-ui-input,
@@ -4835,10 +4894,12 @@ html {
   background: transparent !important;
   box-shadow: none !important;
   border: 0 !important;
+  box-sizing: border-box;
   margin: 0;
-  min-height: 1.5rem;
-  max-height: 8rem;
-  overflow-y: auto;
+  min-height: 2.5rem;
+  max-height: min(8rem, 32vh);
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
   color: var(--panel-input-text);
 }
 

@@ -21,20 +21,20 @@ export default function Field({
   children,
 }: FieldProps) {
   return (
-    <div className={cx('space-y-1.5', className)}>
+    <div className={cx('kds-field', className)}>
       {label && (
-        <label htmlFor={htmlFor} className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <label htmlFor={htmlFor} className="kds-field-label block uppercase tracking-wide">
           {label}
-          {required ? <span className="ml-1 text-red-500">*</span> : null}
+          {required ? <span className="ml-1 text-[var(--danger-text)]">*</span> : null}
         </label>
       )}
 
       {children}
 
       {errorText ? (
-        <p className="text-xs font-medium text-red-600">{errorText}</p>
+        <p className="kds-field-error">{errorText}</p>
       ) : helperText ? (
-        <p className="text-xs text-slate-500">{helperText}</p>
+        <p className="kds-field-description">{helperText}</p>
       ) : null}
     </div>
   );

@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type HTMLAttributes } from 'react';
 import { Loader2 } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
@@ -40,6 +40,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       ref={ref}
       type={type ?? 'button'}
       disabled={isDisabled}
+      aria-busy={loading || undefined}
       className={getPanelButtonClass({
         variant,
         size,
@@ -51,6 +52,29 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       {loading && <Loader2 className={cx('animate-spin', panelButtonSpinnerSizeClasses[size])} aria-hidden="true" />}
       {children}
     </button>
+  );
+});
+
+export type ButtonGroupProps = HTMLAttributes<HTMLDivElement>;
+
+export function ButtonGroup({ className, children, ...props }: ButtonGroupProps) {
+  return (
+    <div className={cx('kds-button-group', className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+export const LoadingButton = Button;
+
+export const IconButton = forwardRef<HTMLButtonElement, Omit<ButtonProps, 'size'>>(function IconButton(
+  { variant = 'icon', children, ...props },
+  ref,
+) {
+  return (
+    <Button ref={ref} variant={variant} size="icon" {...props}>
+      {children}
+    </Button>
   );
 });
 

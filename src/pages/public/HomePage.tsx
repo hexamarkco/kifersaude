@@ -965,7 +965,7 @@ export default function HomePage() {
 
             <div className="mt-12 grid gap-6 lg:grid-cols-2">
               {audienceCards.map((card) => (
-                <article key={card.eyebrow} className="rounded-[2rem] border border-white/70 bg-white p-8 shadow-[0_26px_50px_-42px_rgba(15,23,42,0.28)]">
+                <article key={card.eyebrow} className="flex flex-col rounded-[2rem] border border-white/70 bg-white p-8 shadow-[0_26px_50px_-42px_rgba(15,23,42,0.28)]">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-sm font-black uppercase tracking-[0.18em] text-orange-700">{card.eyebrow}</p>
@@ -981,7 +981,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => scrollToForm(card.contractKind)}
-                    className="mt-8 inline-flex items-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:from-orange-600 hover:to-orange-700"
+                    className="mt-auto inline-flex items-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:from-orange-600 hover:to-orange-700"
                   >
                     {card.ctaLabel}
                     <ChevronRight className="ml-2 h-4 w-4" />

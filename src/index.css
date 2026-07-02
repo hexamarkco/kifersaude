@@ -4825,15 +4825,16 @@ html {
 .painel-theme .whatsapp-inbox-media-viewer-thumb {
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.06);
-  opacity: 0.74;
   height: 5.25rem;
   width: 5.25rem;
 }
 
-.painel-theme .whatsapp-inbox-media-viewer-thumb:hover,
+.painel-theme .whatsapp-inbox-media-viewer-thumb:hover {
+  opacity: 0.9;
+}
+
 .painel-theme .whatsapp-inbox-media-viewer-thumb.is-active {
   border-color: #22c55e;
-  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.64);
   opacity: 1;
 }
 

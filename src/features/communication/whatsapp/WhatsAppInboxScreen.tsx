@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
@@ -1884,7 +1884,7 @@ function WhatsAppMediaViewerThumb({
     <button
       type="button"
       onClick={() => onSelect(message.id)}
-      className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition ${active ? 'is-active' : ''}`}
+      className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all duration-200 ${active ? 'is-active scale-110 ring-2 ring-[#22c55e] ring-offset-2 ring-offset-[#111413]' : 'opacity-60 hover:opacity-90'}`}
       aria-label="Abrir mídia"
       aria-current={active ? 'true' : undefined}
     >
@@ -1932,6 +1932,11 @@ function WhatsAppMediaViewer({
   const selectedName = selectedMessage?.media_file_name || (isVideo ? 'Vídeo' : 'Imagem');
   const selectedAuthor = selectedMessage?.direction === 'outbound' ? 'Você' : contactName;
   const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
+  const [rotation, setRotation] = useState(0);
+
+  useEffect(() => {
+    setRotation(0);
+  }, [selectedMessageId]);
 
   const goToIndex = useCallback((nextIndex: number) => {
     const nextMessage = messages[nextIndex];
@@ -1984,6 +1989,17 @@ function WhatsAppMediaViewer({
           <p className="mt-0.5 truncate text-xs text-white/65">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</p>
         </div>
         <div className="flex items-center gap-2">
+          {mediaUrl && !isVideo ? (
+            <button
+              type="button"
+              onClick={() => setRotation((prev) => (prev + 1) % 4)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
+              aria-label="Rotacionar imagem"
+              title={`Rotacionar (${rotation * 90}°)`}
+            >
+              <RotateCw className="h-5 w-5" />
+            </button>
+          ) : null}
           {mediaUrl ? (
             <a
               href={mediaUrl}
@@ -2030,7 +2046,12 @@ function WhatsAppMediaViewer({
                 <source src={mediaUrl} type={selectedMessage.media_mime_type || undefined} />
               </video>
             ) : (
-              <img src={mediaUrl} alt={selectedName} className="max-h-full max-w-full object-contain" />
+              <img
+                src={mediaUrl}
+                alt={selectedName}
+                className="max-h-full max-w-full object-contain transition-transform duration-300"
+                style={{ transform: `rotate(${rotation * 90}deg)` }}
+              />
             )
           ) : (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/70">

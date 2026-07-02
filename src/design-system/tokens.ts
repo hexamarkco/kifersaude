@@ -37,11 +37,11 @@ export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
 };
 
 export const panelButtonSizeClasses: Record<PanelButtonSize, string> = {
-  xs: 'h-8 px-3 text-xs',
-  sm: 'h-9 px-3.5 text-xs',
-  md: 'h-12 px-5 text-sm',
-  lg: 'h-[52px] min-h-[52px] px-6 text-base',
-  icon: 'h-11 w-11 p-0',
+  xs: 'h-7 px-2.5 text-xs',
+  sm: 'h-8 px-3 text-xs',
+  md: 'h-11 px-4 text-sm',
+  lg: 'h-12 px-5 text-sm',
+  icon: 'h-10 w-10 p-0',
 };
 
 export const panelButtonSpinnerSizeClasses: Record<PanelButtonSize, string> = {

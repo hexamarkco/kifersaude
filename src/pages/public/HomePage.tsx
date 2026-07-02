@@ -966,17 +966,19 @@ export default function HomePage() {
             <div className="mt-12 grid gap-6 lg:grid-cols-2">
               {audienceCards.map((card) => (
                 <article key={card.eyebrow} className="flex flex-col rounded-[2rem] border border-white/70 bg-white p-8 shadow-[0_26px_50px_-42px_rgba(15,23,42,0.28)]">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-black uppercase tracking-[0.18em] text-orange-700">{card.eyebrow}</p>
-                      <h3 className="mt-4 text-3xl font-bold leading-tight text-slate-900">{card.title}</h3>
+                  <div className="flex flex-1 flex-col">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-[0.18em] text-orange-700">{card.eyebrow}</p>
+                        <h3 className="mt-4 text-3xl font-bold leading-tight text-slate-900">{card.title}</h3>
+                      </div>
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+                        <card.icon className="h-7 w-7" />
+                      </span>
                     </div>
-                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
-                      <card.icon className="h-7 w-7" />
-                    </span>
-                  </div>
 
-                  <p className="mt-5 text-base leading-relaxed text-slate-600">{card.description}</p>
+                    <p className="mt-5 flex-1 text-base leading-relaxed text-slate-600">{card.description}</p>
+                  </div>
 
                   <button
                     type="button"

@@ -68,7 +68,7 @@ export function LeadsHeader({
             triggerClassName="flex-1 sm:flex-initial"
           />
 
-          <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
+          <Badge tone="neutral" className="gap-2 normal-case tracking-normal">
             <Clock3
               className="h-4 w-4"
               style={{ color: "var(--panel-accent-strong)" }}
@@ -84,7 +84,7 @@ export function LeadsHeader({
             rel="noopener noreferrer"
             className={getPanelButtonClass({
               variant: "secondary",
-              size: "md",
+              size: "sm",
               className: "w-full sm:w-auto",
             })}
             title="Documentacao da API"
@@ -98,6 +98,7 @@ export function LeadsHeader({
             onClick={onRefresh}
             disabled={loading}
             variant="secondary"
+            size="sm"
             className="w-full sm:w-auto"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -108,6 +109,7 @@ export function LeadsHeader({
             type="button"
             onClick={onToggleArchived}
             variant={showArchived ? "warning" : "soft"}
+            size="sm"
             className="w-full sm:w-auto"
             aria-pressed={showArchived}
           >
@@ -119,6 +121,7 @@ export function LeadsHeader({
             type="button"
             onClick={onCreateLead}
             disabled={!canEditLeads}
+            size="sm"
             className="w-full sm:w-auto"
             title={
               !canEditLeads

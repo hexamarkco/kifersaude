@@ -2270,6 +2270,15 @@
   box-shadow: 0 20px 38px -30px rgba(0,0,0,0.9), 0 0 26px -20px var(--brand-primary);
 }
 
+.kds-kanban-column-body {
+  max-height: calc(100vh - 320px);
+}
+
+.kds-kanban-column-title {
+  color: var(--text-primary);
+  font: 700 0.875rem / 1.25 var(--font-sans);
+}
+
 /* ── Calendar / Date Picker / Agenda ───────────────── */
 .kds-date-picker-input::-webkit-calendar-picker-indicator { opacity: 0; }
 
@@ -2314,6 +2323,258 @@
 .calendar-day-today {
   border-color: var(--accent-gold-border) !important;
   box-shadow: inset 0 0 0 1px var(--accent-gold-border), 0 0 24px -18px var(--accent-gold);
+}
+
+/* ── Operational CRM Components ────────────────────── */
+.kds-op-chip {
+  display: inline-flex;
+  min-height: 2.05rem;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 80%, transparent), color-mix(in srgb, var(--bg-inset) 92%, transparent));
+  color: var(--text-secondary);
+  padding: 0.35rem 0.7rem;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.045), 0 12px 24px -22px rgba(0,0,0,0.85);
+  white-space: nowrap;
+}
+
+.kds-op-chip.is-active,
+.kds-op-chip:hover {
+  border-color: var(--brand-primary-border);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 24px -18px var(--brand-primary);
+}
+
+.kds-op-chip-icon {
+  display: inline-flex;
+  color: var(--accent-gold-hover);
+}
+
+.kds-op-chip-copy {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  line-height: 1;
+}
+
+.kds-op-chip-value {
+  color: var(--text-primary);
+  font: 700 0.8125rem / 1 var(--font-sans);
+}
+
+.kds-op-chip-label {
+  color: var(--text-muted);
+  font: 700 0.6875rem / 1 var(--font-sans);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.kds-op-toolbar,
+.kds-op-bulk-bar,
+.kds-op-pagination {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 58%, transparent), color-mix(in srgb, var(--bg-inset) 86%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+}
+
+.kds-op-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem;
+}
+
+.kds-op-toolbar-search {
+  flex: 1 1 22rem;
+  min-width: min(100%, 18rem);
+}
+
+.kds-op-toolbar-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kds-op-section-label {
+  color: var(--text-muted);
+  font: 700 0.6875rem / 1.2 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.kds-op-panel-title {
+  color: var(--text-primary);
+  font: 700 1.25rem / 1.25 var(--font-sans);
+}
+
+.kds-op-disclosure-trigger {
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+
+.kds-op-disclosure-content {
+  border-radius: var(--radius-lg);
+}
+
+.kds-op-bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-color: var(--brand-primary-border);
+  padding: 0.75rem 1rem;
+}
+
+.kds-op-bulk-title {
+  color: var(--accent-gold-hover);
+  font: 700 0.875rem / 1.2 var(--font-sans);
+}
+
+.kds-op-lead-list {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+}
+
+.kds-op-lead-card {
+  border-radius: var(--radius-xl);
+}
+
+.kds-op-lead-title {
+  color: var(--text-primary);
+  font: 700 1rem / 1.25 var(--font-sans);
+}
+
+.kds-op-lead-meta,
+.kds-op-lead-side {
+  color: var(--text-secondary);
+  font: 500 0.8125rem / 1.45 var(--font-sans);
+}
+
+.kds-op-lead-muted { color: var(--text-muted); }
+.kds-op-lead-strong { color: var(--text-secondary); font-weight: 700; }
+.kds-op-lead-accent { color: var(--accent-gold-hover); }
+.kds-op-lead-danger { color: var(--danger-text); }
+
+.kds-op-lead-actions {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.kds-op-inline-action {
+  height: 1.875rem;
+  min-height: 1.875rem;
+  padding-inline: 0.625rem;
+  font-size: 0.6875rem;
+}
+
+.kds-op-icon-chip {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--bg-inset) 82%, transparent);
+  color: var(--text-secondary);
+}
+
+.kds-op-icon-chip:hover {
+  border-color: var(--brand-primary-border);
+  color: var(--accent-gold-hover);
+  background: var(--brand-primary-muted);
+}
+
+.kds-op-icon-chip-success {
+  border-color: var(--success-border);
+  color: var(--success-text);
+  background: var(--success-soft);
+}
+
+.kds-op-status-badge {
+  --op-status-color: var(--accent-gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.65rem;
+  border: 1px solid color-mix(in srgb, var(--op-status-color) 42%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--op-status-color) 16%, var(--bg-inset));
+  color: color-mix(in srgb, var(--op-status-color) 72%, white);
+  padding: 0.25rem 0.65rem;
+  font: 700 0.6875rem / 1 var(--font-sans);
+  white-space: nowrap;
+}
+
+.kds-op-status-trigger {
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.kds-op-status-trigger:hover:not(:disabled) {
+  box-shadow: 0 0 20px -14px var(--op-status-color);
+}
+
+.kds-op-status-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--op-status-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--op-status-color) 14%, transparent);
+}
+
+.kds-op-status-dot-only {
+  --op-status-color: var(--accent-gold);
+  display: inline-flex;
+  width: 0.625rem;
+  height: 0.625rem;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--op-status-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--op-status-color) 12%, transparent);
+}
+
+.kds-op-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  padding: 0.75rem 1rem;
+}
+
+.kds-op-page-button {
+  display: inline-flex;
+  min-width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-inset) 82%, transparent);
+  color: var(--text-secondary);
+  font: 700 0.75rem / 1 var(--font-sans);
+}
+
+.kds-op-page-button:hover:not(:disabled),
+.kds-op-page-button.is-active {
+  border-color: var(--button-primary-border);
+  background: var(--brand-primary-gradient);
+  color: var(--text-on-brand);
+}
+
+.kds-op-page-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.kds-op-page-ellipsis {
+  color: var(--text-muted);
+  padding: 0.25rem 0.75rem;
 }
 
 @media (min-width: 640px) {

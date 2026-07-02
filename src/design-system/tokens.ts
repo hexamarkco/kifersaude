@@ -39,8 +39,8 @@ export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
 export const panelButtonSizeClasses: Record<PanelButtonSize, string> = {
   xs: 'h-7 px-2.5 text-xs',
   sm: 'h-8 px-3 text-xs',
-  md: 'h-11 px-4 text-sm',
-  lg: 'h-12 px-5 text-sm',
+  md: 'h-10 px-3.5 text-sm',
+  lg: 'h-11 px-4 text-sm',
   icon: 'h-10 w-10 p-0',
 };
 
@@ -132,8 +132,8 @@ export const panelInputStateClasses: Record<PanelInputState | 'valid' | 'invalid
 };
 
 export const panelInputSizeClasses: Record<PanelInputSize, string> = {
-  default: 'h-12 text-sm',
-  compact: 'h-10 text-xs',
+  default: 'h-10 text-sm',
+  compact: 'h-8 text-xs',
 };
 
 export const panelInputIconSizeClasses: Record<PanelInputSize, string> = {

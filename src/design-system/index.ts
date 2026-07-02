@@ -36,6 +36,8 @@ export { default as Field } from './components/Field';
 export type { FieldProps } from './components/Field';
 export { InputAddon, InputGroup, SearchInput, default as Input } from './components/Input';
 export type { InputAddonProps, InputGroupProps, InputProps, InputSize, InputState } from './components/Input';
+export { OperationalMetricChip, OperationalStatusBadge, OperationalStatusDot } from './components/Operational';
+export type { OperationalMetricChipProps, OperationalStatusBadgeProps, OperationalStatusDotProps, OperationalTone } from './components/Operational';
 export { default as PageHeader } from './components/PageHeader';
 export type { PageHeaderProps } from './components/PageHeader';
 export { default as Pagination, PaginationInfo } from './components/Pagination';

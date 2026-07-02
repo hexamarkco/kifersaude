@@ -105,7 +105,7 @@ const sizeClasses: Record<BadgeSize, string> = {
   md: 'px-3 py-1.5 text-xs',
 };
 
-export default function Badge({ tone = 'neutral', size = 'md', icon, className, children, ...props }: BadgeProps) {
+export default function Badge({ tone = 'neutral', size = 'sm', icon, className, children, ...props }: BadgeProps) {
   const Icon = typeof icon === 'function' ? (icon as LucideIcon) : null;
 
   return (

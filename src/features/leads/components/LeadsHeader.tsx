@@ -1,6 +1,6 @@
-import { Archive, BookOpen, Clock3, Plus, RefreshCw } from "lucide-react";
+import { Archive, BookOpen, Clock3, Filter, LayoutList, Plus, RefreshCw, Users } from "lucide-react";
 
-import { Badge, Button, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
+import { Badge, Button, OperationalMetricChip, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
 import { VIEW_MODE_TABS } from "../shared/leadsManagerConfig";
 import type { LeadsViewMode } from "../shared/leadsManagerTypes";
 
@@ -40,20 +40,22 @@ export function LeadsHeader({
       actions={(
         <>
           {showArchived && <Badge tone="accent">Arquivados</Badge>}
-          <Badge tone="neutral" className="gap-2">
-            <span style={{ color: "var(--panel-text)" }}>{filteredLeadCount}</span>
-            <span>leads no recorte</span>
-          </Badge>
-          <Badge tone={activeFilterCount > 0 ? "accent" : "neutral"} className="gap-2">
-            <span style={{ color: "var(--panel-text)" }}>{activeFilterCount}</span>
-            <span>{activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}</span>
-          </Badge>
-          <Badge tone="neutral" className="gap-2">
-            <span style={{ color: "var(--panel-text)" }}>
-              {viewMode === "kanban" ? "Kanban" : "Lista"}
-            </span>
-            <span>modo atual</span>
-          </Badge>
+          <OperationalMetricChip
+            icon={<Users className="h-3.5 w-3.5" />}
+            value={filteredLeadCount}
+            label="leads no recorte"
+          />
+          <OperationalMetricChip
+            icon={<Filter className="h-3.5 w-3.5" />}
+            value={activeFilterCount}
+            label={activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}
+            active={activeFilterCount > 0}
+          />
+          <OperationalMetricChip
+            icon={<LayoutList className="h-3.5 w-3.5" />}
+            value={viewMode === "kanban" ? "Kanban" : "Lista"}
+            label="modo atual"
+          />
         </>
       )}
     >
@@ -68,13 +70,10 @@ export function LeadsHeader({
             triggerClassName="flex-1 sm:flex-initial"
           />
 
-          <Badge tone="neutral" className="gap-2 normal-case tracking-normal">
-            <Clock3
-              className="h-4 w-4"
-              style={{ color: "var(--panel-accent-strong)" }}
-            />
-            <span>{lastUpdatedLabel || "Aguardando atualizacao..."}</span>
-          </Badge>
+          <OperationalMetricChip
+            icon={<Clock3 className="h-3.5 w-3.5" />}
+            value={lastUpdatedLabel || "Aguardando atualizacao..."}
+          />
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row">

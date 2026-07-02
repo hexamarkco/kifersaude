@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { LeadStatusConfig } from '../lib/supabase';
-import { getBadgeStyle } from '../lib/colorUtils';
 import { cx } from '../lib/cx';
+import { OperationalStatusDot } from '../design-system';
 import { getDropdownMenuClass, isPanelDarkTheme } from './ui/dropdownStyles';
 
 type StatusDropdownProps = {
@@ -63,28 +63,9 @@ export default function StatusDropdown({
     return statusOptions.find(option => option.nome === statusName) || null;
   };
 
-  const getButtonStyles = (statusName: string) => {
+  const getStatusColor = (statusName: string) => {
     const status = getStatusInfo(statusName);
-    if (!status) {
-      return {
-        backgroundColor: 'rgba(148, 163, 184, 0.15)',
-        color: '#475569',
-        borderColor: 'rgba(148, 163, 184, 0.35)'
-      };
-    }
-    const badge = getBadgeStyle(status.cor, 1);
-    return {
-      backgroundColor: badge.backgroundColor,
-      color: badge.color,
-      borderColor: badge.borderColor,
-    };
-  };
-
-  const getOptionIndicatorStyle = (statusName: string) => {
-    const status = getStatusInfo(statusName);
-    return {
-      backgroundColor: status ? status.cor : '#94a3b8',
-    };
+    return status?.cor ?? null;
   };
 
   useEffect(() => {
@@ -145,7 +126,7 @@ export default function StatusDropdown({
   };
 
   const displayStatus = isUpdating && pendingStatus ? pendingStatus : currentStatus;
-  const buttonStyles = getButtonStyles(displayStatus);
+  const statusColor = getStatusColor(displayStatus);
   const isDarkTheme = isPanelDarkTheme();
 
   return (
@@ -155,14 +136,15 @@ export default function StatusDropdown({
         type="button"
         onClick={() => !disabled && !isUpdating && setIsOpen(!isOpen)}
         disabled={disabled || isUpdating}
-        style={buttonStyles}
+        style={{ ...(statusColor ? { '--op-status-color': statusColor } : {}) } as CSSProperties}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-busy={isUpdating}
         title={isUpdating ? 'Atualizando status do lead' : 'Alterar status do lead'}
-        className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 ${
-          disabled || isUpdating ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:shadow-md'
-        }`}
+        className={cx(
+          'kds-op-status-badge kds-op-status-trigger',
+          disabled || isUpdating ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+        )}
       >
         <span>{isUpdating ? 'Atualizando...' : displayStatus}</span>
         {!disabled && !isUpdating && (
@@ -198,10 +180,7 @@ export default function StatusDropdown({
                     status.nome === currentStatus && 'is-selected font-medium',
                   )}
                 >
-                  <span
-                    className="inline-block w-2 h-2 rounded-full mr-2"
-                    style={getOptionIndicatorStyle(status.nome)}
-                  />
+                  <OperationalStatusDot statusColor={status.cor} className="mr-2" />
                   {status.nome}
                 </button>
               ))}

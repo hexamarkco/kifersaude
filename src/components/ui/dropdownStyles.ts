@@ -52,7 +52,7 @@ export const getDropdownTriggerClass = ({
   cx(
     'kds-select kds-select-trigger kds-filter-trigger panel-ui-input relative w-full border text-left shadow-none',
     'focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
-    compact ? 'h-9 pl-8 pr-8 text-xs' : 'h-12 pl-10 pr-10 text-sm',
+    compact ? 'h-8 pl-8 pr-8 text-xs' : 'h-10 pl-10 pr-10 text-sm',
     className,
   );
 

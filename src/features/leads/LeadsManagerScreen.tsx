@@ -43,10 +43,19 @@ import FilterMultiSelect from "../../components/FilterMultiSelect";
 import FilterDateRange from "../../components/FilterDateRange";
 import FilterSingleSelect from "../../components/FilterSingleSelect";
 import DateTimePicker from "../../components/ui/DateTimePicker";
-import { Badge, Button, Checkbox, Field, Input, Surface } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  EmptyState,
+  Field,
+  Input,
+  OperationalMetricChip,
+  OperationalStatusBadge,
+  Surface,
+} from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
-import { getBadgeStyle } from "../../lib/colorUtils";
 import {
   shouldPromptFirstReminderAfterQuote,
   syncLeadNextReturnFromUpcomingReminder,
@@ -1092,21 +1101,13 @@ export default function LeadsManager({
     }
   };
 
-  const getStatusBadgeStyles = useCallback(
+  const getStatusColor = useCallback(
     (statusName: string | null | undefined) => {
       const statusConfig = activeLeadStatuses.find(
         (status) => status.nome === statusName,
       );
 
-      if (!statusConfig) {
-        return {
-          backgroundColor: "var(--panel-surface-soft)",
-          color: "var(--panel-text-soft)",
-          borderColor: "var(--panel-border-subtle)",
-        } as const;
-      }
-
-      return getBadgeStyle(statusConfig.cor, 1);
+      return statusConfig?.cor ?? null;
     },
     [activeLeadStatuses],
   );
@@ -1558,8 +1559,8 @@ export default function LeadsManager({
           onCreateLead={handleCreateLead}
         />
         <Surface className="panel-glass-panel space-y-5" data-panel-animate>
-          <Surface variant="muted" padding="sm" className="flex flex-col gap-3 rounded-[1.7rem] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative w-full lg:max-w-2xl">
+          <Surface variant="muted" padding="sm" className="kds-op-toolbar">
+            <div className="kds-op-toolbar-search relative">
               <Input
                 type="text"
                 leftIcon={Search}
@@ -1568,11 +1569,12 @@ export default function LeadsManager({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <div className="kds-op-toolbar-actions">
               <Button
                 type="button"
                 onClick={resetFilters}
                 variant="soft"
+                size="sm"
                 className="whitespace-nowrap"
               >
                 <Filter className="h-4 w-4" />
@@ -1582,6 +1584,7 @@ export default function LeadsManager({
                 type="button"
                 onClick={handleExportFilteredLeads}
                 variant="secondary"
+                size="sm"
                 className="whitespace-nowrap"
               >
                 <Download className="h-4 w-4" />
@@ -1591,23 +1594,19 @@ export default function LeadsManager({
                 type="button"
                 onClick={handleExportCurrentPage}
                 variant="secondary"
+                size="sm"
                 className="whitespace-nowrap"
               >
                 <Download className="h-4 w-4" />
                 Página
               </Button>
-              <Badge tone="neutral" className="h-10 gap-1.5 px-3 text-sm normal-case tracking-normal">
-                <span className="font-semibold" style={{ color: "var(--panel-text)" }}>
-                  {filteredLeads.length}
-                </span>
-                <span>leads</span>
-              </Badge>
+              <OperationalMetricChip value={filteredLeads.length} label="leads" />
             </div>
           </Surface>
 
           <div className="space-y-4">
             <div>
-              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-muted)" }}>
+              <h4 className="kds-op-section-label mb-3">
                 Filtros Principais
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -1653,19 +1652,19 @@ export default function LeadsManager({
 
             <details className="group">
               <summary className="cursor-pointer list-none">
-                <Surface variant="muted" padding="sm" className="flex items-center justify-between rounded-lg px-3 py-2 transition-colors">
-                  <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-soft)" }}>
+                <Surface variant="muted" padding="sm" className="kds-op-disclosure-trigger flex items-center justify-between px-3 py-2 transition-colors">
+                  <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
                     <Filter className="w-4 h-4" />
                     Filtros Avançados
                   </h4>
-                  <span className="text-xs transition-transform group-open:rotate-180" style={{ color: "var(--panel-text-muted)" }}>
+                  <span className="text-xs transition-transform group-open:rotate-180">
                     ▼
                   </span>
                 </Surface>
               </summary>
-              <Surface variant="muted" padding="sm" className="mt-3 space-y-4 rounded-lg p-4">
+              <Surface variant="muted" padding="sm" className="kds-op-disclosure-content mt-3 space-y-4 p-4">
                 <div>
-                  <h5 className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--panel-text-muted)" }}>
+                  <h5 className="kds-op-section-label mb-2">
                     Tags e Canais
                   </h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1694,7 +1693,7 @@ export default function LeadsManager({
                 </div>
 
                 <div>
-                  <h5 className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: "var(--panel-text-muted)" }}>
+                  <h5 className="kds-op-section-label mb-2">
                     Filtros de Data
                   </h5>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -1739,7 +1738,7 @@ export default function LeadsManager({
             </details>
 
             <div>
-              <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--panel-text-muted)" }}>
+              <h4 className="kds-op-section-label mb-3">
                 Ordenação
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1788,42 +1787,23 @@ export default function LeadsManager({
           <Surface className="panel-glass-panel" data-panel-animate>
             <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p
-                  className="text-[11px] font-black uppercase tracking-[0.24em]"
-                  style={{ color: "var(--panel-text-muted)" }}
-                >
+                <p className="kds-op-section-label">
                   Carteira em foco
                 </p>
-                <h3
-                  className="mt-2 text-xl font-semibold"
-                  style={{ color: "var(--panel-text)" }}
-                >
+                <h3 className="kds-op-panel-title mt-2">
                   {contentSectionTitle}
                 </h3>
-                <p
-                  className="mt-1 max-w-3xl text-sm"
-                  style={{ color: "var(--panel-text-muted)" }}
-                >
+                <p className="kds-op-lead-muted mt-1 max-w-3xl text-sm">
                   {contentSectionDescription}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Badge tone="neutral" className="gap-2">
-                  <span style={{ color: "var(--panel-text)" }}>
-                    {filteredLeads.length}
-                  </span>
-                  <span>resultados</span>
-                </Badge>
-                <Badge tone="neutral" className="gap-2">
-                  <span style={{ color: "var(--panel-text)" }}>
-                    {currentPage}/{totalPages}
-                  </span>
-                  <span>paginas</span>
-                </Badge>
+                <OperationalMetricChip value={filteredLeads.length} label="resultados" />
+                <OperationalMetricChip value={`${currentPage}/${totalPages}`} label="paginas" />
                 {canSelectLeads && paginatedLeads.length > 0 && (
                   <label
-                    className="kds-badge kds-badge-neutral cursor-pointer gap-2 px-3 py-1.5 text-xs"
+                    className="kds-op-chip cursor-pointer"
                   >
                     <Checkbox
                       checked={areAllPageLeadsSelected}
@@ -1837,22 +1817,14 @@ export default function LeadsManager({
                   </label>
                 )}
                 {selectedLeadIds.length > 0 && (
-                  <Badge tone="accent" className="gap-2">
-                    <span style={{ color: "var(--panel-text)" }}>
-                      {selectedLeadIds.length}
-                    </span>
-                    <span>selecionados</span>
-                  </Badge>
+                  <OperationalMetricChip value={selectedLeadIds.length} label="selecionados" active />
                 )}
               </div>
             </div>
 
             {selectedLeadIds.length > 0 && (
-                <Surface variant="muted" padding="sm" className="rounded-[1.4rem] px-4 py-3 sm:px-5 xl:flex-row xl:items-center xl:justify-between">
-                  <span
-                    className="text-sm font-medium"
-                    style={{ color: "var(--panel-accent-ink)" }}
-                  >
+                <Surface variant="muted" padding="sm" className="kds-op-bulk-bar">
+                  <span className="kds-op-bulk-title">
                     {selectedLeadIds.length} lead(s) selecionado(s)
                   </span>
                   <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:gap-2">
@@ -1863,6 +1835,7 @@ export default function LeadsManager({
                         onChange={(value) => setBulkStatus(value)}
                         placeholder="Selecionar novo status"
                         includePlaceholderOption={false}
+                        size="compact"
                         disabled={isBulkUpdating}
                         options={[
                           { value: "", label: "Selecionar novo status" },
@@ -1880,6 +1853,7 @@ export default function LeadsManager({
                         onChange={(value) => setBulkResponsavel(value)}
                         placeholder="Selecionar responsável"
                         includePlaceholderOption={false}
+                        size="compact"
                         disabled={isBulkUpdating}
                         options={[
                           { value: "", label: "Selecionar responsável" },
@@ -1895,7 +1869,6 @@ export default function LeadsManager({
                       value={bulkProximoRetorno}
                       onChange={setBulkProximoRetorno}
                       className="w-full xl:w-56"
-                      triggerClassName="h-10 border-[var(--panel-border)]"
                       disabled={isBulkUpdating}
                       placeholder="Proximo retorno"
                     />
@@ -1910,6 +1883,7 @@ export default function LeadsManager({
                         }
                         placeholder="Ação de arquivamento"
                         includePlaceholderOption={false}
+                        size="compact"
                         disabled={isBulkUpdating}
                         options={[
                           {
@@ -1933,6 +1907,7 @@ export default function LeadsManager({
                         onClick={handleBulkStatusApply}
                         disabled={!bulkStatus || isBulkUpdating}
                         variant="primary"
+                        size="sm"
                       >
                         {isBulkUpdating ? "Atualizando..." : "Aplicar Status"}
                       </Button>
@@ -1946,6 +1921,7 @@ export default function LeadsManager({
                             bulkArchiveAction === "none")
                         }
                         variant="soft"
+                        size="sm"
                       >
                         {isBulkUpdating ? "Aplicando..." : "Aplicar dados"}
                       </Button>
@@ -1954,6 +1930,7 @@ export default function LeadsManager({
                         onClick={handleExportSelectedLeads}
                         disabled={isBulkUpdating}
                         variant="secondary"
+                        size="sm"
                       >
                         <Download className="h-4 w-4" />
                         <span>Exportar XLSX</span>
@@ -1963,6 +1940,7 @@ export default function LeadsManager({
                         onClick={clearSelection}
                         disabled={isBulkUpdating}
                         variant="secondary"
+                        size="sm"
                       >
                         Limpar
                       </Button>
@@ -1970,13 +1948,13 @@ export default function LeadsManager({
                   </div>
                 </Surface>
             )}
-            <div className="grid grid-cols-1 gap-4 p-4 sm:p-5">
+            <div className="kds-op-lead-list">
               {paginatedLeads.map((lead) => (
                 <Surface
                   key={lead.id}
                   variant="muted"
                   padding="sm"
-                  className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] transition-all sm:p-6"
+                  className="kds-op-lead-card panel-glass-lite panel-interactive-glass transition-all sm:p-6"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">
@@ -1990,17 +1968,14 @@ export default function LeadsManager({
                                 aria-label={`Selecionar lead ${lead.nome_completo}`}
                               />
                             )}
-                            <h3 className="text-lg font-semibold" style={{ color: "var(--panel-text)" }}>
+                            <h3 className="kds-op-lead-title">
                               {lead.nome_completo}
                             </h3>
                             {leadContractIds.has(lead.id) && (
-                              <span
-                                className="comm-badge comm-badge-contract inline-flex min-h-[30px] items-center gap-2 px-3 py-1 text-xs font-medium leading-none"
-                                title="Contrato cadastrado para este lead"
-                              >
+                              <Badge tone="info" title="Contrato cadastrado para este lead">
                                 <FileText className="h-3.5 w-3.5" />
                                 Contrato
-                              </span>
+                              </Badge>
                             )}
                             {canEditLeads ? (
                               <StatusDropdown
@@ -2011,17 +1986,12 @@ export default function LeadsManager({
                                 statusOptions={activeLeadStatuses}
                               />
                             ) : (
-                              <Badge
-                                tone="neutral"
-                                size="sm"
-                                className="px-2 py-1 text-xs"
-                                style={getStatusBadgeStyles(lead.status)}
-                              >
+                              <OperationalStatusBadge statusColor={getStatusColor(lead.status)}>
                                 {lead.status ?? "Sem status"}
-                              </Badge>
+                              </OperationalStatusBadge>
                             )}
                           </div>
-                          <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4" style={{ color: "var(--panel-text-soft)" }}>
+                          <div className="kds-op-lead-meta grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                             <div className="flex items-center gap-2 break-words">
                               {lead.telefone && (
                                 <a
@@ -2030,7 +2000,7 @@ export default function LeadsManager({
                                   }
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="comm-icon-chip comm-icon-chip-success inline-flex h-8 w-8 items-center justify-center transition-colors"
+                                  className="kds-op-icon-chip kds-op-icon-chip-success inline-flex h-8 w-8 items-center justify-center transition-colors"
                                   aria-label={`Abrir WhatsApp para ${lead.nome_completo}`}
                                 >
                                   <MessageCircle className="w-4 h-4" />
@@ -2045,7 +2015,7 @@ export default function LeadsManager({
                                   onClick={() => handleEmailContact(lead)}
                                   variant="icon"
                                   size="icon"
-                                  className="comm-icon-chip comm-icon-chip-brand h-8 w-8 rounded-full"
+                                  className="kds-op-icon-chip h-8 w-8 rounded-full"
                                   title="Enviar e-mail"
                                   aria-label={`Enviar e-mail para ${lead.nome_completo}`}
                                 >
@@ -2064,18 +2034,15 @@ export default function LeadsManager({
                             </div>
                           </div>
                           {lead.cidade && (
-                            <div className="mt-2 text-sm" style={{ color: "var(--panel-text-soft)" }}>
+                            <div className="kds-op-lead-meta mt-2">
                               <span className="font-medium">Cidade:</span>{" "}
                               {lead.cidade}
                             </div>
                           )}
                           {nextReminderByLeadId.get(lead.id) && (
-                            <div
-                              className="mt-2 flex items-center space-x-2 text-sm"
-                              style={{ color: "var(--panel-accent-ink)" }}
-                            >
+                            <div className="kds-op-lead-accent mt-2 flex items-center space-x-2 text-sm">
                               <Calendar className="h-4 w-4" />
-                              <span className="font-medium">
+                              <span className="kds-op-lead-accent font-medium">
                                 Retorno:{" "}
                                 {formatDateTimeFullBR(
                                   nextReminderByLeadId.get(lead.id) ?? "",
@@ -2084,10 +2051,10 @@ export default function LeadsManager({
                             </div>
                           )}
                         </div>
-                        <div className="text-sm lg:text-right" style={{ color: "var(--panel-text-muted)" }}>
+                        <div className="kds-op-lead-side text-sm lg:text-right">
                           <div>
                             Responsável:{" "}
-                            <span className="font-medium" style={{ color: "var(--panel-text-soft)" }}>
+                            <span className="kds-op-lead-strong">
                               {lead.responsavel}
                             </span>
                           </div>
@@ -2101,15 +2068,12 @@ export default function LeadsManager({
                       </div>
                     </div>
                   </div>
-                  <div
-                    className="mt-3 flex flex-wrap items-center gap-1.5 border-t pt-3"
-                    style={{ borderColor: "var(--panel-border-subtle)" }}
-                  >
+                  <div className="kds-op-lead-actions mt-3 flex flex-wrap items-center gap-1.5 pt-3">
                     <Button
                       onClick={() => setSelectedLead(lead)}
                       variant="secondary"
                       size="sm"
-                      className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
+                      className="kds-op-inline-action space-x-0 sm:space-x-1.5"
                       aria-label={
                         canEditLeads
                           ? "Ver e editar lead"
@@ -2127,7 +2091,7 @@ export default function LeadsManager({
                           onClick={() => handleConvertToContract(lead)}
                           variant="soft"
                           size="sm"
-                          className="hidden h-[30px] px-2.5 text-[11px] md:inline-flex space-x-1.5"
+                          className="kds-op-inline-action hidden md:inline-flex space-x-1.5"
                         >
                           <FileText className="h-4 w-4" />
                           <span>Converter em Contrato</span>
@@ -2136,7 +2100,7 @@ export default function LeadsManager({
                           onClick={() => openReminderScheduler(lead)}
                           variant="soft"
                           size="sm"
-                          className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
+                          className="kds-op-inline-action space-x-0 sm:space-x-1.5"
                           aria-label="Agendar lembrete"
                           type="button"
                         >
@@ -2149,7 +2113,7 @@ export default function LeadsManager({
                           onClick={() => handleDeleteLead(lead)}
                           variant="danger"
                           size="sm"
-                          className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5"
+                          className="kds-op-inline-action space-x-0 sm:space-x-1.5"
                           aria-label="Excluir lead"
                           type="button"
                         >
@@ -2161,7 +2125,7 @@ export default function LeadsManager({
                             onClick={() => handleArchive(lead.id)}
                             variant="warning"
                             size="sm"
-                            className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5 sm:ml-auto"
+                            className="kds-op-inline-action space-x-0 sm:space-x-1.5 sm:ml-auto"
                             aria-label="Arquivar lead"
                           >
                             <Archive className="h-4 w-4" />
@@ -2172,7 +2136,7 @@ export default function LeadsManager({
                             onClick={() => handleUnarchive(lead.id)}
                             variant="secondary"
                             size="sm"
-                            className="h-[30px] px-2.5 text-[11px] space-x-0 sm:space-x-1.5 sm:ml-auto"
+                            className="kds-op-inline-action space-x-0 sm:space-x-1.5 sm:ml-auto"
                             aria-label="Reativar lead"
                           >
                             <Users className="h-4 w-4" />
@@ -2186,21 +2150,12 @@ export default function LeadsManager({
               ))}
 
               {filteredLeads.length === 0 && (
-                <Surface variant="muted" className="panel-glass-panel rounded-[1.7rem] py-12 text-center" data-panel-animate>
-                  <Users
-                    className="mx-auto mb-4 h-16 w-16"
-                    style={{ color: "var(--panel-text-muted)" }}
-                  />
-                  <h3
-                    className="mb-2 text-lg font-medium"
-                    style={{ color: "var(--panel-text)" }}
-                  >
-                    Nenhum lead encontrado
-                  </h3>
-                  <p style={{ color: "var(--panel-text-soft)" }}>
-                    Tente ajustar os filtros ou adicione um novo lead.
-                  </p>
-                </Surface>
+                <EmptyState
+                  icon={<Users className="h-8 w-8" />}
+                  title="Nenhum lead encontrado"
+                  description="Tente ajustar os filtros ou adicione um novo lead."
+                  data-panel-animate
+                />
               )}
             </div>
 

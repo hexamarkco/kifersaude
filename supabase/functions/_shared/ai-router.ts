@@ -491,6 +491,29 @@ const callOpenAi = async (settings: ProviderSettings, params: ProviderCallParams
   );
 };
 
+const stripMimeParameters = (value: string): string => value.split(';')[0]?.trim() || value.trim();
+
+const MIME_TO_EXT: Record<string, string> = {
+  'audio/flac': '.flac',
+  'audio/m4a': '.m4a',
+  'audio/mp4': '.mp4',
+  'audio/mpeg': '.mp3',
+  'audio/mpga': '.mpga',
+  'audio/oga': '.oga',
+  'audio/ogg': '.ogg',
+  'audio/wav': '.wav',
+  'audio/wave': '.wav',
+  'audio/webm': '.webm',
+  'audio/x-m4a': '.m4a',
+  'audio/x-wav': '.wav',
+  'audio/aac': '.aac',
+};
+
+const mimeTypeToExtension = (mimeType: string): string => {
+  const clean = stripMimeParameters(mimeType).toLowerCase();
+  return MIME_TO_EXT[clean] || '.ogg';
+};
+
 const callOpenAiTranscription = async (
   settings: ProviderSettings,
   params: { model: string; audioBlob: Blob; fileName?: string; mimeType?: string; prompt?: string },
@@ -500,8 +523,10 @@ const callOpenAiTranscription = async (
   const formData = new FormData();
 
   const rawMimeType = params.mimeType?.trim() || params.audioBlob.type || 'audio/ogg';
-  const mimeType = rawMimeType.toLowerCase() === 'audio/oga' ? 'audio/ogg' : rawMimeType;
-  const rawFileName = params.fileName?.trim() || `whatsapp-audio.${mimeType.includes('mpeg') ? 'mp3' : mimeType.includes('webm') ? 'webm' : 'ogg'}`;
+  const cleanMimeType = stripMimeParameters(rawMimeType).toLowerCase();
+  const mimeType = cleanMimeType === 'audio/oga' ? 'audio/ogg' : cleanMimeType;
+  const baseFileName = params.fileName?.trim() || `whatsapp-audio`;
+  const rawFileName = /\.\w+$/.test(baseFileName) ? baseFileName : `${baseFileName}${mimeTypeToExtension(mimeType)}`;
   const fileName = /\.oga$/i.test(rawFileName) ? rawFileName.replace(/\.oga$/i, '.ogg') : rawFileName;
   const normalizedBlob = params.audioBlob.slice(0, params.audioBlob.size, mimeType);
 

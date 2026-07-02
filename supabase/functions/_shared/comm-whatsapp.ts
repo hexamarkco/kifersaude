@@ -1865,7 +1865,25 @@ export async function fetchWhapiContacts(params: {
   return merged;
 }
 
-export async function fetchWhapiMediaBlob(params: {
+export const MIME_TO_EXT: Record<string, string> = {
+  'audio/flac': '.flac',
+  'audio/m4a': '.m4a',
+  'audio/mp4': '.mp4',
+  'audio/mpeg': '.mp3',
+  'audio/mpga': '.mpga',
+  'audio/oga': '.oga',
+  'audio/ogg': '.ogg',
+  'audio/wav': '.wav',
+  'audio/wave': '.wav',
+  'audio/webm': '.webm',
+  'audio/x-m4a': '.m4a',
+  'audio/x-wav': '.wav',
+  'audio/aac': '.aac',
+};
+
+const mimeTypeToExtension = (mimeType: string): string => MIME_TO_EXT[mimeType] || '.ogg';
+
+async function fetchWhapiMediaBlob(params: {
   token: string;
   mediaId?: string | null;
   mediaUrl?: string | null;
@@ -1883,16 +1901,19 @@ export async function fetchWhapiMediaBlob(params: {
       throw new Error(parseWhapiError(payload) || 'Falha ao obter midia na Whapi.');
     }
 
+    const stripMimeParameters = (value: string): string => value.split(';')[0]?.trim() || value.trim();
+
     const blob = await response.blob();
-    const rawMimeType = response.headers.get('content-type')?.trim() || params.fallbackMimeType?.trim() || blob.type || 'audio/ogg';
+    const cleanFallbackMime = params.fallbackMimeType?.trim() ? stripMimeParameters(params.fallbackMimeType.trim()) : '';
+    const rawMimeType = stripMimeParameters(response.headers.get('content-type') || '') || cleanFallbackMime || blob.type || 'audio/ogg';
     const contentDisposition = response.headers.get('content-disposition')?.trim() || '';
     const fileNameMatch = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
     const rawFileName =
       decodeURIComponent(fileNameMatch?.[1] || '').trim() ||
       params.fallbackFileName?.trim() ||
-      `whatsapp-audio.${rawMimeType.includes('mpeg') ? 'mp3' : rawMimeType.includes('webm') ? 'webm' : 'ogg'}`;
+      `whatsapp-audio${mimeTypeToExtension(rawMimeType.toLowerCase())}`;
 
-    const mimeType = rawMimeType.toLowerCase() === 'audio/oga' ? 'audio/ogg' : rawMimeType;
+    const mimeType = rawMimeType.toLowerCase() === 'audio/oga' ? 'audio/ogg' : rawMimeType.toLowerCase();
     const fileName = /\.oga$/i.test(rawFileName) ? rawFileName.replace(/\.oga$/i, '.ogg') : rawFileName;
 
     return { blob, mimeType, fileName };
@@ -1962,9 +1983,11 @@ export async function cacheCommWhatsAppMedia(supabaseAdmin: SupabaseClient, para
   if (mediaId) {
     const cachedBlob = await getCachedCommWhatsAppMedia(supabaseAdmin, mediaId);
     if (cachedBlob) {
+      const stripMimeParameters = (value: string): string => value.split(';')[0]?.trim() || value.trim();
+      const rawFallbackMime = params.fallbackMimeType?.trim();
       return {
         blob: cachedBlob,
-        mimeType: params.fallbackMimeType?.trim() || cachedBlob.type || 'application/octet-stream',
+        mimeType: rawFallbackMime ? stripMimeParameters(rawFallbackMime) : cachedBlob.type || 'application/octet-stream',
         fileName: params.fallbackFileName?.trim() || mediaId,
         cached: true,
       };

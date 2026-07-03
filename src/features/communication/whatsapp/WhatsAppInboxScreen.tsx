@@ -1641,7 +1641,7 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
     return savedContactName;
   }
 
-  const resolvedLeadName = getValidWhatsAppDisplayName(leadName);
+  const resolvedLeadName = getValidWhatsAppDisplayName(leadName) || getValidWhatsAppDisplayName(chat.lead_name);
   if (resolvedLeadName) {
     return resolvedLeadName;
   }
@@ -1662,6 +1662,7 @@ const getChatSearchCandidates = (chat: CommWhatsAppChat, connectedUserName?: str
   const values = [
     getSafeChatDisplayName(chat, connectedUserName),
     chat.saved_contact_name,
+    chat.lead_name,
     chat.display_name,
     chat.push_name,
   ];

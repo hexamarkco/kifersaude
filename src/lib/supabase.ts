@@ -732,6 +732,7 @@ export type CommWhatsAppChat = {
   saved_contact_name?: string | null;
   push_name?: string | null;
   lead_id?: string | null;
+  lead_name?: string | null;
   lead_status?: string | null;
   is_archived: boolean;
   archived_at?: string | null;

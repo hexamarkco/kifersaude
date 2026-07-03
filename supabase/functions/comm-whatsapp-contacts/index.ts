@@ -481,7 +481,7 @@ Deno.serve(async (req: Request) => {
           phone_digits: phoneNumber,
           display_name: whapiChatName,
           short_name: whapiChatName.split(/\s+/).filter(Boolean).slice(0, 2).join(' ') || null,
-          saved: true,
+          saved: false,
           last_synced_at: nowIso,
           created_at: nowIso,
           updated_at: nowIso,
@@ -503,7 +503,7 @@ Deno.serve(async (req: Request) => {
     if (action === 'startChat') {
       let phoneNumber = '';
       let savedContactName = '';
-      const pushName = '';
+      let pushName = '';
       let leadId: string | null = null;
 
       if (body.source === 'saved_contact') {
@@ -562,7 +562,7 @@ Deno.serve(async (req: Request) => {
         const whapiChatName = await fetchWhapiChatName({ token: settings.token, chatId: directChatId }).catch(() => '');
         const isOwnChannelName = channel.connected_user_name && whapiChatName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase();
         if (isValidCommWhatsAppDisplayName(whapiChatName) && !isOwnChannelName) {
-          savedContactName = whapiChatName;
+          pushName = whapiChatName;
           await cacheCommWhatsAppChatContactName(supabaseAdmin, {
             channelId: channel.id,
             phoneNumber,

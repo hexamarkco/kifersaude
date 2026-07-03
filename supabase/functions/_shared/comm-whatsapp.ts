@@ -331,7 +331,7 @@ export async function cacheCommWhatsAppChatContactName(
         phone_digits: phoneNumber,
         display_name: displayName,
         short_name: displayName.split(/\s+/).filter(Boolean).slice(0, 2).join(' ') || null,
-        saved: true,
+        saved: false,
         last_synced_at: nowIso,
         updated_at: nowIso,
       },

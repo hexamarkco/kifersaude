@@ -1636,9 +1636,13 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
     return 'Conversa';
   }
 
-  const savedContactName = getValidWhatsAppDisplayName(chat.saved_contact_name);
-  if (savedContactName) {
-    return savedContactName;
+  const displayName = getValidWhatsAppDisplayName(chat.display_name);
+  const pushName = getValidWhatsAppDisplayName(chat.push_name);
+  const ownName = String(connectedUserName ?? '').trim().toLowerCase();
+  const isOwnNameLeak = !chat.saved_contact_name && !chat.lead_id && displayName && ownName && displayName.toLowerCase() === ownName;
+
+  if (displayName && !isOwnNameLeak) {
+    return displayName;
   }
 
   const resolvedLeadName = getValidWhatsAppDisplayName(leadName) || getValidWhatsAppDisplayName(chat.lead_name);
@@ -1646,16 +1650,32 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
     return resolvedLeadName;
   }
 
-  const displayName = getValidWhatsAppDisplayName(chat.display_name);
-  const pushName = getValidWhatsAppDisplayName(chat.push_name);
-  const ownName = String(connectedUserName ?? '').trim().toLowerCase();
-  const isOwnNameLeak = !chat.saved_contact_name && !chat.lead_id && displayName && ownName && displayName.toLowerCase() === ownName;
+  return pushName || formatCommWhatsAppPhoneLabel(chat.phone_number);
+};
 
-  if (isOwnNameLeak) {
-    return pushName || formatCommWhatsAppPhoneLabel(chat.phone_number);
+const stabilizeChatIdentityForLocalMerge = (incoming: CommWhatsAppChat, previous?: CommWhatsAppChat | null): CommWhatsAppChat => {
+  const savedContactName = getValidWhatsAppDisplayName(incoming.saved_contact_name) || getValidWhatsAppDisplayName(previous?.saved_contact_name);
+  const leadName = getValidWhatsAppDisplayName(incoming.lead_name) || getValidWhatsAppDisplayName(previous?.lead_name);
+  const pushName = getValidWhatsAppDisplayName(incoming.push_name) || getValidWhatsAppDisplayName(previous?.push_name);
+  const displayName = getValidWhatsAppDisplayName(incoming.display_name);
+
+  if (savedContactName) {
+    return {
+      ...incoming,
+      saved_contact_name: savedContactName,
+      display_name: displayName || savedContactName,
+    };
   }
 
-  return displayName || pushName || formatCommWhatsAppPhoneLabel(chat.phone_number);
+  if (leadName && (!displayName || displayName === pushName)) {
+    return {
+      ...incoming,
+      lead_name: leadName,
+      display_name: leadName,
+    };
+  }
+
+  return incoming;
 };
 
 const getChatSearchCandidates = (chat: CommWhatsAppChat, connectedUserName?: string | null) => {
@@ -3373,7 +3393,7 @@ export default function WhatsAppInboxScreen() {
       items
         .map(
           (chat) =>
-            `${chat.id}:${chat.updated_at}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.last_message_delivery_status ?? ''}:${chat.display_name}:${chat.saved_contact_name ?? ''}:${chat.lead_id ?? ''}:${chat.is_archived}:${chat.archived_at ?? ''}:${chat.is_muted}:${chat.muted_at ?? ''}:${chat.is_pinned}:${chat.pinned_at ?? ''}:${chat.manual_unread}:${chat.manual_unread_at ?? ''}`,
+            `${chat.id}:${chat.updated_at}:${chat.unread_count}:${chat.last_message_at ?? ''}:${chat.last_message_text ?? ''}:${chat.last_message_delivery_status ?? ''}:${chat.display_name}:${chat.saved_contact_name ?? ''}:${chat.lead_id ?? ''}:${chat.lead_name ?? ''}:${chat.is_archived}:${chat.archived_at ?? ''}:${chat.is_muted}:${chat.muted_at ?? ''}:${chat.is_pinned}:${chat.pinned_at ?? ''}:${chat.manual_unread}:${chat.manual_unread_at ?? ''}`,
         )
         .join('|'),
     [],
@@ -3601,10 +3621,11 @@ export default function WhatsAppInboxScreen() {
   const upsertChatLocally = useCallback((nextChat: CommWhatsAppChat) => {
     setChats((current) => {
       const previousChat = current.find((chat) => chat.id === nextChat.id) ?? null;
-      const hydratedNextChat = preserveUsefulChatPreview(nextChat, previousChat);
+      const stableNextChat = stabilizeChatIdentityForLocalMerge(nextChat, previousChat);
+      const hydratedNextChat = preserveUsefulChatPreview(stableNextChat, previousChat);
       const exists = Boolean(previousChat);
       const updated = exists
-        ? current.map((chat) => (chat.id === nextChat.id ? preserveUsefulChatPreview({ ...chat, ...hydratedNextChat }, chat) : chat))
+        ? current.map((chat) => (chat.id === nextChat.id ? preserveUsefulChatPreview(stabilizeChatIdentityForLocalMerge({ ...chat, ...hydratedNextChat }, chat), chat) : chat))
         : [hydratedNextChat, ...current];
 
       const sorted = sortChatsByInboxOrder(updated);
@@ -4023,6 +4044,7 @@ export default function WhatsAppInboxScreen() {
 
       return {
         ...chat,
+        lead_name: chat.lead_name || matchedLeadName,
         display_name: matchedLeadName,
       };
     });
@@ -4354,6 +4376,7 @@ export default function WhatsAppInboxScreen() {
       if (shouldHydrateChatFromLead && lead) {
         upsertChatLocally({
           ...chat,
+          lead_name: lead.nome_completo || chat.lead_name,
           display_name: !chat.saved_contact_name && lead.nome_completo ? lead.nome_completo : chat.display_name,
           lead_status: nextLeadStatus,
         });

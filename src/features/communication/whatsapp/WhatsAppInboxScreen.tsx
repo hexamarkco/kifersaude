@@ -6910,6 +6910,7 @@ export default function WhatsAppInboxScreen() {
           let shouldStopQueue = false;
           let hadSuccessfulSend = false;
           let firstErrorMessage = '';
+          let hadAmbiguousSend = false;
 
           try {
             for (let index = 0; index < attachmentsToSend.length; index += 1) {
@@ -6970,10 +6971,23 @@ export default function WhatsAppInboxScreen() {
                     externalMessageIds: [sendResult.messageId],
                   });
                 }
-                localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
+                if (sendResult.messageId || sendResult.status.trim().toLowerCase() !== 'sending') {
+                  localOutgoingRetryPayloadRef.current.delete(queued.optimisticMessage.id);
+                }
               } catch (error) {
                 const message = error instanceof Error ? error.message : 'Não foi possível enviar a mídia.';
                 firstErrorMessage = firstErrorMessage || message;
+                if (error instanceof CommWhatsAppMediaSendTimeoutError) {
+                  hadAmbiguousSend = true;
+                  patchLocalOutgoingMessage(queued.optimisticMessage.id, {
+                    delivery_status: 'sending',
+                    status_updated_at: new Date().toISOString(),
+                    error_message: 'Envio ainda em confirmação. Evite reenviar por enquanto.',
+                  });
+                  updateOptimisticChatPreviewStatus(selectedChat.id, queued.optimisticMessage.message_at, 'sending');
+                  continue;
+                }
+
                 patchLocalOutgoingMessage(queued.optimisticMessage.id, {
                   delivery_status: 'failed',
                   status_updated_at: new Date().toISOString(),
@@ -6988,7 +7002,7 @@ export default function WhatsAppInboxScreen() {
             mediaUploadAbortControllerRef.current = null;
           }
 
-          if (hadSuccessfulSend) {
+          if (hadSuccessfulSend || hadAmbiguousSend) {
             void (async () => {
               await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
             })().catch((error) => {
@@ -6996,7 +7010,9 @@ export default function WhatsAppInboxScreen() {
             });
           }
 
-          if (firstErrorMessage) {
+          if (hadAmbiguousSend) {
+            toast.info('Um ou mais arquivos ainda estão confirmando envio. Aguarde antes de reenviar.');
+          } else if (firstErrorMessage) {
             if (firstErrorMessage === 'Envio de mídia cancelado.') {
               toast.info('Upload interrompido. As mensagens que falharam permaneceram no chat para reenvio.');
             } else {
@@ -7045,6 +7061,7 @@ export default function WhatsAppInboxScreen() {
       const localRetryPayload = localOutgoingRetryPayloadRef.current.get(message.id);
 
       if (localRetryPayload) {
+        let keepRetryPayload = false;
         patchLocalOutgoingMessage(message.id, {
           delivery_status: 'pending',
           status_updated_at: new Date().toISOString(),
@@ -7075,6 +7092,7 @@ export default function WhatsAppInboxScreen() {
               externalMessageIds: [sendResult.messageId],
             });
           }
+          keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
         } else if (localRetryPayload.kind === 'media') {
           const sendResult = await commWhatsAppService.sendMediaMessage({
             chatId: selectedChat?.external_chat_id || '',
@@ -7100,6 +7118,7 @@ export default function WhatsAppInboxScreen() {
               externalMessageIds: [sendResult.messageId],
             });
           }
+          keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
         } else {
           const sendResult = await commWhatsAppService.sendRemoteMediaMessage({
             chatId: selectedChat?.external_chat_id || '',
@@ -7122,9 +7141,12 @@ export default function WhatsAppInboxScreen() {
               externalMessageIds: [sendResult.messageId],
             });
           }
+          keepRetryPayload = !sendResult.messageId && sendResult.status.trim().toLowerCase() === 'sending';
         }
 
-        localOutgoingRetryPayloadRef.current.delete(message.id);
+        if (!keepRetryPayload) {
+          localOutgoingRetryPayloadRef.current.delete(message.id);
+        }
         if (selectedChat) {
           await Promise.all([loadMessages(selectedChat, 'send'), loadChats()]);
         }
@@ -7146,6 +7168,21 @@ export default function WhatsAppInboxScreen() {
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao reenviar mensagem', error);
       const messageText = error instanceof Error ? error.message : 'Não foi possível reenviar a mensagem.';
+      if (error instanceof CommWhatsAppMediaSendTimeoutError) {
+        patchLocalOutgoingMessage(message.id, {
+          delivery_status: 'sending',
+          status_updated_at: new Date().toISOString(),
+          error_message: 'Envio ainda em confirmação. Evite reenviar por enquanto.',
+        });
+        toast.info('Envio ainda em confirmação. Aguarde antes de reenviar.');
+        if (selectedChat) {
+          void Promise.all([loadMessages(selectedChat, 'send'), loadChats()]).catch((refreshError) => {
+            console.error('[WhatsAppInbox] erro ao atualizar conversa apos timeout de reenvio', refreshError);
+          });
+        }
+        return;
+      }
+
       if (localOutgoingRetryPayloadRef.current.has(message.id)) {
         patchLocalOutgoingMessage(message.id, {
           delivery_status: 'failed',

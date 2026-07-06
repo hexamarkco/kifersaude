@@ -118,6 +118,7 @@ type SearchMessagesParams = {
 type CommWhatsAppSendResult = {
   messageId: string | null;
   status: string;
+  duplicate?: boolean;
 };
 
 type CommWhatsAppSendResponsePayload = {
@@ -125,6 +126,13 @@ type CommWhatsAppSendResponsePayload = {
   status?: string;
   duplicate?: boolean;
 };
+
+export class CommWhatsAppMediaSendTimeoutError extends Error {
+  constructor() {
+    super('Tempo limite excedido ao enviar a midia no WhatsApp. Confirmando envio...');
+    this.name = 'CommWhatsAppMediaSendTimeoutError';
+  }
+}
 
 export type CommWhatsAppMessagesPage = {
   messages: CommWhatsAppMessage[];
@@ -386,11 +394,7 @@ const parseSendResponse = (data: unknown, fallbackStatus = 'pending'): CommWhats
     ? payload.status.trim()
     : fallbackStatus;
 
-  if (payload.duplicate === true && !messageId && status.toLowerCase() === 'sending') {
-    throw new Error('Este envio ainda está em andamento. Aguarde a confirmação antes de reenviar.');
-  }
-
-  return { messageId, status };
+  return { messageId, status, duplicate: payload.duplicate === true };
 };
 
 const toRecord = (value: unknown): Record<string, unknown> => (
@@ -1613,7 +1617,7 @@ export const commWhatsAppService = {
       };
 
       xhr.ontimeout = () => {
-        finalize(() => reject(new Error('Tempo limite excedido ao enviar a midia no WhatsApp.')));
+        finalize(() => reject(new CommWhatsAppMediaSendTimeoutError()));
       };
 
       xhr.onabort = () => {

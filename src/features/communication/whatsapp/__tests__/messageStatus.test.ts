@@ -89,3 +89,25 @@ test('keeps the most advanced status when merging duplicates', () => {
 
   assert.equal(merged[0].delivery_status, 'delivered');
 });
+
+test('merges by id when identity keys diverge (webhook-first race)', () => {
+  const webhookFirst = baseMessage({
+    id: 'server-1',
+    external_message_id: 'external-1',
+    delivery_status: 'sent',
+    metadata: { from_me: true, provider: 'whapi' },
+  });
+  const sendUpdate = baseMessage({
+    id: 'server-1',
+    external_message_id: 'external-1',
+    delivery_status: 'sent',
+    metadata: { from_me: true, provider: 'whapi', client_request_id: 'req-1' },
+  });
+
+  const merged = mergeCommWhatsAppMessages([webhookFirst], [sendUpdate]);
+
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].id, 'server-1');
+  assert.ok(merged[0].metadata.client_request_id, 'client_request_id should survive');
+  assert.equal(merged[0].metadata.client_request_id, 'req-1');
+});

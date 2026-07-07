@@ -10,7 +10,6 @@ import {
   ensurePrimaryChannel,
   extractPhoneFromChatId,
   extractWhapiMessageId,
-  extractWhapiMessageStatus,
   formatPhoneLabel,
   getNowIso,
   isDirectWhapiChatId,
@@ -19,6 +18,7 @@ import {
   persistCommWhatsAppMessage,
   parseWhapiError,
   readResponsePayload,
+  resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -319,7 +319,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const forwardedMessageId = extractWhapiMessageId(payload);
-      const deliveryStatus = extractWhapiMessageStatus(payload) || 'pending';
+      const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, forwardedMessageId);
       const nowIso = getNowIso();
       const { data: targetChat } = await supabaseAdmin
         .from('comm_whatsapp_chats')

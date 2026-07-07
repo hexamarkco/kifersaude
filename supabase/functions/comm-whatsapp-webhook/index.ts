@@ -349,7 +349,7 @@ async function persistMessageFromWebhook(
     (!existingLooksLikeOwnName && existingChat?.display_name ? existingChat.display_name : fallbackDisplayName);
   const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
   const externalMessageId = toTrimmedString(message.id);
-  const deliveryStatus = toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'pending');
+  const deliveryStatus = toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'sent');
   const mediaMeta = extractWhapiMediaMeta(message);
   const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
   const quoteMeta = extractWhapiQuotedMessageMeta(message);
@@ -423,7 +423,8 @@ async function applyMessageStatus(
   const externalMessageId = toTrimmedString(statusItem.id);
   if (!externalMessageId) return;
 
-  const deliveryStatus = toTrimmedString(statusItem.status) || 'pending';
+  const deliveryStatus = toTrimmedString(statusItem.status);
+  if (!deliveryStatus) return;
   const statusUpdatedAt = stringTimestampToIso(statusItem.timestamp) || getNowIso();
 
   if (deliveryStatus === 'deleted') {

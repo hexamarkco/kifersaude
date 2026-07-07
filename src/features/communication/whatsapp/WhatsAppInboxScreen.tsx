@@ -16,6 +16,7 @@ import { useConfig } from '../../../contexts/ConfigContext';
 import { applyTemplateVariables } from '../../../lib/autoContactService';
 import { cx } from '../../../lib/cx';
 import {
+  CommWhatsAppMediaSendTimeoutError,
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
   type CommWhatsAppLeadContractSummary,
@@ -744,7 +745,19 @@ const getMessageClientOrderAt = (message?: CommWhatsAppMessage | null) => {
 };
 
 const messagesReferToSameOutgoing = (left: CommWhatsAppMessage, right: CommWhatsAppMessage) => {
-  return messagesReferToSameDelivery(left, right);
+  if (messagesReferToSameDelivery(left, right)) return true;
+  if (left.id === right.id) return true;
+
+  const leftCri = getMessageClientRequestId(left);
+  const rightCri = getMessageClientRequestId(right);
+  const leftEid = String(left.external_message_id ?? '').trim();
+  const rightEid = String(right.external_message_id ?? '').trim();
+
+  return left.chat_id === right.chat_id
+    && left.direction === 'outbound'
+    && right.direction === 'outbound'
+    && ((leftCri && !leftEid && rightEid && !rightCri)
+     || (rightCri && !rightEid && leftEid && !leftCri));
 };
 
 const getMessageQuoteInfo = (message?: CommWhatsAppMessage | null): MessageQuoteInfo | null => {
@@ -3837,8 +3850,8 @@ export default function WhatsAppInboxScreen() {
 
     mergePendingChatInboxState(pendingChatInboxStateRef.current, chat.id, {
       ...readPatch,
-      is_archived: chat.is_muted ? chat.is_archived : false,
-      archived_at: chat.is_muted ? chat.archived_at : null,
+      is_archived: chat.is_archived,
+      archived_at: chat.archived_at,
       last_message_text: summaryText,
       last_message_direction: 'outbound',
       last_message_at: messageAt,
@@ -3848,8 +3861,8 @@ export default function WhatsAppInboxScreen() {
     upsertChatLocally({
       ...chat,
       ...readPatch,
-      is_archived: chat.is_muted ? chat.is_archived : false,
-      archived_at: chat.is_muted ? chat.archived_at : null,
+      is_archived: chat.is_archived,
+      archived_at: chat.archived_at,
       last_message_text: summaryText,
       last_message_direction: 'outbound',
       last_message_at: messageAt,
@@ -8622,7 +8635,7 @@ export default function WhatsAppInboxScreen() {
       const muteConfirmed = typeof options.isMuted !== 'boolean' || updatedChat.is_muted === options.isMuted;
       const pinConfirmed = typeof options.isPinned !== 'boolean' || updatedChat.is_pinned === options.isPinned;
 
-      if (archiveConfirmed && muteConfirmed && pinConfirmed) {
+      if (archiveConfirmed && muteConfirmed && pinConfirmed && typeof options.isArchived !== 'boolean') {
         pendingChatInboxStateRef.current.delete(chat.id);
       }
       upsertChatLocally(updatedChat);

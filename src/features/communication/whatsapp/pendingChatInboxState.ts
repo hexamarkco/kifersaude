@@ -25,7 +25,7 @@ type PendingChatInboxStateMetadata = {
 export type PendingChatInboxStatePatch = PendingChatInboxStateFields & PendingChatInboxStateMetadata;
 
 const PENDING_CHAT_INBOX_STATE_TTL_MS = 30_000;
-const PENDING_CHAT_ARCHIVE_PATCH_PROTECT_MS = 20_000;
+const PENDING_CHAT_ARCHIVE_PATCH_PROTECT_MS = PENDING_CHAT_INBOX_STATE_TTL_MS;
 const PENDING_CHAT_INBOX_META_KEYS: ReadonlyArray<keyof PendingChatInboxStateMetadata> = ['__issuedAt', '__actions'];
 
 const getMessageTimestampMs = (value?: string | null) => {
@@ -109,9 +109,12 @@ export const applyPendingChatInboxState = (
   const remaining: PendingChatInboxStateFields = { ...fieldsPatch };
 
   if (typeof remaining.is_archived === 'boolean') {
+    const shouldProtectArchivePatch = withinProtection && Boolean(pendingState.__actions?.isArchived);
     if (chat.is_archived === remaining.is_archived) {
-      delete remaining.is_archived;
-      delete remaining.archived_at;
+      if (!shouldProtectArchivePatch) {
+        delete remaining.is_archived;
+        delete remaining.archived_at;
+      }
     } else if (!withinProtection) {
       delete remaining.is_archived;
       delete remaining.archived_at;

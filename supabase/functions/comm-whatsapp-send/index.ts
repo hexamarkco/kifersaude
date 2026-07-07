@@ -10,7 +10,6 @@ import {
   extractPhoneFromChatId,
   extractWhapiMediaId,
   extractWhapiMessageId,
-  extractWhapiMessageStatus,
   extractWhapiUploadMediaId,
   formatPhoneLabel,
   getNowIso,
@@ -19,6 +18,7 @@ import {
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
+  resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -701,10 +701,11 @@ Deno.serve(async (req: Request) => {
         }
 
         const externalMessageId = extractWhapiMessageId(whapiPayload);
-        const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
         if (!externalMessageId) {
           return await failMissingWhapiMessageId(supabaseAdmin, sendRequest.row?.id);
         }
+
+        const deliveryStatus = resolveWhapiOutboundDeliveryStatus(whapiPayload, externalMessageId);
 
         const nowIso = getNowIso();
         const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
@@ -842,10 +843,11 @@ Deno.serve(async (req: Request) => {
     }
 
     const externalMessageId = extractWhapiMessageId(whapiPayload);
-    const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
     if (!externalMessageId) {
       return await failMissingWhapiMessageId(supabaseAdmin, sendRequest.row?.id);
     }
+
+    const deliveryStatus = resolveWhapiOutboundDeliveryStatus(whapiPayload, externalMessageId);
 
     uploadedMediaId = uploadedMediaId || extractWhapiMediaId(whapiPayload);
     const nowIso = getNowIso();

@@ -418,7 +418,7 @@ Deno.serve(async (req: Request) => {
         externalMessageId: externalMessageId || null,
         direction,
         messageType: toTrimmedString(message.type) || 'text',
-        deliveryStatus: toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'pending'),
+        deliveryStatus: toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'sent'),
         textContent: summaryText,
         createdBy: null,
         source: toTrimmedString(message.source) || null,

@@ -122,8 +122,19 @@ export const mergeCommWhatsAppMessages = (existing: CommWhatsAppMessage[], incom
   }
 
   for (const message of incoming) {
-    const key = getMessageIdentityKey(message);
-    const previous = map.get(key);
+    let key = getMessageIdentityKey(message);
+    let previous = map.get(key);
+
+    if (!previous) {
+      for (const [, value] of map) {
+        if (value.id === message.id) {
+          previous = value;
+          key = getMessageIdentityKey(value);
+          break;
+        }
+      }
+    }
+
     map.set(key, previous ? mergeCommWhatsAppMessage(previous, message) : message);
   }
 

@@ -1466,6 +1466,12 @@ export const extractWhapiMessageStatus = (payload: unknown): string => {
   return '';
 };
 
+export const resolveWhapiOutboundDeliveryStatus = (payload: unknown, externalMessageId?: string | null): string => {
+  const status = extractWhapiMessageStatus(payload);
+  if (status) return status;
+  return toTrimmedString(externalMessageId) ? 'sent' : 'pending';
+};
+
 export const extractWhapiMediaId = (payload: unknown): string => {
   if (!payload) return '';
 

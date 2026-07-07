@@ -7,12 +7,12 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
-  extractWhapiMessageStatus,
   formatPhoneLabel,
   getNowIso,
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
+  resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -373,7 +373,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const externalMessageId = extractWhapiMessageId(whapiPayload);
-    const deliveryStatus = extractWhapiMessageStatus(whapiPayload) || 'pending';
+    const deliveryStatus = resolveWhapiOutboundDeliveryStatus(whapiPayload, externalMessageId);
     const nowIso = getNowIso();
     const summaryText = buildMediaSummary(retryTarget.message_type, caption);
 

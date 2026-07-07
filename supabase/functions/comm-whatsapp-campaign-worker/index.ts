@@ -9,13 +9,13 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
-  extractWhapiMessageStatus,
   formatPhoneLabel,
   getNowIso,
   normalizeCommWhatsAppPhone,
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
+  resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -888,7 +888,7 @@ async function sendTarget(params: {
   }
 
   const externalMessageId = extractWhapiMessageId(payload);
-  const deliveryStatus = extractWhapiMessageStatus(payload) || 'pending';
+  const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, externalMessageId);
   const displayName = lead?.nome_completo || target.display_name || formatPhoneLabel(phoneDigits);
   const persistResult = await persistCommWhatsAppMessage(supabaseAdmin, {
     channelId: params.channelId,

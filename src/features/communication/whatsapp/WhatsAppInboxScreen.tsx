@@ -747,17 +747,7 @@ const getMessageClientOrderAt = (message?: CommWhatsAppMessage | null) => {
 const messagesReferToSameOutgoing = (left: CommWhatsAppMessage, right: CommWhatsAppMessage) => {
   if (messagesReferToSameDelivery(left, right)) return true;
   if (left.id === right.id) return true;
-
-  const leftCri = getMessageClientRequestId(left);
-  const rightCri = getMessageClientRequestId(right);
-  const leftEid = String(left.external_message_id ?? '').trim();
-  const rightEid = String(right.external_message_id ?? '').trim();
-
-  return left.chat_id === right.chat_id
-    && left.direction === 'outbound'
-    && right.direction === 'outbound'
-    && ((leftCri && !leftEid && rightEid && !rightCri)
-     || (rightCri && !rightEid && leftEid && !leftCri));
+  return false;
 };
 
 const getMessageQuoteInfo = (message?: CommWhatsAppMessage | null): MessageQuoteInfo | null => {

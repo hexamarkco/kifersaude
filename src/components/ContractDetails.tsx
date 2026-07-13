@@ -25,8 +25,14 @@ import ContractForm from "./ContractForm";
 import DependentForm from "./DependentForm";
 import FilterSingleSelect from "./FilterSingleSelect";
 import ModalShell from "./ui/ModalShell";
-import Button from "./ui/Button";
-import { panelInputBaseClass, panelInputStateClasses } from "./ui/standards";
+import {
+  Badge,
+  Button,
+  Field,
+  Surface,
+  Textarea,
+  type PanelTone,
+} from "../design-system";
 import { formatDateOnly } from "../lib/dateUtils";
 import { getContractBonusSummary } from "../lib/contractBonus";
 import { getCommissionInstallmentSummary } from "../lib/contractCommission";
@@ -39,39 +45,36 @@ import { toast } from "../lib/toast";
 
 const AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
 const detailPanelClass =
-  "rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)]";
+  "rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)]";
 const detailPanelMutedClass =
-  "rounded-lg bg-[var(--panel-surface-muted,#f7f0e7)]";
+  "rounded-[var(--radius-lg)] bg-[var(--bg-surface-muted)]";
 const detailDividerClass =
-  "mt-4 border-t border-[var(--panel-border-subtle,#e7dac8)] pt-4";
+  "mt-4 border-t border-[var(--border-subtle)] pt-4";
 const detailTitleClass =
-  "text-lg font-semibold text-[var(--panel-text,#1a120d)]";
-const detailHeadingTextClass = "font-semibold text-[var(--panel-text,#1a120d)]";
-const detailBodyTextClass = "text-sm text-[var(--panel-text-soft,#5b4635)]";
+  "text-lg font-semibold text-[var(--text-primary)]";
+const detailHeadingTextClass = "font-semibold text-[var(--text-primary)]";
+const detailBodyTextClass = "text-sm text-[var(--text-secondary)]";
 const detailBodyStrongClass =
-  "text-sm font-medium text-[var(--panel-text-soft,#5b4635)]";
-const detailMutedTextClass = "text-xs text-[var(--panel-text-muted,#876f5c)]";
+  "text-sm font-medium text-[var(--text-secondary)]";
+const detailMutedTextClass = "text-xs text-[var(--text-muted)]";
 const detailLabelTextClass =
-  "font-medium text-[var(--panel-text-soft,#5b4635)]";
+  "font-medium text-[var(--text-secondary)]";
 const detailEmptyStateClass =
-  "rounded-lg border-2 border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-muted,#f7f0e7)] py-8 text-center";
+  "rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-default)] bg-[var(--bg-surface-muted)] py-8 text-center";
 const detailEmptyCompactClass =
-  "rounded-lg border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] p-6 text-center text-sm text-[var(--panel-text-muted,#876f5c)]";
+  "rounded-[var(--radius-lg)] border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] p-6 text-center text-sm text-[var(--text-muted)]";
 const detailAccentLinkClass =
-  "text-xs font-semibold text-[var(--panel-accent-ink,#6f3f16)] hover:text-[var(--panel-accent-ink-strong,#4a2411)]";
+  "text-xs font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]";
 const detailPanelSoftClass =
-  "rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-muted,#f7f0e7)]";
+  "rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface-muted)]";
 const detailNestedPanelClass =
-  "rounded-lg border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]";
+  "rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]";
 const detailSectionHeadingClass = `flex items-center gap-2 ${detailTitleClass}`;
-const detailSectionIconClass = "h-5 w-5 text-[var(--panel-accent-ink,#6f3f16)]";
+const detailSectionIconClass = "h-5 w-5 text-[var(--brand-primary)]";
 const detailMetricValueClass =
-  "text-lg font-bold text-[var(--panel-accent-ink,#6f3f16)]";
+  "text-lg font-bold text-[var(--brand-primary)]";
 const detailEmptyIconClass =
-  "mx-auto mb-3 h-12 w-12 text-[var(--panel-border-strong,#9d7f5a)]/70";
-const detailFormLabelClass =
-  "mb-1 block text-sm font-medium text-[var(--panel-text-soft,#5b4635)]";
-const detailTextareaClass = `${panelInputBaseClass} ${panelInputStateClasses.valid} min-h-[96px] py-2 text-sm`;
+  "mx-auto mb-3 h-12 w-12 text-[var(--text-muted)]";
 
 type ContractDetailsProps = {
   contract: Contract;
@@ -192,14 +195,14 @@ export default function ContractDetails({
     if (remaining === null || !date) return null;
 
     const formattedDate = date.toLocaleDateString("pt-BR");
-    const tone =
+    const tone: PanelTone =
       remaining < 0
-        ? "comm-badge-neutral"
+        ? "neutral"
         : remaining <= 7
-          ? "comm-badge-danger"
+          ? "danger"
           : remaining <= 15
-            ? "comm-badge-warning"
-            : "comm-badge-success";
+            ? "warning"
+            : "success";
 
     const suffix =
       remaining === 0
@@ -209,14 +212,16 @@ export default function ContractDetails({
           : `ha ${Math.abs(remaining)} dia${Math.abs(remaining) === 1 ? "" : "s"}`;
 
     return (
-      <div
+      <Badge
         key={`${label}-${date}`}
-        className={`comm-badge gap-2 px-3 py-2 text-xs font-medium ${tone}`}
+        tone={tone}
+        size="md"
+        className="gap-2 font-medium"
       >
         <span className="font-semibold">{label}</span>
         <span>{formattedDate}</span>
         <span className="text-[11px] font-normal">{suffix}</span>
-      </div>
+      </Badge>
     );
   };
 
@@ -779,7 +784,11 @@ export default function ContractDetails({
         showCloseButton={false}
         bodyClassName="flex min-h-[260px] items-center justify-center"
       >
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--panel-focus,#c86f1d)] border-t-transparent" />
+        <div
+          className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent"
+          role="status"
+          aria-label="Carregando dados do contrato"
+        />
       </ModalShell>
     );
   }
@@ -951,16 +960,18 @@ export default function ContractDetails({
           {(ageAdjustmentAlerts.length > 0 ||
             upcomingAgeAdjustments.length > 0) && (
             <div className={detailDividerClass}>
-              <div className="flex items-center gap-2 text-sm font-medium text-[var(--panel-accent-ink,#6f3f16)]">
+              <div className="flex items-center gap-2 text-sm font-medium text-[var(--brand-primary)]">
                 <AlertCircle className="h-4 w-4" />
                 <span>Gestao de reajuste por idade</span>
               </div>
               {upcomingAgeAdjustments.length > 0 ? (
                 <div className="mt-3 space-y-2">
                   {upcomingAgeAdjustments.map((person) => (
-                    <div
+                    <Surface
                       key={`age-${person.id}`}
-                      className="comm-card comm-card-warning flex items-center justify-between px-3 py-2 text-xs"
+                      variant="warning"
+                      padding="sm"
+                      className="flex flex-col gap-1 text-xs sm:flex-row sm:items-center sm:justify-between"
                     >
                       <span className={detailHeadingTextClass}>
                         {person.name} - {person.role} - {person.age} anos
@@ -968,15 +979,15 @@ export default function ContractDetails({
                       <span className={detailBodyStrongClass}>
                         {person.date.toLocaleDateString("pt-BR")}
                       </span>
-                    </div>
+                    </Surface>
                   ))}
                 </div>
               ) : (
-                <p className="mt-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
+                <p className="mt-2 text-xs text-[var(--text-secondary)]">
                   Nenhum reajuste por idade previsto nos proximos 120 dias.
                 </p>
               )}
-              <p className="mt-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
+              <p className="mt-2 text-xs text-[var(--text-secondary)]">
                 Os planos reajustam por idade quando um titular ou dependente
                 completa 19, 24, 29, 34, 39, 44, 49, 54 ou 59 anos.
               </p>
@@ -993,33 +1004,33 @@ export default function ContractDetails({
                   const isIncrease = adj.tipo === "acrescimo";
 
                   return (
-                    <div
+                    <Surface
                       key={adj.id}
-                      className={`comm-card ${isIncrease ? "comm-card-success" : "comm-card-danger"} flex items-start gap-2 p-3 text-sm`}
+                      variant={isIncrease ? "success" : "danger"}
+                      padding="sm"
+                      className="flex items-start gap-2 text-sm"
                     >
                       {isIncrease ? (
-                        <TrendingUp className="mt-0.5 h-4 w-4 text-[var(--panel-text-soft,#5b4635)]" />
+                        <TrendingUp className="mt-0.5 h-4 w-4 text-[var(--success-text)]" />
                       ) : (
-                        <TrendingDown className="mt-0.5 h-4 w-4 text-[var(--panel-text-soft,#5b4635)]" />
+                        <TrendingDown className="mt-0.5 h-4 w-4 text-[var(--danger-text)]" />
                       )}
                       <div className="flex-1">
-                        <span
-                          className={`comm-badge ${isIncrease ? "comm-badge-success" : "comm-badge-danger"} px-2.5 py-1 text-xs font-semibold`}
-                        >
+                        <Badge tone={isIncrease ? "success" : "danger"} size="sm">
                           {isIncrease ? "+" : "-"} R${" "}
                           {adj.valor.toLocaleString("pt-BR", {
                             minimumFractionDigits: 2,
                           })}
-                        </span>
+                        </Badge>
                         <span className={`ml-2 ${detailBodyTextClass}`}>
                           {adj.motivo}
                         </span>
                       </div>
-                    </div>
+                    </Surface>
                   );
                 })}
               </div>
-              <div className="mt-3 flex items-center justify-between border-t border-[var(--panel-border-subtle,#e7dac8)] pt-3">
+              <div className="mt-3 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
                 <span className={detailLabelTextClass}>Mensalidade final:</span>
                 <span className={detailMetricValueClass}>
                   R${" "}
@@ -1034,8 +1045,8 @@ export default function ContractDetails({
           {contract.comissao_multiplicador &&
             contract.comissao_multiplicador !== 2.8 && (
               <div className={detailDividerClass}>
-                <div className="comm-card comm-card-warning flex items-center gap-2 px-3 py-3">
-                  <AlertCircle className="h-5 w-5 text-[var(--panel-accent-ink,#6f3f16)]" />
+                <Surface variant="warning" padding="sm" className="flex flex-wrap items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-[var(--warning-text)]" />
                   <span className={detailBodyStrongClass}>
                     Multiplicador de comissao:
                   </span>
@@ -1043,7 +1054,7 @@ export default function ContractDetails({
                     {contract.comissao_multiplicador}x
                   </span>
                   <span className={detailMutedTextClass}>(padrao: 2.8x)</span>
-                </div>
+                </Surface>
               </div>
             )}
 
@@ -1062,19 +1073,19 @@ export default function ContractDetails({
               </div>
               {contract.comissao_recebimento_adiantado === false ? (
                 <div className="mt-3 space-y-2">
-                  <div className="flex items-center gap-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
-                    <AlertCircle className="h-4 w-4 text-[var(--panel-accent-ink,#6f3f16)]" />
+                  <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                    <AlertCircle className="h-4 w-4 text-[var(--warning-text)]" />
                     <span>
                       Recebimento parcelado com percentuais e datas
                       personalizadas.
                     </span>
                   </div>
                   {commissionInstallments.length > 0 ? (
-                    <div className="comm-card comm-card-warning space-y-2 p-3">
+                    <Surface variant="warning" padding="sm" className="space-y-2">
                       {commissionSummary.installments.map((parcel, index) => (
                         <div
                           key={`parcel-${index}`}
-                          className="flex items-center justify-between text-xs text-[var(--panel-text-soft,#5b4635)]"
+                          className="flex flex-col gap-1 text-xs text-[var(--text-secondary)] sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="flex items-center gap-2">
                             <span className={detailHeadingTextClass}>
@@ -1097,7 +1108,7 @@ export default function ContractDetails({
                           </div>
                         </div>
                       ))}
-                      <div className="flex items-center justify-between border-t border-[var(--panel-border-subtle,#e7dac8)] pt-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
+                      <div className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 text-xs text-[var(--text-secondary)]">
                         <span className={detailHeadingTextClass}>Total</span>
                         <span className={detailHeadingTextClass}>
                           R${" "}
@@ -1109,7 +1120,7 @@ export default function ContractDetails({
                           )}
                         </span>
                       </div>
-                    </div>
+                    </Surface>
                   ) : (
                     <p className={detailMutedTextClass}>
                       Defina os percentuais e datas para acompanhar o
@@ -1118,17 +1129,17 @@ export default function ContractDetails({
                   )}
                 </div>
               ) : contract.comissao_recebimento_adiantado ? (
-                <div className="comm-card comm-card-brand mt-2 flex items-center gap-2 px-3 py-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
-                  <TrendingUp className="h-4 w-4 text-[var(--panel-accent-ink,#6f3f16)]" />
+                <Surface variant="success" padding="sm" className="mt-2 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                  <TrendingUp className="h-4 w-4 text-[var(--success-text)]" />
                   <span>Recebimento adiantado previsto (pagamento unico).</span>
-                </div>
+                </Surface>
               ) : null}
             </div>
           )}
 
           {hasSignupFeeConfig && (
             <div className={detailDividerClass}>
-              <div className="comm-card comm-card-warning p-4">
+              <Surface variant="warning" padding="sm">
                 <div className="flex items-center justify-between">
                   <span className={detailBodyStrongClass}>Taxa de adesao:</span>
                   <span className={detailMetricValueClass}>
@@ -1138,24 +1149,24 @@ export default function ContractDetails({
                     })}
                   </span>
                 </div>
-                <div className="mt-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
+                <div className="mt-2 text-xs text-[var(--text-secondary)]">
                   {contract.taxa_adesao_tipo === "percentual_mensalidade"
                     ? `Cobrada como ${contract.taxa_adesao_percentual || 0}% da mensalidade.`
                     : "Cobrada como valor fixo."}
                 </div>
-              </div>
+              </Surface>
             </div>
           )}
 
           {contract.bonus_por_vida_aplicado && bonusTotal && (
             <div className={detailDividerClass}>
-              <div className="comm-card comm-card-brand p-4">
+              <Surface variant="strong" padding="sm">
                 {bonusSummary.hasConfigurations ? (
                   <div className="mb-3 space-y-2">
                     {bonusSummary.configurations.map((item, index) => (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between rounded-lg border border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2"
+                        className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border-subtle)] px-3 py-2"
                       >
                         <span className={detailBodyTextClass}>
                           Faixa {index + 1}: {item.quantidade} vida(s)
@@ -1196,7 +1207,7 @@ export default function ContractDetails({
                     {contract.vidas || 1}
                   </span>
                 </div>
-                <div className="mt-2 flex items-center justify-between border-t border-[var(--panel-border-subtle,#e7dac8)] pt-2">
+                <div className="mt-2 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2">
                   <span className={detailBodyStrongClass}>Total do bonus:</span>
                   <span className={detailMetricValueClass}>
                     R${" "}
@@ -1206,7 +1217,7 @@ export default function ContractDetails({
                   </span>
                 </div>
                 {contract.previsao_pagamento_bonificacao && (
-                  <div className="mt-2 flex items-center justify-between border-t border-[var(--panel-border-subtle,#e7dac8)] pt-2">
+                  <div className="mt-2 flex items-center justify-between border-t border-[var(--border-subtle)] pt-2">
                     <span className={detailBodyStrongClass}>
                       Pagamento previsto:
                     </span>
@@ -1217,8 +1228,8 @@ export default function ContractDetails({
                     </span>
                   </div>
                 )}
-              </div>
-              <p className="mt-2 text-xs text-[var(--panel-text-soft,#5b4635)]">
+              </Surface>
+              <p className="mt-2 text-xs text-[var(--text-secondary)]">
                 Pagamento por vida do contrato, previsto conforme a data de
                 bonificacao.
               </p>
@@ -1380,7 +1391,7 @@ export default function ContractDetails({
                 );
                 return (
                   <div key={holderItem.id} className={detailPanelClass}>
-                    <div className="flex items-center justify-between border-b border-[var(--panel-border-subtle,#e7dac8)] px-4 py-3">
+                    <div className="flex flex-col gap-3 border-b border-[var(--border-subtle)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className={detailBodyTextClass}>Titular</p>
                         <p className={detailHeadingTextClass}>
@@ -1546,7 +1557,7 @@ export default function ContractDetails({
           </div>
           {auditEvents.length === 0 ? (
             <div
-              className={`${detailPanelSoftClass} p-6 text-sm text-[var(--panel-text-muted,#876f5c)]`}
+              className={`${detailPanelSoftClass} p-6 text-sm text-[var(--text-muted)]`}
             >
               Nenhum evento de auditoria disponivel.
             </div>
@@ -1597,10 +1608,7 @@ export default function ContractDetails({
               className={`mb-6 ${detailPanelSoftClass} p-4`}
             >
               <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className={detailFormLabelClass}>
-                    Tipo de interacao
-                  </label>
+                <Field label="Tipo de interacao">
                   <FilterSingleSelect
                     icon={MessageCircle}
                     value={interactionData.tipo}
@@ -1617,9 +1625,8 @@ export default function ContractDetails({
                       { value: "Observacao", label: "Observacao" },
                     ]}
                   />
-                </div>
-                <div>
-                  <label className={detailFormLabelClass}>Responsavel</label>
+                </Field>
+                <Field label="Responsavel">
                   <FilterSingleSelect
                     icon={User}
                     value={interactionData.responsavel}
@@ -1636,11 +1643,10 @@ export default function ContractDetails({
                       { value: "Nick", label: "Nick" },
                     ]}
                   />
-                </div>
+                </Field>
               </div>
-              <div className="mb-4">
-                <label className={detailFormLabelClass}>Descricao</label>
-                <textarea
+              <Field label="Descricao *" className="mb-4">
+                <Textarea
                   required
                   value={interactionData.descricao}
                   onChange={(e) =>
@@ -1651,9 +1657,8 @@ export default function ContractDetails({
                   }
                   rows={3}
                   placeholder="Descreva o que foi tratado..."
-                  className={detailTextareaClass}
                 />
-              </div>
+              </Field>
               <div className="flex items-center justify-end gap-2">
                 <Button
                   type="button"
@@ -1689,9 +1694,9 @@ export default function ContractDetails({
                 >
                   <div className="mb-2 flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="comm-badge comm-badge-info px-2.5 py-1 text-xs font-semibold">
+                      <Badge tone="info" size="sm">
                         {interaction.tipo}
-                      </span>
+                      </Badge>
                       <span className={detailBodyTextClass}>
                         {interaction.responsavel}
                       </span>
@@ -1780,7 +1785,12 @@ export default function ContractDetails({
           }}
           onSave={async () => {
             await loadData();
-            const addAnother = window.confirm('Dependente salvo! Deseja adicionar outro dependente?');
+            const addAnother = await requestConfirmation({
+              title: "Adicionar outro dependente?",
+              description: "O dependente foi salvo. Deseja cadastrar outro dependente para este titular?",
+              confirmLabel: "Adicionar outro",
+              cancelLabel: "Concluir",
+            });
             if (addAnother && selectedHolderId) {
               setEditingDependent(null);
             } else {

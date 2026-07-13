@@ -1,5 +1,7 @@
 import { Lightbulb, ArrowRight } from 'lucide-react';
 
+import { Alert } from '../design-system';
+
 type NextStepSuggestionProps = {
   leadStatus: string;
   lastContact?: string;
@@ -79,27 +81,20 @@ export default function NextStepSuggestion({ leadStatus, lastContact }: NextStep
   const isUrgent = daysInactive > 3 && leadStatus !== 'Fechado' && leadStatus !== 'Perdido';
 
   return (
-    <div className={`rounded-lg p-4 border-2 ${
-      isUrgent
-        ? 'bg-orange-50 border-orange-300'
-        : 'bg-amber-50/90 border-amber-300'
-    }`}>
-      <div className="flex items-start space-x-3">
-        <div className={`p-2 rounded-lg flex-shrink-0 ${
-          isUrgent ? 'bg-orange-200' : 'bg-amber-100'
-        }`}>
-          <Lightbulb className={`w-5 h-5 ${
-            isUrgent ? 'text-orange-700' : 'text-amber-700'
-          }`} />
+    <Alert
+      tone={isUrgent ? 'warning' : 'gold'}
+      role={isUrgent ? 'alert' : 'status'}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] p-2">
+          <Lightbulb className="h-5 w-5" aria-hidden="true" />
         </div>
-        <div className="flex-1">
-          <h4 className={`font-semibold mb-2 ${
-            isUrgent ? 'text-orange-900' : 'text-amber-950'
-          }`}>
-            {isUrgent && '⚠️ Atenção: '} Próximos Passos - {suggestion.title}
+        <div className="min-w-0 flex-1">
+          <h4 className="mb-2 font-semibold text-[var(--text-primary)]">
+            {isUrgent && 'Atenção: '} Próximos Passos - {suggestion.title}
           </h4>
           {isUrgent && (
-            <p className="text-sm text-orange-800 mb-3 font-medium">
+            <p className="mb-3 text-sm font-medium">
               Este lead está {daysInactive} dias sem contato. É importante agir rapidamente!
             </p>
           )}
@@ -107,17 +102,15 @@ export default function NextStepSuggestion({ leadStatus, lastContact }: NextStep
             {suggestion.actions.map((action, index) => (
               <li
                 key={index}
-                className={`flex items-start space-x-2 text-sm ${
-                  isUrgent ? 'text-orange-800' : 'text-amber-800'
-                }`}
+                className="flex items-start gap-2 text-sm"
               >
-                <ArrowRight className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <ArrowRight className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
                 <span>{action}</span>
               </li>
             ))}
           </ul>
         </div>
       </div>
-    </div>
+    </Alert>
   );
 }

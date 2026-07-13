@@ -3,6 +3,7 @@ import { supabase, ContractValueAdjustment } from '../lib/supabase';
 import { formatCurrencyFromNumber, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { DollarSign } from 'lucide-react';
 import ModalShell from './ui/ModalShell';
+import { ActionSurface, Alert, Button, Field, Input, Textarea } from '../design-system';
 
 type ValueAdjustmentFormProps = {
   contractId: string;
@@ -86,97 +87,84 @@ export default function ValueAdjustmentForm({
       bodyClassName="p-0"
     >
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
-          <h3 className="mb-4 flex items-center text-lg font-bold text-slate-900">
+          <h3 className="mb-4 flex items-center text-lg font-bold text-[var(--text-primary)]">
             <DollarSign className="mr-2 h-5 w-5" />
             {adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}
           </h3>
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <Alert tone="danger" className="mb-4" role="alert">
               {error}
-            </div>
+            </Alert>
           )}
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Tipo de Ajuste *
-              </label>
+            <Field label="Tipo de Ajuste *">
               <div className="grid grid-cols-2 gap-3">
-                <button
+                <ActionSurface
                   type="button"
                   onClick={() => setFormData({ ...formData, tipo: 'acrescimo' })}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                    formData.tipo === 'acrescimo'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                  }`}
+                  variant={formData.tipo === 'acrescimo' ? 'success' : 'muted'}
+                  padding="sm"
+                  className="w-full cursor-pointer text-left transition-colors hover:border-[var(--border-strong)]"
+                  aria-pressed={formData.tipo === 'acrescimo'}
                 >
                   <div className="font-semibold">Acréscimo</div>
                   <div className="text-xs mt-1">Adicionar valor</div>
-                </button>
-                <button
+                </ActionSurface>
+                <ActionSurface
                   type="button"
                   onClick={() => setFormData({ ...formData, tipo: 'desconto' })}
-                  className={`px-4 py-3 rounded-lg border-2 transition-all ${
-                    formData.tipo === 'desconto'
-                      ? 'border-red-500 bg-red-50 text-red-700'
-                      : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-                  }`}
+                  variant={formData.tipo === 'desconto' ? 'danger' : 'muted'}
+                  padding="sm"
+                  className="w-full cursor-pointer text-left transition-colors hover:border-[var(--border-strong)]"
+                  aria-pressed={formData.tipo === 'desconto'}
                 >
                   <div className="font-semibold">Desconto</div>
                   <div className="text-xs mt-1">Reduzir valor</div>
-                </button>
+                </ActionSurface>
               </div>
-            </div>
+            </Field>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Valor (R$) *
-              </label>
-              <input
+            <Field label="Valor (R$) *">
+              <Input
                 type="text"
                 required
                 value={formData.valor}
                 onChange={(e) => setFormData({ ...formData, valor: formatCurrencyInput(e.target.value) })}
                 placeholder="0,00"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 inputMode="numeric"
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Motivo *
-              </label>
-              <textarea
+            <Field
+              label="Motivo *"
+              description="Este motivo será registrado no histórico do contrato"
+            >
+              <Textarea
                 required
                 value={formData.motivo}
                 onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
                 rows={3}
                 placeholder="Descreva o motivo deste ajuste..."
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                className="resize-none"
               />
-              <p className="text-xs text-slate-500 mt-1">
-                Este motivo será registrado no histórico do contrato
-              </p>
-            </div>
+            </Field>
           </div>
 
-          <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-slate-200">
-            <button
+          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
+            <Button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              variant="ghost"
             >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50"
+              loading={saving}
             >
               {saving ? 'Salvando...' : adjustment ? 'Atualizar' : 'Adicionar'}
-            </button>
+            </Button>
           </div>
         </form>
     </ModalShell>

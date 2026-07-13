@@ -7,7 +7,15 @@ import { useConfig } from '../contexts/ConfigContext';
 import NextStepSuggestion from './NextStepSuggestion';
 import FilterSingleSelect from './FilterSingleSelect';
 import ModalShell from './ui/ModalShell';
-import Button from './ui/Button';
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Field,
+  SectionHeader,
+  Surface,
+  Textarea,
+} from '../design-system';
 import { toast } from '../lib/toast';
 
 type LeadWithRelations = Lead & {
@@ -162,127 +170,140 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
       size="lg"
       panelClassName="sm:max-w-3xl"
     >
-      <div className="flex-1 overflow-y-auto">
-          <div className="mb-4 flex items-center justify-end gap-2">
-            {canEditLead && (
-              <button
-                type="button"
-                onClick={() => onEdit(lead)}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-200"
-              >
-                <Pencil className="h-4 w-4" />
-                <span className="hidden sm:inline">Editar Lead</span>
-              </button>
-            )}
-            {canEditLead && onDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(lead)}
-                className="inline-flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-200"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Excluir</span>
-              </button>
-            )}
-          </div>
+      <div className="flex-1 overflow-y-auto text-[var(--text-secondary)]">
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
+          {canEditLead && (
+            <Button
+              type="button"
+              onClick={() => onEdit(lead)}
+              variant="secondary"
+              size="sm"
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Editar Lead</span>
+            </Button>
+          )}
+          {canEditLead && onDelete && (
+            <Button
+              type="button"
+              onClick={() => onDelete(lead)}
+              variant="danger"
+              size="sm"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Excluir</span>
+            </Button>
+          )}
+        </div>
 
-          <div className="mb-6 rounded-lg bg-slate-50 p-4">
-            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <span className="font-medium text-slate-700">Telefone:</span>
-                <span className="ml-2 text-slate-900">{lead.telefone}</span>
-              </div>
-              {lead.email && (
-                <div>
-                  <span className="font-medium text-slate-700">E-mail:</span>
-                  <span className="ml-2 text-slate-900">{lead.email}</span>
-                </div>
-              )}
-              <div>
-                <span className="font-medium text-slate-700">Status:</span>
-                <span className="ml-2 text-slate-900">
-                  {lead.status_nome ?? lead.status ?? 'Sem status'}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium text-slate-700">Responsável:</span>
-                <span className="ml-2 text-slate-900">
-                  {lead.responsavel_label ?? lead.responsavel ?? 'Sem responsável'}
-                </span>
-              </div>
+        <Surface variant="muted" padding="sm" className="mb-6">
+          <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="inline font-medium text-[var(--text-secondary)]">Telefone:</dt>
+              <dd className="ml-2 inline text-[var(--text-primary)]">{lead.telefone}</dd>
             </div>
-          </div>
+            {lead.email && (
+              <div>
+                <dt className="inline font-medium text-[var(--text-secondary)]">E-mail:</dt>
+                <dd className="ml-2 inline break-all text-[var(--text-primary)]">{lead.email}</dd>
+              </div>
+            )}
+            <div>
+              <dt className="inline font-medium text-[var(--text-secondary)]">Status:</dt>
+              <dd className="ml-2 inline text-[var(--text-primary)]">
+                {lead.status_nome ?? lead.status ?? 'Sem status'}
+              </dd>
+            </div>
+            <div>
+              <dt className="inline font-medium text-[var(--text-secondary)]">Responsável:</dt>
+              <dd className="ml-2 inline text-[var(--text-primary)]">
+                {lead.responsavel_label ?? lead.responsavel ?? 'Sem responsável'}
+              </dd>
+            </div>
+          </dl>
+        </Surface>
 
-          <div className="mb-6">
-            <NextStepSuggestion
-              leadStatus={lead.status_nome ?? lead.status ?? 'Novo'}
-              lastContact={lead.ultimo_contato ?? undefined}
+        <div className="mb-6">
+          <NextStepSuggestion
+            leadStatus={lead.status_nome ?? lead.status ?? 'Novo'}
+            lastContact={lead.ultimo_contato ?? undefined}
+          />
+        </div>
+
+        <section className="mb-6" aria-labelledby="lead-timeline-title">
+          <SectionHeader
+            as="h3"
+            id="lead-timeline-title"
+            title="Linha do tempo"
+            className="mb-4"
+            action={<History className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />}
+          />
+          {loading ? (
+            <div className="flex items-center justify-center py-8" role="status" aria-label="Carregando linha do tempo">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--brand-primary)]" />
+            </div>
+          ) : timelineEvents.length === 0 ? (
+            <EmptyState
+              icon={<History className="h-8 w-8" />}
+              title="Nenhum evento registrado."
+              className="py-8"
             />
-          </div>
-
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <History className="h-5 w-5 text-slate-600" />
-              <h4 className="text-lg font-semibold text-slate-900">Linha do tempo</h4>
-            </div>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
-              </div>
-            ) : timelineEvents.length === 0 ? (
-              <div className="rounded-lg bg-slate-50 py-8 text-center text-slate-500">
-                Nenhum evento registrado.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {timelineEvents.map((event) => (
-                  <div key={event.id} className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4">
-                    <div className="mt-1 rounded-full bg-slate-100 p-2 text-slate-600">
-                      {event.type === 'interaction' && <MessageCircle className="h-4 w-4" />}
-                      {event.type === 'reminder' && <Bell className="h-4 w-4" />}
-                      {event.type === 'status' && <Clock className="h-4 w-4" />}
+          ) : (
+            <div className="space-y-3">
+              {timelineEvents.map((event) => (
+                <Surface key={event.id} variant="muted" padding="sm">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 rounded-full bg-[var(--bg-elevated)] p-2 text-[var(--text-muted)]">
+                      {event.type === 'interaction' && <MessageCircle className="h-4 w-4" aria-hidden="true" />}
+                      {event.type === 'reminder' && <Bell className="h-4 w-4" aria-hidden="true" />}
+                      {event.type === 'status' && <Clock className="h-4 w-4" aria-hidden="true" />}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-sm font-semibold text-slate-900">{event.title}</p>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{event.title}</p>
                         {event.meta && (
-                          <span className="text-xs text-slate-500">{event.meta}</span>
+                          <Badge tone="neutral" size="xs">{event.meta}</Badge>
                         )}
                       </div>
                       {event.description && (
-                        <p className="mt-1 text-sm text-slate-600">{event.description}</p>
+                        <p className="mt-1 break-words text-sm text-[var(--text-secondary)]">{event.description}</p>
                       )}
+                      <time
+                        dateTime={event.date}
+                        className="mt-2 block text-xs text-[var(--text-muted)]"
+                      >
+                        {formatDateTimeFullBR(event.date)}
+                      </time>
                     </div>
-                    <span className="text-xs text-slate-500 whitespace-nowrap">
-                      {formatDateTimeFullBR(event.date)}
-                    </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </Surface>
+              ))}
+            </div>
+          )}
+        </section>
 
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h4 className="text-lg font-semibold text-slate-900">Interações</h4>
-            {canEditLead && (
-              <Button
-                onClick={() => setShowForm(!showForm)}
-                className="sm:w-auto"
-                fullWidth
-              >
-                <Plus className="h-4 w-4" />
-                <span>Nova Interação</span>
-              </Button>
-            )}
-          </div>
+        <SectionHeader
+          as="h3"
+          title="Interações"
+          className="mb-4"
+          action={canEditLead ? (
+            <Button
+              onClick={() => setShowForm(!showForm)}
+              aria-expanded={showForm}
+              size="sm"
+              className="w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              <span>Nova Interação</span>
+            </Button>
+          ) : undefined}
+        />
 
-          {showForm && (
-            <form onSubmit={handleAddInteraction} className="mb-6 rounded-lg border border-amber-200 bg-amber-50/80 p-4">
-              <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Tipo de Interação
-                  </label>
+        {showForm && (
+          <Surface variant="warning" padding="sm" className="mb-6">
+            <form onSubmit={handleAddInteraction}>
+              <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="Tipo de Interação">
                   <FilterSingleSelect
                     icon={Clock}
                     value={formData.tipo}
@@ -297,11 +318,8 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                       { value: 'Observação', label: 'Observação' },
                     ]}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Responsável
-                  </label>
+                </Field>
+                <Field label="Responsável">
                   <FilterSingleSelect
                     icon={UserCircle}
                     value={formData.responsavel}
@@ -313,71 +331,65 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
                       { value: 'Nick', label: 'Nick' },
                     ]}
                   />
-                </div>
+                </Field>
               </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Descrição
-                </label>
-                <textarea
+              <Field label="Descrição" htmlFor="lead-interaction-description" className="mb-4">
+                <Textarea
+                  id="lead-interaction-description"
                   required
                   value={formData.descricao}
                   onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                   rows={3}
                   placeholder="Descreva o que foi tratado nesta interação..."
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-amber-500"
                 />
-              </div>
-              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-0 sm:space-x-2">
+              </Field>
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-2">
                 <Button
                   type="button"
                   onClick={() => setShowForm(false)}
                   variant="ghost"
-                  className="sm:w-auto"
-                  fullWidth
+                  className="w-full sm:w-auto"
                 >
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  className="sm:w-auto"
-                  fullWidth
-                >
+                <Button type="submit" className="w-full sm:w-auto">
                   Adicionar
                 </Button>
               </div>
             </form>
-          )}
+          </Surface>
+        )}
 
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent"></div>
-            </div>
-          ) : interactions.length === 0 ? (
-            <div className="rounded-lg bg-slate-50 py-12 text-center">
-              <MessageCircle className="mx-auto mb-3 h-12 w-12 text-slate-300" />
-              <p className="text-slate-600">Nenhuma interação registrada ainda</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {interactions.map((interaction) => (
-                <div key={interaction.id} className="border border-slate-200 rounded-lg p-4">
-                  <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-                        {interaction.tipo}
-                      </span>
-                      <span className="text-sm text-slate-600">{interaction.responsavel}</span>
-                    </div>
-                    <span className="text-xs text-slate-500 sm:text-sm">
-                      {formatDateTimeFullBR(interaction.data_interacao)}
-                    </span>
+        {loading ? (
+          <div className="flex items-center justify-center py-12" role="status" aria-label="Carregando interações">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--border-strong)] border-t-[var(--brand-primary)]" />
+          </div>
+        ) : interactions.length === 0 ? (
+          <EmptyState
+            icon={<MessageCircle className="h-10 w-10" />}
+            title="Nenhuma interação registrada ainda"
+          />
+        ) : (
+          <div className="space-y-4">
+            {interactions.map((interaction) => (
+              <Surface key={interaction.id} variant="muted" padding="sm">
+                <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="accent">{interaction.tipo}</Badge>
+                    <span className="text-sm text-[var(--text-secondary)]">{interaction.responsavel}</span>
                   </div>
-                  <p className="text-sm text-slate-700 sm:text-base">{interaction.descricao}</p>
+                  <time
+                    dateTime={interaction.data_interacao}
+                    className="text-xs text-[var(--text-muted)] sm:text-sm"
+                  >
+                    {formatDateTimeFullBR(interaction.data_interacao)}
+                  </time>
                 </div>
-              ))}
-            </div>
-          )}
+                <p className="break-words text-sm text-[var(--text-secondary)] sm:text-base">{interaction.descricao}</p>
+              </Surface>
+            ))}
+          </div>
+        )}
       </div>
     </ModalShell>
   );

@@ -340,25 +340,25 @@ export default function LeadKanbanBoard({
                     <OperationalMetricChip value={columnLeads.length} active={isOverLimit} tone={isOverLimit ? "danger" : "neutral"} />
                   </div>
 
-                  <label
-                    className="kds-surface kds-surface-default mb-4 flex items-center justify-between gap-3 px-3 py-2 text-xs font-medium"
-                  >
-                    <span className="kds-op-lead-muted">
-                      Limite WIP
-                    </span>
-                    <div className="w-20">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={wipLimit}
-                        onChange={(event) =>
-                          updateWipLimit(column.id, Number(event.target.value))
-                        }
-                        size="compact"
-                        className="text-right"
-                      />
-                    </div>
-                  </label>
+                  <Surface padding="none" className="mb-4">
+                    <label className="flex items-center justify-between gap-3 px-3 py-2 text-xs font-medium">
+                      <span className="kds-op-lead-muted">
+                        Limite WIP
+                      </span>
+                      <div className="w-20">
+                        <Input
+                          type="number"
+                          min={0}
+                          value={wipLimit}
+                          onChange={(event) =>
+                            updateWipLimit(column.id, Number(event.target.value))
+                          }
+                          size="compact"
+                          className="text-right"
+                        />
+                      </div>
+                    </label>
+                  </Surface>
 
                   <div className="kds-kanban-column-body space-y-3 overflow-y-auto pr-1">
                     {columnLeads.length === 0 ? (
@@ -374,12 +374,22 @@ export default function LeadKanbanBoard({
                         const responsavelLabel = getResponsavelLabel(lead);
 
                         return (
-                          <div
+                          <Surface
                             key={lead.id}
+                            padding="sm"
                             draggable
                             onDragStart={() => setDraggedLead(lead)}
                             onClick={() => onLeadClick?.(lead)}
-                            className="kds-kanban-card kds-surface kds-surface-default kds-action-surface cursor-move p-4 transition-all"
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                onLeadClick?.(lead);
+                              }
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Abrir detalhes de ${lead.nome_completo}`}
+                            className="kds-kanban-card kds-action-surface cursor-move transition-all"
                           >
                             <div className="mb-3">
                               <h5
@@ -446,7 +456,7 @@ export default function LeadKanbanBoard({
                                 Converter em contrato
                               </Button>
                             )}
-                          </div>
+                          </Surface>
                         );
                       })
                     )}

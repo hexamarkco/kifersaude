@@ -1,5 +1,5 @@
 import { AlertTriangle } from 'lucide-react';
-import Button from './Button';
+import { Alert, Button } from '../../design-system';
 import ModalShell from './ModalShell';
 
 export type ConfirmationModalProps = {
@@ -52,23 +52,14 @@ export function ConfirmationModal({
         </div>
       }
     >
-      <div className="flex items-start gap-3">
-        <span
-          className={`rounded-full p-2 ${
-            tone === 'danger' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'
-          }`}
-          aria-hidden="true"
-        >
-          <AlertTriangle className="h-5 w-5" />
-        </span>
-        <div className="space-y-1">
-          {description ? (
-            <p className="text-sm text-slate-600">{description}</p>
-          ) : (
-            <p className="text-sm text-slate-600">Essa acao pode impactar os dados atuais. Confirme para continuar.</p>
-          )}
+      <Alert tone={tone === 'danger' ? 'danger' : 'warning'}>
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+          <p>
+            {description ?? 'Essa acao pode impactar os dados atuais. Confirme para continuar.'}
+          </p>
         </div>
-      </div>
+      </Alert>
     </ModalShell>
   );
 }

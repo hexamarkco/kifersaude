@@ -545,17 +545,17 @@ export default function ContractsManager({
           actions={(
             <>
               <Badge tone="neutral" className="gap-2">
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>{filteredContracts.length}</span>
+                <span className="text-[var(--text-primary)]">{filteredContracts.length}</span>
                 <span>contratos no recorte</span>
               </Badge>
               <Badge tone={upcomingImportantCount > 0 ? "warning" : "neutral"} className="gap-2">
                 <AlertCircle className="h-3.5 w-3.5" />
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>{upcomingImportantCount}</span>
+                <span className="text-[var(--text-primary)]">{upcomingImportantCount}</span>
                 <span>com data sensível</span>
               </Badge>
               <Badge tone={activeFilterCount > 0 ? "accent" : "neutral"} className="gap-2">
                 <Layers className="h-3.5 w-3.5" />
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>{activeFilterCount}</span>
+                <span className="text-[var(--text-primary)]">{activeFilterCount}</span>
                 <span>{activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}</span>
               </Badge>
             </>
@@ -563,10 +563,7 @@ export default function ContractsManager({
         >
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
             <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
-              <Clock3
-                className="h-4 w-4"
-                style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
-              />
+              <Clock3 className="h-4 w-4 text-[var(--brand-primary)]" />
               <span>{lastUpdatedLabel}</span>
             </Badge>
 
@@ -597,8 +594,8 @@ export default function ContractsManager({
           </div>
         </PageHeader>
 
-        <Surface className="panel-glass-panel space-y-5" data-panel-animate>
-          <Surface variant="muted" padding="sm" className="flex flex-col gap-3 rounded-[1.7rem] sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+        <Surface className="space-y-5" data-panel-animate>
+          <Surface variant="muted" padding="sm" className="flex flex-col gap-3 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative w-full lg:max-w-2xl">
               <Input
                 type="text"
@@ -619,7 +616,7 @@ export default function ContractsManager({
                 Limpar
               </Button>
               <Badge tone="neutral" className="h-10 gap-1.5 px-3 text-sm normal-case tracking-normal">
-                <span className="font-semibold" style={{ color: "var(--panel-text,#1c1917)" }}>
+                <span className="font-semibold text-[var(--text-primary)]">
                   {filteredContracts.length}
                 </span>
                 <span>contratos</span>
@@ -628,10 +625,7 @@ export default function ContractsManager({
           </Surface>
 
           <div>
-            <h4
-              className="mb-3 text-xs font-semibold uppercase tracking-wide"
-              style={{ color: "var(--panel-text-muted,#876f5c)" }}
-            >
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
               Filtros principais
             </h4>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -717,25 +711,16 @@ export default function ContractsManager({
           </div>
         </Surface>
 
-        <Surface className="panel-glass-panel" data-panel-animate>
+        <Surface data-panel-animate>
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p
-                className="text-[11px] font-black uppercase tracking-[0.24em]"
-                style={{ color: "var(--panel-text-muted,#876f5c)" }}
-              >
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
                 Carteira contratual
               </p>
-              <h3
-                className="mt-2 text-xl font-semibold"
-                style={{ color: "var(--panel-text,#1c1917)" }}
-              >
+              <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
                 Contratos em acompanhamento
               </h3>
-              <p
-                className="mt-1 max-w-3xl text-sm"
-                style={{ color: "var(--panel-text-muted,#876f5c)" }}
-              >
+              <p className="mt-1 max-w-3xl text-sm text-[var(--text-muted)]">
                 Monitore vigência, reajustes, titulares e previsões financeiras
                 sem perder contexto do responsável comercial.
               </p>
@@ -743,13 +728,13 @@ export default function ContractsManager({
 
             <div className="flex flex-wrap gap-2">
               <Badge tone="neutral" className="gap-2">
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                <span className="text-[var(--text-primary)]">
                   {filteredContracts.length}
                 </span>
                 <span>resultados</span>
               </Badge>
               <Badge tone="neutral" className="gap-2">
-                <span style={{ color: "var(--panel-text,#1c1917)" }}>
+                <span className="text-[var(--text-primary)]">
                   {currentPage}/{totalPages}
                 </span>
                 <span>páginas</span>
@@ -766,15 +751,12 @@ export default function ContractsManager({
                   key={contract.id}
                   variant="muted"
                   padding="sm"
-                  className="panel-glass-lite panel-interactive-glass rounded-[1.7rem] transition-all sm:p-6"
+                  className="transition-colors hover:border-[var(--border-strong)] sm:p-6"
                 >
                   <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <h3
-                          className="text-lg font-semibold"
-                          style={{ color: "var(--panel-text,#1c1917)" }}
-                        >
+                        <h3 className="text-lg font-semibold text-[var(--text-primary)]">
                           {contract.codigo_contrato}
                         </h3>
                         <Badge tone={getStatusTone(contract.status)} size="sm" className="px-3 py-1 text-xs">
@@ -793,17 +775,11 @@ export default function ContractsManager({
                         {renderDateBadges(contract)}
                       </div>
                       <div className="mb-3">
-                        <span
-                          className="font-medium"
-                          style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                        >
+                        <span className="font-medium text-[var(--text-secondary)]">
                           {getContractDisplayName(contract)}
                         </span>
                       </div>
-                      <div
-                        className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 xl:grid-cols-5"
-                        style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                      >
+                      <div className="grid grid-cols-1 gap-3 text-sm text-[var(--text-secondary)] sm:grid-cols-2 xl:grid-cols-5">
                         <div>
                           <span className="font-medium">Operadora:</span>{" "}
                           {normalizeOperadoraLabel(contract.operadora)}
@@ -882,16 +858,10 @@ export default function ContractsManager({
                         )}
                       </div>
                     </div>
-                    <div
-                      className="text-sm lg:text-right"
-                      style={{ color: "var(--panel-text-muted,#876f5c)" }}
-                    >
+                    <div className="text-sm text-[var(--text-muted)] lg:text-right">
                       <div>
                         Responsável:{" "}
-                        <span
-                          className="font-medium"
-                          style={{ color: "var(--panel-text-soft,#5b4635)" }}
-                        >
+                        <span className="font-medium text-[var(--text-secondary)]">
                           {contract.responsavel}
                         </span>
                       </div>
@@ -903,10 +873,7 @@ export default function ContractsManager({
                       </div>
                     </div>
                   </div>
-                  <div
-                    className="flex flex-wrap items-center justify-end gap-2 border-t pt-4 sm:justify-start"
-                    style={{ borderColor: "var(--panel-border-subtle,#e4d5c0)" }}
-                  >
+                  <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-4 sm:justify-start">
                     <Button
                       onClick={() => setSelectedContract(contract)}
                       variant="soft"
@@ -932,18 +899,12 @@ export default function ContractsManager({
             })}
 
             {filteredContracts.length === 0 && (
-              <Surface variant="muted" className="panel-glass-panel rounded-[1.7rem] py-12 text-center" data-panel-animate>
-                <FileText
-                  className="mx-auto mb-4 h-16 w-16"
-                  style={{ color: "var(--panel-text-muted,#876f5c)" }}
-                />
-                <h3
-                  className="mb-2 text-lg font-medium"
-                  style={{ color: "var(--panel-text,#1c1917)" }}
-                >
+              <Surface variant="muted" className="py-12 text-center" data-panel-animate>
+                <FileText className="mx-auto mb-4 h-16 w-16 text-[var(--text-muted)]" />
+                <h3 className="mb-2 text-lg font-medium text-[var(--text-primary)]">
                   Nenhum contrato encontrado
                 </h3>
-                <p style={{ color: "var(--panel-text-soft,#5b4635)" }}>
+                <p className="text-[var(--text-secondary)]">
                   Tente ajustar os filtros ou adicione um novo contrato.
                 </p>
               </Surface>

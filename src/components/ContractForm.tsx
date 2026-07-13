@@ -40,10 +40,18 @@ import {
 import HolderForm from "./HolderForm";
 import ValueAdjustmentForm from "./ValueAdjustmentForm";
 import FilterSingleSelect from "./FilterSingleSelect";
-import Button from "./ui/Button";
-import Checkbox from "./ui/Checkbox";
 import DateTimePicker from "./ui/DateTimePicker";
 import ModalShell from "./ui/ModalShell";
+import {
+  Alert,
+  Badge,
+  Button,
+  Checkbox,
+  Field,
+  Input,
+  Surface,
+  Textarea,
+} from "../design-system";
 import { configService } from "../lib/configService";
 import { useConfig } from "../contexts/ConfigContext";
 import { useConfirmationModal } from "../hooks/useConfirmationModal";
@@ -1192,17 +1200,14 @@ export default function ContractForm({
           onSubmit={handleSubmit}
           className="max-h-[70vh] overflow-y-auto p-6"
         >
-          <div className="mb-6 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] p-4">
-            <h4 className="comm-title mb-3 flex items-center font-semibold">
-              <Building2 className="w-5 h-5 mr-2 text-amber-600" />
+          <Surface variant="muted" padding="sm" className="mb-6">
+            <h4 className="mb-3 flex items-center font-semibold text-[var(--text-primary)]">
+              <Building2 className="mr-2 h-5 w-5 text-[var(--brand-primary)]" />
               Informações do Contrato
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="comm-text mb-1 block text-sm font-medium">
-                  Código do Contrato
-                </label>
-                <input
+              <Field label="Código do Contrato *">
+                <Input
                   type="text"
                   required
                   value={formData.codigo_contrato}
@@ -1213,14 +1218,10 @@ export default function ContractForm({
                     })
                   }
                   placeholder="Informe o código fornecido pela operadora"
-                  className="panel-ui-input w-full rounded-lg px-4 py-2"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="comm-text mb-1 block text-sm font-medium">
-                  Lead Vinculado
-                </label>
+              <Field label="Lead Vinculado">
                 <FilterSingleSelect
                   icon={User}
                   value={formData.lead_id}
@@ -1231,12 +1232,9 @@ export default function ContractForm({
                   includePlaceholderOption={false}
                   options={leadSelectOptions}
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="comm-text mb-1 block text-sm font-medium">
-                  Status *
-                </label>
+              <Field label="Status *">
                 {contractStatusOptions.length > 0 ? (
                   <FilterSingleSelect
                     icon={AlertCircle}
@@ -1249,23 +1247,19 @@ export default function ContractForm({
                     options={contractStatusSelectOptions}
                   />
                 ) : (
-                  <input
+                  <Input
                     type="text"
                     required
                     value={formData.status}
                     onChange={(e) =>
                       setFormData({ ...formData, status: e.target.value })
                     }
-                    className="panel-ui-input w-full rounded-lg px-4 py-2"
                     placeholder="Configure os status de contrato"
                   />
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="comm-text mb-1 block text-sm font-medium">
-                  Modalidade *
-                </label>
+              <Field label="Modalidade *">
                 {modalidadeOptions.length > 0 ? (
                   <FilterSingleSelect
                     icon={AlertCircle}
@@ -1278,27 +1272,23 @@ export default function ContractForm({
                     options={modalidadeSelectOptions}
                   />
                 ) : (
-                  <input
+                  <Input
                     type="text"
                     required
                     value={formData.modalidade}
                     onChange={(e) =>
                       setFormData({ ...formData, modalidade: e.target.value })
                     }
-                    className="panel-ui-input w-full rounded-lg px-4 py-2"
                     placeholder="Informe a modalidade"
                   />
                 )}
-              </div>
+              </Field>
 
               {modalidadeRequerCNPJ && (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      CNPJ (Receita)
-                    </label>
+                  <Field label="CNPJ (Receita)" error={cnpjLookupError || undefined}>
                     <div className="relative">
-                      <input
+                      <Input
                         type="text"
                         value={formData.cnpj}
                         onChange={(e) =>
@@ -1307,15 +1297,18 @@ export default function ContractForm({
                             cnpj: formatCnpj(e.target.value),
                           })
                         }
-                        className="w-full px-4 py-2 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        className="pr-10"
                         inputMode="numeric"
                         maxLength={18}
                       />
-                      <button
+                      <Button
                         type="button"
                         onClick={handleConsultarCNPJ}
                         disabled={cnpjLoading}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-[var(--text-muted)]"
+                        aria-label={cnpjLoading ? "Buscando CNPJ" : "Buscar CNPJ na Receita"}
                         title={
                           cnpjLoading ? "Buscando..." : "Buscar na Receita"
                         }
@@ -1323,20 +1316,12 @@ export default function ContractForm({
                         <Search
                           className={`w-5 h-5 ${cnpjLoading ? "animate-pulse" : ""}`}
                         />
-                      </button>
+                      </Button>
                     </div>
-                    {cnpjLookupError && (
-                      <p className="text-xs text-red-600 mt-1">
-                        {cnpjLookupError}
-                      </p>
-                    )}
-                  </div>
+                  </Field>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Razão Social
-                    </label>
-                    <input
+                  <Field label="Razão Social">
+                    <Input
                       type="text"
                       value={formData.razao_social}
                       onChange={(e) =>
@@ -1345,15 +1330,11 @@ export default function ContractForm({
                           razao_social: e.target.value,
                         })
                       }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     />
-                  </div>
+                  </Field>
 
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Nome Fantasia
-                    </label>
-                    <input
+                  <Field label="Nome Fantasia">
+                    <Input
                       type="text"
                       value={formData.nome_fantasia}
                       onChange={(e) =>
@@ -1362,15 +1343,11 @@ export default function ContractForm({
                           nome_fantasia: e.target.value,
                         })
                       }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     />
-                  </div>
+                  </Field>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Endereço da Empresa (Receita)
-                    </label>
-                    <textarea
+                  <Field label="Endereço da Empresa (Receita)" className="md:col-span-2">
+                    <Textarea
                       value={formData.endereco_empresa}
                       onChange={(e) =>
                         setFormData({
@@ -1378,18 +1355,18 @@ export default function ContractForm({
                           endereco_empresa: e.target.value,
                         })
                       }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      size="compact"
                       rows={2}
                       placeholder="Preenchido automaticamente pela consulta do CNPJ"
                     />
-                  </div>
+                  </Field>
                 </>
               )}
 
-              <div>
-                <label className="comm-text mb-1 block text-sm font-medium">
-                  Operadora *
-                </label>
+              <Field
+                label="Operadora *"
+                description="Comissão e bônus serão preenchidos automaticamente"
+              >
                 <FilterSingleSelect
                   icon={Search}
                   value={formData.operadora}
@@ -1398,30 +1375,20 @@ export default function ContractForm({
                   includePlaceholderOption={false}
                   options={operadoraSelectOptions}
                 />
-                <p className="comm-muted mt-1 text-xs">
-                  Comissão e bônus serão preenchidos automaticamente
-                </p>
-              </div>
+              </Field>
 
-              <div>
-                <label className="comm-text mb-1 block text-sm font-medium">
-                  Produto/Plano *
-                </label>
-                <input
+              <Field label="Produto/Plano *">
+                <Input
                   type="text"
                   required
                   value={formData.produto_plano}
                   onChange={(e) =>
                     setFormData({ ...formData, produto_plano: e.target.value })
                   }
-                  className="panel-ui-input w-full rounded-lg px-4 py-2"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="comm-text mb-1 block text-sm font-medium">
-                  Abrangência
-                </label>
+              <Field label="Abrangência">
                 {abrangenciaOptions.length > 0 ? (
                   <FilterSingleSelect
                     icon={AlertCircle}
@@ -1434,22 +1401,18 @@ export default function ContractForm({
                     options={abrangenciaSelectOptions}
                   />
                 ) : (
-                  <input
+                  <Input
                     type="text"
                     value={formData.abrangencia}
                     onChange={(e) =>
                       setFormData({ ...formData, abrangencia: e.target.value })
                     }
-                    className="panel-ui-input w-full rounded-lg px-4 py-2"
                     placeholder="Informe a abrangência"
                   />
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="comm-text mb-1 block text-sm font-medium">
-                  Acomodação
-                </label>
+              <Field label="Acomodação">
                 {acomodacaoOptions.length > 0 ? (
                   <FilterSingleSelect
                     icon={AlertCircle}
@@ -1462,22 +1425,18 @@ export default function ContractForm({
                     options={acomodacaoSelectOptions}
                   />
                 ) : (
-                  <input
+                  <Input
                     type="text"
                     value={formData.acomodacao}
                     onChange={(e) =>
                       setFormData({ ...formData, acomodacao: e.target.value })
                     }
-                    className="panel-ui-input w-full rounded-lg px-4 py-2"
                     placeholder="Informe a acomodação"
                   />
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Data de Início
-                </label>
+              <Field label="Data de Início">
                 <DateTimePicker
                   type="date"
                   value={formData.data_inicio}
@@ -1486,12 +1445,9 @@ export default function ContractForm({
                   }
                   placeholder="Selecionar data"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Fim da fidelidade
-                </label>
+              <Field label="Fim da fidelidade">
                 <DateTimePicker
                   type="month"
                   value={formData.data_renovacao}
@@ -1500,12 +1456,9 @@ export default function ContractForm({
                   }
                   placeholder="Selecionar mês"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Mês de reajuste
-                </label>
+              <Field label="Mês de reajuste">
                 <FilterSingleSelect
                   icon={Calendar}
                   value={formData.mes_reajuste}
@@ -1530,12 +1483,9 @@ export default function ContractForm({
                     { value: "12", label: "Dezembro" },
                   ]}
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Carência
-                </label>
+              <Field label="Carência">
                 {carenciaOptions.length > 0 ? (
                   <FilterSingleSelect
                     icon={AlertCircle}
@@ -1548,23 +1498,19 @@ export default function ContractForm({
                     options={carenciaSelectOptions}
                   />
                 ) : (
-                  <input
+                  <Input
                     type="text"
                     value={formData.carencia}
                     onChange={(e) =>
                       setFormData({ ...formData, carencia: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Informe a carência"
                   />
                 )}
-              </div>
+              </Field>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Mensalidade Base (R$)
-                </label>
-                <input
+              <Field label="Mensalidade Base (R$)" className="md:col-span-2">
+                <Input
                   type="text"
                   value={formData.mensalidade_total}
                   onChange={(e) =>
@@ -1573,18 +1519,17 @@ export default function ContractForm({
                       mensalidade_total: formatCurrencyInput(e.target.value),
                     })
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   inputMode="numeric"
                   placeholder="0,00"
                 />
-              </div>
+              </Field>
 
               {contract?.id && (
                 <div className="md:col-span-2">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-slate-700">
+                    <span className="block text-sm font-medium text-[var(--text-secondary)]">
                       Ajustes de Valor
-                    </label>
+                    </span>
                     <Button
                       type="button"
                       onClick={() => {
@@ -1602,39 +1547,31 @@ export default function ContractForm({
                   {adjustments.length > 0 ? (
                     <div className="space-y-2 mb-3">
                       {adjustments.map((adj) => (
-                        <div
+                        <Surface
                           key={adj.id}
-                          className={`flex items-start justify-between p-3 rounded-lg border ${
-                            adj.tipo === "acrescimo"
-                              ? "bg-green-50 border-green-200"
-                              : "bg-red-50 border-red-200"
-                          }`}
+                          variant={adj.tipo === "acrescimo" ? "success" : "danger"}
+                          padding="sm"
+                          className="flex items-start justify-between"
                         >
                           <div className="flex items-start space-x-2 flex-1">
                             {adj.tipo === "acrescimo" ? (
-                              <TrendingUp className="w-4 h-4 text-green-600 mt-0.5" />
+                              <TrendingUp className="mt-0.5 h-4 w-4 text-[var(--success-text)]" />
                             ) : (
-                              <TrendingDown className="w-4 h-4 text-red-600 mt-0.5" />
+                              <TrendingDown className="mt-0.5 h-4 w-4 text-[var(--danger-text)]" />
                             )}
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
-                                <span
-                                  className={`font-semibold ${
-                                    adj.tipo === "acrescimo"
-                                      ? "text-green-700"
-                                      : "text-red-700"
-                                  }`}
-                                >
+                                <Badge tone={adj.tipo === "acrescimo" ? "success" : "danger"}>
                                   {adj.tipo === "acrescimo" ? "+" : "-"} R${" "}
                                   {adj.valor.toLocaleString("pt-BR", {
                                     minimumFractionDigits: 2,
                                   })}
-                                </span>
+                                </Badge>
                               </div>
-                              <p className="text-sm text-slate-600 mt-1">
+                              <p className="mt-1 text-sm text-[var(--text-secondary)]">
                                 {adj.motivo}
                               </p>
-                              <p className="text-xs text-slate-500 mt-1">
+                              <p className="mt-1 text-xs text-[var(--text-muted)]">
                                 {adj.created_by} -{" "}
                                 {new Date(adj.created_at).toLocaleDateString(
                                   "pt-BR",
@@ -1642,74 +1579,54 @@ export default function ContractForm({
                               </p>
                             </div>
                           </div>
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleDeleteAdjustment(adj.id)}
-                            className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                            aria-label={`Remover ajuste: ${adj.motivo}`}
                           >
                             <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                          </Button>
+                        </Surface>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-500 italic mb-3">
+                    <p className="mb-3 text-sm italic text-[var(--text-muted)]">
                       Nenhum ajuste aplicado
                     </p>
                   )}
 
                   {formData.mensalidade_total && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <Surface variant="warning" padding="sm">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-[var(--text-secondary)]">
                           Mensalidade Final:
                         </span>
-                        <span className="text-lg font-bold text-amber-700">
+                        <span className="text-lg font-bold text-[var(--warning-text)]">
                           R${" "}
                           {adjustedMensalidade.toLocaleString("pt-BR", {
                             minimumFractionDigits: 2,
                           })}
                         </span>
                       </div>
-                    </div>
+                    </Surface>
                   )}
                 </div>
               )}
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-3">
-                  Multiplicador de Comissão
-                </label>
-                <div
-                  className="rounded-2xl border p-4 sm:p-5"
-                  style={{
-                    borderColor: "var(--panel-border,#d4c0a7)",
-                    background:
-                      "linear-gradient(180deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 97%, white 3%) 0%, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 70%, var(--panel-surface,#fffdfa) 30%) 100%)",
-                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-                  }}
-                >
+              <Field label="Multiplicador de Comissão" className="md:col-span-2">
+                <Surface variant="strong" padding="sm" className="sm:p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <span
-                      className="text-sm"
-                      style={{ color: "var(--panel-text-muted,#876f5c)" }}
-                    >
+                    <span className="text-sm text-[var(--text-muted)]">
                       Valor do multiplicador:
                     </span>
                     <div className="flex items-center space-x-2">
-                      <span
-                        className="text-2xl font-bold"
-                        style={{ color: "var(--panel-accent-strong,#b85c1f)" }}
-                      >
+                      <span className="text-2xl font-bold text-[var(--brand-primary)]">
                         {formData.comissao_multiplicador}x
                       </span>
                       {parseFloat(formData.comissao_multiplicador) !== 2.8 && (
-                        <AlertCircle
-                          className="w-5 h-5"
-                          style={{
-                            color: "var(--panel-accent-border,#d5a25c)",
-                          }}
-                        />
+                        <AlertCircle className="h-5 w-5 text-[var(--warning-text)]" />
                       )}
                     </div>
                   </div>
@@ -1725,22 +1642,16 @@ export default function ContractForm({
                         comissao_multiplicador: e.target.value,
                       })
                     }
-                    className="w-full cursor-pointer appearance-none rounded-full"
+                    className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--bg-inset)] accent-[var(--brand-primary)]"
                     style={{
-                      height: "0.6rem",
-                      background:
-                        "linear-gradient(90deg, color-mix(in srgb, var(--panel-text,#1c1917) 92%, transparent) 0%, color-mix(in srgb, var(--panel-text,#1c1917) 92%, transparent) 100%)",
-                      accentColor: "var(--panel-accent-strong,#b85c1f)",
+                      accentColor: "var(--brand-primary)",
                     }}
                   />
                   <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <span
-                      className="text-xs"
-                      style={{ color: "var(--panel-text-muted,#876f5c)" }}
-                    >
+                    <span className="text-xs text-[var(--text-muted)]">
                       Digite o multiplicador
                     </span>
-                    <input
+                    <Input
                       type="number"
                       min="0"
                       max="10"
@@ -1753,36 +1664,24 @@ export default function ContractForm({
                           comissao_multiplicador: e.target.value,
                         })
                       }
-                      className="w-full rounded-xl px-3 py-1.5 text-sm sm:w-28"
-                      style={{
-                        border: "1px solid var(--panel-border,#d4c0a7)",
-                        background: "var(--panel-surface-muted,#f8f2e8)",
-                        color: "var(--panel-text,#1c1917)",
-                        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-                      }}
+                      className="w-full sm:w-28"
                     />
                   </div>
-                  <div
-                    className="mt-2 flex items-center justify-between text-xs"
-                    style={{ color: "var(--panel-text-muted,#876f5c)" }}
-                  >
+                  <div className="mt-2 flex items-center justify-between text-xs text-[var(--text-muted)]">
                     <span>0x</span>
-                    <span
-                      className="font-medium"
-                      style={{ color: "var(--panel-accent-border,#d5a25c)" }}
-                    >
+                    <span className="font-medium text-[var(--accent-gold)]">
                       2.8x (padrão)
                     </span>
                     <span>10x</span>
                   </div>
-                </div>
-              </div>
+                </Surface>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Comissão Prevista (R$)
-                </label>
-                <input
+              <Field
+                label="Comissão Prevista (R$)"
+                description="Calculada automaticamente com base no multiplicador"
+              >
+                <Input
                   type="text"
                   value={formData.comissao_prevista}
                   onChange={(e) =>
@@ -1791,32 +1690,29 @@ export default function ContractForm({
                       comissao_prevista: formatCurrencyInput(e.target.value),
                     })
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-slate-50"
+                  className="bg-[var(--bg-inset)]"
                   inputMode="numeric"
                   placeholder="0,00"
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  Calculada automaticamente com base no multiplicador
-                </p>
-              </div>
+              </Field>
 
               {isAdesaoModalidade && (
-                <div className="md:col-span-2 rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-muted,#f8f2e8)] p-4">
+                <Surface variant="warning" padding="sm" className="md:col-span-2">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
                         Taxa de adesão
                       </p>
-                      <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
                         Nos contratos coletivos por adesão, os 100% iniciais
                         podem ser tratados à parte da mensalidade.
                       </p>
                     </div>
-                    <div className="rounded-xl bg-white/70 px-3 py-2 text-right">
-                      <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
+                    <div className="rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] px-3 py-2 text-right">
+                      <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Prévia
                       </p>
-                      <p className="text-lg font-semibold text-[var(--panel-accent-strong,#b85c1f)]">
+                      <p className="text-lg font-semibold text-[var(--warning-text)]">
                         R${" "}
                         {signupFeePreview.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
@@ -1826,10 +1722,7 @@ export default function ContractForm({
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Como cobrar
-                      </label>
+                    <Field label="Como cobrar">
                       <FilterSingleSelect
                         icon={WalletCards}
                         value={formData.taxa_adesao_tipo}
@@ -1845,15 +1738,15 @@ export default function ContractForm({
                           { value: "valor_fixo", label: "Valor fixo" },
                         ]}
                       />
-                    </div>
+                    </Field>
 
                     {formData.taxa_adesao_tipo === "percentual_mensalidade" && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Percentual da mensalidade
-                        </label>
+                      <Field
+                        label="Percentual da mensalidade"
+                        description="Use 0%, 100% ou qualquer outro percentual adequado."
+                      >
                         <div className="flex items-center gap-2">
-                          <input
+                          <Input
                             type="number"
                             min="0"
                             step="0.01"
@@ -1864,24 +1757,19 @@ export default function ContractForm({
                                 taxa_adesao_percentual: e.target.value,
                               })
                             }
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                             placeholder="100"
                           />
-                          <span className="text-sm text-slate-500">%</span>
+                          <span className="text-sm text-[var(--text-muted)]">%</span>
                         </div>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Use `0%`, `100%` ou qualquer outro percentual que
-                          fizer sentido.
-                        </p>
-                      </div>
+                      </Field>
                     )}
 
                     {formData.taxa_adesao_tipo === "valor_fixo" && (
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Valor fixo
-                        </label>
-                        <input
+                      <Field
+                        label="Valor fixo"
+                        description="Ex.: R$ 50,00, R$ 100,00 ou R$ 200,00."
+                      >
+                        <Input
                           type="text"
                           inputMode="numeric"
                           value={formData.taxa_adesao_valor}
@@ -1893,22 +1781,15 @@ export default function ContractForm({
                               ),
                             })
                           }
-                          className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           placeholder="0,00"
                         />
-                        <p className="mt-1 text-xs text-slate-500">
-                          Ex.: R$ 50,00, R$ 100,00 ou R$ 200,00.
-                        </p>
-                      </div>
+                      </Field>
                     )}
                   </div>
-                </div>
+                </Surface>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Previsão Recebimento Comissão
-                </label>
+              <Field label="Previsão Recebimento Comissão">
                 <DateTimePicker
                   type="date"
                   value={formData.previsao_recebimento_comissao}
@@ -1920,13 +1801,14 @@ export default function ContractForm({
                   }
                   placeholder="Selecionar data"
                 />
-              </div>
+              </Field>
 
               <div className="md:col-span-2">
-                <span className="block text-sm font-medium text-slate-700 mb-2">
+                <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
                   Forma de recebimento da comissão
                 </span>
-                <label className="flex items-start space-x-3 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <Surface variant="muted" padding="sm">
+                  <label className="flex items-start gap-3">
                   <Checkbox
                     checked={formData.comissao_recebimento_adiantado}
                     onChange={(e) =>
@@ -1938,25 +1820,26 @@ export default function ContractForm({
                     className="mt-1"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">
                       Receber comissão adiantada (pagamento único)
                     </p>
-                    <p className="text-xs text-slate-600 mt-1">
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">
                       Quando marcado, todo o valor previsto será considerado no
                       primeiro mês. Desmarque para distribuir a comissão em
                       parcelas com percentuais e datas específicas.
                     </p>
                   </div>
-                </label>
+                  </label>
+                </Surface>
 
                 {!formData.comissao_recebimento_adiantado && (
                   <div className="mt-3 space-y-3">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-slate-800">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">
                           Parcelas personalizadas
                         </p>
-                        <p className="text-xs text-slate-600">
+                        <p className="text-xs text-[var(--text-secondary)]">
                           Divida a comissão em 2 ou mais pagamentos, iguais ou
                           não, sempre respeitando o total da comissão prevista.
                         </p>
@@ -1972,10 +1855,10 @@ export default function ContractForm({
                     </div>
 
                     {commissionInstallments.length === 0 ? (
-                      <div className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500 bg-slate-50">
+                      <Surface variant="muted" padding="sm" className="border-dashed text-sm text-[var(--text-muted)]">
                         Nenhuma parcela definida. Adicione ao menos uma para
                         indicar como a comissão será recebida.
-                      </div>
+                      </Surface>
                     ) : (
                       <div className="space-y-3">
                         {commissionInstallments.map((parcel, index) => {
@@ -1984,28 +1867,27 @@ export default function ContractForm({
                           );
 
                           return (
-                            <div
+                            <Surface
                               key={`parcel-${index}`}
-                              className="border border-slate-200 rounded-lg p-3 bg-white shadow-sm"
+                              padding="sm"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-slate-800">
+                                <span className="text-sm font-semibold text-[var(--text-primary)]">
                                   Parcela {index + 1}
                                 </span>
-                                <button
+                                <Button
                                   type="button"
                                   onClick={() => handleRemoveInstallment(index)}
-                                  className="text-slate-400 hover:text-red-600"
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Remover parcela ${index + 1}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
-                                </button>
+                                </Button>
                               </div>
                               <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">
-                                    Valor da parcela
-                                  </label>
-                                  <input
+                                <Field label="Valor da parcela">
+                                  <Input
                                     type="text"
                                     inputMode="numeric"
                                     value={parcel.valor}
@@ -2016,20 +1898,16 @@ export default function ContractForm({
                                         e.target.value,
                                       )
                                     }
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                     placeholder="0,00"
                                   />
-                                  <p className="text-[11px] text-slate-500 mt-1">
+                                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                                     Valor informado: R${" "}
                                     {value.toLocaleString("pt-BR", {
                                       minimumFractionDigits: 2,
                                     })}
                                   </p>
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-slate-600 mb-1">
-                                    Data de pagamento
-                                  </label>
+                                </Field>
+                                <Field label="Data de pagamento">
                                   <DateTimePicker
                                     type="date"
                                     value={parcel.data_pagamento}
@@ -2042,42 +1920,42 @@ export default function ContractForm({
                                     }
                                     placeholder="Selecionar data"
                                   />
-                                  <p className="text-[11px] text-slate-500 mt-1">
+                                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                                     Defina o dia previsto para esta parcela.
                                   </p>
-                                </div>
-                                <div className="flex flex-col justify-center rounded-lg border border-amber-100 bg-amber-50 p-3">
-                                  <span className="text-[11px] text-amber-700">
+                                </Field>
+                                <Surface variant="warning" padding="sm" className="flex flex-col justify-center">
+                                  <span className="text-[11px] text-[var(--warning-text)]">
                                     Total acumulado
                                   </span>
-                                  <span className="text-lg font-bold text-amber-800">
+                                  <span className="text-lg font-bold text-[var(--warning-text)]">
                                     R${" "}
                                     {totalInstallmentValue.toLocaleString(
                                       "pt-BR",
                                       { minimumFractionDigits: 2 },
                                     )}
                                   </span>
-                                  <span className="text-xs text-amber-700">
+                                  <span className="text-xs text-[var(--warning-text)]">
                                     Comissão total: R${" "}
                                     {commissionExpectedValue.toLocaleString(
                                       "pt-BR",
                                       { minimumFractionDigits: 2 },
                                     )}
                                   </span>
-                                </div>
+                                </Surface>
                               </div>
-                            </div>
+                            </Surface>
                           );
                         })}
                       </div>
                     )}
 
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm">
+                    <Surface variant="muted" padding="sm" className="flex flex-col text-sm sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-medium text-slate-700">
+                        <p className="font-medium text-[var(--text-secondary)]">
                           Total das parcelas
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-[var(--text-muted)]">
                           {totalCommissionFromInstallments.toLocaleString(
                             "pt-BR",
                             {
@@ -2086,7 +1964,7 @@ export default function ContractForm({
                             },
                           )}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-[var(--text-muted)]">
                           Restante disponível:{" "}
                           {remainingCommissionValue.toLocaleString("pt-BR", {
                             style: "currency",
@@ -2095,25 +1973,22 @@ export default function ContractForm({
                         </p>
                       </div>
                       {totalInstallmentValue > commissionExpectedValue && (
-                        <div className="flex items-center space-x-2 text-amber-600 mt-2 sm:mt-0">
+                        <div className="mt-2 flex items-center space-x-2 text-[var(--warning-text)] sm:mt-0">
                           <AlertCircle className="w-4 h-4" />
                           <span className="text-xs font-medium">
                             O total excede o valor total da comissão.
                           </span>
                         </div>
                       )}
-                    </div>
+                    </Surface>
                   </div>
                 )}
               </div>
             </div>
 
             <div className="mb-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Quantidade de Vidas *
-                </label>
-                <input
+              <Field label="Quantidade de Vidas *" description="Titular + dependentes">
+                <Input
                   type="number"
                   min="1"
                   required
@@ -2121,13 +1996,9 @@ export default function ContractForm({
                   onChange={(e) =>
                     setFormData({ ...formData, vidas: e.target.value })
                   }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   placeholder="1"
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  Titular + dependentes
-                </p>
-              </div>
+              </Field>
 
               <div>
                 <label className="mt-4 flex items-center space-x-2 cursor-pointer">
@@ -2135,31 +2006,23 @@ export default function ContractForm({
                     checked={formData.bonus_por_vida_aplicado}
                     onChange={(e) => handleToggleBonus(e.target.checked)}
                   />
-                  <span className="text-sm font-medium text-slate-700">
+                   <span className="text-sm font-medium text-[var(--text-secondary)]">
                     Aplicar Bônus por Vida
                   </span>
                 </label>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
                   Pagamento único por vida do contrato
                 </p>
               </div>
 
               {formData.bonus_por_vida_aplicado && (
-                <div
-                  className="rounded-2xl border p-4 shadow-sm xl:col-span-2"
-                  style={{
-                    borderColor: "var(--panel-border,#d4c0a7)",
-                    background:
-                      "linear-gradient(180deg, color-mix(in srgb, var(--panel-surface,#fffdfa) 96%, transparent) 0%, color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 82%, var(--panel-surface,#fffdfa) 18%) 100%)",
-                    boxShadow: "0 18px 40px -28px rgba(40, 20, 8, 0.35)",
-                  }}
-                >
+                <Surface variant="strong" padding="sm" className="xl:col-span-2">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">
                         Distribuição do bônus
                       </p>
-                      <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
                         Cadastre uma faixa por valor. Exemplo: 1 vida com R$
                         200,00 e outra com R$ 120,00.
                       </p>
@@ -2177,10 +2040,10 @@ export default function ContractForm({
 
                   <div className="mt-4 space-y-3">
                     {bonusDistribution.length === 0 ? (
-                      <div className="rounded-xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)]/80 px-4 py-5 text-sm text-[var(--panel-text-muted,#876f5c)]">
+                      <Surface variant="muted" padding="sm" className="border-dashed text-sm text-[var(--text-muted)]">
                         Nenhuma faixa criada ainda. Adicione uma linha para
                         informar quantas vidas recebem cada valor.
-                      </div>
+                      </Surface>
                     ) : (
                       bonusDistribution.map((row, index) => {
                         const subtotal =
@@ -2188,15 +2051,13 @@ export default function ContractForm({
                           parseFormattedNumber(row.valor || "");
 
                         return (
-                          <div
+                          <Surface
                             key={row.id}
-                            className="grid grid-cols-1 gap-3 rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)]/88 p-3 md:grid-cols-[minmax(0,150px)_minmax(0,200px)_minmax(0,1fr)_auto]"
+                            padding="sm"
+                            className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,150px)_minmax(0,200px)_minmax(0,1fr)_auto]"
                           >
-                            <div>
-                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
-                                Vidas
-                              </label>
-                              <input
+                            <Field label="Vidas">
+                              <Input
                                 type="text"
                                 inputMode="numeric"
                                 value={row.quantidade}
@@ -2207,16 +2068,12 @@ export default function ContractForm({
                                     e.target.value,
                                   )
                                 }
-                                className="w-full rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-4 py-2 text-[var(--panel-input-text,var(--panel-text-soft))] shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] placeholder:text-[var(--panel-placeholder,var(--panel-text-muted))]"
                                 placeholder="0"
                               />
-                            </div>
+                            </Field>
 
-                            <div>
-                              <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
-                                Bônus por vida
-                              </label>
-                              <input
+                            <Field label="Bônus por vida">
+                              <Input
                                 type="text"
                                 inputMode="numeric"
                                 value={row.valor}
@@ -2227,28 +2084,21 @@ export default function ContractForm({
                                     e.target.value,
                                   )
                                 }
-                                className="w-full rounded-lg border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-4 py-2 text-[var(--panel-input-text,var(--panel-text-soft))] shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-focus,#c86f1d)] placeholder:text-[var(--panel-placeholder,var(--panel-text-muted))]"
                                 placeholder="0,00"
                               />
-                            </div>
+                            </Field>
 
-                            <div
-                              className="flex flex-col justify-center rounded-lg px-4 py-2"
-                              style={{
-                                background:
-                                  "color-mix(in srgb, var(--panel-surface-soft,#efe6d8) 74%, transparent)",
-                              }}
-                            >
-                              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
+                            <Surface variant="muted" padding="sm" className="flex flex-col justify-center">
+                              <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
                                 Subtotal da faixa {index + 1}
                               </span>
-                              <span className="text-base font-semibold text-[var(--panel-text,#1c1917)]">
+                              <span className="text-base font-semibold text-[var(--text-primary)]">
                                 R${" "}
                                 {subtotal.toLocaleString("pt-BR", {
                                   minimumFractionDigits: 2,
                                 })}
                               </span>
-                            </div>
+                            </Surface>
 
                             <div className="flex items-end">
                               <Button
@@ -2261,58 +2111,59 @@ export default function ContractForm({
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
-                          </div>
+                          </Surface>
                         );
                       })
                     )}
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <div className="rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)]/88 px-4 py-3">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
+                    <Surface padding="sm">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Vidas com bônus
                       </p>
-                      <p className="mt-1 text-2xl font-semibold text-[var(--panel-text,#1c1917)]">
+                      <p className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
                         {distributedBonusLives}
                       </p>
-                    </div>
-                    <div className="rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)]/88 px-4 py-3">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
+                    </Surface>
+                    <Surface padding="sm">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Vidas sem bônus
                       </p>
-                      <p className="mt-1 text-2xl font-semibold text-[var(--panel-text,#1c1917)]">
+                      <p className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
                         {livesWithoutBonus}
                       </p>
-                    </div>
-                    <div className="rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)]/88 px-4 py-3">
-                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
+                    </Surface>
+                    <Surface padding="sm">
+                      <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Total previsto
                       </p>
-                      <p className="mt-1 text-2xl font-semibold text-[var(--panel-text,#1c1917)]">
+                      <p className="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
                         R${" "}
                         {distributedBonusTotal.toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                         })}
                       </p>
-                    </div>
+                    </Surface>
                   </div>
 
                   {distributedBonusLives > vidasNumber && (
-                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <Alert tone="warning" className="mt-3">
                       <AlertCircle className="h-4 w-4" />A soma das faixas
                       ultrapassa a quantidade total de vidas do contrato.
-                    </div>
+                    </Alert>
                   )}
-                </div>
+                </Surface>
               )}
             </div>
 
             {(formData.bonus_por_vida_aplicado ||
               formData.previsao_pagamento_bonificacao) && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Previsão Pagamento Bonificação
-                </label>
+              <Field
+                label="Previsão Pagamento Bonificação"
+                description="Informe quando a bonificação deverá ser recebida."
+                className="mb-4"
+              >
                 <DateTimePicker
                   type="date"
                   value={formData.previsao_pagamento_bonificacao}
@@ -2324,17 +2175,11 @@ export default function ContractForm({
                   }
                   placeholder="Selecionar data"
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  Informe quando a bonificação deverá ser recebida.
-                </p>
-              </div>
+              </Field>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Responsável *
-                </label>
+              <Field label="Responsável *">
                 {responsavelOptions.length > 0 ? (
                   <FilterSingleSelect
                     icon={User}
@@ -2347,24 +2192,20 @@ export default function ContractForm({
                     options={responsavelSelectOptions}
                   />
                 ) : (
-                  <input
+                  <Input
                     type="text"
                     required
                     value={formData.responsavel}
                     onChange={(e) =>
                       setFormData({ ...formData, responsavel: e.target.value })
                     }
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Informe o responsável"
                   />
                 )}
-              </div>
+              </Field>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Observações Internas
-                </label>
-                <textarea
+              <Field label="Observações Internas" className="md:col-span-2">
+                <Textarea
                   value={formData.observacoes_internas}
                   onChange={(e) =>
                     setFormData({
@@ -2373,13 +2214,12 @@ export default function ContractForm({
                     })
                   }
                   rows={3}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                 />
-              </div>
+              </Field>
             </div>
-          </div>
+          </Surface>
 
-          <div className="flex items-center justify-end space-x-3 pt-6 border-t border-slate-200">
+          <div className="flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancelar
             </Button>

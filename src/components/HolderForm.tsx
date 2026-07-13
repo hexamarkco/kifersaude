@@ -19,13 +19,10 @@ import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaSe
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
 import FilterSingleSelect from './FilterSingleSelect';
-import Button from './ui/Button';
-import Checkbox from './ui/Checkbox';
 import DateTimePicker from './ui/DateTimePicker';
-import Field from './ui/Field';
 import { toast } from '../lib/toast';
-import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
+import { Button, Checkbox, Field, Input, Surface } from '../design-system';
 
 type HolderFormProps = {
   contractId: string;
@@ -491,10 +488,10 @@ export default function HolderForm({
       >
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
           <div className="grid grid-cols-1 gap-6">
-            <section className="rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#efe6d8)]/80 p-4">
-              <h4 className="mb-4 text-base font-semibold text-[var(--panel-text,#1c1917)]">Informacoes Pessoais</h4>
+            <Surface variant="muted" padding="sm">
+              <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informacoes Pessoais</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Field label="CPF" required errorText={cpfLookupError || undefined}>
+                <Field label="CPF *" error={cpfLookupError || undefined}>
                   <div className="relative">
                     <Input
                       type="text"
@@ -505,19 +502,21 @@ export default function HolderForm({
                       onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
                       className="pr-11"
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={() => void handleConsultarCPF({ force: true })}
                       disabled={cpfLoading || formData.cpf.replace(/\D/g, '').length !== 11}
                       aria-label="Buscar CPF"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--panel-text-subtle,#ab927b)] transition-colors hover:text-[var(--panel-accent-strong,#b85c1f)] disabled:opacity-50"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-[var(--text-muted)]"
                     >
                       <Search className={`h-5 w-5 ${cpfLoading ? 'animate-pulse' : ''}`} />
-                    </button>
+                    </Button>
                   </div>
                 </Field>
 
-                <Field label="Nome Completo" required className="md:col-span-2">
+                <Field label="Nome Completo *" className="md:col-span-2">
                   <Input
                     type="text"
                     required
@@ -536,7 +535,7 @@ export default function HolderForm({
                   />
                 </Field>
 
-                <Field label="Data de Nascimento" required>
+                <Field label="Data de Nascimento *">
                   <DateTimePicker
                     type="date"
                     value={formData.data_nascimento}
@@ -545,7 +544,7 @@ export default function HolderForm({
                   />
                 </Field>
 
-                <div className="md:col-span-3 rounded-xl border border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] p-4">
+                <Surface padding="sm" className="md:col-span-3">
                   <label className="flex items-start gap-3">
                     <Checkbox
                       size="md"
@@ -555,15 +554,15 @@ export default function HolderForm({
                       }
                     />
                     <span>
-                      <span className="block text-sm font-medium text-[var(--panel-text,#1c1917)]">
+                      <span className="block text-sm font-medium text-[var(--text-primary)]">
                         Aplicar bonus por vida
                       </span>
-                      <span className="mt-1 block text-xs text-[var(--panel-text-muted,#876f5c)]">
+                      <span className="mt-1 block text-xs text-[var(--text-muted)]">
                         Marque se este titular e elegivel ao bonus por vida deste contrato.
                       </span>
                     </span>
                   </label>
-                </div>
+                </Surface>
 
                 <Field label="Sexo">
                   <FilterSingleSelect
@@ -587,7 +586,7 @@ export default function HolderForm({
                   />
                 </Field>
 
-                <Field label="Telefone" required>
+                <Field label="Telefone *">
                   <Input
                     type="tel"
                     required
@@ -617,10 +616,10 @@ export default function HolderForm({
                   />
                 </Field>
               </div>
-            </section>
+            </Surface>
 
-            <section className="rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#efe6d8)]/80 p-4">
-              <h4 className="mb-4 text-base font-semibold text-[var(--panel-text,#1c1917)]">Endereco</h4>
+            <Surface variant="muted" padding="sm">
+              <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Endereco</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <Field label="CEP">
                   <div className="relative">
@@ -634,14 +633,16 @@ export default function HolderForm({
                       placeholder="00000-000"
                       className="pr-11"
                     />
-                    <button
+                    <Button
                       type="button"
                       onClick={() => void handleCepSearch()}
                       aria-label="Buscar CEP"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--panel-text-subtle,#ab927b)] transition-colors hover:text-[var(--panel-accent-strong,#b85c1f)]"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2 text-[var(--text-muted)]"
                     >
                       <Search className={`h-5 w-5 ${loadingCep ? 'animate-pulse' : ''}`} />
-                    </button>
+                    </Button>
                   </div>
                 </Field>
 
@@ -693,7 +694,7 @@ export default function HolderForm({
 
                 <Field
                   label="Cidade"
-                  helperText={
+                  description={
                     formData.estado
                       ? loadingCities
                         ? 'Carregando cidades...'
@@ -717,15 +718,15 @@ export default function HolderForm({
                   />
                 </Field>
               </div>
-            </section>
+            </Surface>
 
             {isCNPJModalidade && (
-              <section className="rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#efe6d8)]/80 p-4">
-                <h4 className="mb-4 text-base font-semibold text-[var(--panel-text,#1c1917)]">
+              <Surface variant="muted" padding="sm">
+                <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">
                   Informacoes Empresariais
                 </h4>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field label="CNPJ" errorText={cnpjLookupError || undefined}>
+                  <Field label="CNPJ" error={cnpjLookupError || undefined}>
                     <div className="flex gap-2">
                       <Input
                         type="text"
@@ -789,11 +790,11 @@ export default function HolderForm({
                     />
                   </Field>
                 </div>
-              </section>
+              </Surface>
             )}
           </div>
 
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-[var(--panel-border-subtle,#e4d5c0)] pt-6">
+          <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancelar
             </Button>

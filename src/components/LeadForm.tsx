@@ -31,14 +31,11 @@ import {
   resolveTipoContratacaoIdByLabel,
 } from '../lib/leadRelations';
 import FilterSingleSelect from './FilterSingleSelect';
-import Button from './ui/Button';
-import Checkbox from './ui/Checkbox';
+import { Button, Checkbox, Input, Surface, Textarea } from '../design-system';
 import { toast } from '../lib/toast';
 import DateTimePicker from './ui/DateTimePicker';
 import Field from './ui/Field';
-import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
-import Textarea from './ui/Textarea';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -273,8 +270,8 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
         showCloseButton={false}
         bodyClassName="flex min-h-[220px] flex-col items-center justify-center"
       >
-        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
-        <p className="mt-4 text-center text-sm text-slate-600">
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" role="status" aria-label="Carregando configuracoes" />
+        <p className="mt-4 text-center text-sm text-[var(--text-secondary)]">
           Carregando configuracoes...
         </p>
       </ModalShell>
@@ -574,7 +571,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
           </Field>
 
           <Field label="CEP" htmlFor="lead-cep">
-            <div className="relative">
               <Input
                 id="lead-cep"
                 type="text"
@@ -584,23 +580,19 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                 onChange={(e) => handleCepChange(e.target.value)}
                 placeholder="00000-000"
                 maxLength={9}
-                className="pr-11"
+                action={loadingCep ? (
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" role="status" aria-label="Consultando CEP" />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleCepSearch()}
+                    className="text-[var(--text-muted)] transition-colors hover:text-[var(--brand-primary)]"
+                    aria-label="Buscar CEP"
+                  >
+                    <Search className="h-5 w-5" />
+                  </button>
+                )}
               />
-              {loadingCep ? (
-                <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void handleCepSearch()}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-teal-600"
-                  aria-label="Buscar CEP"
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-              )}
-            </div>
           </Field>
 
           <Field label="Endereco" htmlFor="lead-endereco">
@@ -780,8 +772,8 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
           </Field>
 
           {isNewLead && (
-            <div className="md:col-span-2">
-              <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <Surface variant="muted" padding="sm" className="md:col-span-2">
+              <label className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
                 <Checkbox
                   checked={skipAutomationOnCreate}
                   onChange={(event) => setSkipAutomationOnCreate(event.target.checked)}
@@ -791,7 +783,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                   Nao disparar automacoes ao criar este lead (ex.: ja abordado manualmente).
                 </span>
               </label>
-            </div>
+            </Surface>
           )}
 
           <Field label="Responsavel" required>
@@ -844,7 +836,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                 setFormData((prev) => ({ ...prev, data_criacao: value }))
               }
               placeholder="Selecionar data"
-              triggerClassName="focus:ring-teal-500"
             />
           </Field>
 
@@ -859,7 +850,6 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
                 }))
               }
               placeholder="Selecionar data e hora"
-              triggerClassName="focus:ring-teal-500"
             />
           </Field>
 
@@ -898,7 +888,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
           </Field>
         </div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-end">
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
           <Button type="button" variant="ghost" onClick={onClose} fullWidth className="sm:w-auto">
             Cancelar
           </Button>

@@ -1,4 +1,4 @@
-import { useEffect, useId, type HTMLAttributes, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, type HTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -24,6 +24,7 @@ const sizeClasses: Record<DialogSize, string> = {
 
 let scrollLockCount = 0;
 let originalOverflow = '';
+const DialogTitleIdContext = createContext<string | undefined>(undefined);
 
 export function Dialog({
   open,
@@ -36,6 +37,8 @@ export function Dialog({
   ...props
 }: DialogProps) {
   const titleId = useId();
+  const isDarkThemeActive =
+    typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
 
   useEffect(() => {
     if (!open || !closeOnEscape) return;
@@ -62,7 +65,12 @@ export function Dialog({
   if (!open) return null;
 
   return createPortal(
-    <div className="kds-dialog-overlay" aria-hidden="true">
+    <div
+      className={cx(
+        'kds-dialog-overlay modal-theme-host painel-theme kifer-ds',
+        isDarkThemeActive ? 'theme-dark' : 'theme-light',
+      )}
+    >
       <div
         className="kds-dialog-backdrop"
         onClick={() => closeOnOverlay && onOpenChange(false)}
@@ -71,12 +79,14 @@ export function Dialog({
         <div
           role="dialog"
           aria-modal="true"
-          aria-labelledby={titleId}
+          aria-labelledby={props['aria-label'] ? undefined : titleId}
           className={cx('kds-dialog', sizeClasses[size], className)}
           onClick={(e) => e.stopPropagation()}
           {...props}
         >
-          {children}
+          <DialogTitleIdContext.Provider value={titleId}>
+            {children}
+          </DialogTitleIdContext.Provider>
         </div>
       </div>
     </div>,
@@ -116,8 +126,10 @@ export function DialogHeader({
 export type DialogTitleProps = HTMLAttributes<HTMLHeadingElement>;
 
 export function DialogTitle({ className, children, ...props }: DialogTitleProps) {
+  const titleId = useContext(DialogTitleIdContext);
+
   return (
-    <h2 className={cx('kds-dialog-title', className)} {...props}>
+    <h2 id={props.id ?? titleId} className={cx('kds-dialog-title', className)} {...props}>
       {children}
     </h2>
   );

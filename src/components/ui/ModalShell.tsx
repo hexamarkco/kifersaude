@@ -94,7 +94,7 @@ export default function ModalShell({
   return createPortal(
     <div className={cx('modal-theme-host painel-theme kifer-ds', isDarkThemeActive ? 'theme-dark' : 'theme-light')}>
       <div
-        className="fixed inset-0 z-[130] bg-stone-950/60 backdrop-blur-sm"
+        className="kds-dialog-backdrop fixed inset-0 z-[130]"
         aria-hidden="true"
         onClick={() => {
           if (closeOnOverlay) {
@@ -109,18 +109,18 @@ export default function ModalShell({
           aria-labelledby={title ? titleId : undefined}
           aria-describedby={description ? descriptionId : undefined}
           className={cx(
-            'modal-panel panel-glass-strong flex w-full max-h-[100dvh] flex-col overflow-hidden rounded-2xl border border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] sm:max-h-[calc(100dvh-3rem)]',
+            'modal-panel kds-dialog flex w-full max-h-[100dvh] flex-col overflow-hidden rounded-none sm:max-h-[calc(100dvh-3rem)] sm:rounded-2xl',
             sizeClasses[size],
             panelClassName,
           )}
           onClick={(event) => event.stopPropagation()}
         >
           {(title || description || showCloseButton) && (
-            <header className="relative border-b border-[var(--panel-border-subtle,#e7dac8)] px-5 py-4 sm:px-6">
+            <header className="kds-dialog-header relative">
               {title && (
                 <h2
                   id={titleId}
-                  className="pr-10 text-base font-semibold text-[var(--panel-text,#1a120d)] sm:text-lg"
+                  className="kds-dialog-title pr-10"
                 >
                   {title}
                 </h2>
@@ -128,7 +128,7 @@ export default function ModalShell({
               {description && (
                 <p
                   id={descriptionId}
-                  className="mt-1 pr-10 text-sm text-[var(--panel-text-muted,#876f5c)]"
+                  className="kds-dialog-description pr-10"
                 >
                   {description}
                 </p>
@@ -138,7 +138,7 @@ export default function ModalShell({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="absolute right-3 top-3 rounded-lg p-2 text-[var(--panel-text-muted,#876f5c)] transition-colors hover:bg-[color:var(--panel-surface-soft,#f4ede3)] hover:text-[var(--panel-text,#1a120d)]"
+                  className="kds-dialog-close absolute right-3 top-3"
                   aria-label="Fechar modal"
                 >
                   <X className="h-5 w-5" aria-hidden="true" />
@@ -149,7 +149,7 @@ export default function ModalShell({
 
           <div
             className={cx(
-              'modal-panel-content min-h-0 flex-1 px-5 py-4 sm:px-6 sm:py-5',
+              'modal-panel-content kds-dialog-body min-h-0 flex-1',
               bodyScrollable ? 'overflow-y-auto' : 'overflow-hidden',
               bodyClassName,
             )}
@@ -158,7 +158,7 @@ export default function ModalShell({
           </div>
 
           {footer && (
-            <footer className="border-t border-[var(--panel-border-subtle,#e7dac8)] px-5 py-4 sm:px-6">
+            <footer className="kds-dialog-footer">
               {footer}
             </footer>
           )}

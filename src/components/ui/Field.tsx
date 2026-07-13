@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { cx } from '../../lib/cx';
+import DesignSystemField from '../../design-system/components/Field';
 
 type FieldProps = {
   label?: string;
@@ -21,21 +21,19 @@ export default function Field({
   children,
 }: FieldProps) {
   return (
-    <div className={cx('kds-field', className)}>
-      {label && (
-        <label htmlFor={htmlFor} className="kds-field-label block uppercase tracking-wide">
+    <DesignSystemField
+      className={className}
+      htmlFor={htmlFor}
+      label={label ? (
+        <>
           {label}
           {required ? <span className="ml-1 text-[var(--danger-text)]">*</span> : null}
-        </label>
-      )}
-
+        </>
+      ) : undefined}
+      description={helperText}
+      error={errorText}
+    >
       {children}
-
-      {errorText ? (
-        <p className="kds-field-error">{errorText}</p>
-      ) : helperText ? (
-        <p className="kds-field-description">{helperText}</p>
-      ) : null}
-    </div>
+    </DesignSystemField>
   );
 }

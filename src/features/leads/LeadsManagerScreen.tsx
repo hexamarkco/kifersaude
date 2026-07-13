@@ -1558,7 +1558,7 @@ export default function LeadsManager({
           onToggleArchived={() => setShowArchived((current) => !current)}
           onCreateLead={handleCreateLead}
         />
-        <Surface className="panel-glass-panel space-y-5" data-panel-animate>
+        <Surface className="space-y-5" data-panel-animate>
           <Surface variant="muted" padding="sm" className="kds-op-toolbar">
             <div className="kds-op-toolbar-search relative">
               <Input
@@ -1784,7 +1784,7 @@ export default function LeadsManager({
             />
           </div>
         ) : (
-          <Surface className="panel-glass-panel" data-panel-animate>
+          <Surface data-panel-animate>
             <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <p className="kds-op-section-label">
@@ -1954,7 +1954,7 @@ export default function LeadsManager({
                   key={lead.id}
                   variant="muted"
                   padding="sm"
-                  className="kds-op-lead-card panel-glass-lite panel-interactive-glass transition-all sm:p-6"
+                  className="kds-op-lead-card transition-all sm:p-6"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">

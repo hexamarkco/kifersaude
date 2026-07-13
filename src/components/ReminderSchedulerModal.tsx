@@ -4,12 +4,10 @@ import { supabase, Lead } from '../lib/supabase';
 import { convertLocalToUTC } from '../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
 import FilterSingleSelect from './FilterSingleSelect';
-import Button from './ui/Button';
+import { Alert, Button, Input, Textarea } from '../design-system';
 import DateTimePicker from './ui/DateTimePicker';
 import Field from './ui/Field';
-import Input from './ui/Input';
 import ModalShell from './ui/ModalShell';
-import Textarea from './ui/Textarea';
 import { toast } from '../lib/toast';
 
 const TYPE_OPTIONS = ['Retorno', 'Follow-up', 'Outro'] as const;
@@ -176,19 +174,19 @@ export default function ReminderSchedulerModal({
       }
     >
       <div className="space-y-6">
-        <div className="rounded-xl border border-teal-100 bg-teal-50 p-4">
-          <div className="flex items-start space-x-3">
-            <Clock className="h-5 w-5 flex-shrink-0 text-teal-600" />
-            <div className="text-sm text-teal-800">
-              <p className="font-medium">
+        <Alert tone="accent">
+          <div className="flex items-start gap-3">
+            <Clock className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <div>
+              <p className="font-semibold">
                 {promptMessage ?? 'Defina o proximo lembrete para continuar o acompanhamento manual do lead.'}
               </p>
-              <p className="mt-1 text-xs text-teal-700">
+              <p className="mt-1 text-xs">
                 Escolha o melhor momento e personalize as informacoes conforme necessario.
               </p>
             </div>
           </div>
-        </div>
+        </Alert>
 
         <div className="grid grid-cols-1 gap-4">
           <Field label="Titulo" required>

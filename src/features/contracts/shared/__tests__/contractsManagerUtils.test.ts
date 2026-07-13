@@ -72,7 +72,7 @@ test("contractsManagerUtils formats display labels and countdown helpers", () =>
     ),
     8,
   );
-  assert.equal(getContractBadgeTone(3), "bg-red-100 text-red-700");
+  assert.equal(getContractBadgeTone(3), "danger");
   assert.equal(formatContractManagerDate("2026-03-12"), "12/03/2026");
   assert.equal(
     formatContractManagerDate("6", "monthOnly", new Date("2026-03-12T00:00:00")),

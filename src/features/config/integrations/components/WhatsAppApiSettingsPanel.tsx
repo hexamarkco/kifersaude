@@ -7,7 +7,6 @@ import {
   Key,
   RefreshCcw,
   Save,
-  Settings,
   ShieldCheck,
 } from "lucide-react";
 
@@ -18,13 +17,19 @@ import {
   type AutoContactSettings,
 } from "../../../../lib/autoContactService";
 import { supabase, type IntegrationSetting } from "../../../../lib/supabase";
-import Button from "../../../../components/ui/Button";
-import Checkbox from "../../../../components/ui/Checkbox";
-import Input from "../../../../components/ui/Input";
 import { WhatsAppApiSkeleton } from "../../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../../components/ui/panelLoading";
 import { toast } from "../../../../lib/toast";
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  IconButton,
+  Input,
+  SectionHeader,
+} from "../../../../design-system";
 
 type MessageState = { type: "success" | "error"; text: string } | null;
 type ChannelAdminState = {
@@ -211,15 +216,17 @@ export default function WhatsAppApiSettingsPanel() {
 
   if (!autoContactIntegration && !loading) {
     return (
-      <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 flex items-start gap-3">
-        <Info className="w-5 h-5 text-orange-600 mt-1" />
-        <div className="space-y-1 text-sm text-orange-800">
+      <Alert tone="warning">
+        <div className="flex items-start gap-3">
+        <Info className="mt-1 h-5 w-5" />
+        <div className="space-y-1 text-sm">
           <p className="font-semibold">
             Integração de automação não encontrada.
           </p>
           <p>Execute as migrações mais recentes para habilitar a integração.</p>
         </div>
-      </div>
+        </div>
+      </Alert>
     );
   }
 
@@ -233,34 +240,26 @@ export default function WhatsAppApiSettingsPanel() {
       overlayLabel="Atualizando configurações da API WhatsApp..."
       stageClassName="min-h-[340px]"
     >
-      <div className="panel-page-shell bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div className="space-y-6">
         {statusMessage && (
-          <div
-            className={`p-4 rounded-lg border flex items-center space-x-3 mb-4 ${
-              statusMessage.type === "success"
-                ? "bg-green-50 border-green-200 text-green-800"
-                : "bg-red-50 border-red-200 text-red-800"
-            }`}
-          >
+          <Alert tone={statusMessage.type === "success" ? "success" : "danger"}>
+            <div className="flex items-center gap-3">
             {statusMessage.type === "success" ? (
               <ShieldCheck className="w-5 h-5" />
             ) : (
               <Info className="w-5 h-5" />
             )}
             <p>{statusMessage.text}</p>
-          </div>
+            </div>
+          </Alert>
         )}
 
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 text-slate-900 font-medium">
-            <Settings className="w-5 h-5" />
-            Configurações da API Whapi Cloud
-          </div>
+        <SectionHeader title="Configurações da API Whapi Cloud" />
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <Alert tone="info">
             <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="space-y-2 text-sm text-blue-900">
+              <Info className="mt-0.5 h-5 w-5 shrink-0" />
+              <div className="space-y-2 text-sm">
                 <p className="font-semibold">
                   Como obter seu token da Whapi Cloud:
                 </p>
@@ -271,7 +270,7 @@ export default function WhatsAppApiSettingsPanel() {
                       href="https://whapi.cloud"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="underline hover:text-blue-700"
+                      className="underline"
                     >
                       whapi.cloud
                     </a>{" "}
@@ -284,20 +283,20 @@ export default function WhatsAppApiSettingsPanel() {
                 </ol>
               </div>
             </div>
-          </div>
+          </Alert>
 
             <div className="grid grid-cols-1 gap-4">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <Card variant="muted" padding="sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div className="space-y-1">
-                    <div className="text-sm font-medium text-slate-900">
+                    <div className="text-sm font-medium text-[var(--text-primary)]">
                       Webhook do inbox novo
                     </div>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[var(--text-muted)]">
                       Configure este endpoint na Whapi em Body mode com os eventos `messages`, `statuses` e `channel`.
                     </p>
-                    <p className="text-xs text-slate-500">
-                      Status atual: <span className="font-semibold text-slate-700">{channelStatus || "unknown"}</span>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Status atual: <span className="font-semibold text-[var(--text-secondary)]">{channelStatus || "unknown"}</span>
                       {channelPhone ? ` · ${channelPhone}` : ""}
                     </p>
                   </div>
@@ -309,24 +308,25 @@ export default function WhatsAppApiSettingsPanel() {
 
                 <div className="mt-3 relative">
                   <Input readOnly value={webhookUrl} className="font-mono text-xs pr-10" />
-                  <button
-                    type="button"
+                  <IconButton
+                    variant="icon"
+                    aria-label="Copiar webhook"
                     onClick={handleCopyWebhook}
                     disabled={!webhookUrl}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[color:var(--panel-text-muted,#876f5c)] hover:text-[color:var(--panel-text,#3b2b20)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
                   >
                     <Copy className="w-4 h-4" />
-                  </button>
+                  </IconButton>
                 </div>
-              </div>
+              </Card>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <Card variant="muted" padding="sm">
                 <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <div className="text-sm font-medium text-slate-900">
+                  <div className="text-sm font-medium text-[var(--text-primary)]">
                     Ativar canal para automações
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[var(--text-muted)]">
                     Quando desligado, nenhum lead entra nos fluxos mesmo com a
                     automação marcada como ativa.
                   </p>
@@ -336,49 +336,45 @@ export default function WhatsAppApiSettingsPanel() {
                   onChange={(event) => setEnabled(event.target.checked)}
                 />
               </div>
-              <p className="mt-3 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-[var(--text-muted)]">
                 O disparo automático dos fluxos continua sendo controlado em
                 Configurações &gt; Automações.
               </p>
-            </div>
+            </Card>
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
-                <Key className="w-4 h-4 text-slate-400" />
+              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)]">
+                <Key className="h-4 w-4 text-[var(--text-muted)]" />
                 Token da Whapi Cloud
               </label>
-              <div className="relative">
+              <div>
                 <Input
                   type={showApiKey ? "text" : "password"}
                   value={token}
                   onChange={(e) => setToken(e.target.value)}
-                  className="pr-10 font-mono"
+                  className="font-mono"
+                  action={
+                    <IconButton
+                      aria-label={showApiKey ? "Ocultar token" : "Exibir token"}
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </IconButton>
+                  }
                   placeholder="Token da Whapi Cloud (sem incluir 'Bearer')"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showApiKey ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
                 Este token será usado para autenticação com a API da Whapi Cloud
               </p>
             </div>
           </div>
 
-          <div className="flex items-center justify-end pt-4 border-t border-slate-200">
+          <div className="flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
             <Button onClick={handleSave} loading={saving}>
               {!saving && <Save className="w-4 h-4" />}
               <span>{saving ? "Salvando..." : "Salvar configuração"}</span>
             </Button>
           </div>
-        </div>
       </div>
     </PanelAdaptiveLoadingFrame>
   );

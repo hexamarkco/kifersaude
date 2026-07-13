@@ -128,13 +128,13 @@ export default function CommissionCalendarScreen() {
       <Surface className="space-y-6 p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-1">
-            <h2 className="flex items-center gap-3 text-xl font-bold text-[var(--panel-text)]">
-              <Surface variant="warning" padding="none" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--panel-accent-ink)]">
+            <h2 className="flex items-center gap-3 text-xl font-bold text-[var(--text-primary)]">
+              <Surface variant="warning" padding="none" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--warning-text)]">
                 <CalendarDays className="h-5 w-5" />
               </Surface>
               <span>Agenda de Comissoes e Bonificacoes</span>
             </h2>
-            <p className="text-sm text-[var(--panel-text-soft)]">
+            <p className="text-sm text-[var(--text-secondary)]">
               Visualize as previsoes de recebimento para o mes selecionado e
               organize o fluxo financeiro.
             </p>
@@ -142,18 +142,18 @@ export default function CommissionCalendarScreen() {
 
           <div className="flex flex-wrap items-center gap-4 lg:justify-end">
             <div className="min-w-[160px] text-right">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-text-muted)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                 Comissao prevista
               </p>
-              <p className="text-lg font-semibold text-[var(--panel-accent-ink-strong)]">
+              <p className="text-lg font-semibold text-[var(--warning-text)]">
                 {formatCommissionCurrency(totals.commission)}
               </p>
             </div>
             <div className="min-w-[160px] text-right">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-text-muted)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                 Bonificacao prevista
               </p>
-              <p className="text-lg font-semibold text-[var(--panel-text)]">
+              <p className="text-lg font-semibold text-[var(--text-primary)]">
                 {formatCommissionCurrency(totals.bonus)}
               </p>
             </div>
@@ -173,7 +173,7 @@ export default function CommissionCalendarScreen() {
                 <ChevronLeft className="h-5 w-5" />
               </Button>
 
-              <h3 className="text-lg font-semibold capitalize text-[var(--panel-text)]">
+              <h3 className="text-lg font-semibold capitalize text-[var(--text-primary)]">
                 {monthLabel}
               </h3>
 
@@ -198,7 +198,7 @@ export default function CommissionCalendarScreen() {
                     selectedDate={selectedDate}
                   />
                   {monthEvents.length === 0 && (
-                    <div className="py-10 text-center text-sm text-[var(--panel-text-muted)]">
+                    <div className="py-10 text-center text-sm text-[var(--text-muted)]">
                       Nenhuma previsao cadastrada para este mes.
                     </div>
                   )}

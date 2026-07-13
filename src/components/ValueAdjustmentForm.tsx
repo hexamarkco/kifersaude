@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { supabase, ContractValueAdjustment } from '../lib/supabase';
 import { formatCurrencyFromNumber, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { DollarSign } from 'lucide-react';
-import ModalShell from './ui/ModalShell';
-import { ActionSurface, Alert, Button, Field, Input, Textarea } from '../design-system';
+import { ActionSurface, Alert, Button, Dialog, DialogBody, DialogHeader, DialogTitle, Field, Input, Textarea } from '../design-system';
 
 type ValueAdjustmentFormProps = {
   contractId: string;
@@ -78,14 +77,11 @@ export default function ValueAdjustmentForm({
   };
 
   return (
-    <ModalShell
-      isOpen
-      onClose={onClose}
-      title={adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}
-      size="sm"
-      panelClassName="max-w-md"
-      bodyClassName="p-0"
-    >
+    <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
+      <DialogHeader onClose={onClose}>
+        <DialogTitle>{adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}</DialogTitle>
+      </DialogHeader>
+      <DialogBody className="p-0">
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
           <h3 className="mb-4 flex items-center text-lg font-bold text-[var(--text-primary)]">
             <DollarSign className="mr-2 h-5 w-5" />
@@ -167,6 +163,7 @@ export default function ValueAdjustmentForm({
             </Button>
           </div>
         </form>
-    </ModalShell>
+      </DialogBody>
+    </Dialog>
   );
 }

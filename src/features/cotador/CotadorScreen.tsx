@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, ArrowLeft, Calculator, FileStack, Plus, Settings2 } from 'lucide-react';
+import { ArrowLeft, FileStack, Plus, Settings2 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import Button from '../../components/ui/Button';
-import Pagination from '../../components/Pagination';
+import { Alert, Badge, Button, PageHeader, Pagination, Surface, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../design-system';
 import CotadorCatalogTab from '../../components/config/CotadorCatalogTab';
 import { fetchAllPages, getSupabaseErrorMessage, supabase, type Lead } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
@@ -187,7 +186,7 @@ export default function CotadorScreen() {
   const selectionSyncingRef = useRef(false);
   const pendingSelectionRef = useRef<{ quoteId: string; items: CotadorQuote['selectedItems'] } | null>(null);
   const [quotesPage, setQuotesPage] = useState(1);
-  const [quotesPerPage, setQuotesPerPage] = useState(25);
+  const [quotesPerPage] = useState(25);
 
   useEffect(() => {
     let active = true;
@@ -587,16 +586,11 @@ export default function CotadorScreen() {
 
   const renderListScreen = () => (
     <div className="panel-page-shell space-y-6">
-      <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[radial-gradient(circle_at_top_left,rgba(253,230,195,0.95),rgba(255,253,250,0.96)_48%,rgba(247,240,231,0.99)_100%)] p-6 shadow-sm md:p-8 dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[radial-gradient(circle_at_top_left,rgba(133,77,14,0.24),rgba(28,20,14,0.96)_40%,rgba(20,15,11,0.99)_100%)]">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(255,253,250,0.82)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)] dark:border-[color:rgba(251,191,36,0.18)] dark:bg-[color:rgba(251,191,36,0.12)] dark:text-[color:#fde68a]">
-              <Calculator className="h-3.5 w-3.5" />
-              Cotador
-            </div>
-            <h1 className="mt-3 text-3xl font-semibold text-[color:var(--panel-text,#1a120d)] md:text-4xl dark:text-[color:#fff8ef]">Cotações salvas</h1>
-          </div>
-
+      <PageHeader
+        eyebrow="Cotador"
+        title="Cotações salvas"
+        description="Crie e retome cenários comerciais para comparar planos."
+        actions={(
           <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => navigate('/painel/cotador/configuracoes')}>
               <Settings2 className="h-4 w-4" />
@@ -607,18 +601,15 @@ export default function CotadorScreen() {
               Criar nova cotação
             </Button>
           </div>
-        </div>
-      </section>
+        )}
+      />
 
       {loading ? (
-        <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.03)]">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
-          <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.76)]">Carregando cotações...</p>
-        </div>
+        <Surface className="py-16 text-center"><p className="text-sm text-[var(--text-muted)]">Carregando cotações...</p></Surface>
       ) : quotes.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.03)]">
-          <FileStack className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)] dark:text-[color:rgba(255,243,209,0.66)]" />
-          <h2 className="mt-4 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">Nenhuma cotação salva ainda</h2>
+        <Surface variant="muted" className="py-16 text-center">
+          <FileStack className="mx-auto h-10 w-10 text-[var(--text-muted)]" />
+          <h2 className="mt-4 text-2xl font-semibold text-[var(--text-primary)]">Nenhuma cotação salva ainda</h2>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Button variant="secondary" onClick={() => navigate('/painel/cotador/configuracoes')}>
               Configurar catálogo
@@ -628,56 +619,31 @@ export default function CotadorScreen() {
               Criar primeira cotação
             </Button>
           </div>
-        </div>
+        </Surface>
       ) : (
-        <section className="overflow-hidden rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm dark:border-[color:rgba(255,255,255,0.08)] dark:bg-[color:rgba(255,255,255,0.03)]">
-          <div className="grid grid-cols-[minmax(0,1fr)_140px_180px_180px] gap-4 border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-5 py-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)] dark:border-[color:rgba(255,255,255,0.08)] dark:text-[color:rgba(255,243,209,0.62)]">
-            <span>Cotação</span>
-            <span>Vidas</span>
-            <span>Criada em</span>
-            <span>Atualizada em</span>
-          </div>
-
-          <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] dark:divide-[color:rgba(255,255,255,0.08)]">
+        <Surface padding="none" className="overflow-hidden">
+          <Table>
+            <TableHeader><TableRow><TableHead>Cotação</TableHead><TableHead>Vidas</TableHead><TableHead>Criada em</TableHead><TableHead>Atualizada em</TableHead></TableRow></TableHeader>
+            <TableBody>
             {paginatedQuotes.map((quote) => (
-              <button
+              <TableRow
                 key={quote.id}
-                type="button"
                 onClick={() => navigate(`/painel/cotador/${quote.id}`)}
-                className="grid w-full cursor-pointer grid-cols-[minmax(0,1fr)_140px_180px_180px] gap-4 px-5 py-4 text-left transition-colors hover:bg-[var(--panel-surface-soft,#f4ede3)] dark:hover:bg-[color:rgba(255,255,255,0.05)]"
+                className="cursor-pointer"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{quote.name}</p>
-                </div>
-                <div>
-                  <span className="inline-flex rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(246,228,199,0.6)] px-3 py-1 text-xs font-semibold text-[var(--panel-accent-ink,#6f3f16)] dark:border-[color:rgba(251,191,36,0.18)] dark:bg-[color:rgba(251,191,36,0.12)] dark:text-[color:#fde68a]">
-                    {quote.totalLives} vidas
-                  </span>
-                </div>
-                <div className="text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.76)]">
-                  {formatCotadorDateTime(quote.createdAt)}
-                </div>
-                <div className="text-sm text-[color:var(--panel-text-soft,#5b4635)] dark:text-[color:rgba(255,243,209,0.76)]">
-                  {formatCotadorDateTime(quote.updatedAt)}
-                </div>
-              </button>
+                <TableCell className="font-semibold">{quote.name}</TableCell>
+                <TableCell><Badge tone="info">{quote.totalLives} vidas</Badge></TableCell>
+                <TableCell>{formatCotadorDateTime(quote.createdAt)}</TableCell>
+                <TableCell>{formatCotadorDateTime(quote.updatedAt)}</TableCell>
+              </TableRow>
             ))}
-          </div>
+            </TableBody>
+          </Table>
 
           {quotes.length > quotesPerPage && (
-            <Pagination
-              currentPage={quotesPage}
-              totalPages={totalQuotePages}
-              itemsPerPage={quotesPerPage}
-              totalItems={quotes.length}
-              onPageChange={setQuotesPage}
-              onItemsPerPageChange={(value) => {
-                setQuotesPerPage(value);
-                setQuotesPage(1);
-              }}
-            />
+            <Pagination currentPage={quotesPage} totalPages={totalQuotePages} onPageChange={setQuotesPage} className="p-4" />
           )}
-        </section>
+        </Surface>
       )}
     </div>
   );
@@ -703,10 +669,7 @@ export default function CotadorScreen() {
     if (loading) {
       return (
         <div className="panel-page-shell">
-          <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
-            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
-            <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando cotação...</p>
-          </div>
+          <Surface className="py-16 text-center"><p className="text-sm text-[var(--text-muted)]">Carregando cotação...</p></Surface>
         </div>
       );
     }
@@ -718,11 +681,7 @@ export default function CotadorScreen() {
             <ArrowLeft className="h-4 w-4" />
             Voltar para cotações
           </Button>
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
-            <AlertCircle className="mx-auto h-10 w-10 text-red-600" />
-            <h2 className="mt-4 text-2xl font-semibold text-red-900">Cotação não encontrada</h2>
-            <p className="mt-2 text-sm text-red-700">Essa cotação pode ter sido removida ou ainda não foi carregada no módulo.</p>
-          </div>
+          <Alert tone="danger" title="Cotação não encontrada">Essa cotação pode ter sido removida ou ainda não foi carregada no módulo.</Alert>
         </div>
       );
     }
@@ -773,11 +732,7 @@ export default function CotadorScreen() {
             <ArrowLeft className="h-4 w-4" />
             Voltar para a cotação
           </Button>
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center shadow-sm">
-            <AlertCircle className="mx-auto h-10 w-10 text-red-600" />
-            <h2 className="mt-4 text-2xl font-semibold text-red-900">Plano não encontrado</h2>
-            <p className="mt-2 text-sm text-red-700">Esse plano pode ter sido removido da cotação ou ainda não foi sincronizado.</p>
-          </div>
+          <Alert tone="danger" title="Plano não encontrado">Esse plano pode ter sido removido da cotação ou ainda não foi sincronizado.</Alert>
         </div>
       );
     }

@@ -42,11 +42,11 @@ import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import FilterMultiSelect from "../../components/FilterMultiSelect";
 import FilterDateRange from "../../components/FilterDateRange";
 import FilterSingleSelect from "../../components/FilterSingleSelect";
-import DateTimePicker from "../../components/ui/DateTimePicker";
 import {
   Badge,
   Button,
   Checkbox,
+  DateTimePicker,
   EmptyState,
   Field,
   Input,
@@ -1867,7 +1867,7 @@ export default function LeadsManager({
                     <DateTimePicker
                       type="datetime-local"
                       value={bulkProximoRetorno}
-                      onChange={setBulkProximoRetorno}
+                       onChange={(event) => setBulkProximoRetorno(event.target.value)}
                       className="w-full xl:w-56"
                       disabled={isBulkUpdating}
                       placeholder="Proximo retorno"

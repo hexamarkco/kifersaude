@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Building2, Check, Link2, MapPin, Minus, Plus, Search, Share2, ShieldCheck, Sparkles, Trash2, UserRound, Users } from 'lucide-react';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
-import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ModalShell from '../../../components/ui/ModalShell';
+import { Button, Surface } from '../../../design-system';
 import {
   buildCotadorComparableHospitalKey,
   countCotadorUniqueNetworkProviders,
@@ -52,10 +52,10 @@ type CotadorWorkspaceProps = {
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{value}</p>
-    </div>
+    <Surface variant="muted" padding="sm" className="shadow-none">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-primary)]">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{value}</p>
+    </Surface>
   );
 }
 
@@ -353,14 +353,14 @@ export default function CotadorWorkspace({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--panel-accent-soft,#f6e4c7)_74%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_92%,var(--panel-surface-soft,#f4ede3))_48%,color-mix(in_srgb,var(--panel-surface-muted,#f8f2e8)_90%,var(--panel-surface,#fffdfa))_100%)] p-6 shadow-sm md:p-8">
+      <section className="rounded-2xl border border-[var(--border-default)] bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--bg-surface),var(--bg-surface)),color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_48%,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_100%)] p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-6">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(157,127,90,0.24)] bg-[color:rgba(255,253,250,0.82)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)] dark:border-[color:rgba(251,191,36,0.2)] dark:bg-[color:rgba(251,191,36,0.12)] dark:text-[color:#fde68a]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)] dark:border-[color:var(--border-default)] dark:bg-[color:var(--bg-elevated)] dark:text-[color:var(--text-primary)]">
               <Sparkles className="h-3.5 w-3.5" />
               Cotação ativa
             </div>
-            <h2 className="mt-3 text-3xl font-semibold text-[color:var(--panel-text,#1a120d)]">{quote.name}</h2>
+            <h2 className="mt-3 text-3xl font-semibold text-[color:var(--text-primary)]">{quote.name}</h2>
           </div>
         </div>
 
@@ -371,11 +371,11 @@ export default function CotadorWorkspace({
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="rounded-[32px] border border-[var(--panel-border,#d4c0a7)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_90%,var(--panel-surface-soft,#f4ede3))_0%,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_80%,var(--panel-surface,#fffdfa))_100%)] p-6 text-[color:var(--panel-text,#1a120d)] shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-[color:var(--panel-border-subtle,#e7dac8)] pb-5 sm:flex-row sm:items-center sm:justify-between">
+        <section className="rounded-2xl border border-[var(--border-default)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_0%,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_100%)] p-6 text-[color:var(--text-primary)] shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-[color:var(--border-default)] pb-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">Planos da cotação</p>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{selectedItems.length} plano(s)</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)]">Planos da cotação</p>
+              <p className="mt-1 text-sm text-[color:var(--text-primary)]">{selectedItems.length} plano(s)</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => setShareModalOpen(true)} disabled={selectedItems.length === 0}>
@@ -397,13 +397,13 @@ export default function CotadorWorkspace({
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="mt-6 flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-[var(--panel-border,#d4c0a7)] bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_84%,var(--panel-surface-soft,#f4ede3))] px-6 text-center transition-all hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_72%,var(--panel-accent-soft,#f6e4c7))]"
+              className="mt-6 flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--border-default)] bg-[color:var(--bg-elevated)] px-6 text-center transition-all hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)]"
             >
-              <div className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 text-[var(--panel-accent-ink,#6f3f16)]">
+              <div className="rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)]">
                 <Plus className="h-7 w-7" />
               </div>
-              <p className="mt-5 text-xl font-semibold text-[color:var(--panel-text,#1a120d)]">Adicionar plano</p>
-              <p className="mt-2 max-w-md text-sm text-[color:var(--panel-text-soft,#5b4635)]">Selecione um plano.</p>
+              <p className="mt-5 text-xl font-semibold text-[color:var(--text-primary)]">Adicionar plano</p>
+              <p className="mt-2 max-w-md text-sm text-[color:var(--text-primary)]">Selecione um plano.</p>
             </button>
           ) : (
             <div className="mt-6 grid gap-3 xl:grid-cols-2">
@@ -422,32 +422,32 @@ export default function CotadorWorkspace({
                   <article
                     key={item.id}
                     className={[
-                      'rounded-[24px] border bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm transition-colors',
+                      'rounded-2xl border bg-[var(--bg-surface)] p-4 shadow-sm transition-colors',
                       highlights.bestPrice
-                        ? 'border-[color:rgba(184,92,31,0.28)] shadow-[0_12px_28px_rgba(111,63,22,0.08)]'
-                        : 'border-[color:var(--panel-border-subtle,#e7dac8)]',
+                        ? 'border-[color:var(--border-default)] shadow-[var(--shadow-card)]'
+                        : 'border-[color:var(--border-default)]',
                     ].join(' ')}
                   >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">
                         {item.operadora.name ?? 'OPERADORA'}
                       </p>
-                      <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.linha?.name ?? 'LINHA'}</p>
-                      <h4 className="mt-3 min-w-0 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</h4>
+                      <p className="mt-1 text-sm text-[color:var(--text-primary)]">{item.linha?.name ?? 'LINHA'}</p>
+                      <h4 className="mt-3 min-w-0 text-2xl font-semibold text-[color:var(--text-primary)]">{item.titulo}</h4>
                       <div className="mt-3 flex flex-wrap gap-2">
                         {primaryBadge && (
-                          <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                          <span className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-primary)]">
                             {primaryBadge}
                           </span>
                         )}
                         {item.coparticipacao && (
-                          <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                          <span className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-primary)]">
                             {formatCopart(item.coparticipacao)}
                           </span>
                         )}
                         {(item.vidasMin !== null || item.vidasMax !== null) && (
-                          <span className="rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                          <span className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-primary)]">
                             {`${item.vidasMin ?? 1} a ${item.vidasMax ?? '...'} vidas`}
                           </span>
                         )}
@@ -461,7 +461,7 @@ export default function CotadorWorkspace({
                         <div className="flex flex-wrap justify-end gap-1.5 max-sm:max-w-[8rem]">
                           {highlights.bestPrice && (
                             <span
-                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:rgba(184,92,31,0.24)] bg-[color:rgba(184,92,31,0.1)] text-[color:var(--panel-accent-ink,#6f3f16)]"
+                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]"
                               title="Melhor preço"
                               aria-label="Melhor preço"
                             >
@@ -471,7 +471,7 @@ export default function CotadorWorkspace({
                           )}
                           {highlights.largestNetwork && (
                             <span
-                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)]"
+                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]"
                               title="Maior rede"
                               aria-label="Maior rede"
                             >
@@ -481,7 +481,7 @@ export default function CotadorWorkspace({
                           )}
                           {highlights.mostRestrictive && (
                             <span
-                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:rgba(92,53,23,0.2)] bg-[color:rgba(92,53,23,0.08)] text-[color:var(--panel-text,#1a120d)]"
+                              className="inline-flex h-8 w-8 cursor-help items-center justify-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]"
                               title={highlights.restrictiveReason ? `Mais restritivo: ${highlights.restrictiveReason}` : 'Mais restritivo'}
                               aria-label="Mais restritivo"
                             >
@@ -495,17 +495,17 @@ export default function CotadorWorkspace({
                   </div>
 
                   <div className="mt-4 grid gap-2 sm:grid-cols-1 xl:grid-cols-1">
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_92%,var(--panel-surface,#fffdfa))] px-3 py-2 dark:bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#2a2119)_78%,var(--panel-surface,#1b1611))]">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Acomodação</p>
-                      <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.acomodacao ?? '-'}</p>
+                    <div className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-2 dark:bg-[color:var(--bg-elevated)]">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Acomodação</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{item.acomodacao ?? '-'}</p>
                     </div>
                   </div>
 
                   {item.estimatedMonthlyTotal !== null && (
-                    <div className="mt-3 rounded-2xl border border-[color:rgba(111,63,22,0.22)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-3 py-2.5 dark:border-[color:rgba(243,200,146,0.16)] dark:bg-[color:var(--panel-surface-soft,#2a2119)]">
+                    <div className="mt-3 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-2.5 dark:border-[color:var(--border-default)] dark:bg-[color:var(--bg-elevated)]">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Mensalidade</p>
-                        <p className="text-2xl font-semibold tabular-nums text-[color:var(--panel-text,#1a120d)] dark:text-[color:#fff8ef]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Mensalidade</p>
+                        <p className="text-2xl font-semibold tabular-nums text-[color:var(--text-primary)] dark:text-[color:var(--text-primary)]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
                       </div>
                     </div>
                   )}
@@ -516,7 +516,7 @@ export default function CotadorWorkspace({
                     </Button>
                   </div>
 
-                  <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--text-primary)]">
                       <MapPin className="h-3.5 w-3.5" />
                       <span>
                         {networkCount > 0
@@ -532,28 +532,28 @@ export default function CotadorWorkspace({
               <button
                 type="button"
                 onClick={() => setPickerOpen(true)}
-                className="flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-[var(--panel-border,#d4c0a7)] bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_84%,var(--panel-surface-soft,#f4ede3))] px-6 text-center transition-all hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_72%,var(--panel-accent-soft,#f6e4c7))]"
+                className="flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--border-default)] bg-[color:var(--bg-elevated)] px-6 text-center transition-all hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)]"
               >
-                <div className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 text-[var(--panel-accent-ink,#6f3f16)]">
+                <div className="rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)]">
                   <Plus className="h-6 w-6" />
                 </div>
-                <p className="mt-4 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Adicionar outro plano</p>
-                <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Compare mais uma opção sem sair da cotação.</p>
+                <p className="mt-4 text-lg font-semibold text-[color:var(--text-primary)]">Adicionar outro plano</p>
+                <p className="mt-2 text-sm text-[color:var(--text-primary)]">Compare mais uma opção sem sair da cotação.</p>
               </button>
             </div>
           )}
         </section>
 
         <aside className="space-y-4">
-          <section className="rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
+          <section className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-5 shadow-sm">
             <div className="flex items-start gap-3">
-              <div className="rounded-2xl border border-[color:rgba(111,63,22,0.14)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_84%,var(--panel-surface,#fffdfa))] p-2.5 text-[var(--panel-accent-ink,#6f3f16)]">
+              <div className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] p-2.5 text-[var(--text-primary)]">
                 <Link2 className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Lead CRM</p>
-                <h3 className="mt-2 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Vincular lead</h3>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Busque por nome, telefone ou email para conectar esta cotação ao lead certo.</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-primary)]">Lead CRM</p>
+                <h3 className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">Vincular lead</h3>
+                <p className="mt-1 text-sm text-[color:var(--text-primary)]">Busque por nome, telefone ou email para conectar esta cotação ao lead certo.</p>
               </div>
             </div>
 
@@ -571,34 +571,34 @@ export default function CotadorWorkspace({
               />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Lead atual</p>
-              <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{linkedLeadLabel}</p>
+            <div className="mt-4 rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Lead atual</p>
+              <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{linkedLeadLabel}</p>
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-5 shadow-sm">
+          <section className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-5 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Distribuição</p>
-                <h3 className="mt-2 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Resumo da cotação</h3>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-primary)]">Distribuição</p>
+                <h3 className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">Resumo da cotação</h3>
               </div>
               <Button variant="ghost" size="sm" onClick={onEditQuote}>
                 Editar
               </Button>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+            <div className="mt-4 rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--text-primary)]">
                 <Users className="h-4 w-4" />
                 Faixas preenchidas
               </div>
-              <div className="mt-3 space-y-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+              <div className="mt-3 space-y-2 text-sm text-[color:var(--text-primary)]">
                 {filledDistribution.length > 0 ? (
                   filledDistribution.map(([range, quantity]) => (
                     <div key={range} className="flex items-center justify-between gap-4">
                       <span>{range}</span>
-                      <span className="font-semibold text-[color:var(--panel-text,#1a120d)]">{quantity}</span>
+                      <span className="font-semibold text-[color:var(--text-primary)]">{quantity}</span>
                     </div>
                   ))
                 ) : (
@@ -619,36 +619,36 @@ export default function CotadorWorkspace({
         size="xl"
       >
         {!networkPlansHaveData ? (
-          <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+          <div className="rounded-3xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-12 text-center text-sm text-[color:var(--text-primary)]">
             Adicione planos com rede hospitalar cadastrada para comparar os prestadores.
           </div>
         ) : (
           <div className="space-y-5">
             <div className="grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Prestadores únicos</p>
-                <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkComparisonRows.length}</p>
+              <div className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Prestadores únicos</p>
+                <p className="mt-1 text-lg font-semibold text-[color:var(--text-primary)]">{networkComparisonRows.length}</p>
               </div>
-              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Em todos os planos</p>
-                <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkSharedRowsCount}</p>
+              <div className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Em todos os planos</p>
+                <p className="mt-1 text-lg font-semibold text-[color:var(--text-primary)]">{networkSharedRowsCount}</p>
               </div>
-              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Exclusivos</p>
-                <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkExclusiveRowsCount}</p>
+              <div className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Exclusivos</p>
+                <p className="mt-1 text-lg font-semibold text-[color:var(--text-primary)]">{networkExclusiveRowsCount}</p>
               </div>
             </div>
 
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">Planos comparados</p>
+            <div className="rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)]">Planos comparados</p>
               <div className="mt-3 flex flex-wrap gap-3">
                 {selectedItems.map((item) => (
-                  <div key={item.id} className="min-w-[180px] rounded-2xl border border-[color:rgba(111,63,22,0.16)] bg-[var(--panel-surface,#fffdfa)] px-3 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                  <div key={item.id} className="min-w-[180px] rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-3 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">
                       {item.operadora.name ?? 'Operadora'}
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</p>
-                    <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{networkSummaryByItemId.get(item.id)?.count ?? 0} prestador(es)</p>
+                    <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{item.titulo}</p>
+                    <p className="mt-1 text-xs text-[color:var(--text-primary)]">{networkSummaryByItemId.get(item.id)?.count ?? 0} prestador(es)</p>
                   </div>
                 ))}
               </div>
@@ -670,18 +670,18 @@ export default function CotadorWorkspace({
               />
             </div>
 
-            <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+            <div className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-3">
               <div className="flex flex-wrap items-center gap-2">
                 {NETWORK_COMPARE_LEGEND.map((item) => (
-                  <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[color:rgba(111,63,22,0.16)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[color:rgba(111,63,22,0.18)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))] px-1 text-[10px] text-[color:var(--panel-text,#1a120d)]">
+                  <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-primary)]">
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-1 text-[10px] text-[color:var(--text-primary)]">
                       {item.label}
                     </span>
                     {item.description}
                   </span>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+              <p className="mt-2 text-xs text-[color:var(--text-primary)]">
                 Quando o plano nao detalhar o tipo de atendimento, considere apenas que o hospital esta na rede e consulte a rede oficial da operadora.
               </p>
             </div>
@@ -701,8 +701,8 @@ export default function CotadorWorkspace({
                     className={[
                       'rounded-full border px-3 py-1.5 text-sm font-semibold transition-colors',
                       isActive
-                        ? 'border-[color:rgba(111,63,22,0.28)] bg-[color:var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)]'
-                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[color:var(--panel-surface,#fffdfa)]',
+                        ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]'
+                        : 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)] hover:bg-[color:var(--bg-elevated)]',
                     ].join(' ')}
                   >
                     {option.label}
@@ -712,44 +712,44 @@ export default function CotadorWorkspace({
             </div>
 
             {filteredNetworkComparisonRows.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-[var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+              <div className="rounded-3xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-12 text-center text-sm text-[color:var(--text-primary)]">
                 Nenhum prestador encontrado para os filtros aplicados.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]">
+              <div className="overflow-hidden rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)]">
                 <div className="overflow-x-auto">
                   <div className="min-w-[960px]">
-                    <div className="grid border-b border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]" style={networkComparisonMatrixStyle}>
+                    <div className="grid border-b border-[color:var(--border-default)] bg-[var(--bg-surface)]" style={networkComparisonMatrixStyle}>
                       <div className="px-4 py-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">Prestador</p>
-                        <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Comparativo por plano</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Prestador</p>
+                        <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">Comparativo por plano</p>
                       </div>
                       {selectedItems.map((item) => (
-                        <div key={item.id} className="border-l border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-4">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--panel-text-muted,#876f5c)]">
+                        <div key={item.id} className="border-l border-[color:var(--border-default)] px-4 py-4">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">
                             {item.operadora.name ?? 'Operadora'}
                           </p>
-                          <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.titulo}</p>
-                          <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{networkSummaryByItemId.get(item.id)?.count ?? 0} prestador(es)</p>
+                          <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{item.titulo}</p>
+                          <p className="mt-1 text-xs text-[color:var(--text-primary)]">{networkSummaryByItemId.get(item.id)?.count ?? 0} prestador(es)</p>
                         </div>
                       ))}
                     </div>
 
                     {filteredNetworkComparisonRows.map((row) => (
                       <div key={row.key} className="grid" style={networkComparisonMatrixStyle}>
-                        <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-4">
+                        <div className="border-b border-[color:var(--border-default)] px-4 py-4">
                           <div className="flex items-start gap-3">
-                            <span className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-2 text-[var(--panel-accent-ink,#6f3f16)]">
+                            <span className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-2 text-[var(--text-primary)]">
                               <Building2 className="h-4 w-4" />
                             </span>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
-                                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{row.hospital}</p>
-                                <span className="rounded-full border border-[color:rgba(111,63,22,0.16)] bg-[color:var(--panel-surface-soft,#f4ede3)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--panel-text-soft,#5b4635)]">
+                                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{row.hospital}</p>
+                                <span className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--text-primary)]">
                                   {row.hitsCount === selectedItems.length ? 'Em todos' : `${row.hitsCount}/${selectedItems.length}`}
                                 </span>
                               </div>
-                              <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                              <p className="mt-1 text-xs text-[color:var(--text-primary)]">
                                 {[row.bairro, row.regiao, row.cidade].filter(Boolean).join(' | ')}
                               </p>
                             </div>
@@ -761,17 +761,17 @@ export default function CotadorWorkspace({
                           const serviceSummary = summarizeCotadorNetworkServices(presence?.services ?? []);
 
                           return (
-                            <div key={`${row.key}-${item.id}`} className="border-b border-l border-[color:var(--panel-border-subtle,#e7dac8)] p-3">
+                            <div key={`${row.key}-${item.id}`} className="border-b border-l border-[color:var(--border-default)] p-3">
                               {presence ? (
-                                <div className="rounded-2xl border border-[color:rgba(111,63,22,0.14)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_72%,var(--panel-surface,#fffdfa))] p-3">
-                                  <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
-                                    <Check className="h-4 w-4 text-[var(--panel-accent-ink,#6f3f16)]" />
+                                <div className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] p-3">
+                                  <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--text-primary)]">
+                                    <Check className="h-4 w-4 text-[var(--text-primary)]" />
                                     Na rede
                                   </div>
                                   {serviceSummary.hasStructuredInfo ? (
                                     <div className="mt-2 flex flex-wrap gap-1.5">
                                       {serviceSummary.badges.map((service) => (
-                                        <span key={`${row.key}-${item.id}-${service}`} className="rounded-full border border-[color:rgba(111,63,22,0.12)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                        <span key={`${row.key}-${item.id}-${service}`} className="rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--text-primary)]">
                                           {service}
                                         </span>
                                       ))}
@@ -779,8 +779,8 @@ export default function CotadorWorkspace({
                                   ) : null}
                                 </div>
                               ) : (
-                                <div className="rounded-2xl border border-dashed border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-3">
-                                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                                <div className="rounded-2xl border border-dashed border-[color:var(--border-default)] bg-[var(--bg-surface)] p-3">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                                     <Minus className="h-4 w-4" />
                                     Nao consta
                                   </div>

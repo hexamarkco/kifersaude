@@ -48,7 +48,7 @@ export default function BlogEditor({
   return (
     <Surface className="panel-page-shell space-y-6">
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold" style={{ color: "var(--panel-text)" }}>
+        <h2 className="text-2xl font-bold text-[var(--text-primary)]">
           {editingPost ? "Editar Post" : "Novo Post"}
         </h2>
         <Button
@@ -150,17 +150,17 @@ export default function BlogEditor({
                   disabled={uploadingCover}
                 />
                 {uploadingCover ? (
-                  <div className="flex items-center gap-2" style={{ color: "var(--panel-accent-ink)" }}>
+                  <div className="flex items-center gap-2 text-[var(--warning-text)]">
                     <Loader className="h-5 w-5 animate-spin" />
                     <span className="font-semibold">Fazendo upload...</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2" style={{ color: "var(--panel-accent-ink)" }}>
+                  <div className="flex items-center gap-2 text-[var(--warning-text)]">
                     <Upload className="h-5 w-5" />
                     <span className="font-semibold">
                       Fazer upload da imagem de capa
                     </span>
-                    <span className="text-sm" style={{ color: "var(--panel-accent-ink)" }}>
+                    <span className="text-sm text-[var(--warning-text)]">
                       (JPG, PNG, WEBP, GIF - max 5MB)
                     </span>
                   </div>
@@ -207,14 +207,14 @@ export default function BlogEditor({
                 disabled={uploadingContent}
               />
               {uploadingContent ? (
-                <div className="flex items-center gap-2" style={{ color: "var(--panel-text-soft)" }}>
+                <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                   <Loader className="h-4 w-4 animate-spin" />
                   <span className="text-sm font-semibold">
                     Fazendo upload...
                   </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2" style={{ color: "var(--panel-text-soft)" }}>
+                <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                   <Upload className="h-4 w-4" />
                   <span className="text-sm font-semibold">
                     Adicionar imagem ao conteudo
@@ -222,7 +222,7 @@ export default function BlogEditor({
                 </div>
               )}
             </label>
-            <p className="mt-1 text-xs" style={{ color: "var(--panel-text-muted)" }}>
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
               Faca upload de imagens que serao inseridas no final do editor.
               Voce pode move-las depois.
             </p>
@@ -239,14 +239,14 @@ export default function BlogEditor({
               style={{ height: "400px", marginBottom: "50px" }}
             />
           </Surface>
-          <p className="mt-1 text-xs" style={{ color: "var(--panel-text-muted)" }}>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
             Use o editor para formatar o texto. Adicione titulos (H2, H3),
             listas, links e imagens.
           </p>
         </Field>
 
         <Surface variant="muted" className="pt-6">
-          <h3 className="mb-4 text-lg font-semibold" style={{ color: "var(--panel-text)" }}>
+          <h3 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
             SEO (otimizacao para Google)
           </h3>
 
@@ -293,14 +293,13 @@ export default function BlogEditor({
           />
           <label
             htmlFor="published"
-            className="text-sm font-medium"
-            style={{ color: "var(--panel-text-soft)" }}
+            className="text-sm font-medium text-[var(--text-secondary)]"
           >
             Publicar imediatamente (visivel no site e Google)
           </label>
         </div>
 
-        <div className="flex gap-3 border-t pt-4" style={{ borderColor: "var(--panel-border-subtle)" }}>
+        <div className="flex gap-3 border-t border-[var(--border-subtle)] pt-4">
           <Button
             type="button"
             onClick={onSave}

@@ -1,6 +1,4 @@
-import { AlertTriangle } from 'lucide-react';
-import { Alert, Button } from '../../design-system';
-import ModalShell from './ModalShell';
+import { Alert, ConfirmDialog } from '../../design-system';
 
 export type ConfirmationModalProps = {
   isOpen: boolean;
@@ -14,6 +12,7 @@ export type ConfirmationModalProps = {
   tone?: 'danger' | 'default';
 };
 
+/** Legacy confirmation API backed by the DS confirmation dialog. */
 export function ConfirmationModal({
   isOpen,
   title,
@@ -25,41 +24,22 @@ export function ConfirmationModal({
   isLoading = false,
   tone = 'default',
 }: ConfirmationModalProps) {
-  if (!isOpen) return null;
-
-  const handleClose = () => {
-    if (!isLoading) {
-      onCancel();
-    }
-  };
-
   return (
-    <ModalShell
-      isOpen={isOpen}
-      onClose={handleClose}
+    <ConfirmDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && !isLoading) onCancel();
+      }}
+      onConfirm={onConfirm}
       title={title}
-      size="sm"
-      closeOnOverlay={!isLoading}
-      closeOnEscape={!isLoading}
-      footer={
-        <div className="flex items-center justify-end gap-3">
-          <Button variant="ghost" onClick={onCancel} disabled={isLoading}>
-            {cancelLabel}
-          </Button>
-          <Button variant={tone === 'danger' ? 'danger' : 'primary'} loading={isLoading} onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </div>
-      }
+      confirmLabel={confirmLabel}
+      cancelLabel={cancelLabel}
+      destructive={tone === 'danger'}
+      loading={isLoading}
     >
       <Alert tone={tone === 'danger' ? 'danger' : 'warning'}>
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-          <p>
-            {description ?? 'Essa acao pode impactar os dados atuais. Confirme para continuar.'}
-          </p>
-        </div>
+        {description ?? 'Essa acao pode impactar os dados atuais. Confirme para continuar.'}
       </Alert>
-    </ModalShell>
+    </ConfirmDialog>
   );
 }

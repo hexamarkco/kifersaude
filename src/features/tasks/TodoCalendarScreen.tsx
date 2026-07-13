@@ -419,7 +419,6 @@ export default function TodoCalendarScreen() {
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-semibold uppercase tracking-wide"
             className="text-center text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]"
           >
             {day}

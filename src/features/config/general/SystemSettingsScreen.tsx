@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  Calendar,
   Calculator,
   CheckCircle,
   ChevronDown,
@@ -25,12 +24,10 @@ import ConfigOptionManager from "../../../components/config/ConfigOptionManager"
 import LeadOriginsManager from "../../../components/config/LeadOriginsManager";
 import LeadStatusManager from "../../../components/config/LeadStatusManager";
 import CotadorCatalogTab from "../../../components/config/CotadorCatalogTab";
-import FilterSingleSelect from "../../../components/FilterSingleSelect";
-import Button from "../../../components/ui/Button";
-import Input from "../../../components/ui/Input";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { SystemSettingsSkeleton } from "../../../components/ui/panelSkeletons";
+import { ActionSurface, Alert, Badge, Button, Checkbox, Field, Input, SectionHeader, Select, Surface } from "../../../design-system";
 import AccessControlManagerScreen from "./AccessControlManagerScreen";
 import {
   areSystemPreferencesEqual,
@@ -40,8 +37,6 @@ import {
   matchesConfigSearch,
   normalizeConfigSearchText,
   SECTION_OVERVIEW,
-  SYSTEM_SETTINGS_SECTION_BODY_CLASS,
-  SYSTEM_SETTINGS_SECTION_CARD_CLASS,
   type SectionId,
   type SettingsMessage,
 } from "./shared/systemSettingsConfig";
@@ -287,12 +282,12 @@ export default function SystemSettingsScreen() {
 
   if (!settings) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-8 text-center">
-        <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-600" />
-        <p className="text-red-700">
+      <Alert tone="danger" className="p-8 text-center">
+        <AlertCircle className="mx-auto mb-4 h-12 w-12" />
+        <p>
           Erro ao carregar configurações do sistema.
         </p>
-      </div>
+      </Alert>
     );
   }
 
@@ -308,35 +303,21 @@ export default function SystemSettingsScreen() {
     >
       <div className="panel-page-shell space-y-6">
         {message && (
-          <div
-            className={`flex items-center space-x-3 rounded-xl border p-4 ${
-              message.type === "success"
-                ? "border-green-200 bg-green-50 text-green-800"
-                : "border-red-200 bg-red-50 text-red-800"
-            }`}
-          >
+          <Alert tone={message.type === "success" ? "success" : "danger"} className="flex items-center space-x-3">
             {message.type === "success" ? (
               <CheckCircle className="h-5 w-5 flex-shrink-0" />
             ) : (
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
             )}
             <p>{message.text}</p>
-          </div>
+          </Alert>
         )}
 
-        <div className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+        <Surface padding="lg">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-soft)]">
-                <Settings className="h-3.5 w-3.5" />
-                Central de configurações
-              </div>
-              <h2 className="text-2xl font-semibold text-[color:var(--panel-text)]">
-                Sistema e catálogo comercial no mesmo fluxo
-              </h2>
-              <p className="mt-2 text-sm text-[color:var(--panel-text-soft)]">
-                Organize preferências, acessos, catálogo comercial, leads e contratos em uma experiência única, com busca e atalhos por área.
-              </p>
+              <Badge tone="gold" className="mb-3"><Settings className="h-3.5 w-3.5" />Central de configurações</Badge>
+              <SectionHeader title="Sistema e catálogo comercial no mesmo fluxo" description="Organize preferências, acessos, catálogo comercial, leads e contratos em uma experiência única, com busca e atalhos por área." />
             </div>
 
             <div className="w-full xl:max-w-md">
@@ -356,120 +337,113 @@ export default function SystemSettingsScreen() {
               const expanded = shouldExpandSection(section.id);
 
               return (
-                <button
+                <ActionSurface
                   key={section.id}
                   type="button"
                   onClick={() => revealSection(section.id)}
-                  className="flex min-h-[196px] flex-col rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[color:var(--panel-border)] hover:bg-[var(--panel-surface)] hover:shadow-md"
+                  variant="muted"
+                  padding="md"
+                  className="min-h-[196px] text-left"
                 >
                   <div
-                    className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ${section.accentClassName}`}
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${section.accentClassName}`}
                   >
                     <Icon className="h-5 w-5" />
                   </div>
                   <div className="mt-5 space-y-2">
-                    <h3 className="text-[1.05rem] font-semibold leading-tight text-[color:var(--panel-text)]">
+                    <h3 className="text-[1.05rem] font-semibold leading-tight text-[color:var(--text-primary)]">
                       {section.title}
                     </h3>
-                    <p className="max-w-[24ch] text-sm leading-7 text-[color:var(--panel-text-soft)]">
+                    <p className="max-w-[24ch] text-sm leading-7 text-[color:var(--text-secondary)]">
                       {section.description}
                     </p>
                   </div>
-                  <p className="mt-auto pt-5 text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--panel-text-muted)]">
+                  <p className="mt-auto pt-5 text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
                     {expanded ? "Visível" : "Fechada"}
                   </p>
-                </button>
+                </ActionSurface>
               );
             })}
           </div>
-        </div>
+        </Surface>
 
         {!hasVisibleSections && (
-          <div className="rounded-2xl border border-dashed border-[color:var(--panel-border)] bg-[var(--panel-surface-soft)] p-6 text-center">
-            <p className="text-sm text-[color:var(--panel-text-soft)]">
+          <Surface variant="muted" padding="md" className="border-dashed text-center">
+            <p className="text-sm text-[color:var(--text-secondary)]">
               Nenhum bloco encontrado para "{searchTerm}".
             </p>
-          </div>
+          </Surface>
         )}
 
         {showGeneralSection && (
           <div id="settings-section-general" className="space-y-4">
-            <button
+            <ActionSurface
               type="button"
               onClick={() => toggleSection("general")}
-              className={SYSTEM_SETTINGS_SECTION_CARD_CLASS}
+              variant="default"
+              padding="sm"
+              className="flex w-full items-start justify-between gap-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-amber-bg)] text-[var(--panel-accent-amber-text)]">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                   <Settings className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">
+                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Preferências do sistema
                   </h3>
-                  <p className="text-sm text-[color:var(--panel-text-soft)]">
+                  <p className="text-sm text-[color:var(--text-secondary)]">
                     Notificações, formato de data, fuso horário e tempo de sessão.
                   </p>
                 </div>
               </div>
               <ChevronDown
-                className={`h-5 w-5 text-slate-500 transition-transform ${
+                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
                   shouldExpandSection("general") ? "rotate-180" : ""
                 }`}
               />
-            </button>
+            </ActionSurface>
 
             {shouldExpandSection("general") && (
-              <div className={SYSTEM_SETTINGS_SECTION_BODY_CLASS}>
+              <Surface variant="muted" padding="md">
                 <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div
-                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
-                      hasPendingGeneralChanges
-                        ? "bg-amber-100 text-amber-800"
-                        : "bg-emerald-100 text-emerald-800"
-                    }`}
+                    className="inline-flex items-center gap-2 rounded-full"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    <Badge tone={hasPendingGeneralChanges ? "gold" : "success"}>
                     {hasPendingGeneralChanges
                       ? "Alterações pendentes"
                       : "Sem alterações pendentes"}
+                    </Badge>
                   </div>
 
-                  <button
-                    type="button"
+                  <Button
                     onClick={handleRestoreGeneralDefaults}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                    variant="secondary"
+                    size="sm"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                     Restaurar padrões
-                  </button>
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                      Formato de data
-                    </label>
-                    <FilterSingleSelect
-                      icon={Calendar}
+                  <Field label="Formato de data">
+                    <Select
                       value={settings.date_format}
-                      onChange={(value) =>
-                        setSettings({ ...settings, date_format: value })
+                      onChange={(event) =>
+                        setSettings({ ...settings, date_format: event.target.value })
                       }
-                      placeholder="Formato de data"
-                      includePlaceholderOption={false}
                       options={[
                         { value: "DD/MM/YYYY", label: "DD/MM/YYYY" },
                         { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
                         { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
                       ]}
                     />
-                  </div>
+                  </Field>
 
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                      Tempo de sessão (minutos)
-                    </label>
+                    <Field label="Tempo de sessão (minutos)" description="Padrão recomendado: 480 minutos (8 horas).">
                     <Input
                       type="number"
                       min="30"
@@ -483,34 +457,22 @@ export default function SystemSettingsScreen() {
                         })
                       }
                     />
-                    <p className="mt-1 text-xs text-slate-500">
-                      Padrão recomendado: 480 minutos (8 horas).
-                    </p>
+                    </Field>
                   </div>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                      Fuso horário do sistema
-                    </label>
-                    <FilterSingleSelect
-                      icon={Clock}
+                  <Field label="Fuso horário do sistema" description="Usado como referência para prompts de follow-up com IA e demais rotinas que dependem do horário local.">
+                    <Select
                       value={settings.timezone}
-                      onChange={(value) =>
-                        setSettings({ ...settings, timezone: value || "America/Sao_Paulo" })
+                      onChange={(event) =>
+                        setSettings({ ...settings, timezone: event.target.value || "America/Sao_Paulo" })
                       }
-                      placeholder="Selecione um fuso"
-                      includePlaceholderOption={false}
                       options={timezoneOptions}
                     />
-                    <p className="mt-1 text-xs text-slate-500">
-                      Usado como referência para prompts de follow-up com IA e demais rotinas que dependem do horário local.
-                    </p>
-                  </div>
+                  </Field>
 
                   <div className="lg:col-span-2">
                     <label className="flex cursor-pointer items-center space-x-3">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         checked={settings.notification_sound_enabled}
                         onChange={(event) =>
                           setSettings({
@@ -518,15 +480,14 @@ export default function SystemSettingsScreen() {
                             notification_sound_enabled: event.target.checked,
                           })
                         }
-                        className="h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
                       />
                       <div className="flex items-center space-x-2">
                         {settings.notification_sound_enabled ? (
-                          <Volume2 className="h-5 w-5 text-teal-600" />
+                          <Volume2 className="h-5 w-5 text-[color:var(--brand-primary)]" />
                         ) : (
-                          <VolumeX className="h-5 w-5 text-slate-400" />
+                          <VolumeX className="h-5 w-5 text-[color:var(--text-tertiary)]" />
                         )}
-                        <span className="text-sm font-medium text-slate-700">
+                        <span className="text-sm font-medium text-[color:var(--text-primary)]">
                           Ativar sons de notificação
                         </span>
                       </div>
@@ -535,11 +496,11 @@ export default function SystemSettingsScreen() {
 
                   {settings.notification_sound_enabled && (
                     <div className="lg:col-span-2">
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                    <label className="mb-2 block text-sm font-medium text-[color:var(--text-primary)]">
                         Volume das notificações:{" "}
                         {Math.round(settings.notification_volume * 100)}%
                       </label>
-                      <input
+                      <Input
                         type="range"
                         min="0"
                         max="1"
@@ -553,13 +514,13 @@ export default function SystemSettingsScreen() {
                             ),
                           })
                         }
-                        className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-200 accent-teal-600"
+                        className="h-2 cursor-pointer appearance-none px-0"
                       />
                     </div>
                   )}
 
                   <div className="lg:col-span-2">
-                    <label className="mb-2 flex items-center space-x-2 text-sm font-medium text-slate-700">
+                    <label className="mb-2 flex items-center space-x-2 text-sm font-medium text-[color:var(--text-primary)]">
                       <Clock className="h-4 w-4" />
                       <span>
                         Intervalo de verificação de notificações (segundos)
@@ -578,7 +539,7 @@ export default function SystemSettingsScreen() {
                         })
                       }
                     />
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
                       Recomendado: 30 segundos.
                     </p>
                   </div>
@@ -595,7 +556,7 @@ export default function SystemSettingsScreen() {
                     </span>
                   </Button>
                 </div>
-              </div>
+              </Surface>
             )}
           </div>
         )}
@@ -605,32 +566,32 @@ export default function SystemSettingsScreen() {
             <button
               type="button"
               onClick={() => toggleSection("cotador")}
-              className={SYSTEM_SETTINGS_SECTION_CARD_CLASS}
+              className="kds-surface kds-action-surface kds-surface-default flex w-full items-start justify-between gap-4 p-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:rgba(246,228,199,0.85)] text-[var(--panel-accent-ink,#6f3f16)]">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                   <Calculator className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">
+                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Cotador
                   </h3>
-                  <p className="text-sm text-[color:var(--panel-text-soft)]">
+                  <p className="text-sm text-[color:var(--text-secondary)]">
                     Administradoras, entidades de classe e produtos do catálogo comercial.
                   </p>
                 </div>
               </div>
               <ChevronDown
-                className={`h-5 w-5 text-slate-500 transition-transform ${
+                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
                   shouldExpandSection("cotador") ? "rotate-180" : ""
                 }`}
               />
             </button>
 
             {shouldExpandSection("cotador") && (
-              <div className={SYSTEM_SETTINGS_SECTION_BODY_CLASS}>
+              <Surface variant="muted" padding="md">
                 <CotadorCatalogTab embedded />
-              </div>
+              </Surface>
             )}
           </div>
         )}
@@ -640,23 +601,23 @@ export default function SystemSettingsScreen() {
             <button
               type="button"
               onClick={() => toggleSection("access")}
-              className={SYSTEM_SETTINGS_SECTION_CARD_CLASS}
+              className="kds-surface kds-action-surface kds-surface-default flex w-full items-start justify-between gap-4 p-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-blue-bg)] text-[var(--panel-accent-blue-text)]">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">
+                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Permissões por perfil
                   </h3>
-                  <p className="text-sm text-[color:var(--panel-text-soft)]">
+                  <p className="text-sm text-[color:var(--text-secondary)]">
                     Controle de acesso aos módulos para cada tipo de usuário.
                   </p>
                 </div>
               </div>
               <ChevronDown
-                className={`h-5 w-5 text-slate-500 transition-transform ${
+                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
                   shouldExpandSection("access") ? "rotate-180" : ""
                 }`}
               />
@@ -665,14 +626,14 @@ export default function SystemSettingsScreen() {
             {shouldExpandSection("access") && (
               <div className="space-y-4">
                 {configLoading ? (
-                  <div className={SYSTEM_SETTINGS_SECTION_BODY_CLASS}>
+                  <Surface variant="muted" padding="md">
                     <Skeleton className="h-6 w-56" />
                     <div className="mt-4 space-y-3">
                       <Skeleton className="h-10 w-full rounded-lg" />
                       <Skeleton className="h-10 w-full rounded-lg" />
                       <Skeleton className="h-10 w-full rounded-lg" />
                     </div>
-                  </div>
+                  </Surface>
                 ) : (
                   <AccessControlManagerScreen />
                 )}
@@ -686,23 +647,23 @@ export default function SystemSettingsScreen() {
             <button
               type="button"
               onClick={() => toggleSection("leads")}
-              className={SYSTEM_SETTINGS_SECTION_CARD_CLASS}
+              className="kds-surface kds-action-surface kds-surface-default flex w-full items-start justify-between gap-4 p-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-orange-bg)] text-[var(--panel-accent-orange-text)]">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                   <ListTree className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">
+                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Leads
                   </h3>
-                  <p className="text-sm text-[color:var(--panel-text-soft)]">
+                  <p className="text-sm text-[color:var(--text-secondary)]">
                     Etapas do funil, origens e cadastros de apoio para leads.
                   </p>
                 </div>
               </div>
               <ChevronDown
-                className={`h-5 w-5 text-slate-500 transition-transform ${
+                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
                   shouldExpandSection("leads") ? "rotate-180" : ""
                 }`}
               />
@@ -711,14 +672,14 @@ export default function SystemSettingsScreen() {
             {shouldExpandSection("leads") && (
               <div className="space-y-6">
                 {configLoading ? (
-                  <div className={SYSTEM_SETTINGS_SECTION_BODY_CLASS}>
+                  <Surface variant="muted" padding="md">
                     <Skeleton className="h-6 w-48" />
                     <div className="mt-4 space-y-3">
                       <Skeleton className="h-10 w-full rounded-lg" />
                       <Skeleton className="h-10 w-full rounded-lg" />
                       <Skeleton className="h-10 w-full rounded-lg" />
                     </div>
-                  </div>
+                  </Surface>
                 ) : (
                   <>
                     {showLeadStatusManager && <LeadStatusManager />}
@@ -751,24 +712,24 @@ export default function SystemSettingsScreen() {
             <button
               type="button"
               onClick={() => toggleSection("contracts")}
-              className={SYSTEM_SETTINGS_SECTION_CARD_CLASS}
+              className="kds-surface kds-action-surface kds-surface-default flex w-full items-start justify-between gap-4 p-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--panel-accent-green-bg)] text-[var(--panel-accent-green-text)]">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                   <FileText className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[color:var(--panel-text)]">
+                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Contratos
                   </h3>
-                  <p className="text-sm text-[color:var(--panel-text-soft)]">
+                  <p className="text-sm text-[color:var(--text-secondary)]">
                     Estados e parametros auxiliares usados no cadastro de
                     contratos.
                   </p>
                 </div>
               </div>
               <ChevronDown
-                className={`h-5 w-5 text-slate-500 transition-transform ${
+                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
                   shouldExpandSection("contracts") ? "rotate-180" : ""
                 }`}
               />
@@ -777,14 +738,14 @@ export default function SystemSettingsScreen() {
             {shouldExpandSection("contracts") && (
               <div className="space-y-6">
                 {configLoading ? (
-                  <div className={SYSTEM_SETTINGS_SECTION_BODY_CLASS}>
+                  <Surface variant="muted" padding="md">
                     <Skeleton className="h-6 w-56" />
                     <div className="mt-4 space-y-3">
                       <Skeleton className="h-10 w-full rounded-lg" />
                       <Skeleton className="h-10 w-full rounded-lg" />
                       <Skeleton className="h-10 w-full rounded-lg" />
                     </div>
-                  </div>
+                  </Surface>
                 ) : (
                   <>
                     {visibleContractManagers.map((manager) => (

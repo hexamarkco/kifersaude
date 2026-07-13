@@ -17,7 +17,7 @@ export default function CommissionSelectedDatePanel({
 }: CommissionSelectedDatePanelProps) {
   return (
     <Surface variant="muted" padding="sm" className="p-4">
-      <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-text-muted)]">
+      <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
         {selectedDateLabel
           ? `Eventos de ${selectedDateLabel}`
           : "Escolha um dia"}
@@ -40,19 +40,19 @@ export default function CommissionSelectedDatePanel({
                     <div className="min-w-0 flex-1">
                       <p
                         className="text-sm font-semibold"
-                        style={{ color: isCommission ? "var(--panel-accent-ink-strong)" : "var(--panel-text)" }}
+                        style={{ color: isCommission ? "var(--warning-text)" : "var(--text-primary)" }}
                       >
                         {isCommission
                           ? "Recebimento de comissao"
                           : "Pagamento de bonificacao"}
                       </p>
-                      <p className="mt-1 text-xs text-[var(--panel-text-soft)]">
+                      <p className="mt-1 text-xs text-[var(--text-secondary)]">
                         Contrato{" "}
                         {event.contract.codigo_contrato || "Sem codigo"} -{" "}
                         {event.contract.operadora || "Operadora nao informada"}
                       </p>
                       {event.installmentCount && event.installmentIndex && (
-                        <p className="mt-1 text-[11px] text-[var(--panel-text-muted)]">
+                        <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                           Parcela {event.installmentIndex} de{" "}
                           {event.installmentCount}
                         </p>
@@ -61,7 +61,7 @@ export default function CommissionSelectedDatePanel({
 
                     <span
                       className="shrink-0 text-sm font-semibold"
-                      style={{ color: isCommission ? "var(--panel-accent-ink-strong)" : "var(--panel-text)" }}
+                      style={{ color: isCommission ? "var(--warning-text)" : "var(--text-primary)" }}
                     >
                       {formatCommissionCurrency(event.value)}
                     </span>
@@ -71,12 +71,12 @@ export default function CommissionSelectedDatePanel({
             })}
           </div>
         ) : (
-          <div className="py-10 text-center text-sm text-[var(--panel-text-muted)]">
+          <div className="py-10 text-center text-sm text-[var(--text-muted)]">
             Nenhum lancamento previsto para este dia.
           </div>
         )
       ) : (
-        <Surface variant="muted" className="py-10 text-center text-sm text-[var(--panel-text-muted)]">
+        <Surface variant="muted" className="py-10 text-center text-sm text-[var(--text-muted)]">
           Escolha um dia para visualizar os detalhes.
         </Surface>
       )}

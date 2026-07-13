@@ -1,12 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { cx } from '../../lib/cx';
-import {
-  getDropdownActionClass,
-  getDropdownMenuClass,
-  getDropdownTriggerClass,
-  isPanelDarkTheme,
-} from '../ui/dropdownStyles';
+import { Checkbox, Popover, PopoverContent, PopoverTrigger } from '../../design-system';
 
 type Option = {
   value: string;
@@ -35,34 +30,10 @@ export default function MultiSelectDropdown({
     onChange(values.includes(value) ? values.filter((item) => item !== value) : [...values, value]);
   };
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
-
   const selectedOptions = useMemo(
     () => options.filter((option) => values.includes(option.value)),
     [options, values]
   );
-  const isDarkTheme = isPanelDarkTheme();
 
   const displayText = useMemo(() => {
     if (selectedOptions.length === 0) return placeholder;
@@ -79,14 +50,11 @@ export default function MultiSelectDropdown({
           {label}
         </label>
       )}
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger>
       <button
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
-        className={getDropdownTriggerClass({
-          isDark: isDarkTheme,
-          compact: true,
-          className: 'h-8 rounded-md pl-2.5 pr-8',
-        })}
+        className="kds-select h-8 w-full rounded-[var(--kds-radius-md)] px-2.5 pr-8 text-left"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
@@ -101,21 +69,14 @@ export default function MultiSelectDropdown({
           )}
         />
       </button>
+      </PopoverTrigger>
 
       {isOpen && (
-        <div
-          className={getDropdownMenuClass({
-            isDark: isDarkTheme,
-            position: 'absolute',
-            className: 'left-0 right-0 mt-1 max-h-48 z-[100]',
-          })}
-        >
+        <PopoverContent align="start" className="max-h-48 w-[var(--radix-popover-trigger-width)] overflow-y-auto p-0">
           <button
             type="button"
             className={cx(
-              getDropdownActionClass(isDarkTheme),
-              'border-b text-xs',
-              'border-[var(--border-subtle)]',
+              'kds-button kds-button-text w-full justify-start rounded-none border-b border-[var(--border-subtle)] text-xs',
             )}
             onClick={() => {
               onChange([]);
@@ -134,21 +95,9 @@ export default function MultiSelectDropdown({
                   isSelected && 'is-selected',
                 )}
               >
-                  <span
-                    className={cx(
-                      'flex h-4 w-4 items-center justify-center rounded border',
-                      isSelected
-                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]'
-                        : 'border-[var(--border-strong)]',
-                    )}
-                  >
-                  {isSelected && <Check className="w-3 h-3 text-white" />}
-                </span>
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={isSelected}
                   onChange={() => toggleOption(option.value)}
-                  className="sr-only"
                 />
                 <span>{option.label}</span>
               </label>
@@ -159,8 +108,9 @@ export default function MultiSelectDropdown({
               Nenhuma opção disponível
             </div>
           )}
-        </div>
+        </PopoverContent>
       )}
+      </Popover>
     </div>
   );
 }

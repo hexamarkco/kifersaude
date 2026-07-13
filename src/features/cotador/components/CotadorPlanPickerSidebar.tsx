@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { BadgePercent, Layers3, MapPin, Search, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
-import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import { Button } from '../../../design-system';
 import { cx } from '../../../lib/cx';
 import { COTADOR_MODALITY_OPTIONS, type CotadorQuoteModality } from '../shared/cotadorConstants';
 import type { CotadorCatalogFilters } from '../shared/cotadorTypes';
@@ -86,17 +86,17 @@ export default function CotadorPlanPickerSidebar({
     <aside className={cx(
       'overflow-y-auto border-r px-5 py-5 md:px-6',
       isDarkTheme
-        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.03)]'
-        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[color:color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))]',
+        ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]'
+        : 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]',
     )}>
       <div className="space-y-5">
         <div>
-          <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')}>Modalidade</p>
+          <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Modalidade</p>
           <div className={cx(
             'mt-3 grid grid-cols-3 gap-2 rounded-2xl border p-1.5 shadow-sm',
             isDarkTheme
-              ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)]'
-              : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
+              ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]'
+              : 'border-[color:var(--border-default)] bg-[var(--bg-surface)]',
           )}>
             {COTADOR_MODALITY_OPTIONS.map((option) => {
               const isActive = activeModalityTab === option.value;
@@ -109,11 +109,11 @@ export default function CotadorPlanPickerSidebar({
                     'cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-all',
                     isActive
                       ? isDarkTheme
-                        ? 'bg-[color:rgba(251,191,36,0.16)] text-[color:#fde68a] shadow-sm'
-                        : 'bg-[var(--panel-accent-soft,#f6e4c7)] text-[var(--panel-accent-ink-strong,#4a2411)] shadow-sm'
+                        ? 'bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)] shadow-sm'
+                        : 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm'
                       : isDarkTheme
-                        ? 'text-[color:rgba(255,243,209,0.82)] hover:bg-[color:rgba(255,255,255,0.06)] hover:text-white'
-                        : 'text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]',
+                        ? 'text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)] hover:text-[var(--text-primary)]'
+                        : 'text-[color:var(--text-primary)] hover:bg-[var(--bg-surface)] hover:text-[color:var(--text-primary)]',
                   )}
                 >
                   {option.label}
@@ -131,7 +131,7 @@ export default function CotadorPlanPickerSidebar({
             leftIcon={Search}
             className={cx(
               isDarkTheme
-                ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] !border-[color:rgba(255,255,255,0.1)] !bg-[color:rgba(255,255,255,0.06)] !text-[color:#fff8ef] !shadow-none placeholder:!text-[color:rgba(255,243,209,0.42)] focus:!border-[color:rgba(251,191,36,0.28)] focus:!ring-[color:rgba(251,191,36,0.26)]'
+                ? '!border-[color:var(--border-default)] !bg-[color:var(--bg-elevated)] !text-[color:var(--text-primary)] !shadow-none placeholder:!text-[color:var(--text-secondary)] focus:!border-[color:var(--border-default)] focus:!ring-[color:var(--border-subtle)]'
                 : undefined,
             )}
           />
@@ -152,7 +152,7 @@ export default function CotadorPlanPickerSidebar({
               autoComplete="off"
               className={cx(
                 isDarkTheme
-                  ? '[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] !border-[color:rgba(255,255,255,0.1)] !bg-[color:rgba(255,255,255,0.06)] !text-[color:#fff8ef] !shadow-none placeholder:!text-[color:rgba(255,243,209,0.42)] focus:!border-[color:rgba(251,191,36,0.28)] focus:!ring-[color:rgba(251,191,36,0.26)]'
+                  ? '!border-[color:var(--border-default)] !bg-[color:var(--bg-elevated)] !text-[color:var(--text-primary)] !shadow-none placeholder:!text-[color:var(--text-secondary)] focus:!border-[color:var(--border-default)] focus:!ring-[color:var(--border-subtle)]'
                   : undefined,
               )}
             />
@@ -160,10 +160,10 @@ export default function CotadorPlanPickerSidebar({
             {showNetworkLocationSuggestions && (
               <div
                 className={cx(
-                  'absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-[22px] border shadow-[0_20px_48px_rgba(15,10,6,0.26)]',
+                  'absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-2xl border shadow-[var(--shadow-card)]',
                   isDarkTheme
-                    ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:#201814]'
-                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)]',
+                    ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]'
+                    : 'border-[color:var(--border-default)] bg-[var(--bg-surface)]',
                 )}
               >
                 <div className="max-h-64 overflow-y-auto py-2">
@@ -183,15 +183,15 @@ export default function CotadorPlanPickerSidebar({
                         className={cx(
                           'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
                           isDarkTheme
-                            ? 'hover:bg-[color:rgba(255,255,255,0.06)]'
-                            : 'hover:bg-[var(--panel-surface-soft,#f4ede3)]',
+                            ? 'hover:bg-[color:var(--bg-elevated)]'
+                            : 'hover:bg-[var(--bg-surface)]',
                         )}
                       >
-                        <span className={cx('min-w-0 truncate text-sm font-medium', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
+                        <span className={cx('min-w-0 truncate text-sm font-medium', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>
                           {option.value}
                         </span>
                         {count !== null && (
-                          <span className={cx('shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium', isDarkTheme ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:rgba(255,243,209,0.72)]' : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)]')}>
+                          <span className={cx('shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium', isDarkTheme ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)]' : 'border-[color:var(--border-default)] bg-[var(--bg-surface)] text-[color:var(--text-primary)]')}>
                             {count} produto(s)
                           </span>
                         )}
@@ -255,7 +255,7 @@ export default function CotadorPlanPickerSidebar({
           fullWidth
           className={cx(
             isDarkTheme
-              ? '!border-[color:rgba(251,191,36,0.72)] !bg-[color:rgba(180,83,9,0.14)] !text-[color:#f4c95d] !shadow-none hover:!border-[color:#f4c95d] hover:!bg-[color:rgba(251,191,36,0.16)] hover:!text-[color:#ffe7a8]'
+              ? '!border-[color:var(--border-default)] !bg-[color:var(--bg-elevated)] !text-[color:var(--text-primary)] !shadow-none hover:!border-[color:var(--border-default)] hover:!bg-[color:var(--bg-elevated)] hover:!text-[color:var(--text-primary)]'
               : undefined,
           )}
         >

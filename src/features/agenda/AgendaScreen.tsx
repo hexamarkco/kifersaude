@@ -42,7 +42,6 @@ import {
   formatEstimatedTime,
 } from "../../lib/reminderUtils";
 import { syncLeadNextReturnFromUpcomingReminder } from "../../lib/leadReminderUtils";
-import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import {
   Alert,
@@ -58,8 +57,12 @@ import {
   Field,
   Input,
   KpiCard,
+  LoadingState,
   OperationalMetricChip,
   PageHeader,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   SectionHeader,
   Surface,
   Textarea,
@@ -68,9 +71,6 @@ import {
 import FilterSingleSelect from "../../components/FilterSingleSelect";
 import ReminderSchedulerModal from "../../components/ReminderSchedulerModal";
 import LeadForm from "../../components/LeadForm";
-import { TodoCalendarSkeleton } from "../../components/ui/panelSkeletons";
-import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
-import PanelPopoverShell from "../../components/ui/PanelPopoverShell";
 import { toast } from "../../lib/toast";
 import {
   getReminderWhatsappLink,
@@ -207,12 +207,7 @@ export default function AgendaScreen() {
     reminderId: string;
     daysAhead: 1 | 2 | 3 | 4 | 5;
   } | null>(null);
-  const [quickScheduleDropdown, setQuickScheduleDropdown] = useState<{
-    reminderId: string;
-    position: { top: number; left: number };
-  } | null>(null);
-  const quickScheduleDropdownRef = useRef<HTMLDivElement>(null);
-  const quickScheduleButtonRef = useRef<HTMLButtonElement>(null);
+  const [quickScheduleDropdownId, setQuickScheduleDropdownId] = useState<string | null>(null);
   const [reschedulingReminderId, setReschedulingReminderId] = useState<string | null>(null);
   const [reminderPendingDeletion, setReminderPendingDeletion] = useState<Reminder | null>(null);
   const [isDeletingReminder, setIsDeletingReminder] = useState(false);
@@ -222,7 +217,6 @@ export default function AgendaScreen() {
   const [savingTask, setSavingTask] = useState(false);
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
-  const loadingUi = useAdaptiveLoading(loading);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const loadReminders = useCallback(async (options?: { showLoading?: boolean }) => {
@@ -346,35 +340,6 @@ export default function AgendaScreen() {
     },
     [contractsMap],
   );
-
-  useEffect(() => {
-    if (!quickScheduleDropdown) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        quickScheduleDropdownRef.current &&
-        !quickScheduleDropdownRef.current.contains(event.target as Node) &&
-        quickScheduleButtonRef.current &&
-        !quickScheduleButtonRef.current.contains(event.target as Node)
-      ) {
-        setQuickScheduleDropdown(null);
-      }
-    };
-
-    const handleScroll = () => setQuickScheduleDropdown(null);
-
-    document.addEventListener('mousedown', handleClickOutside);
-    const scrollContainer = document.querySelector('.overflow-auto, .overflow-y-auto');
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      if (scrollContainer) {
-        scrollContainer.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, [quickScheduleDropdown]);
 
   const fetchLeadInfo = useCallback(
     async (leadId: string) => {
@@ -1448,76 +1413,39 @@ export default function AgendaScreen() {
                 </Button>
                 {!reminder.lido && (
                   <>
-                    <div className="relative">
-                      <Button
-                        ref={quickScheduleButtonRef}
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (quickScheduleDropdown?.reminderId === reminder.id) {
-                            setQuickScheduleDropdown(null);
-                          } else {
-                            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                            const viewportHeight = window.innerHeight;
-                            const spaceBelow = viewportHeight - rect.bottom;
-                            const dropdownHeight = 200;
-                            const shouldOpenUpward = spaceBelow < dropdownHeight + 20;
-                            setQuickScheduleDropdown({
-                              reminderId: reminder.id,
-                              position: {
-                                top: shouldOpenUpward ? rect.top - dropdownHeight - 8 : rect.bottom + 4,
-                                left: rect.left,
-                              },
-                            });
-                          }
-                        }}
-                        disabled={isQuickSchedulingCurrentReminder}
-                        variant="primary"
-                        size="icon"
-                        className="h-8 w-8"
-                        title="Agendar dias uteis e marcar atual como lido"
-                        aria-label="Agendar dias uteis e marcar atual como lido"
-                      >
-                        {isQuickSchedulingCurrentReminder ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <span className="relative inline-flex">
-                            <CalendarPlus className="h-4 w-4" />
-                            <ChevronDown className="absolute -bottom-1 -right-1 h-2.5 w-2.5" />
-                          </span>
-                        )}
-                      </Button>
-                      {quickScheduleDropdown?.reminderId === reminder.id && (
-                        <PanelPopoverShell
-                          ref={quickScheduleDropdownRef}
-                          isOpen={true}
-                          position={quickScheduleDropdown.position}
-                          onClose={() => setQuickScheduleDropdown(null)}
-                          ariaLabel="Selecionar dias para agendar"
-                          className="w-36 rounded-[var(--radius-lg)] border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1 shadow-[var(--shadow-popover)]"
-                        >
-                          <div className="flex flex-col gap-1">
-                            {[1, 2, 3, 4, 5].map((days) => (
-                              <Button
-                                key={days}
-                                type="button"
-                                onClick={handleCardAction(() => {
-                                  setQuickScheduleDropdown(null);
-                                  handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
-                                })}
-                                disabled={isQuickSchedulingCurrentReminder}
-                                variant="ghost"
-                                size="sm"
-                                className="h-auto w-full justify-start px-3 py-2 text-left"
-                              >
-                                <CalendarPlus className="h-4 w-4" />
-                                <span>+{days} dia{days > 1 ? "s" : ""}</span>
-                              </Button>
-                            ))}
-                          </div>
-                        </PanelPopoverShell>
-                      )}
-                    </div>
+                    <Popover open={quickScheduleDropdownId === reminder.id} onOpenChange={(open) => setQuickScheduleDropdownId(open ? reminder.id : null)}>
+                      <PopoverTrigger className="inline-flex">
+                        <Button type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" size="icon" className="h-8 w-8" title="Agendar dias uteis e marcar atual como lido" aria-label="Agendar dias uteis e marcar atual como lido">
+                          {isQuickSchedulingCurrentReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+                            <span className="relative inline-flex">
+                              <CalendarPlus className="h-4 w-4" />
+                              <ChevronDown className="absolute -bottom-1 -right-1 h-2.5 w-2.5" />
+                            </span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent aria-label="Selecionar dias para agendar" className="w-36 p-1">
+                        <div className="flex flex-col gap-1">
+                          {[1, 2, 3, 4, 5].map((days) => (
+                            <Button
+                              key={days}
+                              type="button"
+                              onClick={handleCardAction(() => {
+                                setQuickScheduleDropdownId(null);
+                                handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
+                              })}
+                              disabled={isQuickSchedulingCurrentReminder}
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto w-full justify-start px-3 py-2 text-left"
+                            >
+                              <CalendarPlus className="h-4 w-4" />
+                              <span>+{days} dia{days > 1 ? "s" : ""}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </>
                 )}
                 <Button
@@ -1579,15 +1507,10 @@ export default function AgendaScreen() {
     year: "numeric",
   });
   return (
-    <PanelAdaptiveLoadingFrame
-      loading={loading}
-      phase={loadingUi.phase}
-      hasContent={hasAgendaSnapshot}
-      skeleton={<TodoCalendarSkeleton />}
-      stageLabel="Carregando agenda..."
-      overlayLabel="Atualizando agenda..."
-      stageClassName="panel-dashboard-immersive"
-    >
+    <>
+      {loading && !hasAgendaSnapshot ? (
+        <LoadingState label="Carregando agenda..." className="min-h-96" />
+      ) : (
       <div className="panel-page-shell space-y-6">
         <PageHeader
           eyebrow="Rotina operacional"
@@ -1992,7 +1915,8 @@ export default function AgendaScreen() {
         />
         {ConfirmationDialog}
       </div>
-    </PanelAdaptiveLoadingFrame>
+      )}
+    </>
   );
 }
 

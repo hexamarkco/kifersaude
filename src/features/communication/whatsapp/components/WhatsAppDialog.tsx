@@ -7,19 +7,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  type DialogSize,
-} from '../../design-system';
+} from '../../../../design-system';
 
-export type ModalShellSize = Exclude<DialogSize, 'full'>;
-
-type ModalShellProps = {
+type WhatsAppDialogProps = {
   isOpen: boolean;
   onClose: () => void;
   title?: string;
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
-  size?: ModalShellSize;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   closeOnOverlay?: boolean;
   closeOnEscape?: boolean;
   showCloseButton?: boolean;
@@ -28,8 +25,8 @@ type ModalShellProps = {
   bodyScrollable?: boolean;
 };
 
-/** Compatibility adapter for the shared DS dialog. */
-export default function ModalShell({
+/** DS dialog adapter that preserves the inbox overlay API without its legacy shell. */
+export default function WhatsAppDialog({
   isOpen,
   onClose,
   title,
@@ -43,17 +40,15 @@ export default function ModalShell({
   panelClassName,
   bodyClassName,
   bodyScrollable = true,
-}: ModalShellProps) {
+}: WhatsAppDialogProps) {
   return (
     <Dialog
       open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
+      onOpenChange={(open) => !open && onClose()}
       size={size}
       closeOnOverlay={closeOnOverlay}
       closeOnEscape={closeOnEscape}
-      className={panelClassName}
+      className={`flex max-h-[100dvh] w-full flex-col overflow-hidden sm:max-h-[calc(100dvh-3rem)] ${panelClassName ?? ''}`}
     >
       {(title || description || showCloseButton) && (
         <DialogHeader onClose={onClose} showCloseButton={showCloseButton}>
@@ -61,7 +56,10 @@ export default function ModalShell({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
       )}
-      <DialogBody scrollable={bodyScrollable} className={bodyClassName}>
+      <DialogBody
+        scrollable={bodyScrollable}
+        className={`min-h-0 flex-1 ${!bodyScrollable ? 'overflow-hidden' : ''} ${bodyClassName ?? ''}`}
+      >
         {children}
       </DialogBody>
       {footer && <DialogFooter>{footer}</DialogFooter>}

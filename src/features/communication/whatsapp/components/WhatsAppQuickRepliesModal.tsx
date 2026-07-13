@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { MessageCircle, Plus, Trash2 } from 'lucide-react';
 
-import Button from '../../../../components/ui/Button';
-import Input from '../../../../components/ui/Input';
-import ModalShell from '../../../../components/ui/ModalShell';
+import { Alert, Button, Input, Surface } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { sanitizeWhatsAppQuickReplyShortcut, type WhatsAppQuickReply } from '../../../../lib/whatsAppQuickReplies';
+import WhatsAppDialog from './WhatsAppDialog';
 
 type WhatsAppQuickRepliesModalProps = {
   isOpen: boolean;
@@ -117,16 +116,16 @@ export default function WhatsAppQuickRepliesModal({
   };
 
   return (
-      <ModalShell
+      <WhatsAppDialog
         isOpen={isOpen}
         onClose={onClose}
         title="Mensagens rápidas"
         description="Cadastre atalhos independentes do inbox. Use {{ para inserir variáveis dinâmicas na mensagem."
         size="xl"
-        panelClassName="config-transparent-buttons max-w-6xl"
+        panelClassName="max-w-6xl"
         footer={(
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-            <div className="text-xs text-[var(--panel-text-muted,#876f5c)]">
+            <div className="text-xs text-[var(--text-muted)]">
               Digite <code>&#123;&#123;</code> no corpo da mensagem para abrir as variáveis disponíveis.
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -141,11 +140,11 @@ export default function WhatsAppQuickRepliesModal({
       )}
     >
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="space-y-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
+        <Surface variant="muted" padding="sm" className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Atalhos</h3>
-              <p className="text-xs text-[var(--panel-text-muted,#876f5c)]">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Atalhos</h3>
+              <p className="text-xs text-[var(--text-muted)]">
                 {draftQuickReplies.length} cadastrada(s)
               </p>
             </div>
@@ -157,7 +156,7 @@ export default function WhatsAppQuickRepliesModal({
 
           <div className="max-h-[55vh] space-y-2 overflow-y-auto pr-1">
             {draftQuickReplies.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-4 text-sm text-[var(--panel-text-muted,#876f5c)]">
+              <div className="rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-4 text-sm text-[var(--text-muted)]">
                 Nenhuma mensagem rápida cadastrada.
               </div>
             ) : draftQuickReplies.map((quickReply) => {
@@ -169,35 +168,35 @@ export default function WhatsAppQuickRepliesModal({
                   key={quickReply.id}
                   type="button"
                   onClick={() => setSelectedQuickReplyId(quickReply.id)}
-                  className={`w-full rounded-xl border px-3 py-3 text-left transition ${isSelected ? 'border-[var(--panel-accent-strong,#c07a2a)] bg-[var(--panel-surface,#fffdfa)] shadow-sm' : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:border-[var(--panel-accent-soft,#f4e2cc)]'}`}
+                  className={`w-full rounded-xl border px-3 py-3 text-left transition ${isSelected ? 'border-[var(--brand-primary)] bg-[var(--bg-surface)] shadow-sm' : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] hover:border-[var(--brand-primary-soft)]'}`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-sm font-semibold text-[var(--panel-text,#1a120d)]">
+                    <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
                       {quickReply.name.trim() || 'Nova mensagem rápida'}
                     </span>
-                    <code className="shrink-0 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2 py-0.5 text-[11px] font-semibold text-[var(--panel-accent-ink,#8b4d12)]">
+                    <code className="shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-0.5 text-[11px] font-semibold text-[var(--accent-gold-hover)]">
                       /{shortcutPreview}
                     </code>
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                  <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
                     {summarizePreview(quickReply.text)}
                   </p>
                 </button>
               );
             })}
           </div>
-        </div>
+        </Surface>
 
-        <div className="space-y-4 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 sm:p-5">
+        <Surface padding="md" className="space-y-4">
           {selectedQuickReply ? (
             <>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text,#1a120d)]">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                     <MessageCircle className="h-4 w-4" />
                     Editor da mensagem rápida
                   </h3>
-                  <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
                     O atalho e a mensagem ficam disponíveis imediatamente no composer do inbox.
                   </p>
                 </div>
@@ -213,14 +212,14 @@ export default function WhatsAppQuickRepliesModal({
               </div>
 
               {validationError ? (
-                <div className="rounded-xl border border-[var(--panel-accent-red-border,#ef4444)] bg-[var(--panel-accent-red-soft,#fef2f2)] px-3 py-2 text-sm text-[var(--panel-accent-red-ink,#991b1b)]">
+                <Alert tone="danger">
                   {validationError}
-                </div>
+                </Alert>
               ) : null}
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Nome interno
                   </label>
                   <Input
@@ -231,7 +230,7 @@ export default function WhatsAppQuickRepliesModal({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Atalho
                   </label>
                   <Input
@@ -242,14 +241,14 @@ export default function WhatsAppQuickRepliesModal({
                     leftIcon={undefined}
                     rightSlot={<span className="text-[11px] font-semibold">/{sanitizeWhatsAppQuickReplyShortcut(selectedQuickReply.shortcut || selectedQuickReply.name) || 'atalho'}</span>}
                   />
-                  <p className="mt-1 text-[11px] text-[var(--panel-text-muted,#876f5c)]">
+                  <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                     Use letras, números e hífens. Se ficar vazio, o sistema gera a partir do nome.
                   </p>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--panel-text-muted,#876f5c)]">
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Mensagem
                 </label>
                 <VariableAutocompleteTextarea
@@ -263,12 +262,12 @@ export default function WhatsAppQuickRepliesModal({
               </div>
             </>
           ) : (
-            <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-6 text-center text-sm text-[var(--panel-text-muted,#876f5c)]">
+            <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-6 text-center text-sm text-[var(--text-muted)]">
               Selecione ou crie uma mensagem rápida para editar.
             </div>
           )}
-        </div>
+        </Surface>
       </div>
-    </ModalShell>
+    </WhatsAppDialog>
   );
 }

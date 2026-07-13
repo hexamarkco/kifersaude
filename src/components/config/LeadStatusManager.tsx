@@ -7,6 +7,7 @@ import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import ModalShell from '../ui/ModalShell';
+import { Alert, Badge, Card } from '../../design-system';
 
 type Message = { type: 'success' | 'error'; text: string };
 type StatusDraft = { nome: string; ordem: string };
@@ -191,11 +192,11 @@ export default function LeadStatusManager() {
   };
 
   return (
-    <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+    <Card padding="lg">
       <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">Status dos Leads</h3>
-          <p className="text-sm text-[color:var(--panel-text-soft)]">
+          <h3 className="kds-card-title">Status dos Leads</h3>
+          <p className="kds-card-subtitle">
             Personalize as etapas do funil de leads e defina cores e ordens.
           </p>
         </div>
@@ -207,16 +208,10 @@ export default function LeadStatusManager() {
       </div>
 
       {message && (
-        <div
-          className={`mb-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-            message.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-700'
-              : 'border-red-200 bg-red-50 text-red-700'
-          }`}
-        >
+        <Alert tone={message.type === 'success' ? 'success' : 'danger'} className="mb-4">
           {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <span>{message.text}</span>
-        </div>
+        </Alert>
       )}
 
       <div className="space-y-3">
@@ -224,28 +219,28 @@ export default function LeadStatusManager() {
           const isProcessing = processingId === status.id;
 
           return (
-            <div
+            <Card
               key={status.id}
-              className="flex flex-col gap-4 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 lg:flex-row lg:items-center lg:justify-between"
+              variant="muted"
+              padding="sm"
+              className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
                   <PaintBucket className="h-4 w-4" style={{ color: status.cor }} />
                 </div>
 
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-[color:var(--panel-text)]">{status.nome}</span>
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{status.nome}</span>
                     {status.padrao && (
-                      <span className="rounded-full border border-[color:var(--panel-accent-amber-border)] bg-[var(--panel-accent-amber-bg)] px-2.5 py-1 text-xs font-medium text-[var(--panel-accent-amber-text)]">
-                        Padrão
-                      </span>
+                      <Badge tone="gold">Padrão</Badge>
                     )}
                     <span className="rounded-full border px-2.5 py-1 text-xs font-medium" style={getBadgeStyle(status.cor)}>
                       {status.cor}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Ordem atual: {status.ordem}</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Ordem atual: {status.ordem}</p>
                 </div>
               </div>
 
@@ -278,7 +273,7 @@ export default function LeadStatusManager() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
@@ -294,7 +289,7 @@ export default function LeadStatusManager() {
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome do status</label>
+            <label className="kds-field-label mb-2 block">Nome do status</label>
             <Input
               type="text"
               value={newStatus.nome}
@@ -305,7 +300,7 @@ export default function LeadStatusManager() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Cor</label>
+              <label className="kds-field-label mb-2 block">Cor</label>
               <Input
                 type="color"
                 value={newStatus.cor}
@@ -314,7 +309,7 @@ export default function LeadStatusManager() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Ordem</label>
+              <label className="kds-field-label mb-2 block">Ordem</label>
               <Input
                 type="number"
                 value={newStatus.ordem}
@@ -341,6 +336,6 @@ export default function LeadStatusManager() {
         </div>
       </ModalShell>
       {ConfirmationDialog}
-    </div>
+    </Card>
   );
 }

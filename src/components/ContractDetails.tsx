@@ -24,10 +24,14 @@ import HolderForm from "./HolderForm";
 import ContractForm from "./ContractForm";
 import DependentForm from "./DependentForm";
 import FilterSingleSelect from "./FilterSingleSelect";
-import ModalShell from "./ui/ModalShell";
 import {
   Badge,
   Button,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
   Field,
   Surface,
   Textarea,
@@ -44,10 +48,8 @@ import { useConfirmationModal } from "../hooks/useConfirmationModal";
 import { toast } from "../lib/toast";
 
 const AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
-const detailPanelClass =
-  "rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)]";
-const detailPanelMutedClass =
-  "rounded-[var(--radius-lg)] bg-[var(--bg-surface-muted)]";
+const detailPanelClass = "kds-surface kds-surface-default";
+const detailPanelMutedClass = "kds-surface kds-surface-muted";
 const detailDividerClass =
   "mt-4 border-t border-[var(--border-subtle)] pt-4";
 const detailTitleClass =
@@ -60,15 +62,13 @@ const detailMutedTextClass = "text-xs text-[var(--text-muted)]";
 const detailLabelTextClass =
   "font-medium text-[var(--text-secondary)]";
 const detailEmptyStateClass =
-  "rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--border-default)] bg-[var(--bg-surface-muted)] py-8 text-center";
+  "kds-surface kds-surface-muted border-2 border-dashed py-8 text-center";
 const detailEmptyCompactClass =
-  "rounded-[var(--radius-lg)] border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] p-6 text-center text-sm text-[var(--text-muted)]";
+  "kds-surface kds-surface-default border-dashed p-6 text-center text-sm text-[var(--text-muted)]";
 const detailAccentLinkClass =
   "text-xs font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]";
-const detailPanelSoftClass =
-  "rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface-muted)]";
-const detailNestedPanelClass =
-  "rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]";
+const detailPanelSoftClass = "kds-surface kds-surface-muted";
+const detailNestedPanelClass = "kds-surface kds-surface-default";
 const detailSectionHeadingClass = `flex items-center gap-2 ${detailTitleClass}`;
 const detailSectionIconClass = "h-5 w-5 text-[var(--brand-primary)]";
 const detailMetricValueClass =
@@ -774,34 +774,29 @@ export default function ContractDetails({
 
   if (loading) {
     return (
-      <ModalShell
-        isOpen
-        onClose={onClose}
-        title="Carregando contrato"
-        description="Aguarde enquanto reunimos os dados mais recentes."
-        size="xl"
-        panelClassName="sm:max-w-5xl"
-        showCloseButton={false}
-        bodyClassName="flex min-h-[260px] items-center justify-center"
-      >
-        <div
-          className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent"
-          role="status"
-          aria-label="Carregando dados do contrato"
-        />
-      </ModalShell>
+      <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+        <DialogHeader showCloseButton={false}>
+          <DialogTitle>Carregando contrato</DialogTitle>
+          <DialogDescription>Aguarde enquanto reunimos os dados mais recentes.</DialogDescription>
+        </DialogHeader>
+        <DialogBody className="flex min-h-[260px] items-center justify-center">
+          <div
+            className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent"
+            role="status"
+            aria-label="Carregando dados do contrato"
+          />
+        </DialogBody>
+      </Dialog>
     );
   }
 
   return (
-    <ModalShell
-      isOpen
-      onClose={onClose}
-      title={contract.codigo_contrato}
-      description={`${contract.operadora} - ${contract.produto_plano}`}
-      size="xl"
-      panelClassName="sm:max-w-5xl"
-    >
+    <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+      <DialogHeader onClose={onClose}>
+        <DialogTitle>{contract.codigo_contrato}</DialogTitle>
+        <DialogDescription>{`${contract.operadora} - ${contract.produto_plano}`}</DialogDescription>
+      </DialogHeader>
+      <DialogBody>
       <div className="mb-4 flex items-center justify-end gap-2">
         {canEditContracts && (
           <Button
@@ -1813,6 +1808,7 @@ export default function ContractDetails({
         />
       )}
       {ConfirmationDialog}
-    </ModalShell>
+      </DialogBody>
+    </Dialog>
   );
 }

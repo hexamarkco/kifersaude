@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 import { cx } from '../lib/cx';
-import { calculateFloatingPanelPosition, type FloatingPanelPosition } from '../lib/floatingPosition';
-import DateTimePicker from './ui/DateTimePicker';
-import { getDropdownMenuClass, getDropdownTriggerClass, isPanelDarkTheme } from './ui/dropdownStyles';
+import { Button, DateTimePicker, Popover, PopoverContent, PopoverTrigger } from '../design-system';
 
 export type FilterDateRangeProps = {
   icon: LucideIcon;
@@ -27,56 +24,6 @@ export default function FilterDateRange({
   type = 'date',
 }: FilterDateRangeProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState<FloatingPanelPosition | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen || !triggerRef.current) return;
-
-    const updatePosition = () => {
-      if (!triggerRef.current) return;
-      setPosition(
-        calculateFloatingPanelPosition({
-          triggerRect: triggerRef.current.getBoundingClientRect(),
-          panelWidth: 420,
-          panelHeight: 320,
-        }),
-      );
-    };
-
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
-  }, [isOpen]);
 
   const formatValue = (value: string) => {
     if (!value) return '';
@@ -114,7 +61,6 @@ export default function FilterDateRange({
   }, [fromValue, toValue]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hasActiveFilter = Boolean(fromValue || toValue);
-  const isDarkTheme = isPanelDarkTheme();
 
   const handleClear = () => {
     onFromChange('');
@@ -122,15 +68,11 @@ export default function FilterDateRange({
   };
 
   return (
-    <div className="relative" ref={containerRef}>
-      <button
-        ref={triggerRef}
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger className="block">
+        <button
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
-        className={getDropdownTriggerClass({
-          isDark: isDarkTheme,
-          className: 'h-auto py-2.5',
-        })}
+        className="kds-select panel-ui-input relative h-auto w-full py-2.5 pl-10 pr-9 text-left"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
@@ -167,29 +109,15 @@ export default function FilterDateRange({
             isOpen && 'rotate-180',
           )}
         />
-      </button>
+        </button>
+      </PopoverTrigger>
 
-      {isOpen && position && typeof document !== 'undefined'
-        ? createPortal(
-        <div
-          className={cx(
-            'painel-theme kifer-ds',
-            isDarkTheme ? 'theme-dark' : 'theme-light',
-            getDropdownMenuClass({
-              isDark: isDarkTheme,
-              position: 'fixed',
-              className: 'z-[120] space-y-3 p-4',
-            }),
-          )}
-          style={{
-            top: position.top,
-            left: position.left,
-            width: position.width,
-            maxHeight: position.maxHeight,
-          }}
-          role="dialog"
-          aria-label={`Selecionar intervalo de ${label}`}
-        >
+      <PopoverContent
+        side="bottom"
+        align="start"
+        className="w-[min(26.25rem,calc(100vw-1rem))] space-y-3 p-4"
+        aria-label={`Selecionar intervalo de ${label}`}
+      >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
               <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
@@ -198,7 +126,7 @@ export default function FilterDateRange({
               <DateTimePicker
                 type={type}
                 value={fromValue}
-                onChange={onFromChange}
+                onChange={(event) => onFromChange(event.target.value)}
                 placeholder={type === 'date' ? 'Selecionar data inicial' : 'Selecionar data e hora inicial'}
               />
             </label>
@@ -209,7 +137,7 @@ export default function FilterDateRange({
               <DateTimePicker
                 type={type}
                 value={toValue}
-                onChange={onToChange}
+                onChange={(event) => onToChange(event.target.value)}
                 placeholder={type === 'date' ? 'Selecionar data final' : 'Selecionar data e hora final'}
               />
             </label>
@@ -220,28 +148,22 @@ export default function FilterDateRange({
               'border-[var(--border-subtle)]',
             )}
           >
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={handleClear}
-              className={cx(
-                'text-sm font-medium',
-                'text-[var(--brand-primary-hover)] hover:text-[var(--accent-gold-hover)]',
-              )}
+              className="h-auto px-0"
             >
               Limpar
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              size="sm"
               onClick={() => setIsOpen(false)}
-              className="kds-button kds-button-primary h-9 px-3 text-sm"
             >
               Concluído
-            </button>
+            </Button>
           </div>
-        </div>,
-        document.body,
-      )
-        : null}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

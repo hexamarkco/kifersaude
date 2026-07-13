@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { Check } from 'lucide-react';
 
 import { cx } from '../../lib/cx';

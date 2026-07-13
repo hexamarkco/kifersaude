@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, Archive, BarChart3, CheckCircle2, Clock3, Download, Inbox, Link2, Loader2, MessageCircle, RefreshCw, SendHorizontal, WifiOff } from 'lucide-react';
 
-import Button from '../../../../components/ui/Button';
-import ModalShell from '../../../../components/ui/ModalShell';
+import { Button, Surface } from '../../../../design-system';
 import {
   commWhatsAppService,
   formatCommWhatsAppPhoneLabel,
@@ -10,6 +9,7 @@ import {
   type CommWhatsAppDashboardRecentChat,
 } from '../../../../lib/commWhatsAppService';
 import { toast } from '../../../../lib/toast';
+import WhatsAppDialog from './WhatsAppDialog';
 
 type WhatsAppDashboardModalProps = {
   isOpen: boolean;
@@ -222,17 +222,17 @@ const buildPriorityItems = (metrics: CommWhatsAppDashboardMetrics): PriorityItem
 };
 
 const toneClasses: Record<DashboardTone, string> = {
-  danger: 'border-[var(--panel-accent-red-border,#d79a8f)] bg-[var(--panel-accent-red-bg,#faecea)] text-[var(--panel-accent-red-text,#8a3128)]',
-  warning: 'border-[var(--panel-accent-amber-border,var(--panel-accent-border,#d5a25c))] bg-[var(--panel-accent-amber-bg,var(--panel-accent-soft,#f6e4c7))] text-[var(--panel-accent-amber-text,var(--panel-accent-ink,#6f3f16))]',
-  neutral: 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)]',
-  success: 'border-[var(--panel-accent-green-border,#95c4a1)] bg-[var(--panel-accent-green-bg,#edf6ef)] text-[var(--panel-accent-green-text,#275c39)]',
+  danger: 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)]',
+  warning: 'border-[var(--warning-border))] bg-[var(--warning-soft))] text-[var(--warning-text))]',
+  neutral: 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]',
+  success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)]',
 };
 
 const toneIconClasses: Record<DashboardTone, string> = {
-  danger: 'bg-[var(--panel-accent-red-bg-strong,#f2d0ca)] text-[var(--panel-accent-red-text,#8a3128)]',
-  warning: 'bg-[var(--panel-accent-amber-bg-strong,var(--panel-accent-warm,#efcf9f))] text-[var(--panel-accent-amber-text,var(--panel-accent-ink,#6f3f16))]',
-  neutral: 'bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]',
-  success: 'bg-[var(--panel-accent-green-bg-strong,#d6ead8)] text-[var(--panel-accent-green-text,#275c39)]',
+  danger: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
+  warning: 'bg-[var(--warning-soft-strong,var(--accent-gold-soft))] text-[var(--warning-text))]',
+  neutral: 'bg-[var(--bg-surface)] text-[var(--text-secondary)]',
+  success: 'bg-[var(--success-soft)] text-[var(--success-text)]',
 };
 
 const getChatPreview = (chat: CommWhatsAppDashboardRecentChat) => {
@@ -315,16 +315,15 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
   }, [exportingInbox]);
 
   return (
-    <ModalShell
+    <WhatsAppDialog
       isOpen={isOpen}
       onClose={onClose}
       title="Painel WhatsApp"
       description="Dashboard operacional para decidir onde olhar agora no inbox."
       size="xl"
-      panelClassName="config-transparent-buttons"
       footer={(
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs text-[var(--panel-text-muted,#876f5c)]">
+          <div className="text-xs text-[var(--text-muted)]">
             {exportProgress ?? `Atualizado: ${formatDateTime(metrics?.generatedAt)}`}
           </div>
           <div className="flex items-center gap-2">
@@ -342,8 +341,8 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
       )}
     >
       {loading && !metrics ? (
-        <div className="flex min-h-[420px] items-center justify-center text-sm text-[var(--panel-text-muted,#876f5c)]">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin text-[var(--panel-accent-strong,#c86f1d)]" />
+        <div className="flex min-h-[420px] items-center justify-center text-sm text-[var(--text-muted)]">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin text-[var(--brand-primary)]" />
           Carregando métricas do WhatsApp...
         </div>
       ) : error ? (
@@ -370,7 +369,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
                   <p className="mt-1 text-sm leading-6 opacity-90">{channelHealth.description}</p>
                 </div>
               </div>
-              <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2 text-right text-xs font-medium">
+              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-right text-xs font-medium">
                 <p>{metrics.channel?.connected_user_name || metrics.channel?.name || 'WhatsApp principal'}</p>
                 <p className="mt-1 opacity-75">{metrics.channel?.phone_number ? formatCommWhatsAppPhoneLabel(metrics.channel.phone_number) : 'Número não informado'}</p>
               </div>
@@ -385,13 +384,13 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           </section>
 
           <section className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-            <div className="space-y-3 rounded-3xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
+            <div className="space-y-3 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">Onde olhar agora</p>
-                  <h3 className="mt-1 text-base font-semibold text-[var(--panel-text,#1a120d)]">Prioridades operacionais</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Onde olhar agora</p>
+                  <h3 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Prioridades operacionais</h3>
                 </div>
-                <Activity className="h-5 w-5 text-[var(--panel-accent-strong,#c86f1d)]" />
+                <Activity className="h-5 w-5 text-[var(--brand-primary)]" />
               </div>
 
               <div className="space-y-2">
@@ -404,39 +403,39 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               </div>
             </div>
 
-            <div className="space-y-3 rounded-3xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
+            <div className="space-y-3 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">Conversas recentes</p>
-                  <h3 className="mt-1 text-base font-semibold text-[var(--panel-text,#1a120d)]">Últimos pontos de atenção</h3>
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Conversas recentes</p>
+                  <h3 className="mt-1 text-base font-semibold text-[var(--text-primary)]">Últimos pontos de atenção</h3>
                 </div>
-                <MessageCircle className="h-5 w-5 text-[var(--panel-accent-strong,#c86f1d)]" />
+                <MessageCircle className="h-5 w-5 text-[var(--brand-primary)]" />
               </div>
 
               <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
                 {metrics.recentChats.length > 0 ? metrics.recentChats.map((chat) => (
-                  <div key={chat.id} className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-3">
+                  <div key={chat.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--panel-text,#1a120d)]">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</p>
-                        <p className="mt-0.5 truncate text-xs text-[var(--panel-text-muted,#876f5c)]">{formatCommWhatsAppPhoneLabel(chat.phoneNumber)} · {formatDateTime(chat.lastMessageAt)}</p>
+                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{chat.displayName || formatCommWhatsAppPhoneLabel(chat.phoneNumber)}</p>
+                        <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatCommWhatsAppPhoneLabel(chat.phoneNumber)} · {formatDateTime(chat.lastMessageAt)}</p>
                       </div>
                       {chat.unreadCount > 0 || chat.manualUnread ? (
-                        <span className="shrink-0 rounded-full bg-[var(--panel-accent-strong,#c86f1d)] px-2 py-0.5 text-[11px] font-semibold text-white">
+                        <span className="shrink-0 rounded-full bg-[var(--brand-primary)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-on-brand)]">
                           {chat.unreadCount > 99 ? '99+' : Math.max(chat.unreadCount, 1)}
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--panel-text-soft,#5b4635)]">{getChatPreview(chat)}</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-[var(--panel-text-muted,#876f5c)]">
-                      {chat.leadId ? <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5"><Link2 className="mr-1 inline h-3 w-3" />Lead vinculado</span> : <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5">Sem lead</span>}
-                      {chat.isPinned ? <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5">Fixado</span> : null}
-                      {chat.isMuted ? <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5">Silenciado</span> : null}
-                      {chat.lastMessageStatus ? <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2 py-0.5"><SendHorizontal className="mr-1 inline h-3 w-3" />{normalizeStatusLabel(chat.lastMessageStatus)}</span> : null}
+                    <p className="mt-2 line-clamp-2 text-sm leading-5 text-[var(--text-secondary)]">{getChatPreview(chat)}</p>
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-[var(--text-muted)]">
+                      {chat.leadId ? <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5"><Link2 className="mr-1 inline h-3 w-3" />Lead vinculado</span> : <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5">Sem lead</span>}
+                      {chat.isPinned ? <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5">Fixado</span> : null}
+                      {chat.isMuted ? <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5">Silenciado</span> : null}
+                      {chat.lastMessageStatus ? <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5"><SendHorizontal className="mr-1 inline h-3 w-3" />{normalizeStatusLabel(chat.lastMessageStatus)}</span> : null}
                     </div>
                   </div>
                 )) : (
-                  <div className="rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] p-5 text-center text-sm text-[var(--panel-text-muted,#876f5c)]">
+                  <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-5 text-center text-sm text-[var(--text-muted)]">
                     Nenhuma conversa recente encontrada.
                   </div>
                 )}
@@ -451,7 +450,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           </section>
         </div>
       ) : null}
-    </ModalShell>
+    </WhatsAppDialog>
   );
 }
 
@@ -465,17 +464,17 @@ type MetricCardProps = {
 
 function MetricCard({ icon: Icon, label, value, hint, compact = false }: MetricCardProps) {
   return (
-    <div className="rounded-3xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
+      <Surface padding="sm" className="rounded-[var(--kds-radius-lg)]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">{label}</p>
-          <p className={`${compact ? 'mt-2 text-2xl' : 'mt-3 text-3xl'} font-semibold tabular-nums text-[var(--panel-text,#1a120d)]`}>{formatNumber(value)}</p>
-          <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">{hint}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
+          <p className={`${compact ? 'mt-2 text-2xl' : 'mt-3 text-3xl'} font-semibold tabular-nums text-[var(--text-primary)]`}>{formatNumber(value)}</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">{hint}</p>
         </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)]">
           <Icon className="h-5 w-5" />
         </div>
       </div>
-    </div>
+    </Surface>
   );
 }

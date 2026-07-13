@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfig } from '../contexts/ConfigContext';
 import NextStepSuggestion from './NextStepSuggestion';
 import FilterSingleSelect from './FilterSingleSelect';
-import ModalShell from './ui/ModalShell';
 import {
   Badge,
   Button,
@@ -15,6 +14,10 @@ import {
   SectionHeader,
   Surface,
   Textarea,
+  Dialog,
+  DialogBody,
+  DialogHeader,
+  DialogTitle,
 } from '../design-system';
 import { toast } from '../lib/toast';
 
@@ -162,14 +165,11 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   };
 
   return (
-    <ModalShell
-      isOpen
-      onClose={onClose}
-      title={lead.nome_completo}
-      description="Historico de Interacoes"
-      size="lg"
-      panelClassName="sm:max-w-3xl"
-    >
+    <Dialog open onOpenChange={(open) => !open && onClose()} size="lg">
+      <DialogHeader onClose={onClose}>
+        <div><DialogTitle>{lead.nome_completo}</DialogTitle><p className="kds-dialog-description">Historico de Interacoes</p></div>
+      </DialogHeader>
+      <DialogBody>
       <div className="flex-1 overflow-y-auto text-[var(--text-secondary)]">
         <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
           {canEditLead && (
@@ -391,6 +391,7 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
           </div>
         )}
       </div>
-    </ModalShell>
+      </DialogBody>
+    </Dialog>
   );
 }

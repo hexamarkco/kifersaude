@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { LoadingState } from '../../design-system';
 import { cx } from '../../lib/cx';
 import type { AdaptiveLoadingPhase } from '../../hooks/useAdaptiveLoading';
 
@@ -34,12 +35,7 @@ type PanelAdaptiveLoadingFrameProps = {
 
 function Spinner({ label, className }: { label?: string; className?: string }) {
   return (
-    <div className={cx('kds-loading flex min-h-[48vh] items-center justify-center px-4', className)}>
-      <div className="kds-loading-card">
-        <div className="kds-loading-spinner" />
-        {label && <p className="kds-loading-label">{label}</p>}
-      </div>
-    </div>
+    <LoadingState label={label} className={cx('min-h-[48vh] px-4', className)} />
   );
 }
 

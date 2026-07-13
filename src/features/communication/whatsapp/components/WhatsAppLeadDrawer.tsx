@@ -3,10 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 
 import LeadDetailsPanel from '../../../../components/LeadDetailsPanel';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
-import Button from '../../../../components/ui/Button';
+import { Button, DialogHeader, DialogTitle, Drawer, DrawerBody, DrawerHeader, Input } from '../../../../design-system';
 import DateTimePicker from '../../../../components/ui/DateTimePicker';
-import DrawerShell from '../../../../components/ui/DrawerShell';
-import Input from '../../../../components/ui/Input';
 import { SAO_PAULO_TIMEZONE, formatDateTimeForInput, formatDateTimeFullBR, isOverdue } from '../../../../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { supabase, fetchAllPages, type Reminder } from '../../../../lib/supabase';
@@ -319,23 +317,23 @@ export default function WhatsAppLeadDrawer({
     const overdue = isOverdue(reminder.data_lembrete);
 
     return (
-      <div key={reminder.id} className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3">
+      <div key={reminder.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="truncate text-sm font-semibold text-[var(--panel-text,#1c1917)]">{reminder.titulo}</p>
+              <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</p>
               {overdue ? (
-                <span className="rounded-full border border-[var(--panel-accent-red-border,#d79a8f)] bg-[rgba(122,33,24,0.08)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-red-text,#b4534a)]">
+                <span className="rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--danger-text)]">
                   Atrasado
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 flex items-center gap-1 text-xs text-[var(--panel-text-muted,#876f5c)]">
+            <p className="mt-1 flex items-center gap-1 text-xs text-[var(--text-muted)]">
               <Clock3 className="h-3.5 w-3.5" />
               {formatDateTimeFullBR(reminder.data_lembrete)}
             </p>
             {reminder.descricao ? (
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--panel-text-soft,#5b4635)]">{reminder.descricao}</p>
+              <p className="mt-2 line-clamp-2 text-sm leading-6 text-[var(--text-secondary)]">{reminder.descricao}</p>
             ) : null}
           </div>
 
@@ -363,8 +361,8 @@ export default function WhatsAppLeadDrawer({
         </div>
 
         {isOpen && canEditAgenda ? (
-          <div className="mt-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">Novo horário</p>
+          <div className="mt-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Novo horário</p>
             <DateTimePicker
               type="datetime-local"
               value={agendaRescheduleValue}
@@ -393,16 +391,21 @@ export default function WhatsAppLeadDrawer({
 
   return (
     <>
-      <DrawerShell
-        isOpen={isOpen}
-        onClose={onClose}
-        eyebrow="CRM do chat"
-        title={chatDisplayName}
-        closeButtonLabel="Fechar painel do lead"
-        panelClassName="max-w-[440px]"
+      <Drawer
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        side="right"
+        className="w-full max-w-[440px]"
       >
+        <DrawerHeader>
+          <DialogHeader onClose={onClose}>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">CRM do chat</p>
+            <DialogTitle>{chatDisplayName}</DialogTitle>
+          </DialogHeader>
+        </DrawerHeader>
+        <DrawerBody className="overflow-y-auto">
           {loading ? (
-            <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+            <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--text-muted)]">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Carregando dados do CRM...
             </div>
@@ -410,7 +413,7 @@ export default function WhatsAppLeadDrawer({
             <div className="space-y-4">
               <div className="flex items-center justify-end gap-2">
                 {autoLinked && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/40 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)]/40 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
                     <Sparkles className="h-3.5 w-3.5" />
                     Vinculado automaticamente
                   </span>
@@ -424,7 +427,7 @@ export default function WhatsAppLeadDrawer({
               </div>
 
               <LeadDetailsPanel
-                className="whatsapp-lead-drawer-panel min-h-[520px] rounded-2xl border-[var(--panel-border-subtle,#e7dac8)] bg-transparent shadow-none"
+                className="whatsapp-lead-drawer-panel min-h-[520px] rounded-2xl border-[var(--border-subtle)] bg-transparent shadow-none"
                 lead={{ ...linkedLead, observacoes: linkedLead.observacoes ?? undefined }}
                 statusOptions={statusOptions}
                 responsavelOptions={responsavelOptions}
@@ -438,16 +441,16 @@ export default function WhatsAppLeadDrawer({
               />
 
               {canViewAgenda ? (
-                <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4 sm:p-5">
+                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 sm:p-5">
                   <div className="space-y-4">
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#876f5c)]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                         Agenda do chat
                       </p>
-                      <h3 className="mt-2 text-lg font-semibold leading-tight text-[var(--panel-text,#1c1917)]">
+                      <h3 className="mt-2 text-lg font-semibold leading-tight text-[var(--text-primary)]">
                         Acompanhamento contextual
                       </h3>
-                      <p className="mt-1 text-sm leading-6 text-[var(--panel-text-muted,#876f5c)]">
+                      <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
                         Lembretes do lead e dos contratos ligados a esta conversa, com foco no próximo passo operacional.
                       </p>
                     </div>
@@ -467,25 +470,25 @@ export default function WhatsAppLeadDrawer({
                   </div>
 
                   {agendaError ? (
-                    <div className="mt-4 flex items-start gap-2 rounded-2xl border border-[var(--panel-accent-red-border,#d79a8f)] bg-[rgba(122,33,24,0.08)] px-4 py-3 text-sm text-[var(--panel-accent-red-text,#b4534a)]">
+                    <div className="mt-4 flex items-start gap-2 rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger-text)]">
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>{agendaError}</span>
                     </div>
                   ) : agendaLoading ? (
                     <div className="mt-4 space-y-3">
                       {[1, 2, 3].map((item) => (
-                        <div key={item} className="animate-pulse rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4">
-                          <div className="h-4 w-28 rounded bg-black/10" />
-                          <div className="mt-3 h-3 w-40 rounded bg-black/5" />
-                          <div className="mt-4 h-8 w-full rounded bg-black/5" />
+                        <div key={item} className="animate-pulse rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4">
+                          <div className="h-4 w-28 rounded bg-[var(--bg-hover)]" />
+                          <div className="mt-3 h-3 w-40 rounded bg-[var(--bg-inset)]" />
+                          <div className="mt-4 h-8 w-full rounded bg-[var(--bg-inset)]" />
                         </div>
                       ))}
                     </div>
                   ) : pendingAgendaReminders.length === 0 ? (
-                    <div className="mt-4 rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-8 text-center">
-                      <Bell className="mx-auto h-5 w-5 text-[var(--panel-text-muted,#876f5c)]" />
-                      <p className="mt-3 text-base font-semibold text-[var(--panel-text,#1c1917)]">Nenhum lembrete pendente</p>
-                      <p className="mt-1 text-sm text-[var(--panel-text-muted,#876f5c)]">
+                    <div className="mt-4 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-8 text-center">
+                      <Bell className="mx-auto h-5 w-5 text-[var(--text-muted)]" />
+                      <p className="mt-3 text-base font-semibold text-[var(--text-primary)]">Nenhum lembrete pendente</p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
                         A agenda deste chat está em dia no momento.
                       </p>
                     </div>
@@ -497,30 +500,30 @@ export default function WhatsAppLeadDrawer({
                           title: 'Atrasados',
                           subtitle: 'Precisam de ação imediata.',
                           items: overdueAgendaReminders,
-                          toneClassName: 'text-[var(--panel-accent-red-text,#b4534a)]',
+                          toneClassName: 'text-[var(--danger-text)]',
                         },
                         {
                           id: 'today',
                           title: 'Hoje',
                           subtitle: 'Compromissos do dia atual.',
                           items: todayAgendaReminders,
-                          toneClassName: 'text-[var(--panel-accent-ink,#8b4d12)]',
+                          toneClassName: 'text-[var(--accent-gold-hover)]',
                         },
                         {
                           id: 'future',
                           title: 'Futuros',
                           subtitle: 'Próximos acompanhamentos agendados.',
                           items: futureAgendaReminders,
-                          toneClassName: 'text-[var(--panel-text-soft,#5b4635)]',
+                          toneClassName: 'text-[var(--text-secondary)]',
                         },
                       ].map((section) => (
                         <div key={section.id} className="space-y-3">
                           <div className="flex items-center justify-between gap-3 px-1">
                             <div>
                               <p className={`text-sm font-semibold ${section.toneClassName}`}>{section.title}</p>
-                              <p className="text-xs text-[var(--panel-text-muted,#876f5c)]">{section.subtitle}</p>
+                              <p className="text-xs text-[var(--text-muted)]">{section.subtitle}</p>
                             </div>
-                            <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[11px] font-semibold text-[var(--panel-text-soft,#5b4635)]">
+                            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-secondary)]">
                               {section.items.length}
                             </span>
                           </div>
@@ -528,7 +531,7 @@ export default function WhatsAppLeadDrawer({
                           {section.items.length > 0 ? (
                             <div className="space-y-3">{section.items.slice(0, 4).map(renderAgendaReminderItem)}</div>
                           ) : (
-                            <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 text-sm text-[var(--panel-text-muted,#876f5c)]">
+                            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4 text-sm text-[var(--text-muted)]">
                               Nenhum lembrete nesta seção.
                             </div>
                           )}
@@ -541,12 +544,12 @@ export default function WhatsAppLeadDrawer({
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-4 py-4 text-sm text-[var(--panel-text-soft,#5b4635)]">
+              <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-4 text-sm text-[var(--text-secondary)]">
                 <div className="flex items-start gap-3">
-                  <Info className="mt-0.5 h-5 w-5 text-[var(--panel-accent-strong,#c86f1d)]" />
+                  <Info className="mt-0.5 h-5 w-5 text-[var(--brand-primary)]" />
                   <div>
-                    <p className="font-semibold text-[var(--panel-text,#1c1917)]">Nenhum lead vinculado</p>
-                    <p className="mt-1 leading-6 text-[var(--panel-text-muted,#876f5c)]">
+                    <p className="font-semibold text-[var(--text-primary)]">Nenhum lead vinculado</p>
+                    <p className="mt-1 leading-6 text-[var(--text-muted)]">
                       Procure um lead existente do CRM para ligar esta conversa e editar status sem sair do inbox.
                     </p>
                   </div>
@@ -568,17 +571,17 @@ export default function WhatsAppLeadDrawer({
                 />
 
                 {suggestedLead && (
-                  <div className="rounded-2xl border border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/45 px-4 py-4">
+                  <div className="rounded-2xl border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)]/45 px-4 py-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--panel-accent-ink,#8b4d12)]">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold-hover)]">
                           Sugestão para esta conversa
                         </p>
-                        <p className="mt-2 truncate text-sm font-semibold text-[var(--panel-text,#1c1917)]">
+                        <p className="mt-2 truncate text-sm font-semibold text-[var(--text-primary)]">
                           {suggestedLead.nome_completo || 'Lead sem nome'}
                         </p>
-                        <p className="truncate text-xs text-[var(--panel-text-muted,#8a735f)]">{suggestedLead.telefone}</p>
-                        <p className="mt-1 truncate text-xs text-[var(--panel-text-muted,#8a735f)]">
+                        <p className="truncate text-xs text-[var(--text-muted)]">{suggestedLead.telefone}</p>
+                        <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
                           {suggestedLead.status_nome || 'Sem status'}
                           {suggestedLead.responsavel_label ? ` • ${suggestedLead.responsavel_label}` : ''}
                         </p>
@@ -597,12 +600,12 @@ export default function WhatsAppLeadDrawer({
                 )}
 
                 {searchLoading ? (
-                  <div className="flex items-center justify-center rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] px-4 py-6 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="flex items-center justify-center rounded-2xl border border-[var(--border-subtle)] px-4 py-6 text-sm text-[var(--text-muted)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Buscando leads...
                   </div>
                 ) : searchResults.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] px-4 py-6 text-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
                     Nenhum lead encontrado para esta busca.
                   </div>
                 ) : (
@@ -612,12 +615,12 @@ export default function WhatsAppLeadDrawer({
                       .map((lead) => (
                       <div
                         key={lead.id}
-                        className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-4 py-3"
+                        className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--panel-text,#1c1917)]">{lead.nome_completo || 'Lead sem nome'}</p>
-                          <p className="truncate text-xs text-[var(--panel-text-muted,#8a735f)]">{lead.telefone}</p>
-                          <p className="mt-1 truncate text-xs text-[var(--panel-text-muted,#8a735f)]">
+                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{lead.nome_completo || 'Lead sem nome'}</p>
+                          <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
+                          <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
                             {lead.status_nome || 'Sem status'}
                             {lead.responsavel_label ? ` • ${lead.responsavel_label}` : ''}
                           </p>
@@ -638,7 +641,8 @@ export default function WhatsAppLeadDrawer({
               </div>
             </div>
           )}
-      </DrawerShell>
+        </DrawerBody>
+      </Drawer>
 
       {schedulerOpen && agendaLead ? (
         <ReminderSchedulerModal

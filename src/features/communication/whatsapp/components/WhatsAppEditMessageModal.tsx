@@ -1,6 +1,5 @@
-import Button from '../../../../components/ui/Button';
-import ModalShell from '../../../../components/ui/ModalShell';
-import Textarea from '../../../../components/ui/Textarea';
+import { Button, Textarea } from '../../../../design-system';
+import WhatsAppDialog from './WhatsAppDialog';
 
 type WhatsAppEditMessageModalProps = {
   isOpen: boolean;
@@ -24,7 +23,7 @@ export default function WhatsAppEditMessageModal({
   onSubmit,
 }: WhatsAppEditMessageModalProps) {
   return (
-    <ModalShell
+    <WhatsAppDialog
       isOpen={isOpen}
       onClose={onClose}
       title={title}
@@ -50,6 +49,6 @@ export default function WhatsAppEditMessageModal({
         disabled={loading}
         autoFocus
       />
-    </ModalShell>
+    </WhatsAppDialog>
   );
 }

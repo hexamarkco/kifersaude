@@ -1,7 +1,6 @@
-import Button from '../../../../components/ui/Button';
-import ModalShell from '../../../../components/ui/ModalShell';
-import Textarea from '../../../../components/ui/Textarea';
+import { Button, Surface, Textarea } from '../../../../design-system';
 import type { CommWhatsAppRewriteTone } from '../../../../lib/commWhatsAppService';
+import WhatsAppDialog from './WhatsAppDialog';
 
 const TONE_OPTIONS: Array<{ value: CommWhatsAppRewriteTone; label: string; description: string }> = [
   {
@@ -68,7 +67,7 @@ export default function WhatsAppComposerRewriteModal({
   onApply,
 }: WhatsAppComposerRewriteModalProps) {
   return (
-    <ModalShell
+    <WhatsAppDialog
       isOpen={isOpen}
       onClose={onClose}
       title="Reescrever mensagem com IA"
@@ -91,9 +90,9 @@ export default function WhatsAppComposerRewriteModal({
     >
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
         <div className="space-y-4">
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
-            <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Objetivo da reescrita</h3>
-            <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+          <Surface variant="muted" padding="sm">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Objetivo da reescrita</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
               Escolha o ajuste principal. A IA preserva a intencao da mensagem e dados confirmados.
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
@@ -105,20 +104,20 @@ export default function WhatsAppComposerRewriteModal({
                     type="button"
                     onClick={() => onChangeTone(option.value)}
                     className={`rounded-2xl border px-3 py-3 text-left transition ${active
-                      ? 'border-[var(--panel-accent-border,#d2ab85)] bg-[var(--panel-accent-soft,#f4e2cc)]/75 text-[var(--panel-text,#1a120d)]'
-                      : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)]'}`}
+                      ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--text-primary)]'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]'}`}
                   >
                     <p className="text-sm font-semibold">{option.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">{option.description}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{option.description}</p>
                   </button>
                 );
               })}
             </div>
-          </div>
+          </Surface>
 
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
-            <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Instrucoes extras</h3>
-            <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+          <Surface padding="sm">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Instrucoes extras</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
               Opcional. Ex.: nao use emoji, termine com pergunta objetiva, mantenha linguagem simples.
             </p>
             <Textarea
@@ -129,11 +128,11 @@ export default function WhatsAppComposerRewriteModal({
               placeholder="Adicione instrucoes extras so para esta reescrita."
               disabled={generating}
             />
-          </div>
+          </Surface>
 
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
-            <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Texto base</h3>
-            <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+          <Surface padding="sm">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Texto base</h3>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
               Voce pode ajustar o texto aqui antes de pedir uma nova reescrita.
             </p>
             <Textarea
@@ -144,15 +143,15 @@ export default function WhatsAppComposerRewriteModal({
               placeholder="Digite a mensagem que voce quer reescrever."
               disabled={generating}
             />
-          </div>
+          </Surface>
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4">
+          <Surface padding="sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Sugestao da IA</h3>
-                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Sugestao da IA</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                   Revise e edite livremente antes de aplicar no composer.
                 </p>
               </div>
@@ -165,9 +164,9 @@ export default function WhatsAppComposerRewriteModal({
               placeholder="A mensagem reescrita vai aparecer aqui."
               disabled={generating}
             />
-          </div>
+          </Surface>
         </div>
       </div>
-    </ModalShell>
+    </WhatsAppDialog>
   );
 }

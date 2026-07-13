@@ -28,11 +28,7 @@ type CotadorCatalogMetricsPanelProps = {
 
 function MetricCard({ title, value, helper }: { title: string; value: string | number; helper: string }) {
   return (
-    <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-4 shadow-sm">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">{title}</p>
-      <p className="mt-2 text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">{value}</p>
-      <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{helper}</p>
-    </div>
+    <Card padding="sm"><p className="kds-card-subtitle text-[10px] uppercase tracking-[0.16em]">{title}</p><p className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">{value}</p><p className="mt-1 text-xs text-[var(--text-secondary)]">{helper}</p></Card>
   );
 }
 
@@ -56,3 +52,4 @@ export default function CotadorCatalogMetricsPanel({ metrics }: CotadorCatalogMe
     </div>
   );
 }
+import { Card } from '../../design-system';

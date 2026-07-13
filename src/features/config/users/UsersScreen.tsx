@@ -19,17 +19,23 @@ import {
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formatProfileLabel } from "../../../lib/accessControl";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
-import Button from "../../../components/ui/Button";
-import Input from "../../../components/ui/Input";
-import ModalShell from "../../../components/ui/ModalShell";
 import { UsersSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import {
-  FALLBACK_PROFILES,
-  USERS_INSET_CARD_CLASS,
-  USERS_SECTION_SHELL_CLASS,
-} from "./shared/usersSettingsConstants";
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Surface,
+} from "../../../design-system";
+import { FALLBACK_PROFILES } from "./shared/usersSettingsConstants";
 
 export default function UsersScreen() {
   const { user, refreshProfile, role: currentRole } = useAuth();
@@ -292,13 +298,13 @@ export default function UsersScreen() {
 
   if (!canManageUsers) {
     return (
-      <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-        <AlertCircle className="mx-auto mb-3 h-10 w-10 text-red-600" />
-        <h3 className="text-lg font-semibold text-red-900">Acesso restrito</h3>
-        <p className="mt-2 text-sm text-red-700">
+      <Alert tone="danger" className="p-6 text-center">
+        <AlertCircle className="mx-auto mb-3 h-10 w-10" />
+        <h3 className="text-lg font-semibold">Acesso restrito</h3>
+        <p className="mt-2 text-sm">
           Seu perfil não possui permissão para gerenciar usuários do sistema.
         </p>
-      </div>
+      </Alert>
     );
   }
 
@@ -313,22 +319,19 @@ export default function UsersScreen() {
       stageClassName="min-h-[420px]"
     >
       <div className="panel-page-shell space-y-6">
-        <section className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+        <Surface padding="lg">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-text-muted)]">
-                <Shield className="h-3.5 w-3.5 text-amber-600" />
-                Usuários
-              </div>
+              <Badge tone="gold"><Shield className="h-3.5 w-3.5" />Usuários</Badge>
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                <div className="flex h-12 w-12 items-center justify-center rounded-[var(--kds-radius-lg)] bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                   <Users className="h-6 w-6" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold text-[var(--panel-text)]">
+                  <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-[color:var(--text-primary)]">
                     Usuários do sistema
                   </h2>
-                  <p className="max-w-3xl text-sm leading-6 text-[var(--panel-text-muted)]">
+                  <p className="max-w-3xl text-sm leading-6 text-[color:var(--text-secondary)]">
                     Associe cada usuário a um perfil dinâmico de acesso,
                     mantendo a administração centralizada no mesmo padrão visual
                     de configurações gerais.
@@ -342,12 +345,10 @@ export default function UsersScreen() {
               <span>Novo Usuário</span>
             </Button>
           </div>
-        </section>
+        </Surface>
 
         {message && (
-          <div
-            className={`rounded-lg border p-4 ${message.type === "success" ? "border-green-200 bg-green-50 text-green-800" : "border-red-200 bg-red-50 text-red-800"}`}
-          >
+          <Alert tone={message.type === "success" ? "success" : "danger"}>
             <div className="flex items-center space-x-3">
               {message.type === "success" ? (
                 <CheckCircle className="h-5 w-5 flex-shrink-0" />
@@ -356,18 +357,18 @@ export default function UsersScreen() {
               )}
               <p>{message.text}</p>
             </div>
-          </div>
+          </Alert>
         )}
 
-        <section className={USERS_SECTION_SHELL_CLASS}>
+        <Card padding="lg">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Users className="h-6 w-6 text-amber-600" />
+              <Users className="h-6 w-6 text-[color:var(--brand-primary)]" />
               <div>
-                <h3 className="text-xl font-semibold text-[var(--panel-text)]">
+                <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">
                   Carteira de usuários
                 </h3>
-                <p className="text-sm text-[var(--panel-text-muted)]">
+                <p className="text-sm text-[color:var(--text-tertiary)]">
                   Revise perfis, dados de acesso e manutenção da equipe em um
                   único lugar.
                 </p>
@@ -377,12 +378,12 @@ export default function UsersScreen() {
 
           <div className="space-y-3">
             {users.length === 0 ? (
-              <div className={`${USERS_INSET_CARD_CLASS} py-12 text-center`}>
-                <Users className="mx-auto mb-4 h-12 w-12 text-[var(--panel-text-muted)]/40" />
-                <p className="text-[var(--panel-text-muted)]">
+              <Card variant="muted" padding="md" className="py-12 text-center">
+                <Users className="mx-auto mb-4 h-12 w-12 text-[color:var(--text-tertiary)] opacity-40" />
+                <p className="text-[color:var(--text-tertiary)]">
                   Nenhum usuário cadastrado
                 </p>
-              </div>
+              </Card>
             ) : (
               users.map((userProfile) => {
                 const profile = profileBySlug.get(userProfile.role);
@@ -390,31 +391,30 @@ export default function UsersScreen() {
                   userProfile.role,
                   profile?.name,
                 );
-                const isAdminProfile =
-                  profile?.is_admin || userProfile.role === "admin";
-
                 return (
-                  <div
+                  <Card
                     key={userProfile.id}
-                    className={`${USERS_INSET_CARD_CLASS} flex items-center justify-between gap-4`}
+                    className="flex items-center justify-between gap-4"
+                    variant="muted"
+                    padding="sm"
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--brand-primary)]">
                         <UserIcon className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-medium text-[var(--panel-text)]">
+                        <p className="font-medium text-[color:var(--text-primary)]">
                           @{userProfile.username}
                         </p>
-                        <p className="text-sm text-[var(--panel-text-muted)]">
+                        <p className="text-sm text-[color:var(--text-tertiary)]">
                           {userProfile.email}
                         </p>
                         <div className="mt-1 flex items-center space-x-2">
                           <Shield
-                            className={`h-4 w-4 ${isAdminProfile ? "text-amber-600" : "text-[var(--panel-accent)]"}`}
+                            className="h-4 w-4 text-[color:var(--brand-primary)]"
                           />
                           <span
-                            className={`text-sm ${isAdminProfile ? "text-amber-700 dark:text-amber-300" : "text-[var(--panel-accent)]"}`}
+                            className="text-sm text-[color:var(--brand-primary)]"
                           >
                             {profileLabel || userProfile.role}
                           </span>
@@ -429,7 +429,7 @@ export default function UsersScreen() {
                         disabled={actionLoading}
                         variant="icon"
                         size="icon"
-                        className="h-8 w-8 text-[var(--panel-text-muted)] hover:bg-[var(--panel-surface)]"
+                        className="h-8 w-8"
                         title="Editar usuário"
                       >
                         <Pencil className="h-4 w-4" />
@@ -446,26 +446,26 @@ export default function UsersScreen() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       ) : (
-                        <span className="text-sm italic text-[var(--panel-text-muted)]">
+                        <span className="text-sm italic text-[color:var(--text-tertiary)]">
                           Você
                         </span>
                       )}
                     </div>
-                  </div>
+                  </Card>
                 );
               })
             )}
           </div>
-        </section>
+        </Card>
 
-        <section className={USERS_SECTION_SHELL_CLASS}>
+        <Card variant="muted" padding="lg">
           <div className="flex items-start space-x-3">
-            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[color:var(--brand-primary)]" />
             <div>
-              <h4 className="mb-2 font-semibold text-[var(--panel-text)]">
+              <h4 className="mb-2 font-semibold text-[color:var(--text-primary)]">
                 Como funciona agora
               </h4>
-              <ul className="space-y-2 text-sm text-[var(--panel-text-muted)]">
+              <ul className="space-y-2 text-sm text-[color:var(--text-tertiary)]">
                 <li>
                   Os perfis disponíveis aqui são dinâmicos e podem ser criados
                   na área "Perfis e Acessos".
@@ -481,15 +481,14 @@ export default function UsersScreen() {
               </ul>
             </div>
           </div>
-        </section>
+        </Card>
 
-        <ModalShell
-          isOpen={showAddUser}
-          onClose={resetCreateForm}
-          title="Novo Usuário"
-          description="Crie um novo usuário e associe a um perfil dinâmico de acesso."
-          size="lg"
-        >
+        <Dialog open={showAddUser} onOpenChange={(open) => !open && resetCreateForm()} size="lg">
+          <DialogHeader onClose={resetCreateForm}>
+            <DialogTitle>Novo Usuário</DialogTitle>
+            <DialogDescription>Crie um novo usuário e associe a um perfil dinâmico de acesso.</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
           <form onSubmit={handleCreateUser} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
@@ -560,14 +559,14 @@ export default function UsersScreen() {
               </Button>
             </div>
           </form>
-        </ModalShell>
-        <ModalShell
-          isOpen={Boolean(editingUser)}
-          onClose={resetEditForm}
-          title="Editar Usuário"
-          description="Atualize os dados e o perfil de acesso do usuário."
-          size="lg"
-        >
+          </DialogBody>
+        </Dialog>
+        <Dialog open={Boolean(editingUser)} onOpenChange={(open) => !open && resetEditForm()} size="lg">
+          <DialogHeader onClose={resetEditForm}>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>Atualize os dados e o perfil de acesso do usuário.</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
           <form onSubmit={handleUpdateUser} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
@@ -636,7 +635,8 @@ export default function UsersScreen() {
               </Button>
             </div>
           </form>
-        </ModalShell>
+          </DialogBody>
+        </Dialog>
         {ConfirmationDialog}
       </div>
     </PanelAdaptiveLoadingFrame>

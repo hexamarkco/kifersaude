@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Ban, PauseCircle, PlayCircle, RefreshCw, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { Badge, Button, Card, PageHeader } from '../../../design-system';
+import { Badge, Button, Card, EmptyState, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
 import { toast } from '../../../lib/toast';
 import {
   commWhatsAppCampaignService,
@@ -128,11 +128,11 @@ export default function WhatsAppCampaignDetailScreen() {
   };
 
   if (!campaignId) {
-    return <div className="p-6 text-sm text-[color:var(--panel-text-soft)]">Disparo nao informado.</div>;
+    return <div className="panel-page-shell text-sm text-[var(--text-secondary)]">Disparo nao informado.</div>;
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="panel-page-shell space-y-6">
       <PageHeader
         title={campaign?.name ?? 'Detalhe do disparo'}
         description="Acompanhe contatos, status da fila, proximos envios e acoes operacionais da campanha."
@@ -214,40 +214,38 @@ export default function WhatsAppCampaignDetailScreen() {
               </div>
               <Users className="h-5 w-5 text-[color:var(--panel-accent)]" />
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[color:var(--panel-border-subtle)] text-sm">
-                <thead>
-                  <tr className="text-left text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">
-                    <th className="px-3 py-2">Contato</th>
-                    <th className="px-3 py-2">Status</th>
-                    <th className="px-3 py-2">Etapa</th>
-                    <th className="px-3 py-2">Proximo envio</th>
-                    <th className="px-3 py-2">Ultima tentativa</th>
-                    <th className="px-3 py-2">Erro</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[color:var(--panel-border-subtle)]">
+            <Table size="sm">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Etapa</TableHead>
+                    <TableHead>Proximo envio</TableHead>
+                    <TableHead>Ultima tentativa</TableHead>
+                    <TableHead>Erro</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {targets.map((target) => (
-                    <tr key={target.id} className="align-top">
-                      <td className="px-3 py-3">
-                        <p className="font-medium text-[color:var(--panel-text)]">{target.display_name || target.phone_number}</p>
-                        <p className="text-xs text-[color:var(--panel-text-muted)]">{target.phone_number || target.phone_digits}</p>
-                      </td>
-                      <td className="px-3 py-3"><Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge></td>
-                      <td className="px-3 py-3 text-[color:var(--panel-text-soft)]">{target.current_step_index + 1}</td>
-                      <td className="px-3 py-3 text-[color:var(--panel-text-soft)]">{formatDateTime(target.next_send_at)}</td>
-                      <td className="px-3 py-3 text-[color:var(--panel-text-soft)]">{formatDateTime(target.last_attempt_at)}</td>
-                      <td className="max-w-xs px-3 py-3 text-xs text-[color:var(--panel-text-muted)]">{target.error_message || '-'}</td>
-                    </tr>
+                    <TableRow key={target.id} className="align-top">
+                      <TableCell>
+                        <p className="font-medium text-[var(--text-primary)]">{target.display_name || target.phone_number}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{target.phone_number || target.phone_digits}</p>
+                      </TableCell>
+                      <TableCell><Badge tone={targetStatusTones[target.status]}>{targetStatusLabels[target.status]}</Badge></TableCell>
+                      <TableCell className="text-[var(--text-secondary)]">{target.current_step_index + 1}</TableCell>
+                      <TableCell className="text-[var(--text-secondary)]">{formatDateTime(target.next_send_at)}</TableCell>
+                      <TableCell className="text-[var(--text-secondary)]">{formatDateTime(target.last_attempt_at)}</TableCell>
+                      <TableCell className="max-w-xs text-xs text-[var(--text-muted)]">{target.error_message || '-'}</TableCell>
+                    </TableRow>
                   ))}
                   {targets.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-3 py-8 text-center text-sm text-[color:var(--panel-text-muted)]">Nenhum contato materializado ainda.</td>
-                    </tr>
+                    <TableRow>
+                      <TableCell colSpan={6}><EmptyState title="Nenhum contato materializado ainda." /></TableCell>
+                    </TableRow>
                   )}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+            </Table>
           </Card>
         </>
       ) : (

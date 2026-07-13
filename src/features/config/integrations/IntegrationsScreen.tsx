@@ -14,13 +14,22 @@ import {
 import { configService } from "../../../lib/configService";
 import { supabase, type IntegrationSetting } from "../../../lib/supabase";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
-import Button from "../../../components/ui/Button";
-import Input from "../../../components/ui/Input";
 import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocompleteTextarea";
 import { IntegrationsSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from "../../../lib/templateVariableSuggestions";
+import {
+  Alert,
+  Button,
+  Card,
+  CardIcon,
+  Checkbox,
+  IconButton,
+  Input,
+  SectionHeader,
+  Switch,
+} from "../../../design-system";
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
 
 const LEGACY_GPT_SLUG = "gpt_transcription";
@@ -409,12 +418,6 @@ const normalizeFollowUpInstructions = (
   const settings = isRecord(integration?.settings) ? integration.settings : {};
   return typeof settings.instructions === "string" ? settings.instructions : "";
 };
-
-const sectionShellClass =
-  "rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-5 shadow-sm";
-
-const sectionInsetClass =
-  "rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4";
 
 export default function IntegrationsScreen() {
   const [aiProviderIntegrations, setAiProviderIntegrations] = useState<
@@ -927,23 +930,21 @@ export default function IntegrationsScreen() {
       overlayLabel="Atualizando integrações..."
       stageClassName="min-h-[460px]"
     >
-      <div className="panel-page-shell space-y-8">
-        <section className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+      <div className="space-y-8">
+        <Card padding="lg">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--panel-text-muted)]">
-                <Plug className="h-3.5 w-3.5 text-amber-600" />
+              <div className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-muted)]">
+                <Plug className="h-3.5 w-3.5 text-[var(--accent-gold)]" />
                 Integrações
               </div>
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
-                  <ShieldCheck className="h-6 w-6" />
-                </div>
+                <CardIcon tone="gold"><ShieldCheck className="h-6 w-6" /></CardIcon>
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold text-[var(--panel-text)]">
+                  <h2 className="font-[var(--font-display)] text-2xl font-semibold text-[var(--text-primary)]">
                     Integrações e conectores
                   </h2>
-                  <p className="max-w-3xl text-sm leading-6 text-[var(--panel-text-muted)]">
+                  <p className="max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
                     Conecte IA, WhatsApp e rastreamento em uma estrutura visual
                     compatível com as configurações gerais, com menos contraste
                     solto entre seções.
@@ -952,34 +953,22 @@ export default function IntegrationsScreen() {
               </div>
             </div>
           </div>
-        </section>
+        </Card>
 
         <section className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold text-[var(--panel-text)]">
-              Integrações de IA
-            </h2>
-            <p className="text-sm text-[var(--panel-text-muted)]">
-              Conecte OpenAI, Gemini e Claude e escolha qual provedor/modelo
-              cada funcionalidade deve usar.
-            </p>
-          </div>
+          <SectionHeader title="Integrações de IA" description="Conecte OpenAI, Gemini e Claude e escolha qual provedor/modelo cada funcionalidade deve usar." />
 
           {aiMessage && (
-            <div
-              className={`p-4 rounded-lg border flex items-center space-x-3 mb-4 ${
-                aiMessage.type === "success"
-                  ? "bg-green-50 border-green-200 text-green-800"
-                  : "bg-red-50 border-red-200 text-red-800"
-              }`}
-            >
+            <Alert tone={aiMessage.type === "success" ? "success" : "danger"} className="mb-4">
+              <div className="flex items-center gap-3">
               {aiMessage.type === "success" ? (
                 <ShieldCheck className="w-5 h-5" />
               ) : (
                 <Info className="w-5 h-5" />
               )}
               <p>{aiMessage.text}</p>
-            </div>
+              </div>
+            </Alert>
           )}
 
           <div className="space-y-4">
@@ -1000,19 +989,17 @@ export default function IntegrationsScreen() {
                       : "Nenhum modelo retornado pela API do provedor.";
 
               return (
-                <div key={provider} className={sectionShellClass}>
+                <Card key={provider}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-[var(--panel-text)]">
+                      <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                         {providerMeta.name}
                       </h3>
-                      <p className="text-sm text-[var(--panel-text-muted)]">
+                      <p className="text-sm text-[var(--text-muted)]">
                         {providerMeta.description}
                       </p>
                     </div>
-                    <label className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-3 py-2 text-sm text-[var(--panel-text-muted)]">
-                      <input
-                        type="checkbox"
+                    <Switch
                         checked={formState.enabled}
                         onChange={(event) =>
                           setAiProviderForms((prev) => ({
@@ -1023,19 +1010,16 @@ export default function IntegrationsScreen() {
                             },
                           }))
                         }
-                        className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                        label="Ativo"
                       />
-                      Ativo
-                    </label>
                   </div>
 
                   <div className="mt-4">
-                    <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">
+                    <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
                       API Key
                     </label>
-                    <div className="relative">
-                      <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--panel-text-muted)]" />
-                      <input
+                    <div>
+                      <Input
                         type={
                           showProviderApiKey[provider] ? "text" : "password"
                         }
@@ -1049,33 +1033,25 @@ export default function IntegrationsScreen() {
                             },
                           }))
                         }
-                        className="w-full rounded-lg border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] py-2 pl-10 pr-12 text-[var(--panel-text)] placeholder:text-[var(--panel-text-muted)]/70 focus:border-[var(--panel-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--panel-accent)]/20"
+                        leftIcon={KeyRound}
+                        action={
+                          <IconButton
+                            aria-label={showProviderApiKey[provider] ? "Ocultar API key" : "Exibir API key"}
+                            onClick={() => setShowProviderApiKey((prev) => ({ ...prev, [provider]: !prev[provider] }))}
+                          >
+                            {showProviderApiKey[provider] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </IconButton>
+                        }
                         placeholder="Informe a API key"
                         autoComplete="off"
                       />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowProviderApiKey((prev) => ({
-                            ...prev,
-                            [provider]: !prev[provider],
-                          }))
-                        }
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--panel-text-muted)] hover:text-[var(--panel-text)]"
-                      >
-                        {showProviderApiKey[provider] ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
                     </div>
-                    <p className="mt-2 text-xs text-[var(--panel-text-muted)]">
+                    <p className="mt-2 text-xs text-[var(--text-muted)]">
                       {providerModelsHint}
                     </p>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-end border-t border-[color:var(--panel-border-subtle)] pt-4">
+                  <div className="mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
                     <Button
                       onClick={() => handleSaveProvider(provider)}
                       loading={savingAiProvider[provider]}
@@ -1090,16 +1066,16 @@ export default function IntegrationsScreen() {
                       </span>
                     </Button>
                   </div>
-                </div>
+                </Card>
               );
             })}
 
-            <div className={sectionShellClass}>
+            <Card>
               <div className="mb-3">
-                <h3 className="text-lg font-semibold text-[var(--panel-text)]">
+                <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                   Roteamento por funcionalidade
                 </h3>
-                <p className="text-sm text-[var(--panel-text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   Escolha qual provedor/modelo cada funcionalidade de IA deve
                   usar. Se falhar, pode cair para OpenAI automaticamente.
                 </p>
@@ -1147,22 +1123,24 @@ export default function IntegrationsScreen() {
                         : "Nenhum modelo disponível";
 
                   return (
-                    <div
+                    <Card
                       key={task.key}
-                      className={`${sectionInsetClass} space-y-3`}
+                      className="space-y-3"
+                      variant="muted"
+                      padding="sm"
                     >
                       <div>
-                        <p className="text-sm font-semibold text-[var(--panel-text)]">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">
                           {task.label}
                         </p>
-                        <p className="text-xs text-[var(--panel-text-muted)]">
+                        <p className="text-xs text-[var(--text-muted)]">
                           {task.description}
                         </p>
                       </div>
 
                       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-[var(--panel-text-muted)]">
+                          <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
                             Provedor
                           </label>
                           <FilterSingleSelect
@@ -1211,7 +1189,7 @@ export default function IntegrationsScreen() {
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-[var(--panel-text-muted)]">
+                          <label className="mb-1 block text-xs font-medium text-[var(--text-muted)]">
                             Modelo
                           </label>
                           <FilterSingleSelect
@@ -1235,7 +1213,7 @@ export default function IntegrationsScreen() {
                               modelOptions.length === 0
                             }
                           />
-                          <p className="mt-1 text-[11px] text-[var(--panel-text-muted)]">
+                          <p className="mt-1 text-[11px] text-[var(--text-muted)]">
                             {routeError
                               ? routeError
                               : providerModelsState.loading
@@ -1251,9 +1229,8 @@ export default function IntegrationsScreen() {
                         </div>
                       </div>
 
-                      <label className="inline-flex items-center gap-2 text-xs text-[var(--panel-text-muted)]">
-                        <input
-                          type="checkbox"
+                      <label className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                        <Checkbox
                           checked={routeState.fallbackToOpenAi}
                           onChange={(event) =>
                             setAiRoutingForm((prev) => ({
@@ -1264,16 +1241,15 @@ export default function IntegrationsScreen() {
                               },
                             }))
                           }
-                          className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
                         />
                         Se este provedor falhar, tentar OpenAI automaticamente.
                       </label>
-                    </div>
+                    </Card>
                   );
                 })}
               </div>
 
-              <div className="mt-4 flex items-center justify-end border-t border-[color:var(--panel-border-subtle)] pt-4">
+              <div className="mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
                 <Button onClick={handleSaveRouting} loading={savingAiRouting}>
                   {!savingAiRouting && <Save className="w-4 h-4" />}
                   <span>
@@ -1283,14 +1259,14 @@ export default function IntegrationsScreen() {
                   </span>
                 </Button>
               </div>
-            </div>
+            </Card>
 
-            <div className={sectionShellClass}>
+            <Card>
               <div className="mb-3">
-                <h3 className="text-lg font-semibold text-[var(--panel-text)]">
+                <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                   Follow-up no WhatsApp
                 </h3>
-                <p className="text-sm text-[var(--panel-text-muted)]">
+                <p className="text-sm text-[var(--text-muted)]">
                   Defina instruções extras para a IA ao gerar follow-ups direto
                   do chat. O sistema continua enviando uma mensagem por linha.
                 </p>
@@ -1298,7 +1274,7 @@ export default function IntegrationsScreen() {
 
               <div className="space-y-3">
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">
+                  <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
                     Instruções adicionais
                   </label>
                   <VariableAutocompleteTextarea
@@ -1316,14 +1292,14 @@ export default function IntegrationsScreen() {
                       "- Quando fizer sentido, termine com uma CTA simples."
                     }
                   />
-                  <p className="mt-2 text-xs text-[var(--panel-text-muted)]">
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
                     Use este campo para orientar tom, abordagem comercial,
                     limites e preferências da sua operação. Variáveis
                     disponíveis: {"{{nome}}"}, {"{{primeiro_nome}}"},{" "}
                     {"{{data_hoje}}"}, {"{{hora_agora}}"}, {"{{data_hora_atual_sistema}}"}
                     {" "}e {"{{data_hora_atual_brasilia}}"}.
                   </p>
-                  <p className="text-xs text-[var(--panel-text-muted)]">
+                  <p className="text-xs text-[var(--text-muted)]">
                     As datas e horas são resolvidas no fuso configurado em
                     Preferências do sistema. O alias legado
                     {" "}{"{{data_hora_atual_brasilia}}"} continua válido.
@@ -1331,7 +1307,7 @@ export default function IntegrationsScreen() {
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-end border-t border-[color:var(--panel-border-subtle)] pt-4">
+              <div className="mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
                 <Button
                   onClick={handleSaveFollowUpPrompt}
                   loading={savingAiFollowUpPrompt}
@@ -1344,75 +1320,53 @@ export default function IntegrationsScreen() {
                   </span>
                 </Button>
               </div>
-            </div>
+            </Card>
           </div>
         </section>
 
         <section className="space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-xl font-semibold text-[var(--panel-text)]">
-              WhatsApp (Whapi)
-            </h2>
-            <p className="text-sm text-[var(--panel-text-muted)]">
-              Conecte o canal de WhatsApp para uso nos fluxos de automação.
-            </p>
-          </div>
-          <div className={sectionShellClass}>
+          <SectionHeader title="WhatsApp (Whapi)" description="Conecte o canal de WhatsApp para uso nos fluxos de automação." />
+          <Card>
             <WhatsAppApiSettingsPanel />
-          </div>
+          </Card>
         </section>
 
-        <section className="border-t border-[color:var(--panel-border-subtle)] pt-8">
-          <div className="mb-6 space-y-1">
-            <h2 className="text-xl font-semibold text-[var(--panel-text)]">
-              Rastreamento - Landing Page
-            </h2>
-            <p className="text-sm text-[var(--panel-text-muted)] mt-1">
-              Configure os códigos de rastreamento para a página de conversão
-              (/lp)
-            </p>
-          </div>
+        <section className="border-t border-[var(--border-subtle)] pt-8">
+          <SectionHeader className="mb-6" title="Rastreamento - Landing Page" description="Configure os códigos de rastreamento para a página de conversão (/lp)" />
 
           <div className="grid md:grid-cols-2 gap-6">
-            <div className={sectionShellClass}>
+            <Card>
               <div className="flex items-center space-x-3 mb-4">
-                <div className="rounded-full bg-amber-50 p-2 text-amber-700">
+                <CardIcon tone="gold">
                   <Facebook className="w-5 h-5" />
-                </div>
+                </CardIcon>
                 <div>
-                  <h3 className="text-lg font-semibold text-[var(--panel-text)]">
+                  <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                     Meta Pixel
                   </h3>
-                  <p className="text-sm text-[var(--panel-text-muted)]">
+                  <p className="text-sm text-[var(--text-muted)]">
                     Código de rastreamento do Facebook/Instagram
                   </p>
                 </div>
               </div>
 
               {metaPixelMessage && (
-                <div
-                  className={`p-3 rounded-lg border mb-4 ${
-                    metaPixelMessage.type === "success"
-                      ? "bg-green-50 border-green-200 text-green-800"
-                      : "bg-red-50 border-red-200 text-red-800"
-                  }`}
-                >
+                <Alert tone={metaPixelMessage.type === "success" ? "success" : "danger"} className="mb-4">
                   <p className="text-sm">{metaPixelMessage.text}</p>
-                </div>
+                </Alert>
               )}
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">
+                <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
                   Pixel ID
                 </label>
                 <Input
                   type="text"
                   value={metaPixelId}
                   onChange={(event) => setMetaPixelId(event.target.value)}
-                  className="focus:ring-orange-500"
                   placeholder="1234567890"
                 />
-                <p className="mt-2 text-xs text-[var(--panel-text-muted)]">
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
                   Ex: 1234567890 (somente números)
                 </p>
               </div>
@@ -1421,54 +1375,47 @@ export default function IntegrationsScreen() {
                 onClick={handleSaveMetaPixel}
                 loading={savingMetaPixel}
                 fullWidth
-                className="mt-4 border-amber-500 bg-amber-600 text-white hover:border-amber-600 hover:bg-amber-700"
+                className="mt-4"
               >
                 {!savingMetaPixel && <Save className="w-4 h-4" />}
                 <span>
                   {savingMetaPixel ? "Salvando..." : "Salvar Meta Pixel"}
                 </span>
               </Button>
-            </div>
+            </Card>
 
-            <div className={sectionShellClass}>
+            <Card>
               <div className="flex items-center space-x-3 mb-4">
-                <div className="rounded-full bg-amber-50 p-2 text-amber-700">
+                <CardIcon tone="gold">
                   <Tag className="w-5 h-5" />
-                </div>
+                </CardIcon>
                 <div>
-                  <h3 className="text-lg font-semibold text-[var(--panel-text)]">
+                  <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
                     Google Tag Manager
                   </h3>
-                  <p className="text-sm text-[var(--panel-text-muted)]">
+                  <p className="text-sm text-[var(--text-muted)]">
                     Container do GTM para a landing page
                   </p>
                 </div>
               </div>
 
               {gtmMessage && (
-                <div
-                  className={`p-3 rounded-lg border mb-4 ${
-                    gtmMessage.type === "success"
-                      ? "bg-green-50 border-green-200 text-green-800"
-                      : "bg-red-50 border-red-200 text-red-800"
-                  }`}
-                >
+                <Alert tone={gtmMessage.type === "success" ? "success" : "danger"} className="mb-4">
                   <p className="text-sm">{gtmMessage.text}</p>
-                </div>
+                </Alert>
               )}
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[var(--panel-text)]">
+                <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
                   GTM ID
                 </label>
                 <Input
                   type="text"
                   value={gtmId}
                   onChange={(event) => setGtmId(event.target.value)}
-                  className="focus:ring-orange-500"
                   placeholder="GTM-XXXXXXX"
                 />
-                <p className="mt-2 text-xs text-[var(--panel-text-muted)]">
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
                   Ex: GTM-ABC123D
                 </p>
               </div>
@@ -1477,19 +1424,19 @@ export default function IntegrationsScreen() {
                 onClick={handleSaveGtm}
                 loading={savingGtm}
                 fullWidth
-                className="mt-4 border-amber-500 bg-amber-600 text-white hover:border-amber-600 hover:bg-amber-700"
+                className="mt-4"
               >
                 {!savingGtm && <Save className="w-4 h-4" />}
                 <span>{savingGtm ? "Salvando..." : "Salvar GTM"}</span>
               </Button>
-            </div>
+            </Card>
           </div>
 
-          <div className={`${sectionInsetClass} mt-6`}>
+          <Alert tone="warning" className="mt-6">
             <div className="flex items-start space-x-3">
-              <Info className="mt-0.5 h-5 w-5 text-amber-600" />
-              <div className="text-sm text-[var(--panel-text-muted)]">
-                <p className="font-semibold text-[var(--panel-text)]">
+              <Info className="mt-0.5 h-5 w-5" />
+              <div className="text-sm">
+                <p className="font-semibold">
                   Como usar:
                 </p>
                 <p>
@@ -1499,7 +1446,7 @@ export default function IntegrationsScreen() {
                 </p>
               </div>
             </div>
-          </div>
+          </Alert>
         </section>
       </div>
     </PanelAdaptiveLoadingFrame>

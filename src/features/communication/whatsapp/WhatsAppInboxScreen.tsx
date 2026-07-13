@@ -5,7 +5,7 @@ import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, Cal
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import Input from '../../../components/ui/Input';
-import Button from '../../../components/ui/Button';
+import { Button, Dialog, DialogBody, DialogHeader, DialogTitle } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
@@ -420,7 +420,7 @@ function ChatPreviewIcon({ type }: { type: ChatPreviewIconType }) {
   return (
     <span
       aria-label={label}
-      className="inline-flex items-center gap-1 align-middle text-[var(--panel-text-muted,#8a735f)]"
+      className="inline-flex items-center gap-1 align-middle text-[var(--text-muted)]"
       role="img"
       title={label}
     >
@@ -710,7 +710,7 @@ function LinkifiedText({ text, className, linkClassName }: LinkifiedTextProps) {
         href={match.url}
         target="_blank"
         rel="noreferrer"
-        className={cx('underline underline-offset-2 decoration-[rgba(255,255,255,0.38)] hover:decoration-current break-all', linkClassName)}
+        className={cx('underline underline-offset-2 decoration-current/40 hover:decoration-current break-all', linkClassName)}
       >
         {match.url}
       </a>,
@@ -1908,7 +1908,7 @@ function WhatsAppMediaViewerThumb({
     <button
       type="button"
       onClick={() => onSelect(message.id)}
-      className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all duration-200 ${active ? 'is-active scale-110 ring-2 ring-[#22c55e] ring-offset-2 ring-offset-[#111413]' : 'opacity-60 hover:opacity-90'}`}
+      className={`whatsapp-inbox-media-viewer-thumb relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border transition-all duration-200 ${active ? 'is-active scale-110 ring-2 ring-[var(--success)] ring-offset-2 ring-offset-[var(--bg-canvas)]' : 'opacity-60 hover:opacity-90'}`}
       aria-label="Abrir mídia"
       aria-current={active ? 'true' : undefined}
     >
@@ -1921,12 +1921,12 @@ function WhatsAppMediaViewerThumb({
           <img src={mediaUrl} alt={message.media_file_name || 'Imagem'} className="h-full w-full object-cover" loading="lazy" />
         )
       ) : (
-        <span className="flex h-full w-full items-center justify-center bg-white/5 text-[10px] text-white/60">
+        <span className="flex h-full w-full items-center justify-center bg-[var(--bg-elevated)] text-[10px] text-[var(--text-muted)]">
           {loading ? '...' : 'Mídia'}
         </span>
       )}
       {isVideo ? (
-        <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white">
+        <span className="absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--bg-canvas)_20%,transparent)] text-[var(--text-primary)]">
           <Play className="h-4 w-4 fill-current" />
         </span>
       ) : null}
@@ -2006,18 +2006,18 @@ function WhatsAppMediaViewer({
   }
 
   const viewer = (
-    <div className="whatsapp-inbox-media-viewer fixed inset-0 z-[2147483000] flex flex-col bg-[#111413] text-white" role="dialog" aria-modal="true">
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 px-4 py-3">
+    <div className="whatsapp-inbox-media-viewer modal-theme-host painel-theme kifer-ds fixed inset-0 z-[2147483000] flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]" role="dialog" aria-modal="true">
+      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--border-subtle)] px-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{selectedAuthor}</p>
-          <p className="mt-0.5 truncate text-xs text-white/65">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</p>
+          <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">{formatMessageDaySeparatorLabel(selectedMessage.message_at)} às {formatMessageTime(selectedMessage.message_at)}</p>
         </div>
         <div className="flex items-center gap-2">
           {mediaUrl && !isVideo ? (
             <button
               type="button"
               onClick={() => setRotation((prev) => (prev + 1) % 4)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
               aria-label="Rotacionar imagem"
               title={`Rotacionar (${rotation * 90}°)`}
             >
@@ -2028,7 +2028,7 @@ function WhatsAppMediaViewer({
             <a
               href={mediaUrl}
               download={selectedName}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
               aria-label="Baixar mídia"
               title="Baixar"
             >
@@ -2038,7 +2038,7 @@ function WhatsAppMediaViewer({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition hover:bg-white/10 hover:text-white"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
             aria-label="Fechar"
           >
             <X className="h-6 w-6" />
@@ -2060,7 +2060,7 @@ function WhatsAppMediaViewer({
 
         <div className="flex h-full w-full items-center justify-center">
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-white/70">
+            <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
               <Loader2 className="h-5 w-5 animate-spin" />
               Carregando mídia...
             </div>
@@ -2078,7 +2078,7 @@ function WhatsAppMediaViewer({
               />
             )
           ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/70">
+            <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 text-sm text-[var(--text-secondary)]">
               {error || 'Mídia indisponível no momento.'}
             </div>
           )}
@@ -2097,7 +2097,7 @@ function WhatsAppMediaViewer({
       </main>
 
       {messages.length > 1 ? (
-        <footer className="whatsapp-inbox-media-viewer-strip relative shrink-0 border-t border-white/10 px-16 py-4">
+        <footer className="whatsapp-inbox-media-viewer-strip relative shrink-0 border-t border-[var(--border-subtle)] px-16 py-4">
           <button
             type="button"
             onClick={() => scrollThumbnails('previous')}
@@ -2338,7 +2338,7 @@ function InboxFilterGroup<T extends string>({
 }) {
   return (
     <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
       <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         {options.map((option) => (
           <InboxFilterChip key={option.value} active={value === option.value} label={option.label} onClick={() => onChange(option.value)} compact={compact} />
@@ -2373,7 +2373,7 @@ function InboxMultiFilterGroup({
 
   return (
     <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</p>
       <div className={`flex flex-wrap ${compact ? 'gap-1.5' : 'gap-2'}`}>
         <InboxFilterChip active={values.length === 0} label="Todos" onClick={() => onChange([])} compact={compact} />
         {options.map((option) => (
@@ -2403,7 +2403,7 @@ function WhatsAppGalleryMediaTile({
 }) {
   const { mediaUrl, loading, error } = useResolvedMediaUrl(message);
   const normalizedKind = isVideoLikeMessageType(message.message_type) ? 'video' : 'image';
-  const baseClassName = `relative block overflow-hidden rounded-[1.15rem] bg-[rgba(26,18,13,0.08)] ${className ?? ''}`.trim();
+  const baseClassName = `relative block overflow-hidden rounded-[var(--kds-radius-lg)] bg-[var(--bg-inset)] ${className ?? ''}`.trim();
 
   if (normalizedKind === 'image') {
     return mediaUrl ? (
@@ -2420,7 +2420,7 @@ function WhatsAppGalleryMediaTile({
         ) : null}
       </button>
     ) : (
-      <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--panel-text-muted,#8a735f)]`}>
+      <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--text-muted)]`}>
         {loading ? 'Carregando imagem...' : error || 'Imagem indisponivel'}
       </div>
     );
@@ -2444,7 +2444,7 @@ function WhatsAppGalleryMediaTile({
       </div>
     </button>
   ) : (
-    <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--panel-text-muted,#8a735f)]`}>
+    <div className={`${baseClassName} flex items-center justify-center text-sm text-[var(--text-muted)]`}>
       {loading ? 'Carregando video...' : error || 'Video indisponivel'}
     </div>
   );
@@ -2525,22 +2525,22 @@ function InboxChatListItem({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">
+                <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
                   {getSafeChatDisplayName(chat, connectedUserName)}
                 </p>
-                {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--panel-accent-strong,#c86f1d)]" /> : null}
-                {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--panel-text-muted,#8a735f)]" /> : null}
-                {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--panel-text-muted,#8a735f)]" /> : null}
+                {chat.is_pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-[var(--brand-primary)]" /> : null}
+                {chat.is_archived ? <Archive className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
+                {chat.is_muted ? <BellOff className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" /> : null}
               </div>
             </div>
             <div className="flex shrink-0 items-start">
               <span className="whatsapp-inbox-chat-meta text-[11px] font-medium leading-none">{formatMessageTime(chat.last_message_at)}</span>
             </div>
           </div>
-          <p className={`mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
+          <p className={`mt-px truncate text-sm text-[var(--text-secondary)] ${hasUnreadBadge ? 'pr-12' : ''}`}>
             {draftPreview ? (
               <>
-                <span className="mr-1 font-semibold text-[var(--panel-accent-red-text,#d9776b)]">Rascunho:</span>
+                <span className="mr-1 font-semibold text-[var(--danger-text)]">Rascunho:</span>
                 <span>{draftPreview}</span>
               </>
             ) : visibleLastMessageText ? (
@@ -2574,8 +2574,8 @@ function InboxChatListItem({
           onToggleMenu(chat.id);
         }}
         className={cx(
-          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--panel-text-muted,#8a735f)] transition hover:bg-[rgba(255,248,240,0.08)] hover:text-[var(--panel-text,#f3e6d7)]',
-          menuOpen ? 'bg-[rgba(255,248,240,0.08)] text-[var(--panel-text,#f3e6d7)] opacity-100' : 'opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100',
+          'absolute right-3 top-2.5 z-[2] inline-flex h-6 w-6 items-center justify-center rounded-md text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]',
+          menuOpen ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] opacity-100' : 'opacity-0 group-hover/chat:opacity-100 group-focus-within/chat:opacity-100',
           selected ? 'opacity-100' : '',
         )}
         aria-label="Abrir menu da conversa"
@@ -2612,11 +2612,11 @@ function InboxMessageSearchListItem({
         <button type="button" onClick={() => onSelect(result.chat.id)} className="min-w-0 w-full text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">
+              <p className="whatsapp-inbox-heading truncate text-sm font-semibold text-[var(--text-primary)]">
                 {getSafeChatDisplayName(result.chat, connectedUserName)}
               </p>
               {messagePreviewText ? (
-                <p className="mt-px truncate text-sm text-[var(--panel-text-muted,#6b7280)]">
+                <p className="mt-px truncate text-sm text-[var(--text-secondary)]">
                   {messagePreviewIconType ? (
                     <ChatPreviewIcon type={messagePreviewIconType} />
                   ) : (
@@ -2668,8 +2668,8 @@ function WhatsAppMessageBody({
   }, [message.id, editInfo.originalText, message.text_content, message.media_caption]);
 
   const editInfoNode = editInfo.edited ? (
-    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-3 py-2.5">
-      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
         <span>Editada</span>
         {editInfo.previousText ? (
           <Button
@@ -2685,14 +2685,14 @@ function WhatsAppMessageBody({
       </div>
       {showOriginalText && editInfo.previousText ? (
         <div className="mt-2 grid gap-2">
-          <div className="rounded-xl border border-[rgba(215,154,143,0.24)] bg-[rgba(122,33,24,0.04)] px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Antes</p>
-            <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-muted,#876f5c)] line-through opacity-85" text={editInfo.previousText} />
+          <div className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Antes</p>
+            <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-muted)] line-through opacity-85" text={editInfo.previousText} />
           </div>
           {editInfo.currentText ? (
-            <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Depois</p>
-              <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]" text={editInfo.currentText} />
+            <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Depois</p>
+              <LinkifiedText className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]" text={editInfo.currentText} />
             </div>
           ) : null}
         </div>
@@ -2702,14 +2702,14 @@ function WhatsAppMessageBody({
   const linkPreviewContent = linkPreview ? (
     <>
       {linkPreview.previewImage ? (
-        <div className="overflow-hidden border-b border-[var(--panel-border-subtle,#e7dac8)] bg-black/10">
+        <div className="overflow-hidden border-b border-[var(--border-subtle)] bg-[var(--bg-inset)]">
           <img src={linkPreview.previewImage} alt={linkPreview.title || linkPreview.domain || 'Preview do link'} className="max-h-[220px] w-full object-cover" loading="lazy" />
         </div>
       ) : null}
       <div className="space-y-1.5 px-3 py-3">
-        {linkPreview.title ? <p className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--panel-text,#1f2937)]">{linkPreview.title}</p> : null}
-        {linkPreview.description ? <p className="line-clamp-3 text-sm leading-5 text-[var(--panel-text-muted,#6b7280)]">{linkPreview.description}</p> : null}
-        <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--panel-text-muted,#8a735f)]">{linkPreview.domain || 'Link'}</p>
+        {linkPreview.title ? <p className="line-clamp-2 text-sm font-semibold leading-5 text-[var(--text-primary)]">{linkPreview.title}</p> : null}
+        {linkPreview.description ? <p className="line-clamp-3 text-sm leading-5 text-[var(--text-secondary)]">{linkPreview.description}</p> : null}
+        <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">{linkPreview.domain || 'Link'}</p>
       </div>
     </>
   ) : null;
@@ -2720,19 +2720,19 @@ function WhatsAppMessageBody({
           href={linkPreview.url}
           target="_blank"
           rel="noreferrer"
-          className="block overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)] transition hover:border-[rgba(212,192,167,0.56)]"
+          className="block overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] transition hover:border-[var(--border-strong)]"
         >
           {linkPreviewContent}
         </a>
       )
       : (
-        <div className="overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)]">
+        <div className="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)]">
           {linkPreviewContent}
         </div>
       )
     : null;
   const quotePreviewNode = quoteInfo ? (
-    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-black/10 px-3 py-2.5">
+    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 h-8 w-1 shrink-0 rounded-full bg-current/50 opacity-70" />
         <div className="min-w-0 flex-1">
@@ -2745,13 +2745,13 @@ function WhatsAppMessageBody({
   const visibleContactItems = contactCardInfo?.items.slice(0, 3) ?? [];
   const hiddenContactCount = contactCardInfo ? Math.max(0, contactCardInfo.count - visibleContactItems.length) : 0;
   const contactCardNode = contactCardInfo ? (
-    <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[rgba(255,248,240,0.05)] px-3 py-3">
+    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-3">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)]">
+        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
           <UserRound className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1 space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
             {contactCardInfo.kind === 'contact'
               ? 'Contato compartilhado'
               : contactCardInfo.count > 0
@@ -2761,10 +2761,10 @@ function WhatsAppMessageBody({
           {visibleContactItems.length > 0 ? (
             <div className="space-y-2">
               {visibleContactItems.map((item, index) => (
-                <div key={`${item.name ?? 'contact'}:${item.phoneNumber ?? index}`} className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2.5">
-                  <p className="truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">{item.name || 'Contato sem nome'}</p>
+                <div key={`${item.name ?? 'contact'}:${item.phoneNumber ?? index}`} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5">
+                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{item.name || 'Contato sem nome'}</p>
                   {item.phoneNumber ? (
-                    <p className="mt-1 text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</p>
+                    <p className="mt-1 text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(item.phoneNumber)}</p>
                   ) : null}
                   {item.phoneNumber ? (
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -2791,10 +2791,10 @@ function WhatsAppMessageBody({
               ))}
             </div>
           ) : (
-            <p className="text-sm leading-6 text-[var(--panel-text-soft,#5b4635)]">{message.text_content || '[Contato]'}</p>
+            <p className="text-sm leading-6 text-[var(--text-secondary)]">{message.text_content || '[Contato]'}</p>
           )}
           {hiddenContactCount > 0 ? (
-            <p className="text-xs text-[var(--panel-text-muted,#6b7280)]">+{hiddenContactCount} contato(s)</p>
+            <p className="text-xs text-[var(--text-secondary)]">+{hiddenContactCount} contato(s)</p>
           ) : null}
         </div>
       </div>
@@ -2809,13 +2809,13 @@ function WhatsAppMessageBody({
         : 'Mensagem apagada no WhatsApp.';
 
     return (
-      <div className="rounded-2xl border border-[rgba(215,154,143,0.45)] bg-[rgba(122,33,24,0.08)] px-3 py-3 text-[var(--panel-accent-red-text,#b4534a)]">
+      <div className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-3 text-[var(--danger-text)]">
         <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
           <AlertTriangle className="h-3.5 w-3.5" />
           <span>Mensagem apagada</span>
         </div>
-        <p className="mt-2 text-xs text-[var(--panel-text-muted,#876f5c)]">{deletedByLabel}</p>
-        <LinkifiedText className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text-soft,#5b4635)] line-through opacity-85" text={deletedInfo.preservedText} />
+        <p className="mt-2 text-xs text-[var(--text-muted)]">{deletedByLabel}</p>
+        <LinkifiedText className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-secondary)] line-through opacity-85" text={deletedInfo.preservedText} />
       </div>
     );
   }
@@ -2853,8 +2853,8 @@ function WhatsAppMessageBody({
           </button>
         ) : (
           <div className={isSticker
-            ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 px-3 text-center text-sm opacity-80'
-            : 'flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80'}
+            ? 'flex h-32 w-32 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] px-3 text-center text-sm opacity-80'
+            : 'flex h-40 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] text-sm opacity-80'}
           >
             {loading ? loadingLabel : error || unavailableLabel}
           </div>
@@ -2875,7 +2875,7 @@ function WhatsAppMessageBody({
               <source src={mediaUrl} type={message.media_mime_type || undefined} />
             </video>
           ) : (
-            <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-black/5 text-sm opacity-80">
+            <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-current/20 bg-[var(--bg-inset)] text-sm opacity-80">
               {loading ? 'Carregando vídeo...' : error || 'Vídeo indisponível'}
             </div>
           )}
@@ -2955,16 +2955,16 @@ function WhatsAppMessageBody({
         />
         <div className="space-y-2">
           {transcriptionStatus === 'completed' && message.transcription_text?.trim() ? (
-            <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f7efe3)] px-3 py-3">
+            <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">Transcrição</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Transcrição</p>
                 {message.transcription_provider ? (
-                  <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--panel-text-subtle,#9a8573)]">
+                  <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-subtle)]">
                     {message.transcription_provider}
                   </span>
                 ) : null}
               </div>
-              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1f2937)]">
+              <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">
                 {message.transcription_text}
               </p>
             </div>
@@ -2972,7 +2972,7 @@ function WhatsAppMessageBody({
 
           <div className="flex flex-wrap items-center gap-2">
             {transcriptionStatus === 'processing' || transcribing ? (
-              <span className="inline-flex items-center gap-2 rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1.5 text-[11px] font-semibold text-[var(--panel-text-soft,#5b4635)]">
+              <span className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1.5 text-[11px] font-semibold text-[var(--text-secondary)]">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 Transcrevendo...
               </span>
@@ -2989,7 +2989,7 @@ function WhatsAppMessageBody({
             ) : null}
 
             {transcriptionStatus === 'failed' && message.transcription_error ? (
-              <span className="text-xs text-[var(--panel-accent-red-text,#d9776b)]">{message.transcription_error}</span>
+              <span className="text-xs text-[var(--danger-text)]">{message.transcription_error}</span>
             ) : null}
           </div>
         </div>
@@ -9196,7 +9196,7 @@ export default function WhatsAppInboxScreen() {
           <div className="whatsapp-inbox-sidebar-header border-b p-4">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--panel-text-muted,#8a735f)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                   {archivedSectionOpen ? 'Arquivadas' : 'Conversas'}
                 </p>
                 <div className="flex items-center gap-2">
@@ -9212,9 +9212,9 @@ export default function WhatsAppInboxScreen() {
                       <Archive className="h-4 w-4" />
                       {archivedChatsCount > 0 ? (
                         <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
-                          borderColor: 'rgba(212, 192, 167, 0.56)',
-                          background: 'var(--panel-accent-strong,#c86f1d)',
-                          color: '#fff8f0',
+                          borderColor: 'var(--brand-primary-border)',
+                          background: 'var(--brand-primary)',
+                          color: 'var(--text-on-brand)',
                         }}>
                           {archivedChatsCount > 99 ? '99+' : archivedChatsCount}
                         </span>
@@ -9292,16 +9292,16 @@ export default function WhatsAppInboxScreen() {
 
           <div className="whatsapp-inbox-sidebar-scroll min-h-0 flex-1 overflow-y-auto p-0">
             {archivedSectionOpen ? (
-              <div className="sticky top-0 z-[1] flex items-center gap-2 border-b bg-[var(--panel-surface,#fff8f0)] px-4 py-3 text-sm font-semibold text-[var(--panel-text,#1f2937)]">
-                <Archive className="h-4 w-4 text-[var(--panel-text-muted,#8a735f)]" />
+              <div className="sticky top-0 z-[1] flex items-center gap-2 border-b bg-[var(--bg-surface)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">
+                <Archive className="h-4 w-4 text-[var(--text-muted)]" />
                 <span>Conversas arquivadas</span>
-                <span className="ml-auto text-xs font-medium text-[var(--panel-text-muted,#8a735f)]">
+                <span className="ml-auto text-xs font-medium text-[var(--text-muted)]">
                   {archivedChatsCount > 0 ? `${archivedChatsCount} ${archivedChatsCount === 1 ? 'chat' : 'chats'}` : '0 chats'}
                 </span>
               </div>
             ) : null}
             {loading ? (
-              <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Carregando conversas...
               </div>
@@ -9309,10 +9309,10 @@ export default function WhatsAppInboxScreen() {
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
                 <Search className="h-8 w-8 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
-                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--panel-text,#1f2937)]">
+                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">
                     Nenhum resultado encontrado
                   </p>
-                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <p className="text-sm text-[var(--text-secondary)]">
                     Busque pelo nome do contato, telefone ou trecho de mensagem.
                   </p>
                 </div>
@@ -9320,12 +9320,12 @@ export default function WhatsAppInboxScreen() {
             ) : (
               <>
                 {sidebarChats.length > 0 ? (
-                  <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                  <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     Conversas
                   </div>
                 ) : null}
                 {searchingChats && sidebarChats.length === 0 ? (
-                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--text-secondary)]">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Buscando conversas...
                   </div>
@@ -9357,12 +9357,12 @@ export default function WhatsAppInboxScreen() {
                   />
                 ))}
                 {filteredMessageSearchResults.length > 0 || searchingMessages ? (
-                  <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                  <div className="px-4 pb-2 pt-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     Mensagens
                   </div>
                 ) : null}
                 {searchingMessages ? (
-                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="flex items-center gap-2 px-4 py-3 text-sm text-[var(--text-secondary)]">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Buscando mensagens...
                   </div>
@@ -9381,10 +9381,10 @@ export default function WhatsAppInboxScreen() {
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
                 {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
                 <div className="space-y-1">
-                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--panel-text,#1f2937)]">
+                  <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">
                     {archivedSectionOpen ? 'Nenhum chat arquivado' : 'Nenhuma conversa ainda'}
                   </p>
-                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <p className="text-sm text-[var(--text-secondary)]">
                     {archivedSectionOpen
                       ? 'Arquive uma conversa para ela aparecer nesta lista separada.'
                       : 'Assim que o webhook da Whapi receber mensagens, elas aparecerão aqui.'}
@@ -9428,8 +9428,8 @@ export default function WhatsAppInboxScreen() {
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
                 <MessageCircle className="h-10 w-10 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
-                  <p className="whatsapp-inbox-heading text-base font-semibold text-[var(--panel-text,#1f2937)]">Selecione uma conversa</p>
-                  <p className="text-sm text-[var(--panel-text-muted,#6b7280)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</p>
+                  <p className="whatsapp-inbox-heading text-base font-semibold text-[var(--text-primary)]">Selecione uma conversa</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Abra um chat na coluna da esquerda para acompanhar o histórico e responder.</p>
                 </div>
               </div>
           ) : (
@@ -9437,7 +9437,7 @@ export default function WhatsAppInboxScreen() {
               <div className="whatsapp-inbox-thread-header flex items-start justify-between gap-4 border-b p-5">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="whatsapp-inbox-heading text-lg font-semibold text-[var(--panel-text,#1f2937)]">{selectedChatDisplayName}</p>
+                    <p className="whatsapp-inbox-heading text-lg font-semibold text-[var(--text-primary)]">{selectedChatDisplayName}</p>
                     {selectedChat.lead_id && leadPanel?.id && leadPanel.status_nome ? (
                       <StatusDropdown
                         currentStatus={leadPanel.status_nome}
@@ -9447,27 +9447,27 @@ export default function WhatsAppInboxScreen() {
                       />
                     ) : null}
                     {selectedChatWasAutoLinked ? (
-                      <span className="inline-flex items-center rounded-full border border-[var(--panel-accent-border,#d2ab85)] bg-[color:var(--panel-accent-soft,#f4e2cc)]/40 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                      <span className="inline-flex items-center rounded-full border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]">
                         Auto
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
                     <span>{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
                     {leadPanel?.responsavel_label ? <span>Responsável: {leadPanel.responsavel_label}</span> : null}
                   </div>
                   {nextChatReminderSummary ? (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--panel-text-muted,#8a735f)]">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
                       <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1" style={chatAgendaSummary.nextReminder && isOverdue(chatAgendaSummary.nextReminder.data_lembrete)
                         ? {
-                            borderColor: 'rgba(215, 154, 143, 0.75)',
-                            background: 'rgba(122, 33, 24, 0.08)',
-                            color: 'var(--panel-accent-red-text,#b4534a)',
+                            borderColor: 'var(--danger-border)',
+                            background: 'var(--danger-soft)',
+                            color: 'var(--danger-text)',
                           }
                         : {
-                            borderColor: 'rgba(212, 192, 167, 0.56)',
-                            background: 'rgba(255, 248, 240, 0.06)',
-                            color: 'var(--panel-text-muted,#8a735f)',
+                            borderColor: 'var(--border-strong)',
+                            background: 'var(--bg-elevated)',
+                            color: 'var(--text-muted)',
                           }}>
                         <CalendarDays className="h-3.5 w-3.5" />
                         <span className="max-w-[34rem] truncate">{nextChatReminderSummary}</span>
@@ -9482,7 +9482,7 @@ export default function WhatsAppInboxScreen() {
                       {connectionStatusLabel}
                     </span>
                     {channelState?.last_webhook_received_at && (
-                      <span className="text-xs text-[var(--panel-text-muted,#6b7280)]">
+                      <span className="text-xs text-[var(--text-secondary)]">
                         Webhook: {formatMessageTime(channelState.last_webhook_received_at)}
                       </span>
                     )}
@@ -9548,9 +9548,9 @@ export default function WhatsAppInboxScreen() {
                         <Info className="h-4 w-4" />
                         {chatAgendaSummary.pendingCount > 0 ? (
                           <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
-                            borderColor: 'rgba(212, 192, 167, 0.56)',
-                            background: 'var(--panel-accent-strong,#c86f1d)',
-                            color: '#fff8f0',
+                            borderColor: 'var(--brand-primary-border)',
+                            background: 'var(--brand-primary)',
+                            color: 'var(--text-on-brand)',
                           }}>
                             {chatAgendaSummary.pendingCount > 99 ? '99+' : chatAgendaSummary.pendingCount}
                           </span>
@@ -9562,7 +9562,7 @@ export default function WhatsAppInboxScreen() {
               </div>
 
               {chatMessageSearchOpen ? (
-                <div className="border-b bg-[color:var(--panel-surface-soft,#f7efe3)]/70 px-5 py-3">
+                <div className="border-b bg-[var(--bg-elevated)] px-5 py-3">
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">
                       <Input
@@ -9597,8 +9597,8 @@ export default function WhatsAppInboxScreen() {
                     </div>
 
                     {chatMessageSearch ? (
-                      <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-                        <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] px-3 py-2 text-xs text-[var(--panel-text-muted,#8a735f)]">
+                      <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
+                        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-3 py-2 text-xs text-[var(--text-muted)]">
                           <span>
                             {searchingChatMessages
                               ? 'Buscando neste chat...'
@@ -9608,7 +9608,7 @@ export default function WhatsAppInboxScreen() {
                         </div>
 
                         {!searchingChatMessages && chatMessageSearchResults.length === 0 ? (
-                          <div className="px-3 py-3 text-sm text-[var(--panel-text-muted,#6b7280)]">
+                          <div className="px-3 py-3 text-sm text-[var(--text-secondary)]">
                             Nenhuma mensagem encontrada neste chat.
                           </div>
                         ) : (
@@ -9625,17 +9625,17 @@ export default function WhatsAppInboxScreen() {
                                   key={result.message.id}
                                   type="button"
                                   onClick={() => handleSelectChatMessageSearchResult(result)}
-                                  className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition hover:bg-[var(--panel-surface-soft,#f7efe3)] focus:bg-[var(--panel-surface-soft,#f7efe3)] focus:outline-none"
+                                  className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)] focus:outline-none"
                                 >
                                   <span className="min-w-0">
-                                    <span className="block truncate text-sm font-medium text-[var(--panel-text,#1f2937)]">
+                                    <span className="block truncate text-sm font-medium text-[var(--text-primary)]">
                                       {messagePreviewIconType ? <ChatPreviewIcon type={messagePreviewIconType} /> : messagePreviewText}
                                     </span>
-                                    <span className="mt-0.5 block text-xs text-[var(--panel-text-muted,#8a735f)]">
+                                    <span className="mt-0.5 block text-xs text-[var(--text-muted)]">
                                       {result.message.direction === 'outbound' ? 'Você' : 'Contato'}
                                     </span>
                                   </span>
-                                  <span className="shrink-0 pt-0.5 text-[11px] font-medium text-[var(--panel-text-muted,#8a735f)]">
+                                  <span className="shrink-0 pt-0.5 text-[11px] font-medium text-[var(--text-muted)]">
                                     {formatMessageTime(result.message.message_at)}
                                   </span>
                                 </button>
@@ -9645,7 +9645,7 @@ export default function WhatsAppInboxScreen() {
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-[var(--panel-text-muted,#8a735f)]">
+                      <p className="text-xs text-[var(--text-muted)]">
                         Digite um trecho da mensagem, legenda ou transcrição para localizar no histórico deste chat.
                       </p>
                     )}
@@ -9679,17 +9679,17 @@ export default function WhatsAppInboxScreen() {
                 )}
 
                 {loadingMessages && messages.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Carregando mensagens...
                   </div>
                 ) : threadReconcileChatId === selectedChat.id && messages.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Atualizando histórico desta conversa...
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="flex min-h-[220px] items-center justify-center text-sm text-[var(--text-secondary)]">
                     Nenhuma mensagem carregada para esta conversa.
                   </div>
                 ) : (
@@ -9698,9 +9698,9 @@ export default function WhatsAppInboxScreen() {
                       return (
                         <div key={item.key} className="flex w-full justify-center py-1">
                           <div className="rounded-full border px-3 py-1 text-[12px] font-semibold shadow-sm" style={{
-                            borderColor: 'rgba(212, 192, 167, 0.56)',
-                            background: 'color-mix(in srgb, var(--panel-surface,#fffdfa) 82%, rgba(26,18,13,0.18) 18%)',
-                            color: 'var(--panel-text-soft,#5b4635)',
+                            borderColor: 'var(--border-strong)',
+                            background: 'var(--bg-elevated)',
+                            color: 'var(--text-secondary)',
                           }}>
                             {item.label}
                           </div>
@@ -9782,7 +9782,7 @@ export default function WhatsAppInboxScreen() {
                                 }}
                                 type="button"
                                 onClick={() => handleToggleReactionPicker(message.id)}
-                                className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[rgba(212,192,167,0.56)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--panel-surface-soft,#f8f2e9)] focus:opacity-100`}
+                                className={`absolute top-1/2 z-[3] inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)] shadow-sm transition ${message.direction === 'outbound' ? '-left-10' : '-right-10'} opacity-0 group-hover/message:opacity-100 hover:bg-[var(--bg-hover)] focus:opacity-100`}
                                 aria-label="Reagir à mensagem"
                                 title="Reagir"
                               >
@@ -9825,9 +9825,9 @@ export default function WhatsAppInboxScreen() {
                                   type="button"
                                   onClick={() => handleToggleMessageActionMenu(message.id)}
                                   className={cx(
-                                    'inline-flex h-5 w-5 items-center justify-center rounded-md text-[var(--panel-text-soft,#f7efe3)] transition hover:bg-black/15 focus:bg-black/15',
+                                    'inline-flex h-5 w-5 items-center justify-center rounded-md text-[var(--text-secondary)] transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
                                     openMessageActionMenuMessageId === message.id
-                                      ? 'bg-black/15 opacity-100'
+                                      ? 'bg-[var(--bg-hover)] opacity-100'
                                       : 'opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
                                   )}
                                   aria-label="Mais acoes da mensagem"
@@ -9868,8 +9868,7 @@ export default function WhatsAppInboxScreen() {
                               {reactions.map((reaction) => (
                                 <span
                                   key={`${message.id}:${reaction.emoji}`}
-                                  className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)]' : 'bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-text-soft,#5b4635)]'}`}
-                                  style={{ borderColor: 'rgba(212, 192, 167, 0.56)' }}
+                                  className={`inline-flex min-h-[28px] items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-md ${reaction.fromMe ? 'border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]' : 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-secondary)]'}`}
                                 >
                                   <span className="text-sm leading-none">{reaction.emoji}</span>
                                   {reaction.count > 1 ? <span>{reaction.count}</span> : null}
@@ -9918,7 +9917,7 @@ export default function WhatsAppInboxScreen() {
                           </button>
 
                         <div className="flex min-w-0 flex-1 items-center gap-3">
-                          <span className="h-3 w-3 shrink-0 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(34,197,94,0.14)]" />
+                          <span className="h-3 w-3 shrink-0 rounded-full bg-[var(--success)] shadow-[0_0_0_4px_var(--success-soft)]" />
                           <div className="min-w-0 flex-1">
                             <WaveformBars bars={voiceAttachment.waveform} active={voicePreviewPlaying} />
                           </div>
@@ -9966,9 +9965,9 @@ export default function WhatsAppInboxScreen() {
                       </button>
 
                       <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="flex shrink-0 items-center gap-2 text-rose-400">
-                          <span className="h-3 w-3 rounded-full bg-current shadow-[0_0_0_4px_rgba(251,113,133,0.16)]" />
-                          <span className="whatsapp-inbox-voice-time text-sm font-semibold tabular-nums text-[var(--panel-text,#1f2937)]">
+                        <div className="flex shrink-0 items-center gap-2 text-[var(--danger-text)]">
+                          <span className="h-3 w-3 rounded-full bg-current shadow-[0_0_0_4px_var(--danger-soft)]" />
+                          <span className="whatsapp-inbox-voice-time text-sm font-semibold tabular-nums text-[var(--text-primary)]">
                             {formatDurationLabel(voiceRecordingSeconds)}
                           </span>
                         </div>
@@ -10000,16 +9999,16 @@ export default function WhatsAppInboxScreen() {
                   ) : null}
 
                   {replyTargetMessage ? (
-                    <div className="mb-3 flex items-start gap-3 rounded-2xl border border-[rgba(212,192,167,0.56)] bg-[color:var(--panel-surface-soft,#f8f2e9)] px-3 py-2.5">
-                      <Reply className="mt-0.5 h-4 w-4 shrink-0 text-[var(--panel-accent-strong,#c86f1d)]" />
+                    <div className="mb-3 flex items-start gap-3 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-elevated)] px-3 py-2.5">
+                      <Reply className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">Respondendo</p>
-                        <p className="truncate text-sm text-[var(--panel-text-soft,#5b4635)]">{getMessageSearchPreviewText(replyTargetMessage)}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--brand-primary)]">Respondendo</p>
+                        <p className="truncate text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(replyTargetMessage)}</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setReplyTargetMessage(null)}
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--panel-text-muted,#6b7280)] transition hover:bg-black/10"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--bg-hover)]"
                         aria-label="Cancelar resposta"
                       >
                         <X className="h-3.5 w-3.5" />
@@ -10026,8 +10025,8 @@ export default function WhatsAppInboxScreen() {
                       <div className="whatsapp-inbox-document-composer mb-3 overflow-hidden rounded-2xl border">
                         <div className="whatsapp-inbox-document-composer-header flex items-center justify-between gap-3 border-b px-3 py-2.5">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">{selectedDocumentComposerAttachment.file.name}</p>
-                            <p className="text-xs text-[var(--panel-text-muted,#8a735f)]">
+                            <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{selectedDocumentComposerAttachment.file.name}</p>
+                            <p className="text-xs text-[var(--text-muted)]">
                               {formatFileSize(selectedDocumentComposerAttachment.file.size) || 'Documento'} · {selectedExtension}
                             </p>
                           </div>
@@ -10055,8 +10054,8 @@ export default function WhatsAppInboxScreen() {
                                 {selectedExtension.slice(0, 4)}
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-[var(--panel-text,#1f2937)]">Preview indisponível para este formato</p>
-                                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
+                                <p className="text-sm font-semibold text-[var(--text-primary)]">Preview indisponível para este formato</p>
+                                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                                   O arquivo será enviado normalmente. PDFs podem ser visualizados antes do envio.
                                 </p>
                               </div>
@@ -10064,8 +10063,8 @@ export default function WhatsAppInboxScreen() {
                           )}
 
                           {selectedUploading ? (
-                            <div className="absolute bottom-3 left-4 right-4 rounded-full bg-black/25 p-1 backdrop-blur">
-                              <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
+                            <div className="absolute bottom-3 left-4 right-4 rounded-full bg-[color-mix(in_srgb,var(--bg-canvas)_60%,transparent)] p-1 backdrop-blur">
+                              <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
                                 <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress?.progress ?? 0}%` }} />
                               </div>
                             </div>
@@ -10139,7 +10138,7 @@ export default function WhatsAppInboxScreen() {
                                   <button
                                     type="button"
                                     onClick={() => handleClearAttachment(attachment.id)}
-                                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-black"
+                                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                                     aria-label="Remover documento"
                                   >
                                     <X className="h-3.5 w-3.5" />
@@ -10191,15 +10190,15 @@ export default function WhatsAppInboxScreen() {
                             <source src={selectedMediaComposerAttachment.previewUrl} type={selectedMediaComposerAttachment.file.type || undefined} />
                           </video>
                         ) : (
-                          <div className="flex flex-col items-center gap-2 text-[var(--panel-text-muted,#8a735f)]">
+                          <div className="flex flex-col items-center gap-2 text-[var(--text-muted)]">
                             <Images className="h-10 w-10" />
                             <span className="text-sm font-semibold">Preview indisponível</span>
                           </div>
                         )}
 
                         {sending && mediaUploadProgress ? (
-                          <div className="absolute bottom-3 left-4 right-4 rounded-full bg-black/25 p-1 backdrop-blur">
-                            <div className="h-1.5 overflow-hidden rounded-full bg-white/20">
+                          <div className="absolute bottom-3 left-4 right-4 rounded-full bg-[color-mix(in_srgb,var(--bg-canvas)_60%,transparent)] p-1 backdrop-blur">
+                            <div className="h-1.5 overflow-hidden rounded-full bg-[var(--bg-elevated)]">
                               <div className="whatsapp-inbox-upload-progress h-full rounded-full" style={{ width: `${mediaUploadProgress.progress ?? 0}%` }} />
                             </div>
                           </div>
@@ -10277,7 +10276,7 @@ export default function WhatsAppInboxScreen() {
                                 <button
                                   type="button"
                                   onClick={() => handleClearAttachment(attachment.id)}
-                                  className="absolute right-0.5 top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white transition hover:bg-black"
+                                  className="absolute right-0.5 top-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--bg-canvas)] text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                                   aria-label="Remover mídia"
                                 >
                                   <X className="h-3 w-3" />
@@ -10303,26 +10302,26 @@ export default function WhatsAppInboxScreen() {
                   {voiceRecordingState === 'recording' || voiceAttachment || visualComposerAttachments.length > 0 ? null : (
                   <>
                   {(replySuggestionLoading || replySuggestionText || replySuggestionError) && !quickReplyMenuOpen ? (
-                    <div className="mb-2 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-3 py-2.5 shadow-sm">
+                    <div className="mb-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 shadow-sm">
                       <div className="flex items-start gap-2">
-                        <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-strong,#c86f1d)]">
+                        <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
                           {replySuggestionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                               Sugestão da IA
                             </p>
                             {replySuggestionText ? (
-                              <span className="hidden text-[11px] text-[var(--panel-text-muted,#8a735f)] sm:inline">Tab para aplicar</span>
+                              <span className="hidden text-[11px] text-[var(--text-muted)] sm:inline">Tab para aplicar</span>
                             ) : null}
                           </div>
                           {replySuggestionText ? (
-                            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--panel-text-soft,#5b4635)]">{replySuggestionText}</p>
+                            <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[var(--text-secondary)]">{replySuggestionText}</p>
                           ) : replySuggestionError ? (
-                            <p className="mt-1 text-sm leading-6 text-[var(--panel-accent-red-text,#d9776b)]">{replySuggestionError}</p>
+                            <p className="mt-1 text-sm leading-6 text-[var(--danger-text)]">{replySuggestionError}</p>
                           ) : (
-                            <p className="mt-1 text-sm leading-6 text-[var(--panel-text-muted,#8a735f)]">Analisando histórico e padrão de atendimento...</p>
+                            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Analisando histórico e padrão de atendimento...</p>
                           )}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {replySuggestionText ? (
@@ -10364,7 +10363,7 @@ export default function WhatsAppInboxScreen() {
                             onClick={() => handleAttachmentMenuAction('document')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-text-soft,#5b4635)]">
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--text-secondary)]">
                               <FileText className="h-4 w-4" />
                             </span>
                             <span>Documento</span>
@@ -10374,7 +10373,7 @@ export default function WhatsAppInboxScreen() {
                             onClick={() => handleAttachmentMenuAction('media')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
                               <Images className="h-4 w-4" />
                             </span>
                             <span>Fotos e vídeos</span>
@@ -10384,7 +10383,7 @@ export default function WhatsAppInboxScreen() {
                             onClick={() => handleAttachmentMenuAction('audio')}
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-ink,#8b4d12)]">
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
                               <FileAudio className="h-4 w-4" />
                             </span>
                             <span>Áudio</span>
@@ -10394,7 +10393,7 @@ export default function WhatsAppInboxScreen() {
                             disabled
                             className="whatsapp-inbox-attach-menu-item is-disabled flex w-full items-center gap-3 px-3 py-2.5 text-left"
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-text-muted,#8a735f)]">
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--text-muted)]">
                               <UserRound className="h-4 w-4" />
                             </span>
                             <span>Contato</span>
@@ -10440,7 +10439,7 @@ export default function WhatsAppInboxScreen() {
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
                             title={composerRewriteDisabledReason ?? 'Corrigir texto com IA'}
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
                               {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
                             </span>
                             <span>Corrigir texto</span>
@@ -10455,7 +10454,7 @@ export default function WhatsAppInboxScreen() {
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
                             title={composerRewriteDisabledReason ?? 'Adaptar texto ao contexto'}
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-strong,#c86f1d)]">
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
                               {rewritingComposer ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                             </span>
                             <span>Adaptar ao contexto</span>
@@ -10470,7 +10469,7 @@ export default function WhatsAppInboxScreen() {
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
                             title={composerRewriteDisabledReason ?? 'Abrir opções de reescrita'}
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-ink,#8b4d12)]">
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
                               <SlidersHorizontal className="h-4 w-4" />
                             </span>
                             <span>Mais opções</span>
@@ -10485,12 +10484,12 @@ export default function WhatsAppInboxScreen() {
                             className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
                             title={replySuggestionDisabledReason ?? 'Sugerir resposta com IA'}
                           >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--panel-accent-ink,#8b4d12)]">
+                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
                               {replySuggestionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
                             </span>
                             <span>Sugerir resposta</span>
                           </button>
-                          <div className="my-1 border-t border-[var(--panel-border-subtle,#e7dac8)]" />
+                          <div className="my-1 border-t border-[var(--border-subtle)]" />
                           <div className="grid grid-cols-3 gap-1 px-1 pb-1" aria-label="Formatacao do texto">
                             <button
                               type="button"
@@ -10552,9 +10551,9 @@ export default function WhatsAppInboxScreen() {
 
                     <div className={`relative min-w-0 flex-1 ${isComposerExpanded ? 'py-1.5' : 'py-0.5'}`}>
                       {quickReplyMenuOpen && (
-                        <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
-                          <div className="flex items-center justify-between gap-3 border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
-                            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                        <div className="absolute right-0 bottom-full left-0 z-[30] mb-2 overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-2xl">
+                          <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                               Mensagens rápidas por atalho
                             </span>
                             <Button
@@ -10579,7 +10578,7 @@ export default function WhatsAppInboxScreen() {
                                   <button
                                     key={option.id}
                                     type="button"
-                                    className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--panel-accent-soft,#f4e2cc)]/70 text-[var(--panel-text,#1f2937)]' : 'text-[var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f8f2e9)]'}`}
+                                    className={`flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left transition ${isActive ? 'bg-[var(--brand-primary-soft)] text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'}`}
                                     onMouseDown={(event) => {
                                       event.preventDefault();
                                       handleInsertQuickReply(option);
@@ -10588,11 +10587,11 @@ export default function WhatsAppInboxScreen() {
                                     <div className="min-w-0 flex-1">
                                       <div className="flex items-center gap-2">
                                         <span className="truncate text-sm font-semibold">{option.name}</span>
-                                        <code className="shrink-0 rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2 py-0.5 text-[11px] font-semibold text-[var(--panel-accent-ink,#8b4d12)]">
+                                        <code className="shrink-0 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-0.5 text-[11px] font-semibold text-[var(--accent-gold-hover)]">
                                           /{option.shortcut}
                                         </code>
                                       </div>
-                                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
+                                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-muted)]">
                                         {option.preview}
                                       </p>
                                     </div>
@@ -10600,9 +10599,9 @@ export default function WhatsAppInboxScreen() {
                                 );
                               })
                             ) : (
-                              <div className="px-4 py-4 text-sm text-[var(--panel-text-soft,#5b4635)]">
+                              <div className="px-4 py-4 text-sm text-[var(--text-secondary)]">
                                 <p className="font-medium">{quickReplyEmptyStateMessage}</p>
-                                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#8a735f)]">
+                                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                                   Use o botão <strong>Gerenciar</strong> para criar e editar suas mensagens rápidas sem sair do inbox.
                                 </p>
                               </div>
@@ -10692,23 +10691,24 @@ export default function WhatsAppInboxScreen() {
         />
 
         {forwardingMessage ? (
-          <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true" aria-label="Encaminhar mensagem">
-            <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-[rgba(212,192,167,0.28)] bg-[var(--panel-surface,#fffdfa)] shadow-2xl">
-              <div className="flex items-start justify-between gap-4 border-b border-[var(--panel-border-subtle,#e7dac8)] px-5 py-4">
+          <Dialog
+            open
+            onOpenChange={(open) => {
+              if (!open) handleCloseForwardMessageModal();
+            }}
+            size="md"
+            closeOnEscape={false}
+            closeOnOverlay={false}
+            aria-label="Encaminhar mensagem"
+            className="max-w-lg"
+          >
+              <DialogHeader onClose={handleCloseForwardMessageModal}>
                 <div>
-                  <p className="text-base font-semibold text-[var(--panel-text,#1f2937)]">Encaminhar mensagem</p>
-                  <p className="mt-1 line-clamp-2 text-sm text-[var(--panel-text-muted,#6b7280)]">{getMessageSearchPreviewText(forwardingMessage)}</p>
+                  <DialogTitle>Encaminhar mensagem</DialogTitle>
+                  <p className="mt-1 line-clamp-2 text-sm text-[var(--text-secondary)]">{getMessageSearchPreviewText(forwardingMessage)}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCloseForwardMessageModal}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--panel-text-muted,#6b7280)] transition hover:bg-black/10"
-                  aria-label="Fechar encaminhamento"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="space-y-3 p-5">
+              </DialogHeader>
+              <DialogBody className="space-y-3">
                 <Input
                   value={forwardSearch}
                   onChange={(event) => setForwardSearch(event.target.value)}
@@ -10721,23 +10721,22 @@ export default function WhatsAppInboxScreen() {
                       type="button"
                       onClick={() => void handleForwardMessage(chat)}
                       disabled={forwardingChatId === chat.id}
-                      className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--panel-surface-soft,#f8f2e9)] disabled:opacity-70"
+                      className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--panel-text,#1f2937)]">{getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}</p>
-                        <p className="truncate text-xs text-[var(--panel-text-muted,#6b7280)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
+                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}</p>
+                        <p className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
                       </div>
-                      {forwardingChatId === chat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Forward className="h-4 w-4 shrink-0 text-[var(--panel-text-muted,#6b7280)]" />}
+                      {forwardingChatId === chat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Forward className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />}
                     </button>
                   )) : (
-                    <div className="rounded-2xl border border-dashed border-[var(--panel-border-subtle,#e7dac8)] p-5 text-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                    <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-5 text-center text-sm text-[var(--text-secondary)]">
                       Nenhuma conversa encontrada.
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-          </div>
+              </DialogBody>
+          </Dialog>
         ) : null}
 
         <WhatsAppComposerRewriteModal
@@ -10908,9 +10907,9 @@ export default function WhatsAppInboxScreen() {
             overflow: 'visible',
             borderRadius: 9999,
             padding: '6px 8px',
-            border: '1px solid rgba(214, 170, 92, 0.22)',
-            background: 'rgba(18, 12, 9, 0.96)',
-            boxShadow: '0 18px 46px rgba(0, 0, 0, 0.34)',
+            border: '1px solid var(--border-default)',
+            background: 'var(--bg-elevated)',
+            boxShadow: 'var(--shadow-popover)',
           }}
         >
           {openReactionPickerMessage
@@ -10922,7 +10921,7 @@ export default function WhatsAppInboxScreen() {
                     type="button"
                     onClick={() => void handleReactToMessage(openReactionPickerMessage, emoji)}
                     disabled={reactingMessageId === openReactionPickerMessage.id}
-                    className={`message-bubble-emoji-button inline-flex h-9 w-9 items-center justify-center rounded-full text-[1.45rem] leading-none transition ${selected ? 'bg-[rgba(255,255,255,0.12)] scale-105' : 'hover:bg-[rgba(255,255,255,0.08)]'}`}
+                    className={`message-bubble-emoji-button inline-flex h-9 w-9 items-center justify-center rounded-full text-[1.45rem] leading-none transition ${selected ? 'bg-[var(--brand-primary-soft)] scale-105' : 'hover:bg-[var(--bg-hover)]'}`}
                     aria-label={`Reagir com ${emoji}`}
                   >
                     {emoji}
@@ -10941,7 +10940,7 @@ export default function WhatsAppInboxScreen() {
             setOpenMessageActionMenuMessageId(null);
           }}
           ariaLabel="Menu da mensagem"
-          className="before:hidden overflow-y-auto rounded-2xl border-[rgba(212,192,167,0.18)] bg-[rgba(16,12,10,0.98)] p-1 shadow-2xl"
+          className="before:hidden overflow-y-auto rounded-2xl border-[var(--border-default)] bg-[var(--bg-elevated)] p-1 shadow-2xl"
           style={{ width: messageActionMenuPosition?.width ?? 268, maxHeight: messageActionMenuPosition?.maxHeight }}
         >
           {openMessageActionMenuMessage ? (
@@ -10951,7 +10950,7 @@ export default function WhatsAppInboxScreen() {
                   <button
                     type="button"
                     onClick={() => handleReplyToMessage(openMessageActionMenuMessage)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                   >
                     <Reply className="h-4 w-4 shrink-0" />
                     <span>Responder mensagem</span>
@@ -10959,7 +10958,7 @@ export default function WhatsAppInboxScreen() {
                   <button
                     type="button"
                     onClick={() => handleOpenForwardMessageModal(openMessageActionMenuMessage)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                   >
                     <Forward className="h-4 w-4 shrink-0" />
                     <span>Encaminhar mensagem</span>
@@ -10970,7 +10969,7 @@ export default function WhatsAppInboxScreen() {
                 <button
                   type="button"
                   onClick={() => handleOpenEditMessageModal(openMessageActionMenuMessage)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)]"
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
                 >
                   <Pencil className="h-4 w-4 shrink-0" />
                   <span>{openMessageActionMenuMessage.message_type.trim().toLowerCase() === 'text' ? 'Editar mensagem' : 'Editar legenda'}</span>
@@ -10981,7 +10980,7 @@ export default function WhatsAppInboxScreen() {
                   type="button"
                   onClick={() => void handleDeleteMessage(openMessageActionMenuMessage)}
                   disabled={deletingMessageId === openMessageActionMenuMessage.id}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-accent-red-text,#d9776b)] transition hover:bg-[rgba(122,33,24,0.16)] disabled:opacity-60"
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
                 >
                   {deletingMessageId === openMessageActionMenuMessage.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
                   <span>Apagar mensagem</span>
@@ -11000,7 +10999,7 @@ export default function WhatsAppInboxScreen() {
             setOpenChatMenuChatId(null);
           }}
           ariaLabel="Menu da conversa"
-          className="before:hidden rounded-2xl border-[rgba(212,192,167,0.18)] bg-[rgba(16,12,10,0.98)] p-1 shadow-2xl"
+          className="before:hidden rounded-2xl border-[var(--border-default)] bg-[var(--bg-elevated)] p-1 shadow-2xl"
           style={{ width: chatMenuPosition?.width ?? 248 }}
         >
           {openChatMenuChat ? (
@@ -11013,7 +11012,7 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isArchived: !openChatMenuChat.is_archived });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 {openChatMenuChat.is_archived ? <ArchiveRestore className="h-4 w-4 shrink-0" /> : <Archive className="h-4 w-4 shrink-0" />}
                 <span>{openChatMenuChat.is_archived ? 'Remover dos arquivados' : 'Arquivar conversa'}</span>
@@ -11026,7 +11025,7 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isMuted: !openChatMenuChat.is_muted });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 {openChatMenuChat.is_muted ? <Bell className="h-4 w-4 shrink-0" /> : <BellOff className="h-4 w-4 shrink-0" />}
                 <span>{openChatMenuChat.is_muted ? 'Ativar notificacoes' : 'Silenciar notificacoes'}</span>
@@ -11039,7 +11038,7 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { isPinned: !openChatMenuChat.is_pinned });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 <Pin className="h-4 w-4 shrink-0" />
                 <span>{openChatMenuChat.is_pinned ? 'Desafixar conversa' : 'Fixar conversa'}</span>
@@ -11052,7 +11051,7 @@ export default function WhatsAppInboxScreen() {
                     void handleUpdateChatInboxState(openChatMenuChat, { markAsUnread: !openChatMenuChat.manual_unread && openChatMenuChat.unread_count <= 0 });
                   }}
                 disabled={updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-text,#f6eadf)] transition hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
               >
                 <MessageCircle className="h-4 w-4 shrink-0" />
                 <span>{openChatMenuChat.manual_unread || openChatMenuChat.unread_count > 0 ? 'Marcar como lida' : 'Marcar como nao lida'}</span>
@@ -11065,7 +11064,7 @@ export default function WhatsAppInboxScreen() {
                   void handleDeleteChat(openChatMenuChat);
                 }}
                 disabled={deletingChatId === openChatMenuChat.id || updatingChatStateId === openChatMenuChat.id}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--panel-accent-red-text,#d9776b)] transition hover:bg-[rgba(122,33,24,0.16)] disabled:opacity-60"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--danger-text)] transition hover:bg-[var(--danger-soft)] disabled:opacity-60"
               >
                 {deletingChatId === openChatMenuChat.id ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <Trash2 className="h-4 w-4 shrink-0" />}
                 <span>Excluir conversa</span>
@@ -11080,7 +11079,7 @@ export default function WhatsAppInboxScreen() {
           position={advancedFiltersPosition}
           onClose={() => setAdvancedFiltersOpen(false)}
           ariaLabel="Filtros avançados do inbox"
-          className="w-[272px] border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-2.5 shadow-2xl"
+          className="w-[272px] border-[var(--border-subtle)] bg-[var(--bg-surface)] p-2.5 shadow-2xl"
         >
           <div className="space-y-2.5">
             <InboxFilterGroup
@@ -11115,7 +11114,7 @@ export default function WhatsAppInboxScreen() {
                   setLeadStatusFilters([]);
                   setAdvancedFiltersOpen(false);
                 }}
-                className="h-auto px-0 py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)] hover:bg-transparent hover:text-[var(--panel-accent-ink-strong,#6f3f16)]"
+                className="h-auto px-0 py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--brand-primary)] hover:bg-transparent hover:text-[var(--brand-primary-hover)]"
               >
                 Limpar filtros
               </Button>

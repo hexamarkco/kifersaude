@@ -6,6 +6,7 @@ import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import ModalShell from '../ui/ModalShell';
+import { Alert, Card, Checkbox } from '../../design-system';
 
 type ConfigOptionManagerProps = {
   category: ConfigCategory;
@@ -172,11 +173,11 @@ export default function ConfigOptionManager({
   };
 
   return (
-    <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+    <Card padding="lg">
       <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">{title}</h3>
-          {description && <p className="text-sm text-[color:var(--panel-text-soft)]">{description}</p>}
+          <h3 className="kds-card-title">{title}</h3>
+          {description && <p className="kds-card-subtitle">{description}</p>}
         </div>
 
         <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
@@ -186,16 +187,10 @@ export default function ConfigOptionManager({
       </div>
 
       {message && (
-        <div
-          className={`mb-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-            message.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-700'
-              : 'border-red-200 bg-red-50 text-red-700'
-          }`}
-        >
+        <Alert tone={message.type === 'success' ? 'success' : 'danger'} className="mb-4">
           {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <span>{message.text}</span>
-        </div>
+        </Alert>
       )}
 
       <div className="space-y-3">
@@ -203,9 +198,11 @@ export default function ConfigOptionManager({
           const isBusy = busyId === item.id;
 
           return (
-            <div
+            <Card
               key={item.id}
-              className="flex flex-col space-y-3 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-4 py-4 md:flex-row md:items-center md:space-x-3 md:space-y-0"
+              variant="muted"
+              padding="sm"
+              className="flex flex-col space-y-3 md:flex-row md:items-center md:space-x-3 md:space-y-0"
             >
               <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
                 <label className="flex flex-col text-xs text-[color:var(--panel-text-soft)]">
@@ -235,11 +232,9 @@ export default function ConfigOptionManager({
 
               <div className="flex items-center space-x-3">
                 <label className="inline-flex items-center space-x-2 text-sm text-[color:var(--panel-text-soft)]">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={item.ativo}
                     onChange={(event) => void handleUpdate(item.id, { ativo: event.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                     disabled={isBusy}
                   />
                   <span>Ativo</span>
@@ -256,7 +251,7 @@ export default function ConfigOptionManager({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
@@ -272,7 +267,7 @@ export default function ConfigOptionManager({
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da opção</label>
+                <label className="kds-field-label mb-2 block">Nome da opção</label>
             <Input
               type="text"
               value={newLabel}
@@ -299,6 +294,6 @@ export default function ConfigOptionManager({
         </div>
       </ModalShell>
       {ConfirmationDialog}
-    </div>
+    </Card>
   );
 }

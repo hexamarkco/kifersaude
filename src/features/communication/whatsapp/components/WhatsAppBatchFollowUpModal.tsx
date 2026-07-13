@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, CalendarPlus, Check, CheckCircle2, Clock3, Loader2, MessageSquare, Plus, Send, Sparkles } from 'lucide-react';
 
-import Button from '../../../../components/ui/Button';
-import ModalShell from '../../../../components/ui/ModalShell';
-import Textarea from '../../../../components/ui/Textarea';
+import { Button, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
@@ -11,6 +9,7 @@ import { commWhatsAppService, type CommWhatsAppFollowUpNextAction, type CommWhat
 import { toast } from '../../../../lib/toast';
 import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
 import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
+import WhatsAppDialog from './WhatsAppDialog';
 
 // ---- Constants ----
 
@@ -548,37 +547,37 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'sent' && sentSummary) {
     return (
-      <ModalShell isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="xl" panelClassName="config-transparent-buttons max-w-[90rem]"
+      <WhatsAppDialog isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]"
         footer={<div className="flex items-center justify-end gap-2"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>}
       >
         <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-          <CheckCircle2 className="h-12 w-12 text-green-600" />
-          <p className="text-lg font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>
+          <CheckCircle2 className="h-12 w-12 text-[var(--success)]" />
+          <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
             Follow-ups enviados
           </p>
           <div className="flex flex-wrap justify-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border bg-green-50 px-4 py-3 text-sm font-medium text-green-800" style={{ borderColor: 'var(--panel-accent-green-border,#a8c9a0)' }}>
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] px-4 py-3 text-sm font-medium text-[var(--success-text)]">
               <CheckCircle2 className="h-4 w-4" />
               {sentSummary.sentCount} enviado(s)
             </div>
             {sentSummary.scheduledCount > 0 ? (
-              <div className="flex items-center gap-2 rounded-xl border bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800" style={{ borderColor: 'var(--panel-accent-blue-border,#9bb8d4)' }}>
+              <div className="flex items-center gap-2 rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] px-4 py-3 text-sm font-medium text-[var(--info-text)]">
                 <CalendarPlus className="h-4 w-4" />
                 {sentSummary.scheduledCount} agendado(s)
               </div>
             ) : null}
             {sentSummary.failedCount > 0 ? (
-              <div className="flex items-center gap-2 rounded-xl border bg-red-50 px-4 py-3 text-sm font-medium text-red-800" style={{ borderColor: 'var(--panel-accent-red-border,#d79a8f)' }}>
+              <div className="flex items-center gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-sm font-medium text-[var(--danger-text)]">
                 <AlertCircle className="h-4 w-4" />
                 <span>{sentSummary.failedCount} falha(s)</span>
               </div>
             ) : null}
           </div>
           {sentSummary.errorMessage ? (
-            <p className="max-w-md text-center text-xs text-red-700">{sentSummary.errorMessage}</p>
+            <p className="max-w-md text-center text-xs text-[var(--danger-text)]">{sentSummary.errorMessage}</p>
           ) : null}
         </div>
-      </ModalShell>
+      </WhatsAppDialog>
     );
   }
 
@@ -586,50 +585,50 @@ export default function WhatsAppBatchFollowUpModal({
 
   if (phase === 'loading') {
     return (
-      <ModalShell isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="xl" panelClassName="config-transparent-buttons max-w-[90rem]" footer={null}>
+      <WhatsAppDialog isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]" footer={null}>
         <div className="flex min-h-[400px] items-center justify-center">
           <div className="flex items-center gap-3 rounded-2xl border px-5 py-4 shadow-sm" style={{
-            borderColor: 'var(--panel-border-subtle,#e7dac8)',
-            background: 'var(--panel-surface,#fffdfa)',
+            borderColor: 'var(--border-subtle)',
+            background: 'var(--bg-surface)',
           }}>
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
-            <span className="text-sm font-medium" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+            <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--brand-primary)' }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               Carregando follow-ups pendentes...
             </span>
           </div>
         </div>
-      </ModalShell>
+      </WhatsAppDialog>
     );
   }
 
   // ---- Render: main layout ----
 
   return (
-    <ModalShell
+    <WhatsAppDialog
       isOpen={isOpen}
       onClose={handleClose}
       title="Follow-ups em lote"
       description="Gerencie e envie follow-ups para vários leads de uma vez. Cada lead tem seus próprios ajustes de tom, cenário e instruções."
       size="xl"
-      panelClassName="config-transparent-buttons max-w-[90rem]"
+      panelClassName="max-w-[90rem]"
       footer={
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {phase === 'sending' ? (
               <div className="min-w-[280px] max-w-[520px] space-y-1.5">
-                <div className="flex items-center justify-between gap-3 text-xs font-semibold" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                <div className="flex items-center justify-between gap-3 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
                   <span>
                     Enviando {sendingFinished} de {sendingTotal}
                     {currentSendingItem ? ` - ${currentSendingItem.leadName || 'Sem nome'}` : ''}
                   </span>
                   <span>{sendingProgressPercent}%</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full" style={{ background: 'var(--panel-surface-soft,#f8f2e9)' }}>
+                <div className="h-2 overflow-hidden rounded-full" style={{ background: 'var(--bg-elevated)' }}>
                   <div
                     className="h-full rounded-full transition-all duration-300"
                     style={{
                       width: `${sendingProgressPercent}%`,
-                      background: 'var(--panel-accent-strong,#c86f1d)',
+                      background: 'var(--brand-primary)',
                     }}
                   />
                 </div>
@@ -674,14 +673,14 @@ export default function WhatsAppBatchFollowUpModal({
         {/* Sidebar */}
         <aside className="w-[260px] shrink-0 space-y-2">
           <div className="flex items-center justify-between gap-2 px-1">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+            <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
               {items.length} lead(s)
             </span>
             <button
               type="button"
               onClick={handleToggleSelectAll}
               className="text-[11px] font-semibold transition hover:opacity-70"
-              style={{ color: 'var(--panel-accent,#c46a1a)' }}
+              style={{ color: 'var(--brand-primary)' }}
             >
               {items.every((i) => i.selected) ? 'Desmarcar todos' : 'Selecionar todos'}
             </button>
@@ -690,19 +689,19 @@ export default function WhatsAppBatchFollowUpModal({
             {items.map((item, index) => {
               const isActive = activeItemIndex === index;
               const statusIcon = phase === 'sending' && item.sendStatus === 'sending' ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: 'var(--brand-primary)' }} />
               ) : phase === 'sending' && item.sendStatus === 'sent' ? (
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--success)]" />
               ) : phase === 'sending' && item.sendStatus === 'failed' ? (
-                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-[var(--danger)]" />
               ) : phase === 'sending' && item.sendStatus === 'queued' ? (
-                <Clock3 className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--panel-text-muted,#876f5c)' }} />
+                <Clock3 className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
               ) : item.status === 'generating' ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: 'var(--brand-primary)' }} />
               ) : item.status === 'ready' ? (
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--success)]" />
               ) : item.status === 'failed' ? (
-                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-[var(--danger)]" />
               ) : null;
 
               return (
@@ -710,28 +709,28 @@ export default function WhatsAppBatchFollowUpModal({
                   <div
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${phase === 'sending' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
                     style={{
-                      borderColor: item.selected ? 'var(--panel-accent-strong,#c86f1d)' : 'var(--panel-border,#d4c0a7)',
-                      background: item.selected ? 'var(--panel-accent-strong,#c86f1d)' : 'transparent',
+                      borderColor: item.selected ? 'var(--brand-primary)' : 'var(--border-default)',
+                      background: item.selected ? 'var(--brand-primary)' : 'transparent',
                     }}
                     onClick={() => {
                       if (phase !== 'sending') handleToggleSelect(item.chatId);
                     }}
                   >
-                    {item.selected && <Check className="h-3 w-3 text-white" />}
+                    {item.selected && <Check className="h-3 w-3 text-[var(--text-on-brand)]" />}
                   </div>
                   <button
                     type="button"
                     onClick={() => setActiveItemIndex(index)}
                     className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs transition ${
                       isActive
-                        ? 'border-[var(--panel-accent,#c46a1a)] bg-[var(--panel-accent-soft,#f4e2cc)]'
-                        : 'border-transparent bg-transparent hover:bg-[var(--panel-surface-soft,#f8f2e9)]'
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]'
+                        : 'border-transparent bg-transparent hover:bg-[var(--bg-elevated)]'
                     }`}
                   >
                     {statusIcon}
                     <span className="min-w-0 flex-1 truncate font-medium">{item.leadName || 'Sem nome'}</span>
                     {phase === 'sending' && item.sendStatus === 'sending' && item.sendSegmentsTotal > 1 ? (
-                      <span className="shrink-0 text-[10px] font-semibold" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                      <span className="shrink-0 text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>
                         {item.sendSegmentsSent}/{item.sendSegmentsTotal}
                       </span>
                     ) : null}
@@ -748,18 +747,18 @@ export default function WhatsAppBatchFollowUpModal({
             {/* Main editor */}
             <section className="min-w-0 space-y-4">
               <div className="rounded-2xl border p-4 shadow-sm" style={{
-                borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                background: 'var(--panel-surface,#fffdfa)',
+                borderColor: 'var(--border-subtle)',
+                background: 'var(--bg-surface)',
               }}>
                 <div className="flex flex-col gap-4">
                   {/* Header: lead name + generate buttons */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--panel-text,#1a120d)' }}>
+                      <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
                         {activeItem.leadName || 'Sem nome'}
                       </h3>
                       {activeItem.leadPhone ? (
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
                           {activeItem.leadPhone}
                         </p>
                       ) : null}
@@ -789,9 +788,9 @@ export default function WhatsAppBatchFollowUpModal({
                   {/* AI Context Rationale */}
                   {(activeItem.selectedSituationPresetIds.length > 0 || activeItem.selectedSalesTechniques.length > 0 || activeItem.aiContextRationale) ? (
                     <div className="rounded-2xl border px-3 py-2 text-xs" style={{
-                      borderColor: 'var(--panel-accent-border,#d2ab85)',
-                      background: 'var(--panel-accent-soft,#f4e2cc)',
-                      color: 'var(--panel-accent-ink,#8b4d12)',
+                      borderColor: 'var(--brand-primary-border)',
+                      background: 'var(--brand-primary-soft)',
+                      color: 'var(--accent-gold-hover)',
                     }}>
                       <div className="flex items-center gap-2 font-semibold">
                         <Sparkles className="h-3.5 w-3.5" />
@@ -806,8 +805,8 @@ export default function WhatsAppBatchFollowUpModal({
                   {/* Situation presets */}
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>Cenário</h3>
-                      <span className="text-[11px] font-medium" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>IA seleciona ao gerar</span>
+                      <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Cenário</h3>
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>IA seleciona ao gerar</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {CONVERSATION_SITUATION_PRESETS.map((preset) => {
@@ -831,8 +830,8 @@ export default function WhatsAppBatchFollowUpModal({
                   {/* Tone selector */}
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>Tom</h3>
-                      <span className="text-[11px] font-medium" style={{ color: 'var(--panel-accent-ink,#8b4d12)' }}>
+                      <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Tom</h3>
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--accent-gold-hover)' }}>
                         {followUpToneOptions.find((o) => o.value === activeItem.tone)?.label ?? 'Consultivo'}
                       </span>
                     </div>
@@ -848,8 +847,8 @@ export default function WhatsAppBatchFollowUpModal({
                             title={option.description}
                             className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                               activeOption
-                                ? 'border-[var(--panel-accent,#c46a1a)] bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)] shadow-sm'
-                                : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)]'
+                                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
+                                : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary-border)]'
                             }`}
                           >
                             {option.label}
@@ -861,30 +860,30 @@ export default function WhatsAppBatchFollowUpModal({
 
                   {/* Custom instructions */}
                   <details className="rounded-2xl border p-3" style={{
-                    borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                    background: 'var(--panel-surface-soft,#f8f2e9)',
+                    borderColor: 'var(--border-subtle)',
+                    background: 'var(--bg-elevated)',
                   }} open={Boolean(activeItem.customInstructions.trim())}>
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>Instruções extras</h3>
-                        <p className="mt-0.5 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Instruções extras</h3>
+                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
                           Instruções e variáveis para personalizar o follow-up.
                         </p>
                       </div>
                       <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{
-                        borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                        background: 'var(--panel-surface,#fffdfa)',
-                        color: 'var(--panel-text-muted,#876f5c)',
+                        borderColor: 'var(--border-subtle)',
+                        background: 'var(--bg-surface)',
+                        color: 'var(--text-muted)',
                       }}>
                         {activeItem.customInstructions.trim() ? 'Ativo' : 'Abrir'}
                       </span>
                     </summary>
                     <div className="mt-3">
                       <div className="mb-2 flex items-center justify-between gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                        <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-secondary)' }}>
                           Instruções personalizadas
                         </span>
-                        <span className="text-[11px]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
                           Digite {'{{'} para variáveis
                         </span>
                       </div>
@@ -904,29 +903,29 @@ export default function WhatsAppBatchFollowUpModal({
 
               {/* Message area */}
               <div className="rounded-2xl border p-4 shadow-sm" style={{
-                borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                background: 'var(--panel-surface,#fffdfa)',
+                borderColor: 'var(--border-subtle)',
+                background: 'var(--bg-surface)',
               }}>
                 <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>Mensagem</h3>
-                    <p className="mt-1 text-xs leading-5" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Mensagem</h3>
+                    <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
                       Edite o texto final ou refine com um clique.
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                     <div className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{
-                      borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                      background: 'var(--panel-surface-soft,#f8f2e9)',
-                      color: 'var(--panel-accent-ink,#8b4d12)',
+                      borderColor: 'var(--border-subtle)',
+                      background: 'var(--bg-elevated)',
+                      color: 'var(--accent-gold-hover)',
                     }}>
                       {activeMessageSegments.length || 1} mensagem(ns)
                     </div>
                     {activeItem.generatedText.trim() ? (
                       <div className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{
-                        borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                        background: 'var(--panel-surface-soft,#f8f2e9)',
-                        color: 'var(--panel-text-muted,#876f5c)',
+                        borderColor: 'var(--border-subtle)',
+                        background: 'var(--bg-elevated)',
+                        color: 'var(--text-muted)',
                       }}>
                         {activeItem.generatedText.trim().length} caracteres
                       </div>
@@ -969,15 +968,15 @@ export default function WhatsAppBatchFollowUpModal({
                         type="button"
                         onClick={() => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: variation.text }))}
                         disabled={phase !== 'ready' || Boolean(refiningActionId)}
-                        className="min-w-[12rem] max-w-[16rem] rounded-xl border px-3 py-2 text-left text-xs transition hover:border-[var(--panel-accent-border,#d2ab85)] disabled:cursor-not-allowed disabled:opacity-60" style={{
-                          borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                          background: 'var(--panel-surface-soft,#f8f2e9)',
+                        className="min-w-[12rem] max-w-[16rem] rounded-xl border px-3 py-2 text-left text-xs transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-60" style={{
+                          borderColor: 'var(--border-subtle)',
+                          background: 'var(--bg-elevated)',
                         }}
                       >
-                        <span className="block truncate font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>
+                        <span className="block truncate font-semibold" style={{ color: 'var(--text-primary)' }}>
                           {variation.label}
                         </span>
-                        <span className="mt-1 line-clamp-2 block leading-5" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                        <span className="mt-1 line-clamp-2 block leading-5" style={{ color: 'var(--text-muted)' }}>
                           {variation.text}
                         </span>
                       </button>
@@ -997,7 +996,7 @@ export default function WhatsAppBatchFollowUpModal({
 
                 {/* Falha error */}
                 {activeItem.status === 'failed' && activeItem.error ? (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-red-600">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-[var(--danger-text)]">
                     <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                     <span>{activeItem.error}</span>
                   </div>
@@ -1009,23 +1008,23 @@ export default function WhatsAppBatchFollowUpModal({
             <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
               {/* Preview */}
               <div className="rounded-2xl border p-4" style={{
-                borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                background: 'var(--panel-surface-soft,#f8f2e9)',
+                borderColor: 'var(--border-subtle)',
+                background: 'var(--bg-elevated)',
               }}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>
+                    <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                       <MessageSquare className="h-4 w-4" />
                       Preview
                     </div>
-                    <p className="mt-1 text-xs leading-5" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                    <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
                       Como será enviado no WhatsApp.
                     </p>
                   </div>
                   <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{
-                    borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                    background: 'var(--panel-surface,#fffdfa)',
-                    color: 'var(--panel-text-muted,#876f5c)',
+                    borderColor: 'var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-muted)',
                   }}>
                     {activeMessageSegments.length || 1} bloco(s)
                   </span>
@@ -1035,19 +1034,19 @@ export default function WhatsAppBatchFollowUpModal({
                   {activeMessageSegments.length > 0 ? (
                     activeMessageSegments.map((segment, index) => (
                       <div key={`${index}:${segment}`} className="rounded-xl border shadow-sm" style={{
-                        borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                        background: 'var(--panel-surface,#fffdfa)',
+                        borderColor: 'var(--border-subtle)',
+                        background: 'var(--bg-surface)',
                       }}>
                         <div className="rounded-t-xl border-b px-3 py-2" style={{
-                          borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                          background: 'var(--panel-surface-soft,#f8f2e9)',
+                          borderColor: 'var(--border-subtle)',
+                          background: 'var(--bg-elevated)',
                         }}>
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--panel-accent-ink,#8b4d12)' }}>
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--accent-gold-hover)' }}>
                             Mensagem {index + 1}
                           </span>
                         </div>
                         <div className="p-3">
-                          <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--panel-text,#1a120d)' }}>
+                          <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--text-primary)' }}>
                             {segment}
                           </p>
                         </div>
@@ -1055,11 +1054,11 @@ export default function WhatsAppBatchFollowUpModal({
                     ))
                   ) : (
                     <div className="rounded-xl border-2 border-dashed px-4 py-10 text-center" style={{
-                      borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                      background: 'var(--panel-surface,#fffdfa)',
+                      borderColor: 'var(--border-subtle)',
+                      background: 'var(--bg-surface)',
                     }}>
-                      <MessageSquare className="mx-auto mb-2 h-8 w-8" style={{ color: 'var(--panel-text-muted,#876f5c)' }} />
-                      <p className="text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                      <MessageSquare className="mx-auto mb-2 h-8 w-8" style={{ color: 'var(--text-muted)' }} />
+                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
                         Gere ou escreva uma sugestão para visualizar.
                       </p>
                     </div>
@@ -1070,34 +1069,34 @@ export default function WhatsAppBatchFollowUpModal({
               {/* Next action */}
               {activeItem.nextAction ? (
                 <div className="rounded-2xl border p-4 shadow-sm" style={{
-                  borderColor: 'var(--panel-accent-border,#d2ab85)',
-                  background: 'var(--panel-surface,#fffdfa)',
+                  borderColor: 'var(--brand-primary-border)',
+                  background: 'var(--bg-surface)',
                 }}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>
-                        <CalendarPlus className="h-4 w-4" style={{ color: 'var(--panel-accent-strong,#c86f1d)' }} />
+                      <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                        <CalendarPlus className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
                         Próxima ação sugerida
                       </div>
-                      <p className="mt-1 text-xs leading-5" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                      <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
                         {activeItem.nextAction.reason}
                       </p>
                     </div>
                     <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{
-                      borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                      background: 'var(--panel-surface-soft,#f8f2e9)',
-                      color: 'var(--panel-accent-ink,#8b4d12)',
+                      borderColor: 'var(--border-subtle)',
+                      background: 'var(--bg-elevated)',
+                      color: 'var(--accent-gold-hover)',
                     }}>
                       {activeItem.nextAction.type === 'schedule' ? 'Agendar' : activeItem.nextAction.type === 'wait' ? 'Aguardar' : 'Perdido?'}
                     </span>
                   </div>
 
-                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2" style={{ color: 'var(--text-secondary)' }}>
                     <div className="rounded-xl border px-3 py-2" style={{
-                      borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                      background: 'var(--panel-surface-soft,#f8f2e9)',
+                      borderColor: 'var(--border-subtle)',
+                      background: 'var(--bg-elevated)',
                     }}>
-                      <div className="font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>
+                      <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {formatNextActionDate(activeItem.nextAction.suggestedDateTime)}
                       </div>
                       <div className="mt-0.5 flex items-center gap-1">
@@ -1106,10 +1105,10 @@ export default function WhatsAppBatchFollowUpModal({
                       </div>
                     </div>
                     <div className="rounded-xl border px-3 py-2" style={{
-                      borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                      background: 'var(--panel-surface-soft,#f8f2e9)',
+                      borderColor: 'var(--border-subtle)',
+                      background: 'var(--bg-elevated)',
                     }}>
-                      <div className="font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>
+                      <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
                         Prioridade {activeItem.nextAction.priority}
                       </div>
                       <div className="mt-0.5">
@@ -1118,7 +1117,7 @@ export default function WhatsAppBatchFollowUpModal({
                     </div>
                   </div>
 
-                  <p className="mt-3 text-xs leading-5" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                  <p className="mt-3 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
                     {activeItem.nextAction.giveUpRecommendation}
                   </p>
                 </div>
@@ -1126,20 +1125,20 @@ export default function WhatsAppBatchFollowUpModal({
 
               {/* Sales techniques */}
               <details className="group rounded-2xl border p-4" style={{
-                borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                background: 'var(--panel-surface,#fffdfa)',
+                borderColor: 'var(--border-subtle)',
+                background: 'var(--bg-surface)',
               }} open={activeItem.selectedSalesTechniques.length > 0}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--panel-text,#1a120d)' }}>Técnicas avançadas</h3>
-                    <p className="mt-1 text-xs" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Técnicas avançadas</h3>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                       Opcional para a próxima geração.
                     </p>
                   </div>
                   <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{
-                    borderColor: 'var(--panel-border-subtle,#e7dac8)',
-                    background: 'var(--panel-surface-soft,#f8f2e9)',
-                    color: 'var(--panel-text-muted,#876f5c)',
+                    borderColor: 'var(--border-subtle)',
+                    background: 'var(--bg-elevated)',
+                    color: 'var(--text-muted)',
                   }}>
                     {activeItem.selectedSalesTechniques.length || 'Abrir'}
                   </span>
@@ -1156,11 +1155,11 @@ export default function WhatsAppBatchFollowUpModal({
                         title={technique.description}
                         className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                           selected
-                            ? 'border-[var(--panel-accent,#c46a1a)] bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)] shadow-sm'
-                            : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent,#c46a1a)]'
+                            ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
+                            : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]'
                         }`}
                       >
-                        {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border" style={{ borderColor: 'var(--panel-border-subtle,#e7dac8)' }} />}
+                        {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border" style={{ borderColor: 'var(--border-subtle)' }} />}
                         <span>{technique.name}</span>
                       </button>
                     );
@@ -1171,12 +1170,12 @@ export default function WhatsAppBatchFollowUpModal({
           </div>
         ) : (
           <div className="flex min-w-0 flex-1 items-center justify-center">
-            <p className="text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               Selecione um lead na lista ao lado.
             </p>
           </div>
         )}
       </div>
-    </ModalShell>
+    </WhatsAppDialog>
   );
 }

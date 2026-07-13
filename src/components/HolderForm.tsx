@@ -19,10 +19,8 @@ import { consultarEmpresaPorCNPJ, consultarPessoaPorCPF } from '../lib/receitaSe
 import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
 import FilterSingleSelect from './FilterSingleSelect';
-import DateTimePicker from './ui/DateTimePicker';
 import { toast } from '../lib/toast';
-import ModalShell from './ui/ModalShell';
-import { Button, Checkbox, Field, Input, Surface } from '../design-system';
+import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
 
 type HolderFormProps = {
   contractId: string;
@@ -478,14 +476,11 @@ export default function HolderForm({
 
   return (
     <>
-      <ModalShell
-        isOpen
-        onClose={onClose}
-        title={holder ? 'Editar Titular' : 'Dados do Titular'}
-        size="xl"
-        panelClassName="max-w-5xl"
-        bodyClassName="p-0"
-      >
+      <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
+        <DialogHeader onClose={onClose}>
+          <DialogTitle>{holder ? 'Editar Titular' : 'Dados do Titular'}</DialogTitle>
+        </DialogHeader>
+        <DialogBody className="p-0">
         <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
           <div className="grid grid-cols-1 gap-6">
             <Surface variant="muted" padding="sm">
@@ -539,7 +534,7 @@ export default function HolderForm({
                   <DateTimePicker
                     type="date"
                     value={formData.data_nascimento}
-                    onChange={(value) => setFormData({ ...formData, data_nascimento: value })}
+                      onChange={(event) => setFormData({ ...formData, data_nascimento: event.target.value })}
                     placeholder="Selecionar data"
                   />
                 </Field>
@@ -750,8 +745,8 @@ export default function HolderForm({
                     <DateTimePicker
                       type="date"
                       value={formData.data_abertura_cnpj}
-                      onChange={(value) =>
-                        setFormData({ ...formData, data_abertura_cnpj: value })
+                      onChange={(event) =>
+                        setFormData({ ...formData, data_abertura_cnpj: event.target.value })
                       }
                       placeholder="Selecionar data"
                     />
@@ -803,7 +798,8 @@ export default function HolderForm({
             </Button>
           </div>
         </form>
-      </ModalShell>
+        </DialogBody>
+      </Dialog>
 
       {showDependentForm && (
         <DependentForm

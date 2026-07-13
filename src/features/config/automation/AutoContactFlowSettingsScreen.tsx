@@ -1526,9 +1526,9 @@ export default function AutoContactFlowSettingsScreen() {
 
   if (!autoContactIntegration && !loadingFlow) {
     return (
-      <div className="bg-[color:var(--panel-accent-soft)] border border-[var(--panel-accent-border)] rounded-xl p-6 flex items-start gap-3">
-        <Info className="w-5 h-5 text-[var(--panel-accent-ink)] mt-1" />
-        <div className="space-y-1 text-sm text-[var(--panel-accent-ink-strong)]">
+      <div className="bg-[color:var(--brand-primary-soft)] border border-[var(--brand-primary-border)] rounded-xl p-6 flex items-start gap-3">
+        <Info className="w-5 h-5 text-[var(--text-secondary)] mt-1" />
+        <div className="space-y-1 text-sm text-[var(--text-primary)]">
           <p className="font-semibold">
             Integração de automação não encontrada.
           </p>
@@ -1551,90 +1551,90 @@ export default function AutoContactFlowSettingsScreen() {
       overlayLabel="Atualizando fluxos de automação..."
       stageClassName="min-h-[520px]"
     >
-      <div className="panel-page-shell bg-[color:var(--panel-surface)] rounded-xl shadow-sm border border-[var(--panel-border-subtle)] p-6">
+      <div className="panel-page-shell bg-[color:var(--bg-surface)] rounded-xl shadow-sm border border-[var(--border-subtle)] p-6">
         <div className="space-y-6">
           <div>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--panel-text)]">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                   Visão geral
                 </h3>
-                <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   Acompanhe o volume de fluxos, etapas e envios automáticos.
                 </p>
               </div>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-5">
-              <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--panel-text-muted)]">
+                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Fluxos ativos
                   </div>
-                  <BarChart3 className="w-4 h-4 text-[var(--panel-text-subtle)]" />
+                  <BarChart3 className="w-4 h-4 text-[var(--text-subtle)]" />
                 </div>
-                <div className="text-2xl font-semibold text-[var(--panel-text)] mt-2">
+                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
                   {metrics.totalFlows}
                 </div>
-                <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   Modelos: {metrics.totalTemplates}
                 </p>
               </div>
-              <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--panel-text-muted)]">
+                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Etapas totais
                   </div>
-                  <Timer className="w-4 h-4 text-[var(--panel-text-subtle)]" />
+                  <Timer className="w-4 h-4 text-[var(--text-subtle)]" />
                 </div>
-                <div className="text-2xl font-semibold text-[var(--panel-text)] mt-2">
+                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
                   {metrics.totalSteps}
                 </div>
-                <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   Condições: {metrics.flowsWithConditions}
                 </p>
               </div>
-              <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--panel-text-muted)]">
+                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Fluxos tagueados
                   </div>
-                  <Tag className="w-4 h-4 text-[var(--panel-text-subtle)]" />
+                  <Tag className="w-4 h-4 text-[var(--text-subtle)]" />
                 </div>
-                <div className="text-2xl font-semibold text-[var(--panel-text)] mt-2">
+                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
                   {metrics.taggedFlows}
                 </div>
-                <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   Tags ativas: {availableTags.length}
                 </p>
               </div>
-              <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--panel-text-muted)]">
+                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Última atualização
                   </div>
-                  <Activity className="w-4 h-4 text-[var(--panel-text-subtle)]" />
+                  <Activity className="w-4 h-4 text-[var(--text-subtle)]" />
                 </div>
-                <div className="text-2xl font-semibold text-[var(--panel-text)] mt-2">
+                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
                   {lastRefreshAt.toLocaleTimeString("pt-BR", {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
                 </div>
-                <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   Monitoramento em tempo real
                 </p>
               </div>
-              <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--panel-text-muted)]">
+                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Envios hoje
                   </div>
-                  <AlarmClock className="w-4 h-4 text-[var(--panel-text-subtle)]" />
+                  <AlarmClock className="w-4 h-4 text-[var(--text-subtle)]" />
                 </div>
-                <div className="text-2xl font-semibold text-[var(--panel-text)] mt-2">
+                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
                   {dailyAutomationLoading ? "..." : (dailyAutomationCount ?? 0)}
                 </div>
-                <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   {dailyAutomationError
                     ? dailyAutomationError
                     : "Limites são definidos por fluxo no agendamento."}
@@ -1645,25 +1645,25 @@ export default function AutoContactFlowSettingsScreen() {
             <div className="mt-8">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--panel-text)]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                     Configurações globais
                   </h3>
-                  <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     Controle o envio automático, o fuso horário e a
                     observabilidade do sistema.
                   </p>
                 </div>
-                <div className="inline-flex items-center gap-2 text-xs text-[var(--panel-text-muted)]">
+                <div className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
                   {autoSaveState === "saving" ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <span
                       className={`h-2 w-2 rounded-full ${
                         autoSaveState === "error"
-                          ? "bg-[color:var(--panel-accent-red-border)]"
+                          ? "bg-[var(--danger-border)]"
                           : autoSaveState === "saved"
-                            ? "bg-[color:var(--panel-accent-strong)]"
-                            : "bg-[color:var(--panel-border)]"
+                            ? "bg-[color:var(--brand-primary)]"
+                            : "bg-[color:var(--border-default)]"
                       }`}
                     />
                   )}
@@ -1679,21 +1679,21 @@ export default function AutoContactFlowSettingsScreen() {
                 </div>
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4 space-y-4">
-                  <div className="flex items-center gap-2 text-[var(--panel-text)] font-medium">
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 space-y-4">
+                  <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
                     <ShieldCheck className="w-5 h-5" />
                     Automação
                   </div>
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-[var(--panel-text-soft)]">
+                      <p className="text-sm font-medium text-[var(--text-secondary)]">
                         Ativar automação
                       </p>
-                      <p className="text-xs text-[var(--panel-text-muted)]">
+                      <p className="text-xs text-[var(--text-muted)]">
                         Controla o envio automático dos fluxos configurados.
                       </p>
                     </div>
-                    <label className="inline-flex items-center gap-2 text-sm text-[var(--panel-text-soft)]">
+                    <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                       <Checkbox
                         checked={autoSendEnabled}
                         onChange={(event) =>
@@ -1703,14 +1703,14 @@ export default function AutoContactFlowSettingsScreen() {
                     </label>
                   </div>
                 </div>
-                <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4 space-y-4">
-                  <div className="flex items-center gap-2 text-[var(--panel-text)] font-medium">
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 space-y-4">
+                  <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
                     <AlarmClock className="w-5 h-5" />
                     Agendamento avançado
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                         Fuso horário
                       </label>
                       <FilterSingleSelect
@@ -1729,12 +1729,12 @@ export default function AutoContactFlowSettingsScreen() {
                       />
                     </div>
                   </div>
-                  <p className="text-[11px] text-[var(--panel-text-subtle)]">
+                  <p className="text-[11px] text-[var(--text-subtle)]">
                     A janela diária, os dias permitidos e o limite diário são
                     definidos em cada fluxo.
                   </p>
                   <div className="space-y-1">
-                    <label className="inline-flex items-center gap-2 text-sm text-[var(--panel-text-soft)]">
+                    <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)]">
                       <Checkbox
                         checked={schedulingDraft.skipHolidays}
                         onChange={(event) =>
@@ -1746,25 +1746,25 @@ export default function AutoContactFlowSettingsScreen() {
                       />
                       Pausar envios em feriados nacionais e estaduais
                     </label>
-                    <p className="text-[11px] text-[var(--panel-text-subtle)]">
+                    <p className="text-[11px] text-[var(--text-subtle)]">
                       O sistema considera automaticamente os feriados oficiais e
                       respeita datas extras configuradas manualmente.
                     </p>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4 space-y-4 lg:col-span-2">
-                  <div className="flex items-center gap-2 text-[var(--panel-text)] font-medium">
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 space-y-4 lg:col-span-2">
+                  <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
                     <ClipboardList className="w-5 h-5" />
                     Observabilidade e auditoria
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-sm font-semibold text-[var(--panel-text)]">
+                        <div className="text-sm font-semibold text-[var(--text-primary)]">
                           Monitoramento em tempo real
                         </div>
-                        <p className="text-xs text-[var(--panel-text-muted)]">
+                        <p className="text-xs text-[var(--text-muted)]">
                           Atualiza o painel automaticamente com status das
                           execuções.
                         </p>
@@ -1782,7 +1782,7 @@ export default function AutoContactFlowSettingsScreen() {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                        <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                           Atualização (segundos)
                         </label>
                         <Input
@@ -1799,10 +1799,10 @@ export default function AutoContactFlowSettingsScreen() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                        <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                           Última atualização
                         </label>
-                        <div className="px-3 py-2 border border-[var(--panel-border-subtle)] rounded-lg text-sm text-[var(--panel-text-soft)] bg-[color:var(--panel-surface-soft)]">
+                        <div className="px-3 py-2 border border-[var(--border-subtle)] rounded-lg text-sm text-[var(--text-secondary)] bg-[color:var(--bg-elevated)]">
                           {lastRefreshAt.toLocaleTimeString("pt-BR", {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -1811,13 +1811,13 @@ export default function AutoContactFlowSettingsScreen() {
                       </div>
                     </div>
                   </div>
-                  <div className="border-t border-[var(--panel-border-subtle)] pt-4 space-y-3">
+                  <div className="border-t border-[var(--border-subtle)] pt-4 space-y-3">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-sm font-semibold text-[var(--panel-text)]">
+                        <div className="text-sm font-semibold text-[var(--text-primary)]">
                           Logs estruturados e auditoria
                         </div>
-                        <p className="text-xs text-[var(--panel-text-muted)]">
+                        <p className="text-xs text-[var(--text-muted)]">
                           Registre eventos, payloads e ações por usuário.
                         </p>
                       </div>
@@ -1834,7 +1834,7 @@ export default function AutoContactFlowSettingsScreen() {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                        <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                           Retenção (dias)
                         </label>
                         <Input
@@ -1850,7 +1850,7 @@ export default function AutoContactFlowSettingsScreen() {
                           size="compact"
                         />
                       </div>
-                      <label className="inline-flex items-center gap-2 text-sm text-[var(--panel-text-soft)] mt-6">
+                      <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] mt-6">
                         <Checkbox
                           checked={loggingDraft.includePayloads}
                           onChange={(event) =>
@@ -1869,10 +1869,10 @@ export default function AutoContactFlowSettingsScreen() {
             </div>
 
             <div className="mt-10 space-y-1">
-              <h3 className="text-sm font-semibold text-[var(--panel-text)]">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                 Fluxos e templates
               </h3>
-              <p className="text-xs text-[var(--panel-text-muted)]">
+              <p className="text-xs text-[var(--text-muted)]">
                 Crie, organize e acompanhe os fluxos e templates usados na
                 automação.
               </p>
@@ -1881,10 +1881,10 @@ export default function AutoContactFlowSettingsScreen() {
               <div
                 className={`mt-4 p-3 rounded-lg border text-sm flex items-center gap-2 ${
                   statusMessage.type === "success"
-                    ? "bg-[color:var(--panel-accent-green-bg)] border-[var(--panel-accent-green-border)] text-[var(--panel-accent-green-text)]"
+                    ? "bg-[var(--success-soft)] border-[var(--success-border)] text-[var(--success-text)]"
                     : statusMessage.type === "warning"
-                      ? "bg-[color:var(--panel-accent-soft)] border-[var(--panel-accent-border)] text-[var(--panel-accent-ink-strong)]"
-                      : "bg-[color:var(--panel-accent-red-bg)] border-[var(--panel-accent-red-border)] text-[var(--panel-accent-red-text)]"
+                      ? "bg-[color:var(--brand-primary-soft)] border-[var(--brand-primary-border)] text-[var(--text-primary)]"
+                      : "bg-[var(--danger-soft)] border-[var(--danger-border)] text-[var(--danger-text)]"
                 }`}
               >
                 {statusMessage.type === "success" ? (
@@ -1896,7 +1896,7 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
             )}
             {autoContactSettings?.enabled === false && (
-              <div className="mt-4 rounded-lg border border-[var(--panel-accent-border)] bg-[color:var(--panel-accent-soft)] p-3 text-sm text-[var(--panel-accent-ink-strong)] flex items-center gap-2">
+              <div className="mt-4 rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] p-3 text-sm text-[var(--text-primary)] flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 <span>
                   O canal do WhatsApp esta desativado. Ao ligar "Ativar
@@ -1905,13 +1905,13 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
             )}
 
-            <div className="border border-[var(--panel-border-subtle)] rounded-lg p-4 bg-[color:var(--panel-surface-soft)] space-y-4 mt-6">
+            <div className="border border-[var(--border-subtle)] rounded-lg p-4 bg-[color:var(--bg-elevated)] space-y-4 mt-6">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--panel-text)]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                     Fluxos de automação
                   </h3>
-                  <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     Monte sequências com espera configurável (segundos, minutos,
                     horas ou dias), envio de templates e condição de
                     encerramento.
@@ -1924,7 +1924,7 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
 
               {flowDrafts.length === 0 ? (
-                <div className="text-sm text-[var(--panel-text-muted)] bg-[color:var(--panel-surface)] border border-[var(--panel-border-subtle)] rounded-lg p-4">
+                <div className="text-sm text-[var(--text-muted)] bg-[color:var(--bg-surface)] border border-[var(--border-subtle)] rounded-lg p-4">
                   Nenhum fluxo configurado. Clique em "Novo fluxo" para começar.
                 </div>
               ) : (
@@ -1935,7 +1935,7 @@ export default function AutoContactFlowSettingsScreen() {
                       value={flowSearch}
                       onChange={(event) => setFlowSearch(event.target.value)}
                       leftIcon={Search}
-                      className="bg-[color:var(--panel-surface)]"
+                      className="bg-[color:var(--bg-surface)]"
                       placeholder="Buscar fluxo por nome, condição ou tag"
                     />
                     <div>
@@ -1954,7 +1954,7 @@ export default function AutoContactFlowSettingsScreen() {
                         ]}
                       />
                     </div>
-                    <div className="text-xs text-[var(--panel-text-muted)] flex items-center justify-end">
+                    <div className="text-xs text-[var(--text-muted)] flex items-center justify-end">
                       {filteredFlows.length} fluxo
                       {filteredFlows.length === 1 ? "" : "s"} encontrado
                     </div>
@@ -1966,52 +1966,52 @@ export default function AutoContactFlowSettingsScreen() {
                         type="button"
                         key={flow.id}
                         onClick={() => setActiveFlowId(flow.id)}
-                        className="text-left rounded-xl border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4 shadow-sm transition hover:border-[var(--panel-accent-border)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus)] focus-visible:ring-offset-2"
+                        className="text-left rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 shadow-sm transition hover:border-[var(--brand-primary-border)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)] focus-visible:ring-offset-2"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-xs font-semibold text-[var(--panel-text-subtle)] uppercase">
+                            <div className="text-xs font-semibold text-[var(--text-subtle)] uppercase">
                               Fluxo {index + 1}
                             </div>
-                            <div className="text-sm font-semibold text-[var(--panel-text)] mt-1">
+                            <div className="text-sm font-semibold text-[var(--text-primary)] mt-1">
                               {flow.name || "Fluxo sem nome"}
                             </div>
-                            <div className="text-xs text-[var(--panel-text-muted)] mt-1">
+                            <div className="text-xs text-[var(--text-muted)] mt-1">
                               Condições:{" "}
-                              <span className="font-medium text-[var(--panel-text-soft)]">
+                              <span className="font-medium text-[var(--text-secondary)]">
                                 {getFlowConditionPreview(flow)}
                               </span>
                             </div>
                           </div>
-                          <span className="text-[11px] px-2 py-1 rounded-full bg-[color:var(--panel-surface-muted)] text-[var(--panel-text-muted)]">
+                          <span className="text-[11px] px-2 py-1 rounded-full bg-[color:var(--bg-inset)] text-[var(--text-muted)]">
                             {flow.steps.length} etapa
                             {flow.steps.length === 1 ? "" : "s"}
                           </span>
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--panel-text-muted)]">
-                          <span className="rounded-full border border-[var(--panel-border-subtle)] px-2 py-0.5">
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                          <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5">
                             Saída: {(flow.exitConditions ?? []).length || 0}{" "}
                             condição
                             {(flow.exitConditions ?? []).length === 1
                               ? ""
                               : "s"}
                           </span>
-                          <span className="rounded-full border border-[var(--panel-border-subtle)] px-2 py-0.5">
+                          <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5">
                             {flow.finalStatus
                               ? `Finaliza em ${flow.finalStatus}`
                               : "Sem status final"}
                           </span>
-                          <span className="rounded-full border border-[var(--panel-border-subtle)] px-2 py-0.5">
+                          <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5">
                             {(flow.conditions ?? []).length} condição
                             {(flow.conditions ?? []).length === 1 ? "" : "s"}
                           </span>
                         </div>
                         {(flow.tags ?? []).length > 0 && (
-                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[var(--panel-text-muted)]">
+                          <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[var(--text-muted)]">
                             {(flow.tags ?? []).map((tagItem) => (
                               <span
                                 key={tagItem}
-                                className="rounded-full border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] px-2 py-0.5"
+                                className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] px-2 py-0.5"
                               >
                                 #{tagItem}
                               </span>
@@ -2033,15 +2033,15 @@ export default function AutoContactFlowSettingsScreen() {
                   bodyClassName="p-6"
                   showCloseButton={false}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--panel-border-subtle)] pb-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
                     <div>
-                      <div className="text-xs font-semibold text-[var(--panel-text-subtle)] uppercase">
+                      <div className="text-xs font-semibold text-[var(--text-subtle)] uppercase">
                         Fluxo {activeFlowIndex + 1}
                       </div>
-                      <h4 className="text-lg font-semibold text-[var(--panel-text)]">
+                      <h4 className="text-lg font-semibold text-[var(--text-primary)]">
                         Detalhes do fluxo
                       </h4>
-                      <p className="text-sm text-[var(--panel-text-muted)] mt-1">
+                      <p className="text-sm text-[var(--text-muted)] mt-1">
                         Ajuste regras, sequência de ações e status final do
                         fluxo selecionado.
                       </p>
@@ -2090,7 +2090,7 @@ export default function AutoContactFlowSettingsScreen() {
                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <label className="block text-xs font-semibold text-[var(--panel-text-muted)] uppercase tracking-wide">
+                          <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                             Nome do fluxo
                           </label>
                           <Input
@@ -2106,44 +2106,44 @@ export default function AutoContactFlowSettingsScreen() {
                         </div>
                       </div>
 
-                      <div className="rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3">
-                        <div className="text-xs font-semibold text-[var(--panel-text-muted)] uppercase">
+                      <div className="rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
+                        <div className="text-xs font-semibold text-[var(--text-muted)] uppercase">
                           Resumo do fluxo
                         </div>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--panel-text-soft)]">
-                          <span className="rounded-full border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] px-2 py-0.5">
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                          <span className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
                             {activeFlow.triggerStatus
                               ? `Status: ${activeFlow.triggerStatus}`
                               : "Disparo por condições"}
                           </span>
-                          <span className="rounded-full border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] px-2 py-0.5">
+                          <span className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
                             Janela {activeFlowScheduling.startHour} -{" "}
                             {activeFlowScheduling.endHour}
                           </span>
-                          <span className="rounded-full border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] px-2 py-0.5">
+                          <span className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
                             {activeFlow.steps.length} etapa
                             {activeFlow.steps.length === 1 ? "" : "s"}
                           </span>
-                          <span className="rounded-full border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] px-2 py-0.5">
+                          <span className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
                             {getFlowConditionPreview(activeFlow)}
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-3 rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+                    <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                       <div>
-                        <h4 className="text-sm font-semibold text-[var(--panel-text)]">
+                        <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                           Agendamento do fluxo
                         </h4>
-                        <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
                           Defina a janela diária, os dias permitidos e o limite
                           de envios deste fluxo.
                         </p>
                       </div>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                             Janela diária
                           </label>
                           <div className="flex items-center gap-2">
@@ -2157,7 +2157,7 @@ export default function AutoContactFlowSettingsScreen() {
                               }
                               size="compact"
                             />
-                            <span className="text-xs text-[var(--panel-text-subtle)]">
+                            <span className="text-xs text-[var(--text-subtle)]">
                               até
                             </span>
                             <Input
@@ -2173,7 +2173,7 @@ export default function AutoContactFlowSettingsScreen() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-2">
+                          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-2">
                             Dias permitidos
                           </label>
                           <div className="flex flex-wrap gap-2">
@@ -2208,7 +2208,7 @@ export default function AutoContactFlowSettingsScreen() {
                           </div>
                         </div>
                         <div>
-                          <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                             Limite diário deste fluxo
                           </label>
                           <Input
@@ -2226,7 +2226,7 @@ export default function AutoContactFlowSettingsScreen() {
                             }}
                             placeholder="Sem limite"
                           />
-                          <p className="text-[11px] text-[var(--panel-text-subtle)] mt-1">
+                          <p className="text-[11px] text-[var(--text-subtle)] mt-1">
                             Conta apenas os envios automáticos deste fluxo por
                             dia.
                           </p>
@@ -2260,13 +2260,13 @@ export default function AutoContactFlowSettingsScreen() {
                       }}
                     />
 
-                    <div className="space-y-3 rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+                    <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h4 className="text-sm font-semibold text-[var(--panel-text)]">
+                          <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                             Condições de saída
                           </h4>
-                          <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                          <p className="text-xs text-[var(--text-muted)] mt-1">
                             Defina quando este fluxo deve ser encerrado
                             automaticamente.
                           </p>
@@ -2282,7 +2282,7 @@ export default function AutoContactFlowSettingsScreen() {
                           Nova condição
                         </Button>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-[var(--panel-text-muted)]">
+                      <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
                         <span>Encerrar quando</span>
                         <div className="w-52">
                           <FilterSingleSelect
@@ -2307,7 +2307,7 @@ export default function AutoContactFlowSettingsScreen() {
                       </div>
 
                       {(activeFlow.exitConditions ?? []).length === 0 ? (
-                        <div className="text-xs text-[var(--panel-text-muted)] bg-[color:var(--panel-surface)] border border-dashed border-[var(--panel-border-subtle)] rounded-lg p-3">
+                        <div className="text-xs text-[var(--text-muted)] bg-[color:var(--bg-surface)] border border-dashed border-[var(--border-subtle)] rounded-lg p-3">
                           Nenhuma condição de saída configurada. O fluxo seguirá
                           até a última ação.
                         </div>
@@ -2317,7 +2317,7 @@ export default function AutoContactFlowSettingsScreen() {
                             (condition) => (
                               <div
                                 key={condition.id}
-                                className="grid gap-2 rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-3 md:grid-cols-[160px_160px_1fr_auto]"
+                                className="grid gap-2 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-3 md:grid-cols-[160px_160px_1fr_auto]"
                               >
                                 {(() => {
                                   const valueOptions = getConditionValueOptions(
@@ -2458,12 +2458,12 @@ export default function AutoContactFlowSettingsScreen() {
                       )}
                     </div>
 
-                    <div className="space-y-3 rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+                    <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                       <div>
-                        <h4 className="text-sm font-semibold text-[var(--panel-text)]">
+                        <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                           Tags e categorização
                         </h4>
-                        <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                        <p className="text-xs text-[var(--text-muted)] mt-1">
                           Organize e encontre fluxos rapidamente com etiquetas
                           personalizadas.
                         </p>
@@ -2473,7 +2473,7 @@ export default function AutoContactFlowSettingsScreen() {
                           (activeFlow.tags ?? []).map((tagItem) => (
                             <span
                               key={tagItem}
-                              className="inline-flex items-center gap-1 rounded-full bg-[color:var(--panel-surface)] border border-[var(--panel-border-subtle)] px-2 py-1 text-xs text-[var(--panel-text-soft)]"
+                              className="inline-flex items-center gap-1 rounded-full bg-[color:var(--bg-surface)] border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)]"
                             >
                               #{tagItem}
                               <Button
@@ -2482,14 +2482,14 @@ export default function AutoContactFlowSettingsScreen() {
                                 }
                                 variant="icon"
                                 size="icon"
-                                className="h-5 w-5 text-[var(--panel-text-subtle)] hover:bg-[color:var(--panel-surface-muted)] hover:text-[var(--panel-text-soft)]"
+                                className="h-5 w-5 text-[var(--text-subtle)] hover:bg-[color:var(--bg-inset)] hover:text-[var(--text-secondary)]"
                               >
                                 ×
                               </Button>
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-[var(--panel-text-muted)]">
+                          <span className="text-xs text-[var(--text-muted)]">
                             Nenhuma tag adicionada.
                           </span>
                         )}
@@ -2517,7 +2517,7 @@ export default function AutoContactFlowSettingsScreen() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="block text-xs font-semibold text-[var(--panel-text-muted)]">
+                      <label className="block text-xs font-semibold text-[var(--text-muted)]">
                         Status final se não houver resposta
                       </label>
                       {showStatusSelect ? (
@@ -2557,10 +2557,10 @@ export default function AutoContactFlowSettingsScreen() {
                       <div className="space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <div>
-                            <h4 className="text-sm font-semibold text-[var(--panel-text)]">
+                            <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                               Sequência de ações
                             </h4>
-                            <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                            <p className="text-xs text-[var(--text-muted)] mt-1">
                               Cada etapa representa uma ação. Configure o
                               intervalo, o tipo de ação e, se necessário, o
                               conteúdo da mensagem.
@@ -2579,11 +2579,11 @@ export default function AutoContactFlowSettingsScreen() {
                         {activeFlow.steps.map((step, stepIndex) => (
                           <div
                             key={step.id}
-                            className="grid gap-3 rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3"
+                            className="grid gap-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3"
                           >
                             <div className="grid gap-3 md:grid-cols-[160px_160px_1fr_auto]">
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Esperar
                                 </label>
                                 <Input
@@ -2603,7 +2603,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Unidade
                                 </label>
                                 <FilterSingleSelect
@@ -2630,7 +2630,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Tipo de ação
                                 </label>
                                 <FilterSingleSelect
@@ -2671,12 +2671,12 @@ export default function AutoContactFlowSettingsScreen() {
 
                             {step.actionType === "send_message" && (
                               <div className="grid gap-3 md:grid-cols-[220px_1fr]">
-                                <div className="md:col-span-2 text-xs text-[var(--panel-text-muted)]">
+                                <div className="md:col-span-2 text-xs text-[var(--text-muted)]">
                                   Canal ativo: WhatsApp (configurado em
                                   Integrações).
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Origem da mensagem
                                   </label>
                                   <FilterSingleSelect
@@ -2704,7 +2704,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 </div>
                                 {step.messageSource !== "custom" ? (
                                   <div>
-                                    <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                    <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                       Template da mensagem
                                     </label>
                                     <FilterSingleSelect
@@ -2738,7 +2738,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 ) : (
                                   <div className="grid gap-3 sm:grid-cols-2">
                                     <div>
-                                      <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                         Tipo de mensagem
                                       </label>
                                       <FilterSingleSelect
@@ -2769,7 +2769,7 @@ export default function AutoContactFlowSettingsScreen() {
                                       />
                                     </div>
                                     <div>
-                                      <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                         URL da mídia (opcional)
                                       </label>
                                       <Input
@@ -2794,7 +2794,7 @@ export default function AutoContactFlowSettingsScreen() {
                                       />
                                     </div>
                                     <div className="sm:col-span-2">
-                                      <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                      <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                         Texto/legenda
                                       </label>
                                       <VariableAutocompleteTextarea
@@ -2822,7 +2822,7 @@ export default function AutoContactFlowSettingsScreen() {
                                     {step.customMessage?.type ===
                                       "document" && (
                                       <div className="sm:col-span-2">
-                                        <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                        <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                           Nome do arquivo (opcional)
                                         </label>
                                         <Input
@@ -2855,7 +2855,7 @@ export default function AutoContactFlowSettingsScreen() {
                             {step.actionType === "create_task" && (
                               <div className="grid gap-3 md:grid-cols-2">
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Título da tarefa
                                   </label>
                                   <Input
@@ -2872,7 +2872,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Descrição
                                   </label>
                                   <VariableAutocompleteTextarea
@@ -2893,7 +2893,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Vencimento (horas)
                                   </label>
                                   <Input
@@ -2915,7 +2915,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Prioridade
                                   </label>
                                   <FilterSingleSelect
@@ -2945,12 +2945,12 @@ export default function AutoContactFlowSettingsScreen() {
 
                             {step.actionType === "send_email" && (
                               <div className="grid gap-3 md:grid-cols-2">
-                                <div className="md:col-span-2 text-xs text-[var(--panel-text-muted)]">
+                                <div className="md:col-span-2 text-xs text-[var(--text-muted)]">
                                   Envio depende de conta configurada em
                                   Integrações de e-mail.
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Para
                                   </label>
                                   <Input
@@ -2967,7 +2967,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     CC
                                   </label>
                                   <Input
@@ -2983,7 +2983,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     BCC
                                   </label>
                                   <Input
@@ -2999,7 +2999,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Assunto
                                   </label>
                                   <Input
@@ -3015,7 +3015,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Corpo do e-mail
                                   </label>
                                   <VariableAutocompleteTextarea
@@ -3033,7 +3033,7 @@ export default function AutoContactFlowSettingsScreen() {
                                       AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS
                                     }
                                   />
-                                  <p className="text-[11px] text-[var(--panel-text-subtle)] mt-1">
+                                  <p className="text-[11px] text-[var(--text-subtle)] mt-1">
                                     Use variaveis como {"{{primeiro_nome}}"} ou{" "}
                                     {"{{= ... }}"} para formulas.
                                   </p>
@@ -3044,7 +3044,7 @@ export default function AutoContactFlowSettingsScreen() {
                             {step.actionType === "webhook" && (
                               <div className="grid gap-3 md:grid-cols-2">
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     URL
                                   </label>
                                   <Input
@@ -3061,7 +3061,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Metodo
                                   </label>
                                   <FilterSingleSelect
@@ -3088,7 +3088,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Headers (JSON)
                                   </label>
                                   <Input
@@ -3105,7 +3105,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   />
                                 </div>
                                 <div className="md:col-span-2">
-                                  <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                     Body
                                   </label>
                                   <VariableAutocompleteTextarea
@@ -3124,7 +3124,7 @@ export default function AutoContactFlowSettingsScreen() {
                                     }
                                     placeholder='{"lead_id":"{{= lead.id }}"}'
                                   />
-                                  <p className="text-[11px] text-[var(--panel-text-subtle)] mt-1">
+                                  <p className="text-[11px] text-[var(--text-subtle)] mt-1">
                                     Se vazio, envia JSON padrão com dados do
                                     lead.
                                   </p>
@@ -3134,7 +3134,7 @@ export default function AutoContactFlowSettingsScreen() {
 
                             {step.actionType === "update_status" && (
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Novo status do lead
                                 </label>
                                 {showStatusSelect ? (
@@ -3180,13 +3180,13 @@ export default function AutoContactFlowSettingsScreen() {
 
                             {(step.actionType === "archive_lead" ||
                               step.actionType === "delete_lead") && (
-                              <div className="rounded-lg border border-[var(--panel-accent-border)] bg-[color:var(--panel-accent-soft)] px-3 py-2 text-xs text-[var(--panel-accent-ink)]">
+                              <div className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
                                 Esta ação será aplicada automaticamente ao lead
                                 ao chegar nesta etapa.
                               </div>
                             )}
 
-                            <div className="text-[11px] text-[var(--panel-text-muted)]">
+                            <div className="text-[11px] text-[var(--text-muted)]">
                               Etapa {stepIndex + 1} da sequência.
                             </div>
                           </div>
@@ -3195,49 +3195,49 @@ export default function AutoContactFlowSettingsScreen() {
                     )}
 
                     {showSimulation && (
-                      <div className="space-y-4 rounded-2xl border border-[var(--panel-accent-border)] bg-gradient-to-br from-[color:var(--panel-accent-soft)] via-[color:var(--panel-surface)] to-[color:var(--panel-accent-warm)] p-5 shadow-sm">
+                      <div className="space-y-4 rounded-2xl border border-[var(--brand-primary-border)] bg-gradient-to-br from-[color:var(--brand-primary-soft)] via-[color:var(--bg-surface)] to-[color:var(--accent-gold-soft)] p-5 shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-accent-ink-strong)]">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                               <Timer className="w-4 h-4" />
                               Simulação operacional
                             </div>
-                            <p className="text-xs text-[var(--panel-accent-ink-strong)]">
+                            <p className="text-xs text-[var(--text-primary)]">
                               Dry run do fluxo. Nenhuma mensagem é enviada;
                               mostramos somente a previsão de execução.
                             </p>
                           </div>
-                          <div className="rounded-full border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] px-3 py-1 text-[11px] font-medium text-[var(--panel-accent-ink)]">
+                          <div className="rounded-full border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
                             Lead de exemplo + agenda do fluxo
                           </div>
                         </div>
 
                         <div className="grid gap-3 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                          <div className="rounded-xl border border-[var(--panel-accent-border)] bg-[color:color-mix(in_srgb,var(--panel-surface)_90%,transparent)] p-4">
+                          <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:color-mix(in_srgb,var(--bg-surface)_90%,transparent)] p-4">
                             <div className="grid gap-3 sm:grid-cols-2">
                               <div>
-                                <label className="mb-1 block text-xs font-semibold text-[var(--panel-accent-ink)]">
+                                <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">
                                   Início da simulação
                                 </label>
                                 <DateTimePicker
                                   type="datetime-local"
                                   value={simulationInputValue}
                                   onChange={setSimulationStart}
-                                  triggerClassName="border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)]"
+                                  triggerClassName="border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)]"
                                   placeholder="Selecionar inicio"
                                 />
                               </div>
-                              <div className="grid gap-2 text-xs text-[var(--panel-accent-ink-strong)]">
-                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--panel-accent-border)_55%,transparent)] bg-[color:var(--panel-accent-soft)] px-3 py-2">
+                              <div className="grid gap-2 text-xs text-[var(--text-primary)]">
+                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2">
                                   <span className="font-semibold">Janela:</span>{" "}
                                   {activeFlowScheduling.startHour} ate{" "}
                                   {activeFlowScheduling.endHour}
                                 </div>
-                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--panel-accent-border)_55%,transparent)] bg-[color:var(--panel-accent-soft)] px-3 py-2">
+                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2">
                                   <span className="font-semibold">Fuso:</span>{" "}
                                   {activeFlowScheduling.timezone}
                                 </div>
-                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--panel-accent-border)_55%,transparent)] bg-[color:var(--panel-accent-soft)] px-3 py-2">
+                                <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2">
                                   <span className="font-semibold">Dias:</span>{" "}
                                   {activeFlowScheduling.allowedWeekdays.length
                                     ? weekdayLabels
@@ -3255,39 +3255,39 @@ export default function AutoContactFlowSettingsScreen() {
                           </div>
 
                           <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-xl border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] p-4">
-                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-accent-ink)]">
+                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
+                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                                 <ClipboardList className="h-3.5 w-3.5" />
                                 Etapas
                               </div>
-                              <div className="mt-2 text-2xl font-semibold text-[var(--panel-text)]">
+                              <div className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
                                 {simulationSummary?.totalSteps ?? 0}
                               </div>
-                              <div className="text-xs text-[var(--panel-text-muted)]">
+                              <div className="text-xs text-[var(--text-muted)]">
                                 Acoes previstas no fluxo atual.
                               </div>
                             </div>
-                            <div className="rounded-xl border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] p-4">
-                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-accent-ink)]">
+                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
+                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                                 <AlarmClock className="h-3.5 w-3.5" />
                                 Ajustes
                               </div>
-                              <div className="mt-2 text-2xl font-semibold text-[var(--panel-text)]">
+                              <div className="mt-2 text-2xl font-semibold text-[var(--text-primary)]">
                                 {simulationSummary?.adjustedSteps ?? 0}
                               </div>
-                              <div className="text-xs text-[var(--panel-text-muted)]">
+                              <div className="text-xs text-[var(--text-muted)]">
                                 Etapas movidas por regras de agenda.
                               </div>
                             </div>
-                            <div className="rounded-xl border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] p-4 sm:col-span-2">
-                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-accent-ink)]">
+                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4 sm:col-span-2">
+                              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                                 <Activity className="h-3.5 w-3.5" />
                                 Janela estimada
                               </div>
-                              <div className="mt-2 space-y-1 text-xs text-[var(--panel-text-soft)]">
+                              <div className="mt-2 space-y-1 text-xs text-[var(--text-secondary)]">
                                 <div>
                                   Primeiro disparo:{" "}
-                                  <span className="font-medium text-[var(--panel-text)]">
+                                  <span className="font-medium text-[var(--text-primary)]">
                                     {simulationSummary?.firstAt
                                       ? formatSimulationDateTime(
                                           simulationSummary.firstAt,
@@ -3298,7 +3298,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 </div>
                                 <div>
                                   Ultima execucao:{" "}
-                                  <span className="font-medium text-[var(--panel-text)]">
+                                  <span className="font-medium text-[var(--text-primary)]">
                                     {simulationSummary?.lastAt
                                       ? formatSimulationDateTime(
                                           simulationSummary.lastAt,
@@ -3321,7 +3321,7 @@ export default function AutoContactFlowSettingsScreen() {
                               ).map(([actionType, count]) => (
                                 <span
                                   key={actionType}
-                                  className="rounded-full border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] px-3 py-1 text-[11px] text-[var(--panel-accent-ink-strong)]"
+                                  className="rounded-full border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-1 text-[11px] text-[var(--text-primary)]"
                                 >
                                   {count}x{" "}
                                   {flowActionLabels[
@@ -3333,8 +3333,8 @@ export default function AutoContactFlowSettingsScreen() {
                           )}
 
                         {simulationIssues.length > 0 && (
-                          <div className="rounded-xl border border-[var(--panel-accent-strong)] bg-[color:color-mix(in_srgb,var(--panel-accent-warm)_70%,transparent)] p-4">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-accent-ink-strong)]">
+                          <div className="rounded-xl border border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--accent-gold-soft)_70%,transparent)] p-4">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                               <AlertCircle className="h-4 w-4" />
                               Pontos para revisar antes de confiar na simulação
                             </div>
@@ -3342,7 +3342,7 @@ export default function AutoContactFlowSettingsScreen() {
                               {simulationIssues.map((issue) => (
                                 <div
                                   key={issue}
-                                  className="rounded-lg border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] px-3 py-2 text-xs text-[var(--panel-accent-ink-strong)]"
+                                  className="rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-2 text-xs text-[var(--text-primary)]"
                                 >
                                   {issue}
                                 </div>
@@ -3353,13 +3353,13 @@ export default function AutoContactFlowSettingsScreen() {
 
                         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
                           <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text)]">
-                              <Timer className="h-4 w-4 text-[var(--panel-accent-ink)]" />
+                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                              <Timer className="h-4 w-4 text-[var(--text-secondary)]" />
                               Linha do tempo prevista
                             </div>
 
                             {simulationTimeline.length === 0 ? (
-                              <div className="rounded-xl border border-dashed border-[var(--panel-accent-strong)] bg-[color:color-mix(in_srgb,var(--panel-surface)_80%,transparent)] p-5 text-sm text-[var(--panel-text-soft)]">
+                              <div className="rounded-xl border border-dashed border-[var(--brand-primary)] bg-[color:color-mix(in_srgb,var(--bg-surface)_80%,transparent)] p-5 text-sm text-[var(--text-secondary)]">
                                 {simulationIssues.length > 0
                                   ? "A simulação ficou incompleta porque ainda existem configurações pendentes."
                                   : "Adicione etapas para visualizar a linha do tempo."}
@@ -3369,17 +3369,17 @@ export default function AutoContactFlowSettingsScreen() {
                                 {simulationTimeline.map((item) => (
                                   <div
                                     key={item.step.id}
-                                    className="rounded-xl border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] p-4 shadow-sm"
+                                    className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4 shadow-sm"
                                   >
                                     <div className="flex flex-wrap items-start justify-between gap-3">
                                       <div className="space-y-1">
-                                        <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-accent-ink)]">
+                                        <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                                           Etapa {item.index}
                                         </div>
-                                        <div className="text-sm font-semibold text-[var(--panel-text)]">
+                                        <div className="text-sm font-semibold text-[var(--text-primary)]">
                                           {getSimulationStepLabel(item.step)}
                                         </div>
-                                        <div className="text-xs text-[var(--panel-text-muted)]">
+                                        <div className="text-xs text-[var(--text-muted)]">
                                           {formatDelayLabel(
                                             item.delayValue,
                                             item.delayUnit,
@@ -3387,7 +3387,7 @@ export default function AutoContactFlowSettingsScreen() {
                                           apos o marco anterior
                                         </div>
                                       </div>
-                                      <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--panel-accent-border)_55%,transparent)] bg-[color:var(--panel-accent-soft)] px-3 py-2 text-right text-xs text-[var(--panel-accent-ink-strong)]">
+                                      <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--brand-primary-border)_55%,transparent)] bg-[color:var(--brand-primary-soft)] px-3 py-2 text-right text-xs text-[var(--text-primary)]">
                                         {formatSimulationDateTime(
                                           item.scheduledAt,
                                           activeFlowScheduling.timezone,
@@ -3400,7 +3400,7 @@ export default function AutoContactFlowSettingsScreen() {
                                           (reason) => (
                                             <span
                                               key={item.step.id + "-" + reason}
-                                              className="rounded-full border border-[var(--panel-accent-border)] bg-[color:var(--panel-accent-soft)] px-2.5 py-1 text-[11px] text-[var(--panel-accent-ink-strong)]"
+                                              className="rounded-full border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-2.5 py-1 text-[11px] text-[var(--text-primary)]"
                                             >
                                               Ajustado por{" "}
                                               {adjustmentReasonLabels[reason]}
@@ -3416,46 +3416,46 @@ export default function AutoContactFlowSettingsScreen() {
                           </div>
 
                           <div className="space-y-3">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text)]">
-                              <Info className="h-4 w-4 text-[var(--panel-accent-ink)]" />
+                            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                              <Info className="h-4 w-4 text-[var(--text-secondary)]" />
                               Contexto da simulação
                             </div>
-                            <div className="rounded-xl border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-text-muted)]">
+                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                                 Lead de exemplo
                               </div>
-                              <div className="mt-3 grid gap-2 text-xs text-[var(--panel-text-soft)]">
+                              <div className="mt-3 grid gap-2 text-xs text-[var(--text-secondary)]">
                                 <div>
-                                  <span className="font-semibold text-[var(--panel-text)]">
+                                  <span className="font-semibold text-[var(--text-primary)]">
                                     Nome:
                                   </span>{" "}
                                   {simulationLead.nome_completo}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--panel-text)]">
+                                  <span className="font-semibold text-[var(--text-primary)]">
                                     Status inicial:
                                   </span>{" "}
                                   {simulationLead.status}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--panel-text)]">
+                                  <span className="font-semibold text-[var(--text-primary)]">
                                     Origem:
                                   </span>{" "}
                                   {simulationLead.origem}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--panel-text)]">
+                                  <span className="font-semibold text-[var(--text-primary)]">
                                     Cidade:
                                   </span>{" "}
                                   {simulationLead.cidade}
                                 </div>
                               </div>
                             </div>
-                            <div className="rounded-xl border border-[var(--panel-accent-border)] bg-[color:var(--panel-surface)] p-4">
-                              <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--panel-text-muted)]">
+                            <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] p-4">
+                              <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                                 Como ler
                               </div>
-                              <div className="mt-3 space-y-2 text-xs text-[var(--panel-text-soft)]">
+                              <div className="mt-3 space-y-2 text-xs text-[var(--text-secondary)]">
                                 <p>
                                   Os horarios ja consideram a janela do fluxo,
                                   os dias permitidos e pulos automaticos da
@@ -3480,35 +3480,35 @@ export default function AutoContactFlowSettingsScreen() {
               )}
             </div>
 
-            <div className="bg-[color:var(--panel-accent-blue-bg)] border border-[var(--panel-accent-blue-border)] rounded-lg p-3 text-sm text-[var(--panel-accent-blue-text)] mt-8">
+            <div className="mt-8 rounded-[var(--kds-radius-md)] border border-[var(--info-border)] bg-[var(--info-soft)] p-3 text-sm text-[var(--info-text)]">
               <div className="font-semibold mb-2">Variáveis disponíveis:</div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <span>
-                  <code className="bg-[color:var(--panel-accent-blue-bg-strong)] px-1.5 py-0.5 rounded">
+                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{nome}}"}
                   </code>{" "}
                   nome completo
                 </span>
                 <span>
-                  <code className="bg-[color:var(--panel-accent-blue-bg-strong)] px-1.5 py-0.5 rounded">
+                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{primeiro_nome}}"}
                   </code>{" "}
                   primeiro nome
                 </span>
                 <span>
-                  <code className="bg-[color:var(--panel-accent-blue-bg-strong)] px-1.5 py-0.5 rounded">
+                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{origem}}"}
                   </code>{" "}
                   origem do lead
                 </span>
                 <span>
-                  <code className="bg-[color:var(--panel-accent-blue-bg-strong)] px-1.5 py-0.5 rounded">
+                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{cidade}}"}
                   </code>{" "}
                   cidade
                 </span>
                 <span>
-                  <code className="bg-[color:var(--panel-accent-blue-bg-strong)] px-1.5 py-0.5 rounded">
+                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{responsavel}}"}
                   </code>{" "}
                   responsável
@@ -3516,13 +3516,13 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
             </div>
 
-            <div className="border-t border-[var(--panel-border-subtle)] pt-6">
+            <div className="border-t border-[var(--border-subtle)] pt-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--panel-text)]">
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                     Biblioteca de templates
                   </h3>
-                  <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
                     Crie e edite templates pré-fabricados para usar na automação
                     ou em disparos manuais.
                   </p>
@@ -3538,7 +3538,7 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
 
               {messageTemplatesDraft.length === 0 ? (
-                <div className="text-sm text-[var(--panel-text-muted)] bg-[color:var(--panel-surface-soft)] border border-[var(--panel-border-subtle)] rounded-lg p-4">
+                <div className="text-sm text-[var(--text-muted)] bg-[color:var(--bg-elevated)] border border-[var(--border-subtle)] rounded-lg p-4">
                   Nenhum modelo cadastrado. Clique em "Novo modelo" para
                   adicionar mensagens rápidas.
                 </div>
@@ -3552,16 +3552,16 @@ export default function AutoContactFlowSettingsScreen() {
                     return (
                       <div
                         key={template.id}
-                        className="rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4 shadow-sm flex flex-col gap-3"
+                        className="rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 shadow-sm flex flex-col gap-3"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-sm font-semibold text-[var(--panel-text)]">
+                              <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                                 {template.name?.trim() || `Modelo ${index + 1}`}
                               </h4>
                             </div>
-                            <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                            <p className="text-xs text-[var(--text-muted)] mt-1">
                               {getTemplateMessages(template).length} mensagens
                               configuradas
                             </p>
@@ -3599,15 +3599,15 @@ export default function AutoContactFlowSettingsScreen() {
                               return (
                                 <div
                                   key={message.id}
-                                  className="flex gap-2 rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] px-3 py-2"
+                                  className="flex gap-2 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] px-3 py-2"
                                 >
-                                  <Icon className="w-4 h-4 text-[var(--panel-text-subtle)] mt-0.5" />
+                                  <Icon className="w-4 h-4 text-[var(--text-subtle)] mt-0.5" />
                                   <div>
-                                    <div className="text-[11px] uppercase font-semibold text-[var(--panel-text-muted)]">
+                                    <div className="text-[11px] uppercase font-semibold text-[var(--text-muted)]">
                                       {messageTypeLabels[message.type]}{" "}
                                       {messageIndex + 1}
                                     </div>
-                                    <p className="text-xs text-[var(--panel-text-soft)] whitespace-pre-wrap">
+                                    <p className="text-xs text-[var(--text-secondary)] whitespace-pre-wrap">
                                       {content || "Sem conteúdo"}
                                     </p>
                                   </div>
@@ -3615,7 +3615,7 @@ export default function AutoContactFlowSettingsScreen() {
                               );
                             })
                           ) : (
-                            <p className="text-xs text-[var(--panel-text-muted)]">
+                            <p className="text-xs text-[var(--text-muted)]">
                               Nenhuma mensagem configurada ainda. Abra para
                               editar.
                             </p>
@@ -3642,7 +3642,7 @@ export default function AutoContactFlowSettingsScreen() {
             >
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--panel-text-soft)] mb-2">
+                  <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                     Nome do template
                   </label>
                   <Input
@@ -3658,10 +3658,10 @@ export default function AutoContactFlowSettingsScreen() {
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h4 className="text-sm font-semibold text-[var(--panel-text)]">
+                      <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                         Mensagens do template
                       </h4>
-                      <p className="text-xs text-[var(--panel-text-muted)] mt-1">
+                      <p className="text-xs text-[var(--text-muted)] mt-1">
                         Combine textos, mídias, áudios e documentos em uma
                         sequência completa.
                       </p>
@@ -3726,12 +3726,12 @@ export default function AutoContactFlowSettingsScreen() {
                       return (
                         <div
                           key={message.id}
-                          className="rounded-lg border border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4 space-y-3"
+                          className="rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 space-y-3"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2">
-                              <Icon className="w-4 h-4 text-[var(--panel-text-subtle)]" />
-                              <span className="text-xs font-semibold text-[var(--panel-text-muted)] uppercase">
+                              <Icon className="w-4 h-4 text-[var(--text-subtle)]" />
+                              <span className="text-xs font-semibold text-[var(--text-muted)] uppercase">
                                 Mensagem {index + 1}
                               </span>
                               <div className="w-44">
@@ -3784,7 +3784,7 @@ export default function AutoContactFlowSettingsScreen() {
                           ) : (
                             <div className="grid gap-3 sm:grid-cols-2">
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   {mediaLabel}
                                 </label>
                                 <Input
@@ -3800,7 +3800,7 @@ export default function AutoContactFlowSettingsScreen() {
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-semibold text-[var(--panel-text-muted)] mb-1">
+                                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                                   Legenda ou descrição
                                 </label>
                                 <Input
@@ -3823,7 +3823,7 @@ export default function AutoContactFlowSettingsScreen() {
                   </div>
                 </div>
               </div>
-              <div className="text-xs text-[var(--panel-text-muted)]">
+              <div className="text-xs text-[var(--text-muted)]">
                 Este botão salva o template na biblioteca e no banco de dados.
                 Para aplicar mudanças nos fluxos, finalize com "Salvar
                 automação".

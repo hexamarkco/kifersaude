@@ -31,11 +31,21 @@ import {
   resolveTipoContratacaoIdByLabel,
 } from '../lib/leadRelations';
 import FilterSingleSelect from './FilterSingleSelect';
-import { Button, Checkbox, Input, Surface, Textarea } from '../design-system';
+import {
+  Button,
+  Checkbox,
+  DateTimePicker,
+  Dialog,
+  DialogBody,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+  Surface,
+  Textarea,
+} from '../design-system';
 import { toast } from '../lib/toast';
-import DateTimePicker from './ui/DateTimePicker';
-import Field from './ui/Field';
-import ModalShell from './ui/ModalShell';
 
 type LeadFormProps = {
   lead: Lead | null;
@@ -260,21 +270,13 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
   if (configLoading && !lead) {
     return (
-      <ModalShell
-        isOpen
-        onClose={onClose}
-        title="Carregando configuracoes"
-        description="Aguarde enquanto buscamos as configuracoes para o formulario."
-        size="md"
-        panelClassName="max-w-md"
-        showCloseButton={false}
-        bodyClassName="flex min-h-[220px] flex-col items-center justify-center"
-      >
-        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" role="status" aria-label="Carregando configuracoes" />
-        <p className="mt-4 text-center text-sm text-[var(--text-secondary)]">
-          Carregando configuracoes...
-        </p>
-      </ModalShell>
+      <Dialog open onOpenChange={(open) => !open && onClose()} size="sm">
+        <DialogHeader showCloseButton={false}><DialogTitle>Carregando configuracoes</DialogTitle></DialogHeader>
+        <DialogBody className="flex min-h-[220px] flex-col items-center justify-center">
+          <div className="kds-loading-spinner" role="status" aria-label="Carregando configuracoes" />
+          <p className="mt-4 text-center text-sm text-[var(--text-secondary)]">Carregando configuracoes...</p>
+        </DialogBody>
+      </Dialog>
     );
   }
 
@@ -518,20 +520,18 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
   };
 
   return (
-    <ModalShell
-      isOpen
-      onClose={onClose}
-      title={lead ? 'Editar Lead' : 'Novo Lead'}
-      size="lg"
-      panelClassName="sm:max-w-3xl"
-      bodyClassName="p-0"
-    >
+    <Dialog open onOpenChange={(open) => !open && onClose()} size="lg" className="sm:max-w-3xl">
+      <DialogHeader onClose={onClose}>
+        <DialogTitle>{lead ? 'Editar Lead' : 'Novo Lead'}</DialogTitle>
+      </DialogHeader>
+      <DialogBody className="p-0">
       <form
+        id="lead-form"
         onSubmit={handleSubmit}
         className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Nome Completo" htmlFor="lead-nome" required className="md:col-span-2">
+          <Field label="Nome Completo *" htmlFor="lead-nome" className="md:col-span-2">
             <Input
               id="lead-nome"
               type="text"
@@ -544,7 +544,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             />
           </Field>
 
-          <Field label="Telefone" htmlFor="lead-telefone" required>
+          <Field label="Telefone *" htmlFor="lead-telefone">
             <Input
               id="lead-telefone"
               type="tel"
@@ -619,7 +619,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
 
           <Field
             label="Cidade"
-            helperText={
+            description={
               formData.estado
                 ? loadingCities
                   ? 'Carregando cidades...'
@@ -643,7 +643,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             />
           </Field>
 
-          <Field label="Origem do Lead" required>
+          <Field label="Origem do Lead *">
             {activeOrigins.length > 0 ? (
               <FilterSingleSelect
                 icon={Compass}
@@ -676,7 +676,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             )}
           </Field>
 
-          <Field label="Tipo de Contratacao" required>
+          <Field label="Tipo de Contratacao *">
             {tipoContratacaoOptions.length > 0 ? (
               <FilterSingleSelect
                 icon={Briefcase}
@@ -738,7 +738,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             />
           </Field>
 
-          <Field label="Status" required>
+          <Field label="Status *">
             {activeLeadStatuses.length > 0 ? (
               <FilterSingleSelect
                 icon={AlertCircle}
@@ -786,7 +786,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             </Surface>
           )}
 
-          <Field label="Responsavel" required>
+          <Field label="Responsavel *">
             {responsavelOptions.length > 0 ? (
               <FilterSingleSelect
                 icon={UserCircle}
@@ -832,8 +832,8 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             <DateTimePicker
               type="date"
               value={formData.data_criacao}
-              onChange={(value) =>
-                setFormData((prev) => ({ ...prev, data_criacao: value }))
+              onChange={(event) =>
+                setFormData((prev) => ({ ...prev, data_criacao: event.target.value }))
               }
               placeholder="Selecionar data"
             />
@@ -843,10 +843,10 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
             <DateTimePicker
               type="datetime-local"
               value={formData.proximo_retorno}
-              onChange={(value) =>
+              onChange={(event) =>
                 setFormData((prev) => ({
                   ...prev,
-                  proximo_retorno: value,
+                  proximo_retorno: event.target.value,
                 }))
               }
               placeholder="Selecionar data e hora"
@@ -856,7 +856,7 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
           <Field
             label="Limite Diario de Envios"
             htmlFor="lead-daily-send-limit"
-            helperText="Defina um limite especifico para este lead ou deixe vazio para usar o limite do tenant."
+            description="Defina um limite especifico para este lead ou deixe vazio para usar o limite do tenant."
           >
             <Input
               id="lead-daily-send-limit"
@@ -888,15 +888,16 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
           </Field>
         </div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-end">
-          <Button type="button" variant="ghost" onClick={onClose} fullWidth className="sm:w-auto">
-            Cancelar
-          </Button>
-          <Button type="submit" loading={saving} fullWidth className="sm:w-auto">
-            {saving ? 'Salvando...' : 'Salvar'}
-          </Button>
-        </div>
       </form>
-    </ModalShell>
+      </DialogBody>
+      <DialogFooter className="flex-col-reverse sm:flex-row">
+        <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+          Cancelar
+        </Button>
+        <Button type="submit" form="lead-form" loading={saving}>
+          {saving ? 'Salvando...' : 'Salvar'}
+        </Button>
+      </DialogFooter>
+    </Dialog>
   );
 }

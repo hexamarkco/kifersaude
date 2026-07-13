@@ -51,6 +51,7 @@ import {
 import { cotadorImportService, type CotadorImportPreview } from '../../features/cotador/services/cotadorImportService';
 import type { CotadorAdministradora, CotadorEntidadeClasse, Operadora } from '../../lib/supabase';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
+import { Alert, Checkbox } from '../../design-system';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import ModalShell from '../ui/ModalShell';
@@ -885,16 +886,10 @@ function FeedbackBanner({ message }: { message: Message | null }) {
   if (!message) return null;
 
   return (
-    <div
-      className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${
-        message.type === 'success'
-          ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-          : 'border-red-200 bg-red-50 text-red-800'
-      }`}
-    >
+    <Alert tone={message.type === 'success' ? 'success' : 'danger'} className="flex-row items-center gap-3 py-3">
       {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
       <span>{message.text}</span>
-    </div>
+    </Alert>
   );
 }
 
@@ -908,10 +903,10 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[color:var(--panel-border,#d4c0a7)] bg-[var(--panel-surface-soft,#f4ede3)] px-6 py-12 text-center">
-      <Icon className="mx-auto h-10 w-10 text-[color:var(--panel-text-muted,#876f5c)]" />
-      <h4 className="mt-4 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{title}</h4>
-      <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{description}</p>
+    <div className="rounded-[var(--kds-radius-xl)] border border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] px-6 py-12 text-center">
+      <Icon className="mx-auto h-10 w-10 text-[var(--text-muted)]" />
+      <h4 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{title}</h4>
+      <p className="mt-2 text-sm text-[var(--text-secondary)]">{description}</p>
     </div>
   );
 }
@@ -926,10 +921,10 @@ function ErrorState({
   onRetry: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-12 text-center">
-      <AlertCircle className="mx-auto h-10 w-10 text-red-600" />
-      <h4 className="mt-4 text-lg font-semibold text-red-900">{title}</h4>
-      <p className="mt-2 text-sm text-red-700">{description}</p>
+    <div className="rounded-[var(--kds-radius-xl)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-6 py-12 text-center">
+      <AlertCircle className="mx-auto h-10 w-10 text-[var(--danger-text)]" />
+      <h4 className="mt-4 text-lg font-semibold text-[var(--text-primary)]">{title}</h4>
+      <p className="mt-2 text-sm text-[var(--danger-text)]">{description}</p>
       <div className="mt-5 flex justify-center">
         <Button variant="secondary" onClick={onRetry}>
           Tentar novamente
@@ -958,31 +953,29 @@ function InlineCheckboxGroup({
 
   if (options.length === 0) {
     return (
-      <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+      <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className={`rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-3 ${scrollable ? 'max-h-56 overflow-y-auto' : ''}`}>
+    <div className={`rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3 ${scrollable ? 'max-h-56 overflow-y-auto' : ''}`}>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {options.map((option) => {
           const isChecked = values.includes(option.value);
           return (
             <label
               key={option.value}
-              className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm transition-colors ${
+              className={`flex cursor-pointer items-center gap-3 rounded-[var(--kds-radius-md)] border px-3 py-2 text-sm transition-colors ${
                 isChecked
-                  ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)]'
-                  : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-transparent text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface,#fffdfa)]'
+                  ? 'border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-primary)]'
+                  : 'border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-surface)]'
               }`}
             >
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={isChecked}
                 onChange={() => toggleValue(option.value)}
-                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-2 focus:ring-amber-500"
               />
               <span>{option.label}</span>
             </label>
@@ -2696,14 +2689,14 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     <div className={containerClass}>
       <FeedbackBanner message={message} />
 
-      <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-6 shadow-sm">
+      <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-[var(--kds-shadow-card)]">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-accent-ink,#6f3f16)]">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-gold-hover)]">
               <Layers3 className="h-3.5 w-3.5" />
               Catálogo do Cotador
             </div>
-            <h3 className="text-2xl font-semibold text-[color:var(--panel-text,#1a120d)]">Configurações</h3>
+            <h3 className="text-2xl font-semibold text-[var(--text-primary)]">Configurações</h3>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -2749,9 +2742,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       </div>
 
       {loading ? (
-        <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
-          <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando catálogo do Cotador...</p>
+        <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-6 py-16 text-center shadow-[var(--kds-shadow-card)]">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-[var(--radius-full)] border-4 border-[var(--border-subtle)] border-t-[var(--brand-primary)]" />
+          <p className="mt-4 text-sm text-[var(--text-secondary)]">Carregando catálogo do Cotador...</p>
         </div>
       ) : catalogLoadError ? (
         <ErrorState
@@ -2767,19 +2760,19 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         administradoras.length === 0 ? (
           <EmptyState icon={ShieldCheck} title="Nenhuma administradora cadastrada" description="Crie uma administradora." />
         ) : (
-          <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+          <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+            <div className="divide-y divide-[color:var(--border-subtle)]">
               {administradoras.map((item) => (
                 <article key={item.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{item.nome}</h4>
-                    {item.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.observacoes}</p>}
+                    <h4 className="text-base font-semibold text-[var(--text-primary)]">{item.nome}</h4>
+                    {item.observacoes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{item.observacoes}</p>}
                   </div>
                   <div className="flex items-center gap-2 self-end lg:self-auto">
-                    <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openEntityModal('administradoras', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]" onClick={() => openEntityModal('administradoras', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('administradoras', item.id, 'Excluir administradora', 'Essa ação remove a administradora do catálogo do Cotador.') }><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[var(--danger-text)] hover:bg-[var(--danger-soft)]" onClick={() => void handleDelete('administradoras', item.id, 'Excluir administradora', 'Essa ação remove a administradora do catálogo do Cotador.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </article>
               ))}
@@ -2790,19 +2783,19 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         entidades.length === 0 ? (
           <EmptyState icon={Sparkles} title="Nenhuma entidade cadastrada" description="Crie uma entidade." />
         ) : (
-          <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+          <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+            <div className="divide-y divide-[color:var(--border-subtle)]">
               {entidades.map((item) => (
                 <article key={item.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{item.nome}</h4>
-                    {item.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{item.observacoes}</p>}
+                    <h4 className="text-base font-semibold text-[var(--text-primary)]">{item.nome}</h4>
+                    {item.observacoes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{item.observacoes}</p>}
                   </div>
                   <div className="flex items-center gap-2 self-end lg:self-auto">
-                    <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openEntityModal('entidades', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]" onClick={() => openEntityModal('entidades', { ...item, id: item.id, observacoes: item.observacoes ?? '' })}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('entidades', item.id, 'Excluir entidade', 'Essa ação remove a entidade do catálogo do Cotador.') }><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[var(--danger-text)] hover:bg-[var(--danger-soft)]" onClick={() => void handleDelete('entidades', item.id, 'Excluir entidade', 'Essa ação remove a entidade do catálogo do Cotador.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </article>
               ))}
@@ -2813,23 +2806,23 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         linhas.length === 0 ? (
           <EmptyState icon={Network} title="Nenhuma linha cadastrada" description="Crie uma linha." />
         ) : (
-          <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-            <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+          <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+            <div className="divide-y divide-[color:var(--border-subtle)]">
               {linhas.map((line) => (
                 <article key={line.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{line.nome}</h4>
-                      {!line.ativo && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">Inativa</span>}
+                      <h4 className="text-base font-semibold text-[var(--text-primary)]">{line.nome}</h4>
+                      {!line.ativo && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)]">Inativa</span>}
                     </div>
-                    <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Operadora: {line.operadora?.nome ?? 'Não encontrada'}</p>
-                    {line.observacoes && <p className="mt-2 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{line.observacoes}</p>}
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">Operadora: {line.operadora?.nome ?? 'Não encontrada'}</p>
+                    {line.observacoes && <p className="mt-2 text-sm text-[var(--text-secondary)]">{line.observacoes}</p>}
                   </div>
                   <div className="flex items-center gap-2 self-end lg:self-auto">
-                    <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openLineModal(line)}>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]" onClick={() => openLineModal(line)}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('linhas', line.id, 'Excluir linha', 'Essa ação remove a linha e todos os produtos, tabelas, faixas de preço, entidades e vínculos de rede ligados a ela. Snapshots já usados em cotações permanecem preservados.') }><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="icon" size="icon" className="h-10 w-10 text-[var(--danger-text)] hover:bg-[var(--danger-soft)]" onClick={() => void handleDelete('linhas', line.id, 'Excluir linha', 'Essa ação remove a linha e todos os produtos, tabelas, faixas de preço, entidades e vínculos de rede ligados a ela. Snapshots já usados em cotações permanecem preservados.') }><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </article>
               ))}
@@ -2841,11 +2834,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           <EmptyState icon={Building2} title="Nenhum produto cadastrado" description="Crie um produto." />
         ) : (
           <div className="space-y-5">
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[var(--kds-shadow-card)]">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Organização de produtos</p>
-                  <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">Produtos</h4>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Organização de produtos</p>
+                  <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Produtos</h4>
                 </div>
                 <div className="w-full lg:max-w-sm">
                   <Input
@@ -2856,7 +2849,6 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     }}
                     placeholder="Buscar produto, linha ou operadora"
                     leftIcon={Search}
-                    className="[--panel-input-text:#fff8ef] [--panel-placeholder:rgba(255,243,209,0.42)] border-[color:rgba(255,255,255,0.1)] bg-[color:rgba(255,255,255,0.06)] text-[color:#fff8ef] shadow-none placeholder:text-[color:rgba(255,243,209,0.42)] focus:border-[color:rgba(251,191,36,0.28)] focus:ring-[color:rgba(251,191,36,0.26)]"
                   />
                 </div>
               </div>
@@ -2867,18 +2859,18 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             ) : (
               <div className="space-y-4">
                 {paginatedGroupedProducts.map((group) => (
-                  <section key={group.key} className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-                    <div className="flex flex-col gap-3 border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                  <section key={group.key} className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+                    <div className="flex flex-col gap-3 border-b border-[var(--border-subtle)] px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                       <div>
-                        <h4 className="text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{group.linhaNome}</h4>
-                        <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{group.operadoraNome}</p>
+                        <h4 className="text-lg font-semibold text-[var(--text-primary)]">{group.linhaNome}</h4>
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">{group.operadoraNome}</p>
                       </div>
-                      <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-1 text-xs font-semibold text-[color:var(--panel-text-soft,#5b4635)]">
+                      <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
                         {group.items.length} produto(s)
                       </span>
                     </div>
 
-                    <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+                    <div className="divide-y divide-[color:var(--border-subtle)]">
                       {group.items.map((product) => (
                         <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                           <div className="min-w-0 flex-1">
@@ -2888,32 +2880,32 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                               return (
                                 <>
                              <div className="flex flex-wrap items-center gap-2">
-                               <h5 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h5>
+                               <h5 className="text-base font-semibold text-[var(--text-primary)]">{product.nome}</h5>
                                {!product.ativo && (
-                                 <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">
+                                 <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)]">
                                    Inativo
                                  </span>
                                )}
                                {completeness?.complete && (
-                                 <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+                                 <span className="rounded-[var(--radius-full)] border border-[var(--success-border)] bg-[var(--success-soft)] px-2.5 py-1 text-[11px] font-semibold text-[var(--success-text)]">
                                    Completo
                                  </span>
                                )}
                              </div>
-                             <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                               {product.modalidade && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.modalidade}</span>}
-                               {product.administradora?.nome && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.administradora.nome}</span>}
-                       {product.entidadesClasse.length > 0 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
-                               {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
-                                <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>
+                             <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                               {product.modalidade && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{product.modalidade}</span>}
+                               {product.administradora?.nome && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{product.administradora.nome}</span>}
+                       {product.entidadesClasse.length > 0 && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{product.entidadesClasse.length} entidade(s)</span>}
+                               {product.abrangencia && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{product.abrangencia}</span>}
+                                <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>
                               </div>
                               {completeness && !completeness.complete && (
                                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                                  {completeness.missingNetwork && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem rede</span>}
-                                  {completeness.missingPrice && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">{completeness.partialPrice ? `Preco incompleto${completeness.missingExpectedAcomodacoes.length > 0 ? ` (${completeness.missingExpectedAcomodacoes.join(', ')})` : ''}` : 'Sem preco'}</span>}
-                                  {completeness.missingCarencias && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem carencia</span>}
-                                  {completeness.missingDocuments && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem documentos</span>}
-                                  {completeness.missingReembolso && <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-800">Sem reembolso</span>}
+                                  {completeness.missingNetwork && <span className="rounded-[var(--radius-full)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-2.5 py-1 font-medium text-[var(--warning-text)]">Sem rede</span>}
+                                  {completeness.missingPrice && <span className="rounded-[var(--radius-full)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-2.5 py-1 font-medium text-[var(--warning-text)]">{completeness.partialPrice ? `Preco incompleto${completeness.missingExpectedAcomodacoes.length > 0 ? ` (${completeness.missingExpectedAcomodacoes.join(', ')})` : ''}` : 'Sem preco'}</span>}
+                                  {completeness.missingCarencias && <span className="rounded-[var(--radius-full)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-2.5 py-1 font-medium text-[var(--warning-text)]">Sem carencia</span>}
+                                  {completeness.missingDocuments && <span className="rounded-[var(--radius-full)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-2.5 py-1 font-medium text-[var(--warning-text)]">Sem documentos</span>}
+                                  {completeness.missingReembolso && <span className="rounded-[var(--radius-full)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-2.5 py-1 font-medium text-[var(--warning-text)]">Sem reembolso</span>}
                                </div>
                              )}
                                 </>
@@ -2922,10 +2914,10 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                           </div>
 
                           <div className="flex items-center gap-2 self-end lg:self-auto">
-                            <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openProductModal(product)}>
+                            <Button variant="icon" size="icon" className="h-10 w-10 text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]" onClick={() => openProductModal(product)}>
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <Button variant="icon" size="icon" className="h-10 w-10 text-red-600 hover:bg-red-50" onClick={() => void handleDelete('produtos', product.id, 'Excluir produto', 'Essa ação remove o produto e todas as tabelas, faixas de preço, entidades e vínculos de rede ligados a ele. Snapshots já usados em cotações permanecem preservados.') }>
+                            <Button variant="icon" size="icon" className="h-10 w-10 text-[var(--danger-text)] hover:bg-[var(--danger-soft)]" onClick={() => void handleDelete('produtos', product.id, 'Excluir produto', 'Essa ação remove o produto e todas as tabelas, faixas de preço, entidades e vínculos de rede ligados a ele. Snapshots já usados em cotações permanecem preservados.') }>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -2957,44 +2949,44 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           <EmptyState icon={MapPin} title="Nenhuma rede cadastrada" description="Adicione produtos ao catalogo para comecar a vincular hospitais e atendimentos." />
         ) : (
           <div className="space-y-5">
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[var(--kds-shadow-card)]">
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Gestao da rede</p>
-                    <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Gestao da rede</p>
+                    <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">
                       {networkDirectoryMode === 'products' ? 'Produtos e prestadores' : 'Hospitais compartilhados'}
                     </h4>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                  <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
                     {networkDirectoryMode === 'products' ? (
                       <>
-                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProducts.length} produto(s)</span>
-                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProductsWithEntriesCount} com rede</span>
-                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkProducts.length - networkProductsWithEntriesCount} sem rede</span>
+                        <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-3 py-1">{networkProducts.length} produto(s)</span>
+                        <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-3 py-1">{networkProductsWithEntriesCount} com rede</span>
+                        <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-3 py-1">{networkProducts.length - networkProductsWithEntriesCount} sem rede</span>
                       </>
                     ) : (
                       <>
-                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkHospitals.length} hospital(is)</span>
-                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkHospitalsWithLinksCount} com vinculos</span>
-                        <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-3 py-1">{networkHospitals.reduce((total, hospital) => total + hospital.linkedProducts.length, 0)} plano(s) vinculados</span>
+                        <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-3 py-1">{networkHospitals.length} hospital(is)</span>
+                        <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-3 py-1">{networkHospitalsWithLinksCount} com vinculos</span>
+                        <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-3 py-1">{networkHospitals.reduce((total, hospital) => total + hospital.linkedProducts.length, 0)} plano(s) vinculados</span>
                       </>
                     )}
                   </div>
                 </div>
 
-                <div className="inline-flex rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-1">
+                <div className="inline-flex rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1">
                   <button
                     type="button"
                     onClick={() => setNetworkDirectoryMode('products')}
-                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${networkDirectoryMode === 'products' ? 'bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)] shadow-sm' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]'}`}
+                    className={`rounded-[var(--kds-radius-md)] px-4 py-2 text-sm font-semibold transition-colors ${networkDirectoryMode === 'products' ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-[var(--kds-shadow-card)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                   >
                     Por produto
                   </button>
                   <button
                     type="button"
                     onClick={() => setNetworkDirectoryMode('hospitals')}
-                    className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${networkDirectoryMode === 'hospitals' ? 'bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)] shadow-sm' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]'}`}
+                    className={`rounded-[var(--kds-radius-md)] px-4 py-2 text-sm font-semibold transition-colors ${networkDirectoryMode === 'hospitals' ? 'bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-[var(--kds-shadow-card)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}
                   >
                     Hospitais
                   </button>
@@ -3128,10 +3120,10 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                               setNetworkHospitalPage(1);
                             }}
                             className={[
-                              'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                              'rounded-[var(--radius-full)] border px-3 py-1.5 text-xs font-semibold transition-colors',
                               isActive
-                                ? 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)]'
-                                : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface,#fffdfa)] hover:text-[color:var(--panel-text,#1a120d)]',
+                                ? 'border-[color:var(--border-strong)] bg-[var(--bg-surface)] text-[var(--text-primary)]'
+                                : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]',
                             ].join(' ')}
                           >
                             {option.label} ({count})
@@ -3161,8 +3153,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               filteredNetworkProducts.length === 0 ? (
                 <EmptyState icon={Search} title="Nenhum produto encontrado" description="Ajuste os filtros da aba Redes para localizar o produto ou a cidade desejada." />
               ) : (
-                <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-                  <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+                <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+                  <div className="divide-y divide-[color:var(--border-subtle)]">
                     {paginatedNetworkProducts.map((summary) => {
                       const { product, entries, cities } = summary;
 
@@ -3170,27 +3162,27 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                         <article key={product.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{product.nome}</h4>
-                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                              <h4 className="text-base font-semibold text-[var(--text-primary)]">{product.nome}</h4>
+                              <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
                                 {entries.length} prestador(es)
                               </span>
-                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                              <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
                                 {cities.length} cidade(s)
                               </span>
                               {entries.length === 0 && (
-                                <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-muted,#876f5c)]">
+                                <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-muted)]">
                                   Sem rede
                                 </span>
                               )}
                             </div>
-                            <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
                               {product.operadora?.nome ?? 'Operadora'} / {product.linha?.nome ?? 'Linha'}
                             </p>
-                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                              {product.abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{product.abrangencia}</span>}
-                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>
-                              {cities.slice(0, 4).map((city) => <span key={`${product.id}-${city}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{city}</span>)}
-                              {cities.length > 4 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{cities.length - 4} cidade(s)</span>}
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                              {product.abrangencia && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{product.abrangencia}</span>}
+                              <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{formatProductAcomodacoesLabel(parseProductAcomodacoes(product.acomodacao, acomodacaoOptions.map((option) => option.value)))}</span>
+                              {cities.slice(0, 4).map((city) => <span key={`${product.id}-${city}`} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{city}</span>)}
+                              {cities.length > 4 && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">+{cities.length - 4} cidade(s)</span>}
                             </div>
                           </div>
 
@@ -3218,9 +3210,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 </div>
               )
             ) : networkHospitalsLoading ? (
-              <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-6 py-16 text-center shadow-sm">
-                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-[color:rgba(212,192,167,0.5)] border-t-[var(--panel-accent-strong,#b85c1f)]" />
-                <p className="mt-4 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Carregando hospitais compartilhados...</p>
+              <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-6 py-16 text-center shadow-[var(--kds-shadow-card)]">
+                <div className="mx-auto h-10 w-10 animate-spin rounded-[var(--radius-full)] border-4 border-[var(--border-subtle)] border-t-[var(--brand-primary)]" />
+                <p className="mt-4 text-sm text-[var(--text-secondary)]">Carregando hospitais compartilhados...</p>
               </div>
             ) : networkHospitalsError ? (
               <ErrorState
@@ -3231,34 +3223,34 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             ) : filteredNetworkHospitals.length === 0 ? (
               <EmptyState icon={Search} title="Nenhum hospital encontrado" description="Ajuste os filtros da visao global de hospitais para localizar um cadastro compartilhado." />
             ) : (
-              <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-                <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+              <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+                <div className="divide-y divide-[color:var(--border-subtle)]">
                   {paginatedNetworkHospitals.map((hospital) => (
                     <article key={hospital.id} className="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className="text-base font-semibold text-[color:var(--panel-text,#1a120d)]">{hospital.nome}</h4>
-                          <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                          <h4 className="text-base font-semibold text-[var(--text-primary)]">{hospital.nome}</h4>
+                          <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
                             {hospital.linkedProducts.length} plano(s)
                           </span>
                           {hospital.aliases.length > 0 && (
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--panel-text-soft,#5b4635)]">
+                            <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
                               {hospital.aliases.length} alias(es)
                             </span>
                           )}
                         </div>
-                        <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">{formatNetworkLocation(hospital)}</p>
-                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                          {hospital.aliases.slice(0, 3).map((alias) => <span key={`${hospital.id}-${alias}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">{alias}</span>)}
-                          {hospital.aliases.length > 3 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{hospital.aliases.length - 3} alias(es)</span>}
+                        <p className="mt-1 text-sm text-[var(--text-secondary)]">{formatNetworkLocation(hospital)}</p>
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                          {hospital.aliases.slice(0, 3).map((alias) => <span key={`${hospital.id}-${alias}`} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">{alias}</span>)}
+                          {hospital.aliases.length > 3 && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">+{hospital.aliases.length - 3} alias(es)</span>}
                         </div>
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
                           {hospital.linkedProducts.slice(0, 4).map((link) => (
-                            <span key={link.link_id} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">
+                            <span key={link.link_id} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">
                               {(link.operadora?.nome ?? 'Operadora')} / {(link.linha?.nome ?? 'Linha')} / {link.produto_nome}
                             </span>
                           ))}
-                          {hospital.linkedProducts.length > 4 && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2.5 py-1">+{hospital.linkedProducts.length - 4} vinculo(s)</span>}
+                          {hospital.linkedProducts.length > 4 && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2.5 py-1">+{hospital.linkedProducts.length - 4} vinculo(s)</span>}
                         </div>
                       </div>
 
@@ -3289,42 +3281,42 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       ) : tabelas.length === 0 ? (
         <EmptyState icon={Table2} title="Nenhuma tabela cadastrada" description="Crie tabelas por produto para separar MEI, não MEI, coparticipação e faixas de vidas como 2 a 2, 3 a 5 ou 6 a 29." />
       ) : (
-        <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-          <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+        <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+          <div className="divide-y divide-[color:var(--border-subtle)]">
           {paginatedTableEntries.map((entry) => (
             <article key={entry.key} className="px-4 py-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h4 className="text-base font-semibold leading-tight text-[color:var(--panel-text,#1a120d)]">{entry.baseName}</h4>
-                      <p className="mt-0.5 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                      <h4 className="text-base font-semibold leading-tight text-[var(--text-primary)]">{entry.baseName}</h4>
+                      <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
                         {entry.product?.operadora?.nome ?? 'Operadora'} / {entry.product?.linha?.nome ?? 'Linha'} / {entry.product?.nome ?? 'Produto'}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="icon" size="icon" className="h-9 w-9 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(entry.records, 'duplicate')} title="Criar cópia">
+                      <Button variant="icon" size="icon" className="h-9 w-9 text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]" onClick={() => openTableModal(entry.records, 'duplicate')} title="Criar cópia">
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <Button variant="icon" size="icon" className="h-9 w-9 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => openTableModal(entry.records, 'edit')} title="Editar tabela">
+                      <Button variant="icon" size="icon" className="h-9 w-9 text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]" onClick={() => openTableModal(entry.records, 'edit')} title="Editar tabela">
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="icon" size="icon" className="h-9 w-9 text-red-600 hover:bg-red-50" onClick={() => void handleDeleteTableGroup(entry)} title="Excluir tabela"><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="icon" size="icon" className="h-9 w-9 text-[var(--danger-text)] hover:bg-[var(--danger-soft)]" onClick={() => void handleDeleteTableGroup(entry)} title="Excluir tabela"><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-[color:var(--panel-text-soft,#5b4635)]">
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{entry.modalidade}</span>
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{formatPerfilEmpresarial(entry.perfilEmpresarial)}</span>
-                    <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{formatCoparticipacao(entry.coparticipacao)}</span>
-                    {entry.records.map((record) => record.acomodacao).filter(Boolean).map((acomodacao) => <span key={`${entry.key}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{acomodacao}</span>)}
-                    {(entry.vidasMin || entry.vidasMax) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">Vidas: {entry.vidasMin ?? 1} a {entry.vidasMax ?? '...'}</span>}
-                    {!entry.records.every((record) => record.ativo) && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5 font-medium text-[color:var(--panel-text-muted,#876f5c)]">Inativo</span>}
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-[var(--text-secondary)]">
+                    <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">{entry.modalidade}</span>
+                    <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">{formatPerfilEmpresarial(entry.perfilEmpresarial)}</span>
+                    <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">{formatCoparticipacao(entry.coparticipacao)}</span>
+                    {entry.records.map((record) => record.acomodacao).filter(Boolean).map((acomodacao) => <span key={`${entry.key}-${acomodacao}`} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">{acomodacao}</span>)}
+                    {(entry.vidasMin || entry.vidasMax) && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">Vidas: {entry.vidasMin ?? 1} a {entry.vidasMax ?? '...'}</span>}
+                    {!entry.records.every((record) => record.ativo) && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5 font-medium text-[var(--text-muted)]">Inativo</span>}
                     {entry.product && productCompletenessById.get(entry.product.id)?.missingPrice && (
-                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-800">
+                      <span className="rounded-[var(--radius-full)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-2 py-0.5 font-medium text-[var(--warning-text)]">
                         {productCompletenessById.get(entry.product.id)?.partialPrice ? 'Preco incompleto' : 'Sem preco'}
                       </span>
                     )}
-                    {entry.product && !productCompletenessById.get(entry.product.id)?.complete && <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Produto incompleto</span>}
+                    {entry.product && !productCompletenessById.get(entry.product.id)?.complete && <span className="rounded-[var(--radius-full)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-2 py-0.5 font-medium text-[var(--warning-text)]">Produto incompleto</span>}
                   </div>
                 </div>
               </div>
@@ -3353,21 +3345,21 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         size="xl"
       >
         <form onSubmit={handleImportSubmit} className="space-y-5">
-          <div className="rounded-3xl border border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)] p-4 shadow-sm">
+          <div className="rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--bg-elevated)] p-4 shadow-[var(--kds-shadow-card)]">
             <div className="flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:rgba(157,127,90,0.22)] bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-accent-ink,#6f3f16)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kds-radius-lg)] border border-[var(--border-accent)] bg-[var(--bg-elevated)] text-[var(--accent-gold-hover)]">
                 <FileJson className="h-5 w-5" />
               </span>
               <div>
-                  <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">JSON do catalogo</p>
-                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Aceita operadora, linha, produto, tabelas, rede hospitalar, administradora e entidades. Se quiser, envie apenas a rede hospitalar.</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">JSON do catalogo</p>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">Aceita operadora, linha, produto, tabelas, rede hospitalar, administradora e entidades. Se quiser, envie apenas a rede hospitalar.</p>
               </div>
             </div>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Arquivo</label>
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_86%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_94%,var(--panel-surface-muted,#f8f2e8)))] p-4 shadow-sm">
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Arquivo</label>
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--surface-muted-bg)] p-4 shadow-[var(--kds-shadow-card)]">
               <input
                 ref={importFileInputRef}
                 type="file"
@@ -3378,14 +3370,14 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:rgba(157,127,90,0.22)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-accent-ink,#6f3f16)] shadow-sm">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kds-radius-lg)] border border-[var(--border-accent)] bg-[var(--bg-surface)] text-[var(--accent-gold-hover)] shadow-[var(--kds-shadow-card)]">
                       <Upload className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">
                         {importForm.file ? importForm.file.name : 'Nenhum arquivo selecionado'}
                       </p>
-                      <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
                         JSON completo (.json)
                       </p>
                     </div>
@@ -3403,7 +3395,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 </Button>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-3 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
+              <div className="mt-4 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3 text-xs text-[var(--text-secondary)]">
                 {importForm.file
                   ? `Arquivo pronto para importacao: ${importForm.file.name}`
                   : 'Selecione um arquivo compativel com o formato escolhido para continuar.'}
@@ -3412,12 +3404,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Template</label>
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Template</label>
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[var(--kds-shadow-card)]">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Modelo base de importação</p>
-                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Baixe um JSON exemplo para preencher com operadora, linha, produtos, tabelas e rede hospitalar ou use um arquivo focado so na rede.</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Modelo base de importação</p>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">Baixe um JSON exemplo para preencher com operadora, linha, produtos, tabelas e rede hospitalar ou use um arquivo focado so na rede.</p>
                 </div>
                 <Button type="button" variant="secondary" onClick={handleDownloadImportTemplate} className="w-full md:w-auto">
                   <Download className="h-4 w-4" />
@@ -3428,104 +3420,104 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Preview da importação</label>
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Preview da importação</label>
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[var(--kds-shadow-card)]">
               {importPreviewLoading ? (
                 <div className="space-y-3">
-                  <div className="h-2 overflow-hidden rounded-full bg-[var(--panel-surface-soft,#f4ede3)]">
-                    <div className="h-full w-1/2 animate-pulse rounded-full bg-[var(--panel-accent-strong,#b85c1f)]" />
+                  <div className="h-2 overflow-hidden rounded-[var(--radius-full)] bg-[var(--bg-elevated)]">
+                    <div className="h-full w-1/2 animate-pulse rounded-[var(--radius-full)] bg-[var(--brand-primary)]" />
                   </div>
-                  <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Lendo e validando o JSON...</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Lendo e validando o JSON...</p>
                 </div>
               ) : importPreviewError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="rounded-[var(--kds-radius-lg)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger-text)]">
                   {importPreviewError}
                 </div>
               ) : importPreview ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Operadoras</p>
-                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.operadorasCount}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Operadoras</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{importPreview.operadorasCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Linhas</p>
-                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.linhasCount}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Linhas</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{importPreview.linhasCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Produtos</p>
-                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.produtosCount}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Produtos</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{importPreview.produtosCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Tabelas</p>
-                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.tabelasCount}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Tabelas</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{importPreview.tabelasCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Rede</p>
-                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{importPreview.networkEntriesCount}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Rede</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{importPreview.networkEntriesCount}</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-700">Criar</p>
-                      <p className="mt-1 text-lg font-semibold text-emerald-900">{importPreview.actionCounts.create}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--success-border)] bg-[var(--success-soft)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--success-text)]">Criar</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--success-text)]">{importPreview.actionCounts.create}</p>
                     </div>
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-700">Atualizar</p>
-                      <p className="mt-1 text-lg font-semibold text-amber-900">{importPreview.actionCounts.update}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--warning-text)]">Atualizar</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--warning-text)]">{importPreview.actionCounts.update}</p>
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700">Ignorar</p>
-                      <p className="mt-1 text-lg font-semibold text-slate-900">{importPreview.actionCounts.ignore}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">Ignorar</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{importPreview.actionCounts.ignore}</p>
                     </div>
-                    <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-700">Conflitos</p>
-                      <p className="mt-1 text-lg font-semibold text-red-900">{importPreview.actionCounts.conflict}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--danger-text)]">Conflitos</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--danger-text)]">{importPreview.actionCounts.conflict}</p>
                     </div>
                   </div>
 
                   {importPreview.actionCounts.conflict > 0 && (
-                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger-text)]">
                       O arquivo tem conflitos que precisam ser resolvidos antes da importação. Revise os itens destacados abaixo.
                     </div>
                   )}
 
-                  <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
-                    <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                  <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+                    <div className="border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">
                       Itens encontrados e impacto previsto
                     </div>
-                    <div className="max-h-64 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
+                    <div className="max-h-64 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
                       {importPreview.items.map((item, index) => (
                         <div key={`${item.operadora}-${item.linha}-${item.produto}-${index}`} className="px-4 py-3">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.produto}</p>
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">{item.produto}</p>
                             <span className={[
-                              'rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]',
-                              item.status === 'create' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : '',
-                              item.status === 'update' ? 'border-amber-200 bg-amber-50 text-amber-800' : '',
-                              item.status === 'ignore' ? 'border-slate-200 bg-slate-50 text-slate-700' : '',
-                              item.status === 'conflict' ? 'border-red-200 bg-red-50 text-red-800' : '',
+                              'rounded-[var(--radius-full)] border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em]',
+                              item.status === 'create' ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)]' : '',
+                              item.status === 'update' ? 'border-[var(--warning-border)] bg-[var(--warning-soft)] text-[var(--warning-text)]' : '',
+                              item.status === 'ignore' ? 'border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]' : '',
+                              item.status === 'conflict' ? 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)]' : '',
                             ].join(' ')}>
                               {item.status === 'create' ? 'Criar' : item.status === 'update' ? 'Atualizar' : item.status === 'ignore' ? 'Ignorar' : 'Conflito'}
                             </span>
                           </div>
-                          <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora} / {item.linha}{item.modalidadeBase ? ` / ${item.modalidadeBase}` : ''}</p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{item.tabelasCount} tabela(s)</span>
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{item.networkEntriesCount} item(ns) de rede</span>
-                            {item.acomodacoes.map((acomodacao) => <span key={`${item.produto}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{acomodacao}</span>)}
+                          <p className="mt-1 text-xs text-[var(--text-secondary)]">{item.operadora} / {item.linha}{item.modalidadeBase ? ` / ${item.modalidadeBase}` : ''}</p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                            <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1">{item.tabelasCount} tabela(s)</span>
+                            <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1">{item.networkEntriesCount} item(ns) de rede</span>
+                            {item.acomodacoes.map((acomodacao) => <span key={`${item.produto}-${acomodacao}`} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1">{acomodacao}</span>)}
                           </div>
                           <div className="mt-3 space-y-2">
                             {item.changes.map((change, changeIndex) => (
                               <div
                                 key={`${item.operadora}-${item.linha}-${item.produto}-${change.scope}-${changeIndex}`}
                                 className={[
-                                  'rounded-2xl border px-3 py-2 text-xs',
-                                  change.kind === 'create' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : '',
-                                  change.kind === 'update' ? 'border-amber-200 bg-amber-50 text-amber-800' : '',
-                                  change.kind === 'ignore' ? 'border-slate-200 bg-slate-50 text-slate-700' : '',
-                                  change.kind === 'conflict' ? 'border-red-200 bg-red-50 text-red-800' : '',
+                                  'rounded-[var(--kds-radius-lg)] border px-3 py-2 text-xs',
+                                  change.kind === 'create' ? 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)]' : '',
+                                  change.kind === 'update' ? 'border-[var(--warning-border)] bg-[var(--warning-soft)] text-[var(--warning-text)]' : '',
+                                  change.kind === 'ignore' ? 'border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]' : '',
+                                  change.kind === 'conflict' ? 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)]' : '',
                                 ].join(' ')}
                               >
                                 <p className="font-semibold">
@@ -3542,7 +3534,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Selecione um JSON para visualizar um resumo do que será importado.</p>
+                <p className="text-sm text-[var(--text-secondary)]">Selecione um JSON para visualizar um resumo do que será importado.</p>
               )}
             </div>
           </div>
@@ -3562,21 +3554,21 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         size="xl"
       >
         <form onSubmit={handleNetworkImportSubmit} className="space-y-5">
-          <div className="rounded-3xl border border-[color:var(--panel-border-strong,#9d7f5a)] bg-[var(--panel-surface-soft,#f4ede3)] p-4 shadow-sm">
+          <div className="rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--bg-elevated)] p-4 shadow-[var(--kds-shadow-card)]">
             <div className="flex items-start gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:rgba(157,127,90,0.22)] bg-[var(--panel-surface-soft,#f4ede3)] text-[var(--panel-accent-ink,#6f3f16)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kds-radius-lg)] border border-[var(--border-accent)] bg-[var(--bg-elevated)] text-[var(--accent-gold-hover)]">
                 <FileJson className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">JSON de rede</p>
-                <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Aceita entradas com `redeHospitalar` e pode usar `produtos: [...]` para replicar a mesma rede em mais de um produto.</p>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">JSON de rede</p>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">Aceita entradas com `redeHospitalar` e pode usar `produtos: [...]` para replicar a mesma rede em mais de um produto.</p>
               </div>
             </div>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Arquivo</label>
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_86%,var(--panel-surface,#fffdfa)),color-mix(in_srgb,var(--panel-surface,#fffdfa)_94%,var(--panel-surface-muted,#f8f2e8)))] p-4 shadow-sm">
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Arquivo</label>
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--surface-muted-bg)] p-4 shadow-[var(--kds-shadow-card)]">
               <input
                 ref={networkImportFileInputRef}
                 type="file"
@@ -3587,12 +3579,12 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[color:rgba(157,127,90,0.22)] bg-[var(--panel-surface,#fffdfa)] text-[var(--panel-accent-ink,#6f3f16)] shadow-sm">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kds-radius-lg)] border border-[var(--border-accent)] bg-[var(--bg-surface)] text-[var(--accent-gold-hover)] shadow-[var(--kds-shadow-card)]">
                       <Upload className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{networkImportForm.file ? networkImportForm.file.name : 'Nenhum arquivo selecionado'}</p>
-                      <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">JSON focado em rede (.json)</p>
+                      <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{networkImportForm.file ? networkImportForm.file.name : 'Nenhum arquivo selecionado'}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">JSON focado em rede (.json)</p>
                     </div>
                   </div>
                 </div>
@@ -3611,55 +3603,55 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Preview da rede</label>
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Preview da rede</label>
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[var(--kds-shadow-card)]">
               {networkImportPreviewLoading ? (
                 <div className="space-y-3">
-                  <div className="h-2 overflow-hidden rounded-full bg-[var(--panel-surface-soft,#f4ede3)]">
-                    <div className="h-full w-1/2 animate-pulse rounded-full bg-[var(--panel-accent-strong,#b85c1f)]" />
+                  <div className="h-2 overflow-hidden rounded-[var(--radius-full)] bg-[var(--bg-elevated)]">
+                    <div className="h-full w-1/2 animate-pulse rounded-[var(--radius-full)] bg-[var(--brand-primary)]" />
                   </div>
-                  <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Lendo e validando o JSON de rede...</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Lendo e validando o JSON de rede...</p>
                 </div>
               ) : networkImportPreviewError ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{networkImportPreviewError}</div>
+                <div className="rounded-[var(--kds-radius-lg)] border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger-text)]">{networkImportPreviewError}</div>
               ) : networkImportPreview ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Produtos com rede</p>
-                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkImportPreviewItems.length}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Produtos com rede</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{networkImportPreviewItems.length}</p>
                     </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Itens de rede</p>
-                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkImportPreviewEntriesCount}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Itens de rede</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{networkImportPreviewEntriesCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-3 py-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Tabelas no arquivo</p>
-                      <p className="mt-1 text-lg font-semibold text-[color:var(--panel-text,#1a120d)]">{networkImportPreviewTablesCount}</p>
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Tabelas no arquivo</p>
+                      <p className="mt-1 text-lg font-semibold text-[var(--text-primary)]">{networkImportPreviewTablesCount}</p>
                     </div>
                   </div>
 
                   {networkImportPreviewTablesCount > 0 && (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--warning-border)] bg-[var(--warning-soft)] px-4 py-3 text-sm text-[var(--warning-text)]">
                       O arquivo possui tabelas comerciais. Use este modal apenas para JSON focado em rede ou utilize o importador geral do catalogo.
                     </div>
                   )}
 
                   {networkImportPreviewItems.length === 0 ? (
-                    <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">
                       Nenhum item de rede identificado no arquivo.
                     </div>
                   ) : (
-                    <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)]">
-                      <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Produtos encontrados</div>
-                      <div className="max-h-72 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
+                    <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+                      <div className="border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">Produtos encontrados</div>
+                      <div className="max-h-72 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
                         {networkImportPreviewItems.map((item, index) => (
                           <div key={`${item.operadora}-${item.linha}-${item.produto}-${index}`} className="px-4 py-3">
-                            <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{item.produto}</p>
-                            <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{item.operadora} / {item.linha}</p>
-                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)]">
-                              <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{item.networkEntriesCount} item(ns) de rede</span>
-                              {item.acomodacoes.map((acomodacao) => <span key={`${item.produto}-${acomodacao}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1">{acomodacao}</span>)}
+                            <p className="text-sm font-semibold text-[var(--text-primary)]">{item.produto}</p>
+                            <p className="mt-1 text-xs text-[var(--text-secondary)]">{item.operadora} / {item.linha}</p>
+                            <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                              <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1">{item.networkEntriesCount} item(ns) de rede</span>
+                              {item.acomodacoes.map((acomodacao) => <span key={`${item.produto}-${acomodacao}`} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1">{acomodacao}</span>)}
                             </div>
                           </div>
                         ))}
@@ -3668,7 +3660,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                   )}
                 </div>
               ) : (
-                <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Selecione um JSON para visualizar os produtos e os prestadores que serao atualizados.</p>
+                <p className="text-sm text-[var(--text-secondary)]">Selecione um JSON para visualizar os produtos e os prestadores que serao atualizados.</p>
               )}
             </div>
           </div>
@@ -3693,17 +3685,17 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         {selectedNetworkProduct && (
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Abrangencia</p>
-                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{selectedNetworkProduct.abrangencia ?? '-'}</p>
+              <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Abrangencia</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{selectedNetworkProduct.abrangencia ?? '-'}</p>
               </div>
-              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Acomodacoes</p>
-                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{selectedNetworkProduct.acomodacao ? formatProductAcomodacoesLabel(parseProductAcomodacoes(selectedNetworkProduct.acomodacao, acomodacaoOptions.map((option) => option.value))) : '-'}</p>
+              <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Acomodacoes</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{selectedNetworkProduct.acomodacao ? formatProductAcomodacoesLabel(parseProductAcomodacoes(selectedNetworkProduct.acomodacao, acomodacaoOptions.map((option) => option.value))) : '-'}</p>
               </div>
-              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">Prestadores</p>
-                <p className="mt-1 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{networkDraft.length}</p>
+              <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Prestadores</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--text-primary)]">{networkDraft.length}</p>
               </div>
             </div>
 
@@ -3723,43 +3715,43 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               />
             </div>
 
-            <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-              <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+            <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+              <div className="border-b border-[var(--border-subtle)] px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">
                 Prestadores da rede
               </div>
 
               {networkModalLoading ? (
-                <div className="px-4 py-10 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                <div className="px-4 py-10 text-sm text-[var(--text-secondary)]">
                   Carregando hospitais compartilhados desta rede...
                 </div>
               ) : filteredNetworkEntries.length === 0 ? (
-                <div className="px-4 py-10 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+                <div className="px-4 py-10 text-sm text-[var(--text-secondary)]">
                   Nenhum prestador encontrado para os filtros atuais.
                 </div>
               ) : (
-                <div className="max-h-72 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
+                <div className="max-h-72 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
                   {filteredNetworkEntries.map(({ entry, index }) => (
                     <article key={`${entry.hospital}-${index}`} className="flex flex-col gap-3 px-4 py-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{entry.hospital}</p>
-                        <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{formatNetworkLocation(entry)}</p>
-                        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-[color:var(--panel-text-soft,#5b4635)]">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{entry.hospital}</p>
+                        <p className="mt-1 text-xs text-[var(--text-secondary)]">{formatNetworkLocation(entry)}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-[var(--text-secondary)]">
                           {entry.atendimentos.map((service) => (
-                            <span key={`${entry.hospital}-${service}-${index}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{service}</span>
+                            <span key={`${entry.hospital}-${service}-${index}`} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">{service}</span>
                           ))}
                         </div>
                         {entry.aliases.length > 0 && (
-                          <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+                          <p className="mt-2 text-xs text-[var(--text-muted)]">
                             Aliases: {entry.aliases.join(', ')}
                           </p>
                         )}
-                        {entry.observacoes && <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">{entry.observacoes}</p>}
+                        {entry.observacoes && <p className="mt-2 text-xs text-[var(--text-muted)]">{entry.observacoes}</p>}
                       </div>
                       <div className="flex items-center gap-2 self-end lg:self-auto">
-                        <Button variant="icon" size="icon" className="h-9 w-9 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => startEditingNetworkEntry(entry, index)} title="Editar hospital">
+                        <Button variant="icon" size="icon" className="h-9 w-9 text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]" onClick={() => startEditingNetworkEntry(entry, index)} title="Editar hospital">
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button variant="icon" size="icon" className="h-9 w-9 text-red-600 hover:bg-red-50" onClick={() => handleRemoveNetworkEntry(index)} title="Remover hospital">
+                        <Button variant="icon" size="icon" className="h-9 w-9 text-[var(--danger-text)] hover:bg-[var(--danger-soft)]" onClick={() => handleRemoveNetworkEntry(index)} title="Remover hospital">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -3769,27 +3761,27 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               )}
             </div>
 
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4 shadow-sm">
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 shadow-[var(--kds-shadow-card)]">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">
                     Cadastro manual de hospital
                   </p>
-                  <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Abra um modal dedicado para cadastrar ou editar nome, cidade, regiao, bairro e atendimentos.</p>
+                  <p className="mt-1 text-xs text-[var(--text-secondary)]">Abra um modal dedicado para cadastrar ou editar nome, cidade, regiao, bairro e atendimentos.</p>
                 </div>
                 <Button type="button" onClick={openNetworkEntryCreateModal}>
                   <Plus className="h-4 w-4" />
                   Adicionar hospital
                 </Button>
               </div>
-              <p className="mt-3 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+              <p className="mt-3 text-xs text-[var(--text-muted)]">
                 O cadastro passa a reaproveitar hospitais compartilhados e permite guardar aliases para normalizacao manual de importacoes futuras.
               </p>
             </div>
 
-            <div className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
-              <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Legenda das siglas</p>
-              <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[color:var(--panel-text-soft,#5b4635)] md:grid-cols-2">
+            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[var(--kds-shadow-card)]">
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Legenda das siglas</p>
+              <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[var(--text-secondary)] md:grid-cols-2">
                 {networkLegend.map((item) => <p key={item}>{item}</p>)}
               </div>
             </div>
@@ -3815,26 +3807,26 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <div className="space-y-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Hospital *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Hospital *</label>
               <Input value={networkEntryForm.hospital} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, hospital: formatCotadorLocationText(event.target.value) }))} placeholder="Ex: HOSPITAL PASTEUR" required />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Cidade *</label>
               <Input value={networkEntryForm.cidade} onChange={(event) => setNetworkEntryForm((current) => {
                 const cidade = formatCotadorLocationText(event.target.value);
                 return { ...current, cidade, regiao: resolveCotadorRegionByCity(cidade) ?? current.regiao };
               })} placeholder="Ex: RIO DE JANEIRO" required />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Regiao *</label>
               <Input value={networkEntryForm.regiao} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, regiao: formatCotadorLocationText(event.target.value) }))} placeholder="Ex: CAPITAL" required />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Bairro</label>
               <Input value={networkEntryForm.bairro} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, bairro: formatCotadorLocationText(event.target.value) }))} placeholder="Opcional" />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Atendimentos</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Atendimentos</label>
               <InlineCheckboxGroup
                 options={networkServiceOptions.map((option) => ({ value: option.value, label: option.label }))}
                 values={networkEntryForm.atendimentos}
@@ -3843,18 +3835,18 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observacoes</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Observacoes</label>
               <Textarea value={networkEntryForm.observacoes} onChange={(event) => setNetworkEntryForm((current) => ({ ...current, observacoes: event.target.value }))} rows={3} placeholder="Ex: Prestador habilitado apenas na acomodacao QP" />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Aliases para normalizacao manual</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Aliases para normalizacao manual</label>
                 <Textarea
                   value={networkEntryForm.aliasesText}
                   onChange={(event) => setNetworkEntryForm((current) => ({ ...current, aliasesText: formatNetworkAliasesTextarea(event.target.value) }))}
                   rows={4}
                   placeholder={"Ex: ASM - HOSPITAL PASTEUR\nHOSPITAL PASTEUR"}
                 />
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Use um alias por linha para vincular nomes alternativos ao mesmo hospital compartilhado.</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Use um alias por linha para vincular nomes alternativos ao mesmo hospital compartilhado.</p>
             </div>
           </div>
 
@@ -3878,7 +3870,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <div className="space-y-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Manter</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Manter</label>
               <FilterSingleSelect
                 icon={Building2}
                 options={manualMergeHospitalOptions.filter((option) => option.value !== manualMergeSourceId)}
@@ -3891,7 +3883,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Mesclar de</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Mesclar de</label>
               <FilterSingleSelect
                 icon={GitMerge}
                 options={manualMergeHospitalOptions.filter((option) => option.value !== manualMergeTargetId)}
@@ -3905,7 +3897,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3 text-sm text-[color:var(--panel-text-soft,#5b4635)]">
+          <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 text-sm text-[var(--text-secondary)]">
             Use este fluxo quando a sugestão automática não aparecer ou quando você quiser escolher manualmente qual cadastro deve sobreviver.
           </div>
 
@@ -3932,57 +3924,57 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Nome do hospital *</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Nome do hospital *</label>
                 <Input value={networkHospitalForm.nome} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, nome: formatCotadorLocationText(event.target.value) }))} required />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Cidade *</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Cidade *</label>
                 <Input value={networkHospitalForm.cidade} onChange={(event) => setNetworkHospitalForm((current) => {
                   const cidade = formatCotadorLocationText(event.target.value);
                   return { ...current, cidade, regiao: resolveCotadorRegionByCity(cidade) ?? current.regiao };
                 })} required />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Regiao *</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Regiao *</label>
                 <Input value={networkHospitalForm.regiao} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, regiao: formatCotadorLocationText(event.target.value) }))} required />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Bairro</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Bairro</label>
                 <Input value={networkHospitalForm.bairro} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, bairro: formatCotadorLocationText(event.target.value) }))} placeholder="Opcional" />
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Aliases para normalizacao manual</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Aliases para normalizacao manual</label>
                 <Textarea value={networkHospitalForm.aliasesText} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, aliasesText: formatNetworkAliasesTextarea(event.target.value) }))} rows={4} placeholder={"Ex: ASM - HOSPITAL PASTEUR\nHOSPITAL PASTEUR"} />
-                <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Use um alias por linha para cobrir variacoes de importacao entre operadoras e arquivos.</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">Use um alias por linha para cobrir variacoes de importacao entre operadoras e arquivos.</p>
               </div>
             </div>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
-              <input type="checkbox" checked={networkHospitalForm.ativo} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5 h-5 w-5 rounded border-slate-300 text-amber-600 focus:ring-2 focus:ring-amber-500" />
+            <label className="flex cursor-pointer items-start gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <Checkbox size="md" checked={networkHospitalForm.ativo} onChange={(event) => setNetworkHospitalForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Hospital ativo</p>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Hospitais inativos continuam preservados, mas podem ser ocultados em fluxos futuros.</p>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Hospital ativo</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">Hospitais inativos continuam preservados, mas podem ser ocultados em fluxos futuros.</p>
               </div>
             </label>
 
-            <div className="overflow-hidden rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
-              <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3">
-                <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Planos vinculados</p>
-                <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">Todos os produtos que usam este hospital compartilhado na rede.</p>
+            <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--kds-shadow-card)]">
+              <div className="border-b border-[var(--border-subtle)] px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Planos vinculados</p>
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">Todos os produtos que usam este hospital compartilhado na rede.</p>
               </div>
-              <div className="max-h-80 divide-y divide-[color:var(--panel-border-subtle,#e7dac8)] overflow-y-auto">
+              <div className="max-h-80 divide-y divide-[color:var(--border-subtle)] overflow-y-auto">
                 {selectedNetworkHospital.linkedProducts.map((link) => (
                   <article key={link.link_id} className="px-4 py-3">
                     <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{link.produto_nome}</p>
-                        <p className="mt-1 text-xs text-[color:var(--panel-text-soft,#5b4635)]">{link.operadora?.nome ?? 'Operadora'} / {link.linha?.nome ?? 'Linha'}</p>
-                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[color:var(--panel-text-soft,#5b4635)]">
-                          {link.produto_abrangencia && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{link.produto_abrangencia}</span>}
-                          {link.produto_acomodacao && <span className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{link.produto_acomodacao}</span>}
-                          {link.atendimentos.map((service) => <span key={`${link.link_id}-${service}`} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] px-2 py-0.5">{service}</span>)}
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{link.produto_nome}</p>
+                        <p className="mt-1 text-xs text-[var(--text-secondary)]">{link.operadora?.nome ?? 'Operadora'} / {link.linha?.nome ?? 'Linha'}</p>
+                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[var(--text-secondary)]">
+                          {link.produto_abrangencia && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">{link.produto_abrangencia}</span>}
+                          {link.produto_acomodacao && <span className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">{link.produto_acomodacao}</span>}
+                          {link.atendimentos.map((service) => <span key={`${link.link_id}-${service}`} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] px-2 py-0.5">{service}</span>)}
                         </div>
-                        {link.observacoes && <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">{link.observacoes}</p>}
+                        {link.observacoes && <p className="mt-2 text-xs text-[var(--text-muted)]">{link.observacoes}</p>}
                       </div>
                     </div>
                   </article>
@@ -4023,18 +4015,18 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       >
         <form onSubmit={handleEntitySubmit} className="space-y-5">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Nome *</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Nome *</label>
             <Input value={entityForm.nome} onChange={(event) => setEntityForm((current) => ({ ...current, nome: event.target.value }))} required />
           </div>
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
-            <input type="checkbox" checked={entityForm.ativo} onChange={(event) => setEntityForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5 h-5 w-5 rounded border-slate-300 text-amber-600 focus:ring-2 focus:ring-amber-500" />
+          <label className="flex cursor-pointer items-start gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <Checkbox size="md" checked={entityForm.ativo} onChange={(event) => setEntityForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Registro ativo</p>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Mantém o registro disponível para uso no catálogo.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Registro ativo</p>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Mantém o registro disponível para uso no catálogo.</p>
             </div>
           </label>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observações</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Observações</label>
             <Textarea value={entityForm.observacoes} onChange={(event) => setEntityForm((current) => ({ ...current, observacoes: event.target.value }))} rows={4} />
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -4053,22 +4045,22 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
       >
         <form onSubmit={handleLineSubmit} className="space-y-5">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Operadora *</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Operadora *</label>
             <FilterSingleSelect icon={Building2} options={operadoraOptions} placeholder="Selecione a operadora" value={lineForm.operadoraId} onChange={(value) => setLineForm((current) => ({ ...current, operadoraId: value }))} />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Nome da linha *</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Nome da linha *</label>
             <Input value={lineForm.nome} onChange={(event) => setLineForm((current) => ({ ...current, nome: event.target.value }))} placeholder="Ex: Amil ou Selecionada" required />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observações</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Observações</label>
             <Textarea value={lineForm.observacoes} onChange={(event) => setLineForm((current) => ({ ...current, observacoes: event.target.value }))} rows={3} />
           </div>
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
-            <input type="checkbox" checked={lineForm.ativo} onChange={(event) => setLineForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5 h-5 w-5 rounded border-slate-300 text-amber-600 focus:ring-2 focus:ring-amber-500" />
+          <label className="flex cursor-pointer items-start gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <Checkbox size="md" checked={lineForm.ativo} onChange={(event) => setLineForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Linha ativa</p>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Linhas inativas saem do cadastro de produtos e do seletor do Cotador.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Linha ativa</p>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Linhas inativas saem do cadastro de produtos e do seletor do Cotador.</p>
             </div>
           </label>
           <div className="flex flex-wrap items-center gap-3">
@@ -4088,39 +4080,39 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <form onSubmit={handleProductSubmit} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Linha *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Linha *</label>
               <FilterSingleSelect icon={Network} options={lineOptions} placeholder="Selecione a linha" value={productForm.linhaId} onChange={(value) => setProductForm((current) => ({ ...current, linhaId: value }))} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Administradora</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Administradora</label>
               <FilterSingleSelect icon={ShieldCheck} options={administradoraOptions} placeholder="Sem administradora" value={productForm.administradoraId} onChange={(value) => setProductForm((current) => ({ ...current, administradoraId: value }))} />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Nome do produto *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Nome do produto *</label>
               <Input value={productForm.nome} onChange={(event) => setProductForm((current) => ({ ...current, nome: event.target.value }))} placeholder="Ex: Bronze, Bronze Mais, S750 R1" required />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Modalidade base</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Modalidade base</label>
               <FilterSingleSelect icon={Layers3} options={modalidadeProductOptions} placeholder="Selecione a modalidade" value={productForm.modalidade} onChange={(value) => setProductForm((current) => ({ ...current, modalidade: value }))} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Abrangência</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Abrangência</label>
               <FilterSingleSelect icon={MapPin} options={abrangenciaOptions} placeholder="Selecione a abrangência" value={productForm.abrangencia} onChange={(value) => setProductForm((current) => ({ ...current, abrangencia: value }))} />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Acomodações do produto *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Acomodações do produto *</label>
               <InlineCheckboxGroup
                 options={acomodacaoOptions}
                 values={productForm.acomodacoes}
                 onChange={(values) => setProductForm((current) => ({ ...current, acomodacoes: values }))}
                 emptyMessage="Nenhuma acomodação disponível nas configurações gerais."
               />
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Se marcar mais de uma acomodação, a criação de tabela gera uma versão separada para cada acomodação selecionada.</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Se marcar mais de uma acomodação, a criação de tabela gera uma versão separada para cada acomodação selecionada.</p>
             </div>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Entidades elegiveis</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Entidades elegiveis</label>
             <InlineCheckboxGroup
               options={entidadeOptions}
               values={productForm.entidadeIds}
@@ -4132,33 +4124,33 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Carências</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Carências</label>
               <Textarea value={productForm.carencias} onChange={(event) => setProductForm((current) => ({ ...current, carencias: event.target.value }))} rows={4} placeholder="Opcional" />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Documentos necessários</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Documentos necessários</label>
               <Textarea value={productForm.documentosNecessarios} onChange={(event) => setProductForm((current) => ({ ...current, documentosNecessarios: event.target.value }))} rows={4} placeholder="Opcional" />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Reembolso</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Reembolso</label>
               <Textarea value={productForm.reembolso} onChange={(event) => setProductForm((current) => ({ ...current, reembolso: event.target.value }))} rows={4} placeholder="Opcional" />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Informações importantes</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Informações importantes</label>
               <Textarea value={productForm.informacoesImportantes} onChange={(event) => setProductForm((current) => ({ ...current, informacoesImportantes: event.target.value }))} rows={4} placeholder="Opcional" />
             </div>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observações</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Observações</label>
             <Textarea value={productForm.observacoes} onChange={(event) => setProductForm((current) => ({ ...current, observacoes: event.target.value }))} rows={4} />
           </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
-            <input type="checkbox" checked={productForm.ativo} onChange={(event) => setProductForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5 h-5 w-5 rounded border-slate-300 text-amber-600 focus:ring-2 focus:ring-amber-500" />
+          <label className="flex cursor-pointer items-start gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <Checkbox size="md" checked={productForm.ativo} onChange={(event) => setProductForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Produto ativo</p>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Produtos inativos saem da criação de novas tabelas e do seletor.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Produto ativo</p>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Produtos inativos saem da criação de novas tabelas e do seletor.</p>
             </div>
           </label>
 
@@ -4179,11 +4171,11 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         <form onSubmit={handleTableSubmit} className="space-y-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Produto *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Produto *</label>
               <FilterSingleSelect icon={Building2} options={productOptions} placeholder="Selecione o produto" value={tableForm.produtoId} onChange={(value) => setTableForm((current) => ({ ...current, produtoId: value }))} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Nome da tabela *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Nome da tabela *</label>
               <Input
                 value={tableForm.nome}
                 onChange={(event) => {
@@ -4193,7 +4185,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 placeholder="Gerado automaticamente"
                 required
               />
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
                 <span>{autoGeneratedTableName ? `Sugestão: ${autoGeneratedTableName}` : 'Ajuste os campos abaixo para gerar o nome.'}</span>
                 <button
                   type="button"
@@ -4201,7 +4193,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     setTableNameTouched(false);
                     setTableForm((current) => ({ ...current, nome: autoGeneratedTableName }));
                   }}
-                  className="font-semibold text-[var(--panel-accent-ink,#6f3f16)] transition-opacity hover:opacity-80"
+                  className="font-semibold text-[var(--accent-gold-hover)] transition-opacity hover:opacity-80"
                   disabled={!autoGeneratedTableName}
                 >
                   Usar nome automático
@@ -4209,7 +4201,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Código da tabela</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Código da tabela</label>
               <Input
                 value={tableForm.codigo}
                 onChange={(event) => {
@@ -4218,7 +4210,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                 }}
                 placeholder="Gerado automaticamente"
               />
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
                 <span>{autoGeneratedTableCode ? `Sugestão: ${autoGeneratedTableCode}` : 'Escolha um produto para gerar o código.'}</span>
                 <button
                   type="button"
@@ -4226,7 +4218,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
                     setTableCodeTouched(false);
                     setTableForm((current) => ({ ...current, codigo: autoGeneratedTableCode }));
                   }}
-                  className="font-semibold text-[var(--panel-accent-ink,#6f3f16)] transition-opacity hover:opacity-80"
+                  className="font-semibold text-[var(--accent-gold-hover)] transition-opacity hover:opacity-80"
                   disabled={!autoGeneratedTableCode}
                 >
                       Usar código automático
@@ -4234,79 +4226,79 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Modalidade *</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Modalidade *</label>
               <FilterSingleSelect icon={Layers3} options={[...modalidadeOptions]} placeholder="Selecione a modalidade" value={tableForm.modalidade} onChange={(value) => setTableForm((current) => ({ ...current, modalidade: value as TableFormState['modalidade'] }))} />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Perfil empresarial (opcional)</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Perfil empresarial (opcional)</label>
               <FilterSingleSelect icon={Network} options={[...perfilEmpresarialOptions]} placeholder="Selecione o perfil" value={tableForm.perfilEmpresarial} onChange={(value) => setTableForm((current) => ({ ...current, perfilEmpresarial: value as TableFormState['perfilEmpresarial'] }))} />
-              <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Use `Todos` quando a operadora não separar MEI e não MEI nesta tabela.</p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">Use `Todos` quando a operadora não separar MEI e não MEI nesta tabela.</p>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Coparticipação</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Coparticipação</label>
               <FilterSingleSelect icon={Sparkles} options={[...coparticipacaoOptions]} placeholder="Selecione a coparticipação" value={tableForm.coparticipacao} onChange={(value) => setTableForm((current) => ({ ...current, coparticipacao: value as TableFormState['coparticipacao'] }))} />
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Acomodações herdadas do produto</label>
-              <div className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] px-4 py-3">
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Acomodações herdadas do produto</label>
+              <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
                 {tableFormAcomodacoes.length > 0 && (tableEditingRecords.length > 0 || tableModalMode === 'duplicate') ? (
                   <div>
                     <div className="flex flex-wrap gap-2">
                       {tableFormAcomodacoes.map((acomodacao) => (
-                        <span key={acomodacao} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-xs font-semibold text-[color:var(--panel-text,#1a120d)]">{acomodacao}</span>
+                        <span key={acomodacao} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]">{acomodacao}</span>
                       ))}
                     </div>
-                    <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Esta tabela mantém as acomodações já vinculadas.</p>
+                    <p className="mt-2 text-xs text-[var(--text-muted)]">Esta tabela mantém as acomodações já vinculadas.</p>
                   </div>
                 ) : selectedTableProduct ? (
                   <div>
                     <div className="flex flex-wrap gap-2">
                       {selectedTableProductAcomodacoes.length > 0 ? selectedTableProductAcomodacoes.map((acomodacao) => (
-                        <span key={acomodacao} className="rounded-full border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-xs font-semibold text-[color:var(--panel-text,#1a120d)]">{acomodacao}</span>
+                        <span key={acomodacao} className="rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--text-primary)]">{acomodacao}</span>
                       )) : (
-                        <span className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Nenhuma acomodação definida no produto.</span>
+                        <span className="text-sm text-[var(--text-secondary)]">Nenhuma acomodação definida no produto.</span>
                       )}
                     </div>
-                    <p className="mt-2 text-xs text-[color:var(--panel-text-muted,#876f5c)]">
+                    <p className="mt-2 text-xs text-[var(--text-muted)]">
                       {selectedTableProductAcomodacoes.length > 1
                         ? 'Ao salvar, o catálogo agrupa essas acomodações como uma única tabela lógica.'
                         : 'A acomodação desta tabela será herdada do produto selecionado.'}
                     </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-[color:var(--panel-text-soft,#5b4635)]">Escolha um produto para herdar as acomodações.</p>
+                  <p className="text-sm text-[var(--text-secondary)]">Escolha um produto para herdar as acomodações.</p>
                 )}
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Vidas min.</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Vidas min.</label>
               <Input type="number" min="1" value={tableForm.vidasMin} onChange={(event) => setTableForm((current) => ({ ...current, vidasMin: event.target.value }))} placeholder="Ex: 2" />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Vidas max.</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Vidas max.</label>
               <Input type="number" min="1" value={tableForm.vidasMax} onChange={(event) => setTableForm((current) => ({ ...current, vidasMax: event.target.value }))} placeholder="Ex: 29" />
             </div>
           </div>
 
           <div>
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <Table2 className="h-4 w-4" />
               Preços por faixa etária
             </div>
             {useMultiAcomodacaoPricing ? (
               <div className="space-y-4">
                 {selectedTableProductAcomodacoes.map((acomodacao) => (
-                  <section key={acomodacao} className="rounded-3xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+                  <section key={acomodacao} className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-[var(--kds-shadow-card)]">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">{acomodacao}</p>
-                        <p className="mt-1 text-xs text-[color:var(--panel-text-muted,#876f5c)]">Valores desta acomodação</p>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">{acomodacao}</p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">Valores desta acomodação</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
                       {COTADOR_AGE_RANGES.map((range) => (
-                        <div key={`${acomodacao}-${range}`} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
+                        <div key={`${acomodacao}-${range}`} className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{range}</p>
                           <Input
                             type="text"
                             value={tableForm.pricesByAcomodacao[acomodacao]?.[range] ?? ''}
@@ -4335,8 +4327,8 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             ) : (
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
                 {COTADOR_AGE_RANGES.map((range) => (
-                  <div key={range} className="rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[color:var(--panel-text-muted,#876f5c)]">{range}</p>
+                  <div key={range} className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{range}</p>
                     <Input
                       type="text"
                       value={tableForm.pricesByAgeRange[range]}
@@ -4360,15 +4352,15 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft,#5b4635)]">Observações</label>
+            <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Observações</label>
             <Textarea value={tableForm.observacoes} onChange={(event) => setTableForm((current) => ({ ...current, observacoes: event.target.value }))} rows={4} />
           </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] p-4">
-            <input type="checkbox" checked={tableForm.ativo} onChange={(event) => setTableForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5 h-5 w-5 rounded border-slate-300 text-amber-600 focus:ring-2 focus:ring-amber-500" />
+          <label className="flex cursor-pointer items-start gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+            <Checkbox size="md" checked={tableForm.ativo} onChange={(event) => setTableForm((current) => ({ ...current, ativo: event.target.checked }))} className="mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-[color:var(--panel-text,#1a120d)]">Tabela ativa</p>
-              <p className="mt-1 text-sm text-[color:var(--panel-text-soft,#5b4635)]">Tabelas inativas saem da vitrine do Cotador, mas continuam preservadas no histórico.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Tabela ativa</p>
+              <p className="mt-1 text-sm text-[var(--text-secondary)]">Tabelas inativas saem da vitrine do Cotador, mas continuam preservadas no histórico.</p>
             </div>
           </label>
 

@@ -10,6 +10,7 @@ export type BreadcrumbProps = {
 };
 
 export function Breadcrumb({ children, className, separator }: BreadcrumbProps) {
+  void separator;
   return (
     <nav aria-label="Breadcrumb" className={cx('kds-breadcrumb', className)}>
       <ol className="kds-breadcrumb-list">

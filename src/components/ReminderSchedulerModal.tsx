@@ -4,10 +4,20 @@ import { supabase, Lead } from '../lib/supabase';
 import { convertLocalToUTC } from '../lib/dateUtils';
 import { syncLeadNextReturnFromUpcomingReminder } from '../lib/leadReminderUtils';
 import FilterSingleSelect from './FilterSingleSelect';
-import { Alert, Button, Input, Textarea } from '../design-system';
-import DateTimePicker from './ui/DateTimePicker';
-import Field from './ui/Field';
-import ModalShell from './ui/ModalShell';
+import {
+  Alert,
+  Button,
+  DateTimePicker,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+  Textarea,
+} from '../design-system';
 import { toast } from '../lib/toast';
 
 const TYPE_OPTIONS = ['Retorno', 'Follow-up', 'Outro'] as const;
@@ -155,24 +165,11 @@ export default function ReminderSchedulerModal({
   };
 
   return (
-    <ModalShell
-      isOpen
-      onClose={onClose}
-      title="Agendar novo lembrete"
-      description={formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}
-      size="md"
-      panelClassName="max-w-lg"
-      footer={
-        <div className="flex items-center justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Agora nao
-          </Button>
-          <Button variant="primary" onClick={handleSchedule} disabled={saving} loading={saving}>
-            {saving ? 'Salvando...' : 'Agendar lembrete'}
-          </Button>
-        </div>
-      }
-    >
+    <Dialog open onOpenChange={(open) => !open && onClose()} size="md" className="max-w-lg">
+      <DialogHeader onClose={onClose}>
+        <div><DialogTitle>Agendar novo lembrete</DialogTitle><DialogDescription>{formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}</DialogDescription></div>
+      </DialogHeader>
+      <DialogBody>
       <div className="space-y-6">
         <Alert tone="accent">
           <div className="flex items-start gap-3">
@@ -189,7 +186,7 @@ export default function ReminderSchedulerModal({
         </Alert>
 
         <div className="grid grid-cols-1 gap-4">
-          <Field label="Titulo" required>
+          <Field label="Titulo *">
             <Input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
@@ -228,11 +225,11 @@ export default function ReminderSchedulerModal({
             </Field>
           </div>
 
-          <Field label="Data e hora" required>
+          <Field label="Data e hora *">
             <DateTimePicker
               type="datetime-local"
               value={scheduledFor}
-              onChange={setScheduledFor}
+              onChange={(event) => setScheduledFor(event.target.value)}
               placeholder="Selecionar data e hora"
             />
           </Field>
@@ -247,6 +244,11 @@ export default function ReminderSchedulerModal({
           </Field>
         </div>
       </div>
-    </ModalShell>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>Agora nao</Button>
+        <Button variant="primary" onClick={handleSchedule} disabled={saving} loading={saving}>{saving ? 'Salvando...' : 'Agendar lembrete'}</Button>
+      </DialogFooter>
+    </Dialog>
   );
 }

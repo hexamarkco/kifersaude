@@ -16,8 +16,7 @@ import {
   formatProfileLabel,
 } from "../../../lib/accessControl";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
-import Button from "../../../components/ui/Button";
-import Input from "../../../components/ui/Input";
+import { Alert, Badge, Button, Card, Checkbox, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../design-system";
 import { createEmptyPermission } from "./shared/accessControlUtils";
 
 type FeedbackMessage = { type: "success" | "error"; text: string };
@@ -248,16 +247,16 @@ export default function AccessControlManagerScreen() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+      <Card padding="lg">
         <div className="mb-6 flex items-start gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--panel-accent-blue-bg)] text-[var(--panel-accent-blue-text)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">
+            <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
               Perfis e permissões dinâmicas
             </h3>
-            <p className="text-sm text-[color:var(--panel-text-soft)]">
+            <p className="text-sm text-[color:var(--text-secondary)]">
               Crie perfis pelo sistema, marque perfis administrativos e controle
               visualização ou edição módulo a módulo.
             </p>
@@ -265,20 +264,14 @@ export default function AccessControlManagerScreen() {
         </div>
 
         {message && (
-          <div
-            className={`mb-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-              message.type === "success"
-                ? "border-green-200 bg-green-50 text-green-700"
-                : "border-red-200 bg-red-50 text-red-700"
-            }`}
-          >
+          <Alert tone={message.type === "success" ? "success" : "danger"} className="mb-4 flex items-center gap-2">
             {message.type === "success" ? (
               <CheckCircle className="h-4 w-4" />
             ) : (
               <AlertCircle className="h-4 w-4" />
             )}
             <span>{message.text}</span>
-          </div>
+          </Alert>
         )}
 
         <div className="mb-6 flex flex-wrap gap-3">
@@ -304,43 +297,37 @@ export default function AccessControlManagerScreen() {
         </div>
 
         {(creatingProfile || editingProfileId) && (
-          <form
+          <Card
             onSubmit={
               editingProfileId ? handleUpdateProfile : handleCreateProfile
             }
-            className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-5"
+            className="mb-6"
+            variant="muted"
+            padding="md"
           >
-            <h4 className="mb-4 text-base font-semibold text-slate-900">
+            <form onSubmit={editingProfileId ? handleUpdateProfile : handleCreateProfile}>
+            <h4 className="mb-4 text-base font-semibold text-[color:var(--text-primary)]">
               {profileFormTitle}
             </h4>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Nome do perfil
-                </label>
+              <Field label="Nome do perfil">
                 <Input
                   value={profileName}
                   onChange={(event) => setProfileName(event.target.value)}
                   placeholder="Ex: Comercial Senior"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Slug gerado
-                </label>
+              <Field label="Slug gerado">
                 <Input
                   value={buildProfileSlug(profileName)}
                   readOnly
                   placeholder="comercial-senior"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Descrição
-                </label>
+              <Field label="Descrição">
                 <Input
                   value={profileDescription}
                   onChange={(event) =>
@@ -348,15 +335,13 @@ export default function AccessControlManagerScreen() {
                   }
                     placeholder="Resumo rápido do escopo deste perfil"
                 />
-              </div>
+              </Field>
             </div>
 
-            <label className="mt-4 flex items-center gap-3 text-sm text-slate-700">
-              <input
-                type="checkbox"
+            <label className="mt-4 flex items-center gap-3 text-sm text-[color:var(--text-primary)]">
+              <Checkbox
                 checked={profileIsAdmin}
                 onChange={(event) => setProfileIsAdmin(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
               />
               <span>Perfil administrativo (acesso total ao sistema)</span>
             </label>
@@ -373,36 +358,38 @@ export default function AccessControlManagerScreen() {
                 Fechar
               </Button>
             </div>
-          </form>
+            </form>
+          </Card>
         )}
 
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {accessProfiles.map((profile) => (
-            <div
+            <Card
               key={profile.id}
-              className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4"
+              variant="muted"
+              padding="sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-semibold text-[color:var(--panel-text)]">
+                    <h4 className="text-sm font-semibold text-[color:var(--text-primary)]">
                       {formatProfileLabel(profile.slug, profile.name)}
                     </h4>
                     {profile.is_system && (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+                      <Badge tone="neutral" size="sm">
                         Sistema
-                      </span>
+                      </Badge>
                     )}
                     {profile.is_admin && (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                      <Badge tone="gold" size="sm">
                         Admin total
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--panel-text-muted)]">
+                  <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
                     {profile.slug}
                   </p>
-                  <p className="mt-2 text-sm text-[color:var(--panel-text-soft)]">
+                  <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
                     {profile.description || "Sem descrição cadastrada."}
                   </p>
                 </div>
@@ -414,7 +401,7 @@ export default function AccessControlManagerScreen() {
                         type="button"
                         variant="icon"
                         size="icon"
-                        className="h-8 w-8 text-slate-600 hover:bg-slate-200"
+                        className="h-8 w-8"
                         title="Editar perfil"
                         onClick={() => handleStartEdit(profile.id)}
                       >
@@ -446,40 +433,39 @@ export default function AccessControlManagerScreen() {
                   )}
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
-      </div>
+      </Card>
 
-      <div className="overflow-x-auto rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] shadow-sm">
-        <table className="min-w-full divide-y divide-[color:var(--panel-border-subtle)]">
-          <thead>
+      <Table>
+          <TableHeader>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[color:var(--panel-text-muted)]">
+              <TableHead>
                 Módulo
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[color:var(--panel-text-muted)]">
+              </TableHead>
+              <TableHead>
                 Descrição
-              </th>
+              </TableHead>
               {accessProfiles.map((profile) => (
-                <th
+                <TableHead
                   key={profile.id}
-                  className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-[color:var(--panel-text-muted)]"
+                  align="center"
                 >
                   {formatProfileLabel(profile.slug, profile.name)}
-                </th>
+                </TableHead>
               ))}
             </tr>
-          </thead>
-          <tbody className="divide-y divide-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)]">
+          </TableHeader>
+          <TableBody>
             {ACCESS_MODULES.map((module) => (
-              <tr key={module.id}>
-                <td className="px-4 py-3 text-sm font-medium text-[color:var(--panel-text)]">
+              <TableRow key={module.id}>
+                <TableCell className="font-medium">
                   {module.label}
-                </td>
-                <td className="px-4 py-3 text-sm text-[color:var(--panel-text-soft)]">
+                </TableCell>
+                <TableCell className="text-[color:var(--text-secondary)]">
                   {module.description}
-                </td>
+                </TableCell>
                 {accessProfiles.map((profile) => {
                   const permission = getPermission(
                     profile.slug,
@@ -492,14 +478,13 @@ export default function AccessControlManagerScreen() {
                     updatingKey === `${profile.slug}:${module.id}`;
 
                   return (
-                    <td
+                    <TableCell
                       key={`${profile.id}-${module.id}`}
-                      className="px-4 py-3"
+                      align="center"
                     >
                       <div className="flex items-center justify-center space-x-3">
-                        <label className="inline-flex items-center space-x-2 text-xs text-[color:var(--panel-text-soft)]">
-                          <input
-                            type="checkbox"
+                        <label className="inline-flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
+                          <Checkbox
                             checked={canView}
                             onChange={() =>
                               void handleToggleView(
@@ -508,14 +493,12 @@ export default function AccessControlManagerScreen() {
                                 canView,
                               )
                             }
-                            className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                             disabled={profile.is_admin || isUpdating}
                           />
                           <span>Ver</span>
                         </label>
-                        <label className="inline-flex items-center space-x-2 text-xs text-[color:var(--panel-text-soft)]">
-                          <input
-                            type="checkbox"
+                        <label className="inline-flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
+                          <Checkbox
                             checked={canEdit}
                             onChange={() =>
                               void handleToggleEdit(
@@ -524,7 +507,6 @@ export default function AccessControlManagerScreen() {
                                 canEdit,
                               )
                             }
-                            className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                             disabled={
                               profile.is_admin || !canView || isUpdating
                             }
@@ -532,14 +514,13 @@ export default function AccessControlManagerScreen() {
                           <span>Editar</span>
                         </label>
                       </div>
-                    </td>
+                    </TableCell>
                   );
                 })}
-              </tr>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+      </Table>
       {ConfirmationDialog}
     </div>
   );

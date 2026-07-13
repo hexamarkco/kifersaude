@@ -1,12 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Loader2, MessageSquarePlus, Phone, Search, UserCircle2, UserRound } from 'lucide-react';
 
-import ModalShell from '../../../../components/ui/ModalShell';
-import Button from '../../../../components/ui/Button';
-import Input from '../../../../components/ui/Input';
-import Tabs, { type TabItem } from '../../../../components/ui/Tabs';
+import { ActionSurface, Button, Input, Surface, Tabs, type TabItem } from '../../../../design-system';
 import type { CommWhatsAppLeadSearchResult } from '../../../../lib/commWhatsAppService';
 import type { CommWhatsAppPhoneContact } from '../../../../lib/supabase';
+import WhatsAppDialog from './WhatsAppDialog';
 
 type StartChatSource = 'saved' | 'crm' | 'manual';
 
@@ -72,7 +70,7 @@ export default function WhatsAppStartChatModal({
   }, [source]);
 
   return (
-    <ModalShell
+    <WhatsAppDialog
       isOpen={isOpen}
       onClose={onClose}
       title="Novo chat"
@@ -93,10 +91,10 @@ export default function WhatsAppStartChatModal({
         />
 
         {source === 'manual' ? (
-          <div className="space-y-4 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
+          <Surface variant="muted" padding="sm" className="space-y-4">
             <div>
-              <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">Iniciar por número</p>
-              <p className="mt-1 text-sm text-[var(--panel-text-muted,#8a735f)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Iniciar por número</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
@@ -105,42 +103,42 @@ export default function WhatsAppStartChatModal({
                 Iniciar chat
               </Button>
             </div>
-          </div>
+          </Surface>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
             <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} disabled={starting} />
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3">
+            <Surface variant="muted" padding="sm" className="min-h-0 flex-1 overflow-y-auto">
               {source === 'saved' && (
-                <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#8a735f)]">
+                <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   {contactsTotal} contatos salvos
                 </div>
               )}
               {(source === 'saved' ? contactsLoading : crmLoading) ? (
-                <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--text-muted)]">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Carregando {source === 'saved' ? 'contatos salvos' : 'leads do CRM'}...
                 </div>
               ) : source === 'saved' ? (
                 contacts.length === 0 ? (
-                  <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                  <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--text-muted)]">
                     Nenhum contato salvo encontrado.
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {contacts.map((contact) => (
-                      <button
+                      <ActionSurface
                         key={contact.id}
                         type="button"
                         onClick={() => onStartFromSavedContact(contact)}
                         disabled={starting}
-                        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-white px-4 py-3 text-left transition hover:border-[var(--panel-accent-border,#d2ab85)]"
+                        variant="default" padding="sm" className="flex w-full items-center justify-between gap-3 text-left"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-[var(--panel-text,#1c1917)]">{contact.display_name}</p>
-                          <p className="truncate text-xs text-[var(--panel-text-muted,#8a735f)]">{contact.phone_number}</p>
+                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{contact.display_name}</p>
+                          <p className="truncate text-xs text-[var(--text-muted)]">{contact.phone_number}</p>
                         </div>
-                        {startingKey === `saved:${contact.phone_digits}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4 text-[var(--panel-accent-strong,#c86f1d)]" />}
-                      </button>
+                        {startingKey === `saved:${contact.phone_digits}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4 text-[var(--brand-primary)]" />}
+                      </ActionSurface>
                     ))}
 
                     {contactsHasMore && (
@@ -153,36 +151,36 @@ export default function WhatsAppStartChatModal({
                   </div>
                 )
               ) : crmLeads.length === 0 ? (
-                <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--panel-text-muted,#6b7280)]">
+                <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--text-muted)]">
                   Nenhum lead encontrado.
                 </div>
               ) : (
                 <div className="space-y-2">
                   {crmLeads.map((lead) => (
-                    <button
+                    <ActionSurface
                       key={lead.id}
                       type="button"
                       onClick={() => onStartFromLead(lead)}
                       disabled={starting}
-                      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-white px-4 py-3 text-left transition hover:border-[var(--panel-accent-border,#d2ab85)]"
+                      variant="default" padding="sm" className="flex w-full items-center justify-between gap-3 text-left"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--panel-text,#1c1917)]">{lead.nome_completo || 'Lead sem nome'}</p>
-                        <p className="truncate text-xs text-[var(--panel-text-muted,#8a735f)]">{lead.telefone}</p>
-                        <p className="mt-1 truncate text-xs text-[var(--panel-text-muted,#8a735f)]">
+                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{lead.nome_completo || 'Lead sem nome'}</p>
+                        <p className="truncate text-xs text-[var(--text-muted)]">{lead.telefone}</p>
+                        <p className="mt-1 truncate text-xs text-[var(--text-muted)]">
                           {lead.status_nome || 'Sem status'}
                           {lead.responsavel_label ? ` • ${lead.responsavel_label}` : ''}
                         </p>
                       </div>
-                      {startingKey === `crm:${lead.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCircle2 className="h-4 w-4 text-[var(--panel-accent-strong,#c86f1d)]" />}
-                    </button>
+                      {startingKey === `crm:${lead.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCircle2 className="h-4 w-4 text-[var(--brand-primary)]" />}
+                    </ActionSurface>
                   ))}
                 </div>
               )}
-            </div>
+            </Surface>
           </div>
         )}
       </div>
-    </ModalShell>
+    </WhatsAppDialog>
   );
 }

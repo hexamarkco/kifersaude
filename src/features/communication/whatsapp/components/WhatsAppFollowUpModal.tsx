@@ -1,9 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { CalendarPlus, Check, Clock3, MessageSquare, Mic, MicOff, Sparkles } from 'lucide-react';
 
-import Button from '../../../../components/ui/Button';
-import ModalShell from '../../../../components/ui/ModalShell';
-import Textarea from '../../../../components/ui/Textarea';
+import { Button, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { WHATSAPP_MESSAGE_BREAK_DELIMITER, splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
@@ -11,6 +9,7 @@ import { commWhatsAppService, type CommWhatsAppFollowUpNextAction, type CommWhat
 import { toast } from '../../../../lib/toast';
 import { followUpSalesTechniqueOptions } from './followUpSalesTechniques';
 import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
+import WhatsAppDialog from './WhatsAppDialog';
 
 type SpeechRecognitionType = {
   new (): {
@@ -326,16 +325,16 @@ export default function WhatsAppFollowUpModal({
   };
 
   return (
-    <ModalShell
+    <WhatsAppDialog
       isOpen={isOpen}
       onClose={handleClose}
       title="Gerar follow-up"
       description="Escolha um cenário, gere uma sugestão e envie. Os ajustes avançados continuam disponíveis quando precisar."
       size="xl"
-      panelClassName="config-transparent-buttons max-w-[82rem]"
+      panelClassName="max-w-[82rem]"
       footer={(
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">
+          <div className="text-xs leading-5 text-[var(--text-muted)]">
             Use <code>{WHATSAPP_MESSAGE_BREAK_DELIMITER}</code> em uma linha isolada para separar em várias mensagens.
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
@@ -359,10 +358,10 @@ export default function WhatsAppFollowUpModal({
     >
       <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.72fr)]">
         <section className="min-w-0 space-y-4">
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm">
             <div className="flex flex-col gap-4">
               {(selectedSituationPresetIds.length > 0 || selectedSalesTechniques.length > 0 || aiContextRationale) && (
-                <div className="rounded-2xl border border-[var(--panel-accent-border,#d2ab85)] bg-[var(--panel-accent-soft,#f4e2cc)] px-3 py-2 text-xs text-[var(--panel-accent-ink,#8b4d12)]">
+                <div className="rounded-2xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--accent-gold-hover)]">
                   <div className="flex items-center gap-2 font-semibold">
                     <Sparkles className="h-3.5 w-3.5" />
                     <span>IA aplicou o contexto da conversa</span>
@@ -373,8 +372,8 @@ export default function WhatsAppFollowUpModal({
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Cenário</h3>
-                  <span className="text-[11px] font-medium text-[var(--panel-text-muted,#876f5c)]">IA seleciona ao gerar</span>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Cenário</h3>
+                  <span className="text-[11px] font-medium text-[var(--text-muted)]">IA seleciona ao gerar</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {CONVERSATION_SITUATION_PRESETS.map((preset) => {
@@ -400,8 +399,8 @@ export default function WhatsAppFollowUpModal({
 
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Tom</h3>
-                  <span className="text-[11px] font-medium text-[var(--panel-accent-ink,#8b4d12)]">{selectedToneOption.label}</span>
+                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">Tom</h3>
+                  <span className="text-[11px] font-medium text-[var(--accent-gold-hover)]">{selectedToneOption.label}</span>
                 </div>
                 <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Tom do follow-up">
                   {followUpToneOptions.map((option) => {
@@ -417,8 +416,8 @@ export default function WhatsAppFollowUpModal({
                         disabled={generating || submitting}
                         title={option.description}
                         className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${active
-                          ? 'border-[var(--panel-accent,#c46a1a)] bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)] shadow-sm'
-                          : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent-border,#d2ab85)]'}`}
+                          ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
+                          : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary-border)]'}`}
                       >
                         {option.label}
                       </button>
@@ -427,20 +426,20 @@ export default function WhatsAppFollowUpModal({
                 </div>
               </div>
 
-              <details className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-3" open={Boolean(localCustomInstructions.trim())}>
+              <details className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3" open={Boolean(localCustomInstructions.trim())}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Ajustes extras</h3>
-                    <p className="mt-0.5 text-xs text-[var(--panel-text-muted,#876f5c)]">Instruções, variáveis e áudio ficam aqui.</p>
+                    <h3 className="text-sm font-semibold text-[var(--text-primary)]">Ajustes extras</h3>
+                    <p className="mt-0.5 text-xs text-[var(--text-muted)]">Instruções, variáveis e áudio ficam aqui.</p>
                   </div>
-                  <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
+                  <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     {localCustomInstructions.trim() ? 'Ativo' : 'Abrir'}
                   </span>
                 </summary>
                 <div className="mt-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-soft,#5b4635)]">Instruções personalizadas</span>
-                    <span className="text-[11px] text-[var(--panel-text-muted,#876f5c)]">Digite {'{{'} para variáveis</span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">Instruções personalizadas</span>
+                    <span className="text-[11px] text-[var(--text-muted)]">Digite {'{{'} para variáveis</span>
                   </div>
                   <VariableAutocompleteTextarea
                     value={localCustomInstructions}
@@ -459,11 +458,11 @@ export default function WhatsAppFollowUpModal({
                   />
                   <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     {isRecording && currentTranscript ? (
-                      <div className="text-xs italic text-[var(--panel-text-muted,#876f5c)]">
+                      <div className="text-xs italic text-[var(--text-muted)]">
                         "...{currentTranscript}"
                       </div>
                     ) : (
-                      <p className="text-[11px] leading-5 text-[var(--panel-text-muted,#876f5c)]">
+                      <p className="text-[11px] leading-5 text-[var(--text-muted)]">
                         O áudio entra como instrução corrigida automaticamente.
                       </p>
                     )}
@@ -485,18 +484,18 @@ export default function WhatsAppFollowUpModal({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 shadow-sm">
             <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Mensagem</h3>
-                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">Edite o texto final ou refine com um clique.</p>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Mensagem</h3>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Edite o texto final ou refine com um clique.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
                   {messageSegments.length || 1} mensagem(ns)
                 </div>
                 {value.trim() ? (
-                  <div className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
+                  <div className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                     {value.trim().length} caracteres
                   </div>
                 ) : null}
@@ -542,10 +541,10 @@ export default function WhatsAppFollowUpModal({
                     type="button"
                     onClick={() => onChangeValue(variation.text)}
                     disabled={generating || submitting || Boolean(refiningActionId)}
-                    className="min-w-[12rem] max-w-[16rem] rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2 text-left text-xs transition hover:border-[var(--panel-accent-border,#d2ab85)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="min-w-[12rem] max-w-[16rem] rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2 text-left text-xs transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <span className="block truncate font-semibold text-[var(--panel-text,#1a120d)]">{variation.label}</span>
-                    <span className="mt-1 line-clamp-2 block leading-5 text-[var(--panel-text-muted,#876f5c)]">{variation.text}</span>
+                    <span className="block truncate font-semibold text-[var(--text-primary)]">{variation.label}</span>
+                    <span className="mt-1 line-clamp-2 block leading-5 text-[var(--text-muted)]">{variation.text}</span>
                   </button>
                 ))}
               </div>
@@ -563,16 +562,16 @@ export default function WhatsAppFollowUpModal({
         </section>
 
         <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
-          <div className="rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] p-4">
+          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text,#1a120d)]">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                   <MessageSquare className="h-4 w-4" />
                   Preview
                 </div>
-                <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">Como será enviado no WhatsApp.</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">Como será enviado no WhatsApp.</p>
               </div>
-              <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
+              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 {messageSegments.length || 1} bloco(s)
               </span>
             </div>
@@ -582,56 +581,56 @@ export default function WhatsAppFollowUpModal({
                 messageSegments.map((segment, index) => (
                   <div
                     key={`${index}:${segment}`}
-                    className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm"
+                    className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm"
                   >
-                    <div className="rounded-t-xl border-b border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                    <div className="rounded-t-xl border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
                         Mensagem {index + 1}
                       </span>
                     </div>
                     <div className="p-3">
-                      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--panel-text,#1a120d)]">
+                      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-primary)]">
                         {segment}
                       </p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="rounded-xl border-2 border-dashed border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] px-4 py-10 text-center">
-                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[var(--panel-text-muted,#876f5c)]" />
-                  <p className="text-sm text-[var(--panel-text-muted,#876f5c)]">Gere ou escreva uma sugestão para visualizar.</p>
+                <div className="rounded-xl border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-10 text-center">
+                  <MessageSquare className="mx-auto mb-2 h-8 w-8 text-[var(--text-muted)]" />
+                  <p className="text-sm text-[var(--text-muted)]">Gere ou escreva uma sugestão para visualizar.</p>
                 </div>
               )}
             </div>
           </div>
 
           {nextAction ? (
-            <div className="rounded-2xl border border-[var(--panel-accent-border,#d2ab85)] bg-[var(--panel-surface,#fffdfa)] p-4 shadow-sm">
+            <div className="rounded-2xl border border-[var(--brand-primary-border)] bg-[var(--bg-surface)] p-4 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[var(--panel-text,#1a120d)]">
-                    <CalendarPlus className="h-4 w-4 text-[var(--panel-accent-strong,#c86f1d)]" />
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                    <CalendarPlus className="h-4 w-4 text-[var(--brand-primary)]" />
                     Próxima ação sugerida
                   </div>
-                  <p className="mt-1 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">{nextAction.reason}</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">{nextAction.reason}</p>
                 </div>
-                <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-accent-ink,#8b4d12)]">
+                <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--accent-gold-hover)]">
                   {nextAction.type === 'schedule' ? 'Agendar' : nextAction.type === 'wait' ? 'Aguardar' : 'Perdido?'}
                 </span>
               </div>
 
-              <div className="mt-3 grid gap-2 text-xs text-[var(--panel-text-soft,#5b4635)] sm:grid-cols-2">
-                <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
-                  <div className="font-semibold text-[var(--panel-text,#1a120d)]">{formatNextActionDate(nextAction.suggestedDateTime)}</div>
+              <div className="mt-3 grid gap-2 text-xs text-[var(--text-secondary)] sm:grid-cols-2">
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
+                  <div className="font-semibold text-[var(--text-primary)]">{formatNextActionDate(nextAction.suggestedDateTime)}</div>
                   <div className="mt-0.5 flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> Tentativa {nextAction.attemptNumber}/{nextAction.maxAttempts}</div>
                 </div>
-                <div className="rounded-xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-3 py-2">
-                  <div className="font-semibold text-[var(--panel-text,#1a120d)]">Prioridade {nextAction.priority}</div>
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
+                  <div className="font-semibold text-[var(--text-primary)]">Prioridade {nextAction.priority}</div>
                   <div className="mt-0.5">Dia: {nextAction.dayLoad ?? 0}/{nextAction.dailyCapacity} pendentes</div>
                 </div>
               </div>
 
-              <p className="mt-3 text-xs leading-5 text-[var(--panel-text-muted,#876f5c)]">{nextAction.giveUpRecommendation}</p>
+              <p className="mt-3 text-xs leading-5 text-[var(--text-muted)]">{nextAction.giveUpRecommendation}</p>
 
               {nextAction.type === 'schedule' && nextAction.suggestedDateTime ? (
                 <Button type="button" variant="primary" size="sm" className="mt-3" onClick={onScheduleNextAction} loading={schedulingNextAction} disabled={generating || submitting || schedulingNextAction}>
@@ -642,13 +641,13 @@ export default function WhatsAppFollowUpModal({
             </div>
           ) : null}
 
-          <details className="group rounded-2xl border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] p-4" open={selectedSalesTechniques.length > 0}>
+          <details className="group rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4" open={selectedSalesTechniques.length > 0}>
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-[var(--panel-text,#1a120d)]">Técnicas avançadas</h3>
-                <p className="mt-1 text-xs text-[var(--panel-text-muted,#876f5c)]">Opcional para a próxima geração.</p>
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Técnicas avançadas</h3>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">Opcional para a próxima geração.</p>
               </div>
-              <span className="rounded-full border border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--panel-text-muted,#876f5c)]">
+              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                 {selectedSalesTechniques.length || 'Abrir'}
               </span>
             </summary>
@@ -666,11 +665,11 @@ export default function WhatsAppFollowUpModal({
                     title={technique.description}
                     className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                       selected
-                        ? 'border-[var(--panel-accent,#c46a1a)] bg-[var(--panel-accent-soft,#f4e2cc)] text-[var(--panel-accent-ink,#8b4d12)] shadow-sm'
-                        : 'border-[var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f8f2e9)] text-[var(--panel-text-soft,#5b4635)] hover:border-[var(--panel-accent,#c46a1a)] hover:text-[var(--panel-accent-ink,#8b4d12)]'
+                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
+                        : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)] hover:text-[var(--accent-gold-hover)]'
                     }`}
                   >
-                    {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--panel-border-subtle,#e7dac8)]" />}
+                    {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--border-subtle)]" />}
                     <span>{technique.name}</span>
                   </button>
                 );
@@ -679,6 +678,6 @@ export default function WhatsAppFollowUpModal({
           </details>
         </aside>
       </div>
-    </ModalShell>
+    </WhatsAppDialog>
   );
 }

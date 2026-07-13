@@ -32,22 +32,32 @@ export {
   DialogTitle,
 } from './components/Dialog';
 export type { DialogProps, DialogSize, DialogBodyProps, DialogDescriptionProps, DialogFooterProps, DialogHeaderProps, DialogTitleProps } from './components/Dialog';
+export { ConfirmDialog } from './components/ConfirmDialog';
+export type { ConfirmDialogProps } from './components/ConfirmDialog';
+export { Drawer, DrawerBody, DrawerFooter, DrawerHeader } from './components/Drawer';
+export type { DrawerProps, DrawerSide, DrawerBodyProps, DrawerFooterProps, DrawerHeaderProps } from './components/Drawer';
+export { default as DateTimePicker } from './components/DateTimePicker';
+export type { DateTimePickerProps } from './components/DateTimePicker';
 export { default as Field } from './components/Field';
 export type { FieldProps } from './components/Field';
 export { InputAddon, InputGroup, SearchInput, default as Input } from './components/Input';
 export type { InputAddonProps, InputGroupProps, InputProps, InputSize, InputState } from './components/Input';
+export { LoadingState, Skeleton } from './components/LoadingState';
+export type { LoadingStateProps, SkeletonProps } from './components/LoadingState';
 export { OperationalMetricChip, OperationalStatusBadge, OperationalStatusDot } from './components/Operational';
 export type { OperationalMetricChipProps, OperationalStatusBadgeProps, OperationalStatusDotProps, OperationalTone } from './components/Operational';
 export { default as PageHeader } from './components/PageHeader';
 export type { PageHeaderProps } from './components/PageHeader';
 export { default as Pagination, PaginationInfo } from './components/Pagination';
 export type { PaginationProps, PaginationInfoProps } from './components/Pagination';
-export { Radio, RadioGroup } from './components/Radio';
+export { default as Radio, RadioGroup } from './components/Radio';
 export { SectionHeader, EmptyState } from './components/SectionHeader';
 export type { SectionHeaderProps, EmptyStateProps } from './components/SectionHeader';
 export type { RadioProps, RadioGroupProps } from './components/Radio';
 export { MultiSelect, default as Select } from './components/Select';
 export type { MultiSelectProps, SelectOption, SelectProps, SelectSize, SelectState } from './components/Select';
+export { Popover, PopoverContent, PopoverTrigger } from './components/Popover';
+export type { PopoverAlign, PopoverContentProps, PopoverProps, PopoverSide, PopoverTriggerProps } from './components/Popover';
 export { default as Switch } from './components/Switch';
 export type { SwitchProps, SwitchSize } from './components/Switch';
 export { ActionSurface, Surface } from './components/Surface';
@@ -57,7 +67,7 @@ export type { TabItem, TabsProps, TabsVariant } from './components/Tabs';
 export { default as Textarea } from './components/Textarea';
 export type { TextareaProps, TextareaSize } from './components/Textarea';
 export {
-  Avatar,
+  default as Avatar,
   AvatarBadge,
   AvatarGroup,
 } from './components/Avatar';
@@ -68,7 +78,7 @@ export {
 } from './components/Stepper';
 export type { StepperProps, StepperOrientation, StepStatus, ProgressProps } from './components/Stepper';
 export {
-  Table,
+  default as Table,
   TableBody,
   TableCell,
   TableHead,

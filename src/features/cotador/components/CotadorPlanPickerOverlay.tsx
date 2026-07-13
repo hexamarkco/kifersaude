@@ -882,20 +882,20 @@ export default function CotadorPlanPickerOverlay({
 
   return createPortal(
     <div className={cx(
-      'painel-theme fixed inset-0 z-[145] bg-[color:rgba(12,16,25,0.58)] backdrop-blur-sm',
+      'painel-theme kifer-ds fixed inset-0 z-[145] bg-[color:var(--overlay)] backdrop-blur-sm',
       isDarkTheme ? 'theme-dark dark' : 'theme-light',
     )}>
       <div className="flex h-full items-stretch justify-center p-4 md:p-6">
         <div className={cx(
-          'flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-[32px] border shadow-[0_40px_120px_rgba(0,0,0,0.28)]',
+          'flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-2xl border shadow-[var(--shadow-card)]',
           isDarkTheme
-            ? 'border-[color:rgba(255,255,255,0.08)] bg-[linear-gradient(180deg,#16100c_0%,#1f1711_100%)] text-[color:#fff8ef]'
-            : 'border-[var(--panel-border,#d4c0a7)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--panel-surface,#fffdfa)_90%,var(--panel-surface-soft,#f4ede3))_0%,color-mix(in_srgb,var(--panel-surface-soft,#f4ede3)_82%,var(--panel-surface,#fffdfa))_100%)] text-[color:var(--panel-text,#1a120d)]',
+            ? 'border-[color:var(--border-default)] bg-[var(--surface-bg)] text-[color:var(--text-primary)]'
+            : 'border-[var(--border-default)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_0%,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_100%)] text-[color:var(--text-primary)]',
         )}>
-          <div className="flex items-center justify-between border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-6 py-5 md:px-8">
+          <div className="flex items-center justify-between border-b border-[color:var(--border-default)] px-6 py-5 md:px-8">
             <div>
-              <p className={cx('text-xs font-semibold uppercase tracking-[0.24em]', isDarkTheme ? 'text-[color:#f3c892]' : 'text-[var(--panel-accent-ink,#6f3f16)]')}>Adicionar plano</p>
-              <h3 className={cx('mt-2 text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>
+              <p className={cx('text-xs font-semibold uppercase tracking-[0.24em]', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[var(--text-primary)]')}>Adicionar plano</p>
+              <h3 className={cx('mt-2 text-2xl font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>
                 {!selectedOperatorId
                   ? 'Escolha a operadora'
                   : isAdesaoFlow
@@ -914,7 +914,7 @@ export default function CotadorPlanPickerOverlay({
                         ? 'Escolha a tabela comercial'
                         : 'Escolha o produto'}
               </h3>
-              <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{quote.name}</p>
+              <p className={cx('mt-1 text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>{quote.name}</p>
             </div>
             <button
               type="button"
@@ -922,8 +922,8 @@ export default function CotadorPlanPickerOverlay({
               className={cx(
                 'inline-flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors',
                 isDarkTheme
-                  ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:rgba(255,243,209,0.8)] hover:bg-[color:rgba(255,255,255,0.08)] hover:text-white'
-                  : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)] hover:text-[color:var(--panel-text,#1a120d)]',
+                  ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)] hover:text-[var(--text-primary)]'
+                  : 'border-[color:var(--border-default)] bg-[var(--bg-surface)] text-[color:var(--text-primary)] hover:bg-[var(--bg-surface)] hover:text-[color:var(--text-primary)]',
               )}
               aria-label="Fechar seletor"
             >
@@ -954,8 +954,8 @@ export default function CotadorPlanPickerOverlay({
               <div className="flex min-h-full flex-col gap-6">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                   <div>
-                    <h4 className={cx('text-2xl font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>Quais planos deseja comparar?</h4>
-                    <p className={cx('mt-2 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                    <h4 className={cx('text-2xl font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>Quais planos deseja comparar?</h4>
+                    <p className={cx('mt-2 text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>
                       {isAdesaoFlow
                         ? 'Escolha a operadora e avance por linha, entidade, coparticipação e produto sem perder o contexto da cotação.'
                         : 'Escolha a operadora e avance por linha, produto e tabela sem perder o contexto da cotação.'}
@@ -965,16 +965,16 @@ export default function CotadorPlanPickerOverlay({
                     <span className={cx(
                       'rounded-full border px-3 py-1.5',
                       isDarkTheme
-                        ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff8ef]'
-                        : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] text-[color:var(--panel-text,#1a120d)]',
+                        ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]'
+                        : 'border-[color:var(--border-default)] bg-[var(--bg-surface)] text-[color:var(--text-primary)]',
                     )}>
                       {quote.name}
                     </span>
                     <span className={cx(
                       'rounded-full border px-3 py-1.5',
                       isDarkTheme
-                        ? 'border-[color:rgba(251,191,36,0.18)] bg-[color:rgba(251,191,36,0.12)] text-[color:#fde68a]'
-                        : 'border-[color:rgba(8,145,178,0.2)] bg-[color:rgba(8,145,178,0.08)] text-[color:var(--panel-text,#1a120d)]',
+                        ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]'
+                        : 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]',
                     )}>
                       {quote.totalLives} vidas
                     </span>
@@ -983,14 +983,14 @@ export default function CotadorPlanPickerOverlay({
 
                 {operatorCards.length === 0 ? (
                   <div className={cx(
-                    'rounded-[28px] border border-dashed px-8 py-16 text-center',
+                    'rounded-2xl border border-dashed px-8 py-16 text-center',
                     isDarkTheme
-                      ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.03)]'
-                      : 'border-[var(--panel-border,#d4c0a7)] bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                      ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]'
+                      : 'border-[var(--border-default)] bg-[color:var(--bg-elevated)]',
                   )}>
-                    <Search className={cx('mx-auto h-10 w-10', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
-                    <h4 className={cx('mt-4 text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>Nenhuma operadora disponível</h4>
-                    <p className={cx('mt-2 text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Ajuste os filtros para liberar resultados.</p>
+                    <Search className={cx('mx-auto h-10 w-10', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')} />
+                    <h4 className={cx('mt-4 text-lg font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>Nenhuma operadora disponível</h4>
+                    <p className={cx('mt-2 text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Ajuste os filtros para liberar resultados.</p>
                   </div>
                 ) : (
                   <div ref={gridContainerRef} className="relative min-h-[560px] xl:min-h-[640px]">
@@ -1013,26 +1013,26 @@ export default function CotadorPlanPickerOverlay({
                                 setSelectedProductKey(null);
                               }}
                               className={cx(
-                                'group w-full cursor-pointer rounded-[26px] border p-5 text-left transition-all duration-200',
+                                'group w-full cursor-pointer rounded-2xl border p-5 text-left transition-all duration-200',
                                 isActive
                                   ? isDarkTheme
-                                    ? 'border-[color:rgba(251,191,36,0.34)] bg-[color:rgba(251,191,36,0.08)] shadow-[0_18px_42px_rgba(0,0,0,0.22)]'
-                                    : 'border-[color:var(--panel-border-strong,#9d7f5a)] bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_72%,var(--panel-accent-soft,#f6e4c7))] shadow-sm'
+                                    ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] shadow-[var(--shadow-card)]'
+                                    : 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] shadow-sm'
                                   : isDarkTheme
-                                    ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.02)] hover:-translate-y-0.5 hover:border-[color:rgba(251,191,36,0.22)] hover:bg-[color:rgba(255,255,255,0.04)]'
-                                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] hover:-translate-y-0.5 hover:border-[var(--panel-border-strong,#9d7f5a)] hover:bg-[color:color-mix(in_srgb,var(--panel-surface,#fffdfa)_70%,var(--panel-accent-soft,#f6e4c7))]',
+                                    ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] hover:-translate-y-0.5 hover:border-[color:var(--border-default)] hover:bg-[color:var(--bg-elevated)]'
+                                    : 'border-[color:var(--border-default)] bg-[var(--bg-surface)] hover:-translate-y-0.5 hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)]',
                               )}
                             >
                               <div className="flex min-h-[132px] flex-col items-center justify-center gap-4 text-center">
                                 <div className={cx(
                                   'flex h-14 w-14 items-center justify-center rounded-2xl border',
                                   isDarkTheme
-                                    ? 'border-[color:rgba(255,255,255,0.08)] bg-[color:rgba(255,255,255,0.04)] text-[color:#fff3d1]'
-                                    : 'border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface-soft,#f4ede3)] text-[color:var(--panel-accent-ink,#6f3f16)]',
+                                    ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)]'
+                                    : 'border-[color:var(--border-default)] bg-[var(--bg-surface)] text-[color:var(--text-primary)]',
                                 )}>
                                   <Building2 className="h-6 w-6" />
                                 </div>
-                                <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{card.actor.name}</p>
+                                <p className={cx('text-lg font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{card.actor.name}</p>
                               </div>
                             </button>
                           </div>
@@ -1041,7 +1041,7 @@ export default function CotadorPlanPickerOverlay({
                     </div>
 
                     {operatorCards.length > operatorPerPage && (
-                      <div className="mt-4 overflow-hidden rounded-[24px] border border-[color:var(--panel-border-subtle,#e7dac8)] bg-[var(--panel-surface,#fffdfa)] shadow-sm">
+                      <div className="mt-4 overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] shadow-sm">
                         <Pagination
                           currentPage={operatorPage}
                           totalPages={totalOperatorPages}
@@ -1065,14 +1065,14 @@ export default function CotadorPlanPickerOverlay({
                           width: floatingMenuPosition.width,
                         }}
                       >
-                        <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border,#d4c0a7)] bg-[var(--panel-surface,#fffdfa)] shadow-[0_28px_60px_rgba(15,10,6,0.34)]">
-                          <div className="border-b border-[color:var(--panel-border-subtle,#e7dac8)] px-4 py-3">
+                        <div className="overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)]">
+                          <div className="border-b border-[color:var(--border-default)] px-4 py-3">
                             <button
                               type="button"
                               onClick={handleFloatingBack}
                               className={cx(
                                 'inline-flex items-center gap-2 text-xs font-medium transition-colors',
-                                isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)] hover:text-white' : 'text-[color:var(--panel-text-soft,#5b4635)] hover:text-[color:var(--panel-text,#1a120d)]',
+                                isDarkTheme ? 'text-[color:var(--text-secondary)] hover:text-[var(--text-primary)]' : 'text-[color:var(--text-primary)] hover:text-[color:var(--text-primary)]',
                               )}
                             >
                               <ArrowLeft className="h-4 w-4" />
@@ -1093,7 +1093,7 @@ export default function CotadorPlanPickerOverlay({
                                           : 'Voltar às operadoras'}
                             </button>
                             <div className="mt-3 min-w-0">
-                              <p className={cx('truncate text-base font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{floatingPanelTitle}</p>
+                              <p className={cx('truncate text-base font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{floatingPanelTitle}</p>
                             </div>
                           </div>
 
@@ -1101,10 +1101,10 @@ export default function CotadorPlanPickerOverlay({
                             {currentStep === 'adesao-line' ? (
                               lineCards.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível.</p>
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Nenhuma linha disponível.</p>
                                 </div>
                               ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:var(--border-subtle)]' : 'divide-[color:var(--border-subtle)]')}>
                                   {paginatedAdesaoLineCards.map((line) => (
                                     <button
                                       key={line.actor.id}
@@ -1117,17 +1117,17 @@ export default function CotadorPlanPickerOverlay({
                                       }}
                                       className={cx(
                                         'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        isDarkTheme ? 'hover:bg-[color:var(--bg-elevated)]' : 'hover:bg-[color:var(--bg-elevated)]',
                                       )}
                                     >
                                       <div className="min-w-0 flex-1">
-                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{line.actor.name}</p>
-                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{line.actor.name}</p>
+                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>
                                           <span>{line.productCount} produto(s)</span>
                                           <span>{line.tableCount} tabela(s)</span>
                                         </div>
                                       </div>
-                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')} />
                                     </button>
                                   ))}
                                 </div>
@@ -1135,10 +1135,10 @@ export default function CotadorPlanPickerOverlay({
                             ) : currentStep === 'adesao-entity' ? (
                               adesaoEntityCards.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma entidade disponível.</p>
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Nenhuma entidade disponível.</p>
                                 </div>
                               ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:var(--border-subtle)]' : 'divide-[color:var(--border-subtle)]')}>
                                   {paginatedAdesaoEntityCards.map((entity) => (
                                     <button
                                       key={entity.actor.id}
@@ -1150,17 +1150,17 @@ export default function CotadorPlanPickerOverlay({
                                       }}
                                       className={cx(
                                         'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        isDarkTheme ? 'hover:bg-[color:var(--bg-elevated)]' : 'hover:bg-[color:var(--bg-elevated)]',
                                       )}
                                     >
                                       <div className="min-w-0 flex-1">
-                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{entity.actor.name}</p>
-                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{entity.actor.name}</p>
+                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>
                                           <span>{entity.productCount} produto(s)</span>
                                           <span>{entity.itemCount} opção(ões)</span>
                                         </div>
                                       </div>
-                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')} />
                                     </button>
                                   ))}
                                 </div>
@@ -1168,10 +1168,10 @@ export default function CotadorPlanPickerOverlay({
                             ) : currentStep === 'adesao-copart' ? (
                               adesaoCopartCards.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum tipo de coparticipação disponível.</p>
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Nenhum tipo de coparticipação disponível.</p>
                                 </div>
                               ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:var(--border-subtle)]' : 'divide-[color:var(--border-subtle)]')}>
                                   {paginatedAdesaoCopartCards.map((copart) => (
                                     <button
                                       key={copart.key}
@@ -1182,17 +1182,17 @@ export default function CotadorPlanPickerOverlay({
                                       }}
                                       className={cx(
                                         'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        isDarkTheme ? 'hover:bg-[color:var(--bg-elevated)]' : 'hover:bg-[color:var(--bg-elevated)]',
                                       )}
                                     >
                                       <div className="min-w-0 flex-1">
-                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{copart.label}</p>
-                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{copart.label}</p>
+                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>
                                           <span>{copart.productCount} produto(s)</span>
                                           <span>{copart.itemCount} opção(ões)</span>
                                         </div>
                                       </div>
-                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')} />
                                     </button>
                                   ))}
                                 </div>
@@ -1200,10 +1200,10 @@ export default function CotadorPlanPickerOverlay({
                             ) : currentStep === 'line' ? (
                               lineScenarioCards.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma linha disponível.</p>
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Nenhuma linha disponível.</p>
                                 </div>
                               ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:var(--border-subtle)]' : 'divide-[color:var(--border-subtle)]')}>
                                   {paginatedLineScenarioCards.map((lineScenario) => (
                                     <button
                                       key={lineScenario.key}
@@ -1215,18 +1215,18 @@ export default function CotadorPlanPickerOverlay({
                                       }}
                                       className={cx(
                                         'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                        isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                        isDarkTheme ? 'hover:bg-[color:var(--bg-elevated)]' : 'hover:bg-[color:var(--bg-elevated)]',
                                       )}
                                     >
                                       <div className="min-w-0 flex-1">
-                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{lineScenario.actor.name}</p>
-                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:rgba(255,243,209,0.72)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>
+                                        <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{lineScenario.actor.name}</p>
+                                        <div className={cx('mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>
                                           <span>{lineScenario.livesLabel} vidas</span>
                                           <span>{lineScenario.coparticipacao}</span>
                                           <span>{lineScenario.businessProfile}</span>
                                         </div>
                                       </div>
-                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                      <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')} />
                                     </button>
                                   ))}
                                 </div>
@@ -1234,10 +1234,10 @@ export default function CotadorPlanPickerOverlay({
                             ) : currentStep === 'table' ? (
                               tableCandidates.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhuma tabela disponível.</p>
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Nenhuma tabela disponível.</p>
                                 </div>
                               ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:var(--border-subtle)]' : 'divide-[color:var(--border-subtle)]')}>
                                   {paginatedTableCandidates.map((item) => {
                                     const isSelected = selectedIds.has(item.id);
                                     return (
@@ -1253,21 +1253,21 @@ export default function CotadorPlanPickerOverlay({
                                           'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
                                           isSelected
                                             ? isDarkTheme
-                                              ? 'bg-emerald-500/10'
-                                              : 'bg-emerald-50'
+                                              ? 'bg-[var(--success-soft)]'
+                                              : 'bg-[var(--success-soft)]'
                                             : isDarkTheme
-                                              ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
-                                              : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                              ? 'hover:bg-[color:var(--bg-elevated)]'
+                                              : 'hover:bg-[color:var(--bg-elevated)]',
                                         )}
                                       >
                                         <div>
                                           {isSelected ? (
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                            <CheckCircle2 className="h-4 w-4 text-[var(--success-text)]" />
                                           ) : (
-                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:rgba(255,243,209,0.34)]' : 'border-[color:var(--panel-text-muted,#876f5c)]')} />
+                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:var(--border-default)]' : 'border-[color:var(--border-default)]')} />
                                           )}
                                         </div>
-                                        <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{item.tabelaNome ?? item.titulo}</p>
+                                        <p className={cx('min-w-0 flex-1 truncate text-sm font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{item.tabelaNome ?? item.titulo}</p>
                                       </button>
                                     );
                                   })}
@@ -1276,10 +1276,10 @@ export default function CotadorPlanPickerOverlay({
                             ) : isAdesaoFlow ? (
                               adesaoProductOptions.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Nenhum produto disponível.</p>
                                 </div>
                               ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:var(--border-subtle)]' : 'divide-[color:var(--border-subtle)]')}>
                                   {paginatedAdesaoProductOptions.map((option) => {
                                     const isSelected = selectedIds.has(option.item.id);
                                     return (
@@ -1295,23 +1295,23 @@ export default function CotadorPlanPickerOverlay({
                                           'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
                                           isSelected
                                             ? isDarkTheme
-                                              ? 'bg-emerald-500/10'
-                                              : 'bg-emerald-50'
+                                              ? 'bg-[var(--success-soft)]'
+                                              : 'bg-[var(--success-soft)]'
                                             : isDarkTheme
-                                              ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
-                                              : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                              ? 'hover:bg-[color:var(--bg-elevated)]'
+                                              : 'hover:bg-[color:var(--bg-elevated)]',
                                         )}
                                       >
                                         <div>
                                           {isSelected ? (
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                            <CheckCircle2 className="h-4 w-4 text-[var(--success-text)]" />
                                           ) : (
-                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:rgba(255,243,209,0.34)]' : 'border-[color:var(--panel-text-muted,#876f5c)]')} />
+                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:var(--border-default)]' : 'border-[color:var(--border-default)]')} />
                                           )}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                          <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{option.title}</p>
-                                          {option.subtitle && <p className={cx('mt-0.5 truncate text-xs font-normal', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{option.subtitle}</p>}
+                                          <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{option.title}</p>
+                                          {option.subtitle && <p className={cx('mt-0.5 truncate text-xs font-normal', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>{option.subtitle}</p>}
                                         </div>
                                       </button>
                                     );
@@ -1321,10 +1321,10 @@ export default function CotadorPlanPickerOverlay({
                             ) : !isAdesaoFlow && usesLineScenarioStep ? (
                               productDirectOptions.length === 0 ? (
                                 <div className="px-4 py-6 text-center">
-                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
+                                  <p className={cx('text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Nenhum produto disponível.</p>
                                 </div>
                               ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:var(--border-subtle)]' : 'divide-[color:var(--border-subtle)]')}>
                                   {paginatedProductDirectOptions.map((option) => {
                                     const isSelected = selectedIds.has(option.item.id);
                                     return (
@@ -1340,23 +1340,23 @@ export default function CotadorPlanPickerOverlay({
                                           'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors disabled:cursor-default',
                                           isSelected
                                             ? isDarkTheme
-                                              ? 'bg-emerald-500/10'
-                                              : 'bg-emerald-50'
+                                              ? 'bg-[var(--success-soft)]'
+                                              : 'bg-[var(--success-soft)]'
                                             : isDarkTheme
-                                              ? 'hover:bg-[color:rgba(255,255,255,0.04)]'
-                                              : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                              ? 'hover:bg-[color:var(--bg-elevated)]'
+                                              : 'hover:bg-[color:var(--bg-elevated)]',
                                         )}
                                       >
                                         <div>
                                           {isSelected ? (
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                            <CheckCircle2 className="h-4 w-4 text-[var(--success-text)]" />
                                           ) : (
-                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:rgba(255,243,209,0.34)]' : 'border-[color:var(--panel-text-muted,#876f5c)]')} />
+                                            <div className={cx('h-4 w-4 rounded-full border-2', isDarkTheme ? 'border-[color:var(--border-default)]' : 'border-[color:var(--border-default)]')} />
                                           )}
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                          <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{option.title}</p>
-                                          {option.subtitle && <p className={cx('mt-0.5 truncate text-xs font-normal', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>{option.subtitle}</p>}
+                                          <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{option.title}</p>
+                                          {option.subtitle && <p className={cx('mt-0.5 truncate text-xs font-normal', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>{option.subtitle}</p>}
                                         </div>
                                       </button>
                                     );
@@ -1365,10 +1365,10 @@ export default function CotadorPlanPickerOverlay({
                               )
                             ) : productGroups.length === 0 ? (
                               <div className="px-4 py-6 text-center">
-                                <p className={cx('text-sm', isDarkTheme ? 'text-[color:rgba(255,243,209,0.68)]' : 'text-[color:var(--panel-text-soft,#5b4635)]')}>Nenhum produto disponível.</p>
+                                <p className={cx('text-sm', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Nenhum produto disponível.</p>
                               </div>
                             ) : (
-                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:rgba(255,255,255,0.06)]' : 'divide-[color:var(--panel-border-subtle,#e7dac8)]')}>
+                                <div className={cx('divide-y', isDarkTheme ? 'divide-[color:var(--border-subtle)]' : 'divide-[color:var(--border-subtle)]')}>
                                 {paginatedProductGroups.map((group) => (
                                   <button
                                     key={group.key}
@@ -1376,13 +1376,13 @@ export default function CotadorPlanPickerOverlay({
                                     onClick={() => setSelectedProductKey(group.key)}
                                     className={cx(
                                       'flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors',
-                                      isDarkTheme ? 'hover:bg-[color:rgba(255,255,255,0.04)]' : 'hover:bg-[color:var(--panel-surface-soft,#f4ede3)]',
+                                      isDarkTheme ? 'hover:bg-[color:var(--bg-elevated)]' : 'hover:bg-[color:var(--bg-elevated)]',
                                     )}
                                   >
                                     <div className="min-w-0 flex-1">
-                                      <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:#fff8ef]' : 'text-[color:var(--panel-text,#1a120d)]')}>{group.title}</p>
+                                      <p className={cx('truncate text-sm font-semibold', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[color:var(--text-primary)]')}>{group.title}</p>
                                     </div>
-                                    <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:rgba(255,243,209,0.62)]' : 'text-[color:var(--panel-text-muted,#876f5c)]')} />
+                                    <ArrowLeft className={cx('h-4 w-4 rotate-180 shrink-0', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')} />
                                   </button>
                                   ))}
                               </div>

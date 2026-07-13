@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
-import { Activity, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, X, type LucideIcon } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { Activity, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import { Badge, Button, Card, Input, PageHeader, Textarea } from '../../../design-system';
+import { ActionSurface, Badge, Button, Card, Checkbox, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, PageHeader, Select, Surface, Textarea } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
 import { toast } from '../../../lib/toast';
-import { cx } from '../../../lib/cx';
 import {
   commWhatsAppCampaignService,
   type CampaignStats,
@@ -552,20 +551,20 @@ export default function WhatsAppCampaignsScreen() {
           </div>
         </div>
         {workerHealth.latestFailure && (
-          <div className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-danger-border,var(--panel-border-subtle))] bg-[color:var(--panel-danger-bg,var(--panel-surface-soft))] px-3 py-2 text-sm text-[color:var(--panel-danger,var(--panel-text-soft))]">
+          <Surface variant="danger" padding="sm" className="text-sm">
             Ultima falha {formatRelativeRunTime(workerHealth.latestFailure.finished_at ?? workerHealth.latestFailure.started_at)}: {workerHealth.latestFailure.error_message || 'Erro nao informado.'}
-          </div>
+          </Surface>
         )}
         <div className="grid gap-2 lg:grid-cols-3">
           {workerHealth.recentRuns.slice(0, 3).map((run) => (
-            <div key={run.id} className="rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3 text-sm">
+            <Surface key={run.id} variant="muted" padding="sm" className="text-sm">
               <div className="flex items-center justify-between gap-2">
                 <Badge tone={getWorkerRunTone(run)} size="sm">{run.status}</Badge>
                 <span className="text-xs text-[color:var(--panel-text-muted)]">{run.source} · {run.action}</span>
               </div>
               <p className="mt-2 text-xs text-[color:var(--panel-text-muted)]">{formatRelativeRunTime(run.finished_at ?? run.started_at)}</p>
               <p className="mt-1 text-xs text-[color:var(--panel-text-soft)]">{run.processed} proc. · {run.sent} env. · {run.failed} falha(s)</p>
-            </div>
+            </Surface>
           ))}
           {workerHealth.recentRuns.length === 0 && (
             <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhuma execucao registrada ainda. O proximo cron deve aparecer aqui apos rodar.</p>
@@ -584,7 +583,7 @@ export default function WhatsAppCampaignsScreen() {
           </div>
           <div className="grid gap-3 xl:grid-cols-2">
             {aiSuggestions.map((suggestion) => (
-              <article key={suggestion.id} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+              <Surface key={suggestion.id} variant="muted" padding="sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{suggestion.chat?.display_name || suggestion.chat?.phone_number || suggestion.phone_digits || 'Contato sem nome'}</h3>
@@ -608,33 +607,29 @@ export default function WhatsAppCampaignsScreen() {
                     Dispensar
                   </Button>
                 </div>
-              </article>
+              </Surface>
             ))}
           </div>
         </Card>
       )}
 
       {campaignModalOpen && (
-        <div className="fixed inset-0 z-[2147482000] flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm">
-          <Card className="flex max-h-[calc(100vh-3rem)] w-full max-w-5xl flex-col overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="whatsapp-campaign-modal-title">
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[color:var(--panel-border-subtle)] pb-4">
+        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && closeCampaignModal()} size="xl" className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+            <DialogHeader onClose={closeCampaignModal}>
               <div>
-                <h2 id="whatsapp-campaign-modal-title" className="text-lg font-semibold text-[color:var(--panel-text)]">{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</h2>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Configure publico, pacote de mensagens, agendamento e ritmo de envio.</p>
+                <DialogTitle>{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</DialogTitle>
+                <DialogDescription>Configure publico, pacote de mensagens, agendamento e ritmo de envio.</DialogDescription>
               </div>
-              <Button variant="icon" size="icon" onClick={closeCampaignModal} aria-label="Fechar modal de disparo">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            </DialogHeader>
 
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-5 pr-1">
+            <DialogBody className="min-h-0 flex-1 space-y-5">
           <div className="grid gap-4 md:grid-cols-2">
-            <LabelledField label="Nome da campanha">
+            <Field label="Nome da campanha">
               <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Reativacao PME maio" />
-            </LabelledField>
-            <LabelledField label="Objetivo">
+            </Field>
+            <Field label="Objetivo">
               <Input value={objective} onChange={(event) => setObjective(event.target.value)} placeholder="Ex: retomar cotacoes paradas" />
-            </LabelledField>
+            </Field>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -643,17 +638,17 @@ export default function WhatsAppCampaignsScreen() {
           </div>
 
           {audienceMode === 'crm' ? (
-            <div className="grid gap-4 rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4 md:grid-cols-2">
-              <LabelledField label="Status do lead">
+            <Surface variant="muted" padding="sm" className="grid gap-4 md:grid-cols-2">
+              <Field label="Status do lead">
                 <FilterMultiSelect icon={Filter} options={leadStatusOptions} placeholder="Todos os status" values={leadStatusFilters} onChange={setLeadStatusFilters} />
-              </LabelledField>
-              <LabelledField label="Responsavel">
+              </Field>
+              <Field label="Responsavel">
                 <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsaveis" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
-              </LabelledField>
+              </Field>
               <p className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O worker vai materializar os alvos no momento de ativar a campanha, removendo arquivados, duplicados, numeros invalidos e opt-outs.</p>
-            </div>
+            </Surface>
           ) : (
-            <div className="space-y-4 rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+            <Surface variant="muted" padding="sm" className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-[color:var(--panel-text)]">CSV com nome e telefone</p>
@@ -667,17 +662,17 @@ export default function WhatsAppCampaignsScreen() {
               </div>
               <Textarea value={csvText} onChange={(event) => setCsvText(event.target.value)} placeholder={'nome;telefone\nMaria Silva;(11) 99999-9999'} />
               <label className="flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
-                <input type="checkbox" className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600" checked={createLeadsFromCsv} onChange={(event) => setCreateLeadsFromCsv(event.target.checked)} />
+                <Checkbox className="mt-1" checked={createLeadsFromCsv} onChange={(event) => setCreateLeadsFromCsv(event.target.checked)} />
                 Criar ou atualizar leads no CRM quando o CSV nao encontrar um lead existente.
               </label>
               <div className="flex flex-wrap gap-2 text-xs">
                 <Badge tone="neutral">{csvTargets.length} linha(s)</Badge>
                 <Badge tone={csvValidTargets.length > 0 ? 'success' : 'warning'}>{csvValidTargets.length} telefone(s) validos</Badge>
               </div>
-            </div>
+            </Surface>
           )}
 
-          <div className="space-y-3 rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-4">
+          <Surface variant="muted" padding="sm" className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">Pacote de mensagens</span>
@@ -753,52 +748,51 @@ export default function WhatsAppCampaignsScreen() {
                         </div>
                       )}
                     </div>
-                    <div className={cx('grid gap-3 rounded-[var(--kds-radius-md)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface-soft)] p-3 sm:grid-cols-2 lg:grid-cols-1', index === 0 && 'items-center')}>
+                    <Surface variant="muted" padding="sm" className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-1 ${index === 0 ? 'items-center' : ''}`}>
                       {index === 0 ? (
                         <p className="text-xs text-[color:var(--panel-text-muted)]">Sem atraso nesta etapa.</p>
                       ) : (
                         <>
-                          <LabelledField label="Aguardar">
+                          <Field label="Aguardar">
                             <Input type="number" min={0} value={step.delayAmount} onChange={(event) => updateStep(index, { delayAmount: Number(event.target.value) || 0 })} />
-                          </LabelledField>
-                          <LabelledField label="Unidade">
-                            <select
+                          </Field>
+                          <Field label="Unidade">
+                            <Select
                               value={step.delayUnit}
                               onChange={(event) => updateStep(index, { delayUnit: event.target.value as CommWhatsAppCampaignStepDraft['delayUnit'] })}
-                              className="h-10 w-full rounded-[var(--kds-radius-sm)] border border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] px-3 text-sm text-[color:var(--panel-text)]"
                             >
                               <option value="seconds">segundos</option>
                               <option value="minutes">minutos</option>
                               <option value="hours">horas</option>
                               <option value="days">dias</option>
-                            </select>
-                          </LabelledField>
+                            </Select>
+                          </Field>
                         </>
                       )}
-                    </div>
+                    </Surface>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </Surface>
 
           <div className="grid gap-4 md:grid-cols-4">
-            <LabelledField label="Agendar para">
+            <Field label="Agendar para">
               <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
-            </LabelledField>
-            <LabelledField label="Ritmo por minuto">
+            </Field>
+            <Field label="Ritmo por minuto">
               <Input type="number" min={1} max={120} value={pacingPerMinute} onChange={(event) => setPacingPerMinute(Number(event.target.value) || 1)} />
-            </LabelledField>
-            <LabelledField label="Janela inicio">
+            </Field>
+            <Field label="Janela inicio">
               <Input type="time" value={sendWindowStart} onChange={(event) => setSendWindowStart(event.target.value)} />
-            </LabelledField>
-            <LabelledField label="Janela fim">
+            </Field>
+            <Field label="Janela fim">
               <Input type="time" value={sendWindowEnd} onChange={(event) => setSendWindowEnd(event.target.value)} />
-            </LabelledField>
+            </Field>
           </div>
-            </div>
+            </DialogBody>
 
-          <div className="flex shrink-0 flex-col gap-3 border-t border-[color:var(--panel-border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2 text-xs text-[color:var(--panel-text-muted)]">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--panel-accent)]" />
               Respostas inbound param novos envios para aquele contato; opt-outs bloqueados serao excluidos da fila.
@@ -807,25 +801,20 @@ export default function WhatsAppCampaignsScreen() {
               <Send className="h-4 w-4" />
               Salvar
             </Button>
-          </div>
-          </Card>
-        </div>
+          </DialogFooter>
+        </Dialog>
       )}
 
       {activationPreview && (
-        <div className="fixed inset-0 z-[2147482000] flex items-center justify-center bg-black/45 px-4 py-6 backdrop-blur-sm">
-          <Card className="flex max-h-[calc(100vh-3rem)] w-full max-w-4xl flex-col overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="activation-preview-title">
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[color:var(--panel-border-subtle)] pb-4">
+        <Dialog open={Boolean(activationPreview)} onOpenChange={(open) => !open && closeActivationPreview()} size="lg" className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+            <DialogHeader onClose={closeActivationPreview}>
               <div>
-                <h2 id="activation-preview-title" className="text-lg font-semibold text-[color:var(--panel-text)]">Revisar antes de ativar</h2>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Confirme publico, ritmo, janela e mensagens antes de colocar o disparo na fila.</p>
+                <DialogTitle>Revisar antes de ativar</DialogTitle>
+                <DialogDescription>Confirme publico, ritmo, janela e mensagens antes de colocar o disparo na fila.</DialogDescription>
               </div>
-              <Button variant="icon" size="icon" onClick={closeActivationPreview} aria-label="Fechar revisao de ativacao">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            </DialogHeader>
 
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-5 pr-1">
+            <DialogBody className="min-h-0 flex-1 space-y-5">
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <PreviewMetric label="Contatos estimados" value={activationPreview.estimatedTargets} />
                 <PreviewMetric label="Mensagens por contato" value={activationPreview.steps.length} />
@@ -893,9 +882,9 @@ export default function WhatsAppCampaignsScreen() {
                   <p className="text-sm text-[color:var(--panel-text-muted)]">Nenhum contato encontrado para esta configuracao.</p>
                 )}
               </Card>
-            </div>
+            </DialogBody>
 
-            <div className="flex shrink-0 flex-col gap-3 border-t border-[color:var(--panel-border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <DialogFooter className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs text-[color:var(--panel-text-muted)]">Ao confirmar, a campanha sera materializada e processada pelo cron mesmo com o navegador fechado.</p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="secondary" className="whitespace-nowrap" onClick={closeActivationPreview}>Cancelar</Button>
@@ -904,9 +893,8 @@ export default function WhatsAppCampaignsScreen() {
                   Confirmar ativacao
                 </Button>
               </div>
-            </div>
-          </Card>
-        </div>
+            </DialogFooter>
+        </Dialog>
       )}
 
       <Card className="space-y-4">
@@ -1000,30 +988,18 @@ function WorkerHealthStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function LabelledField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[color:var(--panel-text-muted)]">{label}</span>
-      {children}
-    </label>
-  );
-}
-
 function AudienceButton({ active, icon: Icon, label, onClick }: { active: boolean; icon: LucideIcon; label: string; onClick: () => void }) {
   return (
-    <button
-      type="button"
+    <ActionSurface
+      padding="sm"
+      variant={active ? 'warning' : 'default'}
+      selected={active}
       onClick={onClick}
-      className={cx(
-        'inline-flex items-center gap-2 rounded-[var(--kds-radius-md)] border px-3 py-2 text-sm font-medium transition',
-        active
-          ? 'border-[color:var(--panel-accent)] bg-[color:var(--panel-accent-soft)] text-[color:var(--panel-accent-ink)]'
-          : 'border-[color:var(--panel-border)] bg-[color:var(--panel-surface)] text-[color:var(--panel-text-soft)] hover:border-[color:var(--panel-accent)]',
-      )}
+      className="inline-flex items-center gap-2 text-sm font-medium"
     >
       <Icon className="h-4 w-4" />
       {label}
-    </button>
+    </ActionSurface>
   );
 }
 

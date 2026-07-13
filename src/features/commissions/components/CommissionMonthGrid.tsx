@@ -26,15 +26,15 @@ const getDayCellClass = ({
   isToday: boolean;
   }) =>
   cx(
-    "aspect-square rounded-xl border p-2 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--panel-focus)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--panel-surface)]",
+    "aspect-square rounded-xl border p-2 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg-surface)]",
     "flex flex-col items-start justify-between",
     isSelected
-      ? "border-[var(--panel-accent-border)] bg-[color:var(--panel-accent-hover)] text-[var(--panel-accent-ink-strong)] shadow-sm"
+      ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] shadow-sm"
       : isToday
-        ? "border-[var(--panel-accent-border)] bg-[color:var(--panel-accent-soft)] text-[var(--panel-accent-ink)]"
+        ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
         : hasEvents
-          ? "border-[var(--panel-accent-border)] bg-[color:var(--panel-surface-soft)] text-[var(--panel-text)] hover:bg-[color:var(--panel-accent-soft)]"
-          : "border-[var(--panel-border-subtle)] bg-[color:var(--panel-surface)] text-[var(--panel-text)] hover:bg-[color:var(--panel-surface-soft)]",
+          ? "border-[var(--brand-primary-border)] bg-[var(--bg-surface-muted)] text-[var(--text-primary)] hover:bg-[var(--brand-primary-soft)]"
+          : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]",
   );
 
 export default function CommissionMonthGrid({
@@ -117,7 +117,7 @@ export default function CommissionMonthGrid({
       {COMMISSION_WEEK_DAYS.map((day) => (
         <div
           key={day}
-          className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-[var(--panel-text-muted)]"
+          className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]"
         >
           {day}
         </div>

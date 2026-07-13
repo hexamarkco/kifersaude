@@ -75,8 +75,8 @@ export default function BlogPostsList({
         >
           {posts.length === 0 ? (
             <Surface variant="muted" className="py-12 text-center">
-              <FileText className="mx-auto mb-3 h-12 w-12" style={{ color: "var(--panel-text-muted)" }} />
-              <p style={{ color: "var(--panel-text-soft)" }}>Nenhum post encontrado</p>
+              <FileText className="mx-auto mb-3 h-12 w-12 text-[var(--text-muted)]" />
+              <p className="text-[var(--text-secondary)]">Nenhum post encontrado</p>
             </Surface>
           ) : (
             <div className="space-y-4">
@@ -110,19 +110,19 @@ export default function BlogPostsList({
                             <Badge tone={post.published ? "success" : "neutral"} size="sm">
                               {post.published ? "Publicado" : "Rascunho"}
                             </Badge>
-                            <span className="text-xs" style={{ color: "var(--panel-text-muted)" }}>
+                            <span className="text-xs text-[var(--text-muted)]">
                               {post.read_time}
                             </span>
                           </div>
 
-                          <h3 className="mb-1 truncate text-lg font-bold" style={{ color: "var(--panel-text)" }}>
+                          <h3 className="mb-1 truncate text-lg font-bold text-[var(--text-primary)]">
                             {post.title}
                           </h3>
-                          <p className="mb-2 line-clamp-2 text-sm" style={{ color: "var(--panel-text-soft)" }}>
+                          <p className="mb-2 line-clamp-2 text-sm text-[var(--text-secondary)]">
                             {post.excerpt}
                           </p>
 
-                          <div className="flex items-center gap-4 text-xs" style={{ color: "var(--panel-text-muted)" }}>
+                          <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
                             <span>Visualizacoes: {post.views_count}</span>
                             <span>
                               Criado:{" "}

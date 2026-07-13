@@ -6,6 +6,7 @@ import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import ModalShell from '../ui/ModalShell';
+import { Alert, Card, Checkbox } from '../../design-system';
 
 type Message = { type: 'success' | 'error'; text: string };
 
@@ -136,11 +137,11 @@ export default function LeadOriginsManager() {
   };
 
   return (
-    <div className="rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm">
+    <Card padding="lg">
       <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-[color:var(--panel-text)]">Origens de Leads</h3>
-          <p className="text-sm text-[color:var(--panel-text-soft)]">Gerencie todos os canais de entrada de leads.</p>
+          <h3 className="kds-card-title">Origens de Leads</h3>
+          <p className="kds-card-subtitle">Gerencie todos os canais de entrada de leads.</p>
         </div>
 
         <Button onClick={() => setIsCreateModalOpen(true)} disabled={saving}>
@@ -150,16 +151,10 @@ export default function LeadOriginsManager() {
       </div>
 
       {message && (
-        <div
-          className={`mb-4 flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-            message.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-700'
-              : 'border-red-200 bg-red-50 text-red-700'
-          }`}
-        >
+        <Alert tone={message.type === 'success' ? 'success' : 'danger'} className="mb-4">
           {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
           <span>{message.text}</span>
-        </div>
+        </Alert>
       )}
 
       <div className="space-y-3">
@@ -167,9 +162,11 @@ export default function LeadOriginsManager() {
           const isBusy = busyId === origin.id;
 
           return (
-            <div
+            <Card
               key={origin.id}
-              className="flex flex-col gap-4 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-4 py-4 lg:flex-row lg:items-center lg:justify-between"
+              variant="muted"
+              padding="sm"
+              className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
             >
               <div className="flex-1">
                 {editingId === origin.id ? (
@@ -180,35 +177,31 @@ export default function LeadOriginsManager() {
                     disabled={isBusy}
                   />
                 ) : (
-                  <p className="text-sm font-medium text-[color:var(--panel-text)]">{origin.nome}</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{origin.nome}</p>
                 )}
 
                 <div className="mt-1 flex flex-col gap-1">
-                  <p className="text-xs text-[color:var(--panel-text-soft)]">{origin.ativo ? 'Ativo' : 'Inativo'}</p>
-                  <p className="text-xs text-[color:var(--panel-text-soft)]">
+                  <p className="text-xs text-[var(--text-secondary)]">{origin.ativo ? 'Ativo' : 'Inativo'}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">
                     {origin.visivel_para_observadores ? 'Visível para observadores' : 'Oculto para observadores'}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <label className="inline-flex items-center space-x-2 text-sm text-[color:var(--panel-text-soft)]">
-                  <input
-                    type="checkbox"
+                <label className="inline-flex items-center space-x-2 text-sm text-[var(--text-secondary)]">
+                  <Checkbox
                     checked={origin.ativo}
                     onChange={(event) => void handleToggleAtivo(origin.id, event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                     disabled={isBusy}
                   />
                   <span>Ativo</span>
                 </label>
 
-                <label className="inline-flex items-center space-x-2 text-sm text-[color:var(--panel-text-soft)]">
-                  <input
-                    type="checkbox"
+                <label className="inline-flex items-center space-x-2 text-sm text-[var(--text-secondary)]">
+                  <Checkbox
                     checked={origin.visivel_para_observadores}
                     onChange={(event) => void handleToggleObserverVisibility(origin.id, event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                     disabled={isBusy}
                   />
                   <span>Visível para observadores</span>
@@ -234,7 +227,7 @@ export default function LeadOriginsManager() {
                   </div>
                 )}
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
@@ -250,7 +243,7 @@ export default function LeadOriginsManager() {
       >
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da origem</label>
+            <label className="kds-field-label mb-2 block">Nome da origem</label>
             <Input
               type="text"
               value={newOrigin}
@@ -277,6 +270,6 @@ export default function LeadOriginsManager() {
         </div>
       </ModalShell>
       {ConfirmationDialog}
-    </div>
+    </Card>
   );
 }

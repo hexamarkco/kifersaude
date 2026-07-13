@@ -28,11 +28,8 @@ import WhatsAppBatchFollowUpModal from './WhatsAppBatchFollowUpModal';
 import type { WhatsAppBatchFollowUpSendProgress } from './WhatsAppBatchFollowUpModal';
 import ReminderSchedulerModal from '../../../../components/ReminderSchedulerModal';
 import FilterSingleSelect from '../../../../components/FilterSingleSelect';
-import Button from '../../../../components/ui/Button';
-import Input from '../../../../components/ui/Input';
-import ModalShell from '../../../../components/ui/ModalShell';
+import { Button, Input, Textarea } from '../../../../design-system';
 import PanelPopoverShell from '../../../../components/ui/PanelPopoverShell';
-import Textarea from '../../../../components/ui/Textarea';
 import {
   PANEL_EMPTY_STATE_STYLE,
   PANEL_INSET_STYLE,
@@ -48,6 +45,7 @@ import type { ManualReminderPrompt } from '../../../reminders/shared/reminderTyp
 import { syncLeadNextReturnFromUpcomingReminder } from '../../../../lib/leadReminderUtils';
 import { supabase, type Contract, type Lead, type Reminder, fetchAllPages } from '../../../../lib/supabase';
 import { toast } from '../../../../lib/toast';
+import WhatsAppDialog from './WhatsAppDialog';
 
 type WhatsAppAgendaModalProps = {
   isOpen: boolean;
@@ -1101,8 +1099,8 @@ export default function WhatsAppAgendaModal({
     if (isOverdue(reminder.data_lembrete)) {
       return {
         ...PANEL_INSET_STYLE,
-        borderColor: 'var(--panel-accent-red-border,#d79a8f)',
-        boxShadow: '0 0 0 1px var(--panel-accent-red-border,#d79a8f), 0 18px 34px -28px rgba(138,49,40,0.22)',
+        borderColor: 'var(--danger-border)',
+        boxShadow: '0 0 0 1px var(--danger-border), var(--shadow-card)',
       };
     }
 
@@ -1135,7 +1133,7 @@ export default function WhatsAppAgendaModal({
               <div className="min-w-0 flex-1 space-y-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-base font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                    <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
                       {reminder.titulo}
                     </h3>
                     {overdue ? (
@@ -1181,13 +1179,13 @@ export default function WhatsAppAgendaModal({
                   </div>
 
                   {reminder.descricao ? (
-                    <p className="mt-2 text-sm leading-6" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                    <p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>
                       {reminder.descricao}
                     </p>
                   ) : null}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: 'var(--text-muted)' }}>
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
                     <span>{formatDateTimeFullBR(reminder.data_lembrete)}</span>
@@ -1267,7 +1265,7 @@ export default function WhatsAppAgendaModal({
                       position={quickScheduleDropdown.position}
                       onClose={() => setQuickScheduleDropdown(null)}
                       ariaLabel="Selecionar dias para agendar"
-                      className="rounded-xl border-[rgba(212,192,167,0.18)] bg-[var(--panel-bg,#fdfbf7)] p-1 shadow-xl"
+                      className="rounded-xl border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-1 shadow-xl"
                       style={{ width: 140, zIndex: 9999 }}
                     >
                       <div className="flex flex-col gap-1">
@@ -1280,7 +1278,7 @@ export default function WhatsAppAgendaModal({
                               void handleQuickSchedule(reminder, days as 1 | 2 | 3 | 4 | 5);
                             }}
                             disabled={isQuickSchedulingCurrentReminder}
-                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--panel-text,#594d3e)] transition hover:bg-[rgba(212,192,167,0.12)] disabled:opacity-60"
+                            className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)] disabled:opacity-60"
                           >
                             <CalendarPlus className="h-4 w-4" />
                             <span>+{days} dia{days > 1 ? 's' : ''}</span>
@@ -1385,13 +1383,13 @@ export default function WhatsAppAgendaModal({
 
   return (
     <>
-      <ModalShell
+      <WhatsAppDialog
         isOpen={isOpen}
         onClose={onClose}
         title="Agenda do WhatsApp"
         description="Mesma base da Agenda unificada, agora acessivel dentro do inbox. Tudo o que voce fizer aqui reflete em /painel/agenda."
         size="xl"
-        panelClassName="config-transparent-buttons max-w-6xl"
+        panelClassName="max-w-6xl"
         footer={
           <div className="flex items-center justify-end gap-3">
             <Button variant="secondary" onClick={onClose}>
@@ -1403,8 +1401,8 @@ export default function WhatsAppAgendaModal({
         {loading ? (
           <div className="flex min-h-[520px] items-center justify-center rounded-[1.7rem] border" style={PANEL_MUTED_INSET_STYLE}>
             <div className="panel-glass-strong flex items-center gap-3 rounded-[1.1rem] border px-4 py-3 shadow-lg" style={PANEL_INSET_STYLE}>
-              <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--panel-accent-strong,#b85c1f)' }} />
-              <span className="text-sm font-medium" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+              <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--brand-primary)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 Carregando agenda...
               </span>
             </div>
@@ -1414,13 +1412,13 @@ export default function WhatsAppAgendaModal({
             <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--text-muted)' }}>
                     Dia em foco
                   </p>
-                  <h3 className="mt-2 text-xl font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                  <h3 className="mt-2 text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
                     {selectedDateLabel}
                   </h3>
-                  <p className="mt-1 text-sm" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
                     {visiblePendingReminders.length > 0
                       ? `${visiblePendingReminders.length} pendencia(s) em foco: ${overdueReminders.length} atrasada(s) e ${pendingSelectedReminders.length} no dia.`
                       : `Sem pendencias abertas para ${selectedDateLabel.toLowerCase()}.`}
@@ -1443,7 +1441,7 @@ export default function WhatsAppAgendaModal({
                         <Sparkles className="h-4 w-4" />
                       </Button>
                       {pendingCount !== null && pendingCount > 0 ? (
-                        <span className="absolute -right-1.5 -top-1.5 flex min-w-[20px] items-center justify-center rounded-full bg-orange-600 px-1.5 py-0.5 text-[10px] font-bold leading-tight text-white shadow-sm">
+                        <span className="absolute -right-1.5 -top-1.5 flex min-w-[20px] items-center justify-center rounded-full bg-[var(--warning)] px-1.5 py-0.5 text-[10px] font-bold leading-tight text-[var(--text-on-brand)] shadow-sm">
                           {pendingCount}
                         </span>
                       ) : null}
@@ -1525,11 +1523,11 @@ export default function WhatsAppAgendaModal({
 
             {filteredReminders.length === 0 ? (
               <div className="rounded-[1.7rem] border py-12 text-center" style={PANEL_EMPTY_STATE_STYLE}>
-                <Bell className="mx-auto mb-4 h-14 w-14" style={{ color: 'var(--panel-text-muted,#876f5c)' }} />
-                <h3 className="text-lg font-medium" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                <Bell className="mx-auto mb-4 h-14 w-14" style={{ color: 'var(--text-muted)' }} />
+                <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
                   Nenhum item encontrado
                 </h3>
-                <p className="mt-2 text-sm" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+                <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
                   {emptyStateMessage}
                 </p>
               </div>
@@ -1539,10 +1537,10 @@ export default function WhatsAppAgendaModal({
                   <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--panel-accent-red-text,#b4534a)' }}>
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--danger-text)' }}>
                           Atrasados
                         </p>
-                        <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                        <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                           Pendencias de dias anteriores
                         </h4>
                       </div>
@@ -1557,10 +1555,10 @@ export default function WhatsAppAgendaModal({
                 <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
                         Rotina do dia
                       </p>
-                      <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                      <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {selectedDateLabel}
                       </h4>
                     </div>
@@ -1576,7 +1574,7 @@ export default function WhatsAppAgendaModal({
                       className="rounded-[1.3rem] border py-8 text-center text-sm"
                       style={{
                         ...PANEL_MUTED_INSET_STYLE,
-                        color: 'var(--panel-text-soft,#5b4635)',
+                        color: 'var(--text-secondary)',
                       }}
                     >
                       Nenhum item pendente neste dia.
@@ -1587,10 +1585,10 @@ export default function WhatsAppAgendaModal({
                 <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--panel-text-muted,#876f5c)' }}>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
                         Concluidos no dia
                       </p>
-                      <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--panel-text,#1c1917)' }}>
+                      <h4 className="mt-1 text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {completedSelectedReminders.length > 0 ? 'Historico do dia em foco' : 'Nada concluido ainda'}
                       </h4>
                     </div>
@@ -1612,7 +1610,7 @@ export default function WhatsAppAgendaModal({
                         className="rounded-[1.3rem] border py-8 text-center text-sm"
                         style={{
                           ...PANEL_MUTED_INSET_STYLE,
-                          color: 'var(--panel-text-soft,#5b4635)',
+                          color: 'var(--text-secondary)',
                         }}
                       >
                         Nenhum item concluido neste dia.
@@ -1623,7 +1621,7 @@ export default function WhatsAppAgendaModal({
                       className="rounded-[1.3rem] border py-5 text-center text-sm"
                       style={{
                         ...PANEL_MUTED_INSET_STYLE,
-                        color: 'var(--panel-text-soft,#5b4635)',
+                        color: 'var(--text-secondary)',
                       }}
                     >
                       Expanda quando quiser revisar o que ja foi concluido neste dia.
@@ -1634,10 +1632,10 @@ export default function WhatsAppAgendaModal({
             )}
           </div>
         )}
-      </ModalShell>
+      </WhatsAppDialog>
 
       {isAddTaskModalOpen ? (
-        <ModalShell
+        <WhatsAppDialog
           isOpen
           onClose={closeAddTaskModal}
           title="Nova tarefa"
@@ -1647,7 +1645,7 @@ export default function WhatsAppAgendaModal({
         >
           <form onSubmit={(event) => void handleAddTask(event)} className="space-y-4">
             <div className="space-y-1">
-              <label htmlFor="whatsapp-agenda-task-title" className="text-sm font-medium" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+              <label htmlFor="whatsapp-agenda-task-title" className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 Tarefa
               </label>
               <Input
@@ -1662,7 +1660,7 @@ export default function WhatsAppAgendaModal({
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="whatsapp-agenda-task-description" className="text-sm font-medium" style={{ color: 'var(--panel-text-soft,#5b4635)' }}>
+              <label htmlFor="whatsapp-agenda-task-description" className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 Descricao (opcional)
               </label>
               <Textarea
@@ -1685,7 +1683,7 @@ export default function WhatsAppAgendaModal({
               </Button>
             </div>
           </form>
-        </ModalShell>
+        </WhatsAppDialog>
       ) : null}
 
       {schedulerDraft ? (

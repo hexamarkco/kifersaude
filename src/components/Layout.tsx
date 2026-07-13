@@ -984,7 +984,7 @@ export default function Layout({
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                 <span className="text-base font-bold text-white">K</span>
               </div>
-              <span className="whitespace-nowrap text-sm font-semibold text-[var(--panel-text,#1c1917)]">KS Workspace</span>
+              <span className="whitespace-nowrap text-sm font-semibold text-[var(--text-primary)]">KS Workspace</span>
             </div>
             {isMenuCollapsed && (
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
@@ -1045,39 +1045,39 @@ export default function Layout({
                   >
                     <div className="kds-popover-section flex items-center justify-between border-b px-4 py-3">
                       <div>
-                        <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">Central do dia</p>
-                        <p className="text-xs text-[var(--panel-text-muted,#876f5c)]">Resumo de hoje</p>
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">Central do dia</p>
+                        <p className="text-xs text-[var(--text-muted)]">Resumo de hoje</p>
                       </div>
                       <button
                         onClick={() => {
                           onTabChange('agenda');
                           setShowNotificationsDropdown(false);
                         }}
-                        className="text-xs font-semibold text-[var(--panel-accent-strong,#b85c1f)] hover:text-[var(--panel-accent-ink,#6f3f16)]"
+                        className="text-xs font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]"
                       >
                         Ver tudo
                       </button>
                     </div>
 
                     {notificationsLoading ? (
-                      <div className="px-4 py-6 text-sm text-[var(--panel-text-muted,#876f5c)]">Carregando...</div>
+                      <div className="px-4 py-6 text-sm text-[var(--text-muted)]">Carregando...</div>
                     ) : notificationsError ? (
-                      <div className="px-4 py-6 text-sm text-[var(--panel-accent-red-text,#8a3128)]">{notificationsError}</div>
+                      <div className="px-4 py-6 text-sm text-[var(--danger-text)]">{notificationsError}</div>
                     ) : (
                       <div className="max-h-[70vh] overflow-y-auto">
                         <div className="px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Lembretes do dia</p>
-                            <span className="text-xs text-[var(--panel-text-muted,#876f5c)]">{todayReminders.length}</span>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Lembretes do dia</p>
+                            <span className="text-xs text-[var(--text-muted)]">{todayReminders.length}</span>
                           </div>
                           {todayReminders.length === 0 ? (
-                            <p className="mt-2 text-sm text-[var(--panel-text-muted,#876f5c)]">Nenhum lembrete para hoje.</p>
+                            <p className="mt-2 text-sm text-[var(--text-muted)]">Nenhum lembrete para hoje.</p>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayReminders.slice(0, 5).map((reminder) => (
                                 <div key={reminder.id} className="kds-list-item">
-                                  <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">{reminder.titulo}</p>
-                                  <p className="text-xs text-[var(--panel-text-muted,#876f5c)]">{formatDateTimeFullBR(reminder.data_lembrete)}</p>
+                                  <p className="text-sm font-semibold text-[var(--text-primary)]">{reminder.titulo}</p>
+                                  <p className="text-xs text-[var(--text-muted)]">{formatDateTimeFullBR(reminder.data_lembrete)}</p>
                                 </div>
                               ))}
                             </div>
@@ -1086,20 +1086,20 @@ export default function Layout({
 
                         <div className="kds-popover-section border-t px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Pagamentos do dia</p>
-                            <span className="text-xs text-[var(--panel-text-muted,#876f5c)]">{todayPayments.length}</span>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Pagamentos do dia</p>
+                            <span className="text-xs text-[var(--text-muted)]">{todayPayments.length}</span>
                           </div>
                           {todayPayments.length === 0 ? (
-                            <p className="mt-2 text-sm text-[var(--panel-text-muted,#876f5c)]">Nenhum pagamento previsto para hoje.</p>
+                            <p className="mt-2 text-sm text-[var(--text-muted)]">Nenhum pagamento previsto para hoje.</p>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayPayments.slice(0, 5).map((payment) => (
                                 <div key={payment.id} className="kds-list-item kds-list-item-success">
-                                  <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">
+                                  <p className="text-sm font-semibold text-[var(--text-primary)]">
                                     {payment.type === 'comissao' ? 'Comissão' : 'Bonificação'}
                                     {payment.installmentLabel ? ` (${payment.installmentLabel})` : ''}
                                   </p>
-                                  <p className="text-xs text-[var(--panel-text-soft,#5b4635)]">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</p>
+                                  <p className="text-xs text-[var(--text-secondary)]">{payment.contract.codigo_contrato} • {formatCurrency(payment.value)}</p>
                                 </div>
                               ))}
                             </div>
@@ -1108,17 +1108,17 @@ export default function Layout({
 
                         <div className="kds-popover-section border-t px-4 py-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--panel-text-muted,#876f5c)]">Aniversariantes</p>
-                            <span className="text-xs text-[var(--panel-text-muted,#876f5c)]">{todayBirthdays.length}</span>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Aniversariantes</p>
+                            <span className="text-xs text-[var(--text-muted)]">{todayBirthdays.length}</span>
                           </div>
                           {todayBirthdays.length === 0 ? (
-                            <p className="mt-2 text-sm text-[var(--panel-text-muted,#876f5c)]">Nenhum aniversariante hoje.</p>
+                            <p className="mt-2 text-sm text-[var(--text-muted)]">Nenhum aniversariante hoje.</p>
                           ) : (
                             <div className="mt-2 space-y-2">
                               {todayBirthdays.slice(0, 5).map((birthday) => (
                                 <div key={birthday.id} className="kds-list-item kds-list-item-warning">
-                                  <p className="text-sm font-semibold text-[var(--panel-text,#1c1917)]">{birthday.name}</p>
-                                  <p className="text-xs text-[var(--panel-text-soft,#5b4635)]">
+                                  <p className="text-sm font-semibold text-[var(--text-primary)]">{birthday.name}</p>
+                                  <p className="text-xs text-[var(--text-secondary)]">
                                     {birthday.role}
                                     {birthday.holderName ? ` • Titular: ${birthday.holderName}` : ''}
                                   </p>
@@ -1172,7 +1172,7 @@ export default function Layout({
         >
           <div
             aria-hidden="true"
-            className={`pointer-events-none absolute h-3 w-3 rotate-45 border border-[var(--panel-border-subtle,#e4d5c0)] bg-[var(--panel-surface,#fffdfa)] shadow-[0_10px_22px_-14px_rgba(15,23,42,0.8)] ${
+            className={`pointer-events-none absolute h-3 w-3 rotate-45 border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)] ${
               collapsedDropdownPosition.side === 'right'
                 ? '-left-1.5 border-b-0 border-r-0'
                 : '-right-1.5 border-l-0 border-t-0'

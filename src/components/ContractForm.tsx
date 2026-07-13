@@ -40,13 +40,17 @@ import {
 import HolderForm from "./HolderForm";
 import ValueAdjustmentForm from "./ValueAdjustmentForm";
 import FilterSingleSelect from "./FilterSingleSelect";
-import DateTimePicker from "./ui/DateTimePicker";
-import ModalShell from "./ui/ModalShell";
 import {
   Alert,
   Badge,
   Button,
   Checkbox,
+  DateTimePicker,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
   Field,
   Input,
   Surface,
@@ -1177,25 +1181,22 @@ export default function ContractForm({
 
   return (
     <>
-      <ModalShell
-        isOpen
-        onClose={onClose}
-        title={
-          contract
-            ? "Editar Contrato"
-            : leadToConvert
-              ? "Converter Lead em Contrato"
-              : "Novo Contrato"
-        }
-        description={
-          leadToConvert
-            ? `Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`
-            : undefined
-        }
-        size="xl"
-        panelClassName="max-w-4xl"
-        bodyClassName="p-0"
-      >
+      <Dialog open onOpenChange={(open) => !open && onClose()} size="lg">
+        <DialogHeader onClose={onClose}>
+          <DialogTitle>
+            {contract
+              ? "Editar Contrato"
+              : leadToConvert
+                ? "Converter Lead em Contrato"
+                : "Novo Contrato"}
+          </DialogTitle>
+          {leadToConvert && (
+            <DialogDescription>
+              {`Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`}
+            </DialogDescription>
+          )}
+        </DialogHeader>
+        <DialogBody className="p-0">
         <form
           onSubmit={handleSubmit}
           className="max-h-[70vh] overflow-y-auto p-6"
@@ -1440,19 +1441,19 @@ export default function ContractForm({
                 <DateTimePicker
                   type="date"
                   value={formData.data_inicio}
-                  onChange={(value) =>
-                    setFormData({ ...formData, data_inicio: value })
+                  onChange={(event) =>
+                    setFormData({ ...formData, data_inicio: event.target.value })
                   }
                   placeholder="Selecionar data"
                 />
               </Field>
 
               <Field label="Fim da fidelidade">
-                <DateTimePicker
+                <Input
                   type="month"
                   value={formData.data_renovacao}
-                  onChange={(value) =>
-                    setFormData({ ...formData, data_renovacao: value })
+                  onChange={(event) =>
+                    setFormData({ ...formData, data_renovacao: event.target.value })
                   }
                   placeholder="Selecionar mês"
                 />
@@ -1793,10 +1794,10 @@ export default function ContractForm({
                 <DateTimePicker
                   type="date"
                   value={formData.previsao_recebimento_comissao}
-                  onChange={(value) =>
+                  onChange={(event) =>
                     setFormData({
                       ...formData,
-                      previsao_recebimento_comissao: value,
+                      previsao_recebimento_comissao: event.target.value,
                     })
                   }
                   placeholder="Selecionar data"
@@ -1911,11 +1912,11 @@ export default function ContractForm({
                                   <DateTimePicker
                                     type="date"
                                     value={parcel.data_pagamento}
-                                    onChange={(value) =>
+                                    onChange={(event) =>
                                       handleInstallmentChange(
                                         index,
                                         "data_pagamento",
-                                        value,
+                                        event.target.value,
                                       )
                                     }
                                     placeholder="Selecionar data"
@@ -2167,10 +2168,10 @@ export default function ContractForm({
                 <DateTimePicker
                   type="date"
                   value={formData.previsao_pagamento_bonificacao}
-                  onChange={(value) =>
+                  onChange={(event) =>
                     setFormData({
                       ...formData,
-                      previsao_pagamento_bonificacao: value,
+                      previsao_pagamento_bonificacao: event.target.value,
                     })
                   }
                   placeholder="Selecionar data"
@@ -2232,7 +2233,8 @@ export default function ContractForm({
             </Button>
           </div>
         </form>
-      </ModalShell>
+        </DialogBody>
+      </Dialog>
 
       {showAdjustmentForm && contract?.id && (
         <ValueAdjustmentForm

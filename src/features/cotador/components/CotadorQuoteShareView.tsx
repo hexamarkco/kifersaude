@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Building2, Check, WalletCards } from 'lucide-react';
 import PublicBrandMark from '../../../components/public/PublicBrandMark';
+import { Surface } from '../../../design-system';
 import type { CotadorAgeRange } from '../shared/cotadorConstants';
 import {
   buildCotadorComparableHospitalKey,
@@ -85,11 +86,11 @@ const NETWORK_COMPARE_LEGEND = [
 
 function SummaryCard({ label, value, helper }: { label: string; value: string; helper?: string }) {
   return (
-    <div className="rounded-3xl border border-[color:#e8d7c1] bg-white px-4 py-4 shadow-[0_10px_30px_rgba(40,22,10,0.05)]">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:#8d6f57]">{label}</p>
-      <p className="mt-2 text-lg font-semibold text-[color:#23160e]">{value}</p>
-      {helper ? <p className="mt-1 text-sm text-[color:#6d5544]">{helper}</p> : null}
-    </div>
+    <Surface variant="default" padding="sm">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-primary)]">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{value}</p>
+      {helper ? <p className="mt-1 text-sm text-[color:var(--text-primary)]">{helper}</p> : null}
+    </Surface>
   );
 }
 
@@ -167,29 +168,29 @@ export default function CotadorQuoteShareView({
 
   return (
     <div className={[
-      'min-h-full bg-[linear-gradient(180deg,#fffaf4_0%,#f7efe3_100%)] p-8 text-[color:#23160e]',
+      'painel-theme kifer-ds theme-light min-h-full bg-[var(--bg-canvas)] p-8 text-[color:var(--text-primary)]',
       className ?? '',
     ].join(' ')}>
       <div className="mx-auto max-w-6xl space-y-8">
-        <section className="overflow-hidden rounded-[32px] border border-[color:#e8d7c1] bg-[linear-gradient(180deg,#fffdf9_0%,#f6ecde_100%)] shadow-[0_30px_80px_rgba(44,25,13,0.08)]">
+        <section className="overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--surface-bg)] shadow-[var(--shadow-card)]">
           <div className="flex flex-col gap-6 px-8 py-8 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-3 rounded-full border border-[color:#ecd7b6] bg-[color:#fff7ec] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:#9b5d14]">
+              <div className="inline-flex items-center gap-3 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-primary)]">
                 <WalletCards className="h-4 w-4" />
                 Cotação compartilhada
               </div>
-              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[color:#23160e]">{payload.quote.name}</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:#6d5544]">
+              <h1 className="mt-4 text-4xl font-semibold tracking-tight text-[color:var(--text-primary)]">{payload.quote.name}</h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[color:var(--text-primary)]">
                 Compare os planos selecionados, veja o valor total da simulação e consulte os detalhes essenciais de cada opção.
               </p>
             </div>
 
-            <div className="rounded-[28px] border border-[color:#e8d7c1] bg-white/90 px-5 py-4 shadow-[0_18px_40px_rgba(40,22,10,0.06)]">
-              <PublicBrandMark className="h-8 w-auto text-[color:#7a3f18]" />
-              <div className="mt-4 space-y-2 text-sm text-[color:#6d5544]">
-                {modalitiesSummary ? <p><span className="font-semibold text-[color:#23160e]">Modalidades:</span> {modalitiesSummary}</p> : null}
-                <p><span className="font-semibold text-[color:#23160e]">Vidas:</span> {payload.quote.totalLives}</p>
-                <p><span className="font-semibold text-[color:#23160e]">Atualizada em:</span> {formatCotadorDateTime(sharedAt ?? payload.quote.updatedAt)}</p>
+            <div className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 shadow-[var(--shadow-card)]">
+              <PublicBrandMark className="h-8 w-auto text-[color:var(--text-primary)]" />
+              <div className="mt-4 space-y-2 text-sm text-[color:var(--text-primary)]">
+                {modalitiesSummary ? <p><span className="font-semibold text-[color:var(--text-primary)]">Modalidades:</span> {modalitiesSummary}</p> : null}
+                <p><span className="font-semibold text-[color:var(--text-primary)]">Vidas:</span> {payload.quote.totalLives}</p>
+                <p><span className="font-semibold text-[color:var(--text-primary)]">Atualizada em:</span> {formatCotadorDateTime(sharedAt ?? payload.quote.updatedAt)}</p>
               </div>
             </div>
           </div>
@@ -198,8 +199,8 @@ export default function CotadorQuoteShareView({
 
         <section className="space-y-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:#9b5d14]">Planos cotados</p>
-            <h2 className="mt-2 text-2xl font-semibold text-[color:#23160e]">Resumo das opções</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-primary)]">Planos cotados</p>
+            <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Resumo das opções</h2>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -214,48 +215,48 @@ export default function CotadorQuoteShareView({
                 }));
 
               return (
-                <article key={item.id} className="overflow-hidden rounded-[28px] border border-[color:#e8d7c1] bg-white shadow-[0_18px_50px_rgba(44,25,13,0.06)]">
-                  <div className="border-b border-[color:#f0e4d4] px-6 py-5">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:#8d6f57]">{item.operadora.name ?? 'Operadora'}</p>
-                    <p className="mt-1 text-sm text-[color:#6d5544]">{item.linha?.name ?? item.subtitulo ?? 'Linha'}</p>
-                    <h3 className="mt-4 text-3xl font-semibold text-[color:#23160e]">{item.titulo}</h3>
+                <article key={item.id} className="overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
+                  <div className="border-b border-[color:var(--border-default)] px-6 py-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-primary)]">{item.operadora.name ?? 'Operadora'}</p>
+                    <p className="mt-1 text-sm text-[color:var(--text-primary)]">{item.linha?.name ?? item.subtitulo ?? 'Linha'}</p>
+                    <h3 className="mt-4 text-3xl font-semibold text-[color:var(--text-primary)]">{item.titulo}</h3>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {item.acomodacao ? <span className="rounded-full border border-[color:#eadbc7] bg-[color:#fbf4ea] px-3 py-1 text-xs font-semibold text-[color:#6d5544]">{item.acomodacao}</span> : null}
-                      {item.coparticipacao ? <span className="rounded-full border border-[color:#eadbc7] bg-[color:#fbf4ea] px-3 py-1 text-xs font-semibold text-[color:#6d5544]">{formatCopart(item.coparticipacao)}</span> : null}
-                      {item.abrangencia ? <span className="rounded-full border border-[color:#eadbc7] bg-[color:#fbf4ea] px-3 py-1 text-xs font-semibold text-[color:#6d5544]">{item.abrangencia}</span> : null}
+                      {item.acomodacao ? <span className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-1 text-xs font-semibold text-[color:var(--text-primary)]">{item.acomodacao}</span> : null}
+                      {item.coparticipacao ? <span className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-1 text-xs font-semibold text-[color:var(--text-primary)]">{formatCopart(item.coparticipacao)}</span> : null}
+                      {item.abrangencia ? <span className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-1 text-xs font-semibold text-[color:var(--text-primary)]">{item.abrangencia}</span> : null}
                     </div>
                   </div>
 
                   <div className="grid gap-4 px-6 py-5 lg:grid-cols-[minmax(0,1fr)_220px]">
                     <div>
-                      <div className="rounded-3xl border border-[color:#f0e4d4] bg-[color:#fffaf4] px-4 py-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:#8d6f57]">Mensalidade estimada</p>
-                        <p className="mt-2 text-3xl font-semibold text-[color:#23160e]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
-                        <p className="mt-3 text-sm text-[color:#6d5544]">{networkCount > 0 ? `${networkCount} prestador(es) na rede` : 'Rede hospitalar não cadastrada'}</p>
+                      <div className="rounded-3xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-4 py-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Mensalidade estimada</p>
+                        <p className="mt-2 text-3xl font-semibold text-[color:var(--text-primary)]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
+                        <p className="mt-3 text-sm text-[color:var(--text-primary)]">{networkCount > 0 ? `${networkCount} prestador(es) na rede` : 'Rede hospitalar não cadastrada'}</p>
                       </div>
 
                       {item.administradora?.name || item.entidadesClasse.length > 0 ? (
-                        <div className="mt-4 rounded-3xl border border-[color:#f0e4d4] bg-[color:#fffaf4] px-4 py-4 text-sm text-[color:#6d5544]">
-                          {item.administradora?.name ? <p><span className="font-semibold text-[color:#23160e]">Administradora:</span> {item.administradora.name}</p> : null}
-                          {item.entidadesClasse.length > 0 ? <p className="mt-2"><span className="font-semibold text-[color:#23160e]">Entidades:</span> {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</p> : null}
+                        <div className="mt-4 rounded-3xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-4 py-4 text-sm text-[color:var(--text-primary)]">
+                          {item.administradora?.name ? <p><span className="font-semibold text-[color:var(--text-primary)]">Administradora:</span> {item.administradora.name}</p> : null}
+                          {item.entidadesClasse.length > 0 ? <p className="mt-2"><span className="font-semibold text-[color:var(--text-primary)]">Entidades:</span> {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</p> : null}
                         </div>
                       ) : null}
                     </div>
 
-                    <div className="rounded-3xl border border-[color:#f0e4d4] bg-[color:#fffaf4] p-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:#8d6f57]">Faixas cotadas</p>
+                    <div className="rounded-3xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Faixas cotadas</p>
                       {quotedAgeRows.length > 0 ? (
                         <div className="mt-3 space-y-2 text-sm">
                           {quotedAgeRows.map(({ ageRange, quantity, value }) => (
-                            <div key={`${item.id}-${ageRange}`} className="grid grid-cols-[minmax(0,1fr)_56px_minmax(88px,auto)] items-center gap-3 border-b border-[color:#f3e8da] pb-2 last:border-b-0 last:pb-0">
-                              <span className="font-medium text-[color:#6d5544]">{ageRange}</span>
-                              <span className="text-center font-medium text-[color:#6d5544]">{quantity}x</span>
-                              <span className="text-right font-semibold text-[color:#23160e]">{formatCotadorCurrency(value)}</span>
+                            <div key={`${item.id}-${ageRange}`} className="grid grid-cols-[minmax(0,1fr)_56px_minmax(88px,auto)] items-center gap-3 border-b border-[color:var(--border-default)] pb-2 last:border-b-0 last:pb-0">
+                              <span className="font-medium text-[color:var(--text-primary)]">{ageRange}</span>
+                              <span className="text-center font-medium text-[color:var(--text-primary)]">{quantity}x</span>
+                              <span className="text-right font-semibold text-[color:var(--text-primary)]">{formatCotadorCurrency(value)}</span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="mt-3 text-sm text-[color:#6d5544]">Nenhuma faixa etária foi preenchida nesta cotação.</p>
+                        <p className="mt-3 text-sm text-[color:var(--text-primary)]">Nenhuma faixa etária foi preenchida nesta cotação.</p>
                       )}
                     </div>
                   </div>
@@ -268,8 +269,8 @@ export default function CotadorQuoteShareView({
         {includeNetworkComparison && networkComparisonRows.length > 0 ? (
           <section className="space-y-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:#9b5d14]">Comparativo de rede</p>
-              <h2 className="mt-2 text-2xl font-semibold text-[color:#23160e]">Prestadores por plano</h2>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-primary)]">Comparativo de rede</p>
+              <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Prestadores por plano</h2>
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
@@ -278,11 +279,11 @@ export default function CotadorQuoteShareView({
               <SummaryCard label="Exclusivos" value={`${networkExclusiveRowsCount}`} />
             </div>
 
-            <div className="rounded-[24px] border border-[color:#e8d7c1] bg-[color:#fbf4ea] px-5 py-4 text-[color:#6d5544]">
+            <div className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-5 py-4 text-[color:var(--text-primary)]">
               <div className="flex flex-wrap items-center gap-2">
                 {NETWORK_COMPARE_LEGEND.map((item) => (
-                  <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[color:#eadbc7] bg-white px-2.5 py-1 text-[11px] font-semibold">
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[color:#eadbc7] bg-[color:#fffaf4] px-1 text-[10px] text-[color:#23160e]">
+                  <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-2.5 py-1 text-[11px] font-semibold">
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-1 text-[10px] text-[color:var(--text-primary)]">
                       {item.label}
                     </span>
                     {item.description}
@@ -294,37 +295,37 @@ export default function CotadorQuoteShareView({
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-[32px] border border-[color:#e8d7c1] bg-white shadow-[0_18px_50px_rgba(44,25,13,0.06)]">
+            <div className="overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
               <div className="overflow-x-auto">
                 <div className="min-w-[980px]">
-                  <div className="grid border-b border-[color:#f0e4d4] bg-[color:#fbf4ea]" style={networkComparisonMatrixStyle}>
+                  <div className="grid border-b border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]" style={networkComparisonMatrixStyle}>
                     <div className="px-5 py-4">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:#8d6f57]">Prestador</p>
-                      <p className="mt-1 text-sm font-semibold text-[color:#23160e]">Comparativo por plano</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Prestador</p>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">Comparativo por plano</p>
                     </div>
                     {selectedItems.map((item) => (
-                      <div key={item.id} className="border-l border-[color:#f0e4d4] px-5 py-4">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:#8d6f57]">{item.operadora.name ?? 'Operadora'}</p>
-                        <p className="mt-1 text-sm font-semibold text-[color:#23160e]">{item.titulo}</p>
+                      <div key={item.id} className="border-l border-[color:var(--border-default)] px-5 py-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">{item.operadora.name ?? 'Operadora'}</p>
+                        <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{item.titulo}</p>
                       </div>
                     ))}
                   </div>
 
                   {networkComparisonRows.map((row) => (
                     <div key={row.key} className="grid" style={networkComparisonMatrixStyle}>
-                      <div className="border-b border-[color:#f0e4d4] px-5 py-4">
+                      <div className="border-b border-[color:var(--border-default)] px-5 py-4">
                         <div className="flex items-start gap-3">
-                          <span className="rounded-2xl border border-[color:#eadbc7] bg-[color:#fff7ec] p-2 text-[color:#9b5d14]">
+                          <span className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] p-2 text-[color:var(--text-primary)]">
                             <Building2 className="h-4 w-4" />
                           </span>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-sm font-semibold text-[color:#23160e]">{row.hospital}</p>
-                              <span className="rounded-full border border-[color:#eadbc7] bg-[color:#fbf4ea] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:#6d5544]">
+                              <p className="text-sm font-semibold text-[color:var(--text-primary)]">{row.hospital}</p>
+                              <span className="rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[color:var(--text-primary)]">
                                 {row.hitsCount === selectedItems.length ? 'Em todos' : `${row.hitsCount}/${selectedItems.length}`}
                               </span>
                             </div>
-                            <p className="mt-1 text-xs text-[color:#6d5544]">{[row.bairro, row.regiao, row.cidade].filter(Boolean).join(' | ')}</p>
+                            <p className="mt-1 text-xs text-[color:var(--text-primary)]">{[row.bairro, row.regiao, row.cidade].filter(Boolean).join(' | ')}</p>
                           </div>
                         </div>
                       </div>
@@ -333,21 +334,21 @@ export default function CotadorQuoteShareView({
                         const presence = row.planPresence[item.id];
 
                         return (
-                          <div key={`${row.key}-${item.id}`} className="border-b border-l border-[color:#f0e4d4] p-4">
+                          <div key={`${row.key}-${item.id}`} className="border-b border-l border-[color:var(--border-default)] p-4">
                             {presence ? (
                               (() => {
                                 const serviceSummary = summarizeCotadorNetworkServices(presence.services);
 
                                 return (
-                              <div className="rounded-2xl border border-[color:#e7d7c2] bg-[color:#fffaf4] p-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-[color:#23160e]">
-                                  <Check className="h-4 w-4 text-[color:#9b5d14]" />
+                              <div className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] p-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--text-primary)]">
+                                  <Check className="h-4 w-4 text-[color:var(--text-primary)]" />
                                   Na rede
                                 </div>
                                 {serviceSummary.hasStructuredInfo ? (
                                   <div className="mt-2 flex flex-wrap gap-1.5">
                                     {serviceSummary.badges.map((service) => (
-                                      <span key={`${row.key}-${item.id}-${service}`} className="rounded-full border border-[color:#eadbc7] bg-white px-2 py-0.5 text-[10px] font-medium text-[color:#6d5544]">
+                                      <span key={`${row.key}-${item.id}-${service}`} className="rounded-full border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--text-primary)]">
                                         {service}
                                       </span>
                                     ))}
@@ -357,7 +358,7 @@ export default function CotadorQuoteShareView({
                                 );
                               })()
                             ) : (
-                              <div className="rounded-2xl border border-dashed border-[color:#eadbc7] bg-[color:#fbf4ea] p-3 text-sm font-medium text-[color:#8a6d57]">
+                              <div className="rounded-2xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] p-3 text-sm font-medium text-[color:var(--text-primary)]">
                                 Não consta
                               </div>
                             )}
@@ -373,7 +374,7 @@ export default function CotadorQuoteShareView({
         ) : null}
 
         {includeNetworkComparison && networkComparisonRows.length === 0 ? (
-          <section className="rounded-[28px] border border-dashed border-[color:#e2cbaa] bg-[color:#fff7ec] px-6 py-10 text-center text-sm text-[color:#6d5544]">
+          <section className="rounded-2xl border border-dashed border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-6 py-10 text-center text-sm text-[color:var(--text-primary)]">
             O comparativo de rede foi habilitado, mas nenhum dos planos desta cotação possui prestadores cadastrados.
           </section>
         ) : null}

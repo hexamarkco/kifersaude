@@ -5,10 +5,8 @@ import { formatDateForInput } from '../lib/dateUtils';
 import { formatCpf, formatCurrencyInput, parseFormattedNumber } from '../lib/inputFormatters';
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import FilterSingleSelect from './FilterSingleSelect';
-import DateTimePicker from './ui/DateTimePicker';
-import ModalShell from './ui/ModalShell';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, Field, Input, Surface } from '../design-system';
+import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
 
 type DependentFormProps = {
   contractId: string;
@@ -238,14 +236,11 @@ export default function DependentForm({
   };
 
   return (
-    <ModalShell
-      isOpen
-      onClose={onClose}
-      title={dependent ? 'Editar Dependente' : 'Novo Dependente'}
-      size="md"
-      panelClassName="max-w-2xl"
-      bodyClassName="p-0"
-    >
+    <Dialog open onOpenChange={(open) => !open && onClose()} size="md">
+      <DialogHeader onClose={onClose}>
+        <DialogTitle>{dependent ? 'Editar Dependente' : 'Novo Dependente'}</DialogTitle>
+      </DialogHeader>
+      <DialogBody className="p-0">
       <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Titular *" className="md:col-span-2">
@@ -300,7 +295,7 @@ export default function DependentForm({
             <DateTimePicker
               type="date"
               value={formData.data_nascimento}
-              onChange={(value) => setFormData({ ...formData, data_nascimento: value })}
+              onChange={(event) => setFormData({ ...formData, data_nascimento: event.target.value })}
               placeholder="Selecionar data"
             />
           </Field>
@@ -378,6 +373,7 @@ export default function DependentForm({
           </Button>
         </div>
       </form>
-    </ModalShell>
+      </DialogBody>
+    </Dialog>
   );
 }

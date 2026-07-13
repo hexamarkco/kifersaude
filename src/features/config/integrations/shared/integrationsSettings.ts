@@ -273,9 +273,3 @@ export const normalizeFollowUpInstructions = (
   const settings = isRecord(integration?.settings) ? integration.settings : {};
   return toTrimmedString(settings.instructions);
 };
-
-export const INTEGRATIONS_SECTION_SHELL_CLASS =
-  "rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-6 shadow-sm";
-
-export const INTEGRATIONS_SECTION_INSET_CLASS =
-  "rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4";

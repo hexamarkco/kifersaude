@@ -6,38 +6,13 @@
 @tailwind utilities;
 
 :root {
-  --ks-color-primary: #1c1917;
-  --ks-color-secondary: #5b4635;
-  --ks-color-cta: #c86f1d;
-  --ks-color-cta-strong: #7a3e16;
-  --ks-color-cta-soft: #f6e4c7;
-  --ks-color-cta-warm: #efcf9f;
-  --ks-color-bg: #f8f5ef;
-  --ks-color-surface: #fffdfa;
-  --ks-color-surface-strong: #f7f0e7;
-  --ks-color-border: #e4d5c0;
-  --ks-color-border-strong: #c5aa83;
-  --ks-color-text: #0c0a09;
-  --ks-color-text-soft: #6b5645;
   --ks-font-heading: 'Playfair Display', serif;
   --ks-font-body: 'Inter', sans-serif;
-  --ks-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.08);
-  --ks-shadow-md: 0 16px 34px -24px rgba(42, 24, 12, 0.26);
-  --ks-shadow-lg: 0 24px 52px -30px rgba(42, 24, 12, 0.36);
-  --app-scrollbar-track: rgba(91, 70, 53, 0.12);
-  --app-scrollbar-track-hover: rgba(91, 70, 53, 0.18);
-  --app-scrollbar-thumb: linear-gradient(180deg, rgba(200, 111, 29, 0.9) 0%, rgba(122, 62, 22, 0.92) 100%);
-  --app-scrollbar-thumb-solid: #b56220;
-  --app-scrollbar-thumb-hover: linear-gradient(180deg, rgba(223, 139, 47, 0.96) 0%, rgba(144, 68, 20, 0.96) 100%);
 }
 
-html {
-  scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
-  scrollbar-width: thin;
-}
-
+html,
 * {
-  scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
+  scrollbar-color: var(--app-scrollbar-thumb-solid, currentColor) var(--app-scrollbar-track, transparent);
   scrollbar-width: thin;
 }
 
@@ -47,25 +22,24 @@ html {
 }
 
 *::-webkit-scrollbar-track {
-  border-radius: 9999px;
-  background: var(--app-scrollbar-track);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--app-scrollbar-track, transparent);
 }
 
 *::-webkit-scrollbar-track:hover {
-  background: var(--app-scrollbar-track-hover);
+  background: var(--app-scrollbar-track-hover, transparent);
 }
 
 *::-webkit-scrollbar-thumb {
   min-height: 2.75rem;
   border: 3px solid transparent;
-  border-radius: 9999px;
-  background: var(--app-scrollbar-thumb);
+  border-radius: var(--radius-full, 9999px);
+  background: var(--app-scrollbar-thumb, currentColor);
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--app-scrollbar-thumb-hover);
-  background-clip: padding-box;
+  background: var(--app-scrollbar-thumb-hover, currentColor);
 }
 
 *::-webkit-scrollbar-corner {
@@ -73,80 +47,11 @@ html {
 }
 
 .kifer-ds {
-  font-family: var(--ks-font-body);
-  color: var(--ks-color-text);
-  background-color: var(--ks-color-bg);
+  font-family: var(--font-sans, var(--ks-font-body));
 }
 
-.kifer-ds .clinic-heading,
-.kifer-ds .marketing-display,
-.kifer-ds .public-display,
-.kifer-ds .ks-display {
-  font-family: var(--ks-font-heading);
-}
-
-.kifer-ds .ks-card {
-  border: 1px solid var(--ks-color-border);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 249, 241, 0.98) 100%);
-  box-shadow: var(--ks-shadow-md);
-}
-
-.kifer-ds .ks-btn-primary,
-.kifer-ds .ks-btn-secondary,
-.kifer-ds .ks-btn-ghost {
-  cursor: pointer;
-  transition: transform 220ms ease, box-shadow 220ms ease, background-color 220ms ease, color 220ms ease;
-}
-
-.kifer-ds .ks-btn-primary {
-  border: 1px solid rgba(161, 98, 7, 0.36);
-  background: linear-gradient(135deg, var(--ks-color-cta) 0%, var(--ks-color-cta-strong) 100%);
-  color: #fff;
-  box-shadow: 0 14px 28px -20px rgba(161, 98, 7, 0.72);
-}
-
-.kifer-ds .ks-btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 18px 36px -20px rgba(161, 98, 7, 0.76);
-}
-
-.kifer-ds .ks-btn-primary:disabled {
-  transform: none;
-  box-shadow: none;
-}
-
-.kifer-ds .ks-btn-secondary {
-  border: 1px solid rgba(161, 98, 7, 0.32);
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--ks-color-primary);
-}
-
-.kifer-ds .ks-btn-secondary:hover {
-  background: rgba(255, 250, 240, 0.94);
-}
-
-.kifer-ds .ks-btn-ghost {
-  color: var(--ks-color-cta-strong);
-}
-
-.kifer-ds .ks-btn-ghost:hover {
-  color: var(--ks-color-primary);
-}
-
-.kifer-ds .ks-input-field {
-  border: 1px solid rgba(161, 98, 7, 0.22);
-  background: #fff;
-  color: var(--ks-color-text);
-  transition: border-color 200ms ease, box-shadow 200ms ease;
-}
-
-.kifer-ds .ks-input-field::placeholder {
-  color: rgba(87, 83, 78, 0.78);
-}
-
-.kifer-ds .ks-input-field:focus {
-  border-color: var(--ks-color-cta);
-  box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.16);
+.painel-theme.kifer-ds .panel-page-shell :is(h1, h2, h3, h4) {
+  font-family: var(--font-display, var(--ks-font-heading));
 }
 
 .kifer-ds
@@ -168,486 +73,39 @@ html {
   min-height: 2.75rem;
 }
 
-.kifer-home-theme,
-.kifer-landing-theme {
-  background:
-    radial-gradient(circle at 8% 0%, rgba(200, 111, 29, 0.16), transparent 34%),
-    radial-gradient(circle at 92% 8%, rgba(107, 86, 69, 0.14), transparent 36%),
-    radial-gradient(circle at 52% 100%, rgba(122, 62, 22, 0.1), transparent 42%),
-    var(--ks-color-bg);
-}
-
-.painel-theme.kifer-ds .panel-page-shell h1,
-.painel-theme.kifer-ds .panel-page-shell h2,
-.painel-theme.kifer-ds .panel-page-shell h3,
-.painel-theme.kifer-ds .panel-page-shell h4 {
-  font-family: var(--ks-font-heading);
-  letter-spacing: -0.012em;
-}
-
-.painel-theme.kifer-ds .text-teal-900,
-.painel-theme.kifer-ds .text-teal-800,
-.painel-theme.kifer-ds .text-teal-700,
-.painel-theme.kifer-ds .text-teal-600,
-.painel-theme.kifer-ds .text-teal-500 {
-  color: #a16207 !important;
-}
-
-.painel-theme.kifer-ds .bg-teal-50 {
-  background-color: rgba(202, 138, 4, 0.1) !important;
-}
-
-.painel-theme.kifer-ds .bg-teal-50\/50,
-.painel-theme.kifer-ds .bg-teal-50\/70 {
-  background-color: rgba(202, 138, 4, 0.14) !important;
-}
-
-.painel-theme.kifer-ds .bg-teal-100 {
-  background-color: rgba(202, 138, 4, 0.18) !important;
-}
-
-.painel-theme.kifer-ds .bg-teal-500,
-.painel-theme.kifer-ds .bg-teal-600 {
-  background-color: #ca8a04 !important;
-  color: #fff !important;
-}
-
-.painel-theme.kifer-ds .bg-teal-700 {
-  background-color: #a16207 !important;
-  color: #fff !important;
-}
-
-.painel-theme.kifer-ds .hover\:bg-teal-50:hover {
-  background-color: rgba(202, 138, 4, 0.16) !important;
-}
-
-.painel-theme.kifer-ds .hover\:bg-teal-600:hover,
-.painel-theme.kifer-ds .hover\:bg-teal-700:hover {
-  background-color: #854d0e !important;
-}
-
-.painel-theme.kifer-ds .hover\:text-teal-700:hover {
-  color: #854d0e !important;
-}
-
-.painel-theme.kifer-ds .border-teal-100,
-.painel-theme.kifer-ds .border-teal-200,
-.painel-theme.kifer-ds .border-teal-300,
-.painel-theme.kifer-ds .border-teal-400,
-.painel-theme.kifer-ds .border-teal-500,
-.painel-theme.kifer-ds .border-teal-600 {
-  border-color: rgba(161, 98, 7, 0.38) !important;
-}
-
-.painel-theme.kifer-ds .ring-teal-500,
-.painel-theme.kifer-ds .ring-teal-200,
-.painel-theme.kifer-ds .focus\:ring-teal-500:focus,
-.painel-theme.kifer-ds .focus\:ring-teal-500\/40:focus,
-.painel-theme.kifer-ds .focus-visible\:ring-teal-500:focus-visible {
-  --tw-ring-color: rgba(202, 138, 4, 0.5) !important;
-}
-
-.painel-theme.kifer-ds .accent-teal-600 {
-  accent-color: #ca8a04;
-}
-
-.painel-theme.kifer-ds .from-teal-600 {
-  --tw-gradient-from: #ca8a04 var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(202 138 4 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
-.painel-theme.kifer-ds .via-teal-600 {
-  --tw-gradient-to: #a16207 var(--tw-gradient-to-position);
-}
-
-.painel-theme.kifer-ds .to-teal-500 {
-  --tw-gradient-to: #d4a017 var(--tw-gradient-to-position);
-}
-
-.kifer-ds .text-orange-700,
-.kifer-ds .hover\:text-orange-700:hover {
-  color: var(--ks-color-cta-strong);
-}
-
-.kifer-ds .text-orange-600 {
-  color: var(--ks-color-cta);
-}
-
-.kifer-ds .text-orange-500,
-.kifer-ds .text-orange-400 {
-  color: #df8b2f;
-}
-
-.kifer-ds .text-orange-300 {
-  color: #d4a017;
-}
-
-.kifer-ds .bg-orange-500 {
-  background-color: #df8b2f;
-}
-
-.kifer-ds .bg-orange-600 {
-  background-color: var(--ks-color-cta);
-}
-
-.kifer-ds .bg-orange-700 {
-  background-color: var(--ks-color-cta-strong);
-}
-
-.kifer-ds .hover\:bg-orange-50:hover,
-.kifer-ds .bg-orange-50 {
-  background-color: rgba(202, 138, 4, 0.08);
-}
-
-.kifer-ds .bg-orange-100 {
-  background-color: rgba(202, 138, 4, 0.14);
-}
-
-.kifer-ds .bg-orange-200 {
-  background-color: rgba(200, 111, 29, 0.2);
-}
-
-.kifer-ds .border-orange-100,
-.kifer-ds .border-orange-200,
-.kifer-ds .border-orange-300 {
-  border-color: rgba(161, 98, 7, 0.26);
-}
-
-.kifer-ds .border-orange-500,
-.kifer-ds .border-orange-600 {
-  border-color: rgba(122, 62, 22, 0.42);
-}
-
-.kifer-ds .from-orange-700 {
-  --tw-gradient-from: #a16207 var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(161 98 7 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
-.kifer-ds .from-orange-600 {
-  --tw-gradient-from: #ca8a04 var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(202 138 4 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
-.kifer-ds .to-orange-500 {
-  --tw-gradient-to: #d4a017 var(--tw-gradient-to-position);
-}
-
-.kifer-ds .to-orange-600,
-.kifer-ds .via-orange-600 {
-  --tw-gradient-to: #b7791f var(--tw-gradient-to-position);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .kifer-ds .ks-btn-primary,
-  .kifer-ds .ks-btn-secondary,
-  .kifer-ds .ks-btn-ghost {
-    transition: none;
-    transform: none;
-  }
-}
-
-@media (max-width: 640px) {
-  .modal-panel {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    border-radius: 0 !important;
-  }
-
-  .modal-panel-content {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-  }
-}
-
 .theme-switching *,
 .theme-switching *::before,
 .theme-switching *::after {
   transition: none !important;
 }
 
-.painel-theme {
-  --panel-bg: #f6f1e8;
-  --panel-surface: #fffdfa;
-  --panel-surface-muted: #f8f2e8;
-  --panel-surface-soft: #efe6d8;
-  --panel-border-subtle: #e4d5c0;
-  --panel-border: #d4c0a7;
-  --panel-border-strong: #9d7f5a;
-  --panel-text: #1c1917;
-  --panel-text-soft: #5b4635;
-  --panel-text-muted: #876f5c;
-  --panel-text-subtle: #ab927b;
-  --panel-input-text: #5b4635;
-  --panel-placeholder: #9f846e;
-  --panel-chart-grid: #e4d5c0;
-  --panel-focus: #c86f1d;
-  --panel-accent-strong: #b85c1f;
-  --panel-accent-soft: #f6e4c7;
-  --panel-accent-warm: #efcf9f;
-  --panel-accent-hover: #e8c089;
-  --panel-accent-border: #d5a25c;
-  --panel-accent-ink: #6f3f16;
-  --panel-accent-ink-strong: #4a2411;
-  --panel-accent-blue-bg: #edf3fb;
-  --panel-accent-blue-bg-strong: #dbe7f7;
-  --panel-accent-blue-text: #31577a;
-  --panel-accent-blue-border: #a8c0d8;
-  --panel-accent-red-bg: #faecea;
-  --panel-accent-red-bg-strong: #f2d0ca;
-  --panel-accent-red-text: #8a3128;
-  --panel-accent-red-border: #d79a8f;
-  --panel-accent-green-bg: #edf6ef;
-  --panel-accent-green-bg-strong: #d6ead8;
-  --panel-accent-green-text: #275c39;
-  --panel-accent-green-border: #95c4a1;
-  --panel-stat-icon-brand: #9f5a21;
-  --panel-stat-icon-earth: #6a5240;
-  --panel-stat-icon-forest: #2f6a42;
-  --panel-stat-icon-plum: #9b5fd1;
-  --panel-stat-icon-copper: #c26c2d;
-  --panel-glass-bg: rgba(255, 253, 250, 0.88);
-  --panel-glass-bg-lite: rgba(255, 253, 250, 0.93);
-  --panel-glass-bg-strong: rgba(255, 253, 250, 0.97);
-  --panel-glass-border: rgba(122, 62, 22, 0.2);
-  --panel-glass-highlight: rgba(255, 255, 255, 0.6);
-  --panel-glass-shadow: 0 22px 48px -38px rgba(42, 24, 12, 0.38), 0 12px 24px -18px rgba(42, 24, 12, 0.18);
-  --panel-glass-shadow-lite: 0 14px 28px -24px rgba(42, 24, 12, 0.2), 0 8px 18px -14px rgba(42, 24, 12, 0.14);
-  --panel-glass-blur: 0px;
-  --panel-glass-saturate: 100%;
-  --panel-aurora-teal: rgba(200, 111, 29, 0.18);
-  --panel-aurora-blue: rgba(107, 86, 69, 0.12);
-  --panel-aurora-orange: rgba(223, 139, 47, 0.14);
-  --app-scrollbar-track: color-mix(in srgb, var(--panel-surface-soft, #efe6d8) 84%, transparent);
-  --app-scrollbar-track-hover: color-mix(in srgb, var(--panel-surface-soft, #efe6d8) 94%, transparent);
-  --app-scrollbar-thumb: linear-gradient(180deg, color-mix(in srgb, var(--panel-accent-strong, #b85c1f) 88%, white) 0%, var(--panel-accent-ink, #6f3f16) 100%);
-  --app-scrollbar-thumb-solid: color-mix(in srgb, var(--panel-accent-strong, #b85c1f) 82%, var(--panel-accent-ink, #6f3f16));
-  --app-scrollbar-thumb-hover: linear-gradient(180deg, color-mix(in srgb, var(--panel-focus, #c86f1d) 92%, white) 0%, color-mix(in srgb, var(--panel-accent-ink-strong, #4a2411) 80%, var(--panel-accent-strong, #b85c1f)) 100%);
-}
-
-.painel-theme.theme-dark {
-  color-scheme: dark;
-  --panel-bg: #120b08;
-  --panel-surface: #1d1410;
-  --panel-surface-muted: #170f0b;
-  --panel-surface-soft: #2a1c15;
-  --panel-surface-soft-2: #35241a;
-  --panel-border-subtle: #2a1c15;
-  --panel-border: #4b3425;
-  --panel-border-strong: #7a573e;
-  --panel-text: #f8efe3;
-  --panel-text-soft: #ead9c6;
-  --panel-text-muted: #ccb49d;
-  --panel-text-subtle: #a98b71;
-  --panel-input-text: #f5f1e8;
-  --panel-placeholder: #c1a48a;
-  --panel-chart-grid: #4b3425;
-  --panel-focus: #df8b2f;
-  --panel-accent-strong: #df8b2f;
-  --panel-accent-soft: #4a2a17;
-  --panel-accent-warm: #5b3317;
-  --panel-accent-hover: #6f3f16;
-  --panel-accent-border: #a96428;
-  --panel-accent-ink: #f4c58f;
-  --panel-accent-ink-strong: #ffe1bc;
-  --panel-accent-teal-bg: #3b2416;
-  --panel-accent-teal-bg-strong: #5b3317;
-  --panel-accent-teal-text: #f4c58f;
-  --panel-accent-teal-border: #a96428;
-  --panel-accent-emerald-bg: #102d1f;
-  --panel-accent-emerald-bg-strong: #14532d;
-  --panel-accent-emerald-text: #6ee7b7;
-  --panel-accent-emerald-border: #166534;
-  --panel-accent-orange-bg: #3a2810;
-  --panel-accent-orange-bg-strong: #7c2d12;
-  --panel-accent-orange-text: #fdba74;
-  --panel-accent-orange-border: #9a3412;
-  --panel-accent-red-bg: #381218;
-  --panel-accent-red-bg-strong: #7f1d1d;
-  --panel-accent-red-text: #fca5a5;
-  --panel-accent-red-border: #991b1b;
-  --panel-stat-icon-brand: #f4c58f;
-  --panel-stat-icon-earth: #ead9c6;
-  --panel-stat-icon-forest: #86efac;
-  --panel-stat-icon-plum: #d7b9f1;
-  --panel-stat-icon-copper: #fdba74;
-  --panel-accent-pink-bg: #3b1328;
-  --panel-accent-pink-bg-strong: #831843;
-  --panel-accent-pink-text: #f9a8d4;
-  --panel-accent-pink-border: #9d174d;
-  --panel-accent-blue-bg: #10233f;
-  --panel-accent-blue-bg-strong: #172554;
-  --panel-accent-blue-text: #93c5fd;
-  --panel-accent-blue-border: #1e3a8a;
-  --panel-accent-amber-bg: #3a2b0d;
-  --panel-accent-amber-bg-strong: #713f12;
-  --panel-accent-amber-text: #fcd34d;
-  --panel-accent-amber-border: #854d0e;
-  --panel-accent-green-bg: #0f2f24;
-  --panel-accent-green-bg-strong: #14532d;
-  --panel-accent-green-text: #86efac;
-  --panel-accent-green-border: #166534;
-  --panel-glass-bg: rgba(18, 15, 11, 0.9);
-  --panel-glass-bg-lite: rgba(18, 15, 11, 0.93);
-  --panel-glass-bg-strong: rgba(18, 15, 11, 0.96);
-  --panel-glass-border: rgba(200, 111, 29, 0.32);
-  --panel-glass-highlight: rgba(255, 230, 199, 0.14);
-  --panel-glass-shadow: 0 22px 50px -38px rgba(5, 3, 2, 0.9), 0 14px 28px -22px rgba(5, 3, 2, 0.7);
-  --panel-glass-shadow-lite: 0 16px 32px -26px rgba(5, 3, 2, 0.76), 0 10px 20px -16px rgba(5, 3, 2, 0.56);
-  --panel-glass-blur: 0px;
-  --panel-glass-saturate: 100%;
-  --panel-aurora-teal: rgba(223, 139, 47, 0.16);
-  --panel-aurora-blue: rgba(171, 146, 123, 0.1);
-  --panel-aurora-orange: rgba(200, 111, 29, 0.14);
-  --app-scrollbar-track: color-mix(in srgb, var(--panel-surface-soft, #2a1c15) 92%, transparent);
-  --app-scrollbar-track-hover: color-mix(in srgb, var(--panel-surface-soft-2, #35241a) 94%, transparent);
-  --app-scrollbar-thumb: linear-gradient(180deg, color-mix(in srgb, var(--panel-focus, #df8b2f) 88%, white) 0%, color-mix(in srgb, var(--panel-accent-border, #a96428) 82%, var(--panel-accent-ink, #f4c58f)) 100%);
-  --app-scrollbar-thumb-solid: color-mix(in srgb, var(--panel-accent-border, #a96428) 78%, var(--panel-accent-ink, #f4c58f));
-  --app-scrollbar-thumb-hover: linear-gradient(180deg, color-mix(in srgb, var(--panel-focus, #df8b2f) 94%, white) 0%, color-mix(in srgb, var(--panel-accent-ink, #f4c58f) 38%, var(--panel-accent-border, #a96428)) 100%);
-}
-
 .painel-theme.kifer-ds,
-.painel-theme.kifer-ds.theme-dark {
-  color-scheme: dark;
-  --panel-bg: var(--bg-canvas);
-  --panel-surface: var(--bg-surface);
-  --panel-surface-muted: var(--bg-inset);
-  --panel-surface-soft: var(--bg-elevated);
-  --panel-surface-soft-2: var(--bg-hover);
-  --panel-border-subtle: var(--border-subtle);
-  --panel-border: var(--border-default);
-  --panel-border-strong: var(--border-strong);
-  --panel-text: var(--text-primary);
-  --panel-text-soft: var(--text-secondary);
-  --panel-text-muted: var(--text-muted);
-  --panel-text-subtle: var(--text-subtle);
-  --panel-input-text: var(--text-primary);
-  --panel-placeholder: var(--text-muted);
-  --panel-chart-grid: var(--border-default);
-  --panel-focus: var(--warning);
-  --panel-accent-strong: var(--brand-primary);
-  --panel-accent-soft: var(--brand-primary-soft);
-  --panel-accent-warm: var(--accent-gold-soft);
-  --panel-accent-hover: var(--brand-primary-hover);
-  --panel-accent-border: var(--brand-primary-border);
-  --panel-accent-ink: var(--accent-gold-hover);
-  --panel-accent-ink-strong: #ffe1bc;
-  --panel-accent-blue-bg: var(--info-soft);
-  --panel-accent-blue-bg-strong: rgba(59, 130, 246, 0.2);
-  --panel-accent-blue-text: var(--info-text);
-  --panel-accent-blue-border: var(--info-border);
-  --panel-accent-red-bg: var(--danger-soft);
-  --panel-accent-red-bg-strong: rgba(239, 68, 68, 0.24);
-  --panel-accent-red-text: var(--danger-text);
-  --panel-accent-red-border: var(--danger-border);
-  --panel-accent-green-bg: var(--success-soft);
-  --panel-accent-green-bg-strong: rgba(34, 197, 94, 0.22);
-  --panel-accent-green-text: var(--success-text);
-  --panel-accent-green-border: var(--success-border);
-  --panel-accent-amber-bg: var(--warning-soft);
-  --panel-accent-amber-bg-strong: rgba(245, 158, 11, 0.22);
-  --panel-accent-amber-text: var(--warning-text);
-  --panel-accent-amber-border: var(--warning-border);
-  --panel-glass-bg: rgba(23, 19, 17, 0.9);
-  --panel-glass-bg-lite: rgba(23, 19, 17, 0.84);
-  --panel-glass-bg-strong: rgba(23, 19, 17, 0.96);
-  --panel-glass-border: rgba(245, 210, 162, 0.12);
-  --panel-glass-highlight: rgba(255, 232, 204, 0.1);
-  --panel-glass-shadow: var(--shadow-popover);
-  --panel-glass-shadow-lite: var(--shadow-card);
-  --panel-aurora-teal: rgba(197, 90, 61, 0.15);
-  --panel-aurora-blue: rgba(212, 175, 55, 0.08);
-  --panel-aurora-orange: rgba(176, 88, 42, 0.14);
-  --app-scrollbar-track: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+.modal-theme-host.painel-theme.kifer-ds {
+  --app-scrollbar-track: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
   --app-scrollbar-track-hover: color-mix(in srgb, var(--bg-hover) 92%, transparent);
   --app-scrollbar-thumb: linear-gradient(180deg, var(--brand-primary-hover) 0%, var(--brand-primary-active) 100%);
   --app-scrollbar-thumb-solid: var(--brand-primary);
   --app-scrollbar-thumb-hover: linear-gradient(180deg, var(--accent-gold-hover) 0%, var(--brand-primary) 100%);
+  --app-surface-glass: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  --app-surface-glass-strong: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  --app-surface-inset: color-mix(in srgb, var(--bg-inset) 84%, var(--bg-surface));
+  --app-surface-selected: color-mix(in srgb, var(--brand-primary-soft) 72%, var(--bg-surface));
+  --app-border-soft: color-mix(in srgb, var(--border-default) 76%, transparent);
+  --app-overlay: var(--overlay);
+  --app-contrast-surface: color-mix(in srgb, var(--brand-primary-active) 72%, var(--bg-inset));
 }
 
-.painel-theme.theme-light .panel-ui-input,
-.painel-theme.theme-light input,
-.painel-theme.theme-light textarea,
-.painel-theme.theme-light select,
-.painel-theme:not(.theme-dark) .panel-ui-input,
-.painel-theme:not(.theme-dark) input,
-.painel-theme:not(.theme-dark) textarea,
-.painel-theme:not(.theme-dark) select {
-  color: var(--panel-input-text);
+.painel-theme.kifer-ds :is(input, textarea, select) {
+  color: var(--text-primary);
 }
 
-.painel-theme.theme-light .panel-ui-input::placeholder,
-.painel-theme.theme-light input::placeholder,
-.painel-theme.theme-light textarea::placeholder,
-.painel-theme:not(.theme-dark) .panel-ui-input::placeholder,
-.painel-theme:not(.theme-dark) input::placeholder,
-.painel-theme:not(.theme-dark) textarea::placeholder {
-  color: var(--panel-placeholder) !important;
+.painel-theme.kifer-ds :is(input, textarea)::placeholder {
+  color: var(--text-muted);
   opacity: 1;
 }
 
-.painel-theme .panel-shell-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 8% 12%, var(--panel-aurora-teal), transparent 42%),
-    radial-gradient(circle at 90% 4%, var(--panel-aurora-blue), transparent 38%),
-    radial-gradient(circle at 54% 100%, var(--panel-aurora-orange), transparent 44%);
-}
-
-.painel-theme .panel-shell-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(42, 24, 12, 0.03) 0%, rgba(42, 24, 12, 0.08) 100%);
-}
-
-.painel-theme.theme-dark .panel-shell-bg::after {
-  background: linear-gradient(180deg, rgba(26, 12, 8, 0.26) 0%, rgba(8, 4, 2, 0.58) 100%);
-}
-
-.painel-theme .panel-aurora {
-  position: absolute;
-  border-radius: 9999px;
-  opacity: 0.48;
-  filter: blur(56px);
-  will-change: transform;
-}
-
-.painel-theme .panel-aurora-primary {
-  top: -22%;
-  left: -16%;
-  width: 40vw;
-  height: 42vw;
-  background: radial-gradient(circle at 35% 30%, var(--panel-aurora-teal), transparent 75%);
-}
-
-.painel-theme .panel-aurora-secondary {
-  top: 8%;
-  right: -16%;
-  width: 36vw;
-  height: 34vw;
-  background: radial-gradient(circle at 40% 32%, var(--panel-aurora-blue), transparent 75%);
-}
-
-.painel-theme .panel-aurora-tertiary {
-  bottom: -28%;
-  left: 28%;
-  width: 38vw;
-  height: 34vw;
-  background: radial-gradient(circle at 50% 42%, var(--panel-aurora-orange), transparent 78%);
-}
-
 .painel-theme .panel-glass-panel,
-.painel-theme .panel-glass-strong,
-.painel-theme .panel-glass-floating {
+.painel-theme .panel-glass-strong {
   border-color: var(--panel-glass-border);
   background: var(--panel-glass-bg);
   box-shadow: var(--panel-glass-shadow);
@@ -659,616 +117,76 @@ html {
   border-color: var(--panel-glass-border);
   background: var(--panel-glass-bg-lite);
   box-shadow: var(--panel-glass-shadow-lite);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .painel-theme .panel-glass-panel:not(.fixed):not(.sticky):not(.absolute),
-.painel-theme .panel-glass-floating:not(.fixed):not(.sticky):not(.absolute),
 .painel-theme .panel-glass-strong:not(.fixed):not(.sticky):not(.absolute) {
   position: relative;
 }
 
-.painel-theme .panel-glass-panel::before,
-.painel-theme .panel-glass-strong::before {
+.painel-theme :is(.panel-glass-panel, .panel-glass-strong)::before {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  pointer-events: none;
   border-top: 1px solid var(--panel-glass-highlight);
   opacity: 0.72;
+  pointer-events: none;
 }
 
 .painel-theme .panel-glass-strong {
   background: var(--panel-glass-bg-strong);
 }
 
-.painel-theme .panel-glass-floating {
-  background: var(--panel-glass-bg-strong);
+.panel-dropdown-scrollbar {
+  scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
+  scrollbar-width: thin;
 }
 
-.painel-theme .panel-interactive-glass {
-  transition: transform 260ms ease, box-shadow 260ms ease;
+.painel-theme .react-flow__controls {
+  border: 1px solid var(--border-default) !important;
+  box-shadow: none !important;
 }
 
-.painel-theme .panel-interactive-glass:hover {
-  box-shadow: 0 34px 70px -44px rgba(42, 24, 12, 0.34), 0 16px 28px -20px rgba(42, 24, 12, 0.22);
+.painel-theme .react-flow__controls-button {
+  border-bottom: 1px solid var(--border-default) !important;
+  background: var(--bg-surface) !important;
 }
 
-.painel-theme.theme-dark .panel-interactive-glass:hover {
-  box-shadow: 0 34px 70px -42px rgba(8, 4, 2, 0.95), 0 18px 30px -22px rgba(8, 4, 2, 0.72);
+.painel-theme .react-flow__controls-button svg,
+.painel-theme .react-flow__edge-text {
+  fill: var(--text-secondary) !important;
 }
 
-.painel-theme .panel-glass-hero {
-  position: relative;
-  border: 1px solid var(--panel-glass-border);
-  overflow: hidden;
+.painel-theme .react-flow__minimap {
+  border: 1px solid var(--border-default) !important;
+  background: var(--bg-surface) !important;
 }
 
-:root[data-motion-profile='eco'] .painel-theme .panel-glass-panel,
-:root[data-motion-profile='eco'] .painel-theme .panel-glass-strong,
-:root[data-motion-profile='eco'] .painel-theme .panel-glass-floating {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+.painel-theme .react-flow__edge-textbg {
+  fill: var(--bg-surface) !important;
 }
 
-:root[data-motion-profile='ultra'] .painel-theme .panel-glass-panel,
-:root[data-motion-profile='ultra'] .painel-theme .panel-glass-strong,
-:root[data-motion-profile='ultra'] .painel-theme .panel-glass-floating {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-:root[data-motion-profile='minimal'] .painel-theme .panel-glass-panel,
-:root[data-motion-profile='minimal'] .painel-theme .panel-glass-strong,
-:root[data-motion-profile='minimal'] .painel-theme .panel-glass-floating,
-:root[data-motion-profile='minimal'] .painel-theme .panel-glass-lite {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.painel-theme.panel-ambient-reduced .panel-aurora {
-  display: none;
-}
-
-.painel-theme .panel-glass-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(130deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0) 45%);
-  pointer-events: none;
-}
-
-@media (max-width: 1024px) {
-  .painel-theme .panel-aurora-primary,
-  .painel-theme .panel-aurora-secondary,
-  .painel-theme .panel-aurora-tertiary {
-    width: 70vw;
-    height: 60vw;
-    filter: blur(72px);
-    opacity: 0.55;
-  }
-}
-
-.modal-theme-host {
-  --panel-glass-bg: rgba(255, 252, 246, 0.92);
-  --panel-glass-bg-lite: rgba(255, 252, 246, 0.96);
-  --panel-glass-bg-strong: rgba(255, 252, 246, 0.98);
-  --panel-glass-border: rgba(161, 98, 7, 0.24);
-  --panel-glass-highlight: rgba(255, 255, 255, 0.72);
-  --panel-glass-shadow: 0 34px 72px -42px rgba(28, 25, 23, 0.52), 0 18px 34px -22px rgba(161, 98, 7, 0.24);
-  --panel-accent-blue-bg: rgba(202, 138, 4, 0.1);
-  --panel-accent-blue-bg-strong: rgba(202, 138, 4, 0.18);
-  --panel-accent-blue-text: #a16207;
-  --panel-accent-blue-border: rgba(161, 98, 7, 0.34);
-}
-
-.modal-theme-host.theme-dark {
-  --panel-glass-bg: rgba(18, 15, 11, 0.92);
-  --panel-glass-bg-lite: rgba(18, 15, 11, 0.95);
-  --panel-glass-bg-strong: rgba(18, 15, 11, 0.97);
-  --panel-glass-border: rgba(161, 98, 7, 0.36);
-  --panel-glass-highlight: rgba(245, 222, 179, 0.16);
-  --panel-glass-shadow: 0 38px 84px -46px rgba(5, 3, 2, 0.92), 0 22px 42px -26px rgba(5, 3, 2, 0.7);
-  --panel-accent-blue-bg: #3a2b0d;
-  --panel-accent-blue-bg-strong: #713f12;
-  --panel-accent-blue-text: #fcd34d;
-  --panel-accent-blue-border: #854d0e;
-}
-
-.modal-theme-host .bg-blue-50,
-.modal-theme-host .bg-sky-50,
-.modal-theme-host .bg-indigo-50 {
-  background-color: rgba(202, 138, 4, 0.08) !important;
-}
-
-.modal-theme-host .bg-blue-100,
-.modal-theme-host .bg-sky-100,
-.modal-theme-host .bg-indigo-100 {
-  background-color: rgba(202, 138, 4, 0.16) !important;
-}
-
-.modal-theme-host .text-blue-900,
-.modal-theme-host .text-blue-800,
-.modal-theme-host .text-blue-700,
-.modal-theme-host .text-blue-600,
-.modal-theme-host .text-blue-500,
-.modal-theme-host .text-sky-900,
-.modal-theme-host .text-sky-800,
-.modal-theme-host .text-sky-700,
-.modal-theme-host .text-sky-600,
-.modal-theme-host .text-sky-500,
-.modal-theme-host .text-indigo-900,
-.modal-theme-host .text-indigo-800,
-.modal-theme-host .text-indigo-700,
-.modal-theme-host .text-indigo-600,
-.modal-theme-host .text-indigo-500 {
-  color: #a16207 !important;
-}
-
-.modal-theme-host .border-blue-200,
-.modal-theme-host .border-blue-300,
-.modal-theme-host .border-blue-400,
-.modal-theme-host .border-blue-500,
-.modal-theme-host .border-sky-200,
-.modal-theme-host .border-sky-300,
-.modal-theme-host .border-indigo-200,
-.modal-theme-host .border-indigo-300,
-.modal-theme-host .ring-blue-200,
-.modal-theme-host .ring-blue-500 {
-  border-color: rgba(161, 98, 7, 0.34) !important;
-}
-
-.modal-theme-host .bg-blue-500,
-.modal-theme-host .bg-blue-600,
-.modal-theme-host .bg-sky-500,
-.modal-theme-host .bg-sky-600,
-.modal-theme-host .bg-indigo-500,
-.modal-theme-host .bg-indigo-600 {
-  background-color: #ca8a04 !important;
-  color: #fff !important;
-}
-
-.modal-theme-host .hover\:bg-blue-500:hover,
-.modal-theme-host .hover\:bg-blue-600:hover,
-.modal-theme-host .hover\:bg-sky-500:hover,
-.modal-theme-host .hover\:bg-sky-600:hover,
-.modal-theme-host .hover\:bg-indigo-500:hover,
-.modal-theme-host .hover\:bg-indigo-600:hover {
-  background-color: #a16207 !important;
-}
-
-.modal-theme-host .hover\:bg-blue-50:hover,
-.modal-theme-host .hover\:bg-blue-100:hover,
-.modal-theme-host .hover\:bg-sky-50:hover,
-.modal-theme-host .hover\:bg-sky-100:hover,
-.modal-theme-host .hover\:bg-indigo-50:hover,
-.modal-theme-host .hover\:bg-indigo-100:hover {
-  background-color: rgba(202, 138, 4, 0.2) !important;
-}
-
-.modal-theme-host .focus\:ring-blue-500:focus,
-.modal-theme-host .focus-visible\:ring-blue-500:focus-visible {
-  --tw-ring-color: rgba(202, 138, 4, 0.44) !important;
-}
-
-.modal-theme-host .ring-blue-200,
-.modal-theme-host .ring-blue-500 {
-  --tw-ring-color: rgba(202, 138, 4, 0.34) !important;
-}
-
-.painel-theme.theme-dark,
-.painel-theme.theme-dark .bg-slate-50 {
-  background-color: var(--panel-bg) !important;
-}
-
-.painel-theme.theme-dark .bg-slate-50\/50 {
-  background-color: var(--panel-surface-soft) !important;
-}
-
-.painel-theme.theme-dark .bg-white {
-  background-color: var(--panel-surface) !important;
-}
-
-.painel-theme.theme-dark .bg-slate-100 {
-  background-color: var(--panel-surface-soft) !important;
-}
-
-.painel-theme.theme-dark .bg-slate-200,
-.painel-theme.theme-dark .bg-gray-100 {
-  background-color: var(--panel-surface-soft-2) !important;
-}
-
-.painel-theme.theme-dark .bg-slate-200\/80 {
-  background-color: rgba(39, 52, 73, 0.9) !important;
-}
-
-.painel-theme.theme-dark .bg-gray-50 {
-  background-color: var(--panel-surface-soft) !important;
-}
-
-.painel-theme.theme-dark .bg-gray-200 {
-  background-color: #334155 !important;
-}
-
-.painel-theme.theme-dark .border-slate-100 {
-  border-color: var(--panel-border-subtle) !important;
-}
-
-.painel-theme.theme-dark .border-slate-200,
-.painel-theme.theme-dark .ring-slate-200 {
-  border-color: var(--panel-border) !important;
-}
-
-.painel-theme.theme-dark .border-slate-300,
-.painel-theme.theme-dark .ring-slate-300 {
-  border-color: var(--panel-border-strong) !important;
-}
-
-.painel-theme.theme-dark .text-slate-900,
-.painel-theme.theme-dark .fill-slate-900 {
-  color: var(--panel-text) !important;
-  fill: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .text-slate-800 {
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .text-slate-700 {
-  color: var(--panel-text-soft) !important;
-}
-
-.painel-theme.theme-dark .message-day-separator {
-  background-color: rgba(39, 52, 73, 0.9) !important;
-  border-color: var(--panel-border-strong) !important;
-  color: var(--panel-text-soft) !important;
-}
-
-.painel-theme.theme-dark .text-slate-600 {
-  color: var(--panel-text-muted) !important;
-}
-
-.painel-theme.theme-dark .text-slate-500,
-.painel-theme.theme-dark .text-slate-400 {
-  color: var(--panel-text-subtle) !important;
-}
-
-.painel-theme.theme-dark .text-gray-900,
-.painel-theme.theme-dark .text-gray-800,
-.painel-theme.theme-dark .text-gray-700 {
-  color: var(--panel-text-soft) !important;
-}
-
-.painel-theme.theme-dark .text-gray-600,
-.painel-theme.theme-dark .text-gray-500,
-.painel-theme.theme-dark .text-gray-400 {
-  color: var(--panel-text-muted) !important;
-}
-
-.painel-theme.theme-dark .border-gray-200,
-.painel-theme.theme-dark .border-gray-300 {
-  border-color: var(--panel-border) !important;
-}
-
-.painel-theme.theme-dark .border-gray-100 {
-  border-color: var(--panel-border-subtle) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-slate-50:hover,
-.painel-theme.theme-dark .hover\:bg-slate-100:hover,
-.painel-theme.theme-dark .hover\:bg-white:hover,
-.painel-theme.theme-dark .hover\:bg-gray-50:hover,
-.painel-theme.theme-dark .hover\:bg-gray-100:hover {
-  background-color: var(--panel-surface-soft) !important;
-}
-
-.painel-theme.theme-dark .bg-white\/95,
-.painel-theme.theme-dark .bg-white\/90,
-.painel-theme.theme-dark .bg-white\/80,
-.painel-theme.theme-dark .bg-white\/50 {
-  background-color: rgba(44, 32, 21, 0.92) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-white\/95:hover,
-.painel-theme.theme-dark .hover\:bg-white\/50:hover,
-.painel-theme.theme-dark .hover\:bg-white\/80:hover,
-.painel-theme.theme-dark .hover\:bg-white\/90:hover {
-  background-color: rgba(63, 45, 28, 0.95) !important;
-}
-
-.modal-theme-host.theme-dark .bg-white\/95,
-.modal-theme-host.theme-dark .bg-white\/90,
-.modal-theme-host.theme-dark .bg-white\/80,
-.modal-theme-host.theme-dark .bg-white\/50 {
-  background-color: rgba(44, 32, 21, 0.92) !important;
-}
-
-.modal-theme-host.theme-dark .hover\:bg-white\/95:hover,
-.modal-theme-host.theme-dark .hover\:bg-white\/90:hover,
-.modal-theme-host.theme-dark .hover\:bg-white\/80:hover,
-.modal-theme-host.theme-dark .hover\:bg-white\/50:hover {
-  background-color: rgba(63, 45, 28, 0.95) !important;
-}
-
-.painel-theme.theme-dark .hover\:text-slate-900:hover,
-.painel-theme.theme-dark .hover\:text-slate-800:hover {
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .hover\:text-gray-700:hover,
-.painel-theme.theme-dark .hover\:text-gray-600:hover {
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .text-white {
-  color: #f8fafc !important;
-}
-
-.painel-theme.theme-dark .ring-gray-200,
-.painel-theme.theme-dark .ring-gray-300,
-.painel-theme.theme-dark .focus\:ring-gray-200:focus,
-.painel-theme.theme-dark .focus\:ring-gray-300:focus {
-  --tw-ring-color: var(--panel-border) !important;
-}
-
-.painel-theme.theme-dark .bg-teal-50 {
-  background-color: var(--panel-accent-teal-bg) !important;
-}
-
-.painel-theme.theme-dark .bg-teal-100 {
-  background-color: var(--panel-accent-teal-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .bg-teal-600,
-.painel-theme.theme-dark .bg-teal-700 {
-  color: #ecfeff !important;
-}
-
-.painel-theme.theme-dark .bg-teal-600 {
-  background-color: #0f766e !important;
-}
-
-.painel-theme.theme-dark .bg-teal-700 {
-  background-color: #115e59 !important;
-}
-
-.painel-theme.theme-dark .text-teal-900,
-.painel-theme.theme-dark .text-teal-800,
-.painel-theme.theme-dark .text-teal-700,
-.painel-theme.theme-dark .text-teal-600 {
-  color: var(--panel-accent-teal-text) !important;
-}
-
-.painel-theme.theme-dark .hover\:text-teal-700:hover {
-  color: var(--panel-accent-teal-text) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-teal-700:hover {
-  background-color: #0d9488 !important;
-  color: #ecfeff !important;
-}
-
-.painel-theme.theme-dark .border-teal-100,
-.painel-theme.theme-dark .border-teal-200 {
-  border-color: var(--panel-accent-teal-border) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-teal-50:hover,
-.painel-theme.theme-dark .hover\:bg-teal-100:hover,
-.painel-theme.theme-dark .hover\:bg-teal-200:hover {
-  background-color: var(--panel-accent-teal-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .bg-emerald-50 {
-  background-color: var(--panel-accent-emerald-bg) !important;
-}
-
-.painel-theme.theme-dark .bg-emerald-100 {
-  background-color: var(--panel-accent-emerald-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .text-emerald-900,
-.painel-theme.theme-dark .text-emerald-800,
-.painel-theme.theme-dark .text-emerald-700,
-.painel-theme.theme-dark .text-emerald-600 {
-  color: var(--panel-accent-emerald-text) !important;
-}
-
-.painel-theme.theme-dark .border-emerald-100,
-.painel-theme.theme-dark .border-emerald-200 {
-  border-color: var(--panel-accent-emerald-border) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-emerald-100:hover,
-.painel-theme.theme-dark .hover\:bg-emerald-200:hover {
-  background-color: var(--panel-accent-emerald-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .bg-orange-50,
-.painel-theme.theme-dark .bg-orange-100 {
-  background-color: var(--panel-accent-orange-bg) !important;
-}
-
-.painel-theme.theme-dark .text-orange-900,
-.painel-theme.theme-dark .text-orange-800,
-.painel-theme.theme-dark .text-orange-700,
-.painel-theme.theme-dark .text-orange-600,
-.painel-theme.theme-dark .text-orange-500 {
-  color: var(--panel-accent-orange-text) !important;
-}
-
-.painel-theme.theme-dark .border-orange-200,
-.painel-theme.theme-dark .border-orange-300 {
-  border-color: var(--panel-accent-orange-border) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-orange-50:hover,
-.painel-theme.theme-dark .hover\:bg-orange-200:hover {
-  background-color: var(--panel-accent-orange-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .bg-red-50,
-.painel-theme.theme-dark .bg-red-100 {
-  background-color: var(--panel-accent-red-bg) !important;
-}
-
-.painel-theme.theme-dark .text-red-800,
-.painel-theme.theme-dark .text-red-700,
-.painel-theme.theme-dark .text-red-600,
-.painel-theme.theme-dark .text-red-500 {
-  color: var(--panel-accent-red-text) !important;
-}
-
-.painel-theme.theme-dark .border-red-200,
-.painel-theme.theme-dark .border-red-300 {
-  border-color: var(--panel-accent-red-border) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-red-50:hover,
-.painel-theme.theme-dark .hover\:bg-red-200:hover {
-  background-color: var(--panel-accent-red-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .bg-pink-50,
-.painel-theme.theme-dark .bg-pink-100 {
-  background-color: var(--panel-accent-pink-bg) !important;
-}
-
-.painel-theme.theme-dark .text-pink-700,
-.painel-theme.theme-dark .text-pink-600,
-.painel-theme.theme-dark .text-pink-500 {
-  color: var(--panel-accent-pink-text) !important;
-}
-
-.painel-theme.theme-dark .border-pink-200 {
-  border-color: var(--panel-accent-pink-border) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-pink-50:hover {
-  background-color: var(--panel-accent-pink-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .bg-blue-100 {
-  background-color: var(--panel-accent-blue-bg) !important;
-}
-
-.painel-theme.theme-dark .bg-blue-50 {
-  background-color: var(--panel-accent-blue-bg) !important;
-}
-
-.painel-theme.theme-dark .text-blue-700,
-.painel-theme.theme-dark .text-blue-600,
-.painel-theme.theme-dark .text-blue-800,
-.painel-theme.theme-dark .text-blue-900 {
-  color: var(--panel-accent-blue-text) !important;
-}
-
-.painel-theme.theme-dark .border-blue-200 {
-  border-color: var(--panel-accent-blue-border) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-blue-50:hover,
-.painel-theme.theme-dark .hover\:bg-blue-100:hover {
-  background-color: var(--panel-accent-blue-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .bg-sky-50,
-.painel-theme.theme-dark .bg-sky-100 {
-  background-color: var(--panel-accent-blue-bg) !important;
-}
-
-.painel-theme.theme-dark .text-sky-900,
-.painel-theme.theme-dark .text-sky-800,
-.painel-theme.theme-dark .text-sky-700,
-.painel-theme.theme-dark .text-sky-600,
-.painel-theme.theme-dark .text-sky-500 {
-  color: var(--panel-accent-blue-text) !important;
-}
-
-.painel-theme.theme-dark .border-sky-200,
-.painel-theme.theme-dark .border-sky-300 {
-  border-color: var(--panel-accent-blue-border) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-sky-50:hover,
-.painel-theme.theme-dark .hover\:bg-sky-100:hover {
-  background-color: var(--panel-accent-blue-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .bg-amber-50,
-.painel-theme.theme-dark .bg-yellow-50 {
-  background-color: var(--panel-accent-amber-bg) !important;
-}
-
-.painel-theme.theme-dark .bg-amber-100,
-.painel-theme.theme-dark .bg-yellow-100 {
-  background-color: var(--panel-accent-amber-bg-strong) !important;
-}
-
-.painel-theme.theme-dark .text-amber-900,
-.painel-theme.theme-dark .text-amber-800,
-.painel-theme.theme-dark .text-amber-700,
-.painel-theme.theme-dark .text-yellow-900,
-.painel-theme.theme-dark .text-yellow-800,
-.painel-theme.theme-dark .text-yellow-700 {
-  color: var(--panel-accent-amber-text) !important;
-}
-
-.painel-theme.theme-dark .border-amber-200,
-.painel-theme.theme-dark .border-yellow-200 {
-  border-color: var(--panel-accent-amber-border) !important;
-}
-
-.painel-theme.theme-dark .bg-green-50,
-.painel-theme.theme-dark .bg-green-100 {
-  background-color: var(--panel-accent-green-bg) !important;
-}
-
-.painel-theme.theme-dark .text-green-900,
-.painel-theme.theme-dark .text-green-800,
-.painel-theme.theme-dark .text-green-700,
-.painel-theme.theme-dark .text-green-600 {
-  color: var(--panel-accent-green-text) !important;
-}
-
-.painel-theme.theme-dark .border-green-200 {
-  border-color: var(--panel-accent-green-border) !important;
-}
-
-.painel-theme.theme-dark .hover\:bg-green-50:hover,
-.painel-theme.theme-dark .hover\:bg-green-100:hover {
-  background-color: var(--panel-accent-green-bg-strong) !important;
-}
-
-.painel-theme .message-bubble-row .message-bubble {
-  transition:
-    transform 180ms ease,
-    box-shadow 200ms ease,
-    border-color 200ms ease,
-    background-color 200ms ease;
+.painel-theme .message-bubble {
+  transition: transform 180ms ease, box-shadow 200ms ease, border-color 200ms ease, background-color 200ms ease;
 }
 
 .painel-theme .message-bubble-outbound {
-  box-shadow: 0 12px 24px -20px rgba(161, 98, 7, 0.42);
+  box-shadow: var(--shadow-button);
 }
 
 .painel-theme .message-bubble-inbound {
-  box-shadow: 0 10px 20px -20px rgba(28, 25, 23, 0.28);
+  box-shadow: var(--shadow-card);
 }
 
-.painel-theme .message-bubble-row:hover .message-bubble,
-.painel-theme .message-bubble-row:focus-within .message-bubble {
+.painel-theme .message-bubble-row:is(:hover, :focus-within) .message-bubble {
   transform: translateY(-1px);
-  box-shadow: 0 18px 30px -24px rgba(28, 25, 23, 0.34);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .painel-theme .message-bubble-search-highlight {
-  animation: messageBubbleSearchPulse 1.6s ease-in-out 2;
-  box-shadow:
-    0 0 0 3px rgba(202, 111, 29, 0.34),
-    0 18px 34px -20px rgba(202, 111, 29, 0.56) !important;
+  animation: message-bubble-search-pulse 1.6s ease-in-out 2;
+  box-shadow: var(--shadow-focus), var(--shadow-card-hover) !important;
 }
 
 .painel-theme .message-bubble-action-trigger {
@@ -1277,12 +195,12 @@ html {
 
 .painel-theme .message-bubble-action-trigger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(202, 138, 4, 0.3);
+  box-shadow: var(--shadow-focus);
 }
 
 .painel-theme .message-bubble-action-menu {
   transform-origin: top right;
-  animation: messageBubbleMenuIn 170ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: message-bubble-menu-in 170ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .painel-theme .message-bubble-emoji-button {
@@ -1290,623 +208,196 @@ html {
 }
 
 .painel-theme .message-bubble-emoji-button:hover {
-  transform: translateY(-1px) scale(1.06);
+  transform: translateY(-1px);
 }
 
-.painel-theme.theme-dark .message-bubble-row:hover .message-bubble,
-.painel-theme.theme-dark .message-bubble-row:focus-within .message-bubble {
-  box-shadow: 0 18px 30px -24px rgba(2, 6, 23, 0.72);
-}
-
-@keyframes messageBubbleMenuIn {
+@keyframes message-bubble-menu-in {
   from {
     opacity: 0;
     transform: translateY(-4px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
-@keyframes messageBubbleSearchPulse {
+@keyframes message-bubble-search-pulse {
   0%,
   100% {
-    box-shadow:
-      0 0 0 3px rgba(202, 111, 29, 0.28),
-      0 18px 34px -20px rgba(202, 111, 29, 0.46);
+    box-shadow: var(--shadow-focus), var(--shadow-card);
   }
 
   50% {
-    box-shadow:
-      0 0 0 6px rgba(202, 111, 29, 0.2),
-      0 22px 40px -18px rgba(202, 111, 29, 0.62);
+    box-shadow: var(--shadow-focus), var(--shadow-card-hover);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .painel-theme .message-bubble-row .message-bubble,
-  .painel-theme .message-bubble-action-trigger,
-  .painel-theme .message-bubble-emoji-button,
-  .painel-theme .message-bubble-action-menu {
-    transition: none !important;
-    animation: none !important;
-    transform: none !important;
-  }
-
-  .comm-emoji-picker-tab,
-  .comm-emoji-picker-item {
-    transition: none !important;
-    transform: none !important;
-  }
-}
-
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound {
-  background-color: var(--panel-accent-amber-bg-strong) !important;
-  color: #fef3c7 !important;
-  border-color: transparent !important;
-}
-
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-inbound {
-  background-color: var(--panel-surface) !important;
-  color: var(--panel-text) !important;
-  border-color: transparent !important;
-}
-
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .text-gray-500,
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .text-gray-600,
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .text-gray-700,
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .text-slate-500,
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .text-slate-600 {
-  color: #fde68a !important;
-}
-
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .bg-gray-100,
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .bg-gray-200,
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .bg-slate-50,
-.painel-theme.theme-dark:not(.comm-terracotta) .message-bubble-outbound .bg-slate-100 {
-  background-color: #4a3418 !important;
-}
-
-.painel-theme.theme-dark .message-bubble-outbound .border-gray-200,
-.painel-theme.theme-dark .message-bubble-outbound .border-slate-200 {
-  border-color: #7c5b2f !important;
-}
-
-.painel-theme.theme-dark .message-bubble-outbound .bg-white\/80,
-.painel-theme.theme-dark .message-bubble-outbound .bg-white {
-  background-color: #4a3418 !important;
-}
-
-.painel-theme.theme-dark .message-bubble-inbound .text-slate-900,
-.painel-theme.theme-dark .message-bubble-inbound .text-slate-800,
-.painel-theme.theme-dark .message-bubble-inbound .text-slate-700,
-.painel-theme.theme-dark .message-bubble-inbound .text-gray-900,
-.painel-theme.theme-dark .message-bubble-inbound .text-gray-800,
-.painel-theme.theme-dark .message-bubble-inbound .text-gray-700 {
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .message-bubble-inbound .text-slate-600,
-.painel-theme.theme-dark .message-bubble-inbound .text-slate-500,
-.painel-theme.theme-dark .message-bubble-inbound .text-gray-600,
-.painel-theme.theme-dark .message-bubble-inbound .text-gray-500 {
-  color: var(--panel-text-muted) !important;
-}
-
-.painel-theme.theme-dark .react-flow__controls {
-  border: 1px solid var(--panel-border) !important;
-  box-shadow: none !important;
-}
-
-.painel-theme.theme-dark .react-flow__controls-button {
-  background: var(--panel-surface) !important;
-  border-bottom: 1px solid var(--panel-border) !important;
-}
-
-.painel-theme.theme-dark .react-flow__controls-button svg {
-  fill: var(--panel-text-soft) !important;
-}
-
-.painel-theme.theme-dark .react-flow__minimap {
-  background: var(--panel-surface) !important;
-  border: 1px solid var(--panel-border) !important;
-}
-
-.painel-theme.theme-dark .react-flow__edge-textbg {
-  fill: var(--panel-surface) !important;
-}
-
-.painel-theme.theme-dark .react-flow__edge-text {
-  fill: var(--panel-text-soft) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button {
-  --tw-ring-offset-color: var(--panel-bg);
-}
-
-.painel-theme.theme-dark .panel-ui-button-primary {
-  background-color: rgba(245, 158, 11, 0.24) !important;
-  border-color: rgba(251, 191, 36, 0.5) !important;
-  color: #fcd34d !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-primary:hover {
-  background-color: rgba(245, 158, 11, 0.36) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-secondary {
-  background-color: rgba(15, 23, 42, 0.5) !important;
-  border-color: var(--panel-border-strong) !important;
-  color: var(--panel-text-soft) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-secondary:hover {
-  background-color: rgba(30, 41, 59, 0.75) !important;
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-ghost,
-.painel-theme.theme-dark .panel-ui-button-icon {
-  color: var(--panel-text-muted) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-info {
-  background-color: rgba(37, 99, 235, 0.24) !important;
-  border-color: rgba(96, 165, 250, 0.5) !important;
-  color: #bfdbfe !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-info:hover {
-  background-color: rgba(37, 99, 235, 0.36) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-success {
-  background-color: rgba(16, 185, 129, 0.22) !important;
-  border-color: rgba(52, 211, 153, 0.45) !important;
-  color: #a7f3d0 !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-success:hover {
-  background-color: rgba(16, 185, 129, 0.34) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-warning {
-  background-color: rgba(245, 158, 11, 0.24) !important;
-  border-color: rgba(251, 191, 36, 0.46) !important;
-  color: #fde68a !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-warning:hover {
-  background-color: rgba(245, 158, 11, 0.36) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-soft {
-  background-color: rgba(245, 158, 11, 0.2) !important;
-  border-color: rgba(251, 191, 36, 0.44) !important;
-  color: #fde68a !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-soft:hover {
-  background-color: rgba(245, 158, 11, 0.32) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-danger {
-  background-color: rgba(239, 68, 68, 0.22) !important;
-  border-color: rgba(248, 113, 113, 0.48) !important;
-  color: #fecaca !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-danger:hover {
-  background-color: rgba(239, 68, 68, 0.34) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-button-ghost:hover,
-.painel-theme.theme-dark .panel-ui-button-icon:hover {
-  background-color: var(--panel-surface-soft) !important;
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-tab {
-  --tw-ring-offset-color: var(--panel-bg);
-}
-
-.painel-theme.theme-dark .panel-ui-tab-underline[aria-selected='false']:hover {
-  background-color: rgba(51, 65, 85, 0.52) !important;
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-tab-pill[aria-selected='false']:hover {
-  background-color: rgba(51, 65, 85, 0.58) !important;
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-tab-panel[aria-selected='false']:hover {
-  background-color: rgba(71, 85, 105, 0.5) !important;
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-tab-pill[aria-selected='true'] {
-  background-color: rgba(245, 158, 11, 0.18) !important;
-  color: #fde68a !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 191, 36, 0.2),
-    0 10px 24px -18px rgba(2, 6, 23, 0.9) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-tab-panel[aria-selected='true'] {
-  background-color: rgba(245, 158, 11, 0.2) !important;
-  color: #fde68a !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 191, 36, 0.22),
-    0 10px 24px -18px rgba(2, 6, 23, 0.9) !important;
-}
-
-.config-transparent-buttons button.bg-white,
-.config-transparent-buttons button.bg-slate-50,
-.config-transparent-buttons button.bg-slate-100 {
-  background-color: rgba(255, 255, 255, 0.52) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(148, 163, 184, 0.34),
-    0 1px 2px rgba(15, 23, 42, 0.06);
-}
-
-.config-transparent-buttons button.bg-white:hover:not(:disabled),
-.config-transparent-buttons button.bg-slate-50:hover:not(:disabled),
-.config-transparent-buttons button.bg-slate-100:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.72) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(148, 163, 184, 0.44),
-    0 1px 2px rgba(15, 23, 42, 0.08);
-}
-
-.config-transparent-buttons button.bg-teal-600,
-.config-transparent-buttons button.bg-teal-700 {
-  background-color: rgba(202, 138, 4, 0.18) !important;
-  color: #854d0e !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(217, 119, 6, 0.66),
-    0 1px 2px rgba(146, 64, 14, 0.2);
-}
-
-.config-transparent-buttons button.bg-teal-600:hover:not(:disabled),
-.config-transparent-buttons button.bg-teal-700:hover:not(:disabled) {
-  background-color: rgba(202, 138, 4, 0.3) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(217, 119, 6, 0.82),
-    0 1px 2px rgba(146, 64, 14, 0.26);
-}
-
-.config-transparent-buttons button.bg-orange-600,
-.config-transparent-buttons button.bg-orange-700 {
-  background-color: rgba(249, 115, 22, 0.2) !important;
-  color: #9a3412 !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 146, 60, 0.76),
-    0 1px 2px rgba(194, 65, 12, 0.18);
-}
-
-.config-transparent-buttons button.bg-orange-600:hover:not(:disabled),
-.config-transparent-buttons button.bg-orange-700:hover:not(:disabled) {
-  background-color: rgba(249, 115, 22, 0.3) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 146, 60, 0.88),
-    0 1px 2px rgba(194, 65, 12, 0.24);
-}
-
-.config-transparent-buttons button.bg-slate-900,
-.config-transparent-buttons button.bg-slate-800 {
-  background-color: rgba(30, 41, 59, 0.16) !important;
-  color: #334155 !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(100, 116, 139, 0.52),
-    0 1px 2px rgba(15, 23, 42, 0.1);
-}
-
-.config-transparent-buttons button.bg-slate-900:hover:not(:disabled),
-.config-transparent-buttons button.bg-slate-800:hover:not(:disabled) {
-  background-color: rgba(30, 41, 59, 0.24) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(100, 116, 139, 0.64),
-    0 1px 2px rgba(15, 23, 42, 0.14);
-}
-
-.painel-theme.theme-dark .config-transparent-buttons button.bg-white,
-.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-50,
-.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-100 {
-  background-color: rgba(15, 23, 42, 0.62) !important;
-  color: #cbd5e1 !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(71, 85, 105, 0.64),
-    0 1px 2px rgba(2, 6, 23, 0.34);
-}
-
-.painel-theme.theme-dark .config-transparent-buttons button.bg-white:hover:not(:disabled),
-.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-50:hover:not(:disabled),
-.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-100:hover:not(:disabled) {
-  background-color: rgba(30, 41, 59, 0.8) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(100, 116, 139, 0.7),
-    0 1px 2px rgba(2, 6, 23, 0.45);
-}
-
-.painel-theme.theme-dark .config-transparent-buttons button.bg-teal-600,
-.painel-theme.theme-dark .config-transparent-buttons button.bg-teal-700 {
-  background-color: rgba(20, 184, 166, 0.24) !important;
-  color: #99f6e4 !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(45, 212, 191, 0.5),
-    0 1px 2px rgba(6, 78, 59, 0.4);
-}
-
-.painel-theme.theme-dark .config-transparent-buttons button.bg-teal-600:hover:not(:disabled),
-.painel-theme.theme-dark .config-transparent-buttons button.bg-teal-700:hover:not(:disabled) {
-  background-color: rgba(20, 184, 166, 0.36) !important;
-}
-
-.painel-theme.theme-dark .config-transparent-buttons button.bg-orange-600,
-.painel-theme.theme-dark .config-transparent-buttons button.bg-orange-700 {
-  background-color: rgba(234, 88, 12, 0.26) !important;
-  color: #fdba74 !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(251, 146, 60, 0.52),
-    0 1px 2px rgba(124, 45, 18, 0.42);
-}
-
-.painel-theme.theme-dark .config-transparent-buttons button.bg-orange-600:hover:not(:disabled),
-.painel-theme.theme-dark .config-transparent-buttons button.bg-orange-700:hover:not(:disabled) {
-  background-color: rgba(234, 88, 12, 0.38) !important;
-}
-
-.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-900,
-.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-800 {
-  background-color: rgba(15, 23, 42, 0.72) !important;
-  color: #e2e8f0 !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(100, 116, 139, 0.72),
-    0 1px 2px rgba(2, 6, 23, 0.42);
-}
-
-.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-900:hover:not(:disabled),
-.painel-theme.theme-dark .config-transparent-buttons button.bg-slate-800:hover:not(:disabled) {
-  background-color: rgba(30, 41, 59, 0.82) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-input {
-  background-color: var(--panel-surface) !important;
-  border-color: var(--panel-border-strong) !important;
-  color: var(--panel-text) !important;
-}
-
-.painel-theme.theme-dark .panel-ui-input::placeholder {
-  color: var(--panel-text-subtle) !important;
-}
-
-.painel-theme.theme-dark input,
-.painel-theme.theme-dark textarea,
-.painel-theme.theme-dark select {
-  background-color: var(--panel-surface);
-  border-color: var(--panel-border-strong);
-  color: var(--panel-text);
-}
-
-.painel-theme.theme-dark input::placeholder,
-.painel-theme.theme-dark textarea::placeholder {
-  color: var(--panel-text-subtle);
-}
-
-.calendar-day {
-  border-color: var(--panel-border-subtle, #e7dac8);
-  background-color: var(--panel-surface, #fffdfa);
-  color: var(--panel-text, #1c1917);
-}
-
-.calendar-day-default:hover {
-  background-color: var(--panel-surface-soft, #efe6d8);
-}
-
-.calendar-day-has-events {
-  background-color: color-mix(in srgb, var(--panel-accent-soft, #f6e4c7) 74%, var(--panel-surface, #fffdfa));
-  border-color: var(--panel-accent-border, #d5a25c);
-  color: var(--panel-accent-ink, #6f3f16);
-}
-
-.calendar-day-has-events:hover {
-  background-color: color-mix(in srgb, var(--panel-accent-soft, #f6e4c7) 90%, var(--panel-surface, #fffdfa));
-}
-
-.calendar-day-today {
-  background-color: color-mix(in srgb, var(--panel-accent-blue-bg, #edf3fb) 82%, var(--panel-surface, #fffdfa));
-  border-color: var(--panel-accent-blue-border, #a8c0d8);
-  color: var(--panel-accent-blue-text, #31577a);
-}
-
-.calendar-day-selected {
-  background-color: var(--panel-accent-hover, #e8c089);
-  border-color: var(--panel-accent-border, #d5a25c);
-  color: var(--panel-accent-ink-strong, #4a2411);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-accent-border, #d5a25c) 46%, transparent) inset;
-}
-
-.painel-theme.theme-dark .reminders-calendar-modal {
-  background-color: var(--panel-surface) !important;
-  border: 1px solid var(--panel-border);
-}
-
-.calendar-weekday {
-  color: var(--panel-text-muted, #876f5c);
-}
-
-.painel-theme.theme-dark .calendar-day-selected {
-  background-color: var(--panel-accent-hover, #6f3f16);
-  border-color: var(--panel-accent-border, #a96428);
-  color: var(--panel-accent-ink-strong, #ffe1bc);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--panel-accent-border, #a96428) 52%, transparent) inset;
+.comm-terracotta {
+  color: var(--text-primary);
+  background: var(--bg-canvas);
 }
 
-.panel-dropdown-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
+.comm-popover,
+.comm-whatsapp-popover,
+.comm-whatsapp-overlay,
+.comm-whatsapp-lead-drawer {
+  border: 1px solid var(--border-default);
+  border-radius: var(--kds-radius-lg);
+  background: var(--surface-strong-bg);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-popover);
 }
 
-.panel-dropdown-dark {
-  color-scheme: dark;
-  background-color: #1b1611;
-  border-color: rgba(161, 98, 7, 0.36);
-  color: #f5f1e8;
+.comm-whatsapp-dialog-body,
+.comm-whatsapp-dialog-footer {
+  border-color: var(--border-subtle);
 }
 
-.comm-popover {
-  border: 1px solid var(--panel-border, #d4c0a7);
-  border-radius: 0.75rem;
-  background: var(--panel-surface, #fffdfa);
-  box-shadow: var(--panel-glass-shadow-lite, 0 16px 32px -26px rgba(42, 24, 12, 0.18));
+.comm-whatsapp-dialog-footer {
+  background: color-mix(in srgb, var(--bg-inset) 72%, transparent);
 }
 
-.comm-popover-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  border-bottom: 1px solid var(--panel-border-subtle, #e7dac8);
-  padding: 0.75rem;
+.comm-campaign-toolbar,
+.comm-campaign-list-item,
+.comm-campaign-metric {
+  border-color: var(--border-default);
+  background: var(--surface-bg);
 }
 
 .comm-emoji-picker {
   --comm-emoji-size: 2.75rem;
   --comm-emoji-gap: 0.375rem;
   --comm-emoji-rows: 4;
-  border-color: rgba(96, 70, 44, 0.82);
-  border-radius: 1.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--kds-radius-xl);
   background:
-    radial-gradient(circle at top, rgba(84, 53, 28, 0.22), transparent 42%),
-    linear-gradient(180deg, rgba(24, 15, 10, 0.98) 0%, rgba(16, 10, 7, 0.99) 100%);
-  box-shadow: 0 28px 60px -32px rgba(0, 0, 0, 0.72);
+    radial-gradient(circle at top, color-mix(in srgb, var(--brand-primary) 18%, transparent), transparent 42%),
+    linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-inset) 100%);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-popover);
 }
 
-.comm-emoji-picker-tabs {
+.comm-emoji-picker-tabs,
+.comm-media-picker-shortcuts {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.875rem 1rem 0.625rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  gap: var(--space-2);
   overflow-x: auto;
+  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-3) var(--space-4) var(--space-2);
   scrollbar-width: none;
 }
 
-.comm-emoji-picker-tabs::-webkit-scrollbar {
+:is(.comm-emoji-picker-tabs, .comm-media-picker-shortcuts)::-webkit-scrollbar {
   display: none;
+}
+
+.comm-emoji-picker-tab,
+.comm-emoji-search-clear,
+.comm-media-picker-modebutton {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  transition: color 180ms ease, background-color 180ms ease;
 }
 
 .comm-emoji-picker-tab {
   position: relative;
-  flex: 0 0 auto;
-  display: inline-flex;
   height: 2.25rem;
   width: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  color: rgba(255, 248, 240, 0.58);
-  transition: color 180ms ease, background-color 180ms ease;
 }
 
-.comm-emoji-picker-tab:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 248, 240, 0.88);
-}
-
-.comm-emoji-picker-tab.is-active {
-  color: #ffffff;
+.comm-emoji-picker-tab:hover,
+.comm-emoji-picker-tab.is-active,
+.comm-media-picker-modebutton:hover,
+.comm-media-picker-modebutton.is-active {
+  background: var(--brand-primary-muted);
+  color: var(--text-primary);
 }
 
 .comm-emoji-picker-tab.is-active::after {
   content: '';
   position: absolute;
-  left: 50%;
   bottom: -0.65rem;
+  left: 50%;
   height: 0.2rem;
   width: 1.5rem;
   transform: translateX(-50%);
-  border-radius: 9999px;
-  background: #f5f5f4;
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
 }
 
 .comm-emoji-search {
   display: flex;
+  min-height: 3.1rem;
   align-items: center;
-  gap: 0.625rem;
-   min-height: 3.1rem;
-   border: 1px solid var(--panel-border-strong, #9d7f5a);
-   border-radius: 1rem;
-   padding: 0 0.5rem 0 0;
-   color: var(--panel-text, #f5f1e8);
-   background: var(--panel-surface, #1d1410);
-   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-   transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  gap: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--kds-radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  box-shadow: var(--control-inset-shadow);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
 }
 
 .comm-emoji-search:focus-within {
-   border-color: var(--panel-focus, #c86f1d);
-   box-shadow: 0 0 0 2px color-mix(in srgb, var(--panel-focus, #c86f1d) 28%, transparent);
+  border-color: var(--control-focus-color);
+  box-shadow: var(--shadow-focus);
 }
 
 .comm-emoji-search-icon {
   flex: 0 0 auto;
-   margin-left: 0.875rem;
-   color: var(--panel-text-subtle, #ab927b);
+  margin-left: var(--space-3);
+  color: var(--text-subtle);
 }
 
 .comm-emoji-search input {
-  flex: 1 1 auto;
-  width: 100%;
   min-width: 0;
-   height: 3rem;
-   border: 0;
-   border-radius: 0;
-   padding: 0 0.75rem 0 0;
-   background: transparent;
-   color: var(--panel-text, #f5f1e8);
-   outline: none;
-   font-size: 0.95rem;
-   box-shadow: none;
+  height: 3rem;
+  flex: 1 1 auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  outline: none;
+  box-shadow: none;
 }
 
 .comm-emoji-search input::placeholder {
-   color: var(--panel-text-subtle, #ab927b);
-}
-
-.comm-emoji-search input:focus {
-   background: transparent;
+  color: var(--text-muted);
 }
 
 .comm-emoji-search-clear {
-   display: inline-flex;
-   flex: 0 0 auto;
-   height: 1.75rem;
+  height: 1.75rem;
   width: 1.75rem;
-   align-items: center;
-   justify-content: center;
-   border-radius: 9999px;
-   margin-right: 0.5rem;
-   color: var(--panel-text-subtle, #ab927b);
-   background: transparent;
-   transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  margin-right: var(--space-2);
 }
 
-.comm-emoji-search-clear:hover {
-   color: var(--panel-text, #f5f1e8);
-   background: color-mix(in srgb, var(--panel-surface-soft, #2a1c15) 88%, transparent);
+.comm-emoji-search-clear:hover,
+.comm-emoji-picker-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
-.comm-emoji-picker-section-title {
-  color: rgba(255, 248, 240, 0.78);
+.comm-emoji-picker-section-title,
+.comm-media-picker-empty-title {
+  color: var(--text-primary);
   font-size: 0.95rem;
   font-weight: 600;
 }
 
+.comm-emoji-picker-section-meta,
+.comm-media-picker-empty-copy {
+  color: var(--text-muted);
+}
+
 .comm-emoji-picker-section-meta {
-  color: rgba(255, 248, 240, 0.46);
   font-size: 0.72rem;
 }
 
@@ -1915,11 +406,15 @@ html {
   scrollbar-color: var(--app-scrollbar-thumb-solid) var(--app-scrollbar-track);
 }
 
-.comm-emoji-picker-empty {
+.comm-emoji-picker-empty,
+.comm-media-picker-empty-state {
   display: flex;
-  min-height: calc(var(--comm-emoji-size) * var(--comm-emoji-rows) + var(--comm-emoji-gap) * (var(--comm-emoji-rows) - 1));
   align-items: center;
   justify-content: center;
+}
+
+.comm-emoji-picker-empty {
+  min-height: calc(var(--comm-emoji-size) * var(--comm-emoji-rows) + var(--comm-emoji-gap) * (var(--comm-emoji-rows) - 1));
 }
 
 .comm-emoji-picker-item {
@@ -1928,85 +423,69 @@ html {
   width: var(--comm-emoji-size);
   align-items: center;
   justify-content: center;
-  border-radius: 0.9rem;
+  border-radius: var(--kds-radius-sm);
   transition: background-color 160ms ease, transform 160ms ease;
 }
 
 .comm-emoji-picker-item:hover {
-  background: rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
 }
 
 .comm-emoji-picker-item:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.34);
+  box-shadow: var(--shadow-focus);
 }
 
 .comm-media-picker {
-  border-radius: 1.6rem;
+  border-radius: var(--kds-radius-xl);
 }
 
-.comm-media-picker-shortcuts {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.875rem 1rem 0.625rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.comm-media-picker-shortcuts::-webkit-scrollbar {
-  display: none;
+.comm-media-picker-shortcut,
+.comm-media-picker-modebar,
+.comm-media-picker-gif-card,
+.comm-media-picker-sticker-card,
+.comm-media-picker-sticker-add,
+.comm-media-picker-empty-state {
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-elevated) 76%, transparent);
 }
 
 .comm-media-picker-shortcut {
   display: inline-flex;
+  min-height: 2rem;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  min-height: 2rem;
-  padding: 0 0.85rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 248, 240, 0.72);
+  border-radius: var(--radius-full);
+  padding: 0 var(--space-3);
+  color: var(--text-secondary);
   font-size: 0.72rem;
   font-weight: 600;
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
 .comm-media-picker-shortcut:hover,
-.comm-media-picker-shortcut.is-active {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.comm-media-picker-shortcut.is-active,
+.comm-media-picker-sticker-card:hover,
+.comm-media-picker-sticker-add:hover {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--text-primary);
 }
 
 .comm-media-picker-empty-state {
-  display: flex;
   min-height: 12rem;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 1.25rem;
-  background: rgba(255, 255, 255, 0.035);
-  padding: 1.25rem;
+  gap: var(--space-2);
+  border-style: dashed;
+  border-radius: var(--kds-radius-lg);
+  padding: var(--space-5);
   text-align: center;
-}
-
-.comm-media-picker-empty-title {
-  color: rgba(255, 248, 240, 0.86);
-  font-size: 0.92rem;
-  font-weight: 600;
 }
 
 .comm-media-picker-empty-copy {
   max-width: 19rem;
-  color: rgba(255, 248, 240, 0.58);
   font-size: 0.78rem;
   line-height: 1.45;
 }
@@ -2016,14 +495,17 @@ html {
 .comm-media-picker-sticker-add {
   position: relative;
   overflow: hidden;
-  border-radius: 1rem;
+  border-radius: var(--kds-radius-md);
   transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 
 .comm-media-picker-gif-card {
   aspect-ratio: 4 / 5;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
+}
+
+.comm-media-picker-sticker-card,
+.comm-media-picker-sticker-add {
+  aspect-ratio: 1;
 }
 
 .comm-media-picker-gif-card:hover,
@@ -2034,36 +516,17 @@ html {
 
 .comm-media-picker-gif-overlay {
   position: absolute;
-  inset: auto 0 0 0;
+  inset: auto 0 0;
   display: flex;
-  align-items: flex-end;
   min-height: 3.75rem;
-  padding: 0.85rem 0.7rem 0.55rem;
-  background: linear-gradient(180deg, rgba(10, 6, 4, 0) 0%, rgba(10, 6, 4, 0.86) 100%);
+  align-items: flex-end;
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  background: linear-gradient(180deg, transparent 0%, var(--app-overlay) 100%);
 }
 
-.comm-media-picker-gif-overlay span {
-  display: -webkit-box;
-  overflow: hidden;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.2;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.comm-media-picker-sticker-card,
+.comm-media-picker-gif-overlay span,
 .comm-media-picker-sticker-add {
-  aspect-ratio: 1;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.comm-media-picker-sticker-card:hover,
-.comm-media-picker-sticker-add:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
 }
 
 .comm-media-picker-sticker-add {
@@ -2073,1946 +536,158 @@ html {
   justify-content: center;
   gap: 0.35rem;
   border-style: dashed;
-  color: rgba(255, 248, 240, 0.72);
-}
-
-.comm-media-picker-sticker-add span {
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.comm-media-picker-sticker-add small {
-  color: rgba(255, 248, 240, 0.46);
-  font-size: 0.68rem;
 }
 
 .comm-media-picker-modebar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   width: min(18rem, calc(100% - 1.5rem));
-  margin: 0.25rem auto 1rem;
-  position: relative;
-  isolation: isolate;
-  flex-shrink: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: var(--space-1) auto var(--space-4);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
-  background: rgba(18, 15, 11, 0.96);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-full);
 }
 
 .comm-media-picker-modebutton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 2.35rem;
-  background: transparent;
-  color: rgba(255, 248, 240, 0.64);
+  border-radius: 0;
   font-size: 0.8rem;
   font-weight: 700;
-  transition: background-color 160ms ease, color 160ms ease;
-}
-
-.comm-media-picker-modebutton:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 248, 240, 0.92);
 }
 
 .comm-media-picker-modebutton + .comm-media-picker-modebutton {
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.comm-media-picker-modebutton.is-active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.comm-title {
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-text {
-  color: var(--panel-text-soft, #5b4635);
-}
-
-.comm-muted {
-  color: var(--panel-text-muted, #876f5c);
-}
-
-.comm-subtle {
-  color: var(--panel-text-subtle, #ab927b);
-}
-
-.comm-accent-text {
-  color: var(--panel-accent-ink, #6f3f16);
-}
-
-.comm-card {
-  border: 1px solid var(--panel-border-subtle, #e7dac8);
-  border-radius: 0.75rem;
-  background: var(--panel-surface-muted, #f7f0e7);
-}
-
-.comm-card-success {
-  border-color: rgba(16, 185, 129, 0.24);
-  background: rgba(236, 253, 245, 0.88);
-}
-
-.comm-card-warning {
-  border-color: rgba(217, 119, 6, 0.24);
-  background: rgba(255, 247, 237, 0.92);
-}
-
-.comm-card-info {
-  border-color: rgba(59, 130, 246, 0.2);
-  background: rgba(239, 246, 255, 0.92);
-}
-
-.comm-card-danger {
-  border-color: rgba(239, 68, 68, 0.24);
-  background: rgba(254, 242, 242, 0.9);
-}
-
-.comm-card-brand {
-  border-color: var(--panel-accent-border, #d5a25c);
-  background: color-mix(in srgb, var(--panel-accent-soft, #f6e4c7) 72%, var(--panel-surface, #fffdfa));
-}
-
-.comm-accordion-header {
-  border: 1px solid var(--panel-border, #d4c0a7);
-  border-radius: 0.75rem;
-  background: color-mix(in srgb, var(--panel-surface, #fffdfa) 72%, var(--panel-surface-soft, #f4ede3));
-  box-shadow: 0 14px 26px -24px rgba(42, 24, 12, 0.28);
-}
-
-.comm-accordion-toggle {
-  border: 1px solid var(--panel-border-strong, #9d7f5a);
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--panel-surface-muted, #f7f0e7) 84%, var(--panel-surface, #fffdfa));
-  color: var(--panel-text-soft, #5b4635);
-}
-
-.comm-accordion-toggle:hover {
-  background: color-mix(in srgb, var(--panel-surface-soft, #f4ede3) 88%, var(--panel-surface, #fffdfa));
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-input,
-.comm-textarea {
-  width: 100%;
-  border: 1px solid var(--panel-border, #d4c0a7);
-  border-radius: 0.5rem;
-  background: var(--panel-surface, #fffdfa);
-  color: var(--panel-text-soft, #5b4635);
-}
-
-.comm-input::placeholder,
-.comm-textarea::placeholder {
-  color: var(--panel-text-subtle, #ab927b);
-}
-
-.comm-input:focus,
-.comm-textarea:focus {
-  outline: none;
-  border-color: transparent;
-  box-shadow: 0 0 0 2px var(--panel-focus, #c86f1d);
-}
-
-.comm-icon-button {
-  border-radius: 0.5rem;
-  color: var(--panel-text-muted, #876f5c);
-  transition: background-color 180ms ease, color 180ms ease;
-}
-
-.comm-icon-button:hover {
-  background: var(--panel-surface-soft, #f4ede3);
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-button-primary,
-.comm-button-secondary,
-.comm-button-link,
-.comm-chip-button {
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
-}
-
-.comm-button-primary {
-  border: 1px solid rgba(122, 62, 22, 0.16);
-  background: linear-gradient(135deg, var(--panel-accent-ink, #6f3f16) 0%, var(--panel-focus, #c86f1d) 100%);
-  color: #fff;
-}
-
-.comm-button-primary:hover {
-  background: linear-gradient(135deg, var(--panel-accent-ink-strong, #4a2411) 0%, var(--panel-accent-ink, #6f3f16) 100%);
-}
-
-.comm-button-secondary {
-  border: 1px solid var(--panel-border, #d4c0a7);
-  background: var(--panel-surface, #fffdfa);
-  color: var(--panel-text-soft, #5b4635);
-}
-
-.comm-button-secondary:hover {
-  background: var(--panel-surface-soft, #f4ede3);
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-button-link {
-  color: var(--panel-accent-ink, #6f3f16);
-}
-
-.comm-button-link:hover {
-  color: var(--panel-accent-ink-strong, #4a2411);
-}
-
-.comm-chip-button {
-  border: 1px solid rgba(122, 62, 22, 0.18);
-  border-radius: 9999px;
-  background: rgba(246, 228, 199, 0.72);
-  color: var(--panel-accent-ink, #6f3f16);
-}
-
-.comm-chip-button:hover {
-  background: rgba(239, 207, 159, 0.84);
-}
-
-.comm-list {
-  border: 1px solid var(--panel-border-subtle, #e7dac8);
-  border-radius: 0.5rem;
-  background: var(--panel-surface, #fffdfa);
-}
-
-.comm-list-item {
-  transition: background-color 160ms ease;
-}
-
-.comm-list-item:hover {
-  background: var(--panel-surface-soft, #f4ede3);
-}
-
-.comm-list-item-active {
-  background: rgba(246, 228, 199, 0.72);
-}
-
-.comm-menu-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.75rem;
-  border-radius: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  color: var(--panel-text-soft, #5b4635);
-  transition: background-color 160ms ease, color 160ms ease;
-}
-
-.comm-menu-item:hover {
-  background: var(--panel-surface-soft, #f4ede3);
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-banner {
-  border-bottom: 1px solid var(--panel-border-subtle, #e7dac8);
-  background: var(--panel-surface-muted, #f7f0e7);
-}
-
-.comm-media-placeholder {
-  background: var(--panel-surface-soft, #f4ede3);
-  color: var(--panel-text-subtle, #ab927b);
-}
-
-.comm-composer-shell {
-  border: 1px solid var(--panel-border, #d4c0a7);
-  border-radius: 0.75rem;
-  background: var(--panel-surface, #fffdfa);
-}
-
-.comm-composer-textarea {
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-composer-textarea::placeholder {
-  color: var(--panel-text-muted, #876f5c);
-}
-
-.comm-action-button {
-  border-radius: 9999px;
-  color: var(--panel-text-muted, #876f5c);
-  transition: background-color 180ms ease, color 180ms ease;
-}
-
-.comm-action-button:hover {
-  background: var(--panel-surface-soft, #f4ede3);
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-attach-item {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  text-align: left;
-  color: var(--panel-text-soft, #5b4635);
-  transition: background-color 160ms ease, color 160ms ease;
-}
-
-.comm-attach-item:hover {
-  background: var(--panel-surface-soft, #f4ede3);
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-icon-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-}
-
-.comm-avatar-shell {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border-radius: 9999px;
-  border: 1px solid var(--panel-border, #d4c0a7);
-  background: color-mix(in srgb, var(--panel-surface-soft, #f4ede3) 72%, var(--panel-surface, #fffdfa));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
-}
-
-.comm-avatar-image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  background: var(--panel-surface-soft, #f4ede3);
-}
-
-.comm-icon-chip-brand {
-  background: color-mix(in srgb, var(--panel-accent-soft, #f6e4c7) 88%, var(--panel-surface, #fffdfa));
-  color: var(--panel-accent-ink, #6f3f16);
-}
-
-.comm-icon-chip-info {
-  background: color-mix(in srgb, var(--panel-accent-blue-bg, #edf3fb) 90%, var(--panel-surface, #fffdfa));
-  color: var(--panel-accent-blue-text, #31577a);
-}
-
-.comm-icon-chip-success {
-  background: color-mix(in srgb, var(--panel-accent-green-bg, #edf6ef) 90%, var(--panel-surface, #fffdfa));
-  color: var(--panel-accent-green-text, #275c39);
-}
-
-.comm-icon-chip-warning {
-  background: color-mix(in srgb, var(--panel-accent-warm, #efcf9f) 86%, var(--panel-surface, #fffdfa));
-  color: var(--panel-accent-ink, #6f3f16);
-}
-
-.painel-theme.theme-dark .comm-avatar-shell {
-  border-color: color-mix(in srgb, var(--panel-border, #4b3425) 82%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft-2, #35241a) 76%, var(--panel-bg, #120b08));
-  box-shadow: inset 0 1px 0 rgba(255, 225, 188, 0.08), 0 10px 22px -18px rgba(5, 3, 2, 0.92);
-}
-
-.painel-theme.theme-dark .comm-avatar-image {
-  background: color-mix(in srgb, var(--panel-surface-soft-2, #35241a) 88%, var(--panel-bg, #120b08));
-}
-
-.painel-theme.theme-dark .comm-icon-chip-brand {
-  background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 92%, var(--panel-surface-soft, #2a1c15));
-  color: var(--panel-accent-ink-strong, #ffe1bc);
-}
-
-.painel-theme.theme-dark .comm-icon-chip-info {
-  background: color-mix(in srgb, var(--panel-accent-blue-bg, #3a2b0d) 92%, var(--panel-surface-soft, #2a1c15));
-  color: var(--panel-accent-blue-text, #fcd34d);
-}
-
-.painel-theme.theme-dark .comm-icon-chip-success {
-  background: color-mix(in srgb, var(--panel-accent-green-bg, #0f2f24) 92%, var(--panel-surface-soft, #2a1c15));
-  color: var(--panel-accent-green-text, #86efac);
-}
-
-.painel-theme.theme-dark .comm-icon-chip-warning {
-  background: color-mix(in srgb, var(--panel-accent-warm, #5b3317) 92%, var(--panel-surface-soft, #2a1c15));
-  color: var(--panel-accent-ink-strong, #ffe1bc);
-}
-
-.painel-theme.theme-dark .comm-accordion-header {
-  border-color: color-mix(in srgb, var(--panel-border, #4b3425) 84%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft-2, #35241a) 78%, var(--panel-surface, #1d1410));
-  box-shadow: inset 0 1px 0 rgba(255, 225, 188, 0.06), 0 16px 28px -24px rgba(5, 3, 2, 0.92);
-}
-
-.painel-theme.theme-dark .comm-accordion-toggle {
-  border-color: color-mix(in srgb, var(--panel-border, #4b3425) 92%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft, #2a1c15) 86%, var(--panel-surface, #1d1410));
-  color: var(--panel-text-soft, #ead9c6);
-}
-
-.painel-theme.theme-dark .comm-accordion-toggle:hover {
-  background: color-mix(in srgb, var(--panel-surface-soft-2, #35241a) 88%, var(--panel-surface, #1d1410));
-  color: var(--panel-text, #f8efe3);
-}
-
-.painel-theme.theme-dark .comm-card-brand {
-  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 88%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 84%, var(--panel-surface-soft, #2a1c15));
-}
-
-.painel-theme.theme-dark .comm-card-success {
-  border-color: color-mix(in srgb, var(--panel-accent-green-border, #95c4a1) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-green-bg, #1f3425) 38%, var(--panel-surface-soft, #2a1c15));
-}
-
-.painel-theme.theme-dark .comm-card-warning {
-  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 82%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 42%, var(--panel-surface-soft, #2a1c15));
-}
-
-.painel-theme.theme-dark .comm-card-info {
-  border-color: color-mix(in srgb, var(--panel-accent-blue-border, #7c9fc1) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-blue-bg, #203248) 34%, var(--panel-surface-soft, #2a1c15));
-}
-
-.painel-theme.theme-dark .comm-card-danger {
-  border-color: color-mix(in srgb, var(--panel-accent-red-border, #b7776a) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-red-bg, #3a1f1a) 32%, var(--panel-surface-soft, #2a1c15));
-}
-
-.comm-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  border: 1px solid transparent;
-  padding: 0.125rem 0.5rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.comm-badge-brand {
-  border-color: var(--panel-accent-border, #d5a25c);
-  background: color-mix(in srgb, var(--panel-accent-soft, #f6e4c7) 78%, var(--panel-surface, #fffdfa));
-  color: var(--panel-accent-ink, #6f3f16);
-}
-
-.comm-badge-channel {
-  border-color: var(--panel-accent-border, #d5a25c);
-  background: color-mix(in srgb, var(--panel-accent-warm, #efcf9f) 74%, var(--panel-surface, #fffdfa));
-  color: var(--panel-accent-ink-strong, #4a2411);
-}
-
-.comm-badge-contract {
-  border-color: var(--panel-accent-border, #d5a25c);
-  background: color-mix(in srgb, var(--panel-accent-soft, #f6e4c7) 84%, var(--panel-surface, #fffdfa));
-  color: var(--panel-accent-ink-strong, #4a2411);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-.comm-badge-neutral {
-  border-color: var(--panel-border, #d4c0a7);
-  background: var(--panel-surface-muted, #f7f0e7);
-  color: var(--panel-text-soft, #5b4635);
-}
-
-.comm-badge-info {
-  border-color: rgba(59, 130, 246, 0.24);
-  background: rgba(219, 234, 254, 0.88);
-  color: #1d4ed8;
-}
-
-.comm-badge-success {
-  border-color: rgba(16, 185, 129, 0.24);
-  background: rgba(220, 252, 231, 0.9);
-  color: #15803d;
-}
-
-.comm-badge-warning {
-  border-color: rgba(217, 119, 6, 0.24);
-  background: rgba(254, 243, 199, 0.9);
-  color: #b45309;
-}
-
-.comm-badge-danger {
-  border-color: rgba(239, 68, 68, 0.24);
-  background: rgba(254, 226, 226, 0.9);
-  color: #b91c1c;
-}
-
-.painel-theme.theme-dark .comm-badge-brand {
-  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 88%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 92%, var(--panel-surface-soft, #2a1c15));
-  color: var(--panel-accent-ink-strong, #ffe1bc);
-}
-
-.painel-theme.theme-dark .comm-badge-channel {
-  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 92%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-warm, #5b3317) 90%, var(--panel-surface-soft-2, #35241a));
-  color: var(--panel-accent-ink-strong, #ffe1bc);
-}
-
-.painel-theme.theme-dark .comm-badge-contract {
-  border-color: color-mix(in srgb, var(--panel-accent-border, #a96428) 92%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft, #4a2a17) 88%, var(--panel-surface-soft-2, #35241a));
-  color: var(--panel-accent-ink-strong, #ffe1bc);
-  box-shadow: inset 0 1px 0 rgba(255, 225, 188, 0.1);
-}
-
-.comm-fab-neutral,
-.comm-fab-primary,
-.comm-fab-danger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease;
-}
-
-.comm-fab-neutral {
-  border: 1px solid var(--panel-border, #d4c0a7);
-  background: var(--panel-surface, #fffdfa);
-  color: var(--panel-text-muted, #876f5c);
-}
-
-.comm-fab-neutral:hover {
-  background: var(--panel-surface-soft, #f4ede3);
-  color: var(--panel-text, #1a120d);
-}
-
-.comm-fab-primary {
-  border: 1px solid rgba(122, 62, 22, 0.16);
-  background: linear-gradient(135deg, var(--panel-accent-ink, #6f3f16) 0%, var(--panel-focus, #c86f1d) 100%);
-  color: #fff;
-}
-
-.comm-fab-primary:hover {
-  background: linear-gradient(135deg, var(--panel-accent-ink-strong, #4a2411) 0%, var(--panel-accent-ink, #6f3f16) 100%);
-}
-
-.comm-fab-danger {
-  border: 1px solid rgba(239, 68, 68, 0.22);
-  background: rgba(254, 226, 226, 0.92);
-  color: #b91c1c;
-}
-
-.comm-fab-danger:hover {
-  background: rgba(254, 202, 202, 0.96);
-}
-
-.comm-recording-pill {
-  border-radius: 9999px;
-  border: 1px solid rgba(239, 68, 68, 0.18);
-  background: rgba(254, 226, 226, 0.88);
-  color: #b91c1c;
-}
-
-.comm-recording-dot {
-  background: #dc2626;
-}
-
-.panel-skeleton {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    130deg,
-    rgba(247, 250, 252, 0.94) 0%,
-    rgba(243, 247, 251, 0.93) 48%,
-    rgba(247, 250, 252, 0.94) 100%
-  );
-  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.26);
-}
-
-.panel-skeleton::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 76%);
-  pointer-events: none;
-}
-
-.panel-skeleton::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: linear-gradient(
-    102deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.3) 48%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  transform: translateX(-115%);
-  animation: panel-skeleton-shimmer 2.15s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes panel-skeleton-shimmer {
-  100% {
-    transform: translateX(115%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .panel-skeleton::after {
-    animation: none;
-    transform: translateX(0);
-    opacity: 0;
-  }
-}
-
-.painel-theme.theme-dark .panel-skeleton {
-  background: linear-gradient(
-    130deg,
-    rgba(38, 47, 61, 0.68) 0%,
-    rgba(44, 54, 70, 0.66) 48%,
-    rgba(38, 47, 61, 0.68) 100%
-  );
-  box-shadow: inset 0 0 0 1px rgba(71, 85, 105, 0.26);
-}
-
-.painel-theme.theme-dark .panel-skeleton::before {
-  background: linear-gradient(180deg, rgba(148, 163, 184, 0.07) 0%, rgba(148, 163, 184, 0) 72%);
-}
-
-.painel-theme.theme-dark .panel-skeleton::after {
-  background: linear-gradient(
-    102deg,
-    rgba(148, 163, 184, 0) 0%,
-    rgba(148, 163, 184, 0.12) 46%,
-    rgba(148, 163, 184, 0) 100%
-  );
-}
-
-.panel-top-loader-track {
-  height: 3px;
-  width: 100%;
-  overflow: hidden;
-  background: rgba(203, 213, 225, 0.5);
-}
-
-.panel-top-loader-bar {
-  height: 100%;
-  width: 38%;
-  background: linear-gradient(90deg, #0d9488 0%, #14b8a6 40%, #2dd4bf 100%);
-  transform: translateX(-120%);
-  animation: panel-top-loader-slide 1.25s ease-in-out infinite;
-}
-
-@keyframes panel-top-loader-slide {
-  100% {
-    transform: translateX(360%);
-  }
-}
-
-.panel-loading-dots {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.panel-loading-dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 9999px;
-  background: #0f766e;
-  opacity: 0.5;
-  animation: panel-loading-dot 1s ease-in-out infinite;
-}
-
-.panel-loading-dots span:nth-child(2) {
-  animation-delay: 0.12s;
-}
-
-.panel-loading-dots span:nth-child(3) {
-  animation-delay: 0.24s;
-}
-
-@keyframes panel-loading-dot {
-  50% {
-    opacity: 1;
-    transform: translateY(-1px);
-  }
-}
-
-.painel-theme.theme-dark .panel-top-loader-track {
-  background: rgba(71, 85, 105, 0.55);
-}
-
-.painel-theme.theme-dark .panel-loading-pill {
-  border-color: rgba(71, 85, 105, 0.66);
-  background: rgba(15, 23, 42, 0.9);
-}
-
-.painel-theme.theme-dark .panel-loading-pill .panel-loading-dots span {
-  background: #5eead4;
-}
-
-.painel-theme.theme-dark .panel-loading-pill .text-sm,
-.painel-theme.theme-dark .panel-loading-pill .text-xs {
-  color: #dbeafe;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .panel-top-loader-bar,
-  .panel-loading-dots span {
-    animation: none;
-  }
-
-  .panel-loading-dots span {
-    opacity: 0.9;
-  }
-}
-
-.public-theme {
-  --public-bg: #f8f4ed;
-  --public-surface: #fffdfa;
-  --public-surface-strong: #f7ede0;
-  --public-line: rgba(122, 62, 22, 0.16);
-  --public-ink: #1c140f;
-  --public-ink-soft: #6b5645;
-  --public-accent: #c86f1d;
-  --public-accent-soft: #f3d8b4;
-  --public-accent-ink: #7a3e16;
-  --public-accent-deep: #5a2d12;
-  font-family: var(--ks-font-body);
-  background:
-    radial-gradient(circle at 12% 0%, rgba(223, 139, 47, 0.22), transparent 30%),
-    radial-gradient(circle at 88% 8%, rgba(171, 146, 123, 0.14), transparent 34%),
-    radial-gradient(circle at 50% 96%, rgba(200, 111, 29, 0.14), transparent 38%),
-    var(--public-bg);
-  color: var(--public-ink);
-}
-
-.public-theme .public-display {
-  font-family: var(--ks-font-heading);
-  letter-spacing: -0.015em;
-}
-
-.public-theme .public-kicker {
-  letter-spacing: 0.2em;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: var(--public-accent-ink);
-}
-
-.public-theme .public-surface-card {
-  border: 1px solid var(--public-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 249, 241, 0.98) 100%);
-  box-shadow: 0 28px 55px -45px rgba(42, 24, 12, 0.36), 0 18px 28px -24px rgba(122, 62, 22, 0.18);
-}
-
-.public-theme .text-slate-900,
-.public-theme .text-slate-800,
-.public-theme .text-gray-900,
-.public-theme .text-gray-800,
-.marketing-theme .text-slate-900,
-.marketing-theme .text-slate-800,
-.clinic-theme .text-slate-900,
-.clinic-theme .text-slate-800 {
-  color: var(--ks-color-text) !important;
-}
-
-.public-theme .text-slate-700,
-.public-theme .text-slate-600,
-.public-theme .text-gray-700,
-.public-theme .text-gray-600,
-.marketing-theme .text-slate-700,
-.marketing-theme .text-slate-600,
-.marketing-theme .text-gray-700,
-.marketing-theme .text-gray-600,
-.clinic-theme .text-slate-700,
-.clinic-theme .text-slate-600,
-.clinic-theme .text-gray-700,
-.clinic-theme .text-gray-600 {
-  color: var(--ks-color-text-soft) !important;
-}
-
-.public-theme .text-slate-500,
-.marketing-theme .text-slate-500,
-.clinic-theme .text-slate-500 {
-  color: #9f846e !important;
-}
-
-.public-theme .bg-slate-50,
-.public-theme .bg-slate-100,
-.public-theme .bg-gray-50,
-.marketing-theme .bg-slate-50,
-.marketing-theme .bg-slate-100,
-.marketing-theme .bg-gray-50,
-.clinic-theme .bg-slate-50,
-.clinic-theme .bg-slate-100,
-.clinic-theme .bg-gray-50 {
-  background-color: var(--ks-color-surface-strong) !important;
-}
-
-.public-theme .border-slate-100,
-.public-theme .border-slate-200,
-.public-theme .border-slate-300,
-.public-theme .border-gray-100,
-.public-theme .border-gray-200,
-.marketing-theme .border-slate-100,
-.marketing-theme .border-slate-200,
-.marketing-theme .border-slate-300,
-.clinic-theme .border-slate-100,
-.clinic-theme .border-slate-200,
-.clinic-theme .border-slate-300 {
-  border-color: var(--ks-color-border) !important;
-}
-
-.public-theme .bg-slate-900,
-.public-theme .bg-slate-800,
-.marketing-theme .bg-slate-900,
-.marketing-theme .bg-slate-800,
-.clinic-theme .bg-slate-900,
-.clinic-theme .bg-slate-800 {
-  background-color: #1c140f !important;
-}
-
-.public-theme .text-cyan-200,
-.public-theme .text-cyan-100,
-.marketing-theme .text-cyan-200,
-.marketing-theme .text-cyan-100,
-.clinic-theme .text-cyan-200,
-.clinic-theme .text-cyan-100 {
-  color: #f3d8b4 !important;
-}
-
-.public-theme .bg-cyan-300\/15,
-.marketing-theme .bg-cyan-300\/15,
-.clinic-theme .bg-cyan-300\/15 {
-  background-color: rgba(200, 111, 29, 0.14) !important;
-}
-
-.public-theme .from-slate-900,
-.marketing-theme .from-slate-900,
-.clinic-theme .from-slate-900 {
-  --tw-gradient-from: #1c140f var(--tw-gradient-from-position);
-  --tw-gradient-to: rgb(28 20 15 / 0) var(--tw-gradient-to-position);
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
-}
-
-.public-theme .via-slate-800,
-.marketing-theme .via-slate-800,
-.clinic-theme .via-slate-800 {
-  --tw-gradient-to: #2a1b13 var(--tw-gradient-to-position);
-}
-
-.public-theme .to-slate-900,
-.marketing-theme .to-slate-900,
-.clinic-theme .to-slate-900 {
-  --tw-gradient-to: #1c140f var(--tw-gradient-to-position);
-}
-
-.public-theme .public-fade-up {
-  opacity: 0;
-  transform: translateY(18px);
-  animation: public-reveal-up 0.72s cubic-bezier(0.2, 0.65, 0.18, 1) forwards;
-}
-
-.public-theme .public-fade-up-delay-1 {
-  animation-delay: 0.1s;
-}
-
-.public-theme .public-fade-up-delay-2 {
-  animation-delay: 0.2s;
-}
-
-.public-theme .public-fade-up-delay-3 {
-  animation-delay: 0.3s;
-}
-
-.public-theme .public-fade-up-delay-4 {
-  animation-delay: 0.4s;
-}
-
-.public-theme .public-orb {
-  animation: public-orb-float 16s ease-in-out infinite alternate;
-}
-
-:root[data-motion-profile='ultra'] .public-theme .public-orb {
-  animation-duration: 22s;
-  opacity: 0.78;
-}
-
-:root[data-motion-profile='ultra'] .public-theme .public-fade-up {
-  animation-duration: 0.48s;
-}
-
-:root[data-motion-profile='minimal'] .public-theme .public-fade-up,
-:root[data-motion-profile='minimal'] .public-theme .public-orb {
-  animation: none;
-  opacity: 1;
-  transform: none;
-}
-
-@keyframes public-reveal-up {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes public-orb-float {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(24px, -18px, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .public-theme .public-fade-up,
-  .public-theme .public-orb {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.marketing-theme {
-  --marketing-bg: #f8f4ed;
-  --marketing-line: rgba(122, 62, 22, 0.16);
-  font-family: var(--ks-font-body);
-  color: #1c1917;
-  background:
-    radial-gradient(circle at 10% 0%, rgba(200, 111, 29, 0.16), transparent 36%),
-    radial-gradient(circle at 92% 10%, rgba(171, 146, 123, 0.14), transparent 34%),
-    radial-gradient(circle at 52% 96%, rgba(91, 70, 53, 0.08), transparent 42%),
-    var(--marketing-bg);
-}
-
-.marketing-theme .marketing-display {
-  font-family: var(--ks-font-heading);
-  letter-spacing: -0.03em;
-}
-
-.marketing-theme h1,
-.marketing-theme h2,
-.marketing-theme h3,
-.marketing-theme h4,
-.marketing-theme h5,
-.marketing-theme h6 {
-  font-family: var(--ks-font-heading);
-  letter-spacing: -0.02em;
-}
-
-.marketing-theme .marketing-surface {
-  border: 1px solid var(--marketing-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 248, 239, 0.94) 100%);
-  box-shadow: 0 28px 58px -46px rgba(42, 24, 12, 0.24), 0 14px 26px -24px rgba(42, 24, 12, 0.14);
-}
-
-.marketing-theme .marketing-chip {
-  border: 1px solid rgba(122, 62, 22, 0.22);
-  background: rgba(246, 228, 199, 0.8);
-  color: #7a3e16;
-}
-
-.marketing-theme .marketing-reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  animation: marketing-rise 0.7s cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
-}
-
-.marketing-theme .marketing-delay-1 {
-  animation-delay: 0.1s;
-}
-
-.marketing-theme .marketing-delay-2 {
-  animation-delay: 0.2s;
-}
-
-.marketing-theme .marketing-glow {
-  animation: marketing-float 16s ease-in-out infinite alternate;
-}
-
-@keyframes marketing-rise {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes marketing-float {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(24px, -16px, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .marketing-theme .marketing-reveal,
-  .marketing-theme .marketing-glow {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.clinic-theme {
-  --clinic-bg: #f8f4ed;
-  --clinic-line: rgba(122, 62, 22, 0.18);
-  --clinic-soft: rgba(255, 247, 236, 0.84);
-  color: #1c1917;
-  font-family: var(--ks-font-body);
-  background:
-    radial-gradient(circle at 7% 0%, rgba(200, 111, 29, 0.18), transparent 34%),
-    radial-gradient(circle at 94% 8%, rgba(171, 146, 123, 0.14), transparent 34%),
-    radial-gradient(circle at 52% 100%, rgba(91, 70, 53, 0.08), transparent 42%),
-    var(--clinic-bg);
-}
-
-.clinic-theme .clinic-heading,
-.clinic-theme h1,
-.clinic-theme h2,
-.clinic-theme h3,
-.clinic-theme h4,
-.clinic-theme h5,
-.clinic-theme h6 {
-  font-family: var(--ks-font-heading);
-  letter-spacing: -0.02em;
-}
-
-.clinic-theme .clinic-card {
-  border: 1px solid var(--clinic-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 248, 239, 0.94) 100%);
-  box-shadow: 0 30px 62px -46px rgba(42, 24, 12, 0.28), 0 16px 26px -24px rgba(122, 62, 22, 0.14);
-}
-
-.clinic-theme .clinic-photo-slot {
-  background:
-    linear-gradient(165deg, rgba(255, 247, 237, 0.9) 0%, rgba(255, 255, 255, 0.95) 68%),
-    var(--clinic-soft);
-}
-
-.clinic-theme .clinic-reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  animation: clinic-rise 0.72s cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
-}
-
-.clinic-theme .clinic-delay-1 {
-  animation-delay: 0.1s;
-}
-
-.clinic-theme .clinic-delay-2 {
-  animation-delay: 0.2s;
-}
-
-.clinic-theme .clinic-glow {
-  animation: clinic-float 18s ease-in-out infinite alternate;
-}
-
-@keyframes clinic-rise {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes clinic-float {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(24px, -18px, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .clinic-theme .clinic-reveal,
-  .clinic-theme .clinic-glow {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.home-v2-theme {
-  --home-v2-bg: #f7f3ec;
-  --home-v2-ink: #18120e;
-  --home-v2-muted: #6a594d;
-  --home-v2-line: rgba(88, 64, 48, 0.14);
-  --home-v2-line-strong: rgba(88, 64, 48, 0.24);
-  --home-v2-accent: #c56b25;
-  --home-v2-accent-deep: #7c3f1b;
-  --home-v2-accent-soft: #f4c995;
-  --home-v2-page-max: 72rem;
-  color: var(--home-v2-ink);
-  font-family: var(--ks-font-body);
-  background:
-    radial-gradient(circle at 0% 0%, rgba(197, 107, 37, 0.11), transparent 28%),
-    radial-gradient(circle at 100% 12%, rgba(88, 64, 48, 0.08), transparent 24%),
-    repeating-linear-gradient(90deg, rgba(124, 63, 27, 0.014) 0, rgba(124, 63, 27, 0.014) 1px, transparent 1px, transparent 128px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0) 18%),
-    var(--home-v2-bg);
-}
-
-.home-v2-theme .home-v2-heading {
-  font-family: var(--ks-font-heading);
-  letter-spacing: -0.045em;
-}
-
-.home-v2-theme .home-v2-card {
-  border: 1px solid var(--home-v2-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(250, 246, 239, 0.98) 100%);
-  box-shadow: 0 24px 48px -42px rgba(32, 23, 19, 0.18), 0 10px 18px -16px rgba(32, 23, 19, 0.08);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.home-v2-theme .home-v2-dark-block {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(160deg, #181310 0%, #0f0c0a 58%, #241912 100%);
-  box-shadow: 0 30px 70px -50px rgba(15, 12, 10, 0.82);
-}
-
-.home-v2-theme .home-v2-accent-block {
-  border: 1px solid var(--home-v2-line-strong);
-  background: linear-gradient(135deg, #fbf2e5 0%, #f0dcc0 100%);
-  box-shadow: 0 30px 70px -52px rgba(124, 63, 27, 0.32);
-}
-
-.home-v2-theme .home-v2-shell::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 28%),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0, rgba(255, 255, 255, 0.04) 1px, transparent 1px, transparent 138px);
-}
-
-.home-v2-theme .home-v2-logo-tile {
-  border: 1px solid var(--home-v2-line);
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.home-v2-theme .home-v2-logo-tile img {
-  opacity: 0.88;
-  filter: grayscale(1) contrast(1.06) brightness(0.48);
-}
-
-.home-v2-theme .home-v2-route-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.home-v2-theme .home-v2-route-card::before {
-  content: '';
-  position: absolute;
-  left: 1.5rem;
-  top: 0;
-  width: 4.5rem;
-  height: 3px;
-  border-radius: 9999px;
-  background: linear-gradient(90deg, var(--home-v2-accent), rgba(244, 201, 149, 0.72));
-}
-
-.home-v2-theme .home-v2-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: var(--home-v2-accent);
-}
-
-.home-v2-theme .home-v2-kicker::before {
-  content: '';
-  width: 2.5rem;
-  height: 1px;
-  flex-shrink: 0;
-  background: linear-gradient(90deg, currentColor, transparent);
-}
-
-.home-v2-theme .home-v2-link {
-  transition: color 180ms ease;
-}
-
-.home-v2-theme .home-v2-link:hover {
-  color: var(--home-v2-ink);
-}
-
-.home-v2-theme .home-v2-button-primary,
-.home-v2-theme .home-v2-button-secondary-dark,
-.home-v2-theme .home-v2-button-secondary-light,
-.home-v2-theme .home-v2-button-cream,
-.home-v2-theme .home-v2-button-outline,
-.home-v2-theme .home-v2-fab {
-  cursor: pointer;
-  transition:
-    transform 200ms ease,
-    background-color 200ms ease,
-    border-color 200ms ease,
-    color 200ms ease,
-    box-shadow 200ms ease;
-}
-
-.home-v2-theme .home-v2-button-primary {
-  border: 1px solid rgba(124, 63, 27, 0.18);
-  background: linear-gradient(135deg, var(--home-v2-accent) 0%, var(--home-v2-accent-deep) 100%);
-  color: #fff;
-  box-shadow: 0 18px 40px -24px rgba(124, 63, 27, 0.7);
-}
-
-.home-v2-theme .home-v2-button-secondary-dark {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
-.home-v2-theme .home-v2-button-secondary-light {
-  border: 1px solid var(--home-v2-line-strong);
-  background: rgba(247, 243, 236, 0.94);
-  color: var(--home-v2-ink);
-}
-
-.home-v2-theme .home-v2-button-cream {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(250, 242, 230, 0.98);
-  color: var(--home-v2-accent-deep);
-}
-
-.home-v2-theme .home-v2-button-outline {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
-}
-
-.home-v2-theme .home-v2-button-primary:hover,
-.home-v2-theme .home-v2-button-secondary-dark:hover,
-.home-v2-theme .home-v2-button-secondary-light:hover,
-.home-v2-theme .home-v2-button-cream:hover,
-.home-v2-theme .home-v2-button-outline:hover,
-.home-v2-theme .home-v2-fab:hover {
-  transform: translateY(-1px);
-}
-
-.home-v2-theme .home-v2-button-secondary-dark:hover,
-.home-v2-theme .home-v2-button-outline:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.home-v2-theme .home-v2-button-secondary-light:hover {
-  border-color: rgba(88, 64, 48, 0.34);
-  background: #fff;
-}
-
-.home-v2-theme .home-v2-button-primary:focus-visible,
-.home-v2-theme .home-v2-button-secondary-dark:focus-visible,
-.home-v2-theme .home-v2-button-secondary-light:focus-visible,
-.home-v2-theme .home-v2-button-cream:focus-visible,
-.home-v2-theme .home-v2-button-outline:focus-visible,
-.home-v2-theme .home-v2-link:focus-visible,
-.home-v2-theme .home-v2-fab:focus-visible,
-.home-v2-theme .home-v2-skip-link:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(197, 107, 37, 0.22);
-}
-
-.home-v2-theme .home-v2-fab {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(135deg, var(--home-v2-accent) 0%, var(--home-v2-accent-deep) 100%);
-}
-
-.home-v2-theme .home-v2-skip-link {
-  position: fixed;
-  left: 1rem;
-  top: 1rem;
-  z-index: 70;
-  transform: translateY(-220%);
-  border-radius: 9999px;
-  border: 1px solid var(--home-v2-line-strong);
-  background: rgba(255, 255, 255, 0.96);
-  padding: 0.7rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--home-v2-ink);
-}
-
-.home-v2-theme .home-v2-skip-link:focus {
-  transform: translateY(0);
-}
-
-.home-v2-theme .home-v2-orb {
-  pointer-events: none;
-  filter: blur(72px);
-  opacity: 0.65;
-  animation: home-v2-drift 18s ease-in-out infinite alternate;
-}
-
-.home-v2-theme .home-v2-orb-primary {
-  background: rgba(197, 107, 37, 0.28);
-}
-
-.home-v2-theme .home-v2-orb-secondary {
-  background: rgba(113, 88, 67, 0.18);
-  animation-duration: 22s;
-}
-
-.home-v2-theme .home-v2-reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  animation: home-v2-rise 0.68s cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
-}
-
-.home-v2-theme .home-v2-delay-1 {
-  animation-delay: 0.1s;
-}
-
-.home-v2-theme .home-v2-delay-2 {
-  animation-delay: 0.2s;
-}
-
-@keyframes home-v2-rise {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes home-v2-drift {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-
-  to {
-    transform: translate3d(22px, -16px, 0);
-  }
-}
-
-@media (max-width: 768px) {
-  .home-v2-theme {
-    background:
-      radial-gradient(circle at 0% 0%, rgba(197, 107, 37, 0.11), transparent 30%),
-      radial-gradient(circle at 100% 10%, rgba(88, 64, 48, 0.08), transparent 24%),
-      var(--home-v2-bg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-v2-theme .home-v2-reveal,
-  .home-v2-theme .home-v2-orb,
-  .home-v2-theme .home-v2-button-primary,
-  .home-v2-theme .home-v2-button-secondary-dark,
-  .home-v2-theme .home-v2-button-secondary-light,
-  .home-v2-theme .home-v2-button-cream,
-  .home-v2-theme .home-v2-button-outline,
-  .home-v2-theme .home-v2-fab {
-    animation: none !important;
-    transition: none !important;
-    transform: none !important;
-    opacity: 1;
-  }
-}
-
-.home-conv-theme {
-  --home-conv-bg: #faf7f2;
-  --home-conv-ink: #171412;
-  --home-conv-muted: #6b5c50;
-  --home-conv-line: rgba(101, 77, 59, 0.14);
-  --home-conv-line-strong: rgba(101, 77, 59, 0.24);
-  --home-conv-accent: #b7632a;
-  --home-conv-accent-deep: #7f401c;
-  --home-conv-accent-soft: #f3c89a;
-  --home-conv-whatsapp: #198754;
-  --home-conv-whatsapp-deep: #12643d;
-  color: var(--home-conv-ink);
-  font-family: var(--ks-font-body);
-  background:
-    radial-gradient(circle at top left, rgba(183, 99, 42, 0.08), transparent 28%),
-    radial-gradient(circle at top right, rgba(23, 20, 18, 0.04), transparent 22%),
-    repeating-linear-gradient(90deg, rgba(127, 64, 28, 0.015) 0, rgba(127, 64, 28, 0.015) 1px, transparent 1px, transparent 132px),
-    var(--home-conv-bg);
-}
-
-.home-conv-theme .home-conv-heading {
-  font-family: var(--ks-font-heading);
-  letter-spacing: -0.045em;
-}
-
-.home-conv-theme .home-conv-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--home-conv-accent);
-}
-
-.home-conv-theme .home-conv-kicker::before {
-  content: '';
-  width: 2.4rem;
-  height: 1px;
-  flex-shrink: 0;
-  background: linear-gradient(90deg, currentColor, transparent);
-}
-
-.home-conv-theme .home-conv-skip-link {
-  position: fixed;
-  left: 1rem;
-  top: 1rem;
-  z-index: 70;
-  transform: translateY(-220%);
-  border-radius: 9999px;
-  border: 1px solid var(--home-conv-line-strong);
-  background: rgba(255, 255, 255, 0.96);
-  padding: 0.7rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--home-conv-ink);
-}
-
-.home-conv-theme .home-conv-skip-link:focus {
-  transform: translateY(0);
-}
-
-.home-conv-theme .home-conv-nav-link,
-.home-conv-theme .home-conv-inline-link,
-.home-conv-theme .home-conv-contact-link {
-  transition: color 180ms ease, opacity 180ms ease;
-}
-
-.home-conv-theme .home-conv-nav-link:hover,
-.home-conv-theme .home-conv-inline-link:hover,
-.home-conv-theme .home-conv-contact-link:hover {
-  color: var(--home-conv-ink);
-}
-
-.home-conv-theme .home-conv-header-cta,
-.home-conv-theme .home-conv-whatsapp-cta,
-.home-conv-theme .home-conv-secondary-cta,
-.home-conv-theme .home-conv-form-submit,
-.home-conv-theme .home-conv-floating-whatsapp {
-  cursor: pointer;
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease,
-    border-color 180ms ease,
-    background-color 180ms ease,
-    color 180ms ease;
-}
-
-.home-conv-theme .home-conv-header-cta,
-.home-conv-theme .home-conv-whatsapp-cta,
-.home-conv-theme .home-conv-floating-whatsapp {
-  border: 1px solid rgba(25, 135, 84, 0.18);
-  background: linear-gradient(135deg, var(--home-conv-whatsapp) 0%, var(--home-conv-whatsapp-deep) 100%);
-  color: #fff;
-  box-shadow: 0 18px 38px -24px rgba(18, 100, 61, 0.58);
-}
-
-.home-conv-theme .home-conv-header-cta {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  padding: 0.8rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.home-conv-theme .home-conv-secondary-cta {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-
-.home-conv-theme .home-conv-form-submit {
-  border: 1px solid rgba(183, 99, 42, 0.18);
-  background: linear-gradient(135deg, var(--home-conv-accent) 0%, var(--home-conv-accent-deep) 100%);
-  color: #fff;
-  box-shadow: 0 18px 34px -24px rgba(127, 64, 28, 0.45);
-}
-
-.home-conv-theme .home-conv-header-cta:hover,
-.home-conv-theme .home-conv-whatsapp-cta:hover,
-.home-conv-theme .home-conv-secondary-cta:hover,
-.home-conv-theme .home-conv-form-submit:hover,
-.home-conv-theme .home-conv-floating-whatsapp:hover {
-  transform: translateY(-1px);
-}
-
-.home-conv-theme .home-conv-hero-card {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(160deg, #1d1714 0%, #110d0a 56%, #241912 100%);
-  box-shadow: 0 40px 90px -60px rgba(17, 13, 10, 0.92);
-}
-
-.home-conv-theme .home-conv-hero-band {
-  border-top: none;
-  border-right: none;
-  border-left: none;
-  border-radius: 0;
-}
-
-.home-conv-theme .home-conv-hero-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at top right, rgba(243, 200, 154, 0.11), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0) 26%);
-}
-
-.home-conv-theme .home-conv-trust-pill {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.home-conv-theme .home-conv-surface-card {
-  border: 1px solid var(--home-conv-line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(250, 246, 239, 0.98) 100%);
-  box-shadow: 0 24px 48px -40px rgba(26, 22, 18, 0.14), 0 8px 16px -14px rgba(26, 22, 18, 0.06);
-}
-
-.home-conv-theme .home-conv-marquee {
-  overflow: hidden;
-  mask-image: linear-gradient(90deg, transparent 0, black 8%, black 92%, transparent 100%);
-}
-
-.home-conv-theme .home-conv-marquee-track {
-  display: flex;
-  width: max-content;
-  gap: 1rem;
-  animation: home-conv-marquee 28s linear infinite;
-}
-
-.home-conv-theme .home-conv-logo-card {
-  display: inline-flex;
-  min-width: 10rem;
-  align-items: center;
-  justify-content: center;
-  padding: 0.85rem 1rem;
-}
-
-.home-conv-theme .home-conv-logo-card img {
-  opacity: 0.88;
-  filter: grayscale(1) contrast(1.05) brightness(0.52);
-  transition: filter 180ms ease, opacity 180ms ease, transform 180ms ease;
-}
-
-.home-conv-theme .home-conv-logo-card:hover img {
-  opacity: 1;
-  filter: none;
-  transform: translateY(-1px);
-}
-
-.home-conv-theme .home-conv-logo-text {
-  color: #6b5c50;
-  transition: color 180ms ease, transform 180ms ease;
-}
-
-.home-conv-theme .home-conv-logo-card:hover .home-conv-logo-text {
-  color: #00995d;
-  transform: translateY(-1px);
-}
-
-.home-conv-theme .home-conv-footer-card {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(160deg, #1c1511 0%, #120d0a 54%, #241912 100%);
-  box-shadow: 0 34px 74px -54px rgba(18, 13, 10, 0.92);
-}
-
-.home-conv-theme .home-conv-form-panel {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 243, 236, 0.98) 100%);
-}
-
-.home-conv-theme .home-conv-field-group {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.home-conv-theme .home-conv-field-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--home-conv-muted);
-}
-
-.home-conv-theme .home-conv-field {
-  width: 100%;
-  border-radius: 1rem;
-  border: 1px solid var(--home-conv-line-strong);
-  background: #fff;
-  padding: 0.95rem 1rem;
-  font-size: 0.95rem;
-  color: var(--home-conv-ink);
-}
-
-.home-conv-theme .home-conv-field:focus {
-  outline: none;
-  border-color: rgba(183, 99, 42, 0.48);
-  box-shadow: 0 0 0 3px rgba(183, 99, 42, 0.14);
-}
-
-.home-conv-theme .home-conv-inline-link {
-  color: var(--home-conv-accent);
-}
-
-.home-conv-theme .home-conv-floating-whatsapp {
-  background: linear-gradient(135deg, var(--home-conv-whatsapp) 0%, var(--home-conv-whatsapp-deep) 100%);
-}
-
-@keyframes home-conv-marquee {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(calc(-50% - 0.5rem));
-  }
-}
-
-@media (max-width: 768px) {
-  .home-conv-theme {
-    background:
-      radial-gradient(circle at top left, rgba(183, 99, 42, 0.08), transparent 28%),
-      var(--home-conv-bg);
-  }
-
-  .home-conv-theme .home-conv-logo-card {
-    min-width: 8.5rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-conv-theme .home-conv-header-cta,
-  .home-conv-theme .home-conv-whatsapp-cta,
-  .home-conv-theme .home-conv-secondary-cta,
-  .home-conv-theme .home-conv-form-submit,
-  .home-conv-theme .home-conv-floating-whatsapp,
-  .home-conv-theme .home-conv-marquee-track,
-  .home-conv-theme .home-conv-faq-card button svg {
-    transition: none !important;
-    animation: none !important;
-    transform: none !important;
-  }
+  border-left: 1px solid var(--border-subtle);
 }
 
 .painel-theme .whatsapp-inbox-shell {
-  font-family: var(--ks-font-body);
+  font-family: var(--font-sans);
   background:
-    radial-gradient(circle at top left, rgba(200, 111, 29, 0.08), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(122, 62, 22, 0.06), transparent 28%);
+    radial-gradient(circle at top left, color-mix(in srgb, var(--brand-primary) 10%, transparent), transparent 26%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--accent-gold) 8%, transparent), transparent 28%);
 }
 
 .painel-theme .whatsapp-inbox-shell :is(button, input, textarea, select, option) {
   font-family: inherit;
 }
 
-.painel-theme .whatsapp-inbox-shell .whatsapp-inbox-heading {
-  font-family: var(--ks-font-heading);
+.painel-theme .whatsapp-inbox-heading {
+  font-family: var(--font-display);
   letter-spacing: -0.02em;
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-shell {
-  background:
-    radial-gradient(circle at top left, rgba(223, 139, 47, 0.08), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(74, 36, 23, 0.24), transparent 30%);
-}
-
 .painel-theme .whatsapp-inbox-panel {
-  border-color: var(--panel-border-subtle);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface) 96%, white 4%) 0%,
-    var(--panel-surface) 100%
-  );
-  box-shadow:
-    0 24px 40px -34px rgba(42, 24, 12, 0.24),
-    0 12px 22px -18px rgba(42, 24, 12, 0.12);
+  border-color: var(--border-subtle);
+  background: var(--surface-bg);
+  box-shadow: var(--shadow-card);
 }
 
 .painel-theme .whatsapp-inbox-status-banner {
-  box-shadow: 0 16px 28px -24px rgba(42, 24, 12, 0.22);
+  box-shadow: var(--shadow-card);
 }
 
 .painel-theme .whatsapp-inbox-status-banner-info {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 62%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 62%, var(--panel-surface) 38%);
-  color: var(--panel-accent-ink-strong);
+  border-color: var(--info-border);
+  background: var(--info-soft);
+  color: var(--info-text);
 }
 
 .painel-theme .whatsapp-inbox-status-banner-warning {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 76%, transparent);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--panel-accent-soft) 84%, var(--panel-surface) 16%) 0%,
-    color-mix(in srgb, var(--panel-accent-warm) 68%, var(--panel-surface) 32%) 100%
-  );
-  color: var(--panel-accent-ink-strong);
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--warning-text);
 }
 
 .painel-theme .whatsapp-inbox-status-banner-danger {
-  border-color: color-mix(in srgb, var(--panel-accent-red-border) 82%, transparent);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--panel-accent-red-bg) 84%, var(--panel-surface) 16%) 0%,
-    color-mix(in srgb, var(--panel-accent-red-bg-strong) 66%, var(--panel-surface) 34%) 100%
-  );
-  color: var(--panel-accent-red-text);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-status-banner {
-  box-shadow: 0 20px 34px -28px rgba(0, 0, 0, 0.52);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-status-banner-info {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 66%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 74%, var(--panel-surface) 26%);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-status-banner-warning {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 76%, transparent);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--panel-accent-soft) 80%, var(--panel-surface) 20%) 0%,
-    color-mix(in srgb, var(--panel-accent-warm) 58%, var(--panel-surface-soft) 42%) 100%
-  );
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-status-banner-danger {
-  border-color: color-mix(in srgb, var(--panel-accent-red-border) 76%, transparent);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--panel-accent-red-bg) 82%, var(--panel-surface) 18%) 0%,
-    color-mix(in srgb, var(--panel-accent-red-bg-strong) 58%, var(--panel-surface-soft) 42%) 100%
-  );
-  color: #ffd5cf;
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
 }
 
 .painel-theme .whatsapp-inbox-status-pill {
   display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  justify-content: center;
   min-height: 1.9rem;
-  border-radius: 9999px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
   border: 1px solid transparent;
-  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-full);
+  padding: 0.3rem var(--space-3);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
 
 .painel-theme .whatsapp-inbox-status-pill-dot {
-  width: 0.45rem;
   height: 0.45rem;
-  border-radius: 9999px;
+  width: 0.45rem;
+  border-radius: var(--radius-full);
   background: currentColor;
   opacity: 0.9;
 }
 
 .painel-theme .whatsapp-inbox-status-pill-success {
-  border-color: color-mix(in srgb, var(--panel-accent-green-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-green-bg) 68%, var(--panel-surface) 32%);
-  color: var(--panel-accent-green-text);
+  border-color: var(--success-border);
+  background: var(--success-soft);
+  color: var(--success-text);
 }
 
 .painel-theme .whatsapp-inbox-status-pill-warning {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 58%, var(--panel-surface) 42%);
-  color: var(--panel-accent-ink-strong);
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+  color: var(--warning-text);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-status-pill-success {
-  border-color: color-mix(in srgb, var(--panel-accent-emerald-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-emerald-bg) 74%, var(--panel-surface) 26%);
-  color: var(--panel-accent-emerald-text);
+.painel-theme :is(.whatsapp-inbox-sidebar-header, .whatsapp-inbox-thread-header, .whatsapp-inbox-composer-area) {
+  border-color: var(--border-subtle);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-status-pill-warning {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 60%, var(--panel-surface) 40%);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-panel {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface) 88%, black 12%) 0%,
-    var(--panel-surface) 100%
-  );
-  box-shadow:
-    0 28px 52px -42px rgba(0, 0, 0, 0.72),
-    0 14px 24px -22px rgba(0, 0, 0, 0.38);
-}
-
-.painel-theme .whatsapp-inbox-sidebar-header,
-.painel-theme .whatsapp-inbox-thread-header,
+.painel-theme .whatsapp-inbox-sidebar-scroll,
 .painel-theme .whatsapp-inbox-composer-area {
-  border-color: var(--panel-border-subtle);
+  background: linear-gradient(180deg, var(--app-surface-inset) 0%, var(--bg-surface) 100%);
 }
 
-.painel-theme .whatsapp-inbox-sidebar-scroll {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-muted) 64%, var(--panel-surface) 36%) 0%,
-    var(--panel-surface) 100%
-  );
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-sidebar-scroll {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft) 78%, var(--panel-surface) 22%) 0%,
-    var(--panel-surface) 100%
-  );
-}
-
-.painel-theme .whatsapp-inbox-search-input {
-  background: color-mix(in srgb, var(--panel-surface) 94%, white 6%);
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-}
-
+.painel-theme .whatsapp-inbox-search-input,
 .painel-theme .whatsapp-inbox-empty-state {
-  border-color: color-mix(in srgb, var(--panel-border) 74%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-muted) 72%, var(--panel-surface) 28%);
+  border-color: var(--app-border-soft);
+  background: var(--app-surface-inset);
 }
 
-.painel-theme .whatsapp-inbox-empty-icon {
-  color: var(--panel-text-subtle);
+.painel-theme .whatsapp-inbox-empty-icon,
+.painel-theme :is(.whatsapp-inbox-chat-meta, .whatsapp-inbox-message-meta) {
+  color: var(--text-subtle);
 }
 
 .painel-theme .whatsapp-inbox-chat-card {
   border-color: transparent;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-muted) 72%, var(--panel-surface) 28%) 0%,
-    color-mix(in srgb, var(--panel-surface) 92%, transparent) 100%
-  );
-  box-shadow: 0 10px 20px -24px rgba(42, 24, 12, 0.2);
+  background: linear-gradient(180deg, var(--app-surface-inset) 0%, var(--bg-surface) 100%);
+  box-shadow: var(--shadow-card);
 }
 
 .painel-theme .whatsapp-inbox-chat-card:hover {
-  border-color: var(--panel-border-subtle);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface) 96%, white 4%) 0%,
-    var(--panel-surface) 100%
-  );
+  border-color: var(--border-subtle);
+  background: var(--bg-elevated);
 }
 
 .painel-theme .whatsapp-inbox-chat-card.is-active {
-  border-color: var(--panel-accent-border);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--panel-accent-soft) 78%, var(--panel-surface) 22%) 0%,
-    color-mix(in srgb, var(--panel-accent-soft) 46%, var(--panel-surface) 54%) 100%
-  );
-  box-shadow:
-    0 18px 30px -24px rgba(161, 98, 7, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-chat-card {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft) 82%, var(--panel-surface) 18%) 0%,
-    var(--panel-surface) 100%
-  );
-  box-shadow: 0 12px 24px -24px rgba(0, 0, 0, 0.36);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-chat-card:hover {
-  border-color: var(--panel-border);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft-2) 76%, var(--panel-surface) 24%) 0%,
-    var(--panel-surface) 100%
-  );
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-chat-card.is-active {
-  border-color: var(--panel-accent-border);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--panel-accent-soft) 72%, var(--panel-surface) 28%) 0%,
-    color-mix(in srgb, var(--panel-accent-warm) 44%, var(--panel-surface) 56%) 100%
-  );
-  box-shadow:
-    0 20px 34px -28px rgba(223, 139, 47, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.painel-theme .whatsapp-inbox-chat-meta,
-.painel-theme .whatsapp-inbox-message-meta {
-  color: var(--panel-text-subtle);
+  border-color: var(--brand-primary-border);
+  background: var(--app-surface-selected);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .painel-theme .whatsapp-inbox-unread-badge {
-  background: var(--panel-accent-strong);
-  color: #fffaf2;
-  box-shadow: 0 10px 18px -14px rgba(161, 98, 7, 0.56);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-unread-badge {
-  color: #2a1708;
-  box-shadow: 0 10px 18px -14px rgba(223, 139, 47, 0.42);
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-button);
 }
 
 .painel-theme .whatsapp-inbox-thread-header {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface) 92%, white 8%) 0%,
-    color-mix(in srgb, var(--panel-surface-muted) 24%, var(--panel-surface) 76%) 100%
-  );
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-thread-header {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft) 44%, var(--panel-surface) 56%) 0%,
-    var(--panel-surface) 100%
-  );
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--app-surface-inset) 100%);
 }
 
 .painel-theme .whatsapp-inbox-messages {
   background:
-    radial-gradient(circle at top right, rgba(200, 111, 29, 0.06), transparent 24%),
-    radial-gradient(circle at bottom left, rgba(161, 98, 7, 0.04), transparent 28%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--panel-bg) 26%, var(--panel-surface) 74%) 0%,
-      var(--panel-surface) 100%
-    );
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-messages {
-  background:
-    radial-gradient(circle at top right, rgba(223, 139, 47, 0.07), transparent 22%),
-    radial-gradient(circle at bottom left, rgba(74, 36, 23, 0.24), transparent 28%),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--panel-surface-muted) 58%, #0b0806 42%) 0%,
-      var(--panel-surface) 100%
-    );
+    radial-gradient(circle at top right, color-mix(in srgb, var(--brand-primary) 8%, transparent), transparent 24%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--accent-gold) 6%, transparent), transparent 28%),
+    linear-gradient(180deg, var(--app-surface-inset) 0%, var(--bg-surface) 100%);
 }
 
 .painel-theme .whatsapp-inbox-thread .message-bubble {
@@ -4020,375 +695,212 @@ html {
 }
 
 .painel-theme .whatsapp-inbox-thread .message-bubble-inbound {
-  background: color-mix(in srgb, var(--panel-surface) 96%, white 4%);
-  border-color: var(--panel-border-subtle);
-  color: var(--panel-text);
+  border-color: var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }
 
 .painel-theme .whatsapp-inbox-thread .message-bubble-outbound {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--panel-accent-soft) 78%, white 22%) 0%,
-    color-mix(in srgb, var(--panel-accent-soft) 62%, var(--panel-accent-warm) 38%) 100%
-  );
-  border-color: color-mix(in srgb, var(--panel-accent-border) 74%, transparent);
-  color: var(--panel-accent-ink-strong);
+  border-color: var(--brand-primary-border);
+  background: linear-gradient(135deg, var(--brand-primary-soft) 0%, var(--accent-gold-soft) 100%);
+  color: var(--text-primary);
 }
 
 .painel-theme .whatsapp-inbox-thread .message-bubble-system {
-  background: color-mix(in srgb, var(--panel-surface-soft) 74%, var(--panel-surface) 26%);
-  border-color: var(--panel-border-subtle);
-  color: var(--panel-text-soft);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-thread .message-bubble-inbound {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft) 74%, var(--panel-surface) 26%) 0%,
-    var(--panel-surface) 100%
-  );
-  border-color: var(--panel-border);
-  color: var(--panel-text);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-thread .message-bubble-outbound {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--panel-accent-soft) 76%, var(--panel-surface) 24%) 0%,
-    color-mix(in srgb, var(--panel-accent-warm) 44%, var(--panel-surface-soft) 56%) 100%
-  );
-  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-thread .message-bubble-system {
-  background: color-mix(in srgb, var(--panel-surface-soft-2) 74%, var(--panel-surface) 26%);
-  border-color: var(--panel-border);
-  color: var(--panel-text-soft);
+  border-color: var(--border-subtle);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .painel-theme .whatsapp-inbox-thread .message-bubble-outbound .whatsapp-inbox-message-meta {
-  color: color-mix(in srgb, var(--panel-accent-ink) 74%, var(--panel-text-muted) 26%);
+  color: color-mix(in srgb, var(--brand-primary) 68%, var(--text-muted));
 }
 
-.painel-theme .whatsapp-inbox-image-card {
-  border-color: color-mix(in srgb, var(--panel-border) 56%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 92%, rgba(255, 255, 255, 0.08) 8%);
+.painel-theme :is(.whatsapp-inbox-image-card, .whatsapp-inbox-document-card, .whatsapp-inbox-audio-card) {
+  border-color: var(--app-border-soft);
+  background: var(--app-surface-glass);
 }
 
 .painel-theme .whatsapp-inbox-image-card-footer {
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0.02) 0%, rgba(17, 24, 39, 0.08) 100%);
-  color: var(--panel-text-soft);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-image-card {
-  border-color: color-mix(in srgb, var(--panel-border) 66%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 82%, rgba(255, 255, 255, 0.04) 18%);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-image-card-footer {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.06) 100%);
-}
-
-.painel-theme .whatsapp-inbox-document-card {
-  border-color: color-mix(in srgb, var(--panel-border) 66%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 88%, rgba(255, 255, 255, 0.1) 12%);
+  background: color-mix(in srgb, var(--bg-inset) 70%, transparent);
+  color: var(--text-secondary);
 }
 
 .painel-theme .whatsapp-inbox-document-thumb {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 62%, var(--panel-surface) 38%);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme .whatsapp-inbox-audio-card {
-  border-color: color-mix(in srgb, var(--panel-border) 64%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 88%, rgba(255, 255, 255, 0.08) 12%);
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-hover);
 }
 
 .painel-theme .whatsapp-inbox-audio-card.is-voice {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--panel-accent-green-bg) 78%, var(--panel-surface) 22%) 0%, color-mix(in srgb, var(--panel-surface) 82%, rgba(16, 185, 129, 0.1) 18%) 100%);
+  background: linear-gradient(135deg, var(--success-soft) 0%, var(--bg-surface) 100%);
 }
 
 .painel-theme .whatsapp-inbox-audio-card.is-audio {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--panel-accent-soft) 62%, var(--panel-surface) 38%) 0%, color-mix(in srgb, var(--panel-surface) 88%, rgba(245, 158, 11, 0.08) 12%) 100%);
-}
-
-.painel-theme .whatsapp-inbox-audio-badge {
-  border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--warning-soft) 0%, var(--bg-surface) 100%);
 }
 
 .painel-theme .whatsapp-inbox-audio-badge.is-voice {
-  background: #173b32;
-  border-color: rgba(16, 185, 129, 0.24);
-  color: #7bf3c3;
+  border-color: var(--success-border);
+  background: var(--success-soft);
+  color: var(--success-text);
 }
 
 .painel-theme .whatsapp-inbox-audio-badge.is-audio {
-  background: #f59e0b;
-  border-color: rgba(255, 255, 255, 0.18);
-  color: #fff9f0;
+  border-color: var(--warning-border);
+  background: var(--warning);
+  color: var(--text-on-brand);
 }
 
 .painel-theme .whatsapp-inbox-audio-native-card {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  border-radius: 1.35rem;
+  gap: var(--space-3);
   border: 0;
-  padding: 0.15rem 0;
   background: transparent;
   color: inherit;
 }
 
-.painel-theme .whatsapp-inbox-audio-native-card.is-voice {
-  background: transparent;
-  color: inherit;
-}
-
-.painel-theme .whatsapp-inbox-audio-native-card.is-audio {
-  background: transparent;
+.painel-theme :is(.whatsapp-inbox-audio-native-badge, .whatsapp-inbox-audio-native-play) {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, currentColor 12%, var(--bg-surface));
   color: inherit;
 }
 
 .painel-theme .whatsapp-inbox-audio-native-badge {
-  display: inline-flex;
   height: 2.75rem;
   width: 2.75rem;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 78%, currentColor 22%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-
-.painel-theme .whatsapp-inbox-audio-native-badge.is-voice {
-  color: inherit;
-  background: color-mix(in srgb, currentColor 10%, transparent);
-}
-
-.painel-theme .whatsapp-inbox-audio-native-badge.is-audio {
-  color: inherit;
-  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 .painel-theme .whatsapp-inbox-audio-native-play {
-  display: inline-flex;
   height: 2.25rem;
   width: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 72%, currentColor 28%);
-  color: inherit;
 }
 
 .painel-theme .whatsapp-inbox-audio-native-play:hover {
-  background: color-mix(in srgb, var(--panel-surface) 62%, currentColor 38%);
+  background: color-mix(in srgb, currentColor 22%, var(--bg-surface));
 }
 
-.painel-theme .whatsapp-inbox-audio-native-waveform {
+.painel-theme .whatsapp-inbox-audio-native-waveform,
+.painel-theme .whatsapp-inbox-waveform {
   display: flex;
+  min-height: 1.5rem;
   align-items: center;
   gap: 0.15rem;
-  min-height: 1.5rem;
+}
+
+.painel-theme :is(.whatsapp-inbox-audio-native-waveform-bar, .whatsapp-inbox-waveform-bar) {
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, currentColor 30%, transparent);
+  transition: background-color 140ms ease, opacity 140ms ease, transform 140ms ease;
 }
 
 .painel-theme .whatsapp-inbox-audio-native-waveform-bar {
   width: 0.16rem;
-  flex-shrink: 0;
-  border-radius: 9999px;
-  background: color-mix(in srgb, currentColor 26%, transparent);
-  transition: background-color 140ms ease, opacity 140ms ease, transform 140ms ease;
+}
+
+.painel-theme .whatsapp-inbox-waveform-bar {
+  width: 0.2rem;
+  background: color-mix(in srgb, var(--brand-primary) 78%, var(--text-secondary));
 }
 
 .painel-theme .whatsapp-inbox-audio-native-waveform-bar.is-played {
-  background: color-mix(in srgb, currentColor 92%, transparent);
+  background: currentColor;
 }
 
-.painel-theme .whatsapp-inbox-audio-native-waveform-bar.is-active {
+.painel-theme :is(.whatsapp-inbox-audio-native-waveform-bar, .whatsapp-inbox-waveform-bar).is-active {
   animation: whatsapp-waveform-pulse 1s ease-in-out infinite alternate;
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-document-card {
-  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 84%, rgba(255, 255, 255, 0.04) 16%);
+.painel-theme .whatsapp-inbox-status-meta :is(svg, path) {
+  color: inherit;
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-document-thumb {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 70%, var(--panel-surface) 30%);
+.painel-theme :is(
+  .whatsapp-inbox-status-meta-pending,
+  .whatsapp-inbox-status-meta-sent,
+  .whatsapp-inbox-status-meta-delivered,
+  .whatsapp-inbox-status-meta-deleted,
+  .whatsapp-inbox-preview-status-pending,
+  .whatsapp-inbox-preview-status-sent,
+  .whatsapp-inbox-preview-status-delivered,
+  .whatsapp-inbox-preview-status-deleted
+) {
+  color: var(--text-subtle);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-audio-card {
-  border-color: color-mix(in srgb, var(--panel-border) 70%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 84%, rgba(255, 255, 255, 0.04) 16%);
+.painel-theme :is(
+  .whatsapp-inbox-status-meta-read,
+  .whatsapp-inbox-status-meta-played,
+  .whatsapp-inbox-preview-status-read,
+  .whatsapp-inbox-preview-status-played
+) {
+  color: var(--brand-primary-hover);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-audio-card.is-voice {
-  background: linear-gradient(135deg, rgba(18, 64, 53, 0.9) 0%, rgba(24, 38, 34, 0.96) 100%);
+.painel-theme :is(.whatsapp-inbox-status-meta-failed, .whatsapp-inbox-preview-status-failed) {
+  color: var(--danger-text);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-audio-card.is-audio {
-  background: linear-gradient(135deg, rgba(95, 57, 15, 0.9) 0%, rgba(34, 26, 18, 0.96) 100%);
+.painel-theme :is(.whatsapp-inbox-retry-button, .whatsapp-inbox-load-older, .whatsapp-inbox-attachment-action) {
+  border-color: var(--app-border-soft);
+  background: var(--app-surface-glass);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-card);
 }
 
-.painel-theme .whatsapp-inbox-status-meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-weight: 600;
+.painel-theme :is(.whatsapp-inbox-retry-button, .whatsapp-inbox-load-older, .whatsapp-inbox-attachment-action):hover:not(:disabled) {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-hover);
 }
 
-.painel-theme .whatsapp-inbox-retry-button {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 58%, var(--panel-surface) 42%);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme .whatsapp-inbox-retry-button:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--panel-accent-soft) 74%, var(--panel-surface) 26%);
-}
-
-.painel-theme .whatsapp-inbox-retry-button:disabled {
-  opacity: 0.66;
+.painel-theme :is(.whatsapp-inbox-retry-button, .whatsapp-inbox-load-older, .whatsapp-inbox-attachment-action):disabled {
   cursor: wait;
-}
-
-.painel-theme .whatsapp-inbox-status-meta-pending,
-.painel-theme .whatsapp-inbox-status-meta-sent,
-.painel-theme .whatsapp-inbox-status-meta-delivered,
-.painel-theme .whatsapp-inbox-status-meta-deleted {
-  color: var(--panel-text-subtle);
-}
-
-.painel-theme .whatsapp-inbox-status-meta-read,
-.painel-theme .whatsapp-inbox-status-meta-played {
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme .whatsapp-inbox-status-meta-failed {
-  color: var(--panel-accent-red-text);
-}
-
-.painel-theme .whatsapp-inbox-preview-status-pending,
-.painel-theme .whatsapp-inbox-preview-status-sent,
-.painel-theme .whatsapp-inbox-preview-status-delivered,
-.painel-theme .whatsapp-inbox-preview-status-deleted {
-  color: var(--panel-text-subtle);
-}
-
-.painel-theme .whatsapp-inbox-preview-status-read,
-.painel-theme .whatsapp-inbox-preview-status-played {
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme .whatsapp-inbox-preview-status-failed {
-  color: var(--panel-accent-red-text);
-}
-
-.painel-theme .whatsapp-inbox-thread .message-bubble-inbound .whatsapp-inbox-message-meta,
-.painel-theme .whatsapp-inbox-thread .message-bubble-system .whatsapp-inbox-message-meta {
-  color: var(--panel-text-subtle);
-}
-
-.painel-theme .whatsapp-inbox-load-older {
-  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 82%, rgba(255, 255, 255, 0.4) 18%);
-  color: var(--panel-text-soft);
-  box-shadow: 0 12px 24px -22px rgba(42, 24, 12, 0.18);
-  backdrop-filter: blur(8px);
-}
-
-.painel-theme .whatsapp-inbox-load-older:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 76%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 58%, var(--panel-surface) 42%);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme .whatsapp-inbox-load-older:disabled {
-  opacity: 0.74;
-  cursor: wait;
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-load-older {
-  border-color: color-mix(in srgb, var(--panel-border) 76%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 76%, rgba(0, 0, 0, 0.18) 24%);
-  color: var(--panel-text-soft);
-  box-shadow: 0 14px 28px -24px rgba(0, 0, 0, 0.42);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-load-older:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 76%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 62%, var(--panel-surface) 38%);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme .whatsapp-inbox-composer-area {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-muted) 64%, var(--panel-surface) 36%) 0%,
-    var(--panel-surface) 100%
-  );
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-composer-area {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-muted) 84%, #090706 16%) 0%,
-    var(--panel-surface) 100%
-  );
+  opacity: 0.6;
 }
 
 .painel-theme .whatsapp-inbox-composer {
-  border-color: color-mix(in srgb, var(--panel-border) 70%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 78%, var(--panel-surface) 22%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.38),
-    0 16px 26px -24px rgba(42, 24, 12, 0.14);
+  border-color: var(--app-border-soft);
+  background: var(--app-surface-glass-strong);
+  box-shadow: var(--shadow-card);
 }
 
 .painel-theme .whatsapp-inbox-composer.is-voice-mode {
-  padding: 0;
   overflow: hidden;
+  padding: 0;
 }
 
 .painel-theme .whatsapp-inbox-attach-menu {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface) 96%, white 4%) 0%,
-    color-mix(in srgb, var(--panel-surface-soft) 60%, var(--panel-surface) 40%) 100%
-  );
-  color: var(--panel-text);
-  box-shadow:
-    0 24px 36px -24px rgba(42, 24, 12, 0.22),
-    0 12px 16px -18px rgba(42, 24, 12, 0.12);
-  backdrop-filter: blur(10px);
+  border-color: var(--app-border-soft);
+  background: var(--surface-strong-bg);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-popover);
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-item {
+  border-radius: var(--kds-radius-sm);
   color: inherit;
-  border-radius: 12px;
-  font-size: 0.9rem;
   font-weight: 600;
   transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-item:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--panel-accent-soft) 36%, var(--panel-surface) 64%);
-  color: var(--panel-accent-ink-strong);
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-hover);
   transform: translateY(-1px);
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-item.is-disabled {
-  background: color-mix(in srgb, var(--panel-surface-soft) 58%, var(--panel-surface) 42%);
-  color: var(--panel-text-muted);
+  background: var(--bg-hover);
+  color: var(--text-muted);
   cursor: not-allowed;
-  opacity: 0.9;
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-icon {
@@ -4398,589 +910,250 @@ html {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 9999px;
+  border-radius: var(--radius-full);
   background: color-mix(in srgb, currentColor 10%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .painel-theme .whatsapp-inbox-attach-menu-badge {
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--panel-surface) 84%, var(--panel-surface-soft) 16%);
-  color: var(--panel-text-subtle);
-  opacity: 0.92;
-  padding: 0.2rem 0.5rem;
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attach-menu {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft) 86%, #120d0a 14%) 0%,
-    color-mix(in srgb, var(--panel-surface) 92%, #0f0907 8%) 100%
-  );
-  color: var(--panel-text);
-  box-shadow:
-    0 24px 36px -24px rgba(0, 0, 0, 0.48),
-    0 12px 16px -18px rgba(0, 0, 0, 0.26);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attach-menu-item:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--panel-accent-soft) 28%, var(--panel-surface) 72%);
-  color: var(--panel-text);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attach-menu-icon {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.painel-theme .whatsapp-inbox-composer-icon.is-open {
-  background: color-mix(in srgb, var(--panel-accent-soft) 36%, transparent);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme .whatsapp-inbox-voice-composer {
-  border: 0;
-  background: #262928;
-  color: #f7f3eb;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  min-height: 48px;
-  border-radius: 0.75rem;
-}
-
-.painel-theme .whatsapp-inbox-voice-composer.is-recording {
-  background: #232624;
-}
-
-.painel-theme .whatsapp-inbox-voice-side-action {
-  color: rgba(245, 238, 226, 0.88);
-  width: 36px;
-  height: 36px;
-}
-
-.painel-theme .whatsapp-inbox-voice-side-action:hover:not(:disabled),
-.painel-theme .whatsapp-inbox-voice-play:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.07);
-  color: #fffaf2;
-}
-
-.painel-theme .whatsapp-inbox-voice-side-action.is-accent {
-  color: #ff9ba6;
-}
-
-.painel-theme .whatsapp-inbox-voice-play {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  width: 36px;
-  height: 36px;
-}
-
-.painel-theme .whatsapp-inbox-voice-time {
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.painel-theme .whatsapp-inbox-voice-send {
-  background: #fffaf4;
-  color: #151515;
-  box-shadow: 0 10px 24px -16px rgba(255, 255, 255, 0.52);
-  width: 40px;
-  height: 40px;
-}
-
-.painel-theme .whatsapp-inbox-voice-send:hover:not(:disabled) {
-  background: #ffffff;
-}
-
-.painel-theme .whatsapp-inbox-voice-send:disabled,
-.painel-theme .whatsapp-inbox-voice-side-action:disabled,
-.painel-theme .whatsapp-inbox-voice-play:disabled {
-  opacity: 0.56;
-  cursor: not-allowed;
-}
-
-.painel-theme .whatsapp-inbox-recorder-card,
-.painel-theme .whatsapp-inbox-attachment-card {
-  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 82%, rgba(255, 255, 255, 0.26) 18%);
-  color: var(--panel-text);
-}
-
-.painel-theme .whatsapp-inbox-attachment-tray {
-  scrollbar-gutter: stable;
-}
-
-.painel-theme .whatsapp-inbox-attachment-tray-header {
-  border-color: color-mix(in srgb, var(--panel-border) 70%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 62%, var(--panel-surface) 38%);
-}
-
-.painel-theme .whatsapp-inbox-attachment-tray-count {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--panel-accent-soft) 72%, white 28%) 0%, color-mix(in srgb, var(--panel-accent-soft) 52%, transparent) 100%);
-  color: var(--panel-accent-ink-strong);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
-}
-
-.painel-theme .whatsapp-inbox-attachment-card-compact {
-  background: color-mix(in srgb, var(--panel-surface) 86%, rgba(255, 255, 255, 0.16) 14%);
-}
-
-.painel-theme .whatsapp-inbox-attachment-preview {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft) 84%, var(--panel-surface) 16%) 0%,
-    color-mix(in srgb, var(--panel-surface) 92%, transparent) 100%
-  );
-  border: 1px solid color-mix(in srgb, var(--panel-border) 62%, transparent);
-}
-
-.painel-theme .whatsapp-inbox-media-composer {
-  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 78%, rgba(22, 18, 14, 0.1) 22%);
-  color: var(--panel-text);
-}
-
-.painel-theme .whatsapp-inbox-media-composer-stage {
-  background:
-    radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.08), transparent 42%),
-    color-mix(in srgb, var(--panel-surface-soft) 34%, #111 66%);
-}
-
-.painel-theme .whatsapp-inbox-media-composer-preview {
-  border-radius: var(--kds-radius-lg, 1rem);
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.28);
-}
-
-.painel-theme .whatsapp-inbox-media-composer-close {
-  background: rgba(0, 0, 0, 0.46);
-  color: #fff8ef;
-  backdrop-filter: blur(10px);
-}
-
-.painel-theme .whatsapp-inbox-media-composer-close:hover {
-  background: rgba(0, 0, 0, 0.68);
-}
-
-.painel-theme .whatsapp-inbox-media-composer-caption,
-.painel-theme .whatsapp-inbox-media-composer-strip {
-  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 86%, transparent);
-}
-
-.painel-theme .whatsapp-inbox-media-composer-thumb,
-.painel-theme .whatsapp-inbox-media-composer-add {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 78%, transparent);
-  color: var(--panel-text-soft);
-}
-
-.painel-theme .whatsapp-inbox-media-composer-thumb.is-selected {
-  border-color: var(--panel-accent-strong);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--panel-accent-strong) 28%, transparent);
-}
-
-.painel-theme .whatsapp-inbox-media-composer-add:hover:not(:disabled) {
-  border-color: var(--panel-accent-border);
-  background: color-mix(in srgb, var(--panel-accent-soft) 56%, var(--panel-surface) 44%);
-}
-
-.painel-theme .whatsapp-inbox-document-composer {
-  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 84%, transparent);
-  color: var(--panel-text);
-}
-
-.painel-theme .whatsapp-inbox-document-composer-header,
-.painel-theme .whatsapp-inbox-document-composer-caption,
-.painel-theme .whatsapp-inbox-document-composer-strip {
-  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 88%, transparent);
-}
-
-.painel-theme .whatsapp-inbox-document-composer-stage {
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.1), transparent 42%),
-    color-mix(in srgb, var(--panel-surface-soft) 42%, #15110e 58%);
-}
-
-.painel-theme .whatsapp-inbox-document-composer-pdf {
-  border-color: rgba(255, 248, 239, 0.16);
-  background: #f8f8f8;
-  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.26);
-}
-
-.painel-theme .whatsapp-inbox-document-composer-fallback,
-.painel-theme .whatsapp-inbox-document-composer-item,
-.painel-theme .whatsapp-inbox-document-composer-extension,
-.painel-theme .whatsapp-inbox-document-composer-mini-extension {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 78%, transparent);
-  color: var(--panel-text-soft);
-}
-
-.painel-theme .whatsapp-inbox-document-composer-item.is-selected {
-  border-color: var(--panel-accent-strong);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--panel-accent-strong) 28%, transparent);
-}
-
-.painel-theme .whatsapp-inbox-document-composer-item:hover {
-  border-color: var(--panel-accent-border);
-}
-
-.painel-theme .whatsapp-inbox-attachment-kind-badge {
-  background: rgba(22, 18, 14, 0.72);
-  color: #fff8ef;
-  backdrop-filter: blur(10px);
-}
-
-.painel-theme .whatsapp-inbox-attachment-dismiss {
-  border: 1px solid rgba(255, 248, 239, 0.18);
-  background: rgba(22, 18, 14, 0.72);
-  color: #fff8ef;
-  backdrop-filter: blur(10px);
-}
-
-.painel-theme .whatsapp-inbox-attachment-dismiss:hover:not(:disabled) {
-  background: rgba(22, 18, 14, 0.9);
-  color: #ffffff;
-}
-
-.painel-theme .whatsapp-inbox-attachment-dismiss:disabled {
-  opacity: 0.56;
-  cursor: not-allowed;
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-recorder-card,
-.painel-theme.theme-dark .whatsapp-inbox-attachment-card {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 78%, rgba(0, 0, 0, 0.14) 22%);
-  color: var(--panel-text);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attachment-tray-header {
-  border-color: color-mix(in srgb, var(--panel-border) 76%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 74%, rgba(0, 0, 0, 0.22) 26%);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attachment-tray-count {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--panel-accent-soft) 44%, rgba(255, 255, 255, 0.1) 56%) 0%, rgba(0, 0, 0, 0.16) 100%);
-  color: #fff1df;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attachment-card-compact {
-  background: color-mix(in srgb, var(--panel-surface-soft) 84%, rgba(0, 0, 0, 0.18) 16%);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attachment-preview {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft-2) 82%, #090706 18%) 0%,
-    color-mix(in srgb, var(--panel-surface-soft) 88%, #080604 12%) 100%
-  );
-  border-color: color-mix(in srgb, var(--panel-border) 74%, transparent);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-media-composer {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 82%, rgba(0, 0, 0, 0.18) 18%);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-media-composer-stage {
-  background:
-    radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.06), transparent 42%),
-    #101010;
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-media-composer-caption,
-.painel-theme.theme-dark .whatsapp-inbox-media-composer-strip {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 86%, rgba(0, 0, 0, 0.16) 14%);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-media-composer-thumb,
-.painel-theme.theme-dark .whatsapp-inbox-media-composer-add {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft-2) 82%, #0f0c0a 18%);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-document-composer {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 82%, rgba(0, 0, 0, 0.18) 18%);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-document-composer-header,
-.painel-theme.theme-dark .whatsapp-inbox-document-composer-caption,
-.painel-theme.theme-dark .whatsapp-inbox-document-composer-strip {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 86%, rgba(0, 0, 0, 0.16) 14%);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-document-composer-stage {
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.06), transparent 42%),
-    #101010;
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-document-composer-fallback,
-.painel-theme.theme-dark .whatsapp-inbox-document-composer-item,
-.painel-theme.theme-dark .whatsapp-inbox-document-composer-extension,
-.painel-theme.theme-dark .whatsapp-inbox-document-composer-mini-extension {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft-2) 82%, #0f0c0a 18%);
-}
-
-.painel-theme .whatsapp-inbox-waveform {
-  display: flex;
-  align-items: center;
-  gap: 0.18rem;
-  min-height: 2.25rem;
-}
-
-.painel-theme .whatsapp-inbox-waveform-bar {
-  width: 0.2rem;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--panel-accent-strong) 78%, var(--panel-text-soft) 22%);
-  opacity: 0.84;
-  transition: height 120ms ease;
-}
-
-.painel-theme .whatsapp-inbox-voice-composer .whatsapp-inbox-waveform-bar {
-  background: rgba(255, 255, 255, 0.78);
-  width: 0.18rem;
-}
-
-.painel-theme .whatsapp-inbox-voice-composer.is-recording .whatsapp-inbox-waveform-bar {
-  background: rgba(255, 206, 214, 0.92);
-}
-
-.painel-theme .whatsapp-inbox-waveform.is-active .whatsapp-inbox-waveform-bar {
-  animation: whatsapp-waveform-pulse 1s ease-in-out infinite alternate;
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-waveform-bar {
-  background: color-mix(in srgb, var(--panel-accent-strong) 66%, #fff1df 34%);
-}
-
-.painel-theme .whatsapp-inbox-upload-progress {
-  background: linear-gradient(90deg, var(--panel-accent-strong) 0%, #d27727 100%);
-  transition: width 160ms ease;
-}
-
-.painel-theme .whatsapp-inbox-lightbox {
-  animation: whatsapp-lightbox-fade 160ms ease;
-}
-
-.painel-theme .whatsapp-inbox-media-viewer {
-  animation: whatsapp-lightbox-fade 160ms ease;
-}
-
-.painel-theme .whatsapp-inbox-media-viewer-nav {
-  position: absolute;
-  top: 50%;
-  z-index: 2;
-  display: inline-flex;
-  height: 3.25rem;
-  width: 3.25rem;
-  transform: translateY(-50%);
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.34);
-  color: rgba(255, 255, 255, 0.82);
-  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-.painel-theme .whatsapp-inbox-media-viewer-nav:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  transform: translateY(-50%) scale(1.04);
-}
-
-.painel-theme .whatsapp-inbox-media-viewer-strip {
-  background: #151817;
-  scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
-}
-
-.painel-theme .whatsapp-inbox-media-viewer-strip-nav {
-  position: absolute;
-  top: 50%;
-  z-index: 2;
-  display: inline-flex;
-  height: 2.75rem;
-  width: 2.75rem;
-  transform: translateY(-50%);
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.36);
-  color: rgba(255, 255, 255, 0.82);
-  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-.painel-theme .whatsapp-inbox-media-viewer-strip-nav:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  transform: translateY(-50%) scale(1.04);
-}
-
-.painel-theme .whatsapp-inbox-media-viewer-thumb {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
-  height: 5.25rem;
-  width: 5.25rem;
-}
-
-.painel-theme .whatsapp-inbox-media-viewer-thumb:hover {
-  opacity: 0.9;
-}
-
-.painel-theme .whatsapp-inbox-media-viewer-thumb.is-active {
-  border-color: #22c55e;
-  opacity: 1;
-}
-
-.painel-theme .whatsapp-inbox-attachment-action {
-  border-color: color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 74%, rgba(255, 255, 255, 0.18) 26%);
-  color: var(--panel-text-soft);
-}
-
-.painel-theme .whatsapp-inbox-attachment-action:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 54%, var(--panel-surface) 46%);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme .whatsapp-inbox-attachment-action:disabled {
-  opacity: 0.56;
-  cursor: wait;
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attachment-action {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 82%, rgba(0, 0, 0, 0.14) 18%);
-  color: var(--panel-text-soft);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-attachment-action:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 58%, var(--panel-surface) 42%);
-  color: var(--panel-accent-ink-strong);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-composer {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--panel-surface-soft-2) 82%, #090706 18%) 0%,
-    color-mix(in srgb, var(--panel-surface-soft) 88%, #0b0907 12%) 100%
-  );
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 18px 30px -26px rgba(0, 0, 0, 0.34);
-}
-
-.painel-theme .whatsapp-inbox-composer-input {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: 0 !important;
-  box-sizing: border-box;
-  margin: 0;
-  min-height: 2.5rem;
-  max-height: min(8rem, 32vh);
-  overflow-y: hidden;
-  scrollbar-gutter: stable;
-  color: var(--panel-input-text);
-}
-
-.painel-theme .whatsapp-inbox-composer-input::placeholder {
-  color: var(--panel-placeholder);
-}
-
-.painel-theme .whatsapp-inbox-composer-format-preview {
-  border: 1px solid color-mix(in srgb, var(--panel-border-subtle, #e7dac8) 82%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft, #f8f2e9) 84%, transparent);
-  color: var(--panel-text-soft, #5b4635);
-}
-
-.painel-theme.theme-dark .whatsapp-inbox-composer-format-preview {
-  border-color: rgba(247, 218, 188, 0.13);
-  background: rgba(255, 229, 199, 0.055);
-  color: var(--panel-text-soft, #f4d7b4);
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  color: var(--text-subtle);
+  padding: 0.2rem var(--space-2);
 }
 
 .painel-theme .whatsapp-inbox-composer-icon,
 .painel-theme .whatsapp-inbox-composer-action {
-  border: 1px solid color-mix(in srgb, var(--panel-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-surface) 82%, rgba(255, 255, 255, 0.16) 18%);
-  box-shadow: 0 10px 18px -18px rgba(42, 24, 12, 0.28);
-  color: var(--panel-text-muted);
+  border: 1px solid var(--app-border-soft);
+  background: var(--app-surface-glass);
+  color: var(--text-muted);
+  box-shadow: var(--shadow-card);
 }
 
-.painel-theme .whatsapp-inbox-composer-icon:disabled {
-  opacity: 0.42;
-  cursor: not-allowed;
+.painel-theme :is(.whatsapp-inbox-composer-icon, .whatsapp-inbox-composer-action):hover:not(:disabled),
+.painel-theme .whatsapp-inbox-composer-icon.is-open {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-hover);
 }
 
-.painel-theme .whatsapp-inbox-composer-icon:hover,
-.painel-theme .whatsapp-inbox-composer-action:hover {
-  border-color: color-mix(in srgb, var(--panel-accent-border) 72%, transparent);
-  background: color-mix(in srgb, var(--panel-accent-soft) 42%, var(--panel-surface) 58%);
-  color: var(--panel-text);
+.painel-theme .whatsapp-inbox-composer-input {
+  box-sizing: border-box;
+  min-height: 2.5rem;
+  max-height: min(8rem, 32vh);
+  margin: 0;
+  overflow-y: hidden;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--text-primary);
+  box-shadow: none !important;
 }
 
-.painel-theme .whatsapp-inbox-composer-icon:disabled:hover {
-  background: transparent;
-  color: var(--panel-text-muted);
+.painel-theme .whatsapp-inbox-composer-input::placeholder {
+  color: var(--text-muted);
+}
+
+.painel-theme .whatsapp-inbox-composer-format-preview {
+  border-color: var(--border-subtle);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .painel-theme .whatsapp-inbox-composer-action.is-active {
-  background: linear-gradient(135deg, var(--panel-accent-strong) 0%, #9f4f1a 100%);
-  color: #fff9f3;
-  box-shadow: 0 12px 20px -14px rgba(161, 98, 7, 0.48);
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-gradient);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-button);
 }
 
 .painel-theme .whatsapp-inbox-composer-action.is-active:hover {
-  background: linear-gradient(135deg, #d27727 0%, #8f4516 100%);
-  color: #fffdf9;
+  background: var(--brand-primary-gradient-hover);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-composer-icon,
-.painel-theme.theme-dark .whatsapp-inbox-composer-action {
-  border-color: color-mix(in srgb, var(--panel-border) 78%, transparent);
-  background: color-mix(in srgb, var(--panel-surface-soft) 82%, rgba(0, 0, 0, 0.12) 18%);
-  box-shadow: 0 12px 20px -20px rgba(0, 0, 0, 0.4);
-  color: var(--panel-text-soft);
+.painel-theme .whatsapp-inbox-voice-composer {
+  min-height: 3rem;
+  border: 0;
+  border-radius: var(--kds-radius-sm);
+  background: var(--app-contrast-surface);
+  color: var(--text-on-brand);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-composer-icon:disabled:hover {
-  background: transparent;
-  color: var(--panel-text-soft);
+.painel-theme .whatsapp-inbox-voice-composer.is-recording {
+  background: color-mix(in srgb, var(--danger) 28%, var(--app-contrast-surface));
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-composer-icon:hover,
-.painel-theme.theme-dark .whatsapp-inbox-composer-action:hover {
-  background: color-mix(in srgb, var(--panel-accent-soft) 58%, transparent);
-  color: var(--panel-text);
+.painel-theme :is(.whatsapp-inbox-voice-side-action, .whatsapp-inbox-voice-play) {
+  height: 2.25rem;
+  width: 2.25rem;
+  color: var(--text-on-brand);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-composer-action.is-active {
-  background: #f7ede1;
-  color: #2e1a0e;
-  box-shadow: 0 12px 24px -14px rgba(255, 255, 255, 0.18);
+.painel-theme :is(.whatsapp-inbox-voice-side-action, .whatsapp-inbox-voice-play):hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-on-brand) 12%, transparent);
 }
 
-.painel-theme.theme-dark .whatsapp-inbox-composer-action.is-active:hover {
-  background: #fff6eb;
-  color: #1e120b;
+.painel-theme .whatsapp-inbox-voice-side-action.is-accent {
+  color: var(--danger-text);
+}
+
+.painel-theme .whatsapp-inbox-voice-play {
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 16%, transparent);
+  border-radius: var(--radius-full);
+}
+
+.painel-theme .whatsapp-inbox-voice-time {
+  color: var(--text-on-brand);
+}
+
+.painel-theme .whatsapp-inbox-voice-send {
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: var(--radius-full);
+  background: var(--text-on-brand);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-card);
+}
+
+.painel-theme .whatsapp-inbox-voice-send:hover:not(:disabled) {
+  background: var(--bg-elevated);
+}
+
+.painel-theme :is(.whatsapp-inbox-voice-send, .whatsapp-inbox-voice-side-action, .whatsapp-inbox-voice-play):disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.painel-theme :is(.whatsapp-inbox-recorder-card, .whatsapp-inbox-attachment-card, .whatsapp-inbox-media-composer, .whatsapp-inbox-document-composer) {
+  border-color: var(--app-border-soft);
+  background: var(--app-surface-glass-strong);
+  color: var(--text-primary);
+}
+
+.painel-theme .whatsapp-inbox-attachment-tray-header,
+.painel-theme :is(.whatsapp-inbox-media-composer-caption, .whatsapp-inbox-media-composer-strip, .whatsapp-inbox-document-composer-header, .whatsapp-inbox-document-composer-caption, .whatsapp-inbox-document-composer-strip) {
+  border-color: var(--app-border-soft);
+  background: var(--app-surface-inset);
+}
+
+.painel-theme .whatsapp-inbox-attachment-tray-count {
+  background: var(--brand-primary-soft);
+  color: var(--brand-primary-hover);
+}
+
+.painel-theme .whatsapp-inbox-attachment-card-compact {
+  background: var(--app-surface-glass);
+}
+
+.painel-theme .whatsapp-inbox-attachment-preview {
+  border: 1px solid var(--app-border-soft);
+  background: var(--app-surface-inset);
+}
+
+.painel-theme :is(.whatsapp-inbox-media-composer-stage, .whatsapp-inbox-document-composer-stage) {
+  background:
+    radial-gradient(circle at 50% 10%, color-mix(in srgb, var(--text-on-brand) 10%, transparent), transparent 42%),
+    var(--app-contrast-surface);
+}
+
+.painel-theme .whatsapp-inbox-media-composer-preview,
+.painel-theme .whatsapp-inbox-document-composer-pdf {
+  box-shadow: var(--shadow-popover);
+}
+
+.painel-theme .whatsapp-inbox-document-composer-pdf {
+  border-color: var(--border-subtle);
+  background: var(--bg-elevated);
+}
+
+.painel-theme .whatsapp-inbox-media-composer-close,
+.painel-theme :is(.whatsapp-inbox-attachment-kind-badge, .whatsapp-inbox-attachment-dismiss) {
+  background: var(--app-overlay);
+  color: var(--text-on-brand);
+  backdrop-filter: blur(10px);
+}
+
+.painel-theme .whatsapp-inbox-media-composer-close:hover,
+.painel-theme .whatsapp-inbox-attachment-dismiss:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--overlay) 100%, var(--bg-inset));
+}
+
+.painel-theme :is(.whatsapp-inbox-media-composer-thumb, .whatsapp-inbox-media-composer-add, .whatsapp-inbox-document-composer-fallback, .whatsapp-inbox-document-composer-item, .whatsapp-inbox-document-composer-extension, .whatsapp-inbox-document-composer-mini-extension) {
+  border-color: var(--app-border-soft);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.painel-theme :is(.whatsapp-inbox-media-composer-thumb, .whatsapp-inbox-document-composer-item).is-selected {
+  border-color: var(--brand-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.painel-theme :is(.whatsapp-inbox-media-composer-add, .whatsapp-inbox-document-composer-item):hover:not(:disabled) {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-soft);
+}
+
+.painel-theme .whatsapp-inbox-upload-progress {
+  background: var(--brand-primary-gradient);
+  transition: width 160ms ease;
+}
+
+.whatsapp-inbox-media-viewer,
+.painel-theme .whatsapp-inbox-lightbox {
+  animation: whatsapp-lightbox-fade 160ms ease;
+}
+
+.whatsapp-inbox-media-viewer :is(.whatsapp-inbox-media-viewer-nav, .whatsapp-inbox-media-viewer-strip-nav) {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+  border-radius: var(--radius-full);
+  background: var(--app-overlay);
+  color: var(--text-on-brand);
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.whatsapp-inbox-media-viewer-nav {
+  height: 3.25rem;
+  width: 3.25rem;
+}
+
+.whatsapp-inbox-media-viewer-strip-nav {
+  height: 2.75rem;
+  width: 2.75rem;
+}
+
+.whatsapp-inbox-media-viewer :is(.whatsapp-inbox-media-viewer-nav, .whatsapp-inbox-media-viewer-strip-nav):hover {
+  background: color-mix(in srgb, var(--text-on-brand) 14%, var(--app-overlay));
+  transform: translateY(-50%) scale(1.04);
+}
+
+.whatsapp-inbox-media-viewer-strip {
+  background: var(--bg-inset);
+  scrollbar-color: var(--app-scrollbar-thumb-solid) transparent;
+}
+
+.whatsapp-inbox-media-viewer-thumb {
+  height: 5.25rem;
+  width: 5.25rem;
+  border-color: var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-elevated) 76%, transparent);
+}
+
+.whatsapp-inbox-media-viewer-thumb.is-active {
+  border-color: var(--success);
 }
 
 @keyframes whatsapp-waveform-pulse {
-  0% {
+  from {
     opacity: 0.6;
     transform: translateY(1px);
   }
 
-  100% {
+  to {
     opacity: 1;
     transform: translateY(-1px);
   }
@@ -4998,57 +1171,54 @@ html {
   }
 }
 
-/* Terracota CRM shell: a solid, warm workspace without ambient or glass layers. */
-.terracota-shell {
-  background: var(--bg-canvas);
-}
-
+/* Terracota CRM shell: solid workspace surfaces driven by DS tokens. */
+.terracota-shell,
 .terracota-main,
 .terracota-content-shell {
   background: var(--bg-canvas);
 }
 
 .terracota-sidebar {
-  border-color: rgba(255, 235, 218, 0.16);
-  background: linear-gradient(180deg, #8e3a25 0%, #642719 48%, #321611 100%);
-  box-shadow: 10px 0 30px -20px rgba(47, 18, 12, 0.72);
-  color: #fff7f0;
+  border-color: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
+  background: linear-gradient(180deg, var(--brand-primary-active) 0%, color-mix(in srgb, var(--brand-primary-active) 72%, var(--bg-inset)) 48%, var(--bg-inset) 100%);
+  box-shadow: var(--shadow-popover);
+  color: var(--text-on-brand);
 }
 
 .terracota-sidebar .kds-sidebar-divider {
-  border-color: rgba(255, 235, 218, 0.16);
+  border-color: color-mix(in srgb, var(--text-on-brand) 18%, transparent);
 }
 
 .terracota-sidebar .kds-sidebar-item {
-  color: rgba(255, 247, 240, 0.72);
+  color: color-mix(in srgb, var(--text-on-brand) 76%, transparent);
 }
 
 .terracota-sidebar .kds-sidebar-item:hover {
-  background: rgba(255, 247, 240, 0.11);
-  color: #fffdf9;
+  background: color-mix(in srgb, var(--text-on-brand) 12%, transparent);
+  color: var(--text-on-brand);
 }
 
 .terracota-sidebar .kds-sidebar-item.is-active {
-  border: 1px solid rgba(255, 226, 206, 0.26);
-  background: linear-gradient(90deg, #dd6848 0%, #b84830 100%);
-  color: #fffdf9;
-  box-shadow: 0 10px 20px -16px rgba(33, 11, 7, 0.88), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, var(--text-on-brand) 28%, transparent);
+  background: var(--brand-primary-gradient-hover);
+  color: var(--text-on-brand);
+  box-shadow: var(--shadow-button);
 }
 
 .terracota-sidebar .kds-sidebar-item-danger:hover {
-  background: rgba(239, 68, 68, 0.18);
-  color: #ffe0dc;
+  background: var(--danger-soft);
+  color: var(--danger-text);
 }
 
 .terracota-sidebar .kds-brand-mark {
-  background: linear-gradient(135deg, #f08a61 0%, #c25035 64%, #8f3422 100%);
-  box-shadow: 0 10px 20px -14px rgba(33, 11, 7, 0.9);
+  background: var(--brand-primary-gradient);
+  box-shadow: var(--shadow-button);
 }
 
 .terracota-sidebar .kds-sidebar-badge {
-  background: #fff4ea;
-  color: #9e3f2a;
-  box-shadow: 0 2px 8px -4px rgba(33, 11, 7, 0.68);
+  background: var(--text-on-brand);
+  color: var(--brand-primary-active);
+  box-shadow: var(--shadow-card);
 }
 
 .terracota-sidebar-popover {
@@ -5069,7 +1239,7 @@ html {
 
 .terracota-sidebar .kds-sidebar-item:focus-visible,
 .terracota-mobile-menu-trigger:focus-visible {
-  outline: 2px solid #fff7f0;
+  outline: 2px solid var(--text-on-brand);
   outline-offset: 2px;
 }
 
@@ -5088,17 +1258,17 @@ html {
     width: 2.5rem;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 235, 218, 0.2);
+    border: 1px solid var(--brand-primary-border);
     border-radius: var(--kds-radius-sm);
-    background: #74301f;
-    color: #fffdf9;
-    box-shadow: 0 12px 24px -16px rgba(47, 18, 12, 0.78);
+    background: var(--brand-primary-active);
+    color: var(--text-on-brand);
+    box-shadow: var(--shadow-button);
     transition: background-color 180ms ease, box-shadow 180ms ease;
   }
 
   .terracota-mobile-menu-trigger:hover {
-    background: #9e3f2a;
-    box-shadow: 0 16px 28px -18px rgba(47, 18, 12, 0.84);
+    background: var(--brand-primary-hover);
+    box-shadow: var(--shadow-card-hover);
   }
 
   .terracota-mobile-menu-backdrop {
@@ -5107,7 +1277,7 @@ html {
     z-index: 30;
     display: block;
     border: 0;
-    background: rgba(31, 18, 13, 0.42);
+    background: var(--overlay);
   }
 
   .terracota-sidebar {
@@ -5123,7 +1293,7 @@ html {
     visibility: visible;
     pointer-events: auto;
     transform: translateX(0);
-    box-shadow: 18px 0 42px -20px rgba(47, 18, 12, 0.86);
+    box-shadow: var(--shadow-modal);
   }
 
   .terracota-sidebar-collapse-toggle {
@@ -5135,9 +1305,33 @@ html {
   }
 }
 
+@media (max-width: 640px) {
+  .modal-panel {
+    height: 100% !important;
+    width: 100% !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+  }
+
+  .modal-panel-content {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .painel-theme :is(.message-bubble, .message-bubble-action-trigger, .message-bubble-emoji-button, .message-bubble-action-menu),
+  .comm-emoji-picker-tab,
+  .comm-emoji-picker-item,
+  .comm-media-picker-shortcut,
+  .comm-media-picker-gif-card,
+  .comm-media-picker-sticker-card,
+  .comm-media-picker-sticker-add,
   .terracota-sidebar,
   .terracota-mobile-menu-trigger {
-    transition: none;
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
   }
 }

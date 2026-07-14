@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { X, UserPlus, Phone, Mail, MapPin } from 'lucide-react';
+import { UserPlus, Phone, Mail, MapPin } from 'lucide-react';
 import { Lead } from '../lib/supabase';
-import Button from './ui/Button';
+import { Toast } from '../design-system';
 
 type LeadNotificationToastProps = {
   lead: Lead;
@@ -60,67 +60,54 @@ export default function LeadNotificationToast({
           : 'translate-x-full opacity-0'
       }`}
     >
-      <div className="max-w-md overflow-hidden rounded-xl border border-amber-300/70 bg-white shadow-2xl">
-        <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 to-amber-700 px-4 py-3">
-          <div className="flex items-center space-x-2 text-white">
-            <UserPlus className="w-5 h-5 animate-bounce" />
-            <h3 className="font-bold text-lg">Novo Lead Recebido!</h3>
-          </div>
-          <button
-            onClick={handleClose}
-            className="text-white hover:bg-teal-700 rounded-full p-1 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-4 space-y-3">
+      <Toast
+        className="w-[min(24rem,calc(100vw-2rem))]"
+        title="Novo Lead Recebido!"
+        variant="warning"
+        icon={UserPlus}
+        onDismiss={handleClose}
+        actions={[{ label: 'Ver Lead', onClick: handleViewLead, fullWidth: true }]}
+      >
+        <div className="mt-3 space-y-3">
           <div>
-            <p className="font-bold text-lg text-slate-900">{lead.nome_completo}</p>
-            <p className="text-sm text-slate-600">
-              Status:{' '}
-              <span className="font-medium text-blue-600">
-                {statusLabel}
-              </span>
+            <p className="text-base font-bold text-[var(--text-primary)]">{lead.nome_completo}</p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Status: <span className="font-medium text-[var(--info-text)]">{statusLabel}</span>
             </p>
           </div>
 
-          <div className="space-y-2 text-sm text-slate-700">
-            <div className="flex items-center space-x-2">
-              <Phone className="w-4 h-4 text-teal-600" />
+          <div className="space-y-2 text-sm text-[var(--text-secondary)]">
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-[var(--brand-primary)]" />
               <span>{lead.telefone}</span>
             </div>
 
             {lead.email && (
-              <div className="flex items-center space-x-2">
-                <Mail className="w-4 h-4 text-teal-600" />
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 text-[var(--brand-primary)]" />
                 <span className="truncate">{lead.email}</span>
               </div>
             )}
 
             {lead.cidade && (
-              <div className="flex items-center space-x-2">
-                <MapPin className="w-4 h-4 text-teal-600" />
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-[var(--brand-primary)]" />
                 <span>{lead.cidade}</span>
               </div>
             )}
           </div>
 
-          <div className="pt-2 border-t border-slate-200">
-            <p className="text-xs text-slate-500 mb-2">
+          <div className="border-t border-[var(--border-subtle)] pt-2">
+            <p className="mb-2 text-xs text-[var(--text-muted)]">
               <span className="font-medium">Origem:</span> {origemLabel} |
-              <span className="font-medium ml-2">Tipo:</span> {tipoContratacaoLabel}
+              <span className="ml-2 font-medium">Tipo:</span> {tipoContratacaoLabel}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--text-muted)]">
               <span className="font-medium">Responsável:</span> {responsavelLabel}
             </p>
           </div>
-
-          <Button onClick={handleViewLead} fullWidth>
-            Ver Lead
-          </Button>
         </div>
-      </div>
+      </Toast>
     </div>
   );
 }

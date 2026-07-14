@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, X, type LucideIcon } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
+import Button, { type ButtonSize, type ButtonVariant } from './Button';
 
 export type ToastVariant = 'default' | 'success' | 'error' | 'warning' | 'info';
 export type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center';
@@ -13,13 +14,34 @@ export type Toast = {
   description: string;
   variant: ToastVariant;
   duration: number;
+  actions?: ToastAction[];
 };
 
-type ToastInput = {
+export type ToastAction = {
+  label: ReactNode;
+  onClick: () => void;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
+};
+
+export type ToastInput = {
   title?: string;
   description: string;
   variant?: ToastVariant;
   duration?: number;
+  actions?: ToastAction[];
+};
+
+export type ToastProps = Omit<HTMLAttributes<HTMLDivElement>, 'title'> & {
+  title?: ReactNode;
+  description?: ReactNode;
+  variant?: ToastVariant;
+  icon?: LucideIcon;
+  onDismiss?: () => void;
+  actions?: ToastAction[];
+  duration?: number;
+  showProgress?: boolean;
 };
 
 type ToastContextValue = {
@@ -73,6 +95,7 @@ export function ToastProvider({ children, position = 'bottom-right', maxToasts =
         description: input.description,
         variant: input.variant ?? 'default',
         duration: input.duration ?? 5000,
+        actions: input.actions,
       };
       setToasts((prev) => [...prev.slice(-(maxToasts - 1)), newToast]);
       return id;
@@ -118,9 +141,71 @@ function ToastContainer({
   );
 }
 
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
-  const Icon = variantIcons[toast.variant];
+export function Toast({
+  title,
+  description,
+  variant = 'default',
+  icon,
+  onDismiss,
+  actions,
+  duration = 5000,
+  showProgress = false,
+  className,
+  style,
+  children,
+  role = 'alert',
+  ...props
+}: ToastProps) {
+  const Icon = icon ?? variantIcons[variant];
 
+  return (
+    <div
+      className={cx('kds-toast', variantClasses[variant], className)}
+      role={role}
+      style={
+        showProgress
+          ? ({ ...style, '--toast-duration': `${duration}ms` } as CSSProperties)
+          : style
+      }
+      {...props}
+    >
+      <Icon className="kds-toast-icon" aria-hidden="true" />
+      <div className="kds-toast-content">
+        {title && <p className="kds-toast-title">{title}</p>}
+        {description && <p className="kds-toast-description">{description}</p>}
+        {children}
+        {actions && actions.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {actions.map((action, index) => (
+              <Button
+                key={index}
+                variant={action.variant ?? 'primary'}
+                size={action.size ?? 'sm'}
+                fullWidth={action.fullWidth}
+                onClick={action.onClick}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="kds-toast-close"
+          aria-label="Fechar notificacao"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+      {showProgress && duration > 0 && <span className="kds-toast-progress" aria-hidden="true" />}
+    </div>
+  );
+}
+
+function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string) => void }) {
   useEffect(() => {
     if (toast.duration <= 0) return;
     const timer = setTimeout(() => onDismiss(toast.id), toast.duration);
@@ -128,25 +213,14 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
   }, [toast.id, toast.duration, onDismiss]);
 
   return (
-    <div
-      className={cx('kds-toast', variantClasses[toast.variant])}
-      role="alert"
-      style={{ '--toast-duration': `${toast.duration}ms` } as CSSProperties}
-    >
-      <Icon className="kds-toast-icon" aria-hidden="true" />
-      <div className="kds-toast-content">
-        {toast.title && <p className="kds-toast-title">{toast.title}</p>}
-        <p className="kds-toast-description">{toast.description}</p>
-      </div>
-      <button
-        type="button"
-        onClick={() => onDismiss(toast.id)}
-        className="kds-toast-close"
-        aria-label="Fechar notificacao"
-      >
-        <X className="h-4 w-4" />
-      </button>
-      {toast.duration > 0 && <span className="kds-toast-progress" aria-hidden="true" />}
-    </div>
+    <Toast
+      title={toast.title}
+      description={toast.description}
+      variant={toast.variant}
+      actions={toast.actions}
+      onDismiss={() => onDismiss(toast.id)}
+      duration={toast.duration}
+      showProgress={toast.duration > 0}
+    />
   );
 }

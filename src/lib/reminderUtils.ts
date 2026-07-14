@@ -66,12 +66,12 @@ export function getPeriodLabel(period: ReminderPeriod): string {
 
 export function getPeriodColor(period: ReminderPeriod): string {
   const colors: Record<ReminderPeriod, string> = {
-    'overdue': 'bg-red-50 border-red-200',
-    'today': 'bg-orange-50 border-orange-200',
-    'tomorrow': 'bg-blue-50 border-blue-200',
-    'thisWeek': 'bg-teal-50 border-teal-200',
-    'thisMonth': 'bg-slate-50 border-slate-200',
-    'later': 'bg-slate-50 border-slate-200'
+    'overdue': 'border-[var(--danger-border)] bg-[var(--danger-soft)]',
+    'today': 'border-[var(--warning-border)] bg-[var(--warning-soft)]',
+    'tomorrow': 'border-[var(--info-border)] bg-[var(--info-soft)]',
+    'thisWeek': 'border-[var(--success-border)] bg-[var(--success-soft)]',
+    'thisMonth': 'border-[var(--border-default)] bg-[var(--bg-inset)]',
+    'later': 'border-[var(--border-default)] bg-[var(--bg-inset)]'
   };
   return colors[period];
 }
@@ -144,10 +144,10 @@ export function getUrgencyLevel(reminder: Reminder): 'critical' | 'high' | 'medi
 
 export function getUrgencyStyles(urgency: 'critical' | 'high' | 'medium' | 'low'): string {
   const styles = {
-    critical: 'ring-2 ring-red-400/80',
-    high: 'ring-1 ring-orange-300/90',
-    medium: 'ring-1 ring-amber-300/90',
-    low: 'ring-1 ring-slate-300/80'
+    critical: 'ring-2 ring-[var(--danger)]',
+    high: 'ring-1 ring-[var(--warning)]',
+    medium: 'ring-1 ring-[var(--accent-gold)]',
+    low: 'ring-1 ring-[var(--border-strong)]'
   };
   return styles[urgency];
 }

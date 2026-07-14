@@ -1,7 +1,7 @@
-const DEFAULT_COLOR = '#6b7280';
+const DEFAULT_COLOR = 'var(--text-muted)';
 
-const normalizeHex = (color: string): string => {
-  if (!color) return DEFAULT_COLOR;
+const normalizeHex = (color: string): string | null => {
+  if (!color) return null;
   const hex = color.trim();
   if (hex.startsWith('#') && (hex.length === 7 || hex.length === 4)) {
     if (hex.length === 4) {
@@ -12,24 +12,26 @@ const normalizeHex = (color: string): string => {
     }
     return hex;
   }
-  return DEFAULT_COLOR;
+  return null;
 };
 
+const getColor = (color: string): string => normalizeHex(color) ?? DEFAULT_COLOR;
+
 export const hexToRgba = (hexColor: string, alpha = 1): string => {
-  const hex = normalizeHex(hexColor).replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  const opacity = Math.min(Math.max(alpha, 0), 1) * 100;
+  return `color-mix(in srgb, ${getColor(hexColor)} ${opacity}%, transparent)`;
 };
 
 export const getContrastTextColor = (hexColor: string): string => {
-  const hex = normalizeHex(hexColor).replace('#', '');
+  const normalized = normalizeHex(hexColor);
+  if (!normalized) return 'var(--text-on-brand)';
+
+  const hex = normalized.replace('#', '');
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
   const b = parseInt(hex.substring(4, 6), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.6 ? '#1f2937' : '#ffffff';
+  return luminance > 0.6 ? 'var(--text-primary)' : 'var(--text-on-brand)';
 };
 
 export const getBadgeStyle = (hexColor: string, alpha = 0.15) => {

@@ -24,7 +24,7 @@ const TICK_COUNT = 4;
 
 export default function MonthlyTrendChart({
   data,
-  color = '#c55a3d',
+  color = 'var(--brand-primary)',
   height = 280,
   formatValue = (value) => value.toLocaleString('pt-BR'),
 }: MonthlyTrendChartProps) {

@@ -126,7 +126,7 @@ export default function WhatsAppQuickRepliesModal({
         footer={(
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <div className="text-xs text-[var(--text-muted)]">
-              Digite <code>&#123;&#123;</code> no corpo da mensagem para abrir as variáveis disponíveis.
+              Digite <code>{'{{'}</code> no corpo da mensagem para abrir as variáveis disponíveis.
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <Button variant="secondary" onClick={onClose} disabled={saving}>

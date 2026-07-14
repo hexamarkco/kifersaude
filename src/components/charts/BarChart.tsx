@@ -18,7 +18,7 @@ export default function BarChart({ data, height = 300, showValues = true }: BarC
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center text-slate-400 text-sm" style={{ height }}>
+      <div className="flex items-center justify-center text-[color:var(--text-muted)] text-sm" style={{ height }}>
         Sem dados
       </div>
     );
@@ -29,13 +29,13 @@ export default function BarChart({ data, height = 300, showValues = true }: BarC
       <div className="flex items-end justify-between space-x-2" style={{ height }}>
         {data.map((item, index) => {
           const barHeight = (item.value / maxValue) * 100;
-          const color = item.color || '#14b8a6';
+          const color = item.color || 'var(--brand-primary)';
 
           return (
             <div key={index} className="flex-1 flex flex-col items-center justify-end">
               <div className="w-full relative group">
                 {showValues && (
-                  <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold text-[color:var(--text-primary)] opacity-0 group-hover:opacity-100 transition-opacity">
                     {item.value}
                   </div>
                 )}
@@ -48,7 +48,7 @@ export default function BarChart({ data, height = 300, showValues = true }: BarC
                   }}
                 />
               </div>
-              <div className="mt-2 text-xs text-slate-600 text-center truncate w-full px-1">
+              <div className="mt-2 text-xs text-[color:var(--text-secondary)] text-center truncate w-full px-1">
                 {item.label}
               </div>
             </div>

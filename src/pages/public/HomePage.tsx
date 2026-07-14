@@ -20,6 +20,7 @@ import {
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
+import { Input } from '../../design-system';
 import { formatPhoneInput } from '../../lib/inputFormatters';
 import {
   getSupabaseErrorMessage,
@@ -272,20 +273,20 @@ const normalizePublicMetric = (value: unknown): PublicMetric | null => {
 
 function OverlayModal({ title, subtitle, maxWidthClass = 'max-w-3xl', onClose, children }: OverlayModalProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[color:var(--overlay)] p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className={`modal-panel flex w-full ${maxWidthClass} max-h-[90vh] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl`}
+        className={`modal-panel flex w-full ${maxWidthClass} max-h-[90vh] flex-col overflow-hidden rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] text-[color:var(--text-primary)] shadow-[var(--shadow-modal)]`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 flex items-start justify-between gap-4 bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-white">
+        <div className="sticky top-0 flex items-start justify-between gap-4 [background:var(--brand-primary-gradient)] p-6 text-[color:var(--text-on-brand)]">
           <div>
             <h2 className="text-3xl font-bold">{title}</h2>
-            {subtitle ? <p className="mt-1 text-sm text-white/90">{subtitle}</p> : null}
+            {subtitle ? <p className="mt-1 text-sm opacity-90">{subtitle}</p> : null}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 transition-colors hover:bg-white/20"
+            className="rounded-full p-2 transition-colors hover:bg-[var(--brand-primary-muted)]"
             aria-label="Fechar modal"
           >
             <X className="h-6 w-6" />
@@ -525,25 +526,25 @@ export default function HomePage() {
   const renderQuoteFields = () => (
     <>
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="quote-name">
+        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-name">
           Nome completo *
         </label>
-        <input
+        <Input
           id="quote-name"
           type="text"
           required
           value={formData.nome}
           onChange={(event) => setFormData((current) => ({ ...current, nome: event.target.value }))}
-          className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
+          className="h-12 px-4 text-base"
           placeholder="Seu nome"
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="quote-phone">
+        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-phone">
           Telefone (WhatsApp) *
         </label>
-        <input
+        <Input
           id="quote-phone"
           type="tel"
           required
@@ -554,28 +555,28 @@ export default function HomePage() {
               telefone: formatPhoneInput(event.target.value),
             }))
           }
-          className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
+          className="h-12 px-4 text-base"
           placeholder="(21) 99999-9999"
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="quote-city">
+        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-city">
           Cidade *
         </label>
-        <input
+        <Input
           id="quote-city"
           type="text"
           required
           value={formData.cidade}
           onChange={(event) => setFormData((current) => ({ ...current, cidade: event.target.value }))}
-          className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
+          className="h-12 px-4 text-base"
           placeholder="Sua cidade"
         />
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="quote-contract-type">
+        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-contract-type">
           Tipo de contratação *
         </label>
         <select
@@ -587,7 +588,7 @@ export default function HomePage() {
               tipoContratacao: event.target.value as ContractKind,
             }))
           }
-          className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
+          className="kds-select h-12 px-4 text-base"
         >
           <option value="PF">Pessoa física</option>
           <option value="MEI">MEI</option>
@@ -596,17 +597,17 @@ export default function HomePage() {
       </div>
 
       <div>
-        <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="quote-lives">
+        <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-lives">
           Quantas vidas são no contrato? *
         </label>
-        <input
+        <Input
           id="quote-lives"
           type="number"
           min="1"
           required
           value={formData.numeroVidas}
           onChange={(event) => setFormData((current) => ({ ...current, numeroVidas: event.target.value }))}
-          className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
+          className="h-12 px-4 text-base"
           placeholder="Ex: 1, 2, 3"
         />
       </div>
@@ -614,23 +615,23 @@ export default function HomePage() {
       {totalLives > 1 ? (
         <div className="md:col-span-2">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <label className="block text-sm font-semibold text-slate-700">Idade das vidas *</label>
-            <span className={`text-xs font-semibold ${ageRangeTotal === totalLives ? 'text-green-700' : 'text-slate-500'}`}>
+            <label className="block text-sm font-semibold text-[color:var(--text-primary)]">Idade das vidas *</label>
+            <span className={`text-xs font-semibold ${ageRangeTotal === totalLives ? 'text-[color:var(--success-text)]' : 'text-[color:var(--text-muted)]'}`}>
               Distribuídas: {ageRangeTotal} de {totalLives}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {AGE_RANGES.map((range) => (
-              <div key={range} className="rounded-xl border-2 border-slate-200 p-3">
-                <p className="text-sm font-semibold text-slate-700">{range}</p>
-                <input
+              <div key={range} className="rounded-[var(--kds-radius-sm)] border border-[color:var(--border-default)] bg-[var(--bg-inset)] p-3">
+                <p className="text-sm font-semibold text-[color:var(--text-primary)]">{range}</p>
+                <Input
                   type="number"
                   min="0"
                   inputMode="numeric"
                   pattern="\d*"
                   value={ageRangeCounts[range]}
                   onChange={(event) => updateAgeRangeCount(range, event.target.value)}
-                  className="mt-2 w-full rounded-lg border-2 border-slate-200 px-3 py-2 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                  className="mt-2 h-10 px-3"
                   placeholder="Qtd."
                 />
               </div>
@@ -639,17 +640,17 @@ export default function HomePage() {
         </div>
       ) : totalLives === 1 ? (
         <div>
-          <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="quote-age">
+          <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-age">
             Idade da pessoa *
           </label>
-          <input
+          <Input
             id="quote-age"
             type="number"
             min="0"
             required
             value={formData.idadeTitular}
             onChange={(event) => setFormData((current) => ({ ...current, idadeTitular: event.target.value }))}
-            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 transition-all focus:border-transparent focus:ring-2 focus:ring-orange-500 focus:outline-none"
+            className="h-12 px-4 text-base"
             placeholder="Informe a idade"
           />
         </div>
@@ -706,10 +707,10 @@ export default function HomePage() {
 
         .hero-ribbon-marquee {
           overflow: hidden;
-          background: linear-gradient(90deg, rgba(255, 243, 235, 0.94), rgba(255, 250, 245, 0.98), rgba(255, 243, 235, 0.94));
-          border-top: 1px solid rgba(249, 115, 22, 0.18);
-          border-bottom: 1px solid rgba(249, 115, 22, 0.18);
-          box-shadow: 0 10px 24px rgba(148, 86, 38, 0.06);
+          background: linear-gradient(90deg, var(--brand-primary-muted), var(--bg-canvas-subtle), var(--brand-primary-muted));
+          border-top: 1px solid var(--brand-primary-border);
+          border-bottom: 1px solid var(--brand-primary-border);
+          box-shadow: var(--shadow-card);
         }
 
         .hero-ribbon-track {
@@ -744,34 +745,34 @@ export default function HomePage() {
         }
       `}</style>
 
-      <div className="min-h-screen overflow-x-hidden bg-white text-slate-900">
+      <div className="painel-theme kifer-ds theme-light min-h-screen overflow-x-hidden bg-[var(--bg-canvas)] text-[color:var(--text-primary)]">
         <nav
           className={`fixed top-0 z-40 w-full transition-all duration-300 ${
-            isScrolled ? 'bg-white/95 shadow-sm backdrop-blur-sm' : 'bg-transparent'
+            isScrolled ? 'bg-[var(--panel-glass-bg-lite)] shadow-[var(--shadow-card)] backdrop-blur-sm' : 'bg-transparent'
           }`}
         >
           <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <a href="#topo" className="flex items-center space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg">
-                <PublicBrandMark className="h-6 w-auto text-white" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] shadow-[var(--shadow-button)]">
+                <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
               </div>
-              <span className="text-2xl font-bold text-slate-900">Kifer Saúde</span>
+              <span className="text-2xl font-bold text-[color:var(--text-primary)]">Kifer Saúde</span>
             </a>
 
             <div className="hidden flex-1 items-center justify-center space-x-6 md:flex">
-              <a href="#prova-social" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
+              <a href="#prova-social" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
                 Operadoras
               </a>
-              <a href="#para-quem" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
+              <a href="#para-quem" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
                 Para quem é
               </a>
-              <a href="#como-funciona" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
+              <a href="#como-funciona" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
                 Como funciona
               </a>
-              <a href="#depoimentos" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
+              <a href="#depoimentos" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
                 Depoimentos
               </a>
-              <a href="#faq" className="font-medium text-slate-800 transition-colors hover:text-orange-600">
+              <a href="#faq" className="font-medium text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]">
                 FAQ
               </a>
             </div>
@@ -779,7 +780,7 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setShowQuoteModal(true)}
-              className="rounded-lg bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-orange-600 hover:to-orange-700 sm:px-6"
+              className="rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] px-4 py-2 text-sm font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:[background:var(--brand-primary-gradient-hover)] sm:px-6"
             >
               Cotação grátis
             </button>
@@ -788,45 +789,45 @@ export default function HomePage() {
 
         <section
           id="topo"
-          className="relative flex min-h-[85vh] items-center overflow-hidden bg-gradient-to-br from-orange-50 via-orange-100 to-amber-50 px-4 pb-20 pt-24 sm:px-6 lg:px-8"
+          className="relative flex min-h-[85vh] items-center overflow-hidden [background:var(--surface-hero-bg)] px-4 pb-20 pt-24 sm:px-6 lg:px-8"
         >
           <div className="absolute inset-0 opacity-10">
-            <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-orange-400 blur-3xl" />
-            <div className="absolute bottom-10 right-10 h-96 w-96 rounded-full bg-amber-400 blur-3xl" />
+            <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-[var(--brand-primary)] blur-3xl" />
+            <div className="absolute bottom-10 right-10 h-96 w-96 rounded-full bg-[var(--accent-gold)] blur-3xl" />
           </div>
 
           <div className="relative z-10 mx-auto w-full max-w-7xl">
             <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-16">
               <div className="order-2 text-left lg:order-1">
                 <div className="mb-6">
-                  <span className="inline-flex items-center rounded-full bg-gradient-to-r from-orange-600 to-amber-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg">
+                  <span className="inline-flex items-center rounded-full [background:var(--brand-primary-gradient)] px-5 py-2.5 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)]">
                     <Star className="mr-2 h-4 w-4 fill-current" />
                     Especialista em planos de saúde no RJ
                   </span>
                 </div>
 
-                <h1 className="mb-6 text-4xl font-extrabold leading-tight text-slate-900 md:text-5xl lg:text-6xl">
+                <h1 className="mb-6 font-[var(--font-display)] text-4xl font-extrabold leading-tight text-[color:var(--text-primary)] md:text-5xl lg:text-6xl">
                   O plano ideal começa com{' '}
-                  <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">gente de verdade.</span>
+                  <span className="[background:var(--brand-primary-gradient)] bg-clip-text [color:transparent]">gente de verdade.</span>
                 </h1>
 
-                <p className="mb-5 text-lg font-light leading-relaxed text-slate-700 md:text-xl">
+                <p className="mb-5 text-lg font-light leading-relaxed text-[color:var(--text-secondary)] md:text-xl">
                   Atendimento humano e especializado em planos de saúde para todo o estado do Rio de Janeiro.
-                  <span className="mt-2 block font-semibold text-orange-700">Mais de 500 clientes satisfeitos.</span>
+                  <span className="mt-2 block font-semibold text-[color:var(--brand-primary)]">Mais de 500 clientes satisfeitos.</span>
                 </p>
 
                 <div className="mb-6 flex flex-wrap gap-2">
-                  <div className="inline-flex items-center rounded-full border border-slate-300/50 bg-slate-800/10 px-4 py-2 backdrop-blur-sm">
-                    <Shield className="mr-1.5 h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-semibold text-slate-900">100% Gratuito</span>
+                  <div className="inline-flex items-center rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 backdrop-blur-sm">
+                    <Shield className="mr-1.5 h-4 w-4 text-[color:var(--brand-primary)]" />
+                    <span className="text-sm font-semibold text-[color:var(--text-primary)]">100% Gratuito</span>
                   </div>
-                  <div className="inline-flex items-center rounded-full border border-slate-300/50 bg-slate-800/10 px-4 py-2 backdrop-blur-sm">
-                    <CheckCircle className="mr-1.5 h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-semibold text-slate-900">Sem compromisso</span>
+                  <div className="inline-flex items-center rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 backdrop-blur-sm">
+                    <CheckCircle className="mr-1.5 h-4 w-4 text-[color:var(--brand-primary)]" />
+                    <span className="text-sm font-semibold text-[color:var(--text-primary)]">Sem compromisso</span>
                   </div>
-                  <div className="inline-flex items-center rounded-full border border-slate-300/50 bg-slate-800/10 px-4 py-2 backdrop-blur-sm">
-                    <ThumbsUp className="mr-1.5 h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-semibold text-slate-900">98% Satisfação</span>
+                  <div className="inline-flex items-center rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-2 backdrop-blur-sm">
+                    <ThumbsUp className="mr-1.5 h-4 w-4 text-[color:var(--brand-primary)]" />
+                    <span className="text-sm font-semibold text-[color:var(--text-primary)]">98% Satisfação</span>
                   </div>
                 </div>
 
@@ -834,7 +835,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => setShowQuoteModal(true)}
-                    className="whitespace-nowrap rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-8 py-4 text-base font-bold text-white shadow-2xl transition-all hover:scale-105 hover:from-orange-600 hover:to-orange-700 hover:shadow-orange-300 md:text-lg"
+                    className="whitespace-nowrap rounded-[var(--kds-radius-md)] [background:var(--brand-primary-gradient)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:[background:var(--brand-primary-gradient-hover)] md:text-lg"
                   >
                     Quero minha cotação gratuita
                   </button>
@@ -842,7 +843,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     onClick={() => openWhatsApp()}
-                    className="whitespace-nowrap rounded-xl bg-green-600 px-8 py-4 text-base font-bold text-white shadow-xl transition-all hover:scale-105 hover:bg-green-700 md:text-lg"
+                    className="whitespace-nowrap rounded-[var(--kds-radius-md)] border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-105 hover:bg-[var(--success-hover)] md:text-lg"
                   >
                     <MessageCircle className="mr-2 inline-block h-5 w-5" />
                     Falar no WhatsApp
@@ -852,7 +853,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => openWhatsApp(WHATSAPP_SUPPORT_MESSAGE)}
-                  className="mt-4 inline-flex items-center text-sm font-semibold text-slate-700 transition-colors hover:text-orange-700"
+                  className="mt-4 inline-flex items-center text-sm font-semibold text-[color:var(--text-secondary)] transition-colors hover:text-[color:var(--brand-primary)]"
                 >
                   Já sou cliente e preciso de suporte
                   <ChevronRight className="ml-1 h-4 w-4" />
@@ -861,22 +862,22 @@ export default function HomePage() {
 
               <div className="order-1 flex justify-center lg:order-2">
                 <div className="relative pb-8 pt-20">
-                  <div className="absolute -left-2 top-20 z-10 rounded-2xl bg-white px-5 py-3 shadow-xl">
-                    <div className="mb-0 text-2xl font-bold text-orange-600">500+</div>
-                    <div className="text-xs font-medium text-slate-600">Clientes</div>
+                  <div className="absolute -left-2 top-20 z-10 rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] px-5 py-3 shadow-[var(--shadow-card)]">
+                    <div className="mb-0 text-2xl font-bold text-[color:var(--brand-primary)]">500+</div>
+                    <div className="text-xs font-medium text-[color:var(--text-secondary)]">Clientes</div>
                   </div>
 
-                  <div className="absolute -right-2 bottom-32 z-10 rounded-2xl bg-white px-5 py-3 shadow-xl">
-                    <div className="mb-0 text-2xl font-bold text-orange-600">4.9★</div>
-                    <div className="text-xs font-medium text-slate-600">Avaliação</div>
+                  <div className="absolute -right-2 bottom-32 z-10 rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] px-5 py-3 shadow-[var(--shadow-card)]">
+                    <div className="mb-0 text-2xl font-bold text-[color:var(--brand-primary)]">4.9★</div>
+                    <div className="text-xs font-medium text-[color:var(--text-secondary)]">Avaliação</div>
                   </div>
 
                   <div className="relative h-[480px] w-[320px] md:h-[540px] md:w-[360px]">
-                    <div className="absolute right-0 top-0 z-20 flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-4 py-2 shadow-xl">
-                      <div className="h-2 w-2 rounded-full bg-white" />
-                      <span className="text-xs font-bold whitespace-nowrap text-white">Online agora</span>
+                    <div className="absolute right-0 top-0 z-20 flex items-center gap-2 rounded-full [background:var(--brand-primary-gradient)] px-4 py-2 shadow-[var(--shadow-button)]">
+                      <div className="h-2 w-2 rounded-full bg-[var(--text-on-brand)]" />
+                      <span className="text-xs font-bold whitespace-nowrap text-[color:var(--text-on-brand)]">Online agora</span>
                     </div>
-                    <div className="absolute inset-0 overflow-hidden rounded-2xl border-4 border-white bg-gradient-to-br from-orange-200 to-amber-200 shadow-2xl">
+                    <div className="absolute inset-0 overflow-hidden rounded-[var(--kds-radius-md)] border-4 border-[color:var(--text-on-brand)] [background:var(--surface-hero-bg)] shadow-[var(--shadow-modal)]">
                       <img
                         src="/image.png"
                         alt="Luiza Kifer - especialista em planos de saúde"
@@ -885,9 +886,9 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="absolute -bottom-6 left-1/2 z-10 min-w-[280px] -translate-x-1/2 rounded-2xl bg-white px-8 py-4 text-center shadow-xl">
-                    <h3 className="mb-1 text-xl font-bold text-slate-900">Luiza Kifer</h3>
-                    <p className="font-semibold whitespace-nowrap text-orange-600">Sua especialista em saúde</p>
+                  <div className="absolute -bottom-6 left-1/2 z-10 min-w-[280px] -translate-x-1/2 rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] px-8 py-4 text-center shadow-[var(--shadow-card)]">
+                    <h3 className="mb-1 text-xl font-bold text-[color:var(--text-primary)]">Luiza Kifer</h3>
+                    <p className="font-semibold whitespace-nowrap text-[color:var(--brand-primary)]">Sua especialista em saúde</p>
                   </div>
                 </div>
               </div>
@@ -899,37 +900,37 @@ export default function HomePage() {
           <div className="hero-ribbon-track items-center gap-5 px-4 py-3 sm:gap-6 sm:px-6">
             {loopedHeroRibbonItems.map((item, index) => (
               <div key={`${item}-${index}`} className="hero-ribbon-item flex items-center gap-5 sm:gap-6" aria-hidden={index >= heroRibbonItems.length}>
-                <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.01em] text-slate-800 sm:text-xs lg:text-sm">{item}</span>
-                <Sparkles className="h-3.5 w-3.5 text-orange-400 sm:h-4 sm:w-4" />
+                <span className="whitespace-nowrap text-[10px] font-semibold tracking-[0.01em] text-[color:var(--text-secondary)] sm:text-xs lg:text-sm">{item}</span>
+                <Sparkles className="h-3.5 w-3.5 text-[color:var(--brand-primary)] sm:h-4 sm:w-4" />
               </div>
             ))}
           </div>
         </div>
 
-        <section id="prova-social" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
+        <section id="prova-social" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">confiança em números</p>
-              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Confiança construída no atendimento real.</h2>
-              <p className="mt-4 text-lg leading-relaxed text-slate-600">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">confiança em números</p>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Confiança construída no atendimento real.</h2>
+              <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 A Kifer compara operadoras, custos e rede de atendimento com linguagem simples. O foco não é empurrar plano, é ajudar você a decidir.
               </p>
             </div>
 
             <div className="mt-12 grid gap-5 md:grid-cols-3">
               {publicMetrics.map((metric) => (
-                <article key={metric.label} className="rounded-3xl border border-orange-100 bg-orange-50/60 p-8 shadow-[0_24px_50px_-40px_rgba(122,62,22,0.35)]">
-                  <p className="text-4xl font-black text-slate-900 md:text-5xl">{metric.value}</p>
-                  <p className="mt-3 text-lg font-semibold text-orange-700">{metric.label}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">{metric.detail}</p>
+                <article key={metric.label} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--brand-primary-border)] bg-[var(--brand-primary-muted)] p-8 shadow-[var(--shadow-card)]">
+                  <p className="text-4xl font-black text-[color:var(--text-primary)] md:text-5xl">{metric.value}</p>
+                  <p className="mt-3 text-lg font-semibold text-[color:var(--brand-primary)]">{metric.label}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">{metric.detail}</p>
                 </article>
               ))}
             </div>
 
-            <div className="mt-12 rounded-[2rem] border border-slate-200 bg-slate-50 px-6 py-8 shadow-sm">
+            <div className="mt-12 rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] px-6 py-8 shadow-[var(--shadow-card)]">
               <div className="mb-6 flex flex-col gap-2 text-center">
-                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">operadoras parceiras</p>
-                <p className="text-base text-slate-600">Trabalhamos com marcas relevantes para comparar cenário real de contratação no RJ.</p>
+                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[color:var(--text-muted)]">operadoras parceiras</p>
+                <p className="text-base text-[color:var(--text-secondary)]">Trabalhamos com marcas relevantes para comparar cenário real de contratação no RJ.</p>
               </div>
 
               <div className="partner-logos-marquee py-2">
@@ -953,37 +954,37 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="para-quem" className="scroll-mt-32 bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
+        <section id="para-quem" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">para quem é</p>
-              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">O plano certo para cada perfil: PF, MEI ou empresa.</h2>
-              <p className="mt-4 text-lg leading-relaxed text-slate-600">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">para quem é</p>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">O plano certo para cada perfil: PF, MEI ou empresa.</h2>
+              <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 Se você quer cotar como pessoa física ou entender se existe uma via mais inteligente via CNPJ, a Kifer orienta o caminho sem enrolação.
               </p>
             </div>
 
             <div className="mt-12 grid gap-6 lg:grid-cols-2">
               {audienceCards.map((card) => (
-                <article key={card.eyebrow} className="flex flex-col rounded-[2rem] border border-white/70 bg-white p-8 shadow-[0_26px_50px_-42px_rgba(15,23,42,0.28)]">
+                <article key={card.eyebrow} className="flex flex-col rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-8 shadow-[var(--shadow-card)]">
                   <div className="flex flex-1 flex-col">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-sm font-black uppercase tracking-[0.18em] text-orange-700">{card.eyebrow}</p>
-                        <h3 className="mt-4 text-3xl font-bold leading-tight text-slate-900">{card.title}</h3>
+                        <p className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--brand-primary)]">{card.eyebrow}</p>
+                        <h3 className="mt-4 font-[var(--font-display)] text-3xl font-bold leading-tight text-[color:var(--text-primary)]">{card.title}</h3>
                       </div>
-                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--kds-radius-md)] bg-[var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
                         <card.icon className="h-7 w-7" />
                       </span>
                     </div>
 
-                    <p className="mt-5 flex-1 text-base leading-relaxed text-slate-600">{card.description}</p>
+                    <p className="mt-5 flex-1 text-base leading-relaxed text-[color:var(--text-secondary)]">{card.description}</p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => scrollToForm(card.contractKind)}
-                    className="mt-auto inline-flex items-center rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:from-orange-600 hover:to-orange-700"
+                    className="mt-auto inline-flex items-center rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] px-6 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:[background:var(--brand-primary-gradient-hover)]"
                   >
                     {card.ctaLabel}
                     <ChevronRight className="ml-2 h-4 w-4" />
@@ -994,11 +995,11 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="como-funciona" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
+        <section id="como-funciona" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">como funciona</p>
-              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Três passos para sair da dúvida com mais clareza.</h2>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">como funciona</p>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Três passos para sair da dúvida com mais clareza.</h2>
             </div>
 
             <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -1022,16 +1023,16 @@ export default function HomePage() {
                   icon: CheckCircle,
                 },
               ].map((item) => (
-                <article key={item.step} className="relative rounded-[2rem] border border-slate-200 bg-slate-50 p-8 shadow-sm">
-                  <div className="absolute -left-3 top-8 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-xl font-bold text-white shadow-lg">
+                <article key={item.step} className="relative rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] p-8 shadow-[var(--shadow-card)]">
+                  <div className="absolute -left-3 top-8 flex h-12 w-12 items-center justify-center rounded-full [background:var(--brand-primary-gradient)] text-xl font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)]">
                     {item.step}
                   </div>
                   <div className="ml-6">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-orange-700 shadow-sm">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[var(--kds-radius-md)] bg-[var(--bg-elevated)] text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]">
                       <item.icon className="h-8 w-8" />
                     </div>
-                    <h3 className="mt-6 text-2xl font-bold text-slate-900">{item.title}</h3>
-                    <p className="mt-4 text-base leading-relaxed text-slate-600">{item.text}</p>
+                    <h3 className="mt-6 font-[var(--font-display)] text-2xl font-bold text-[color:var(--text-primary)]">{item.title}</h3>
+                    <p className="mt-4 text-base leading-relaxed text-[color:var(--text-secondary)]">{item.text}</p>
                   </div>
                 </article>
               ))}
@@ -1039,29 +1040,29 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="depoimentos" className="scroll-mt-32 bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
+        <section id="depoimentos" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">depoimentos</p>
-              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Clientes que saíram da cotação com mais segurança.</h2>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">depoimentos</p>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Clientes que saíram da cotação com mais segurança.</h2>
             </div>
 
             <div className="mt-12 grid gap-6 md:grid-cols-3">
               {testimonials.map((testimonial) => (
-                <article key={testimonial.name} className="rounded-[2rem] border border-white/80 bg-white p-8 shadow-[0_26px_50px_-42px_rgba(15,23,42,0.28)]">
-                  <div className="mb-5 flex items-center gap-1 text-yellow-400">
+                <article key={testimonial.name} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] p-8 shadow-[var(--shadow-card)]">
+                  <div className="mb-5 flex items-center gap-1 text-[color:var(--accent-gold)]">
                     {Array.from({ length: 5 }).map((_, index) => (
                       <Star key={`${testimonial.name}-${index}`} className="h-5 w-5 fill-current" />
                     ))}
                   </div>
-                  <p className="text-lg leading-relaxed text-slate-700">&quot;{testimonial.quote}&quot;</p>
+                  <p className="text-lg leading-relaxed text-[color:var(--text-secondary)]">&quot;{testimonial.quote}&quot;</p>
                   <div className="mt-8 flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-lg font-bold text-orange-700">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-lg font-bold text-[color:var(--brand-primary)]">
                       {testimonial.initial}
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-900">{testimonial.name}</p>
-                      <p className="text-sm text-slate-500">{testimonial.detail}</p>
+                      <p className="font-semibold text-[color:var(--text-primary)]">{testimonial.name}</p>
+                      <p className="text-sm text-[color:var(--text-muted)]">{testimonial.detail}</p>
                     </div>
                   </div>
                 </article>
@@ -1073,7 +1074,7 @@ export default function HomePage() {
                 href={GOOGLE_REVIEWS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center font-semibold text-orange-700 transition-colors hover:text-orange-800"
+                className="inline-flex items-center font-semibold text-[color:var(--brand-primary)] transition-colors hover:text-[color:var(--brand-primary-hover)]"
               >
                 Ver mais avaliações no Google
                 <ChevronRight className="ml-1 h-4 w-4" />
@@ -1082,10 +1083,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="quem-somos" className="scroll-mt-32 bg-white px-4 py-20 sm:px-6 lg:px-8">
+        <section id="quem-somos" className="scroll-mt-32 bg-[var(--bg-surface)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-            <div className="relative overflow-hidden rounded-[2.4rem] bg-gradient-to-br from-orange-100 via-orange-50 to-amber-100 p-4 shadow-[0_34px_70px_-48px_rgba(122,62,22,0.45)]">
-              <div className="overflow-hidden rounded-[2rem] border border-white/70 bg-white">
+            <div className="relative overflow-hidden rounded-[var(--kds-radius-xl)] [background:var(--surface-hero-bg)] p-4 shadow-[var(--shadow-card)]">
+              <div className="overflow-hidden rounded-[var(--kds-radius-xl)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)]">
                 <img
                   src="/image.png"
                   alt="Luiza Kifer, corretora independente de planos de saúde no Rio de Janeiro"
@@ -1095,12 +1096,12 @@ export default function HomePage() {
             </div>
 
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">sobre a Luiza</p>
-              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Uma pessoa real te acompanha do início até a ativação.</h2>
-              <p className="mt-6 text-lg leading-relaxed text-slate-600">
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">sobre a Luiza</p>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Uma pessoa real te acompanha do início até a ativação.</h2>
+              <p className="mt-6 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 Sou corretora independente no Rio de Janeiro. Trabalho com as principais operadoras e cuido de cada cliente com o mesmo cuidado que eu teria ao orientar alguém da minha família.
               </p>
-              <p className="mt-4 text-lg leading-relaxed text-slate-600">
+              <p className="mt-4 text-lg leading-relaxed text-[color:var(--text-secondary)]">
                 O foco da Kifer é deixar a contratação mais clara, comparando custo, rede e regras com linguagem simples para você decidir sem pressão e sem surpresa depois.
               </p>
 
@@ -1127,10 +1128,10 @@ export default function HomePage() {
                     icon: Phone,
                   },
                 ].map((item) => (
-                  <article key={item.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-                    <item.icon className="h-8 w-8 text-orange-700" />
-                    <h3 className="mt-4 text-lg font-bold text-slate-900">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.description}</p>
+                  <article key={item.title} className="rounded-[var(--kds-radius-md)] border border-[color:var(--border-default)] bg-[var(--bg-surface-muted)] p-5 shadow-[var(--shadow-card)]">
+                    <item.icon className="h-8 w-8 text-[color:var(--brand-primary)]" />
+                    <h3 className="mt-4 font-[var(--font-display)] text-lg font-bold text-[color:var(--text-primary)]">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-[color:var(--text-secondary)]">{item.description}</p>
                   </article>
                 ))}
               </div>
@@ -1138,30 +1139,30 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="faq" className="scroll-mt-32 bg-slate-50 px-4 py-20 sm:px-6 lg:px-8">
+        <section id="faq" className="scroll-mt-32 bg-[var(--bg-surface-muted)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-4xl">
             <div className="text-center">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-700">faq rápido</p>
-              <h2 className="mt-4 text-4xl font-bold text-slate-900 md:text-5xl">Perguntas frequentes antes de contratar.</h2>
+              <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--brand-primary)]">faq rápido</p>
+              <h2 className="mt-4 font-[var(--font-display)] text-4xl font-bold text-[color:var(--text-primary)] md:text-5xl">Perguntas frequentes antes de contratar.</h2>
             </div>
 
             <div className="mt-12 space-y-4">
               {faqItems.map((faq, index) => (
-                <div key={faq.question} className="overflow-hidden rounded-[1.6rem] border border-white/80 bg-white shadow-sm">
+                <div key={faq.question} className="overflow-hidden rounded-[var(--kds-radius-lg)] border border-[color:var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex((current) => (current === index ? null : index))}
-                    className="flex w-full items-center justify-between gap-5 px-6 py-5 text-left transition-colors hover:bg-slate-50 sm:px-8 sm:py-6"
+                    className="flex w-full items-center justify-between gap-5 px-6 py-5 text-left transition-colors hover:bg-[var(--bg-hover)] sm:px-8 sm:py-6"
                     aria-expanded={openFaqIndex === index}
                   >
-                    <span className="text-lg font-semibold leading-relaxed text-slate-900">{faq.question}</span>
+                    <span className="text-lg font-semibold leading-relaxed text-[color:var(--text-primary)]">{faq.question}</span>
                     <ChevronDown
-                      className={`h-6 w-6 shrink-0 text-orange-600 transition-transform ${openFaqIndex === index ? 'rotate-180' : ''}`}
+                      className={`h-6 w-6 shrink-0 text-[color:var(--brand-primary)] transition-transform ${openFaqIndex === index ? 'rotate-180' : ''}`}
                     />
                   </button>
                   {openFaqIndex === index ? (
                     <div className="px-6 pb-6 sm:px-8">
-                      <p className="leading-relaxed text-slate-600">{faq.answer}</p>
+                      <p className="leading-relaxed text-[color:var(--text-secondary)]">{faq.answer}</p>
                     </div>
                   ) : null}
                 </div>
@@ -1170,53 +1171,53 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="cotacao" className="scroll-mt-32 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 px-4 py-20 sm:px-6 lg:px-8">
+        <section id="cotacao" className="scroll-mt-32 [background:var(--brand-primary-gradient)] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-            <div className="text-white">
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-100">cotação gratuita</p>
+            <div className="text-[color:var(--text-on-brand)]">
+              <p className="text-sm font-black uppercase tracking-[0.2em] opacity-80">cotação gratuita</p>
               <h2 className="mt-4 text-4xl font-bold md:text-5xl">Receba um comparativo coerente com o seu perfil.</h2>
-              <p className="mt-5 text-lg leading-relaxed text-orange-50">
+              <p className="mt-5 text-lg leading-relaxed opacity-90">
                 Preencha o formulário e receba orientação para pessoa física, MEI ou empresa pequena com foco em rede, custo e contratação sem complicação.
               </p>
 
-              <div className="mt-8 space-y-4 rounded-[2rem] border border-white/15 bg-white/10 p-6 backdrop-blur-sm">
+              <div className="mt-8 space-y-4 rounded-[var(--kds-radius-xl)] border border-[color:color-mix(in_srgb,var(--text-on-brand)_24%,transparent)] bg-[color:color-mix(in_srgb,var(--text-on-brand)_14%,transparent)] p-6 backdrop-blur-sm">
                 {[
                   'Atendimento sem custo e sem compromisso.',
                   'Análise prática da sua cidade, faixa etária e número de vidas.',
                   'Contato direto pelo WhatsApp para agilizar a resposta.',
                 ].map((item) => (
-                  <div key={item} className="flex items-start gap-3 text-sm leading-relaxed text-white/90">
-                    <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-white" />
+                  <div key={item} className="flex items-start gap-3 text-sm leading-relaxed opacity-90">
+                    <CheckCircle className="mt-0.5 h-5 w-5 shrink-0" />
                     <span>{item}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="rounded-[2rem] bg-white p-8 shadow-2xl md:p-10">
+            <form onSubmit={handleSubmit} className="rounded-[var(--kds-radius-xl)] bg-[var(--bg-elevated)] p-8 text-[color:var(--text-primary)] shadow-[var(--shadow-modal)] md:p-10">
               <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">{renderQuoteFields()}</div>
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg transition-all hover:scale-[1.01] hover:from-orange-600 hover:to-orange-700 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:scale-[1.01] hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? 'Enviando cotação...' : 'Quero minha cotação personalizada agora'}
                 <ChevronRight className="ml-2 inline-block h-5 w-5" />
               </button>
 
-              <p className="mt-4 text-center text-sm text-slate-500">Seu contato é usado apenas para montar a melhor cotação para o seu perfil.</p>
+              <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Seu contato é usado apenas para montar a melhor cotação para o seu perfil.</p>
             </form>
           </div>
         </section>
 
-        <section className="bg-slate-900 px-4 py-16 text-white sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl rounded-[2.4rem] border border-white/10 bg-gradient-to-r from-[#0f172a] via-[#172033] to-[#1e293b] p-8 shadow-[0_38px_80px_-52px_rgba(15,23,42,0.7)] md:p-12">
+        <section className="bg-[var(--text-primary)] px-4 py-16 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-7xl rounded-[var(--kds-radius-xl)] border border-[color:var(--border-strong)] bg-[var(--text-primary)] p-8 shadow-[var(--shadow-modal)] md:p-12">
             <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-orange-200">fale agora</p>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-[color:var(--accent-gold)]">fale agora</p>
                 <h2 className="mt-4 text-4xl font-bold md:text-5xl">Quer resolver isso hoje pelo WhatsApp?</h2>
-                <p className="mt-4 max-w-2xl text-lg leading-relaxed text-slate-300">
+                <p className="mt-4 max-w-2xl text-lg leading-relaxed opacity-75">
                   Se preferir, pule direto para a conversa. A Kifer entende seu cenário, compara as opções e te acompanha até a contratação acontecer de verdade.
                 </p>
               </div>
@@ -1226,7 +1227,7 @@ export default function HomePage() {
                   href={WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-2xl bg-green-600 px-8 py-4 text-base font-bold text-white shadow-xl transition-all hover:-translate-y-0.5 hover:bg-green-700"
+                  className="inline-flex items-center justify-center rounded-[var(--kds-radius-md)] border border-[color:var(--success-border)] bg-[var(--success)] px-8 py-4 text-base font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
                 >
                   <MessageCircle className="mr-2 h-5 w-5" />
                   Quero falar agora no WhatsApp
@@ -1234,7 +1235,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setShowQuoteModal(true)}
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/5 px-8 py-4 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                  className="inline-flex items-center justify-center rounded-[var(--kds-radius-md)] border border-[color:var(--border-strong)] bg-[var(--bg-hover)] px-8 py-4 text-sm font-bold transition-colors hover:bg-[var(--bg-active)]"
                 >
                   Prefiro preencher a cotação
                 </button>
@@ -1243,60 +1244,60 @@ export default function HomePage() {
           </div>
         </section>
 
-        <footer className="bg-slate-950 px-4 py-14 text-white sm:px-6 lg:px-8">
+        <footer className="bg-[var(--text-primary)] px-4 py-14 text-[color:var(--text-inverse)] sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr_0.8fr]">
               <div>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600">
-                    <PublicBrandMark className="h-6 w-auto text-white" />
+                  <div className="flex h-11 w-11 items-center justify-center rounded-[var(--kds-radius-md)] [background:var(--brand-primary-gradient)]">
+                    <PublicBrandMark className="h-6 w-auto text-[color:var(--text-on-brand)]" />
                   </div>
                   <span className="text-2xl font-bold">Kifer Saúde</span>
                 </div>
-                <p className="mt-5 max-w-md text-sm leading-relaxed text-slate-400">
+                <p className="mt-5 max-w-md text-sm leading-relaxed opacity-70">
                   Corretora especializada em planos de saúde no Rio de Janeiro, com atendimento humano, comparação consultiva e suporte até o pós-venda.
                 </p>
               </div>
 
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-orange-200">Links rápidos</h3>
-                <div className="mt-5 space-y-3 text-sm text-slate-400">
-                  <a href="#para-quem" className="block transition-colors hover:text-white">
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Links rápidos</h3>
+                <div className="mt-5 space-y-3 text-sm opacity-70">
+                  <a href="#para-quem" className="block transition-colors hover:text-[color:var(--text-inverse)]">
                     Para quem é
                   </a>
-                  <a href="#como-funciona" className="block transition-colors hover:text-white">
+                  <a href="#como-funciona" className="block transition-colors hover:text-[color:var(--text-inverse)]">
                     Como funciona
                   </a>
-                  <a href="#faq" className="block transition-colors hover:text-white">
+                  <a href="#faq" className="block transition-colors hover:text-[color:var(--text-inverse)]">
                     FAQ
                   </a>
-                  <a href="#cotacao" className="block transition-colors hover:text-white">
+                  <a href="#cotacao" className="block transition-colors hover:text-[color:var(--text-inverse)]">
                     Cotação gratuita
                   </a>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-orange-200">Contato</h3>
-                <div className="mt-5 space-y-3 text-sm text-slate-400">
-                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-white">
-                    <MessageCircle className="h-4 w-4 text-green-400" />
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Contato</h3>
+                <div className="mt-5 space-y-3 text-sm opacity-70">
+                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
+                    <MessageCircle className="h-4 w-4 text-[color:var(--success)]" />
                     WhatsApp
                   </a>
-                  <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-white">
-                    <Instagram className="h-4 w-4 text-orange-300" />
+                  <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 transition-colors hover:text-[color:var(--text-inverse)]">
+                    <Instagram className="h-4 w-4 text-[color:var(--accent-gold)]" />
                     @souluizakifer
                   </a>
                   <span className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-orange-300" />
+                    <MapPin className="h-4 w-4 text-[color:var(--accent-gold)]" />
                     Rio de Janeiro, RJ
                   </span>
                 </div>
               </div>
 
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-orange-200">Legal</h3>
-                <div className="mt-5 space-y-3 text-sm text-slate-400">
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-[color:var(--accent-gold)]">Legal</h3>
+                <div className="mt-5 space-y-3 text-sm opacity-70">
                   <p>CNPJ: {CNPJ}</p>
                   <p>Desenvolvido por Kifer Saúde</p>
                 </div>
@@ -1309,7 +1310,7 @@ export default function HomePage() {
           href={WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-2xl transition-transform hover:-translate-y-0.5 hover:bg-green-700"
+          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full border border-[color:var(--success-border)] bg-[var(--success)] px-4 py-3 text-sm font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-transform hover:-translate-y-0.5 hover:bg-[var(--success-hover)]"
           aria-label="Abrir conversa no WhatsApp"
         >
           <MessageCircle className="h-5 w-5" />
@@ -1324,13 +1325,13 @@ export default function HomePage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 py-4 text-lg font-bold text-white shadow-lg transition-all hover:from-orange-600 hover:to-orange-700 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-[var(--kds-radius-sm)] [background:var(--brand-primary-gradient)] py-4 text-lg font-bold text-[color:var(--text-on-brand)] shadow-[var(--shadow-button)] transition-all hover:[background:var(--brand-primary-gradient-hover)] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {submitting ? 'Enviando cotação...' : 'Enviar cotação via WhatsApp'}
                 <MessageCircle className="ml-2 inline-block h-5 w-5" />
               </button>
 
-              <p className="mt-4 text-center text-sm text-slate-500">Resposta em até 10 minutos</p>
+              <p className="mt-4 text-center text-sm text-[color:var(--text-muted)]">Resposta em até 10 minutos</p>
             </form>
           </OverlayModal>
         ) : null}

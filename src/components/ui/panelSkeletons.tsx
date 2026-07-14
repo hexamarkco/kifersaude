@@ -8,13 +8,15 @@ type PanelCardProps = {
 
 function PanelCard({ children, className = '' }: PanelCardProps) {
   return (
-    <div className={`panel-glass-panel rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
+    <div className={`kds-card kds-card-default p-5 ${className}`}>
       {children}
     </div>
   );
 }
 
-function CalendarGridSkeleton({ accentClass }: { accentClass: string }) {
+function CalendarGridSkeleton({ tone }: { tone: 'success' | 'info' }) {
+  const toneClass = tone === 'success' ? 'bg-[var(--success-soft)]' : 'bg-[var(--info-soft)]';
+
   return (
     <div className="grid grid-cols-7 gap-2">
       {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((day) => (
@@ -25,7 +27,7 @@ function CalendarGridSkeleton({ accentClass }: { accentClass: string }) {
       {Array.from({ length: 35 }).map((_, index) => (
         <div
           key={`calendar-cell-${index}`}
-          className={`rounded-lg border border-slate-200 bg-slate-50/70 p-2 ${accentClass}`}
+          className={`rounded-[var(--kds-radius-sm)] border border-[var(--border-default)] p-2 ${toneClass}`}
         >
           <Skeleton variant="line" className="h-3 w-6" />
           <div className="mt-2 space-y-1">
@@ -40,9 +42,9 @@ function CalendarGridSkeleton({ accentClass }: { accentClass: string }) {
 
 export function PanelBootSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-50 p-3 sm:p-6">
+    <div className="min-h-screen bg-[var(--bg-canvas)] p-3 sm:p-6">
       <div className="mx-auto flex max-w-[1440px] gap-4">
-        <aside className="panel-glass-strong hidden h-[calc(100vh-3rem)] w-64 shrink-0 rounded-2xl border border-slate-200 p-4 lg:flex lg:flex-col">
+        <aside className="kds-card kds-card-strong hidden h-[calc(100vh-3rem)] w-64 shrink-0 p-4 lg:flex lg:flex-col">
           <div className="mb-6 flex items-center gap-3">
             <Skeleton variant="avatar" className="h-10 w-10" />
             <Skeleton variant="line" className="h-5 w-28" />
@@ -95,7 +97,7 @@ export function PanelBootSkeleton() {
 export function DashboardPageSkeleton() {
   return (
     <div className="panel-dashboard-immersive space-y-6">
-      <div className="panel-glass-panel rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="kds-card kds-card-default p-4 sm:p-6">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-2">
@@ -220,7 +222,7 @@ export function DashboardPageSkeleton() {
 export function LeadsPageSkeleton() {
   return (
     <div className="panel-dashboard-immersive space-y-6">
-      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+      <div className="kds-surface kds-surface-info px-4 py-3">
         <Skeleton variant="line" className="h-4 w-72" />
       </div>
 
@@ -260,7 +262,7 @@ export function LeadsPageSkeleton() {
         </div>
 
         {Array.from({ length: 7 }).map((_, index) => (
-          <article key={`lead-row-${index}`} className="rounded-xl border border-slate-200 bg-white p-4">
+          <article key={`lead-row-${index}`} className="kds-card kds-card-default p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-52" />
@@ -280,7 +282,7 @@ export function LeadsPageSkeleton() {
           </article>
         ))}
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
           <Skeleton variant="line" className="h-4 w-44" />
           <div className="flex gap-2">
             <Skeleton className="h-9 w-20 rounded-lg" />
@@ -320,7 +322,7 @@ export function ContractsPageSkeleton() {
 
       <PanelCard className="space-y-4">
         {Array.from({ length: 7 }).map((_, index) => (
-          <article key={`contract-row-${index}`} className="rounded-xl border border-slate-200 bg-white p-4">
+          <article key={`contract-row-${index}`} className="kds-card kds-card-default p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-60" />
@@ -339,7 +341,7 @@ export function ContractsPageSkeleton() {
           </article>
         ))}
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-4 sm:flex-row sm:items-center sm:justify-between">
           <Skeleton variant="line" className="h-4 w-44" />
           <div className="flex gap-2">
             <Skeleton className="h-9 w-20 rounded-lg" />
@@ -398,7 +400,7 @@ export function RemindersPageSkeleton() {
                 {Array.from({ length: groupIndex === 0 ? 2 : 1 }).map((_, index) => (
                   <article
                     key={`${group}-reminder-${index}`}
-                    className="rounded-xl border border-slate-200 bg-white p-4"
+                    className="kds-card kds-card-default p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-2">
@@ -426,9 +428,9 @@ export function RemindersPageSkeleton() {
 
 export function WhatsAppPageSkeleton() {
   return (
-    <div className="flex h-[calc(100vh-2rem)] min-h-[560px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <aside className="w-full border-r border-slate-200 bg-white md:w-96">
-        <div className="space-y-3 border-b border-slate-200 p-4">
+    <div className="kds-card kds-card-default flex h-[calc(100vh-2rem)] min-h-[560px] overflow-hidden">
+      <aside className="w-full border-r border-[var(--border-default)] bg-[var(--bg-surface)] md:w-96">
+        <div className="space-y-3 border-b border-[var(--border-default)] p-4">
           <div className="flex items-center justify-between">
             <Skeleton className="h-7 w-28" />
             <div className="flex items-center gap-2">
@@ -445,7 +447,7 @@ export function WhatsAppPageSkeleton() {
         </div>
         <div className="space-y-2 p-3">
           {Array.from({ length: 9 }).map((_, index) => (
-            <div key={`chat-row-${index}`} className="rounded-xl border border-slate-200 p-3">
+            <div key={`chat-row-${index}`} className="kds-card kds-card-default p-3">
               <div className="flex items-start gap-3">
                 <Skeleton variant="avatar" className="h-11 w-11" />
                 <div className="min-w-0 flex-1 space-y-2">
@@ -462,7 +464,7 @@ export function WhatsAppPageSkeleton() {
       </aside>
 
       <div className="hidden min-w-0 flex-1 flex-col md:flex">
-        <div className="flex items-center justify-between border-b border-slate-200 p-4">
+        <div className="flex items-center justify-between border-b border-[var(--border-default)] p-4">
           <div className="flex items-center gap-3">
             <Skeleton variant="avatar" className="h-10 w-10" />
             <div className="space-y-1.5">
@@ -486,7 +488,7 @@ export function WhatsAppPageSkeleton() {
             </div>
           ))}
         </div>
-        <div className="border-t border-slate-200 p-4">
+        <div className="border-t border-[var(--border-default)] p-4">
           <Skeleton className="h-11 w-full rounded-xl" />
         </div>
       </div>
@@ -498,7 +500,7 @@ export function BlogTabSkeletonList() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 4 }).map((_, index) => (
-        <article key={`blog-admin-row-${index}`} className="rounded-lg border border-slate-200 p-4">
+        <article key={`blog-admin-row-${index}`} className="kds-card kds-card-default p-4">
           <div className="flex items-start gap-4">
             <Skeleton className="h-20 w-32 rounded-lg" />
             <div className="min-w-0 flex-1 space-y-2">
@@ -525,7 +527,7 @@ export function BlogTabSkeletonList() {
 
 export function CommissionCalendarSkeleton() {
   return (
-    <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="kds-card kds-card-default space-y-6 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-8 w-72" />
@@ -543,14 +545,14 @@ export function CommissionCalendarSkeleton() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200">
-        <div className="flex items-center justify-between bg-slate-50 px-4 py-3">
+      <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-default)]">
+        <div className="flex items-center justify-between bg-[var(--bg-inset)] px-4 py-3">
           <Skeleton className="h-8 w-8 rounded-md" />
           <Skeleton className="h-6 w-36" />
           <Skeleton className="h-8 w-8 rounded-md" />
         </div>
         <div className="p-4">
-          <CalendarGridSkeleton accentClass="bg-emerald-50/40" />
+          <CalendarGridSkeleton tone="success" />
         </div>
       </div>
 
@@ -577,7 +579,7 @@ export function CommissionCalendarSkeleton() {
 
 export function TodoCalendarSkeleton() {
   return (
-    <section className="panel-glass-panel space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+    <section className="kds-card kds-card-default space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <Skeleton className="h-8 w-52" />
@@ -589,14 +591,14 @@ export function TodoCalendarSkeleton() {
         </div>
       </div>
 
-      <div className="rounded-[1.7rem] border border-slate-200">
-        <div className="flex items-center justify-between bg-slate-50 px-4 py-3">
+      <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-default)]">
+        <div className="flex items-center justify-between bg-[var(--bg-inset)] px-4 py-3">
           <Skeleton className="h-8 w-8 rounded-md" />
           <Skeleton className="h-6 w-36" />
           <Skeleton className="h-8 w-8 rounded-md" />
         </div>
         <div className="p-4">
-          <CalendarGridSkeleton accentClass="bg-sky-50/40" />
+          <CalendarGridSkeleton tone="info" />
         </div>
       </div>
 
@@ -668,7 +670,7 @@ export function OperadorasSkeleton() {
         <Skeleton className="h-44 w-full rounded-xl" />
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`operadora-row-${index}`} className="rounded-lg border border-slate-200 p-4">
+            <div key={`operadora-row-${index}`} className="kds-card kds-card-default p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="space-y-2">
                   <Skeleton className="h-5 w-40" />
@@ -701,7 +703,7 @@ export function UsersSkeleton() {
         </div>
         <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={`user-row-${index}`} className="rounded-lg border border-slate-200 p-4">
+            <div key={`user-row-${index}`} className="kds-card kds-card-default p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <Skeleton variant="avatar" className="h-10 w-10" />
@@ -735,7 +737,7 @@ export function IntegrationsSkeleton() {
           <Skeleton className="h-7 w-56" />
           <Skeleton variant="line" className="h-4 w-80" />
         </div>
-        <div className="rounded-xl border border-slate-200 p-4">
+        <div className="kds-card kds-card-default p-4">
           <Skeleton className="h-6 w-64" />
           <Skeleton variant="line" className="mt-2 h-4 w-11/12" />
           <Skeleton variant="line" className="mt-1 h-4 w-10/12" />
@@ -782,11 +784,11 @@ export function IntegrationsSkeleton() {
 
 export function AutomationFlowsSkeleton() {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+    <div className="kds-card kds-card-default p-6">
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
           {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`automation-metric-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div key={`automation-metric-${index}`} className="kds-card kds-card-muted p-4">
               <Skeleton variant="line" className="h-3 w-20" />
               <Skeleton className="mt-2 h-8 w-16" />
               <Skeleton variant="line" className="mt-2 h-3 w-24" />
@@ -795,14 +797,14 @@ export function AutomationFlowsSkeleton() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 p-4">
+          <div className="kds-card kds-card-default p-4">
             <Skeleton className="h-6 w-32" />
             <div className="mt-4 space-y-3">
               <Skeleton className="h-12 w-full rounded-lg" />
               <Skeleton className="h-12 w-full rounded-lg" />
             </div>
           </div>
-          <div className="rounded-xl border border-slate-200 p-4">
+          <div className="kds-card kds-card-default p-4">
             <Skeleton className="h-6 w-44" />
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Skeleton className="h-10 w-full rounded-lg" />
@@ -814,13 +816,13 @@ export function AutomationFlowsSkeleton() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+          <div className="kds-card kds-card-default space-y-3 p-4">
             <Skeleton className="h-10 w-full rounded-lg" />
             {Array.from({ length: 6 }).map((_, index) => (
               <Skeleton key={`automation-flow-${index}`} className="h-20 w-full rounded-lg" />
             ))}
           </div>
-          <div className="space-y-4 rounded-xl border border-slate-200 p-4">
+          <div className="kds-card kds-card-default space-y-4 p-4">
             <div className="flex items-center justify-between gap-3">
               <Skeleton className="h-9 w-2/3 rounded-lg" />
               <div className="flex gap-2">

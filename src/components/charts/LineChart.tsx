@@ -15,7 +15,7 @@ type LineChartProps = {
 
 export default function LineChart({
   data,
-  color = '#14b8a6',
+  color = 'var(--brand-primary)',
   height = 200,
   showGrid = true,
   showDots = true,
@@ -48,7 +48,7 @@ export default function LineChart({
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center text-slate-400 text-sm" style={{ height }}>
+      <div className="flex items-center justify-center text-[color:var(--text-muted)] text-sm" style={{ height }}>
         Sem dados
       </div>
     );
@@ -66,7 +66,7 @@ export default function LineChart({
                 y1={y}
                 x2="90"
                 y2={y}
-                stroke="var(--panel-chart-grid, #e2e8f0)"
+                stroke="var(--border-default)"
                 strokeWidth="0.2"
               />
             ))}
@@ -102,7 +102,7 @@ export default function LineChart({
               cx={point.x}
               cy={point.y}
               r="1.5"
-              fill="var(--panel-surface, #ffffff)"
+              fill="var(--bg-surface)"
               stroke={color}
               strokeWidth="0.5"
               className="transition-all duration-300 hover:r-2"
@@ -114,7 +114,7 @@ export default function LineChart({
         ))}
       </svg>
 
-      <div className="flex justify-between mt-2 text-xs text-slate-500">
+      <div className="flex justify-between mt-2 text-xs text-[color:var(--text-muted)]">
         <span>{data[0]?.label || ''}</span>
         <span>{data[data.length - 1]?.label || ''}</span>
       </div>

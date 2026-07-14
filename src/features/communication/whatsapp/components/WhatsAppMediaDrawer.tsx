@@ -564,7 +564,7 @@ export default function WhatsAppMediaDrawer({
                 </div>
               </div>
             ) : (
-              <div className="comm-emoji-picker-empty text-sm text-[rgba(255,248,240,0.58)]">
+              <div className="comm-emoji-picker-empty text-sm text-[var(--text-muted)]">
                 Nenhum emoji encontrado para essa busca.
               </div>
             )
@@ -623,7 +623,7 @@ export default function WhatsAppMediaDrawer({
           )
         ) : mediaLoading ? (
           <div className="comm-media-picker-empty-state">
-            <Loader2 className="h-6 w-6 animate-spin text-white/70" />
+            <Loader2 className="h-6 w-6 animate-spin text-[var(--text-secondary)]" />
             <h3 className="comm-media-picker-empty-title">Carregando {mode === 'gif' ? 'GIFs' : 'figurinhas'}</h3>
           </div>
         ) : mediaError ? (
@@ -688,7 +688,7 @@ export default function WhatsAppMediaDrawer({
       </div>
 
       {!canSendMedia && mode !== 'emoji' ? (
-        <div className="border-t border-white/10 px-4 pb-4 text-center text-[11px] font-medium text-white/60">
+        <div className="border-t border-[var(--border-subtle)] px-4 pb-4 text-center text-[11px] font-medium text-[var(--text-muted)]">
           {mediaDisabledReason || 'Selecione uma conversa para enviar GIFs e figurinhas.'}
         </div>
       ) : null}

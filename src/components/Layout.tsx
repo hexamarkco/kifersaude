@@ -988,13 +988,13 @@ export default function Layout({
           <div className={`kds-sidebar-divider terracota-sidebar-header flex h-16 items-center border-b px-4 transition-all duration-300 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
             <div className={`flex items-center gap-3 transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
-                <span className="text-base font-bold text-white">K</span>
+                <span className="text-base font-bold text-[color:var(--text-on-brand)]">K</span>
               </div>
-              <span className="whitespace-nowrap text-sm font-semibold text-white">Kifer Saúde</span>
+              <span className="whitespace-nowrap text-sm font-semibold text-[color:var(--text-on-brand)]">Kifer Saúde</span>
             </div>
             {isSidebarCollapsed && (
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
-                <span className="text-base font-bold text-white">K</span>
+                <span className="text-base font-bold text-[color:var(--text-on-brand)]">K</span>
               </div>
             )}
           </div>

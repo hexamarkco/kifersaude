@@ -2070,7 +2070,7 @@ function WhatsAppMediaViewer({
             </div>
           ) : mediaUrl ? (
             isVideo ? (
-              <video controls autoPlay className="max-h-full max-w-full bg-black object-contain">
+              <video controls autoPlay className="max-h-full max-w-full bg-[var(--overlay)] object-contain">
                 <source src={mediaUrl} type={selectedMessage.media_mime_type || undefined} />
               </video>
             ) : (
@@ -2418,7 +2418,7 @@ function WhatsAppGalleryMediaTile({
       >
         <img src={mediaUrl} alt={message.media_file_name || 'Imagem enviada'} className="h-full w-full object-cover" loading="lazy" />
         {overlayLabel ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-black/50 text-base font-semibold text-white">
+          <span className="absolute inset-0 flex items-center justify-center bg-[var(--overlay)] text-base font-semibold text-[var(--text-on-brand)]">
             {overlayLabel}
           </span>
         ) : null}
@@ -2439,7 +2439,7 @@ function WhatsAppGalleryMediaTile({
       <video muted playsInline preload="metadata" className="h-full w-full object-cover">
         <source src={mediaUrl} type={message.media_mime_type || undefined} />
       </video>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 via-black/10 to-transparent px-3 py-2 text-xs font-medium text-white">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-[color:var(--overlay)] via-transparent to-transparent px-3 py-2 text-xs font-medium text-[var(--text-on-brand)]">
         <span className="inline-flex items-center gap-1.5 truncate">
           <Play className="h-3.5 w-3.5 fill-current" />
           <span className="truncate">{secondaryLabel}</span>
@@ -2875,7 +2875,7 @@ function WhatsAppMessageBody({
         {quotePreviewNode}
         <div className="whatsapp-inbox-image-card overflow-hidden rounded-2xl border">
           {mediaUrl ? (
-            <video controls preload="metadata" className="max-h-[320px] w-full bg-black object-contain">
+            <video controls preload="metadata" className="max-h-[320px] w-full bg-[var(--overlay)] object-contain">
               <source src={mediaUrl} type={message.media_mime_type || undefined} />
             </video>
           ) : (

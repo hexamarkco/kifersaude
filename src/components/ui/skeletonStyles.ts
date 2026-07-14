@@ -1,5 +1,5 @@
 export const skeletonSurfaces = {
-  card: 'bg-white/80 border border-white/60 rounded-2xl shadow-sm',
-  panel: 'bg-white/80 border border-white/60 rounded-2xl shadow-sm',
-  chip: 'bg-white/60 border border-white/50 rounded-full'
+  card: 'kds-card kds-card-default',
+  panel: 'kds-card kds-card-default',
+  chip: 'rounded-full border border-[var(--border-subtle)] bg-[var(--bg-elevated)]'
 } as const;

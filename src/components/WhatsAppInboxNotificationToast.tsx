@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { MessageCircle, X } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 
-import Button from './ui/Button';
+import { Toast } from '../design-system';
 import type { BrowserNotificationPermission } from '../lib/browserNotificationService';
 import type { InboxMessageNotification } from '../lib/notificationService';
 
@@ -70,43 +70,38 @@ export default function WhatsAppInboxNotificationToast({
           : 'translate-x-full opacity-0'
       }`}
     >
-      <div className="w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-amber-300/70 bg-white shadow-2xl">
-        <div className="flex items-center justify-between bg-gradient-to-r from-amber-500 to-amber-700 px-4 py-3">
-          <div className="flex items-center space-x-2 text-white">
-            <MessageCircle className="h-5 w-5 animate-bounce" />
-            <h3 className="text-base font-bold">Nova mensagem no WhatsApp</h3>
-          </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="rounded-full p-1 text-white transition-colors hover:bg-white/20"
-            aria-label="Fechar notificacao do WhatsApp"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="space-y-3 p-4">
+      <Toast
+        className="w-[min(24rem,calc(100vw-2rem))]"
+        title="Nova mensagem no WhatsApp"
+        variant="warning"
+        icon={MessageCircle}
+        onDismiss={handleClose}
+        actions={[
+          { label: 'Abrir conversa', onClick: handleViewChat, fullWidth: true },
+          ...(canRequestBrowserNotifications
+            ? [
+                {
+                  label: 'Ativar notificacoes do navegador',
+                  onClick: onEnableBrowserNotifications!,
+                  variant: 'secondary' as const,
+                  size: 'sm' as const,
+                  fullWidth: true,
+                },
+              ]
+            : []),
+        ]}
+      >
+        <div className="mt-3 space-y-3">
           <div>
-            <p className="truncate text-base font-bold text-slate-900">{notification.displayName}</p>
-            <p className="text-xs text-slate-500">{notification.phoneNumber}</p>
+            <p className="truncate text-base font-bold text-[var(--text-primary)]">{notification.displayName}</p>
+            <p className="text-xs text-[var(--text-muted)]">{notification.phoneNumber}</p>
           </div>
 
-          <p className="text-sm leading-5 text-slate-700">{truncatePreview(notification.messagePreview)}</p>
-
-          <div className="space-y-2">
-            <Button onClick={handleViewChat} fullWidth>
-              Abrir conversa
-            </Button>
-
-            {canRequestBrowserNotifications && (
-              <Button variant="secondary" size="sm" onClick={onEnableBrowserNotifications} fullWidth>
-                Ativar notificacoes do navegador
-              </Button>
-            )}
-          </div>
+          <p className="text-sm leading-5 text-[var(--text-secondary)]">
+            {truncatePreview(notification.messagePreview)}
+          </p>
         </div>
-      </div>
+      </Toast>
     </div>
   );
 }

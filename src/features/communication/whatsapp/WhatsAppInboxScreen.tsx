@@ -2141,7 +2141,7 @@ function DeliveryStatusIndicator({ message }: { message: CommWhatsAppMessage }) 
   const Icon = meta.icon;
 
   return (
-    <span className={`whatsapp-inbox-status-meta whatsapp-inbox-status-meta-${meta.tone}`}>
+    <span className={`whatsapp-inbox-status-meta whatsapp-inbox-status-meta-${meta.tone} inline-flex shrink-0 items-center gap-1 whitespace-nowrap`}>
       <Icon className="h-3.5 w-3.5" />
       <span>{meta.label}</span>
     </span>

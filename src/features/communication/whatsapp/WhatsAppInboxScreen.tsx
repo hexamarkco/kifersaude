@@ -9740,8 +9740,10 @@ export default function WhatsAppInboxScreen() {
                             <div className={`rounded-[var(--kds-radius-lg)] px-2 py-2 shadow-sm ${getMessageBubbleClasses(lastMessage.direction)} ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
                               <WhatsAppMediaGroupBody messages={groupMessages} onOpenImage={setLightboxMessageId} />
                               <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 px-2 text-[11px] font-medium">
-                                <span>{formatMessageTime(lastMessage.message_at)}</span>
-                                {lastMessage.direction === 'outbound' && <DeliveryStatusIndicator message={lastMessage} />}
+                                <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                                  <span>{formatMessageTime(lastMessage.message_at)}</span>
+                                  {lastMessage.direction === 'outbound' && <DeliveryStatusIndicator message={lastMessage} />}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -9841,8 +9843,10 @@ export default function WhatsAppInboxScreen() {
                                   <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
                                 </button>
                               ) : null}
-                              <span>{formatMessageTime(message.message_at)}</span>
-                              {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
+                              <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                                <span>{formatMessageTime(message.message_at)}</span>
+                                {message.direction === 'outbound' && <DeliveryStatusIndicator message={message} />}
+                              </span>
                               {message.direction === 'outbound' && mediaUploadProgress?.attachmentId === message.id ? (
                                 <>
                                   <span className="whatsapp-inbox-status-meta whatsapp-inbox-status-meta-pending">

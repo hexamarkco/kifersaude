@@ -121,7 +121,7 @@ export function DashboardHeader({
             />
           </div>
 
-          <div className="min-w-0 xl:w-52">
+          <div className="min-w-0 xl:w-56">
             <FilterSingleSelect
               icon={Users}
               value={dashboardOwnerFilter}

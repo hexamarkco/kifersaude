@@ -112,7 +112,7 @@ export function DashboardTrendSection({
               listClassName="w-full xl:w-auto"
             />
 
-            <div className="min-w-0 xl:w-44">
+            <div className="min-w-0 xl:w-48">
               <FilterSingleSelect
                 icon={Clock}
                 value={String(chartRangeInMonths)}

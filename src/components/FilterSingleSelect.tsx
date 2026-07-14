@@ -51,6 +51,7 @@ export default function FilterSingleSelect({
   const selected = optionsWithPlaceholder.find((option) => option.value === value);
   const isNeutral = !selected || selected.value === '' || neutralValues.includes(selected.value);
   const compact = size === 'compact';
+  const displayLabel = selected?.label ?? placeholder;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -86,7 +87,7 @@ export default function FilterSingleSelect({
 
   return <Popover open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) setSearchTerm(''); }}>
     <PopoverTrigger className="block">
-      <button type="button" disabled={disabled} onKeyDown={(event) => {
+      <button type="button" disabled={disabled} title={displayLabel} onKeyDown={(event) => {
         if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
           event.preventDefault();
           setIsOpen(true);
@@ -94,7 +95,9 @@ export default function FilterSingleSelect({
         }
       }} className={cx('kds-select panel-ui-input relative w-full text-left', compact ? 'h-8 px-8 text-xs' : 'h-10 px-9 text-sm')} aria-haspopup="listbox" aria-expanded={isOpen}>
         <Icon className={cx('absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)]', compact ? 'left-2 h-3 w-3' : 'left-3 h-4 w-4')} aria-hidden="true" />
-        <span className={isNeutral ? 'text-[var(--text-secondary)]' : 'font-medium text-[var(--text-primary)]'}>{selected?.label ?? placeholder}</span>
+        <span className={cx('block truncate whitespace-nowrap pr-5', isNeutral ? 'text-[var(--text-secondary)]' : 'font-medium text-[var(--text-primary)]')}>
+          {displayLabel}
+        </span>
         <ChevronDown className={cx('absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)] transition-transform', isOpen && 'rotate-180')} aria-hidden="true" />
       </button>
     </PopoverTrigger>

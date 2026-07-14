@@ -1989,19 +1989,19 @@ export default function AutoContactFlowSettingsScreen() {
                           </span>
                         </div>
                         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
-                          <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5">
+                          <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-0.5">
                             Saída: {(flow.exitConditions ?? []).length || 0}{" "}
                             condição
                             {(flow.exitConditions ?? []).length === 1
                               ? ""
                               : "s"}
                           </span>
-                          <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5">
+                          <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-0.5">
                             {flow.finalStatus
                               ? `Finaliza em ${flow.finalStatus}`
                               : "Sem status final"}
                           </span>
-                          <span className="rounded-full border border-[var(--border-subtle)] px-2 py-0.5">
+                          <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-0.5">
                             {(flow.conditions ?? []).length} condição
                             {(flow.conditions ?? []).length === 1 ? "" : "s"}
                           </span>
@@ -2011,7 +2011,7 @@ export default function AutoContactFlowSettingsScreen() {
                             {(flow.tags ?? []).map((tagItem) => (
                               <span
                                 key={tagItem}
-                                className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] px-2 py-0.5"
+                                className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] px-2 py-0.5"
                               >
                                 #{tagItem}
                               </span>
@@ -2111,20 +2111,20 @@ export default function AutoContactFlowSettingsScreen() {
                           Resumo do fluxo
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
-                          <span className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
+                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
                             {activeFlow.triggerStatus
                               ? `Status: ${activeFlow.triggerStatus}`
                               : "Disparo por condições"}
                           </span>
-                          <span className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
+                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
                             Janela {activeFlowScheduling.startHour} -{" "}
                             {activeFlowScheduling.endHour}
                           </span>
-                          <span className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
+                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
                             {activeFlow.steps.length} etapa
                             {activeFlow.steps.length === 1 ? "" : "s"}
                           </span>
-                          <span className="rounded-full border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
+                          <span className="kds-config-token border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-0.5">
                             {getFlowConditionPreview(activeFlow)}
                           </span>
                         </div>
@@ -2199,7 +2199,7 @@ export default function AutoContactFlowSettingsScreen() {
                                   }
                                   variant={isActive ? "warning" : "secondary"}
                                   size="sm"
-                                  className="h-auto rounded-full px-3 py-1 text-xs"
+                                  className="h-auto px-3 py-1 text-xs"
                                 >
                                   {day.label}
                                 </Button>
@@ -2473,7 +2473,7 @@ export default function AutoContactFlowSettingsScreen() {
                           (activeFlow.tags ?? []).map((tagItem) => (
                             <span
                               key={tagItem}
-                              className="inline-flex items-center gap-1 rounded-full bg-[color:var(--bg-surface)] border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)]"
+                              className="kds-config-token inline-flex items-center gap-1 bg-[color:var(--bg-surface)] border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)]"
                             >
                               #{tagItem}
                               <Button
@@ -3207,7 +3207,7 @@ export default function AutoContactFlowSettingsScreen() {
                               mostramos somente a previsão de execução.
                             </p>
                           </div>
-                          <div className="rounded-full border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
+                          <div className="kds-config-token border border-[var(--brand-primary-border)] bg-[color:var(--bg-surface)] px-3 py-1 text-[11px] font-medium text-[var(--text-secondary)]">
                             Lead de exemplo + agenda do fluxo
                           </div>
                         </div>
@@ -3400,7 +3400,7 @@ export default function AutoContactFlowSettingsScreen() {
                                           (reason) => (
                                             <span
                                               key={item.step.id + "-" + reason}
-                                              className="rounded-full border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-2.5 py-1 text-[11px] text-[var(--text-primary)]"
+                                              className="kds-config-token border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] px-2.5 py-1 text-[11px] text-[var(--text-primary)]"
                                             >
                                               Ajustado por{" "}
                                               {adjustmentReasonLabels[reason]}

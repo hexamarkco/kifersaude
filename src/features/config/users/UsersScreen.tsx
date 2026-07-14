@@ -36,6 +36,12 @@ import {
   Field,
   Input,
   Surface,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "../../../design-system";
 import { FALLBACK_PROFILES } from "./shared/usersSettingsConstants";
 
@@ -378,7 +384,59 @@ export default function UsersScreen() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="hidden lg:block">
+            <Table size="sm" stickyHeader className="min-w-[720px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Usuário</TableHead>
+                  <TableHead>Perfil de acesso</TableHead>
+                  <TableHead>Criado em</TableHead>
+                  <TableHead align="right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-12 text-center text-[var(--text-muted)]">
+                      Nenhum usuário cadastrado
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users.map((userProfile) => {
+                    const profile = profileBySlug.get(userProfile.role);
+                    const profileLabel = formatProfileLabel(userProfile.role, profile?.name);
+                    const isCurrentUser = userProfile.id === currentUserManagementId;
+
+                    return (
+                      <TableRow key={userProfile.id} className="align-middle">
+                        <TableCell className="min-w-64">
+                          <div className="flex items-center gap-3">
+                            <CardIcon className="h-8 w-8"><UserIcon className="h-4 w-4" /></CardIcon>
+                            <div className="min-w-0">
+                              <span className="block truncate font-semibold text-[var(--text-primary)]">@{userProfile.username}</span>
+                              <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{userProfile.email}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={isCurrentUser ? "gold" : "neutral"}>{profileLabel || userProfile.role}</Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{new Date(userProfile.created_at).toLocaleDateString("pt-BR")}</TableCell>
+                        <TableCell align="right">
+                          <div className="flex justify-end gap-1">
+                            <Button type="button" onClick={() => startEditingUser(userProfile)} disabled={actionLoading} variant="icon" size="icon" title="Editar usuário" aria-label={`Editar ${userProfile.username}`}><Pencil className="h-4 w-4" /></Button>
+                            {!isCurrentUser && <Button type="button" onClick={() => void handleDeleteUser(userProfile.id)} disabled={actionLoading} variant="danger" size="icon" title="Excluir usuário" aria-label={`Excluir ${userProfile.username}`}><Trash2 className="h-4 w-4" /></Button>}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="space-y-3 lg:hidden">
             {users.length === 0 ? (
               <Card variant="muted" padding="md" className="py-12 text-center">
                 <Users className="mx-auto mb-4 h-12 w-12 text-[color:var(--text-tertiary)] opacity-40" />

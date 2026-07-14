@@ -972,7 +972,7 @@ export default function IntegrationsScreen() {
             </Alert>
           )}
 
-          <div className="space-y-4">
+          <div className="grid gap-4 xl:grid-cols-3">
             {AI_PROVIDER_ORDER.map((provider) => {
               const providerMeta = AI_PROVIDER_META[provider];
               const formState = aiProviderForms[provider];
@@ -1070,7 +1070,9 @@ export default function IntegrationsScreen() {
                 </Card>
               );
             })}
+          </div>
 
+          <div className="space-y-4">
             <Card>
               <div className="mb-3">
                 <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">

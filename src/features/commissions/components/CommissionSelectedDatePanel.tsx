@@ -1,4 +1,5 @@
 import { Surface } from "../../../design-system";
+import { cx } from "../../../lib/cx";
 import {
   formatCommissionCurrency,
 } from "../shared/commissionCalendarUtils";
@@ -16,12 +17,12 @@ export default function CommissionSelectedDatePanel({
   selectedDateLabel,
 }: CommissionSelectedDatePanelProps) {
   return (
-    <Surface variant="muted" padding="sm" className="p-4">
-      <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+    <Surface padding="sm">
+      <h3 className="mb-3 font-[var(--font-display)] text-base font-semibold text-[var(--text-primary)]">
         {selectedDateLabel
           ? `Eventos de ${selectedDateLabel}`
           : "Escolha um dia"}
-      </h4>
+      </h3>
 
       {selectedDate ? (
         selectedDateEvents.length > 0 ? (
@@ -32,16 +33,18 @@ export default function CommissionSelectedDatePanel({
               return (
                 <Surface
                   key={event.id}
-                  variant={isCommission ? "warning" : "default"}
+                  variant={isCommission ? "muted" : "default"}
                   padding="sm"
-                  className="rounded-xl p-3"
+                  className="p-3"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: isCommission ? "var(--warning-text)" : "var(--text-primary)" }}
-                      >
+                      <p className={cx(
+                        "text-sm font-semibold",
+                        isCommission
+                          ? "text-[var(--accent-gold-hover)]"
+                          : "text-[var(--text-primary)]",
+                      )}>
                         {isCommission
                           ? "Recebimento de comissao"
                           : "Pagamento de bonificacao"}
@@ -59,10 +62,12 @@ export default function CommissionSelectedDatePanel({
                       )}
                     </div>
 
-                    <span
-                      className="shrink-0 text-sm font-semibold"
-                      style={{ color: isCommission ? "var(--warning-text)" : "var(--text-primary)" }}
-                    >
+                    <span className={cx(
+                      "shrink-0 text-sm font-semibold",
+                      isCommission
+                        ? "text-[var(--accent-gold-hover)]"
+                        : "text-[var(--text-primary)]",
+                    )}>
                       {formatCommissionCurrency(event.value)}
                     </span>
                   </div>

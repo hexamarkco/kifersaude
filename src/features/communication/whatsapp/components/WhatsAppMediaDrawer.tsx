@@ -477,7 +477,7 @@ export default function WhatsAppMediaDrawer({
       position={position}
       onClose={onClose}
       ariaLabel="Gaveta de emoji, GIF e figurinha"
-      className="comm-emoji-picker comm-media-picker w-[min(92vw,31rem)]"
+      className="comm-whatsapp-popover comm-emoji-picker comm-media-picker w-[min(92vw,31rem)]"
     >
       {mode === 'emoji' ? (
         <div className="comm-emoji-picker-tabs">

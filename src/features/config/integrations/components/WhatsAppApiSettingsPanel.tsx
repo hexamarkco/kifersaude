@@ -26,6 +26,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Field,
   IconButton,
   Input,
   SectionHeader,
@@ -341,11 +342,15 @@ export default function WhatsAppApiSettingsPanel() {
                 Configurações &gt; Automações.
               </p>
             </Card>
-            <div>
-              <label className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--text-secondary)]">
-                <Key className="h-4 w-4 text-[var(--text-muted)]" />
-                Token da Whapi Cloud
-              </label>
+            <Field
+              label={
+                <span className="flex items-center gap-2">
+                  <Key className="h-4 w-4" />
+                  Token da Whapi Cloud
+                </span>
+              }
+              description="Este token será usado para autenticação com a API da Whapi Cloud."
+            >
               <div>
                 <Input
                   type={showApiKey ? "text" : "password"}
@@ -363,10 +368,7 @@ export default function WhatsAppApiSettingsPanel() {
                   placeholder="Token da Whapi Cloud (sem incluir 'Bearer')"
                 />
               </div>
-              <p className="mt-1 text-xs text-[var(--text-muted)]">
-                Este token será usado para autenticação com a API da Whapi Cloud
-              </p>
-            </div>
+            </Field>
           </div>
 
           <div className="flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">

@@ -1195,13 +1195,18 @@ export default function ContractForm({
               {`Lead: ${leadToConvert.nome_completo} - ${leadToConvert.telefone}`}
             </DialogDescription>
           )}
+          {!leadToConvert && (
+            <DialogDescription>
+              Registre os dados comerciais, financeiros e de vigencia do contrato.
+            </DialogDescription>
+          )}
         </DialogHeader>
         <DialogBody className="p-0">
         <form
           onSubmit={handleSubmit}
-          className="max-h-[70vh] overflow-y-auto p-6"
+          className="max-h-[70vh] overflow-y-auto p-4 sm:p-5"
         >
-          <Surface variant="muted" padding="sm" className="mb-6">
+          <Surface variant="muted" padding="sm" className="mb-4">
             <h4 className="mb-3 flex items-center font-semibold text-[var(--text-primary)]">
               <Building2 className="mr-2 h-5 w-5 text-[var(--brand-primary)]" />
               Informações do Contrato
@@ -1709,7 +1714,7 @@ export default function ContractForm({
                         podem ser tratados à parte da mensalidade.
                       </p>
                     </div>
-                    <div className="rounded-[var(--radius-lg)] bg-[var(--bg-elevated)] px-3 py-2 text-right">
+                    <Surface padding="none" className="px-3 py-2 text-right">
                       <p className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
                         Prévia
                       </p>
@@ -1719,7 +1724,7 @@ export default function ContractForm({
                           minimumFractionDigits: 2,
                         })}
                       </p>
-                    </div>
+                    </Surface>
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">

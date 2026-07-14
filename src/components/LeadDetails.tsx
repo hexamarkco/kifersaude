@@ -16,6 +16,7 @@ import {
   Textarea,
   Dialog,
   DialogBody,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '../design-system';
@@ -167,7 +168,10 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()} size="lg">
       <DialogHeader onClose={onClose}>
-        <div><DialogTitle>{lead.nome_completo}</DialogTitle><p className="kds-dialog-description">Historico de Interacoes</p></div>
+        <div>
+          <DialogTitle>{lead.nome_completo}</DialogTitle>
+          <DialogDescription>Historico de interacoes, status e lembretes.</DialogDescription>
+        </div>
       </DialogHeader>
       <DialogBody>
       <div className="flex-1 overflow-y-auto text-[var(--text-secondary)]">
@@ -253,11 +257,11 @@ export default function LeadDetails({ lead, onClose, onUpdate, onEdit, onDelete 
               {timelineEvents.map((event) => (
                 <Surface key={event.id} variant="muted" padding="sm">
                   <div className="flex items-start gap-3">
-                    <div className="mt-1 rounded-full bg-[var(--bg-elevated)] p-2 text-[var(--text-muted)]">
+                    <Surface padding="none" className="mt-1 flex h-8 w-8 items-center justify-center text-[var(--text-muted)]">
                       {event.type === 'interaction' && <MessageCircle className="h-4 w-4" aria-hidden="true" />}
                       {event.type === 'reminder' && <Bell className="h-4 w-4" aria-hidden="true" />}
                       {event.type === 'status' && <Clock className="h-4 w-4" aria-hidden="true" />}
-                    </div>
+                    </Surface>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-[var(--text-primary)]">{event.title}</p>

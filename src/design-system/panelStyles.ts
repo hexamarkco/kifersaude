@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 
 export const PANEL_SECTION_STYLE: CSSProperties = {
   borderColor: 'var(--border-default)',
-  background: 'linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-surface) 100%)',
+  background: 'var(--bg-surface)',
   boxShadow: 'var(--shadow-card)',
 };
 
@@ -13,7 +13,7 @@ export const PANEL_INSET_STYLE: CSSProperties = {
 
 export const PANEL_MUTED_INSET_STYLE: CSSProperties = {
   borderColor: 'var(--border-subtle)',
-  background: 'linear-gradient(180deg, var(--bg-surface-muted) 0%, var(--bg-inset) 100%)',
+  background: 'var(--bg-surface-muted)',
 };
 
 export const PANEL_PILL_STYLE: CSSProperties = {
@@ -23,8 +23,7 @@ export const PANEL_PILL_STYLE: CSSProperties = {
 
 export const PANEL_HERO_STYLE: CSSProperties = {
   borderColor: 'var(--border-accent)',
-  background:
-    'radial-gradient(circle at 12% 0%, rgba(197, 90, 61, 0.2), transparent 36%), radial-gradient(circle at 92% 12%, rgba(212, 175, 55, 0.12), transparent 34%), linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-canvas) 100%)',
+  background: 'var(--surface-hero-bg)',
   boxShadow: 'var(--shadow-card)',
 };
 
@@ -45,7 +44,7 @@ const PANEL_TONE_STYLES: Record<PanelTone, CSSProperties> = {
   accent: {
     borderColor: 'var(--brand-primary-border)',
     background: 'var(--brand-primary-soft)',
-    color: '#ffb387',
+    color: 'var(--badge-accent-text)',
   },
   gold: {
     borderColor: 'var(--accent-gold-border)',

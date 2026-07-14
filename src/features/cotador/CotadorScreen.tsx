@@ -622,7 +622,7 @@ export default function CotadorScreen() {
         </Surface>
       ) : (
         <Surface padding="none" className="overflow-hidden">
-          <Table>
+          <Table size="sm">
             <TableHeader><TableRow><TableHead>Cotação</TableHead><TableHead>Vidas</TableHead><TableHead>Criada em</TableHead><TableHead>Atualizada em</TableHead></TableRow></TableHeader>
             <TableBody>
             {paginatedQuotes.map((quote) => (

@@ -20,6 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Calculator,
+  Menu,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { supabase, Reminder, Contract } from '../lib/supabase';
@@ -67,7 +69,7 @@ const getInitialThemeMode = (): ThemeMode => {
     return storedTheme;
   }
 
-  return 'dark';
+  return 'light';
 };
 
 export default function Layout({
@@ -89,6 +91,8 @@ export default function Layout({
     const stored = localStorage.getItem('painel.sidebar.collapsed');
     return stored === 'true';
   });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -115,9 +119,6 @@ export default function Layout({
   const sidebarRef = useRef<HTMLElement | null>(null);
   const panelContentRef = useRef<HTMLDivElement | null>(null);
   const themeSwitchFrameRef = useRef<number | null>(null);
-  const auroraPrimaryRef = useRef<HTMLDivElement | null>(null);
-  const auroraSecondaryRef = useRef<HTMLDivElement | null>(null);
-  const auroraTertiaryRef = useRef<HTMLDivElement | null>(null);
   const [activeDropdownTab, setActiveDropdownTab] = useState<string | null>(null);
   const [collapsedDropdownPosition, setCollapsedDropdownPosition] = useState<{
     left: number;
@@ -127,13 +128,13 @@ export default function Layout({
   } | null>(null);
   const {
     motionEnabled,
-    ambientMotionEnabled,
     enterDuration,
     sectionStagger,
     microDuration,
     revealDistance,
     ease,
   } = usePanelMotion();
+  const isSidebarCollapsed = isMenuCollapsed && !isMobileMenuOpen;
   const currentRole = role;
 
   const canView = (moduleId: string) => getRoleModulePermission(currentRole, moduleId).can_view;
@@ -388,7 +389,7 @@ export default function Layout({
 
   const handleTabClick = (tab: TabConfig, triggerElement?: HTMLButtonElement | null) => {
     if (tab.children && tab.children.length > 0) {
-      if (isMenuCollapsed) {
+      if (isSidebarCollapsed) {
         if (activeDropdownTab === tab.id) {
           setActiveDropdownTab(null);
           setCollapsedDropdownPosition(null);
@@ -424,6 +425,7 @@ export default function Layout({
       onTabChange(tab.id);
       setExpandedParent(null);
       setActiveDropdownTab(null);
+      setIsMobileMenuOpen(false);
     }
   };
 
@@ -441,7 +443,7 @@ export default function Layout({
   };
 
   const updateCollapsedDropdownPosition = useCallback(() => {
-    if (!isMenuCollapsed || !activeDropdownTab) {
+    if (!isSidebarCollapsed || !activeDropdownTab) {
       setCollapsedDropdownPosition(null);
       return;
     }
@@ -471,7 +473,7 @@ export default function Layout({
     const caretTop = Math.max(12, Math.min(triggerCenterY - top, dropdownHeight - 12));
 
     setCollapsedDropdownPosition({ left, top, side, caretTop });
-  }, [activeDropdownTab, isMenuCollapsed]);
+  }, [activeDropdownTab, isSidebarCollapsed]);
 
   useEffect(() => {
     if (!showNotificationsDropdown) {
@@ -552,14 +554,30 @@ export default function Layout({
   }, [activeDropdownTab]);
 
   useEffect(() => {
-    if (!isMenuCollapsed) {
+    if (!isSidebarCollapsed) {
       setActiveDropdownTab(null);
       setCollapsedDropdownPosition(null);
     }
-  }, [isMenuCollapsed]);
+  }, [isSidebarCollapsed]);
 
   useEffect(() => {
-    if (!activeDropdownTab || !isMenuCollapsed) {
+    const mobileQuery = window.matchMedia('(max-width: 767px)');
+    const closeMobileMenuOnDesktop = () => {
+      if (!mobileQuery.matches) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    closeMobileMenuOnDesktop();
+    mobileQuery.addEventListener('change', closeMobileMenuOnDesktop);
+
+    return () => {
+      mobileQuery.removeEventListener('change', closeMobileMenuOnDesktop);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeDropdownTab || !isSidebarCollapsed) {
       setCollapsedDropdownPosition(null);
       return;
     }
@@ -578,7 +596,7 @@ export default function Layout({
       window.removeEventListener('resize', syncPosition);
       window.removeEventListener('scroll', syncPosition, true);
     };
-  }, [activeDropdownTab, isMenuCollapsed, updateCollapsedDropdownPosition]);
+  }, [activeDropdownTab, isSidebarCollapsed, updateCollapsedDropdownPosition]);
 
   useEffect(() => {
     localStorage.setItem('painel.sidebar.collapsed', String(isMenuCollapsed));
@@ -685,76 +703,7 @@ export default function Layout({
     return () => {
       context.revert();
     };
-  }, [isMenuCollapsed, microDuration, motionEnabled, revealDistance, sectionStagger, tabs.length]);
-
-  useEffect(() => {
-    const primary = auroraPrimaryRef.current;
-    const secondary = auroraSecondaryRef.current;
-    const tertiary = auroraTertiaryRef.current;
-
-    if (!primary || !secondary || !tertiary) {
-      return;
-    }
-
-    if (!motionEnabled || !ambientMotionEnabled) {
-      gsap.set([primary, secondary, tertiary], {
-        xPercent: 0,
-        yPercent: 0,
-        scale: 1,
-        clearProps: 'transform,willChange',
-      });
-      return;
-    }
-
-    const timeline = gsap.timeline({
-      repeat: -1,
-      yoyo: true,
-      defaults: {
-        ease: 'sine.inOut',
-        force3D: true,
-      },
-    });
-
-    timeline
-      .to(
-        primary,
-        {
-          xPercent: 5,
-          yPercent: -3,
-          scale: 1.04,
-          duration: 20,
-          willChange: 'transform',
-        },
-        0,
-      )
-      .to(
-        secondary,
-        {
-          xPercent: -4,
-          yPercent: 5,
-          scale: 0.97,
-          duration: 24,
-          willChange: 'transform',
-        },
-        0,
-      )
-      .to(
-        tertiary,
-        {
-          xPercent: 4,
-          yPercent: 3,
-          scale: 1.05,
-          duration: 27,
-          willChange: 'transform',
-        },
-        0,
-      );
-
-    return () => {
-      timeline.kill();
-      gsap.set([primary, secondary, tertiary], { clearProps: 'willChange' });
-    };
-  }, [ambientMotionEnabled, motionEnabled]);
+  }, [isSidebarCollapsed, microDuration, motionEnabled, revealDistance, sectionStagger, tabs.length]);
 
   useEffect(() => {
     if (!showNotificationsDropdown || !notificationsDropdownRef.current || !motionEnabled) {
@@ -765,7 +714,7 @@ export default function Layout({
       notificationsDropdownRef.current,
       {
         autoAlpha: 0,
-        y: isMenuCollapsed ? 12 : 8,
+        y: isSidebarCollapsed ? 12 : 8,
         scale: 0.985,
         transformOrigin: 'left bottom',
       },
@@ -783,10 +732,10 @@ export default function Layout({
     return () => {
       animation.kill();
     };
-  }, [isMenuCollapsed, microDuration, motionEnabled, showNotificationsDropdown]);
+  }, [isSidebarCollapsed, microDuration, motionEnabled, showNotificationsDropdown]);
 
   useEffect(() => {
-    if (!activeDropdownTab || !motionEnabled || (isMenuCollapsed && !collapsedDropdownPosition)) {
+    if (!activeDropdownTab || !motionEnabled || (isSidebarCollapsed && !collapsedDropdownPosition)) {
       return;
     }
 
@@ -795,7 +744,7 @@ export default function Layout({
       return;
     }
 
-    const fromX = isMenuCollapsed && collapsedDropdownPosition?.side === 'left' ? 6 : -6;
+    const fromX = isSidebarCollapsed && collapsedDropdownPosition?.side === 'left' ? 6 : -6;
 
     const animation = gsap.fromTo(
       dropdown,
@@ -820,7 +769,7 @@ export default function Layout({
     return () => {
       animation.kill();
     };
-  }, [activeDropdownTab, collapsedDropdownPosition, isMenuCollapsed, microDuration, motionEnabled]);
+  }, [activeDropdownTab, collapsedDropdownPosition, isSidebarCollapsed, microDuration, motionEnabled]);
 
   const toggleThemeMode = () => {
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
@@ -850,7 +799,7 @@ export default function Layout({
   const renderSidebarItem = (tab: TabConfig) => {
     const Icon = tab.icon;
     const isActive = isParentActive(tab);
-    const isExpanded = isMenuCollapsed ? activeDropdownTab === tab.id : expandedParent === tab.id;
+    const isExpanded = isSidebarCollapsed ? activeDropdownTab === tab.id : expandedParent === tab.id;
     const totalBadge = getTotalBadge(tab);
 
     if (tab.children && tab.children.length > 0) {
@@ -863,14 +812,14 @@ export default function Layout({
             className={cx(
               'kds-sidebar-item relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200',
               isActive && 'is-active',
-              isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3',
+              isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-3',
             )}
-            title={isMenuCollapsed ? tab.label : undefined}
+            title={isSidebarCollapsed ? tab.label : undefined}
           >
-            <div className={`flex items-center transition-all duration-200 ${isMenuCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
+            <div className={`flex items-center transition-all duration-200 ${isSidebarCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
               <div className="relative flex h-5 w-5 items-center justify-center">
                 <Icon className="h-5 w-5 flex-shrink-0" />
-                {totalBadge > 0 && isMenuCollapsed && (
+                {totalBadge > 0 && isSidebarCollapsed && (
                   renderSidebarBadge(totalBadge, {
                     floating: true,
                     pulse:
@@ -879,12 +828,12 @@ export default function Layout({
                   })
                 )}
               </div>
-              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
+              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
             </div>
-            {!isMenuCollapsed && (
+            {!isSidebarCollapsed && (
               <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
             )}
-            {totalBadge > 0 && !isMenuCollapsed && (
+            {totalBadge > 0 && !isSidebarCollapsed && (
               renderSidebarBadge(totalBadge, {
                 floating: true,
                 pulse:
@@ -894,7 +843,7 @@ export default function Layout({
             )}
           </button>
 
-          {isExpanded && !isMenuCollapsed && (
+          {isExpanded && !isSidebarCollapsed && (
             <div className="mt-1 space-y-1 pl-4">
               {tab.children.map((child) => {
                 const ChildIcon = child.icon;
@@ -905,6 +854,7 @@ export default function Layout({
                     onClick={() => {
                       onTabChange(child.id);
                       setExpandedParent(null);
+                      setIsMobileMenuOpen(false);
                     }}
                     className={cx(
                       'kds-sidebar-item flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors',
@@ -939,15 +889,15 @@ export default function Layout({
         className={cx(
           'kds-sidebar-item relative flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-colors',
           isActive && 'is-active',
-          isMenuCollapsed ? 'justify-center px-2' : 'justify-between px-3',
+          isSidebarCollapsed ? 'justify-center px-2' : 'justify-between px-3',
         )}
-        title={isMenuCollapsed ? tab.label : undefined}
+        title={isSidebarCollapsed ? tab.label : undefined}
       >
-        <div className={`flex items-center transition-all duration-200 ${isMenuCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
+        <div className={`flex items-center transition-all duration-200 ${isSidebarCollapsed ? 'w-full justify-center gap-0' : 'gap-3'}`}>
           <Icon className="h-5 w-5 flex-shrink-0" />
-          <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
+          <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{tab.label}</span>
         </div>
-        {totalBadge > 0 && !isMenuCollapsed && (
+        {totalBadge > 0 && !isSidebarCollapsed && (
           renderSidebarBadge(totalBadge, {
             pulse:
               Boolean(hasActiveNotification && (tab.id === 'crm' || activeTab === 'agenda')) ||
@@ -959,57 +909,113 @@ export default function Layout({
   };
 
   const activeCollapsedParentTab =
-    isMenuCollapsed && activeDropdownTab
+    isSidebarCollapsed && activeDropdownTab
       ? tabs.find((tab) => tab.id === activeDropdownTab && tab.children && tab.children.length > 0)
       : undefined;
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const menu = sidebarRef.current;
+    const menuTrigger = mobileMenuTriggerRef.current;
+    const focusableSelector = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+    const focusable = () => Array.from(menu?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
+    const firstFocusable = focusable()[0];
+    firstFocusable?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsMobileMenuOpen(false);
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const items = focusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      menuTrigger?.focus();
+    };
+  }, [isMobileMenuOpen]);
+
   return (
     <div
-      className={`painel-theme kifer-ds kifer-panel-theme kds-app-shell theme-${themeMode} ${ambientMotionEnabled ? 'panel-ambient-full' : 'panel-ambient-reduced'} relative isolate flex min-h-screen`}
+      className={`painel-theme kifer-ds kifer-panel-theme kds-app-shell terracota-shell theme-${themeMode} relative isolate flex min-h-screen`}
     >
-      <div className="panel-shell-bg" aria-hidden="true">
-        <div ref={auroraPrimaryRef} className="panel-aurora panel-aurora-primary" />
-        <div ref={auroraSecondaryRef} className="panel-aurora panel-aurora-secondary" />
-        <div ref={auroraTertiaryRef} className="panel-aurora panel-aurora-tertiary" />
-      </div>
+      <button
+        ref={mobileMenuTriggerRef}
+        type="button"
+        className="terracota-mobile-menu-trigger"
+        onClick={() => setIsMobileMenuOpen((current) => !current)}
+        aria-label={isMobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+        aria-expanded={isMobileMenuOpen}
+        aria-controls="painel-navigation"
+      >
+        {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </button>
+      {isMobileMenuOpen && (
+        <button
+          type="button"
+          className="terracota-mobile-menu-backdrop"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-label="Fechar menu"
+        />
+      )}
       <aside
         ref={sidebarRef}
-        className={`kds-sidebar panel-glass-strong fixed left-0 top-0 z-40 h-screen border-r transition-[width] duration-300 ease-in-out ${
-          isMenuCollapsed ? 'w-16' : 'w-64'
+        id="painel-navigation"
+        className={`kds-sidebar terracota-sidebar fixed left-0 top-0 z-40 h-screen border-r transition-[width] duration-300 ease-in-out ${
+          isSidebarCollapsed ? 'w-16' : 'w-64'
+        } ${
+          isMobileMenuOpen ? 'is-mobile-open' : ''
         }`}
       >
         <div className="flex h-full flex-col">
-          <div className={`kds-sidebar-divider flex h-16 items-center border-b px-4 transition-all duration-300 ${isMenuCollapsed ? 'justify-center' : 'justify-between'}`}>
-            <div className={`flex items-center gap-3 transition-all duration-300 ${isMenuCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+          <div className={`kds-sidebar-divider terracota-sidebar-header flex h-16 items-center border-b px-4 transition-all duration-300 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            <div className={`flex items-center gap-3 transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                 <span className="text-base font-bold text-white">K</span>
               </div>
-              <span className="whitespace-nowrap text-sm font-semibold text-[var(--text-primary)]">KS Workspace</span>
+              <span className="whitespace-nowrap text-sm font-semibold text-white">Kifer Saúde</span>
             </div>
-            {isMenuCollapsed && (
+            {isSidebarCollapsed && (
               <div className="kds-brand-mark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                 <span className="text-base font-bold text-white">K</span>
               </div>
             )}
           </div>
 
-          <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-2 transition-all duration-300 ${isMenuCollapsed ? 'px-1' : 'px-2'}`}>
+          <nav className={`terracota-sidebar-navigation flex-1 overflow-y-auto overflow-x-hidden py-2 transition-all duration-300 ${isSidebarCollapsed ? 'px-1' : 'px-2'}`}>
             <div className="space-y-1">
               {tabs.map((tab) => renderSidebarItem(tab))}
             </div>
           </nav>
 
-          <div className={`kds-sidebar-divider space-y-1 border-t p-2 ${isMenuCollapsed ? 'px-1' : ''}`}>
+          <div className={`kds-sidebar-divider terracota-sidebar-footer space-y-1 border-t p-2 ${isSidebarCollapsed ? 'px-1' : ''}`}>
             <button
               onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
               data-sidebar-item
-              className={`kds-sidebar-item flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
-                isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
+              className={`terracota-sidebar-collapse-toggle kds-sidebar-item flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
+                isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
-              title={isMenuCollapsed ? 'Expandir menu' : 'Recolher menu'}
+              title={isSidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
             >
-              {isMenuCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{isMenuCollapsed ? 'Expandir' : 'Recolher'}</span>
+              {isSidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{isSidebarCollapsed ? 'Expandir' : 'Recolher'}</span>
             </button>
             <div className="relative">
               <button
@@ -1017,7 +1023,7 @@ export default function Layout({
                 onClick={() => setShowNotificationsDropdown((current) => !current)}
                 data-sidebar-item
                 className={`kds-sidebar-item flex items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
-                  isMenuCollapsed ? 'w-full justify-center px-2 gap-0' : 'gap-3 px-3'
+                  isSidebarCollapsed ? 'w-full justify-center px-2 gap-0' : 'gap-3 px-3'
                 }`}
                 title="Notificações"
                 aria-expanded={showNotificationsDropdown}
@@ -1032,13 +1038,13 @@ export default function Layout({
                       })
                     )}
                   </div>
-                  <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notificações</span>
+                  <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Notificações</span>
                 </button>
                 {showNotificationsDropdown && (
                   <div
                     ref={notificationsDropdownRef}
-                    className={`panel-glass-panel absolute z-50 w-96 rounded-2xl border shadow-xl ${
-                      isMenuCollapsed
+                    className={`terracota-sidebar-popover absolute z-50 w-96 rounded-2xl border shadow-xl ${
+                      isSidebarCollapsed
                         ? 'left-full bottom-0 ml-2 max-w-[calc(100vw-5rem)]'
                         : 'left-0 bottom-full mb-2 max-w-[calc(100vw-1rem)]'
                     }`}
@@ -1052,6 +1058,7 @@ export default function Layout({
                         onClick={() => {
                           onTabChange('agenda');
                           setShowNotificationsDropdown(false);
+                          setIsMobileMenuOpen(false);
                         }}
                         className="text-xs font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)]"
                       >
@@ -1137,24 +1144,24 @@ export default function Layout({
               onClick={toggleThemeMode}
               data-sidebar-item
               className={`kds-sidebar-item flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
-                isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
+                isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
               title={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
               aria-label={themeMode === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
             >
               {themeMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>
+              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>{themeMode === 'dark' ? 'Claro' : 'Escuro'}</span>
             </button>
             <button
               onClick={handleLogout}
               data-sidebar-item
               className={`kds-sidebar-item kds-sidebar-item-danger flex w-full items-center rounded-lg py-2.5 text-sm font-medium transition-all duration-200 ${
-                isMenuCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
+                isSidebarCollapsed ? 'justify-center px-2 gap-0' : 'gap-3 px-3'
               }`}
-              title={isMenuCollapsed ? 'Sair' : undefined}
+              title={isSidebarCollapsed ? 'Sair' : undefined}
             >
               <LogOut className="h-5 w-5" />
-              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isMenuCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Sair</span>
+              <span className={`transition-all duration-200 overflow-hidden whitespace-nowrap ${isSidebarCollapsed ? 'opacity-0 w-0' : 'opacity-100'}`}>Sair</span>
             </button>
           </div>
         </div>
@@ -1164,7 +1171,7 @@ export default function Layout({
         <div
           id="collapsed-menu-dropdown"
           ref={collapsedDropdownRef}
-          className="panel-glass-panel fixed z-[60] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-lg border p-1.5 shadow-2xl"
+          className="terracota-sidebar-popover fixed z-[60] w-max min-w-[172px] max-w-[240px] overflow-y-auto rounded-lg border p-1.5 shadow-2xl"
           style={{
             left: collapsedDropdownPosition.left,
             top: collapsedDropdownPosition.top,
@@ -1191,6 +1198,7 @@ export default function Layout({
                     onTabChange(child.id);
                     setActiveDropdownTab(null);
                     setCollapsedDropdownPosition(null);
+                    setIsMobileMenuOpen(false);
                   }}
                   className={cx(
                     'kds-sidebar-item flex min-w-[156px] items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
@@ -1215,15 +1223,15 @@ export default function Layout({
         </div>
       )}
 
-      <div className={`relative z-10 flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${isMenuCollapsed ? 'ml-16' : 'ml-64'}`}>
-        <main className={`flex-1 min-h-0 ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+      <div className={`terracota-content-shell relative z-10 flex min-w-0 flex-1 flex-col transition-[margin] duration-300 ${isSidebarCollapsed ? 'ml-16' : 'ml-64'} ${useFullBleedContent ? 'is-full-bleed' : ''}`}>
+        <main className={`terracota-main flex-1 min-h-0 ${useFullBleedContent ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             ref={panelContentRef}
-            className={
+            className={`terracota-panel-content ${
               useFullBleedContent
                 ? 'w-full h-[calc(100vh)] min-h-0'
                 : 'w-full py-8 px-2 sm:px-3 lg:px-4'
-            }
+            }`}
           >
             {children}
           </div>

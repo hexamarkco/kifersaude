@@ -75,25 +75,17 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
   }
 
   return (
-    <Surface className="overflow-hidden">
-      <div
-        className="absolute inset-0 opacity-100"
-        style={{
-          background:
-            'radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--brand-primary) 14%, transparent) 0%, transparent 34%), radial-gradient(circle at 92% 10%, color-mix(in srgb, var(--accent-gold) 10%, transparent) 0%, transparent 32%)',
-        }}
-      />
-
-      <div className="relative">
-        <div className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <Surface padding="sm">
+      <div>
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <SectionHeader
             eyebrow="Panorama"
             title="Funil comercial"
             description="Leitura do pipeline ativo e da conversao entre etapas."
           />
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[360px]">
-            <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[320px]">
+            <Surface variant="muted" padding="sm">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 <Users className="h-4 w-4 text-[var(--brand-primary)]" />
                 Pipeline ativo
@@ -101,9 +93,9 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
               <p className="mt-2 font-[var(--font-sans)] text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
                 {totalLeads}
               </p>
-            </div>
+            </Surface>
 
-            <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-3">
+            <Surface variant="muted" padding="sm">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 <TrendingDown className="h-4 w-4 text-[var(--accent-copper)]" />
                 Etapas ativas
@@ -111,33 +103,33 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
               <p className="mt-2 font-[var(--font-sans)] text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
                 {stages.length}
               </p>
-            </div>
+            </Surface>
           </div>
         </div>
 
-        <div className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-5">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <Surface variant="muted" padding="sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">Funil</p>
                 <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">Volume por etapa ativa</p>
               </div>
             </div>
-            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)]">
+            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1 text-xs font-semibold text-[var(--text-secondary)]">
               {totalLeads.toLocaleString('pt-BR')} total
             </span>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(15rem,0.78fr)_minmax(0,1fr)] lg:items-center">
-            <div className="mx-auto flex w-full max-w-[34rem] flex-col items-center gap-1.5 py-2 sm:py-4">
+          <div className="grid gap-5 lg:grid-cols-[minmax(15rem,0.78fr)_minmax(0,1fr)] lg:items-center">
+            <div className="mx-auto flex w-full max-w-[34rem] flex-col items-center gap-1.5 py-2">
               {stageSummaries.map((summary) => (
                 <div
                   key={summary.stage.id}
-                  className="h-9 rounded-[0.25rem] shadow-[0_14px_28px_-22px_rgba(0,0,0,0.75)] transition-all duration-500 sm:h-10"
+                  className="h-8 rounded-[var(--kds-radius-xs)] transition-[width] duration-500 sm:h-9"
                   style={{
                     width: `${summary.funnelWidth}%`,
                     clipPath: 'polygon(4% 0%, 96% 0%, 88% 100%, 12% 100%)',
-                    background: `linear-gradient(180deg, color-mix(in srgb, ${summary.color} 92%, white) 0%, color-mix(in srgb, ${summary.color} 70%, black) 100%)`,
+                    background: summary.color,
                   }}
                   title={`${summary.stage.nome}: ${summary.count.toLocaleString('pt-BR')}`}
                 />
@@ -146,15 +138,12 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
 
             <div className="space-y-3">
               {stageSummaries.map((summary, index) => (
-                <div key={summary.stage.id} className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+                <Surface key={summary.stage.id} padding="sm">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                       <span
                         className="h-3 w-3 shrink-0 rounded-full"
-                        style={{
-                          background: summary.color,
-                          boxShadow: `0 0 0 6px color-mix(in srgb, ${summary.color} 13%, transparent)`,
-                        }}
+                        style={{ background: summary.color }}
                       />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{summary.stage.nome}</p>
@@ -178,7 +167,7 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
                         className="h-full rounded-full transition-all duration-500"
                         style={{
                           width: `${summary.progressWidth}%`,
-                          background: `linear-gradient(90deg, ${summary.color} 0%, color-mix(in srgb, ${summary.color} 76%, var(--accent-gold)) 100%)`,
+                          background: summary.color,
                         }}
                       />
                     </div>
@@ -186,11 +175,11 @@ export default function LeadFunnel({ leads }: LeadFunnelProps) {
                       {summary.percentage.toFixed(1)}%
                     </span>
                   </div>
-                </div>
+                </Surface>
               ))}
             </div>
           </div>
-        </div>
+        </Surface>
       </div>
     </Surface>
   );

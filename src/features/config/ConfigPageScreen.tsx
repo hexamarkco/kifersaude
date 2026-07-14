@@ -36,7 +36,7 @@ export default function ConfigPageScreen() {
     : allowedTabs[0].id;
 
   return (
-    <div className="config-transparent-buttons panel-page-shell w-full">
+    <div className="panel-page-shell w-full">
       <PageHeader
         eyebrow="Administracao"
         title="Configurações"

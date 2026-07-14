@@ -27,7 +27,7 @@ import CotadorCatalogTab from "../../../components/config/CotadorCatalogTab";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { SystemSettingsSkeleton } from "../../../components/ui/panelSkeletons";
-import { ActionSurface, Alert, Badge, Button, Checkbox, Field, Input, SectionHeader, Select, Surface } from "../../../design-system";
+import { ActionSurface, Alert, Badge, Button, CardIcon, Checkbox, Field, Input, SectionHeader, Select, Surface } from "../../../design-system";
 import AccessControlManagerScreen from "./AccessControlManagerScreen";
 import {
   areSystemPreferencesEqual,
@@ -345,11 +345,9 @@ export default function SystemSettingsScreen() {
                   padding="md"
                   className="min-h-[196px] text-left"
                 >
-                  <div
-                    className={`inline-flex h-10 w-10 items-center justify-center rounded-xl ${section.accentClassName}`}
-                  >
+                  <CardIcon tone={section.iconTone}>
                     <Icon className="h-5 w-5" />
-                  </div>
+                  </CardIcon>
                   <div className="mt-5 space-y-2">
                     <h3 className="text-[1.05rem] font-semibold leading-tight text-[color:var(--text-primary)]">
                       {section.title}
@@ -385,9 +383,9 @@ export default function SystemSettingsScreen() {
               className="flex w-full items-start justify-between gap-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                <CardIcon className="mt-0.5">
                   <Settings className="h-5 w-5" />
-                </div>
+                </CardIcon>
                 <div>
                   <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Preferências do sistema
@@ -563,15 +561,16 @@ export default function SystemSettingsScreen() {
 
         {showCotadorSection && (
           <div id="settings-section-cotador" className="space-y-4">
-            <button
-              type="button"
+            <ActionSurface
               onClick={() => toggleSection("cotador")}
-              className="kds-surface kds-action-surface kds-surface-default flex w-full items-start justify-between gap-4 p-4 text-left"
+              variant="default"
+              padding="sm"
+              className="flex w-full items-start justify-between gap-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                <CardIcon className="mt-0.5">
                   <Calculator className="h-5 w-5" />
-                </div>
+                </CardIcon>
                 <div>
                   <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Cotador
@@ -586,7 +585,7 @@ export default function SystemSettingsScreen() {
                   shouldExpandSection("cotador") ? "rotate-180" : ""
                 }`}
               />
-            </button>
+            </ActionSurface>
 
             {shouldExpandSection("cotador") && (
               <Surface variant="muted" padding="md">
@@ -598,15 +597,16 @@ export default function SystemSettingsScreen() {
 
         {showAccessSection && (
           <div id="settings-section-access" className="space-y-4">
-            <button
-              type="button"
+            <ActionSurface
               onClick={() => toggleSection("access")}
-              className="kds-surface kds-action-surface kds-surface-default flex w-full items-start justify-between gap-4 p-4 text-left"
+              variant="default"
+              padding="sm"
+              className="flex w-full items-start justify-between gap-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                <CardIcon className="mt-0.5">
                   <ShieldCheck className="h-5 w-5" />
-                </div>
+                </CardIcon>
                 <div>
                   <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Permissões por perfil
@@ -621,7 +621,7 @@ export default function SystemSettingsScreen() {
                   shouldExpandSection("access") ? "rotate-180" : ""
                 }`}
               />
-            </button>
+            </ActionSurface>
 
             {shouldExpandSection("access") && (
               <div className="space-y-4">
@@ -644,15 +644,16 @@ export default function SystemSettingsScreen() {
 
         {showLeadsSection && (
           <div id="settings-section-leads" className="space-y-4">
-            <button
-              type="button"
+            <ActionSurface
               onClick={() => toggleSection("leads")}
-              className="kds-surface kds-action-surface kds-surface-default flex w-full items-start justify-between gap-4 p-4 text-left"
+              variant="default"
+              padding="sm"
+              className="flex w-full items-start justify-between gap-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                <CardIcon className="mt-0.5">
                   <ListTree className="h-5 w-5" />
-                </div>
+                </CardIcon>
                 <div>
                   <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Leads
@@ -667,7 +668,7 @@ export default function SystemSettingsScreen() {
                   shouldExpandSection("leads") ? "rotate-180" : ""
                 }`}
               />
-            </button>
+            </ActionSurface>
 
             {shouldExpandSection("leads") && (
               <div className="space-y-6">
@@ -696,9 +697,9 @@ export default function SystemSettingsScreen() {
                     {!showLeadStatusManager &&
                       !showLeadOriginsManager &&
                       visibleLeadManagers.length === 0 && (
-                        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600">
+                        <Surface variant="muted" padding="md" className="border-dashed text-center text-sm">
                           Nenhum item de leads encontrado para "{searchTerm}".
-                        </div>
+                        </Surface>
                       )}
                   </>
                 )}
@@ -709,15 +710,16 @@ export default function SystemSettingsScreen() {
 
         {showContractsSection && (
           <div id="settings-section-contracts" className="space-y-4">
-            <button
-              type="button"
+            <ActionSurface
               onClick={() => toggleSection("contracts")}
-              className="kds-surface kds-action-surface kds-surface-default flex w-full items-start justify-between gap-4 p-4 text-left"
+              variant="default"
+              padding="sm"
+              className="flex w-full items-start justify-between gap-4 text-left"
             >
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                <CardIcon className="mt-0.5">
                   <FileText className="h-5 w-5" />
-                </div>
+                </CardIcon>
                 <div>
                   <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
                     Contratos
@@ -733,7 +735,7 @@ export default function SystemSettingsScreen() {
                   shouldExpandSection("contracts") ? "rotate-180" : ""
                 }`}
               />
-            </button>
+            </ActionSurface>
 
             {shouldExpandSection("contracts") && (
               <div className="space-y-6">
@@ -758,9 +760,9 @@ export default function SystemSettingsScreen() {
                       />
                     ))}
                     {visibleContractManagers.length === 0 && (
-                      <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-600">
+                      <Surface variant="muted" padding="md" className="border-dashed text-center text-sm">
                         Nenhum item de contratos encontrado para "{searchTerm}".
-                      </div>
+                      </Surface>
                     )}
                   </>
                 )}

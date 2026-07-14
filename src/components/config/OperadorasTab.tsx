@@ -14,10 +14,7 @@ import { cotadorService } from '../../features/cotador/services/cotadorService';
 import { type Operadora } from '../../lib/supabase';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
 import { useAdaptiveLoading } from '../../hooks/useAdaptiveLoading';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import ModalShell from '../ui/ModalShell';
-import Textarea from '../ui/Textarea';
+import { Alert, Button, Checkbox, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle, Input, Surface, Textarea } from '../../design-system';
 import { PanelAdaptiveLoadingFrame } from '../ui/panelLoading';
 import { OperadorasSkeleton } from '../ui/panelSkeletons';
 
@@ -194,27 +191,21 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
     >
       <div className={containerClass}>
         {message && (
-          <div
-            className={`flex items-center space-x-3 rounded-xl border p-4 ${
-              message.type === 'success'
-                ? 'border-green-200 bg-green-50 text-green-800'
-                : 'border-red-200 bg-red-50 text-red-800'
-            }`}
-          >
+          <Alert tone={message.type === 'success' ? 'success' : 'danger'} className="flex-row items-center gap-3">
             {message.type === 'success' ? (
               <CheckCircle className="h-5 w-5 flex-shrink-0" />
             ) : (
               <AlertCircle className="h-5 w-5 flex-shrink-0" />
             )}
             <p>{message.text}</p>
-          </div>
+          </Alert>
         )}
 
-        <div className="rounded-3xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-4 shadow-sm">
+        <Surface padding="sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--panel-text-muted,#876f5c)]">Organização de operadoras</p>
-              <h4 className="mt-1 text-lg font-semibold text-[color:var(--panel-text)]">Operadoras</h4>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">Organização de operadoras</p>
+              <h4 className="mt-1 text-lg font-semibold text-[var(--text-primary)]">Operadoras</h4>
             </div>
             <div className="flex w-full gap-3 lg:w-auto lg:min-w-[460px]">
               <div className="flex-1 lg:min-w-[300px]">
@@ -231,17 +222,17 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
               </Button>
             </div>
           </div>
-        </div>
+        </Surface>
 
-        <div className="overflow-hidden rounded-[26px] border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] shadow-sm">
+        <Surface padding="none" className="overflow-hidden">
             {filteredOperadoras.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[color:var(--panel-border)] bg-[var(--panel-surface-soft)] py-14 text-center">
-                <Building2 className="mx-auto h-12 w-12 text-[color:var(--panel-text-muted)]" />
-                <p className="mt-4 text-sm font-medium text-[color:var(--panel-text)]">{operadoras.length === 0 ? 'Nenhuma operadora cadastrada' : 'Nenhuma operadora encontrada'}</p>
-                <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">{operadoras.length === 0 ? 'Crie a primeira operadora para liberar configurações comerciais.' : 'Ajuste a busca para localizar a operadora desejada.'}</p>
+              <div className="border border-dashed border-[var(--border-subtle)] bg-[var(--bg-inset)] py-14 text-center">
+                <Building2 className="mx-auto h-12 w-12 text-[var(--text-muted)]" />
+                <p className="mt-4 text-sm font-medium text-[var(--text-primary)]">{operadoras.length === 0 ? 'Nenhuma operadora cadastrada' : 'Nenhuma operadora encontrada'}</p>
+                <p className="mt-1 text-sm text-[var(--text-secondary)]">{operadoras.length === 0 ? 'Crie a primeira operadora para liberar configurações comerciais.' : 'Ajuste a busca para localizar a operadora desejada.'}</p>
               </div>
             ) : (
-              <div className="divide-y divide-[color:var(--panel-border-subtle,#e7dac8)]">
+              <div className="divide-y divide-[var(--border-subtle)]">
                 {filteredOperadoras.map((operadora) => {
                   const isEditing = operadora.id === editingId;
 
@@ -250,51 +241,51 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                       key={operadora.id}
                       className={`flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-start lg:justify-between ${
                         isEditing
-                          ? 'bg-[var(--panel-surface-soft)]'
-                          : 'bg-[var(--panel-surface)]'
+                          ? 'bg-[var(--bg-inset)]'
+                          : 'bg-[var(--bg-surface)]'
                       }`}
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h5 className="text-base font-semibold text-[color:var(--panel-text)]">{operadora.nome}</h5>
+                          <h5 className="text-base font-semibold text-[var(--text-primary)]">{operadora.nome}</h5>
                           {!operadora.ativo && (
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--panel-text-soft)]">
+                            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]">
                               Inativa
                             </span>
                           )}
                           {operadora.bonus_por_vida && (
-                            <span className="rounded-full border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] px-2.5 py-1 text-xs font-medium text-[color:var(--panel-text-soft)]">
+                            <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]">
                               Bônus por vida
                             </span>
                           )}
                         </div>
 
-                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--panel-text-soft)]">
-                          <span className="rounded-full border border-[color:var(--panel-border-subtle)] px-2.5 py-1">
-                            Comissão: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.comissao_padrao}%</span>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                          <span className="rounded-full border border-[var(--border-subtle)] px-2.5 py-1">
+                            Comissão: <span className="font-semibold text-[var(--text-primary)]">{operadora.comissao_padrao}%</span>
                           </span>
-                          <span className="rounded-full border border-[color:var(--panel-border-subtle)] px-2.5 py-1">
-                            Prazo: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.prazo_recebimento_dias} dias</span>
+                          <span className="rounded-full border border-[var(--border-subtle)] px-2.5 py-1">
+                            Prazo: <span className="font-semibold text-[var(--text-primary)]">{operadora.prazo_recebimento_dias} dias</span>
                           </span>
-                          <span className="rounded-full border border-[color:var(--panel-border-subtle)] px-2.5 py-1">
-                            Bônus: <span className="font-semibold text-[color:var(--panel-text)]">{operadora.bonus_por_vida ? `R$ ${operadora.bonus_padrao.toFixed(2)}` : 'Não possui'}</span>
+                          <span className="rounded-full border border-[var(--border-subtle)] px-2.5 py-1">
+                            Bônus: <span className="font-semibold text-[var(--text-primary)]">{operadora.bonus_por_vida ? `R$ ${operadora.bonus_padrao.toFixed(2)}` : 'Não possui'}</span>
                           </span>
                         </div>
 
                         {operadora.observacoes && (
-                          <p className="mt-3 text-sm text-[color:var(--panel-text-soft)]">{operadora.observacoes}</p>
+                          <p className="mt-3 text-sm text-[var(--text-secondary)]">{operadora.observacoes}</p>
                         )}
                       </div>
 
                       <div className="flex items-center gap-2 self-end lg:self-auto">
-                        <Button variant="icon" size="icon" className="h-10 w-10 text-[color:var(--panel-text-soft,#5b4635)] hover:bg-[var(--panel-surface-soft,#f4ede3)]" onClick={() => handleEdit(operadora)}>
+                        <Button variant="icon" size="icon" className="text-[var(--text-secondary)] hover:bg-[var(--bg-inset)]" onClick={() => handleEdit(operadora)}>
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button
                           onClick={() => void handleDelete(operadora.id)}
                           variant="icon"
                           size="icon"
-                          className="h-10 w-10 text-red-600 hover:bg-red-50"
+                          className="text-[var(--danger-text)] hover:bg-[var(--danger-soft)]"
                           title="Excluir operadora"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -305,18 +296,17 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                 })}
               </div>
             )}
-        </div>
-        <ModalShell
-          isOpen={isModalOpen}
-          onClose={resetForm}
-          title={editingId ? 'Editar operadora' : 'Nova operadora'}
-          description="Defina regras padrão para comissão, prazo e eventuais bônus."
-          size="md"
-        >
+        </Surface>
+        <Dialog open={isModalOpen} onOpenChange={(open) => !open && resetForm()} size="md">
+          <DialogHeader onClose={resetForm}>
+            <DialogTitle>{editingId ? 'Editar operadora' : 'Nova operadora'}</DialogTitle>
+            <DialogDescription>Defina regras padrão para comissão, prazo e eventuais bônus.</DialogDescription>
+          </DialogHeader>
+          <DialogBody>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Nome da operadora *</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Nome da operadora *</label>
                 <Input
                   type="text"
                   value={formData.nome}
@@ -327,7 +317,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Comissão padrão (%)</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Comissão padrão (%)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -341,11 +331,11 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
                     })
                   }
                 />
-                <p className="mt-1 text-xs text-[color:var(--panel-text-muted)]">Pode exceder 100% para contratos PJ.</p>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">Pode exceder 100% para contratos PJ.</p>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Prazo de recebimento (dias)</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Prazo de recebimento (dias)</label>
                 <Input
                   type="number"
                   min="0"
@@ -361,36 +351,34 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 transition-colors hover:border-[color:var(--panel-accent-emerald-border)]">
-                <input
-                  type="checkbox"
+              <label className="flex cursor-pointer items-start gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4 transition-colors hover:border-[var(--border-accent)]">
+                <Checkbox
                   checked={formData.bonus_por_vida}
                   onChange={(event) => setFormData({ ...formData, bonus_por_vida: event.target.checked })}
-                  className="mt-0.5 h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
+                  className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-semibold text-[color:var(--panel-text)]">Bônus por vida</p>
-                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Ative se a operadora tiver bônus recorrente adicional.</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Bônus por vida</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Ative se a operadora tiver bônus recorrente adicional.</p>
                 </div>
               </label>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-4 transition-colors hover:border-[color:var(--panel-border)]">
-                <input
-                  type="checkbox"
+              <label className="flex cursor-pointer items-start gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4 transition-colors hover:border-[var(--border-accent)]">
+                <Checkbox
                   checked={formData.ativo}
                   onChange={(event) => setFormData({ ...formData, ativo: event.target.checked })}
-                  className="mt-0.5 h-5 w-5 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500"
+                  className="mt-0.5"
                 />
                 <div>
-                  <p className="text-sm font-semibold text-[color:var(--panel-text)]">Operadora ativa</p>
-                  <p className="mt-1 text-sm text-[color:var(--panel-text-soft)]">Mantém a operadora disponível para novos contratos.</p>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Operadora ativa</p>
+                  <p className="mt-1 text-sm text-[var(--text-secondary)]">Mantém a operadora disponível para novos contratos.</p>
                 </div>
               </label>
             </div>
 
             {formData.bonus_por_vida && (
               <div>
-                <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Bônus padrão (R$)</label>
+                <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Bônus padrão (R$)</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -408,7 +396,7 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
             )}
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-[color:var(--panel-text-soft)]">Observações</label>
+              <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Observações</label>
               <Textarea
                 value={formData.observacoes}
                 onChange={(event) => setFormData({ ...formData, observacoes: event.target.value })}
@@ -428,7 +416,8 @@ export default function OperadorasTab({ embedded = false }: OperadorasTabProps) 
               </Button>
             </div>
           </form>
-        </ModalShell>
+          </DialogBody>
+        </Dialog>
         {ConfirmationDialog}
       </div>
     </PanelAdaptiveLoadingFrame>

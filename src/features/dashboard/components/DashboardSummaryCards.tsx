@@ -1,6 +1,6 @@
 import { Activity, DollarSign, FileText, Target, Users } from 'lucide-react';
 
-import AnimatedStatCard from '../../../components/AnimatedStatCard';
+import { KpiCard } from '../../../design-system';
 
 type DashboardSummaryCardsProps = {
   isObserver: boolean;
@@ -22,68 +22,60 @@ export function DashboardSummaryCards({
   ticketMedio,
 }: DashboardSummaryCardsProps) {
   const gridClassName = isObserver
-    ? 'grid grid-cols-1 gap-5 sm:grid-cols-2'
-    : 'grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-6';
+    ? 'grid grid-cols-1 gap-3 sm:grid-cols-2'
+    : 'grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5';
 
   return (
     <div data-panel-animate className={gridClassName}>
-      <div className={!isObserver ? 'lg:col-span-2' : undefined}>
-        <AnimatedStatCard
-          label="Leads em negociação"
-          value={`${leadsAtivos} / ${totalLeads}`}
-          icon={Users}
-          tone="brand"
-          subtitle="Base de leads"
-        />
-      </div>
+      <KpiCard
+        padding="sm"
+        title="Leads em negociação"
+        subtitle="Base de leads"
+        value={<span className="tabular-nums">{leadsAtivos} / {totalLeads}</span>}
+        trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><Users className="h-3.5 w-3.5 text-[var(--brand-primary)]" aria-hidden="true" />Pipeline ativo</span>}
+        className="h-full space-y-3"
+      />
 
       {!isObserver && (
-        <div className="lg:col-span-2">
-          <AnimatedStatCard
-            label="Contratos ativos"
-            value={contratosAtivosCount}
-            icon={FileText}
-            tone="earth"
-            subtitle="Vigentes"
-          />
-        </div>
+        <KpiCard
+          padding="sm"
+          title="Contratos ativos"
+          subtitle="Vigentes"
+          value={<span className="tabular-nums">{contratosAtivosCount.toLocaleString('pt-BR')}</span>}
+          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><FileText className="h-3.5 w-3.5 text-[var(--accent-copper)]" aria-hidden="true" />Carteira atual</span>}
+          className="h-full space-y-3"
+        />
       )}
 
       {!isObserver && (
-        <div className="lg:col-span-2">
-          <AnimatedStatCard
-            label="Comissão"
-            value={comissaoTotal}
-            icon={DollarSign}
-            tone="copper"
-            prefix="R$"
-            subtitle="Mensal"
-          />
-        </div>
+        <KpiCard
+          padding="sm"
+          title="Comissão"
+          subtitle="Mensal"
+          value={<span className="tabular-nums">R$ {comissaoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><DollarSign className="h-3.5 w-3.5 text-[var(--accent-gold-hover)]" aria-hidden="true" />Previsão de receita</span>}
+          className="h-full space-y-3"
+        />
       )}
 
-      <div className={!isObserver ? 'lg:col-span-3' : undefined}>
-        <AnimatedStatCard
-          label="Taxa de eficiência"
-          value={conversionRate}
-          icon={Target}
-          tone="earth"
-          suffix="%"
-          subtitle="Leads convertidos"
-        />
-      </div>
+      <KpiCard
+        padding="sm"
+        title="Taxa de eficiência"
+        subtitle="Leads convertidos"
+        value={<span className="tabular-nums">{conversionRate.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}%</span>}
+        trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><Target className="h-3.5 w-3.5 text-[var(--accent-copper)]" aria-hidden="true" />Conversão atual</span>}
+        className="h-full space-y-3"
+      />
 
       {!isObserver && (
-        <div className="lg:col-span-3">
-          <AnimatedStatCard
-            label="Ticket médio"
-            value={ticketMedio}
-            icon={Activity}
-            tone="copper"
-            prefix="R$"
-            subtitle="Por contrato"
-          />
-        </div>
+        <KpiCard
+          padding="sm"
+          title="Ticket médio"
+          subtitle="Por contrato"
+          value={<span className="tabular-nums">R$ {ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+          trend={<span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--text-muted)]"><Activity className="h-3.5 w-3.5 text-[var(--accent-gold-hover)]" aria-hidden="true" />Valor da carteira</span>}
+          className="h-full space-y-3"
+        />
       )}
     </div>
   );

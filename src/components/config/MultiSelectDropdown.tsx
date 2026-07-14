@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cx } from '../../lib/cx';
-import { Checkbox, Popover, PopoverContent, PopoverTrigger } from '../../design-system';
+import { Button, Checkbox, Popover, PopoverContent, PopoverTrigger } from '../../design-system';
 
 type Option = {
   value: string;
@@ -46,7 +46,7 @@ export default function MultiSelectDropdown({
   return (
     <div className="relative" ref={containerRef}>
       {label && (
-        <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
+        <label className="kds-field-label mb-1 block">
           {label}
         </label>
       )}
@@ -54,7 +54,7 @@ export default function MultiSelectDropdown({
       <PopoverTrigger>
       <button
         type="button"
-        className="kds-select h-8 w-full rounded-[var(--kds-radius-md)] px-2.5 pr-8 text-left"
+        className="kds-select h-8 w-full px-2.5 pr-8 text-left"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >
@@ -73,18 +73,18 @@ export default function MultiSelectDropdown({
 
       {isOpen && (
         <PopoverContent align="start" className="max-h-48 w-[var(--radix-popover-trigger-width)] overflow-y-auto p-0">
-          <button
-            type="button"
-            className={cx(
-              'kds-button kds-button-text w-full justify-start rounded-none border-b border-[var(--border-subtle)] text-xs',
-            )}
+          <Button
+            variant="text"
+            size="sm"
+            fullWidth
+            className="justify-start rounded-none border-b border-[var(--border-subtle)]"
             onClick={() => {
               onChange([]);
               setIsOpen(false);
             }}
           >
             Limpar seleção
-          </button>
+          </Button>
           {options.map((option) => {
             const isSelected = values.includes(option.value);
             return (

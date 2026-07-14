@@ -1,6 +1,6 @@
 import { DollarSign, Gift } from "lucide-react";
 
-import { Badge } from "../../../design-system";
+import { ActionSurface, Badge } from "../../../design-system";
 import { cx } from "../../../lib/cx";
 import { COMMISSION_WEEK_DAYS } from "../shared/commissionCalendarConstants";
 import {
@@ -15,27 +15,6 @@ type CommissionMonthGridProps = {
   onSelectDate: (date: Date) => void;
   selectedDate: Date | null;
 };
-
-const getDayCellClass = ({
-  hasEvents,
-  isSelected,
-  isToday,
-}: {
-  hasEvents: boolean;
-  isSelected: boolean;
-  isToday: boolean;
-  }) =>
-  cx(
-    "aspect-square rounded-xl border p-2 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--bg-surface)]",
-    "flex flex-col items-start justify-between",
-    isSelected
-      ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)] shadow-sm"
-      : isToday
-        ? "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
-        : hasEvents
-          ? "border-[var(--brand-primary-border)] bg-[var(--bg-surface-muted)] text-[var(--text-primary)] hover:bg-[var(--brand-primary-soft)]"
-          : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)]",
-  );
 
 export default function CommissionMonthGrid({
   currentMonth,
@@ -76,16 +55,18 @@ export default function CommissionMonthGrid({
       : false;
 
     days.push(
-      <button
+      <ActionSurface
         key={day}
-        type="button"
         aria-pressed={isSelected}
         onClick={() => onSelectDate(cellDate)}
-        className={getDayCellClass({
-          hasEvents: dayEvents.length > 0,
-          isSelected,
-          isToday,
-        })}
+        variant={dayEvents.length > 0 || isToday ? "muted" : "default"}
+        padding="none"
+        selected={isSelected}
+        className={cx(
+          "aspect-square p-2",
+          "flex flex-col items-start justify-between",
+          isToday && !isSelected && "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]",
+        )}
       >
         <span className="text-sm font-semibold">{day}</span>
         <div className="mt-auto flex flex-wrap gap-1">
@@ -108,7 +89,7 @@ export default function CommissionMonthGrid({
             </Badge>
           )}
         </div>
-      </button>,
+      </ActionSurface>,
     );
   }
 

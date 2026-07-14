@@ -395,7 +395,7 @@ export default function WhatsAppLeadDrawer({
         open={isOpen}
         onOpenChange={(open) => !open && onClose()}
         side="right"
-        className="w-full max-w-[440px]"
+        className="comm-whatsapp-lead-drawer w-full max-w-[440px]"
       >
         <DrawerHeader>
           <DialogHeader onClose={onClose}>

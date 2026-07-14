@@ -107,7 +107,7 @@ export function PopoverContent({
   const { open, setOpen, triggerRef } = usePopoverContext();
   const contentRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<Position>({ top: -10000, left: -10000 });
-  const [theme, setTheme] = useState('theme-dark');
+  const [theme, setTheme] = useState('theme-light');
 
   useLayoutEffect(() => {
     if (!open || !triggerRef.current || !contentRef.current) return;
@@ -133,7 +133,7 @@ export function PopoverContent({
   useEffect(() => {
     if (!open) return;
     const host = triggerRef.current?.closest('.painel-theme');
-    setTheme(host?.classList.contains('theme-light') ? 'theme-light' : 'theme-dark');
+    setTheme(host?.classList.contains('theme-dark') ? 'theme-dark' : 'theme-light');
     const handlePointerDown = (event: PointerEvent) => {
       if (!contentRef.current?.contains(event.target as Node) && !triggerRef.current?.contains(event.target as Node)) {
         onInteractOutside?.();

@@ -1120,7 +1120,7 @@ export default function WhatsAppAgendaModal({
     return (
       <article
         key={reminder.id}
-        className="panel-glass-lite rounded-[1.35rem] border p-4 shadow-sm transition-all"
+        className="panel-glass-lite rounded-[var(--kds-radius-lg)] border p-4 shadow-sm transition-all"
         style={getReminderCardStyle(reminder)}
       >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1399,8 +1399,8 @@ export default function WhatsAppAgendaModal({
         }
       >
         {loading ? (
-          <div className="flex min-h-[520px] items-center justify-center rounded-[1.7rem] border" style={PANEL_MUTED_INSET_STYLE}>
-            <div className="panel-glass-strong flex items-center gap-3 rounded-[1.1rem] border px-4 py-3 shadow-lg" style={PANEL_INSET_STYLE}>
+          <div className="flex min-h-[520px] items-center justify-center rounded-[var(--kds-radius-lg)] border" style={PANEL_MUTED_INSET_STYLE}>
+            <div className="panel-glass-strong flex items-center gap-3 rounded-[var(--kds-radius-md)] border px-4 py-3 shadow-lg" style={PANEL_INSET_STYLE}>
               <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--brand-primary)' }} />
               <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 Carregando agenda...
@@ -1409,7 +1409,7 @@ export default function WhatsAppAgendaModal({
           </div>
         ) : (
           <div className="space-y-5">
-            <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+            <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--text-muted)' }}>
@@ -1467,7 +1467,7 @@ export default function WhatsAppAgendaModal({
               </div>
             </section>
 
-            <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+            <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
               <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_240px_auto_auto]">
                 <div className="relative">
                   <Input
@@ -1515,14 +1515,14 @@ export default function WhatsAppAgendaModal({
             </section>
 
             {error ? (
-              <div className="flex items-center gap-2 rounded-[1.1rem] border p-3 text-sm" style={getPanelToneStyle('danger')}>
+              <div className="flex items-center gap-2 rounded-[var(--kds-radius-md)] border p-3 text-sm" style={getPanelToneStyle('danger')}>
                 <AlertCircle className="h-4 w-4" />
                 <span>{error}</span>
               </div>
             ) : null}
 
             {filteredReminders.length === 0 ? (
-              <div className="rounded-[1.7rem] border py-12 text-center" style={PANEL_EMPTY_STATE_STYLE}>
+              <div className="rounded-[var(--kds-radius-lg)] border py-12 text-center" style={PANEL_EMPTY_STATE_STYLE}>
                 <Bell className="mx-auto mb-4 h-14 w-14" style={{ color: 'var(--text-muted)' }} />
                 <h3 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
                   Nenhum item encontrado
@@ -1534,7 +1534,7 @@ export default function WhatsAppAgendaModal({
             ) : (
               <div className="space-y-4">
                 {overdueReminders.length > 0 ? (
-                  <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                  <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
                     <div className="mb-4 flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--danger-text)' }}>
@@ -1552,7 +1552,7 @@ export default function WhatsAppAgendaModal({
                   </section>
                 ) : null}
 
-                <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
@@ -1571,7 +1571,7 @@ export default function WhatsAppAgendaModal({
                     <div className="space-y-3">{pendingSelectedReminders.map(renderReminderCard)}</div>
                   ) : (
                     <div
-                      className="rounded-[1.3rem] border py-8 text-center text-sm"
+                      className="rounded-[var(--kds-radius-md)] border py-8 text-center text-sm"
                       style={{
                         ...PANEL_MUTED_INSET_STYLE,
                         color: 'var(--text-secondary)',
@@ -1582,7 +1582,7 @@ export default function WhatsAppAgendaModal({
                   )}
                 </section>
 
-                <section className="rounded-[1.7rem] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
+                <section className="rounded-[var(--kds-radius-lg)] border p-4 sm:p-5" style={PANEL_INSET_STYLE}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--text-muted)' }}>
@@ -1607,7 +1607,7 @@ export default function WhatsAppAgendaModal({
                       <div className="space-y-3">{completedSelectedReminders.map(renderReminderCard)}</div>
                     ) : (
                       <div
-                        className="rounded-[1.3rem] border py-8 text-center text-sm"
+                        className="rounded-[var(--kds-radius-md)] border py-8 text-center text-sm"
                         style={{
                           ...PANEL_MUTED_INSET_STYLE,
                           color: 'var(--text-secondary)',
@@ -1618,7 +1618,7 @@ export default function WhatsAppAgendaModal({
                     )
                   ) : (
                     <div
-                      className="rounded-[1.3rem] border py-5 text-center text-sm"
+                      className="rounded-[var(--kds-radius-md)] border py-5 text-center text-sm"
                       style={{
                         ...PANEL_MUTED_INSET_STYLE,
                         color: 'var(--text-secondary)',

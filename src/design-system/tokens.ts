@@ -37,10 +37,10 @@ export const panelButtonVariantClasses: Record<PanelButtonVariant, string> = {
 };
 
 export const panelButtonSizeClasses: Record<PanelButtonSize, string> = {
-  xs: 'h-7 px-2.5 text-xs',
+  xs: 'h-8 px-2.5 text-xs',
   sm: 'h-8 px-3 text-xs',
   md: 'h-10 px-3.5 text-sm',
-  lg: 'h-11 px-4 text-sm',
+  lg: 'h-12 px-4 text-sm',
   icon: 'h-10 w-10 p-0',
 };
 
@@ -87,7 +87,7 @@ export type PanelCardKind =
   | 'summary'
   | 'chart';
 
-export const panelCardBaseClass = 'kds-card rounded-[var(--radius-2xl)]';
+export const panelCardBaseClass = 'kds-card';
 
 export const panelCardVariantClasses: Record<PanelCardVariant, string> = {
   default: 'kds-card-default',
@@ -162,7 +162,7 @@ const tabsListVariantClasses: Record<PanelTabsVariant, string> = {
 };
 
 const tabsTriggerBaseClass =
-  'kds-tab inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)] disabled:cursor-not-allowed disabled:opacity-50';
+  'kds-tab inline-flex items-center justify-center gap-2 px-4 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)] disabled:cursor-not-allowed disabled:opacity-50';
 
 const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle: string }> = {
   underline: {
@@ -174,8 +174,9 @@ const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle
     idle: '',
   },
   panel: {
-    active: 'kds-tab-active h-9 px-3 py-0',
-    idle: 'h-9 px-3 py-0',
+    // Matches the 40px operational control height once the panel's 4px inset is included.
+    active: 'kds-tab-active h-8 px-3 py-0',
+    idle: 'h-8 px-3 py-0',
   },
 };
 

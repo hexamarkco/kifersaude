@@ -82,7 +82,7 @@ export default function ValueAdjustmentForm({
         <DialogTitle>{adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}</DialogTitle>
       </DialogHeader>
       <DialogBody className="p-0">
-        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
+        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
           <h3 className="mb-4 flex items-center text-lg font-bold text-[var(--text-primary)]">
             <DollarSign className="mr-2 h-5 w-5" />
             {adjustment ? 'Editar Ajuste' : 'Adicionar Ajuste de Valor'}

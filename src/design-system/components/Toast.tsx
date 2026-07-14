@@ -99,8 +99,17 @@ function ToastContainer({
 }) {
   if (toasts.length === 0) return null;
 
+  const isDarkThemeActive = document.querySelector('.painel-theme')?.classList.contains('theme-dark');
+
   return createPortal(
-    <div className={cx('kds-toast-container', `kds-toast-${position}`)} aria-live="polite">
+    <div
+      className={cx(
+        'kds-toast-container modal-theme-host painel-theme kifer-ds',
+        isDarkThemeActive ? 'theme-dark' : 'theme-light',
+        `kds-toast-${position}`,
+      )}
+      aria-live="polite"
+    >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onDismiss={onDismiss} />
       ))}

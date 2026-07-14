@@ -27,11 +27,13 @@ import {
   Badge,
   Button,
   Card,
+  CardIcon,
   Dialog,
   DialogBody,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  Field,
   Input,
   Surface,
 } from "../../../design-system";
@@ -324,9 +326,9 @@ export default function UsersScreen() {
             <div className="space-y-4">
               <Badge tone="gold"><Shield className="h-3.5 w-3.5" />Usuários</Badge>
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[var(--kds-radius-lg)] bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                <CardIcon tone="gold">
                   <Users className="h-6 w-6" />
-                </div>
+                </CardIcon>
                 <div className="space-y-2">
                   <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-[color:var(--text-primary)]">
                     Usuários do sistema
@@ -399,9 +401,9 @@ export default function UsersScreen() {
                     padding="sm"
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--brand-primary)]">
-                        <UserIcon className="h-5 w-5 text-white" />
-                      </div>
+                      <CardIcon>
+                        <UserIcon className="h-5 w-5" />
+                      </CardIcon>
                       <div>
                         <p className="font-medium text-[color:var(--text-primary)]">
                           @{userProfile.username}
@@ -440,7 +442,6 @@ export default function UsersScreen() {
                           disabled={actionLoading}
                           variant="icon"
                           size="icon"
-                          className="h-8 w-8 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                           title="Excluir usuário"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -491,10 +492,7 @@ export default function UsersScreen() {
           <DialogBody>
           <form onSubmit={handleCreateUser} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Usuário
-                </label>
+              <Field label="Usuário">
                 <Input
                   type="text"
                   value={newUserUsername}
@@ -502,12 +500,9 @@ export default function UsersScreen() {
                   required
                   placeholder="nome.usuario"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Email
-                </label>
+              <Field label="Email">
                 <Input
                   type="email"
                   value={newUserEmail}
@@ -515,12 +510,9 @@ export default function UsersScreen() {
                   required
                   placeholder="usuario@email.com"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Senha
-                </label>
+              <Field label="Senha">
                 <Input
                   type="password"
                   value={newUserPassword}
@@ -529,12 +521,9 @@ export default function UsersScreen() {
                   minLength={6}
                   placeholder="Digite uma senha temporária"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Perfil
-                </label>
+              <Field label="Perfil">
                 <FilterSingleSelect
                   icon={Shield}
                   value={newUserRole}
@@ -543,7 +532,7 @@ export default function UsersScreen() {
                   includePlaceholderOption={false}
                   options={profileOptions}
                 />
-              </div>
+              </Field>
             </div>
 
             <div className="flex items-center gap-3">
@@ -569,10 +558,7 @@ export default function UsersScreen() {
           <DialogBody>
           <form onSubmit={handleUpdateUser} className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Usuário
-                </label>
+              <Field label="Usuário">
                 <Input
                   type="text"
                   value={editUserUsername}
@@ -580,12 +566,9 @@ export default function UsersScreen() {
                   required
                   placeholder="nome.usuario"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Email
-                </label>
+              <Field label="Email">
                 <Input
                   type="email"
                   value={editUserEmail}
@@ -593,12 +576,12 @@ export default function UsersScreen() {
                   required
                   placeholder="usuario@email.com"
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Nova Senha
-                </label>
+              <Field
+                label="Nova senha"
+                description="Deixe em branco para manter a senha atual."
+              >
                 <Input
                   type="password"
                   value={editUserPassword}
@@ -606,15 +589,9 @@ export default function UsersScreen() {
                   minLength={6}
                   placeholder="Deixe em branco para manter"
                 />
-                <p className="mt-1 text-xs text-slate-500">
-                  Deixe em branco para manter a senha atual.
-                </p>
-              </div>
+              </Field>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Perfil
-                </label>
+              <Field label="Perfil">
                 <FilterSingleSelect
                   icon={Shield}
                   value={editUserRole}
@@ -623,7 +600,7 @@ export default function UsersScreen() {
                   includePlaceholderOption={false}
                   options={profileOptions}
                 />
-              </div>
+              </Field>
             </div>
 
             <div className="flex items-center gap-3">

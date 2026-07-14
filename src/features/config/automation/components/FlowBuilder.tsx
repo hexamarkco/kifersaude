@@ -37,9 +37,8 @@ import { buildFlowGraphFromFlow } from "../../../../lib/autoContactFlowGraph";
 import { buildAutoContactFlowTextExport } from "../../../../lib/autoContactFlowExport";
 import MultiSelectDropdown from "../../../../components/config/MultiSelectDropdown";
 import FilterSingleSelect from "../../../../components/FilterSingleSelect";
-import Button from "../../../../components/ui/Button";
-import Input from "../../../../components/ui/Input";
 import VariableAutocompleteTextarea from "../../../../components/ui/VariableAutocompleteTextarea";
+import { Button, Input } from "../../../../design-system";
 
 type FlowBuilderProps = {
   flow: AutoContactFlow;
@@ -232,7 +231,7 @@ const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
   };
 
   return (
-    <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-sm">
+    <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-sm">
       <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
         Gatilho
       </div>
@@ -254,7 +253,7 @@ const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
 const BOOLEAN_FIELDS = ["whatsapp_valid", "event", "lead_created"];
 
 const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
-  <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-strong)] bg-[var(--bg-surface-muted)] px-4 py-3 shadow-sm">
+  <div className="rounded-[var(--radius-xl)] border border-[var(--border-strong)] bg-[var(--bg-surface-muted)] px-4 py-3 shadow-sm">
     <div className="text-xs font-semibold uppercase text-[var(--brand-primary)]">
       Condição
     </div>
@@ -297,7 +296,7 @@ const ConditionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
 );
 
 const ActionNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => (
-  <div className="rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-sm">
+  <div className="rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3 shadow-sm">
     <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">Ação</div>
     <div className="text-sm font-semibold text-[var(--text-primary)]">
       {data.label || "Ação"}
@@ -1040,9 +1039,9 @@ export default function FlowBuilder({
     <div className="panel-page-shell grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_380px]">
       <div
         ref={reactFlowWrapperRef}
-        className="flex h-[520px] flex-col overflow-hidden rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] sm:h-[560px] lg:h-[680px]"
+        className="flex h-[520px] flex-col overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] sm:h-[560px] lg:h-[680px]"
       >
-        <div className="flex items-center justify-between rounded-t-[var(--kds-radius-xl)] border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
+        <div className="flex items-center justify-between rounded-t-[var(--radius-2xl)] border-b border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
           <div>
             <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
               Builder avancado
@@ -1154,7 +1153,7 @@ export default function FlowBuilder({
         )}
       </div>
 
-      <div className="h-[520px] overflow-y-auto rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:h-[560px] lg:h-[680px]">
+      <div className="h-[520px] overflow-y-auto rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:h-[560px] lg:h-[680px]">
         <div className="text-xs font-semibold uppercase text-[var(--text-subtle)]">
           Inspector
         </div>
@@ -1170,7 +1169,7 @@ export default function FlowBuilder({
             </div>
 
             {selectedNodeIssues.length > 0 && (
-              <div className="rounded-[var(--kds-radius-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
+              <div className="rounded-[var(--radius-lg)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-2 text-xs text-[var(--text-secondary)]">
                 {selectedNodeIssues.join(" • ")}
               </div>
             )}
@@ -1298,7 +1297,7 @@ export default function FlowBuilder({
                     return (
                       <div
                         key={condition.id}
-                        className="space-y-2 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] p-3"
+                          className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] p-3"
                       >
                         <FilterSingleSelect
                           icon={RefreshCcw}
@@ -1363,7 +1362,7 @@ export default function FlowBuilder({
                           )}
                         />
                         {BOOLEAN_FIELDS.includes(condition.field) ? (
-                          <div className="rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 text-[11px] text-[var(--text-muted)]">
+                          <div className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 text-[11px] text-[var(--text-muted)]">
                             Use as conexões{" "}
                             <span className="font-semibold">Sim/Não</span> para
                             definir o fluxo quando a condição for verdadeira ou
@@ -1691,7 +1690,7 @@ export default function FlowBuilder({
                           com {"{{= ... }}"}.
                         </div>
                         {messagePreview && (
-                          <div className="mt-2 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 text-[11px] text-[var(--text-secondary)]">
+                          <div className="mt-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2 text-[11px] text-[var(--text-secondary)]">
                             Preview: {messagePreview}
                           </div>
                         )}

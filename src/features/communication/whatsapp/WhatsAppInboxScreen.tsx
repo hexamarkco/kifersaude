@@ -4,6 +4,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
 import { Button, Dialog, DialogBody, DialogHeader, DialogTitle } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
@@ -2005,8 +2006,11 @@ function WhatsAppMediaViewer({
     return null;
   }
 
+  const isDarkThemeActive = typeof document !== 'undefined'
+    && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
+
   const viewer = (
-    <div className="whatsapp-inbox-media-viewer modal-theme-host painel-theme kifer-ds fixed inset-0 z-[2147483000] flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]" role="dialog" aria-modal="true">
+    <div className={`whatsapp-inbox-media-viewer comm-whatsapp-media-viewer modal-theme-host painel-theme kifer-ds ${isDarkThemeActive ? 'theme-dark' : 'theme-light'} fixed inset-0 z-[2147483000] flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]`} role="dialog" aria-modal="true">
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--border-subtle)] px-4 py-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{selectedAuthor}</p>
@@ -9179,10 +9183,10 @@ export default function WhatsAppInboxScreen() {
 
   return (
     <WhatsAppInboxSelectionProvider value={selectionContextValue}>
-    <div className="whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0">
+    <div className="comm-terracotta whatsapp-inbox-shell panel-page-shell h-full overflow-hidden p-0">
       <div className="flex h-full min-h-0 flex-col gap-0">
         {operationalBanner && (
-          <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-4 mb-0 flex items-start gap-3 rounded-3xl border px-4 py-3.5`}>
+          <section className={`whatsapp-inbox-status-banner whatsapp-inbox-status-banner-${operationalBanner.tone} m-4 mb-0 flex items-start gap-3 rounded-[var(--kds-radius-md)] border px-4 py-3.5`}>
             <operationalBanner.icon className="mt-0.5 h-5 w-5 shrink-0" />
             <div className="min-w-0 space-y-1">
               <p className="whatsapp-inbox-heading text-sm font-semibold">{operationalBanner.title}</p>
@@ -9306,7 +9310,7 @@ export default function WhatsAppInboxScreen() {
                 Carregando conversas...
               </div>
             ) : search ? (sidebarChats.length === 0 && filteredMessageSearchResults.length === 0 && !searchingChats && !searchingMessages ? (
-              <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
+              <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
                 <Search className="h-8 w-8 whatsapp-inbox-empty-icon" />
                 <div className="space-y-1">
                   <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">
@@ -9378,7 +9382,7 @@ export default function WhatsAppInboxScreen() {
                 ))}
               </>
             )) : sidebarChats.length === 0 ? (
-              <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-3xl border border-dashed p-6 text-center">
+              <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
                 {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
                 <div className="space-y-1">
                   <p className="whatsapp-inbox-heading text-sm font-medium text-[var(--text-primary)]">
@@ -9733,7 +9737,7 @@ export default function WhatsAppInboxScreen() {
                           className={`message-bubble-row flex w-full ${lastMessage.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div className="relative max-w-[82%] pb-2">
-                            <div className={`rounded-[2rem] px-2 py-2 shadow-sm ${getMessageBubbleClasses(lastMessage.direction)} ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
+                            <div className={`rounded-[var(--kds-radius-lg)] px-2 py-2 shadow-sm ${getMessageBubbleClasses(lastMessage.direction)} ${groupHighlighted ? 'message-bubble-search-highlight' : ''}`}>
                               <WhatsAppMediaGroupBody messages={groupMessages} onOpenImage={setLightboxMessageId} />
                               <div className="whatsapp-inbox-message-meta mt-2 flex flex-wrap items-center justify-end gap-2 px-2 text-[11px] font-medium">
                                 <span>{formatMessageTime(lastMessage.message_at)}</span>
@@ -9793,7 +9797,7 @@ export default function WhatsAppInboxScreen() {
                           ) : null}
 
                           <div
-                            className={`rounded-3xl px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)} ${highlightedMessageId === message.id ? 'message-bubble-search-highlight' : ''}`}
+                            className={`rounded-[var(--kds-radius-lg)] px-4 py-3 shadow-sm ${getMessageBubbleClasses(message.direction)} ${highlightedMessageId === message.id ? 'message-bubble-search-highlight' : ''}`}
                             onContextMenu={(event) => {
                               if (!showEditAction && !showDeleteAction && !showReplyForwardActions) {
                                 return;
@@ -10700,7 +10704,7 @@ export default function WhatsAppInboxScreen() {
             closeOnEscape={false}
             closeOnOverlay={false}
             aria-label="Encaminhar mensagem"
-            className="max-w-lg"
+            className="comm-whatsapp-overlay max-w-lg"
           >
               <DialogHeader onClose={handleCloseForwardMessageModal}>
                 <div>

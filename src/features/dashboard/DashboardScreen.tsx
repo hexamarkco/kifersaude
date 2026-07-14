@@ -1968,28 +1968,25 @@ export default function DashboardScreen({
           onClick={() => setSelectedCalendarDate(date)}
           padding="none"
           selected={isSelected}
-          className="group relative aspect-square rounded-[var(--radius-xl)] p-2 text-left transition-all duration-200 hover:-translate-y-px"
+          className="group relative aspect-square rounded-[var(--kds-radius-md)] p-2 text-left transition-all duration-200 hover:-translate-y-px"
           style={
             isSelected
               ? undefined
               : isToday
                 ? {
                     borderColor: "var(--brand-primary-border)",
-                    background:
-                      "linear-gradient(180deg, color-mix(in srgb, var(--brand-primary-muted) 78%, var(--bg-surface)) 0%, var(--bg-surface) 100%)",
+                    background: "var(--brand-primary-muted)",
                     color: "var(--text-primary)",
                   }
                 : dayEvents.length > 0
                   ? {
                       borderColor: "var(--border-subtle)",
-                      background:
-                        "linear-gradient(180deg, color-mix(in srgb, var(--accent-gold-muted) 72%, var(--bg-surface)) 0%, var(--bg-surface) 100%)",
+                    background: "var(--accent-gold-muted)",
                       color: "var(--text-secondary)",
                     }
                   : {
                       borderColor: "var(--border-subtle)",
-                      background:
-                        "color-mix(in srgb, var(--bg-surface) 92%, transparent)",
+                    background: "var(--bg-surface)",
                       color: "var(--text-secondary)",
                     }
           }
@@ -2212,7 +2209,7 @@ export default function DashboardScreen({
     >
       <div
         ref={dashboardRootRef}
-        className="panel-dashboard-immersive panel-page-shell space-y-8"
+        className="panel-dashboard-immersive panel-page-shell space-y-6"
       >
         <DashboardHeader
           periodFilter={periodFilter}
@@ -2276,19 +2273,12 @@ export default function DashboardScreen({
 
         {!isObserver && (
           <>
-            <Surface data-panel-animate className="space-y-6 overflow-hidden">
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background:
-                    "radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--brand-primary) 12%, transparent) 0%, transparent 34%), radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--accent-gold) 10%, transparent) 0%, transparent 30%)",
-                }}
-              />
+            <Surface padding="sm" data-panel-animate className="space-y-5">
               <SectionHeader
                 title="Calendário de eventos"
                 description="Reajustes e aniversários agrupados pelo período selecionado."
                 action={(
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
                     <Badge tone="neutral">
                       <span className="text-[var(--text-primary)]">
                         {calendarMonthEventCount}
@@ -2312,9 +2302,9 @@ export default function DashboardScreen({
                 as="h3"
               />
 
-              <div className="relative grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
-                <Surface variant="muted" padding="sm" className="rounded-[var(--radius-2xl)] border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] sm:p-5">
-                  <div className="mb-5 flex items-center justify-between gap-3">
+              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr] lg:items-stretch">
+                <Surface variant="muted" padding="sm" className="sm:p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
                     <Button
                       type="button"
                       onClick={() =>
@@ -2334,7 +2324,7 @@ export default function DashboardScreen({
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <div className="text-center">
-                      <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--brand-primary)]">
+                      <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--brand-primary)]">
                         <CalendarDays className="h-5 w-5" strokeWidth={1.75} />
                       </div>
                       <h4 className="text-base font-semibold capitalize leading-tight text-[var(--text-primary)]">
@@ -2361,13 +2351,13 @@ export default function DashboardScreen({
                     </Button>
                   </div>
                   <div
-                    className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-xs text-[var(--text-muted)]"
+                    className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 text-xs text-[var(--text-muted)]"
                   >
                     <span>
                       Navegue os meses para consultar reajustes e aniversários.
                     </span>
                     <div
-                      className="inline-flex items-center gap-1 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1"
+                      className="inline-flex items-center gap-1 rounded-[var(--kds-radius-sm)] border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1"
                     >
                       <Button
                         type="button"
@@ -2416,7 +2406,7 @@ export default function DashboardScreen({
                       </Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-7 gap-2 rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
+                  <div className="grid grid-cols-7 gap-1.5 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
                     {calendarDays.weekDays.map((day) => (
                       <div
                         key={day}
@@ -2429,10 +2419,10 @@ export default function DashboardScreen({
                   </div>
                 </Surface>
 
-                <Surface variant="muted" padding="sm" className="flex flex-col rounded-[var(--radius-2xl)] border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] sm:p-5">
-                  <div className="mb-5 flex items-start justify-between gap-4 rounded-[var(--radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
+                <Surface variant="muted" padding="sm" className="flex flex-col sm:p-4">
+                  <div className="mb-4 flex items-start justify-between gap-4 rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3">
                     <div className="flex min-w-0 items-start gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--accent-copper)]">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--accent-copper)]">
                         <Sparkles className="h-5 w-5" strokeWidth={1.75} />
                       </span>
                       <div className="min-w-0">
@@ -2495,16 +2485,13 @@ export default function DashboardScreen({
                           return (
                             <Surface
                               key={event.id}
-                              padding="md"
-                              className="overflow-hidden border-[var(--brand-primary-border)]"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg, color-mix(in srgb, var(--brand-primary-muted) 84%, var(--bg-surface)) 0%, var(--bg-surface) 100%)",
-                              }}
+                              padding="sm"
+                              variant="muted"
+                              className="overflow-hidden border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)]"
                             >
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex min-w-0 gap-3">
-                                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
+                                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
                                     <Sparkles className="h-5 w-5" strokeWidth={1.75} />
                                   </span>
                                   <div className="min-w-0 space-y-1">
@@ -2621,16 +2608,13 @@ export default function DashboardScreen({
                         return (
                           <Surface
                             key={event.id}
-                            padding="md"
+                            padding="sm"
+                            variant="muted"
                             className="overflow-hidden border-[var(--border-subtle)]"
-                            style={{
-                              background:
-                                "linear-gradient(135deg, color-mix(in srgb, var(--accent-gold-muted) 72%, var(--bg-surface)) 0%, var(--bg-surface) 100%)",
-                            }}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex min-w-0 gap-3">
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--accent-copper)]">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-hover)] text-[var(--accent-copper)]">
                                   <Cake className="h-5 w-5" strokeWidth={1.75} />
                                 </span>
                                 <div className="min-w-0">

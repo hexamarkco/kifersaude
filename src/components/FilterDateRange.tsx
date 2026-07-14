@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 import { cx } from '../lib/cx';
-import { Button, DateTimePicker, Popover, PopoverContent, PopoverTrigger } from '../design-system';
+import { Button, DateTimePicker, Field, Popover, PopoverContent, PopoverTrigger } from '../design-system';
 
 export type FilterDateRangeProps = {
   icon: LucideIcon;
@@ -119,28 +119,24 @@ export default function FilterDateRange({
         aria-label={`Selecionar intervalo de ${label}`}
       >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                De
-              </span>
+            <Field label="De" htmlFor={`${label}-from`}>
               <DateTimePicker
+                id={`${label}-from`}
                 type={type}
                 value={fromValue}
                 onChange={(event) => onFromChange(event.target.value)}
                 placeholder={type === 'date' ? 'Selecionar data inicial' : 'Selecionar data e hora inicial'}
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
-              <span className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-                Até
-              </span>
+            </Field>
+            <Field label="Até" htmlFor={`${label}-to`}>
               <DateTimePicker
+                id={`${label}-to`}
                 type={type}
                 value={toValue}
                 onChange={(event) => onToChange(event.target.value)}
                 placeholder={type === 'date' ? 'Selecionar data final' : 'Selecionar data e hora final'}
               />
-            </label>
+            </Field>
           </div>
           <div
             className={cx(

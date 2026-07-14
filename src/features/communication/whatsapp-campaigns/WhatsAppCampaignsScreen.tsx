@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import { Activity, Bot, CalendarClock, Eye, FileSpreadsheet, Filter, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, RefreshCw, Send, ShieldCheck, UserCircle, Users, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import '../communicationTerracotta.css';
 import { ActionSurface, Badge, Button, Card, Checkbox, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Field, Input, PageHeader, Select, Surface, Textarea } from '../../../design-system';
 import FilterMultiSelect from '../../../components/FilterMultiSelect';
 import { useConfig } from '../../../contexts/ConfigContext';
@@ -503,7 +504,7 @@ export default function WhatsAppCampaignsScreen() {
   };
 
   return (
-    <div className="panel-page-shell space-y-6">
+    <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell space-y-5">
       <PageHeader
         eyebrow="Comunicação"
         title="Disparos WhatsApp"
@@ -530,7 +531,7 @@ export default function WhatsAppCampaignsScreen() {
         <MetricCard icon={Bot} label="Sugestoes IA" value={stats.aiSuggestionsPending} />
       </div>
 
-      <Card className="space-y-4">
+      <Card className="comm-campaign-toolbar space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -614,7 +615,7 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       {campaignModalOpen && (
-        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && closeCampaignModal()} size="xl" className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+        <Dialog open={campaignModalOpen} onOpenChange={(open) => !open && closeCampaignModal()} size="xl" className="comm-whatsapp-overlay flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
             <DialogHeader onClose={closeCampaignModal}>
               <div>
                 <DialogTitle>{editingCampaign ? 'Editar disparo' : 'Novo disparo'}</DialogTitle>
@@ -806,7 +807,7 @@ export default function WhatsAppCampaignsScreen() {
       )}
 
       {activationPreview && (
-        <Dialog open={Boolean(activationPreview)} onOpenChange={(open) => !open && closeActivationPreview()} size="lg" className="flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
+        <Dialog open={Boolean(activationPreview)} onOpenChange={(open) => !open && closeActivationPreview()} size="lg" className="comm-whatsapp-overlay flex max-h-[calc(100vh-3rem)] flex-col overflow-hidden">
             <DialogHeader onClose={closeActivationPreview}>
               <div>
                 <DialogTitle>Revisar antes de ativar</DialogTitle>
@@ -918,7 +919,7 @@ export default function WhatsAppCampaignsScreen() {
           ) : (
             <div className="space-y-3">
               {campaigns.map((campaign) => (
-                <article key={campaign.id} className="rounded-[var(--kds-radius-xl)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4">
+                <article key={campaign.id} className="comm-campaign-list-item rounded-[var(--kds-radius-lg)] border border-[color:var(--panel-border-subtle)] bg-[color:var(--panel-surface)] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="truncate text-sm font-semibold text-[color:var(--panel-text)]">{campaign.name}</h3>
@@ -967,7 +968,7 @@ export default function WhatsAppCampaignsScreen() {
 
 function MetricCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: number }) {
   return (
-    <Card padding="sm" className="flex items-center gap-3">
+    <Card padding="sm" className="comm-campaign-metric flex items-center gap-3">
       <span className="flex h-10 w-10 items-center justify-center rounded-[var(--kds-radius-lg)] bg-[color:var(--panel-accent-soft)] text-[color:var(--panel-accent-strong)]">
         <Icon className="h-5 w-5" />
       </span>

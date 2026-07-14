@@ -1,5 +1,7 @@
 import { lazy } from 'react';
 
+import { LoadingState } from '../design-system';
+
 export const HomePage = lazy(() => import('../pages/public/HomePage'));
 export const CotadorSharePage = lazy(() => import('../pages/public/CotadorSharePage'));
 export const PlanosPage = lazy(() => import('../pages/public/PlanosPage'));
@@ -15,15 +17,15 @@ export const WhatsAppInboxWrapper = lazy(() => import('../pages/routes/WhatsAppI
 export const WhatsAppCampaignsWrapper = lazy(() => import('../pages/routes/WhatsAppCampaignsWrapper'));
 export const WhatsAppCampaignDetailWrapper = lazy(() => import('../pages/routes/WhatsAppCampaignDetailWrapper'));
 export const RemindersManagerEnhanced = lazy(() => import('../components/RemindersManagerEnhanced'));
-export const BlogTab = lazy(() => import('../components/config/BlogTab'));
+export const BlogTab = lazy(() => import('../features/blog/BlogTabScreen'));
 export const ConfigPage = lazy(() => import('../pages/ConfigPage'));
-export const FinanceiroComissoesTab = lazy(() => import('../components/finance/FinanceiroComissoesTab'));
+export const FinanceiroComissoesTab = lazy(() => import('../features/commissions/FinanceiroComissoesScreen'));
 export const FinanceiroAgendaTab = lazy(() => import('../components/finance/FinanceiroAgendaTab'));
 
 export function RouteLoading() {
   return (
     <div className="kifer-ds flex min-h-screen items-center justify-center bg-[var(--bg-canvas)] px-4">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--border-default)] border-t-[var(--brand-primary)]" />
+      <LoadingState label="Carregando painel" compact />
     </div>
   );
 }

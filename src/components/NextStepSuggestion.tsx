@@ -1,6 +1,6 @@
 import { Lightbulb, ArrowRight } from 'lucide-react';
 
-import { Alert } from '../design-system';
+import { Alert, Surface } from '../design-system';
 
 type NextStepSuggestionProps = {
   leadStatus: string;
@@ -86,9 +86,9 @@ export default function NextStepSuggestion({ leadStatus, lastContact }: NextStep
       role={isUrgent ? 'alert' : 'status'}
     >
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] p-2">
+        <Surface padding="none" className="flex h-9 w-9 flex-shrink-0 items-center justify-center">
           <Lightbulb className="h-5 w-5" aria-hidden="true" />
-        </div>
+        </Surface>
         <div className="min-w-0 flex-1">
           <h4 className="mb-2 font-semibold text-[var(--text-primary)]">
             {isUrgent && 'Atenção: '} Próximos Passos - {suggestion.title}

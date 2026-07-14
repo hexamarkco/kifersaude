@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Ban, PauseCircle, PlayCircle, RefreshCw, Send, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import '../communicationTerracotta.css';
 import { Badge, Button, Card, EmptyState, PageHeader, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../design-system';
 import { toast } from '../../../lib/toast';
 import {
@@ -128,11 +129,11 @@ export default function WhatsAppCampaignDetailScreen() {
   };
 
   if (!campaignId) {
-    return <div className="panel-page-shell text-sm text-[var(--text-secondary)]">Disparo nao informado.</div>;
+    return <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell text-sm text-[var(--text-secondary)]">Disparo nao informado.</div>;
   }
 
   return (
-    <div className="panel-page-shell space-y-6">
+    <div className="comm-terracotta comm-terracotta-campaigns panel-page-shell space-y-5">
       <PageHeader
         title={campaign?.name ?? 'Detalhe do disparo'}
         description="Acompanhe contatos, status da fila, proximos envios e acoes operacionais da campanha."
@@ -154,7 +155,7 @@ export default function WhatsAppCampaignDetailScreen() {
         <Card className="h-48 animate-pulse" />
       ) : campaign ? (
         <>
-          <Card className="space-y-4">
+          <Card className="comm-campaign-toolbar space-y-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2">

@@ -2,7 +2,7 @@ import { BadgePercent, Calendar, Clock, Filter, TrendingUp } from 'lucide-react'
 
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import MonthlyTrendChart from '../../../components/charts/MonthlyTrendChart';
-import { SectionHeader, Surface, Tabs } from '../../../design-system';
+import { Card, SectionHeader, Surface, Tabs } from '../../../design-system';
 import {
   DASHBOARD_CHART_RANGE_OPTIONS,
   DASHBOARD_METRIC_COLORS,
@@ -83,23 +83,14 @@ export function DashboardTrendSection({
   ];
 
   return (
-    <Surface data-panel-animate className="overflow-hidden">
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(circle at 10% 0%, color-mix(in srgb, var(--brand-primary) 12%, transparent) 0%, transparent 34%), radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--accent-gold) 10%, transparent) 0%, transparent 30%)',
-        }}
-      />
-
-      <div className="relative">
-        <SectionHeader
-          eyebrow="Analytics"
-          title="Evolucao mensal"
-          description="Tendencia por mes considerando o periodo selecionado e os filtros atuais."
-          action={(
-            <div className="flex flex-wrap gap-2 sm:justify-end">
-            <div className="w-full sm:w-44">
+    <Surface padding="sm" data-panel-animate>
+      <SectionHeader
+        eyebrow="Analytics"
+        title="Evolucao mensal"
+        description="Tendencia por mes considerando o periodo selecionado e os filtros atuais."
+        action={(
+          <div className="grid w-full gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:items-center">
+            <div className="min-w-0 xl:w-40">
               <FilterSingleSelect
                 icon={Filter}
                 value={periodFilter}
@@ -118,10 +109,10 @@ export function DashboardTrendSection({
               value={selectedMetric}
               onChange={onSelectedMetricChange}
               variant="panel"
-              listClassName="w-full sm:w-auto"
+              listClassName="w-full xl:w-auto"
             />
 
-            <div className="w-full sm:w-48">
+            <div className="min-w-0 xl:w-44">
               <FilterSingleSelect
                 icon={Clock}
                 value={String(chartRangeInMonths)}
@@ -134,50 +125,44 @@ export function DashboardTrendSection({
                 }))}
               />
             </div>
-            </div>
-          )}
-        />
-
-        <div className="mt-8 grid gap-6 xl:grid-cols-[0.92fr_1.6fr] xl:items-stretch">
-          <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
-            {insightCards.map((card) => {
-              const Icon = card.icon;
-
-              return (
-                <div
-                  key={card.label}
-                  className="rounded-[var(--radius-2xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
-                        <Icon className="h-5 w-5" strokeWidth={1.75} style={{ color: card.iconColor }} />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold leading-tight text-[var(--text-primary)]">{card.label}</p>
-                        <p className="mt-1 text-xs font-medium text-[var(--text-muted)]">{card.meta}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-4 font-[var(--font-sans)] text-3xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
-                    {card.value}
-                  </p>
-                  <p className={`mt-3 text-xs font-semibold leading-snug ${card.captionClassName}`}>{card.caption}</p>
-                </div>
-              );
-            })}
           </div>
+        )}
+      />
 
-          <MonthlyTrendChart
-            data={displayedMonthlySeries.map((point) => ({
-              label: point.label,
-              value: point.value,
-            }))}
-            color={DASHBOARD_METRIC_COLORS[selectedMetric]}
-            formatValue={formatSelectedMetricValue}
-            height={300}
-          />
+      <div className="mt-6 grid gap-4 xl:grid-cols-[0.82fr_1.6fr] xl:items-stretch">
+        <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-1">
+          {insightCards.map((card) => {
+            const Icon = card.icon;
+
+            return (
+              <Card key={card.label} variant="muted" kind="summary" padding="sm" className="space-y-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+                    <Icon className="h-4 w-4" strokeWidth={1.75} style={{ color: card.iconColor }} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold leading-tight text-[var(--text-primary)]">{card.label}</p>
+                    <p className="mt-0.5 text-xs font-medium text-[var(--text-muted)]">{card.meta}</p>
+                  </div>
+                </div>
+                <p className="font-[var(--font-sans)] text-2xl font-semibold leading-none tracking-[-0.04em] text-[var(--text-primary)] tabular-nums">
+                  {card.value}
+                </p>
+                <p className={`text-xs font-semibold leading-snug ${card.captionClassName}`}>{card.caption}</p>
+              </Card>
+            );
+          })}
         </div>
+
+        <MonthlyTrendChart
+          data={displayedMonthlySeries.map((point) => ({
+            label: point.label,
+            value: point.value,
+          }))}
+          color={DASHBOARD_METRIC_COLORS[selectedMetric]}
+          formatValue={formatSelectedMetricValue}
+          height={300}
+        />
       </div>
     </Surface>
   );

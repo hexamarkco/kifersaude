@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Building2, ChevronRight, FileText, MapPin, Search, ShieldCheck, WalletCards } from 'lucide-react';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Input from '../../../components/ui/Input';
-import ModalShell from '../../../components/ui/ModalShell';
-import { Button } from '../../../design-system';
+import { Button, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle, Surface } from '../../../design-system';
 import { formatCotadorCurrency, mergeCotadorHospitalNetworkEntries } from '../shared/cotadorUtils';
 import type { CotadorQuoteItem } from '../shared/cotadorTypes';
 
@@ -271,7 +270,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
         </Button>
       </div>
 
-      <section className="rounded-2xl border border-[var(--border-default)] bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--bg-surface),var(--bg-surface)),color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_48%,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_100%)] p-6 shadow-sm md:p-8">
+      <Surface variant="hero" padding="lg">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)]">{item.operadora.name ?? 'Operadora'}</p>
@@ -300,23 +299,23 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
 
         <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {summaryBlocks.map((block) => (
-            <div key={block.label} className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-3">
+            <div key={block.label} className="rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">{block.label}</p>
               <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{block.value}</p>
               {block.helper && <p className="mt-1 text-xs text-[color:var(--text-primary)]">{block.helper}</p>}
             </div>
           ))}
         </div>
-      </section>
+      </Surface>
 
-      <section className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-6 shadow-sm md:p-8">
+      <Surface padding="lg">
         <div className="max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)]">Condições do plano</p>
           <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">Informacoes objetivas para decisao</h2>
         </div>
 
         {sections.length === 0 && commercialNotes.length === 0 && pricesByAgeRangeEntries.length === 0 ? (
-          <div className="mt-6 rounded-3xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-12 text-center text-sm text-[color:var(--text-primary)]">
+          <div className="mt-6 rounded-[var(--kds-radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-inset)] px-6 py-12 text-center text-sm text-[var(--text-secondary)]">
             Este produto ainda nao possui informacoes adicionais cadastradas.
           </div>
         ) : (
@@ -325,7 +324,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
               <button
                 type="button"
                 onClick={() => setActiveSectionId('faixas-preco')}
-                className="flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-5 py-5 text-left transition-colors hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)]"
+                className="flex items-center justify-between gap-4 overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-4 text-left transition-colors hover:bg-[var(--bg-inset)]"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-3">
@@ -349,7 +348,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
                   key={section.id}
                   type="button"
                   onClick={() => setActiveSectionId(section.id)}
-                  className="flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-5 py-5 text-left transition-colors hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)]"
+                  className="flex items-center justify-between gap-4 overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-4 text-left transition-colors hover:bg-[var(--bg-inset)]"
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-3">
@@ -370,7 +369,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
                 key={`note-${index}`}
                 type="button"
                 onClick={() => setActiveSectionId(`nota-${index}`)}
-                className="flex items-center justify-between gap-4 overflow-hidden rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-5 py-5 text-left transition-colors hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)] xl:col-span-2"
+                className="flex items-center justify-between gap-4 overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-4 text-left transition-colors hover:bg-[var(--bg-inset)] xl:col-span-2"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-3">
@@ -386,34 +385,33 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
             ))}
           </div>
         )}
-      </section>
+      </Surface>
 
-      <ModalShell
-        isOpen={activeSectionId !== null}
-        onClose={() => setActiveSectionId(null)}
-        title={
-          activeSectionId === 'faixas-preco'
-            ? 'Mensalidade por faixa etaria'
-            : activeSectionId?.startsWith('nota-')
-              ? 'Observacoes comerciais'
-              : activeSection?.title ?? 'Detalhes do plano'
-        }
-        description={
-          activeSectionId === 'faixas-preco'
-            ? 'Valores base da tabela comercial para cada faixa etaria desta selecao.'
-            : 'Conteudo detalhado do plano em leitura dedicada.'
-        }
-        size="xl"
-      >
+      <Dialog open={activeSectionId !== null} onOpenChange={(open) => !open && setActiveSectionId(null)} size="xl">
+        <DialogHeader onClose={() => setActiveSectionId(null)}>
+          <DialogTitle>
+            {activeSectionId === 'faixas-preco'
+              ? 'Mensalidade por faixa etaria'
+              : activeSectionId?.startsWith('nota-')
+                ? 'Observacoes comerciais'
+                : activeSection?.title ?? 'Detalhes do plano'}
+          </DialogTitle>
+          <DialogDescription>
+            {activeSectionId === 'faixas-preco'
+              ? 'Valores base da tabela comercial para cada faixa etaria desta selecao.'
+              : 'Conteudo detalhado do plano em leitura dedicada.'}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogBody>
         {activeSectionId === 'faixas-preco' ? (
-          <div className="overflow-hidden rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)]">
-            <div className="grid grid-cols-[minmax(140px,1fr)_minmax(160px,1fr)] border-b border-[color:var(--border-default)] bg-[var(--bg-surface)] px-5 py-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">
+          <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+            <div className="grid grid-cols-[minmax(140px,1fr)_minmax(160px,1fr)] border-b border-[var(--border-subtle)] bg-[var(--bg-inset)] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-primary)]">
               <span>Faixa etaria</span>
               <span>Valor</span>
             </div>
             <div className="divide-y divide-[color:var(--border-subtle)]">
               {pricesByAgeRangeEntries.map(([ageRange, value]) => (
-                <div key={ageRange} className="grid grid-cols-[minmax(140px,1fr)_minmax(160px,1fr)] px-5 py-4 text-sm text-[color:var(--text-primary)]">
+                <div key={ageRange} className="grid grid-cols-[minmax(140px,1fr)_minmax(160px,1fr)] px-5 py-3 text-sm text-[var(--text-primary)]">
                   <span className="font-semibold">{ageRange}</span>
                   <span className="font-semibold tabular-nums">{formatCotadorCurrency(value)}</span>
                 </div>
@@ -433,7 +431,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
 
               if (block.type === 'table') {
                 return (
-                  <div key={`note-table-${index}`} className="overflow-auto rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)]">
+                  <div key={`note-table-${index}`} className="overflow-auto rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
                     <table className="min-w-full text-left text-sm">
                       <thead className="bg-[var(--bg-surface)] text-[color:var(--text-primary)]">
                         <tr>
@@ -468,7 +466,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
 
               if (block.type === 'table') {
                 return (
-                  <div key={`section-table-${index}`} className="overflow-auto rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)]">
+                  <div key={`section-table-${index}`} className="overflow-auto rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
                     <table className="min-w-full text-left text-sm">
                       <thead className="bg-[var(--bg-surface)] text-[color:var(--text-primary)]">
                         <tr>
@@ -491,17 +489,17 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
             })}
           </div>
         )}
-      </ModalShell>
+        </DialogBody>
+      </Dialog>
 
-      <ModalShell
-        isOpen={networkModalOpen}
-        onClose={() => setNetworkModalOpen(false)}
-        title="Rede do plano"
-        description="A rede esta ordenada por cidade, regiao e bairro. Use os filtros para localizar um prestador especifico."
-        size="xl"
-      >
+      <Dialog open={networkModalOpen} onOpenChange={(open) => !open && setNetworkModalOpen(false)} size="xl">
+        <DialogHeader onClose={() => setNetworkModalOpen(false)}>
+          <DialogTitle>Rede do plano</DialogTitle>
+          <DialogDescription>A rede esta ordenada por cidade, regiao e bairro. Use os filtros para localizar um prestador especifico.</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
         {networkEntriesCount === 0 ? (
-          <div className="rounded-3xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-12 text-center text-sm text-[color:var(--text-primary)]">
+          <div className="rounded-[var(--kds-radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-inset)] px-6 py-12 text-center text-sm text-[var(--text-secondary)]">
             Este plano ainda nao possui rede hospitalar cadastrada para exibicao.
           </div>
         ) : (
@@ -523,11 +521,11 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
             </div>
 
             {groupedFilteredNetwork.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-12 text-center text-sm text-[color:var(--text-primary)]">
+              <div className="rounded-[var(--kds-radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-inset)] px-6 py-12 text-center text-sm text-[var(--text-secondary)]">
                 Nenhum hospital encontrado para os filtros aplicados.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)]">
+              <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
                 {groupedFilteredNetwork.map((group, groupIndex) => (
                   <section
                     key={group.city}
@@ -572,7 +570,7 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
               </div>
             )}
 
-            <div className="rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4 shadow-sm">
+            <div className="rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4">
               <p className="text-sm font-semibold text-[color:var(--text-primary)]">Legenda das siglas</p>
               <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[color:var(--text-primary)] md:grid-cols-2">
                 {networkLegend.map((legendItem) => (
@@ -582,7 +580,8 @@ export default function CotadorPlanDetailsPage({ item, onBack }: CotadorPlanDeta
             </div>
           </div>
         )}
-      </ModalShell>
+        </DialogBody>
+      </Dialog>
     </div>
   );
 }

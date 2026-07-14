@@ -4,17 +4,37 @@ import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { getBadgeStyle } from '../../lib/colorUtils';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import ModalShell from '../ui/ModalShell';
-import { Alert, Badge, Card } from '../../design-system';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardIcon,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+} from '../../design-system';
 
 type Message = { type: 'success' | 'error'; text: string };
 type StatusDraft = { nome: string; ordem: string };
 
+const getDefaultStatusColor = () => {
+  if (typeof document === 'undefined') return '';
+
+  return getComputedStyle(
+    document.querySelector<HTMLElement>('.painel-theme.kifer-ds') ?? document.documentElement,
+  )
+    .getPropertyValue('--brand-primary')
+    .trim();
+};
+
 export default function LeadStatusManager() {
   const { leadStatuses, refreshLeadStatuses } = useConfig();
-  const [newStatus, setNewStatus] = useState({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 1 });
+  const [newStatus, setNewStatus] = useState({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 1 });
   const [saving, setSaving] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, StatusDraft>>({});
@@ -66,7 +86,7 @@ export default function LeadStatusManager() {
     if (error) {
       showMessage('error', 'Erro ao criar status.');
     } else {
-      setNewStatus({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 2 });
+      setNewStatus({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 2 });
       setIsCreateModalOpen(false);
       await refreshLeadStatuses();
       showMessage('success', 'Status criado com sucesso.');
@@ -226,9 +246,9 @@ export default function LeadStatusManager() {
               className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+                <CardIcon>
                   <PaintBucket className="h-4 w-4" style={{ color: status.cor }} />
-                </div>
+                </CardIcon>
 
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -277,45 +297,52 @@ export default function LeadStatusManager() {
           );
         })}
       </div>
-      <ModalShell
-        isOpen={isCreateModalOpen}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setNewStatus({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 1 });
+      <Dialog
+        open={isCreateModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateModalOpen(false);
+            setNewStatus({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 1 });
+          }
         }}
-        title="Novo status"
-        description="Crie uma nova etapa para o funil de leads."
         size="sm"
       >
-        <div className="space-y-4">
-          <div>
-            <label className="kds-field-label mb-2 block">Nome do status</label>
+        <DialogHeader
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setNewStatus({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 1 });
+          }}
+        >
+          <DialogTitle>Novo status</DialogTitle>
+          <DialogDescription>Crie uma nova etapa para o funil de leads.</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="space-y-4">
+            <Field label="Nome do status">
             <Input
               type="text"
               value={newStatus.nome}
               onChange={(event) => setNewStatus((current) => ({ ...current, nome: event.target.value }))}
               placeholder="Ex: Em negociação"
             />
-          </div>
+            </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="kds-field-label mb-2 block">Cor</label>
+            <Field label="Cor">
               <Input
                 type="color"
                 value={newStatus.cor}
                 onChange={(event) => setNewStatus((current) => ({ ...current, cor: event.target.value }))}
               />
-            </div>
+            </Field>
 
-            <div>
-              <label className="kds-field-label mb-2 block">Ordem</label>
+            <Field label="Ordem">
               <Input
                 type="number"
                 value={newStatus.ordem}
                 onChange={(event) => setNewStatus((current) => ({ ...current, ordem: Number.parseInt(event.target.value, 10) || 1 }))}
               />
-            </div>
+            </Field>
           </div>
 
           <div className="flex items-center gap-3">
@@ -327,14 +354,15 @@ export default function LeadStatusManager() {
               variant="secondary"
               onClick={() => {
                 setIsCreateModalOpen(false);
-                setNewStatus({ nome: '', cor: '#3b82f6', ordem: leadStatuses.length + 1 });
+                setNewStatus({ nome: '', cor: getDefaultStatusColor(), ordem: leadStatuses.length + 1 });
               }}
             >
               Cancelar
             </Button>
           </div>
-        </div>
-      </ModalShell>
+          </div>
+        </DialogBody>
+      </Dialog>
       {ConfirmationDialog}
     </Card>
   );

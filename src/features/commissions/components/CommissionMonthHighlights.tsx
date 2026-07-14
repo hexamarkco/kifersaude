@@ -13,32 +13,32 @@ export default function CommissionMonthHighlights({
   commissionTotal,
 }: CommissionMonthHighlightsProps) {
   return (
-    <Surface variant="muted" padding="sm" className="p-4">
-      <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+    <Surface padding="sm">
+      <h3 className="mb-3 font-[var(--font-display)] text-base font-semibold text-[var(--text-primary)]">
         Destaques do mes
-      </h4>
+      </h3>
 
       <div className="space-y-3">
-        <Surface variant="warning" padding="sm" className="flex items-center justify-between rounded-xl p-3">
+        <Surface variant="muted" padding="sm" className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-[var(--warning-text)]" />
+            <DollarSign className="h-4 w-4 text-[var(--accent-gold-hover)]" />
             <span className="text-sm text-[var(--text-secondary)]">
               Total em comissoes previstas
             </span>
           </div>
-          <span className="text-sm font-semibold text-[var(--warning-text)]">
+          <span className="text-sm font-semibold text-[var(--accent-gold-hover)]">
             {formatCommissionCurrency(commissionTotal)}
           </span>
         </Surface>
 
-        <Surface variant="default" padding="sm" className="flex items-center justify-between rounded-xl p-3">
+        <Surface variant="muted" padding="sm" className="flex items-center justify-between p-3">
           <div className="flex items-center gap-2">
-            <Gift className="h-4 w-4 text-[var(--text-secondary)]" />
+            <Gift className="h-4 w-4 text-[var(--brand-primary)]" />
             <span className="text-sm text-[var(--text-secondary)]">
               Total em bonificacoes previstas
             </span>
           </div>
-          <span className="text-sm font-semibold text-[var(--text-primary)]">
+          <span className="text-sm font-semibold text-[var(--brand-primary)]">
             {formatCommissionCurrency(bonusTotal)}
           </span>
         </Surface>

@@ -3,10 +3,19 @@ import { AlertCircle, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService, type ConfigCategory } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import ModalShell from '../ui/ModalShell';
-import { Alert, Card, Checkbox } from '../../design-system';
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+} from '../../design-system';
 
 type ConfigOptionManagerProps = {
   category: ConfigCategory;
@@ -205,33 +214,31 @@ export default function ConfigOptionManager({
               className="flex flex-col space-y-3 md:flex-row md:items-center md:space-x-3 md:space-y-0"
             >
               <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
-                <label className="flex flex-col text-xs text-[color:var(--panel-text-soft)]">
-                  Rótulo
+                <Field label="Rótulo" htmlFor={`config-option-label-${item.id}`}>
                   <Input
+                    id={`config-option-label-${item.id}`}
                     type="text"
                     value={drafts[item.id]?.label ?? item.label}
                     onChange={(event) => updateDraft(item.id, { label: event.target.value })}
                     onBlur={() => void handleLabelBlur(item.id, item.label)}
-                    className="mt-1"
                     disabled={isBusy}
                   />
-                </label>
+                </Field>
 
-                <label className="flex flex-col text-xs text-[color:var(--panel-text-soft)]">
-                  Ordem
+                <Field label="Ordem" htmlFor={`config-option-order-${item.id}`}>
                   <Input
+                    id={`config-option-order-${item.id}`}
                     type="number"
                     value={drafts[item.id]?.ordem ?? String(item.ordem)}
                     onChange={(event) => updateDraft(item.id, { ordem: event.target.value })}
                     onBlur={() => void handleOrderBlur(item.id, item.ordem)}
-                    className="mt-1"
                     disabled={isBusy}
                   />
-                </label>
+                </Field>
               </div>
 
               <div className="flex items-center space-x-3">
-                <label className="inline-flex items-center space-x-2 text-sm text-[color:var(--panel-text-soft)]">
+                <label className="inline-flex items-center space-x-2 text-sm text-[var(--text-secondary)]">
                   <Checkbox
                     checked={item.ativo}
                     onChange={(event) => void handleUpdate(item.id, { ativo: event.target.checked })}
@@ -255,26 +262,35 @@ export default function ConfigOptionManager({
           );
         })}
       </div>
-      <ModalShell
-        isOpen={isCreateModalOpen}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setNewLabel('');
+      <Dialog
+        open={isCreateModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateModalOpen(false);
+            setNewLabel('');
+          }
         }}
-        title={`Nova opção${title ? ` - ${title}` : ''}`}
-        description="Adicione um novo item a esta lista."
         size="sm"
       >
-        <div className="space-y-4">
-          <div>
-                <label className="kds-field-label mb-2 block">Nome da opção</label>
+        <DialogHeader
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setNewLabel('');
+          }}
+        >
+          <DialogTitle>{`Nova opção${title ? ` - ${title}` : ''}`}</DialogTitle>
+          <DialogDescription>Adicione um novo item a esta lista.</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="space-y-4">
+            <Field label="Nome da opção">
             <Input
               type="text"
               value={newLabel}
               onChange={(event) => setNewLabel(event.target.value)}
               placeholder={placeholder || 'Nova opção'}
             />
-          </div>
+            </Field>
 
           <div className="flex items-center gap-3">
             <Button onClick={() => void handleCreate()} disabled={saving}>
@@ -291,8 +307,9 @@ export default function ConfigOptionManager({
               Cancelar
             </Button>
           </div>
-        </div>
-      </ModalShell>
+          </div>
+        </DialogBody>
+      </Dialog>
       {ConfirmationDialog}
     </Card>
   );

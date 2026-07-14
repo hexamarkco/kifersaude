@@ -37,6 +37,7 @@ import {
   DateTimePicker,
   Dialog,
   DialogBody,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -523,12 +524,15 @@ export default function LeadForm({ lead, initialValues, onClose, onSave }: LeadF
     <Dialog open onOpenChange={(open) => !open && onClose()} size="lg" className="sm:max-w-3xl">
       <DialogHeader onClose={onClose}>
         <DialogTitle>{lead ? 'Editar Lead' : 'Novo Lead'}</DialogTitle>
+        <DialogDescription>
+          {lead ? 'Atualize os dados comerciais e o proximo retorno.' : 'Registre o contato e defina o primeiro acompanhamento.'}
+        </DialogDescription>
       </DialogHeader>
       <DialogBody className="p-0">
       <form
         id="lead-form"
         onSubmit={handleSubmit}
-        className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6"
+        className="flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Nome Completo *" htmlFor="lead-nome" className="md:col-span-2">

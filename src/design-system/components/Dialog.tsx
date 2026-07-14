@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, type HTMLAttributes } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, type HTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -25,6 +25,14 @@ const sizeClasses: Record<DialogSize, string> = {
 let scrollLockCount = 0;
 let originalOverflow = '';
 const DialogTitleIdContext = createContext<string | undefined>(undefined);
+const focusableSelector = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
 
 export function Dialog({
   open,
@@ -37,8 +45,30 @@ export function Dialog({
   ...props
 }: DialogProps) {
   const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
   const isDarkThemeActive =
     typeof document !== 'undefined' && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
+
+  useEffect(() => {
+    if (!open) return;
+
+    previouslyFocusedElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+
+      dialog.querySelector<HTMLElement>(focusableSelector)?.focus();
+      if (document.activeElement === document.body) dialog.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (previouslyFocusedElementRef.current?.isConnected) {
+        previouslyFocusedElementRef.current.focus();
+      }
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open || !closeOnEscape) return;
@@ -48,6 +78,37 @@ export function Dialog({
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [closeOnEscape, open, onOpenChange]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', trapFocus);
+    return () => document.removeEventListener('keydown', trapFocus);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -77,9 +138,11 @@ export function Dialog({
       />
       <div className="kds-dialog-container">
         <div
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby={props['aria-label'] ? undefined : titleId}
+          tabIndex={props.tabIndex ?? -1}
           className={cx('kds-dialog', sizeClasses[size], className)}
           onClick={(e) => e.stopPropagation()}
           {...props}

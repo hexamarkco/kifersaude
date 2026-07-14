@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react';
 import { Building2, Check, Link2, MapPin, Minus, Plus, Search, Share2, ShieldCheck, Sparkles, Trash2, UserRound, Users } from 'lucide-react';
 import FilterSingleSelect from '../../../components/FilterSingleSelect';
 import Input from '../../../components/ui/Input';
-import ModalShell from '../../../components/ui/ModalShell';
-import { Button, Surface } from '../../../design-system';
+import { Button, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle, Surface } from '../../../design-system';
 import {
   buildCotadorComparableHospitalKey,
   countCotadorUniqueNetworkProviders,
@@ -353,7 +352,7 @@ export default function CotadorWorkspace({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-[var(--border-default)] bg-[radial-gradient(circle_at_top_left,color-mix(in_srgb,var(--bg-surface),var(--bg-surface)),color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_48%,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_100%)] p-6 shadow-sm md:p-8">
+      <Surface variant="hero" padding="lg">
         <div className="flex flex-col gap-6">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)] dark:border-[color:var(--border-default)] dark:bg-[color:var(--bg-elevated)] dark:text-[color:var(--text-primary)]">
@@ -368,10 +367,10 @@ export default function CotadorWorkspace({
           <SummaryMetric label="Criada em" value={formatCotadorDateTime(quote.createdAt)} />
           <SummaryMetric label="Atualizada em" value={formatCotadorDateTime(quote.updatedAt)} />
         </div>
-      </section>
+      </Surface>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="rounded-2xl border border-[var(--border-default)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_0%,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_100%)] p-6 text-[color:var(--text-primary)] shadow-sm">
+        <Surface padding="lg" className="text-[var(--text-primary)]">
           <div className="flex flex-col gap-4 border-b border-[color:var(--border-default)] pb-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)]">Planos da cotação</p>
@@ -397,7 +396,7 @@ export default function CotadorWorkspace({
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="mt-6 flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--border-default)] bg-[color:var(--bg-elevated)] px-6 text-center transition-all hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)]"
+              className="mt-6 flex min-h-[320px] w-full cursor-pointer flex-col items-center justify-center rounded-[var(--kds-radius-md)] border-2 border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] px-6 text-center transition-colors hover:bg-[var(--bg-inset)]"
             >
               <div className="rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)]">
                 <Plus className="h-7 w-7" />
@@ -422,9 +421,9 @@ export default function CotadorWorkspace({
                   <article
                     key={item.id}
                     className={[
-                      'rounded-2xl border bg-[var(--bg-surface)] p-4 shadow-sm transition-colors',
+                       'rounded-[var(--kds-radius-md)] border bg-[var(--bg-surface)] p-4 transition-colors',
                       highlights.bestPrice
-                        ? 'border-[color:var(--border-default)] shadow-[var(--shadow-card)]'
+                         ? 'border-[var(--border-accent)] bg-[var(--brand-primary-soft)]'
                         : 'border-[color:var(--border-default)]',
                     ].join(' ')}
                   >
@@ -495,14 +494,14 @@ export default function CotadorWorkspace({
                   </div>
 
                   <div className="mt-4 grid gap-2 sm:grid-cols-1 xl:grid-cols-1">
-                    <div className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-2 dark:bg-[color:var(--bg-elevated)]">
+                     <div className="rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Acomodação</p>
                       <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{item.acomodacao ?? '-'}</p>
                     </div>
                   </div>
 
                   {item.estimatedMonthlyTotal !== null && (
-                    <div className="mt-3 rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-3 py-2.5 dark:border-[color:var(--border-default)] dark:bg-[color:var(--bg-elevated)]">
+                     <div className="mt-3 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-3 py-2.5">
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Mensalidade</p>
                         <p className="text-2xl font-semibold tabular-nums text-[color:var(--text-primary)] dark:text-[color:var(--text-primary)]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
@@ -532,7 +531,7 @@ export default function CotadorWorkspace({
               <button
                 type="button"
                 onClick={() => setPickerOpen(true)}
-                className="flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--border-default)] bg-[color:var(--bg-elevated)] px-6 text-center transition-all hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)]"
+                 className="flex min-h-[260px] cursor-pointer flex-col items-center justify-center rounded-[var(--kds-radius-md)] border-2 border-dashed border-[var(--border-default)] bg-[var(--bg-elevated)] px-6 text-center transition-colors hover:bg-[var(--bg-inset)]"
               >
                 <div className="rounded-full border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)]">
                   <Plus className="h-6 w-6" />
@@ -542,10 +541,10 @@ export default function CotadorWorkspace({
               </button>
             </div>
           )}
-        </section>
+        </Surface>
 
         <aside className="space-y-4">
-          <section className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-5 shadow-sm">
+          <Surface padding="md" className="p-5">
             <div className="flex items-start gap-3">
               <div className="rounded-2xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] p-2.5 text-[var(--text-primary)]">
                 <Link2 className="h-4 w-4" />
@@ -571,13 +570,13 @@ export default function CotadorWorkspace({
               />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] px-4 py-3">
+            <div className="mt-4 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Lead atual</p>
               <p className="mt-1 text-sm font-semibold text-[color:var(--text-primary)]">{linkedLeadLabel}</p>
             </div>
-          </section>
+          </Surface>
 
-          <section className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-5 shadow-sm">
+          <Surface padding="md" className="p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-primary)]">Distribuição</p>
@@ -588,7 +587,7 @@ export default function CotadorWorkspace({
               </Button>
             </div>
 
-            <div className="mt-4 rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4">
+            <div className="mt-4 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--text-primary)]">
                 <Users className="h-4 w-4" />
                 Faixas preenchidas
@@ -606,20 +605,19 @@ export default function CotadorWorkspace({
                 )}
               </div>
             </div>
-          </section>
+          </Surface>
 
         </aside>
       </div>
 
-      <ModalShell
-        isOpen={networkCompareOpen}
-        onClose={() => setNetworkCompareOpen(false)}
-        title="Comparativo de rede"
-        description="Cruze os prestadores de todos os planos selecionados para ver o que se repete e o que muda entre as opções da shortlist."
-        size="xl"
-      >
+      <Dialog open={networkCompareOpen} onOpenChange={(open) => !open && setNetworkCompareOpen(false)} size="xl">
+        <DialogHeader onClose={() => setNetworkCompareOpen(false)}>
+          <DialogTitle>Comparativo de rede</DialogTitle>
+          <DialogDescription>Cruze os prestadores de todos os planos selecionados para ver o que se repete e o que muda entre as opções da shortlist.</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
         {!networkPlansHaveData ? (
-          <div className="rounded-3xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-12 text-center text-sm text-[color:var(--text-primary)]">
+          <div className="rounded-[var(--kds-radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-inset)] px-6 py-12 text-center text-sm text-[var(--text-secondary)]">
             Adicione planos com rede hospitalar cadastrada para comparar os prestadores.
           </div>
         ) : (
@@ -639,7 +637,7 @@ export default function CotadorWorkspace({
               </div>
             </div>
 
-            <div className="rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] p-4">
+            <div className="rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-primary)]">Planos comparados</p>
               <div className="mt-3 flex flex-wrap gap-3">
                 {selectedItems.map((item) => (
@@ -712,11 +710,11 @@ export default function CotadorWorkspace({
             </div>
 
             {filteredNetworkComparisonRows.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-[var(--border-default)] bg-[var(--bg-surface)] px-6 py-12 text-center text-sm text-[color:var(--text-primary)]">
+              <div className="rounded-[var(--kds-radius-md)] border border-dashed border-[var(--border-default)] bg-[var(--bg-inset)] px-6 py-12 text-center text-sm text-[var(--text-secondary)]">
                 Nenhum prestador encontrado para os filtros aplicados.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-3xl border border-[color:var(--border-default)] bg-[var(--bg-surface)]">
+              <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
                 <div className="overflow-x-auto">
                   <div className="min-w-[960px]">
                     <div className="grid border-b border-[color:var(--border-default)] bg-[var(--bg-surface)]" style={networkComparisonMatrixStyle}>
@@ -797,7 +795,8 @@ export default function CotadorWorkspace({
             )}
           </div>
         )}
-      </ModalShell>
+        </DialogBody>
+      </Dialog>
 
       <CotadorPlanPickerOverlay
         isOpen={pickerOpen}

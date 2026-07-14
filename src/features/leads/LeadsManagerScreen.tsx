@@ -1559,7 +1559,7 @@ export default function LeadsManager({
           onCreateLead={handleCreateLead}
         />
         <Surface className="space-y-5" data-panel-animate>
-          <Surface variant="muted" padding="sm" className="kds-op-toolbar">
+          <Surface variant="muted" padding="none" className="kds-op-toolbar">
             <div className="kds-op-toolbar-search relative">
               <Input
                 type="text"
@@ -1662,7 +1662,7 @@ export default function LeadsManager({
                   </span>
                 </Surface>
               </summary>
-              <Surface variant="muted" padding="sm" className="kds-op-disclosure-content mt-3 space-y-4 p-4">
+                <Surface variant="muted" padding="none" className="kds-op-disclosure-content mt-3 space-y-4 p-4">
                 <div>
                   <h5 className="kds-op-section-label mb-2">
                     Tags e Canais
@@ -1823,7 +1823,7 @@ export default function LeadsManager({
             </div>
 
             {selectedLeadIds.length > 0 && (
-                <Surface variant="muted" padding="sm" className="kds-op-bulk-bar">
+                <Surface variant="muted" padding="none" className="kds-op-bulk-bar">
                   <span className="kds-op-bulk-title">
                     {selectedLeadIds.length} lead(s) selecionado(s)
                   </span>
@@ -1954,7 +1954,7 @@ export default function LeadsManager({
                   key={lead.id}
                   variant="muted"
                   padding="sm"
-                  className="kds-op-lead-card transition-all sm:p-6"
+                  className="kds-op-lead-card transition-colors sm:p-4"
                 >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">
@@ -2015,7 +2015,7 @@ export default function LeadsManager({
                                   onClick={() => handleEmailContact(lead)}
                                   variant="icon"
                                   size="icon"
-                                  className="kds-op-icon-chip h-8 w-8 rounded-full"
+                                  className="kds-op-icon-chip h-8 w-8"
                                   title="Enviar e-mail"
                                   aria-label={`Enviar e-mail para ${lead.nome_completo}`}
                                 >

@@ -193,7 +193,7 @@ export default function FollowUpAgendaOrganizerModal({ isOpen, onClose, onApplie
               ].map(([key, label]) => (
                 <label
                   key={key}
-                  className="flex min-h-10 cursor-pointer items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-hover)]"
+                  className="kds-surface kds-surface-default flex min-h-10 cursor-pointer items-center gap-2 px-3 py-2 text-sm font-semibold transition-colors"
                 >
                   <Checkbox
                     checked={Boolean(options[key as keyof FollowUpAgendaOrganizerOptions])}

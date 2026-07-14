@@ -1121,22 +1121,22 @@ export default function AgendaScreen() {
     isRescheduling: boolean;
   }) => {
     if (isSelected) {
-      return "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--text-primary)] shadow-[var(--shadow-card)]";
+      return "kds-calendar-day kds-calendar-day-selected";
     }
 
     if (isToday) {
-      return "border-[var(--accent-gold-border)] bg-[var(--accent-gold-soft)] text-[var(--accent-gold-hover)] shadow-[var(--shadow-card)]";
+      return "kds-calendar-day kds-calendar-day-today";
     }
 
     if (hasItems) {
-      return "border-[var(--brand-primary-border)] bg-[var(--bg-surface-muted)] text-[var(--text-primary)]";
+      return "kds-calendar-day kds-surface-muted";
     }
 
     if (isRescheduling) {
-      return "border-[var(--brand-primary-border)] bg-[var(--bg-inset)] text-[var(--text-primary)]";
+      return "kds-calendar-day kds-surface-strong";
     }
 
-    return "border-[var(--border-subtle)] bg-[var(--bg-inset)] text-[var(--text-secondary)]";
+    return "kds-calendar-day";
   };
 
   const getReminderPriorityTone = (priority: string): AgendaTone => {
@@ -1190,14 +1190,14 @@ export default function AgendaScreen() {
 
   const getReminderCardClass = (reminder: Reminder) => {
     if (reminder.lido) {
-      return "border-[var(--success-border)] bg-[var(--success-soft)]";
+      return "kds-surface-success";
     }
 
     if (isOverdue(reminder.data_lembrete)) {
-      return "border-[var(--danger-border)] bg-[var(--danger-soft)]";
+      return "kds-surface-danger";
     }
 
-    return "border-[var(--border-subtle)] bg-[var(--bg-surface)]";
+    return "kds-surface-muted";
   };
 
   const renderCalendar = () => {
@@ -1233,7 +1233,7 @@ export default function AgendaScreen() {
           onClick={() => {
             void handleDayClick(cellDate);
           }}
-          className={`flex min-h-16 flex-col justify-between rounded-[var(--radius-lg)] border p-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)] sm:min-h-20 sm:p-2 ${stateClass}`}
+          className={`kds-action-surface flex min-h-16 flex-col justify-between border p-1.5 text-left transition-colors sm:min-h-20 sm:p-2 ${stateClass}`}
           aria-pressed={isSelected}
           aria-label={`${day} de ${currentMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}, ${totalCount} item(ns)`}
         >
@@ -1319,7 +1319,7 @@ export default function AgendaScreen() {
     return (
       <article
         key={reminder.id}
-        className={`rounded-[var(--radius-xl)] border p-3 text-[var(--text-secondary)] shadow-[var(--shadow-card)] transition-[border-color,background-color,box-shadow,transform] hover:-translate-y-0.5 hover:shadow-[var(--shadow-card-hover)] ${getReminderCardClass(reminder)} ${canOpenLead ? "cursor-pointer" : ""}`}
+        className={`kds-surface border p-3 text-[var(--text-secondary)] transition-colors ${getReminderCardClass(reminder)} ${canOpenLead ? "kds-action-surface" : ""}`}
         onClick={canOpenLead ? handleCardOpen : undefined}
         onKeyDown={canOpenLead ? handleCardKeyDown : undefined}
         role={canOpenLead ? "button" : undefined}
@@ -1330,7 +1330,7 @@ export default function AgendaScreen() {
           <Surface
             variant={reminder.lido ? "success" : getReminderTypeSurface(reminder.tipo)}
             padding="none"
-            className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-lg)]"
+            className="flex h-10 w-10 items-center justify-center"
           >
             {getReminderIcon(reminder.tipo)}
           </Surface>
@@ -1538,9 +1538,8 @@ export default function AgendaScreen() {
           ))}
         </div>
 
-        <Surface variant="muted" padding="sm" className="flex flex-col gap-3">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="relative flex-1">
+        <Surface variant="muted" padding="none" className="kds-op-toolbar">
+              <div className="kds-op-toolbar-search relative">
                 <Input
                   type="text"
                   placeholder="Buscar por titulo, descricao, tipo ou lead..."
@@ -1562,28 +1561,26 @@ export default function AgendaScreen() {
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
-                <Button onClick={goToToday} variant="secondary" size="md">
+              <div className="kds-op-toolbar-actions">
+                <Button onClick={goToToday} variant="secondary" size="sm">
                   Hoje
                 </Button>
-                <Button onClick={() => setOrganizerOpen(true)} variant="primary" size="md">
+                <Button onClick={() => setOrganizerOpen(true)} variant="primary" size="sm">
                   <Sparkles className="h-4 w-4" />
                   Organizar follow-ups
                 </Button>
-                <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="md">
+                <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="sm">
                   <Plus className="h-4 w-4" />
                   Nova tarefa
                 </Button>
                 {filteredReminders.some((item) => !item.lido) && (
-                  <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="md" className="whitespace-nowrap">
+                  <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="sm" className="whitespace-nowrap">
                     Marcar filtrados como lidos
                   </Button>
                 )}
               </div>
-            </div>
 
-            <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-              <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-3">
+              <div className="grid min-w-0 flex-1 basis-full grid-cols-1 gap-2 md:grid-cols-3">
                 <FilterSingleSelect
                   icon={Tag}
                   value={typeFilter}
@@ -1609,25 +1606,25 @@ export default function AgendaScreen() {
                   options={TIME_FILTER_OPTIONS}
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
+              <div className="kds-op-toolbar-actions">
                 <Button
                   onClick={() => setStatusFilter("nao-lidos")}
                   variant={statusFilter === "nao-lidos" ? "primary" : "secondary"}
-                  size="md"
+                  size="sm"
                 >
                   Pendentes
                 </Button>
                 <Button
                   onClick={() => setStatusFilter("todos")}
                   variant={statusFilter === "todos" ? "primary" : "secondary"}
-                  size="md"
+                  size="sm"
                 >
                   Todos
                 </Button>
                 <Button
                   onClick={() => setStatusFilter("lidos")}
                   variant={statusFilter === "lidos" ? "primary" : "secondary"}
-                  size="md"
+                  size="sm"
                 >
                   Concluidos
                 </Button>
@@ -1640,21 +1637,20 @@ export default function AgendaScreen() {
                       setStatusFilter("todos");
                     }}
                     variant="ghost"
-                    size="md"
+                    size="sm"
                     className="whitespace-nowrap"
                   >
                     Limpar filtros ({hasActiveFilters})
                   </Button>
                 )}
               </div>
-            </div>
         </Surface>
 
         <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-          <Badge tone="neutral" className="h-10 gap-2 px-3 text-sm normal-case tracking-normal">
-            <Clock3 className="h-4 w-4 text-[var(--brand-primary)]" />
-            <span>{lastUpdatedLabel}</span>
-          </Badge>
+          <OperationalMetricChip
+            icon={<Clock3 className="h-3.5 w-3.5" />}
+            value={lastUpdatedLabel}
+          />
 
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <Badge tone="accent" className="gap-2">
@@ -1690,7 +1686,7 @@ export default function AgendaScreen() {
           </Surface>
 
           <Surface padding="none" className="overflow-hidden">
-            <div className="sticky top-0 z-10 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-4">
+            <Surface padding="sm" className="sticky top-0 z-10 rounded-none border-x-0 border-t-0 px-4 py-4">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <SectionHeader
                     eyebrow="Dia selecionado"
@@ -1737,7 +1733,7 @@ export default function AgendaScreen() {
                     {error}
                   </Alert>
                 )}
-            </div>
+            </Surface>
 
             <div className={`max-h-[calc(100vh-18rem)] min-h-96 overflow-y-auto px-4 py-4 ${selectedDateDensity === "compact" ? "space-y-3" : "space-y-4"}`}>
                 {selectedDateSections.length > 0 ? (

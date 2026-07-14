@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
+  DollarSign,
+  Gift,
 } from "lucide-react";
 
-import { Button, Surface } from "../../design-system";
+import {
+  Alert,
+  Button,
+  OperationalMetricChip,
+  PageHeader,
+  Surface,
+} from "../../design-system";
 import { PanelAdaptiveLoadingFrame } from "../../components/ui/panelLoading";
 import { CommissionCalendarSkeleton } from "../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../hooks/useAdaptiveLoading";
@@ -116,53 +123,41 @@ export default function CommissionCalendarScreen() {
     : null;
 
   return (
-    <PanelAdaptiveLoadingFrame
-      loading={loading}
-      phase={loadingUi.phase}
-      hasContent={hasContractsSnapshot}
-      skeleton={<CommissionCalendarSkeleton />}
-      stageLabel="Carregando agenda de comissoes..."
-      overlayLabel="Atualizando agenda de comissoes..."
-      stageClassName="min-h-[560px]"
-    >
-      <Surface className="space-y-6 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1">
-            <h2 className="flex items-center gap-3 text-xl font-bold text-[var(--text-primary)]">
-              <Surface variant="warning" padding="none" className="inline-flex h-11 w-11 items-center justify-center rounded-2xl text-[var(--warning-text)]">
-                <CalendarDays className="h-5 w-5" />
-              </Surface>
-              <span>Agenda de Comissoes e Bonificacoes</span>
-            </h2>
-            <p className="text-sm text-[var(--text-secondary)]">
-              Visualize as previsoes de recebimento para o mes selecionado e
-              organize o fluxo financeiro.
-            </p>
+    <div className="panel-page-shell space-y-6">
+      <PageHeader
+        eyebrow="Financeiro"
+        title="Agenda de comissoes e bonificacoes"
+        description="Visualize as previsoes de recebimento para o mes selecionado e organize o fluxo financeiro."
+        actions={(
+          <div className="flex flex-wrap gap-2">
+            <OperationalMetricChip
+              tone="gold"
+              icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
+              label="Comissao prevista"
+              value={formatCommissionCurrency(totals.commission)}
+            />
+            <OperationalMetricChip
+              tone="accent"
+              icon={<Gift className="h-4 w-4" aria-hidden="true" />}
+              label="Bonificacao prevista"
+              value={formatCommissionCurrency(totals.bonus)}
+            />
           </div>
+        )}
+      />
 
-          <div className="flex flex-wrap items-center gap-4 lg:justify-end">
-            <div className="min-w-[160px] text-right">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Comissao prevista
-              </p>
-              <p className="text-lg font-semibold text-[var(--warning-text)]">
-                {formatCommissionCurrency(totals.commission)}
-              </p>
-            </div>
-            <div className="min-w-[160px] text-right">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Bonificacao prevista
-              </p>
-              <p className="text-lg font-semibold text-[var(--text-primary)]">
-                {formatCommissionCurrency(totals.bonus)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-6">
-          <Surface variant="muted" padding="none" className="overflow-hidden rounded-2xl">
-            <Surface variant="muted" padding="sm" className="flex flex-wrap items-center justify-between gap-3 rounded-none border-x-0 border-t-0 px-4 py-3">
+      <PanelAdaptiveLoadingFrame
+        loading={loading}
+        phase={loadingUi.phase}
+        hasContent={hasContractsSnapshot}
+        skeleton={<CommissionCalendarSkeleton />}
+        stageLabel="Carregando agenda de comissoes..."
+        overlayLabel="Atualizando agenda de comissoes..."
+        stageClassName="min-h-[560px]"
+      >
+        <Surface className="space-y-6">
+          <Surface variant="muted" padding="none" className="overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-4 py-3">
               <Button
                 onClick={goToPreviousMonth}
                 variant="icon"
@@ -173,7 +168,7 @@ export default function CommissionCalendarScreen() {
                 <ChevronLeft className="h-5 w-5" />
               </Button>
 
-              <h3 className="text-lg font-semibold capitalize text-[var(--text-primary)]">
+              <h3 className="font-[var(--font-display)] text-lg font-semibold capitalize text-[var(--text-primary)]">
                 {monthLabel}
               </h3>
 
@@ -186,7 +181,7 @@ export default function CommissionCalendarScreen() {
               >
                 <ChevronRight className="h-5 w-5" />
               </Button>
-            </Surface>
+            </div>
 
             <div className="p-4">
               <div className="overflow-x-auto pb-2">
@@ -208,10 +203,12 @@ export default function CommissionCalendarScreen() {
           </Surface>
 
           {error && (
-            <Surface variant="danger" padding="sm" className="mt-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm">
-              <AlertCircle className="h-4 w-4" />
-              <span>{error}</span>
-            </Surface>
+            <Alert tone="danger" className="mt-4">
+              <span className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" aria-hidden="true" />
+                {error}
+              </span>
+            </Alert>
           )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -225,8 +222,8 @@ export default function CommissionCalendarScreen() {
               selectedDateLabel={selectedDateLabel}
             />
           </div>
-        </div>
-      </Surface>
-    </PanelAdaptiveLoadingFrame>
+        </Surface>
+      </PanelAdaptiveLoadingFrame>
+    </div>
   );
 }

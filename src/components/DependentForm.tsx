@@ -6,7 +6,7 @@ import { formatCpf, formatCurrencyInput, parseFormattedNumber } from '../lib/inp
 import { consultarPessoaPorCPF } from '../lib/receitaService';
 import FilterSingleSelect from './FilterSingleSelect';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
+import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
 
 type DependentFormProps = {
   contractId: string;
@@ -239,9 +239,10 @@ export default function DependentForm({
     <Dialog open onOpenChange={(open) => !open && onClose()} size="md">
       <DialogHeader onClose={onClose}>
         <DialogTitle>{dependent ? 'Editar Dependente' : 'Novo Dependente'}</DialogTitle>
+        <DialogDescription>Vincule o dependente ao titular e informe as condicoes individuais.</DialogDescription>
       </DialogHeader>
       <DialogBody className="p-0">
-      <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
+      <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label="Titular *" className="md:col-span-2">
             <FilterSingleSelect

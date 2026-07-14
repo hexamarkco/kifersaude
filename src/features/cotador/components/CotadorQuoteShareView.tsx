@@ -172,8 +172,8 @@ export default function CotadorQuoteShareView({
       className ?? '',
     ].join(' ')}>
       <div className="mx-auto max-w-6xl space-y-8">
-        <section className="overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--surface-bg)] shadow-[var(--shadow-card)]">
-          <div className="flex flex-col gap-6 px-8 py-8 lg:flex-row lg:items-start lg:justify-between">
+        <section className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] shadow-sm">
+          <div className="flex flex-col gap-6 px-6 py-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-3 rounded-full border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-primary)]">
                 <WalletCards className="h-4 w-4" />
@@ -185,7 +185,7 @@ export default function CotadorQuoteShareView({
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] px-5 py-4 shadow-[var(--shadow-card)]">
+            <div className="rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-5 py-4">
               <PublicBrandMark className="h-8 w-auto text-[color:var(--text-primary)]" />
               <div className="mt-4 space-y-2 text-sm text-[color:var(--text-primary)]">
                 {modalitiesSummary ? <p><span className="font-semibold text-[color:var(--text-primary)]">Modalidades:</span> {modalitiesSummary}</p> : null}
@@ -215,7 +215,7 @@ export default function CotadorQuoteShareView({
                 }));
 
               return (
-                <article key={item.id} className="overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
+                <article key={item.id} className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
                   <div className="border-b border-[color:var(--border-default)] px-6 py-5">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[color:var(--text-primary)]">{item.operadora.name ?? 'Operadora'}</p>
                     <p className="mt-1 text-sm text-[color:var(--text-primary)]">{item.linha?.name ?? item.subtitulo ?? 'Linha'}</p>
@@ -227,23 +227,23 @@ export default function CotadorQuoteShareView({
                     </div>
                   </div>
 
-                  <div className="grid gap-4 px-6 py-5 lg:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="grid gap-3 px-5 py-4 lg:grid-cols-[minmax(0,1fr)_220px]">
                     <div>
-                      <div className="rounded-3xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-4 py-4">
+                      <div className="rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Mensalidade estimada</p>
                         <p className="mt-2 text-3xl font-semibold text-[color:var(--text-primary)]">{formatCotadorCurrency(item.estimatedMonthlyTotal)}</p>
                         <p className="mt-3 text-sm text-[color:var(--text-primary)]">{networkCount > 0 ? `${networkCount} prestador(es) na rede` : 'Rede hospitalar não cadastrada'}</p>
                       </div>
 
                       {item.administradora?.name || item.entidadesClasse.length > 0 ? (
-                        <div className="mt-4 rounded-3xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] px-4 py-4 text-sm text-[color:var(--text-primary)]">
+                        <div className="mt-3 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] px-4 py-3 text-sm text-[var(--text-primary)]">
                           {item.administradora?.name ? <p><span className="font-semibold text-[color:var(--text-primary)]">Administradora:</span> {item.administradora.name}</p> : null}
                           {item.entidadesClasse.length > 0 ? <p className="mt-2"><span className="font-semibold text-[color:var(--text-primary)]">Entidades:</span> {item.entidadesClasse.map((entity) => entity.name).filter(Boolean).join(', ')}</p> : null}
                         </div>
                       ) : null}
                     </div>
 
-                    <div className="rounded-3xl border border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] p-4">
+                    <div className="rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-inset)] p-3">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[color:var(--text-primary)]">Faixas cotadas</p>
                       {quotedAgeRows.length > 0 ? (
                         <div className="mt-3 space-y-2 text-sm">
@@ -295,7 +295,7 @@ export default function CotadorQuoteShareView({
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-elevated)] shadow-[var(--shadow-card)]">
+            <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
               <div className="overflow-x-auto">
                 <div className="min-w-[980px]">
                   <div className="grid border-b border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]" style={networkComparisonMatrixStyle}>

@@ -93,7 +93,7 @@ export default function CotadorPlanPickerSidebar({
         <div>
           <p className={cx('text-xs font-semibold uppercase tracking-[0.18em]', isDarkTheme ? 'text-[color:var(--text-secondary)]' : 'text-[color:var(--text-primary)]')}>Modalidade</p>
           <div className={cx(
-            'mt-3 grid grid-cols-3 gap-2 rounded-2xl border p-1.5 shadow-sm',
+            'mt-3 grid grid-cols-3 gap-1 rounded-[var(--kds-radius-md)] border p-1',
             isDarkTheme
               ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]'
               : 'border-[color:var(--border-default)] bg-[var(--bg-surface)]',
@@ -106,7 +106,7 @@ export default function CotadorPlanPickerSidebar({
                   type="button"
                   onClick={() => onChangeModality(option.value)}
                   className={cx(
-                    'cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold transition-all',
+                     'cursor-pointer rounded-[var(--kds-radius-sm)] px-3 py-2 text-sm font-semibold transition-colors',
                     isActive
                       ? isDarkTheme
                         ? 'bg-[color:var(--bg-elevated)] text-[color:var(--text-primary)] shadow-sm'
@@ -160,7 +160,7 @@ export default function CotadorPlanPickerSidebar({
             {showNetworkLocationSuggestions && (
               <div
                 className={cx(
-                  'absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-2xl border shadow-[var(--shadow-card)]',
+                   'absolute left-0 right-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-[var(--kds-radius-md)] border shadow-sm',
                   isDarkTheme
                     ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)]'
                     : 'border-[color:var(--border-default)] bg-[var(--bg-surface)]',

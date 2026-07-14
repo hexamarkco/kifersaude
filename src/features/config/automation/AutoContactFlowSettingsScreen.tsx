@@ -67,13 +67,11 @@ import FlowBuilder from "./components/FlowBuilder";
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
 import DateTimePicker from "../../../components/ui/DateTimePicker";
 import ModalShell from "../../../components/ui/ModalShell";
-import Button from "../../../components/ui/Button";
-import Checkbox from "../../../components/ui/Checkbox";
-import Input from "../../../components/ui/Input";
 import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocompleteTextarea";
 import { AutomationFlowsSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
+import { ActionSurface, Alert, Button, Card, Checkbox, Input, Surface } from "../../../design-system";
 
 type MessageState = {
   type: "success" | "error" | "warning";
@@ -1526,7 +1524,7 @@ export default function AutoContactFlowSettingsScreen() {
 
   if (!autoContactIntegration && !loadingFlow) {
     return (
-      <div className="bg-[color:var(--brand-primary-soft)] border border-[var(--brand-primary-border)] rounded-xl p-6 flex items-start gap-3">
+      <Alert tone="warning" className="items-start">
         <Info className="w-5 h-5 text-[var(--text-secondary)] mt-1" />
         <div className="space-y-1 text-sm text-[var(--text-primary)]">
           <p className="font-semibold">
@@ -1537,7 +1535,7 @@ export default function AutoContactFlowSettingsScreen() {
             definir os templates de automação.
           </p>
         </div>
-      </div>
+      </Alert>
     );
   }
 
@@ -1551,7 +1549,7 @@ export default function AutoContactFlowSettingsScreen() {
       overlayLabel="Atualizando fluxos de automação..."
       stageClassName="min-h-[520px]"
     >
-      <div className="panel-page-shell bg-[color:var(--bg-surface)] rounded-xl shadow-sm border border-[var(--border-subtle)] p-6">
+      <Surface padding="md" className="panel-page-shell">
         <div className="space-y-6">
           <div>
             <div className="flex items-start justify-between gap-4">
@@ -1565,7 +1563,7 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-5">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+              <Card variant="muted" padding="sm">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Fluxos ativos
@@ -1578,8 +1576,8 @@ export default function AutoContactFlowSettingsScreen() {
                 <p className="text-xs text-[var(--text-muted)] mt-1">
                   Modelos: {metrics.totalTemplates}
                 </p>
-              </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+              </Card>
+              <Card variant="muted" padding="sm">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Etapas totais
@@ -1592,8 +1590,8 @@ export default function AutoContactFlowSettingsScreen() {
                 <p className="text-xs text-[var(--text-muted)] mt-1">
                   Condições: {metrics.flowsWithConditions}
                 </p>
-              </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+              </Card>
+              <Card variant="muted" padding="sm">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Fluxos tagueados
@@ -1606,8 +1604,8 @@ export default function AutoContactFlowSettingsScreen() {
                 <p className="text-xs text-[var(--text-muted)] mt-1">
                   Tags ativas: {availableTags.length}
                 </p>
-              </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+              </Card>
+              <Card variant="muted" padding="sm">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Última atualização
@@ -1623,8 +1621,8 @@ export default function AutoContactFlowSettingsScreen() {
                 <p className="text-xs text-[var(--text-muted)] mt-1">
                   Monitoramento em tempo real
                 </p>
-              </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+              </Card>
+              <Card variant="muted" padding="sm">
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
                     Envios hoje
@@ -1639,7 +1637,7 @@ export default function AutoContactFlowSettingsScreen() {
                     ? dailyAutomationError
                     : "Limites são definidos por fluxo no agendamento."}
                 </p>
-              </div>
+              </Card>
             </div>
 
             <div className="mt-8">
@@ -1679,7 +1677,7 @@ export default function AutoContactFlowSettingsScreen() {
                 </div>
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 space-y-4">
+                <Card variant="muted" padding="sm" className="space-y-4">
                   <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
                     <ShieldCheck className="w-5 h-5" />
                     Automação
@@ -1702,8 +1700,8 @@ export default function AutoContactFlowSettingsScreen() {
                       />
                     </label>
                   </div>
-                </div>
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 space-y-4">
+                </Card>
+                <Card variant="muted" padding="sm" className="space-y-4">
                   <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
                     <AlarmClock className="w-5 h-5" />
                     Agendamento avançado
@@ -1751,9 +1749,9 @@ export default function AutoContactFlowSettingsScreen() {
                       respeita datas extras configuradas manualmente.
                     </p>
                   </div>
-                </div>
+                </Card>
 
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 space-y-4 lg:col-span-2">
+                <Card variant="muted" padding="sm" className="space-y-4 lg:col-span-2">
                   <div className="flex items-center gap-2 text-[var(--text-primary)] font-medium">
                     <ClipboardList className="w-5 h-5" />
                     Observabilidade e auditoria
@@ -1864,7 +1862,7 @@ export default function AutoContactFlowSettingsScreen() {
                       </label>
                     </div>
                   </div>
-                </div>
+                </Card>
               </div>
             </div>
 
@@ -1878,14 +1876,15 @@ export default function AutoContactFlowSettingsScreen() {
               </p>
             </div>
             {statusMessage && (
-              <div
-                className={`mt-4 p-3 rounded-lg border text-sm flex items-center gap-2 ${
+              <Alert
+                tone={
                   statusMessage.type === "success"
-                    ? "bg-[var(--success-soft)] border-[var(--success-border)] text-[var(--success-text)]"
+                    ? "success"
                     : statusMessage.type === "warning"
-                      ? "bg-[color:var(--brand-primary-soft)] border-[var(--brand-primary-border)] text-[var(--text-primary)]"
-                      : "bg-[var(--danger-soft)] border-[var(--danger-border)] text-[var(--danger-text)]"
-                }`}
+                      ? "warning"
+                      : "danger"
+                }
+                className="mt-4 flex-row items-center gap-2"
               >
                 {statusMessage.type === "success" ? (
                   <ShieldCheck className="w-4 h-4" />
@@ -1893,19 +1892,19 @@ export default function AutoContactFlowSettingsScreen() {
                   <Info className="w-4 h-4" />
                 )}
                 <span>{statusMessage.text}</span>
-              </div>
+              </Alert>
             )}
             {autoContactSettings?.enabled === false && (
-              <div className="mt-4 rounded-lg border border-[var(--brand-primary-border)] bg-[color:var(--brand-primary-soft)] p-3 text-sm text-[var(--text-primary)] flex items-center gap-2">
+              <Alert tone="warning" className="mt-4 flex-row items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
                 <span>
                   O canal do WhatsApp esta desativado. Ao ligar "Ativar
                   automacao", o envio volta a ser habilitado para os fluxos.
                 </span>
-              </div>
+              </Alert>
             )}
 
-            <div className="border border-[var(--border-subtle)] rounded-lg p-4 bg-[color:var(--bg-elevated)] space-y-4 mt-6">
+            <Card variant="muted" padding="sm" className="mt-6 space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">
@@ -1924,9 +1923,9 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
 
               {flowDrafts.length === 0 ? (
-                <div className="text-sm text-[var(--text-muted)] bg-[color:var(--bg-surface)] border border-[var(--border-subtle)] rounded-lg p-4">
+                <Surface variant="muted" padding="sm" className="text-sm">
                   Nenhum fluxo configurado. Clique em "Novo fluxo" para começar.
-                </div>
+                </Surface>
               ) : (
                 <div className="space-y-4">
                   <div className="grid gap-3 md:grid-cols-[1.4fr_1fr_auto]">
@@ -1962,11 +1961,12 @@ export default function AutoContactFlowSettingsScreen() {
 
                   <div className="grid gap-3 md:grid-cols-2">
                     {filteredFlows.map((flow, index) => (
-                      <button
-                        type="button"
+                      <ActionSurface
                         key={flow.id}
                         onClick={() => setActiveFlowId(flow.id)}
-                        className="text-left rounded-xl border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 shadow-sm transition hover:border-[var(--brand-primary-border)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-ring-strong)] focus-visible:ring-offset-2"
+                        variant="default"
+                        padding="sm"
+                        className="text-left"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -2018,7 +2018,7 @@ export default function AutoContactFlowSettingsScreen() {
                             ))}
                           </div>
                         )}
-                      </button>
+                      </ActionSurface>
                     ))}
                   </div>
                 </div>
@@ -2029,7 +2029,7 @@ export default function AutoContactFlowSettingsScreen() {
                   isOpen
                   onClose={() => setActiveFlowId(null)}
                   size="xl"
-                  panelClassName="config-transparent-buttons max-w-6xl 2xl:max-w-7xl"
+                  panelClassName="max-w-6xl 2xl:max-w-7xl"
                   bodyClassName="p-6"
                   showCloseButton={false}
                 >
@@ -3478,43 +3478,43 @@ export default function AutoContactFlowSettingsScreen() {
                   </div>
                 </ModalShell>
               )}
-            </div>
+            </Card>
 
-            <div className="mt-8 rounded-[var(--kds-radius-md)] border border-[var(--info-border)] bg-[var(--info-soft)] p-3 text-sm text-[var(--info-text)]">
+            <Alert tone="info" className="mt-8">
               <div className="font-semibold mb-2">Variáveis disponíveis:</div>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                 <span>
-                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
+                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{nome}}"}
                   </code>{" "}
                   nome completo
                 </span>
                 <span>
-                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
+                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{primeiro_nome}}"}
                   </code>{" "}
                   primeiro nome
                 </span>
                 <span>
-                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
+                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{origem}}"}
                   </code>{" "}
                   origem do lead
                 </span>
                 <span>
-                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
+                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{cidade}}"}
                   </code>{" "}
                   cidade
                 </span>
                 <span>
-                  <code className="rounded-[var(--kds-radius-sm)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
+                  <code className="rounded-[var(--radius-md)] bg-[var(--bg-elevated)] px-1.5 py-0.5">
                     {"{{responsavel}}"}
                   </code>{" "}
                   responsável
                 </span>
               </div>
-            </div>
+            </Alert>
 
             <div className="border-t border-[var(--border-subtle)] pt-6">
               <div className="flex items-center justify-between mb-4">
@@ -3550,9 +3550,10 @@ export default function AutoContactFlowSettingsScreen() {
                       2,
                     );
                     return (
-                      <div
+                      <Card
                         key={template.id}
-                        className="rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 shadow-sm flex flex-col gap-3"
+                        className="flex flex-col gap-3"
+                        padding="sm"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
@@ -3597,9 +3598,11 @@ export default function AutoContactFlowSettingsScreen() {
                                     message.mediaUrl?.trim() ||
                                     "Conteúdo pendente";
                               return (
-                                <div
-                                  key={message.id}
-                                  className="flex gap-2 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] px-3 py-2"
+                                  <Surface
+                                    key={message.id}
+                                    variant="muted"
+                                    padding="sm"
+                                    className="flex gap-2"
                                 >
                                   <Icon className="w-4 h-4 text-[var(--text-subtle)] mt-0.5" />
                                   <div>
@@ -3611,7 +3614,7 @@ export default function AutoContactFlowSettingsScreen() {
                                       {content || "Sem conteúdo"}
                                     </p>
                                   </div>
-                                </div>
+                                </Surface>
                               );
                             })
                           ) : (
@@ -3621,7 +3624,7 @@ export default function AutoContactFlowSettingsScreen() {
                             </p>
                           )}
                         </div>
-                      </div>
+                      </Card>
                     );
                   })}
                 </div>
@@ -3638,7 +3641,7 @@ export default function AutoContactFlowSettingsScreen() {
                   : "Editar template"
               }
               size="lg"
-              panelClassName="config-transparent-buttons max-w-3xl"
+              panelClassName="max-w-3xl"
             >
               <div className="space-y-6">
                 <div>
@@ -3848,7 +3851,7 @@ export default function AutoContactFlowSettingsScreen() {
             </ModalShell>
           )}
         </div>
-      </div>
+      </Surface>
     </PanelAdaptiveLoadingFrame>
   );
 }

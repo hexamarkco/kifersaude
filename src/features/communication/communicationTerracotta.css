@@ -1,0 +1,326 @@
+/* Local communication skin. It deliberately uses the shared DS tokens so the inbox stays consistent in both themes. */
+.comm-terracotta {
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+}
+
+.comm-terracotta.whatsapp-inbox-shell {
+  background: var(--bg-canvas);
+}
+
+.comm-terracotta .whatsapp-inbox-panel {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-sidebar-header,
+.comm-terracotta .whatsapp-inbox-thread-header,
+.comm-terracotta .whatsapp-inbox-composer-area {
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.comm-terracotta .whatsapp-inbox-sidebar-scroll,
+.comm-terracotta .whatsapp-inbox-messages {
+  background: var(--bg-inset);
+}
+
+.comm-terracotta .whatsapp-inbox-chat-card {
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-chat-card:hover {
+  border-color: var(--border-default);
+  background: var(--bg-hover);
+}
+
+.comm-terracotta .whatsapp-inbox-chat-card.is-active {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  box-shadow: inset 3px 0 0 var(--brand-primary);
+}
+
+.comm-terracotta .whatsapp-inbox-empty-state {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+}
+
+.comm-terracotta .whatsapp-inbox-status-banner {
+  box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-status-banner-info,
+.comm-terracotta .whatsapp-inbox-status-banner-warning {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--text-primary);
+}
+
+.comm-terracotta .whatsapp-inbox-status-banner-danger {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+  color: var(--danger-text);
+}
+
+.comm-terracotta .whatsapp-inbox-thread .message-bubble-inbound {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.comm-terracotta .whatsapp-inbox-thread .message-bubble-outbound {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--text-primary);
+}
+
+.comm-terracotta .whatsapp-inbox-thread .message-bubble-system {
+  border-color: var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.comm-terracotta .whatsapp-inbox-thread .message-bubble-outbound .whatsapp-inbox-message-meta,
+.comm-terracotta .whatsapp-inbox-message-meta,
+.comm-terracotta .whatsapp-inbox-chat-meta {
+  color: var(--text-muted);
+}
+
+.comm-terracotta .whatsapp-inbox-image-card,
+.comm-terracotta .whatsapp-inbox-document-card,
+.comm-terracotta .whatsapp-inbox-audio-native-card,
+.comm-terracotta .whatsapp-inbox-composer {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-image-card-footer {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+}
+
+.comm-terracotta .whatsapp-inbox-document-thumb,
+.comm-terracotta .whatsapp-inbox-audio-native-badge {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--brand-primary);
+}
+
+.comm-terracotta .whatsapp-inbox-load-older,
+.comm-terracotta .whatsapp-inbox-composer-icon,
+.comm-terracotta .whatsapp-inbox-composer-action {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: none;
+  color: var(--text-secondary);
+}
+
+.comm-terracotta .whatsapp-inbox-load-older:hover:not(:disabled),
+.comm-terracotta .whatsapp-inbox-composer-icon:hover:not(:disabled),
+.comm-terracotta .whatsapp-inbox-composer-action:hover:not(:disabled),
+.comm-terracotta .whatsapp-inbox-composer-icon.is-open {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--brand-primary);
+}
+
+.comm-terracotta .whatsapp-inbox-composer-action.is-active,
+.comm-terracotta .whatsapp-inbox-composer-action.is-active:hover {
+  border-color: var(--brand-primary);
+  background: var(--brand-primary);
+  color: var(--text-on-brand);
+  box-shadow: none;
+}
+
+.comm-terracotta .whatsapp-inbox-attach-menu,
+.comm-terracotta .whatsapp-inbox-quick-replies-menu {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-popover);
+  backdrop-filter: none;
+}
+
+.comm-terracotta .whatsapp-inbox-attach-menu-item:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: none;
+}
+
+.comm-terracotta-campaigns .kds-card,
+.comm-terracotta-campaigns .kds-table-wrapper {
+  border-color: var(--border-default);
+  box-shadow: none;
+}
+
+.comm-terracotta-campaigns .comm-campaign-list-item,
+.comm-terracotta-campaigns .comm-campaign-metric {
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+
+.comm-terracotta-campaigns .comm-campaign-list-item:hover {
+  border-color: var(--brand-primary-border);
+}
+
+.comm-terracotta-campaigns .comm-campaign-toolbar {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+}
+
+.comm-whatsapp-overlay {
+  border-color: var(--border-default);
+  border-radius: var(--kds-radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.comm-whatsapp-overlay .kds-dialog-header,
+.comm-whatsapp-overlay .kds-dialog-footer {
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.comm-whatsapp-overlay .kds-dialog-body {
+  background: var(--bg-surface);
+}
+
+.comm-whatsapp-overlay .kds-dialog-close {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+}
+
+.comm-whatsapp-overlay .kds-dialog-close:hover {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--brand-primary);
+}
+
+.comm-whatsapp-overlay :is(.rounded-3xl, .rounded-2xl),
+.comm-whatsapp-lead-drawer :is(.rounded-3xl, .rounded-2xl) {
+  border-radius: var(--kds-radius-md);
+}
+
+.comm-whatsapp-overlay :is(.shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl),
+.comm-whatsapp-lead-drawer :is(.shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl) {
+  box-shadow: none;
+}
+
+.comm-whatsapp-lead-drawer {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-modal);
+}
+
+.comm-whatsapp-lead-drawer .kds-drawer-header,
+.comm-whatsapp-lead-drawer .kds-drawer-footer {
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.comm-whatsapp-lead-drawer .kds-drawer-body {
+  background: var(--bg-surface);
+}
+
+.panel-glass-panel.comm-whatsapp-popover {
+  border-color: var(--border-default);
+  border-radius: var(--kds-radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.comm-whatsapp-popover .comm-emoji-picker-tabs,
+.comm-whatsapp-popover .comm-media-picker-shortcuts {
+  border-color: var(--border-subtle);
+}
+
+.comm-whatsapp-popover .comm-emoji-picker-tab,
+.comm-whatsapp-popover .comm-media-picker-modebutton,
+.comm-whatsapp-popover .comm-media-picker-shortcut {
+  color: var(--text-secondary);
+}
+
+.comm-whatsapp-popover .comm-emoji-picker-tab:hover,
+.comm-whatsapp-popover .comm-emoji-picker-tab.is-active,
+.comm-whatsapp-popover .comm-media-picker-modebutton:hover,
+.comm-whatsapp-popover .comm-media-picker-modebutton.is-active,
+.comm-whatsapp-popover .comm-media-picker-shortcut:hover,
+.comm-whatsapp-popover .comm-media-picker-shortcut.is-active {
+  border-color: var(--brand-primary-border);
+  background: var(--brand-primary-muted);
+  color: var(--brand-primary);
+}
+
+.comm-whatsapp-popover .comm-emoji-picker-tab.is-active::after {
+  background: var(--brand-primary);
+}
+
+.comm-whatsapp-popover .comm-emoji-search {
+  border-color: var(--border-default);
+  background: var(--bg-inset);
+  box-shadow: none;
+}
+
+.comm-whatsapp-popover .comm-emoji-search input,
+.comm-whatsapp-popover .comm-emoji-picker-section-title,
+.comm-whatsapp-popover .comm-media-picker-empty-title {
+  color: var(--text-primary);
+}
+
+.comm-whatsapp-popover :is(.comm-emoji-picker-section-meta, .comm-emoji-picker-empty, .comm-media-picker-empty-copy) {
+  color: var(--text-muted);
+}
+
+.comm-whatsapp-popover .comm-emoji-picker-item:hover,
+.comm-whatsapp-popover .comm-media-picker-sticker-card:hover,
+.comm-whatsapp-popover .comm-media-picker-gif-card:hover {
+  background: var(--bg-hover);
+  transform: none;
+}
+
+.comm-whatsapp-popover :is(.comm-media-picker-gif-card, .comm-media-picker-sticker-card) {
+  border-color: var(--border-subtle);
+  background: var(--bg-elevated);
+}
+
+.whatsapp-inbox-media-viewer.comm-whatsapp-media-viewer {
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+}
+
+.comm-whatsapp-media-viewer .whatsapp-inbox-media-viewer-nav,
+.comm-whatsapp-media-viewer .whatsapp-inbox-media-viewer-strip-nav {
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
+.comm-whatsapp-media-viewer .whatsapp-inbox-media-viewer-nav:hover,
+.comm-whatsapp-media-viewer .whatsapp-inbox-media-viewer-strip-nav:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: translateY(-50%);
+}
+
+.comm-whatsapp-media-viewer .whatsapp-inbox-media-viewer-strip {
+  background: var(--bg-surface);
+}
+
+.comm-whatsapp-media-viewer .whatsapp-inbox-media-viewer-thumb {
+  border-color: var(--border-default);
+  background: var(--bg-elevated);
+}
+
+.comm-whatsapp-media-viewer .whatsapp-inbox-media-viewer-thumb.is-active {
+  border-color: var(--brand-primary);
+}
+
+@media (max-width: 1279px) {
+  .comm-terracotta .whatsapp-inbox-panel {
+    border-radius: var(--kds-radius-lg);
+  }
+}

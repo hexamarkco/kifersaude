@@ -31,7 +31,7 @@ export type SectionOverview = {
   title: string;
   description: string;
   icon: LucideIcon;
-  accentClassName: string;
+  iconTone: "terracotta" | "gold";
   searchTerms: string[];
 };
 
@@ -106,7 +106,7 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     title: "Preferencias do sistema",
     description: "Sessao, formato de data e notificacoes.",
     icon: Settings,
-    accentClassName: "bg-amber-50 text-amber-700 ring-amber-100",
+    iconTone: "gold",
     searchTerms: ["preferencias", "sistema", "notificacao", "sessao", "data", "fuso", "timezone"],
   },
   {
@@ -114,7 +114,7 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     title: "Perfis e acessos",
     description: "Permissoes por tipo de usuario.",
     icon: ShieldCheck,
-    accentClassName: "bg-sky-50 text-sky-700 ring-sky-100",
+    iconTone: "terracotta",
     searchTerms: ["acesso", "perfil", "permissoes", "admin", "observer"],
   },
   {
@@ -122,7 +122,7 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     title: "Cotador",
     description: "Operadoras, administradoras, linhas, produtos, tabelas e regras comerciais.",
     icon: Calculator,
-    accentClassName: "bg-orange-50 text-orange-700 ring-orange-100",
+    iconTone: "terracotta",
     searchTerms: ["cotador", "operadora", "operadoras", "administradora", "administradoras", "entidade", "entidades", "produto", "produtos", "linha", "linhas", "tabela", "tabelas", "mei", "coparticipacao", "catalogo", "comissao", "bonus", "prazo"],
   },
   {
@@ -130,7 +130,7 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     title: "Leads",
     description: "Funil, origens e cadastros auxiliares.",
     icon: ListTree,
-    accentClassName: "bg-orange-50 text-orange-700 ring-orange-100",
+    iconTone: "terracotta",
     searchTerms: ["lead", "status", "origens", "responsavel"],
   },
   {
@@ -138,7 +138,7 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     title: "Contratos",
     description: "Estados e parametros do cadastro.",
     icon: FileText,
-    accentClassName: "bg-teal-50 text-teal-700 ring-teal-100",
+    iconTone: "gold",
     searchTerms: [
       "contratos",
       "status",
@@ -186,9 +186,3 @@ export const areSystemPreferencesEqual = (
     a.session_timeout_minutes === b.session_timeout_minutes
   );
 };
-
-export const SYSTEM_SETTINGS_SECTION_CARD_CLASS =
-  "flex w-full items-start justify-between gap-4 rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface)] p-4 text-left shadow-sm transition-colors hover:border-[color:var(--panel-border)]";
-
-export const SYSTEM_SETTINGS_SECTION_BODY_CLASS =
-  "rounded-2xl border border-[color:var(--panel-border-subtle)] bg-[var(--panel-surface-soft)] p-6 shadow-sm";

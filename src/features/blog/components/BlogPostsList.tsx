@@ -54,7 +54,7 @@ export default function BlogPostsList({
       />
 
       <Surface className="space-y-6">
-        <Surface variant="muted" padding="sm" className="p-4">
+        <Surface variant="muted" padding="sm">
           <Input
               type="text"
               value={searchTerm}
@@ -83,19 +83,20 @@ export default function BlogPostsList({
               {posts.map((post) => (
                 <Surface
                   key={post.id}
-                  variant="muted"
+                  variant="default"
                   padding="sm"
-                  className="p-4 transition-all hover:-translate-y-0.5"
                 >
-                  <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4">
                     {post.cover_image_url ? (
-                      <img
-                        src={post.cover_image_url}
-                        alt={post.title}
-                        className="h-20 w-32 flex-shrink-0 rounded-lg object-cover"
-                      />
+                      <Surface padding="none" className="h-20 w-32 flex-shrink-0 overflow-hidden">
+                        <img
+                          src={post.cover_image_url}
+                          alt={post.title}
+                          className="h-full w-full object-cover"
+                        />
+                      </Surface>
                     ) : (
-                      <Surface variant="warning" padding="none" className="flex h-20 w-32 flex-shrink-0 items-center justify-center rounded-lg">
+                      <Surface variant="warning" padding="none" className="flex h-20 w-32 flex-shrink-0 items-center justify-center">
                         <FileText className="h-8 w-8" />
                       </Surface>
                     )}

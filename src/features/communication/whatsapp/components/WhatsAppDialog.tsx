@@ -48,7 +48,7 @@ export default function WhatsAppDialog({
       size={size}
       closeOnOverlay={closeOnOverlay}
       closeOnEscape={closeOnEscape}
-      className={`flex max-h-[100dvh] w-full flex-col overflow-hidden sm:max-h-[calc(100dvh-3rem)] ${panelClassName ?? ''}`}
+      className={`comm-whatsapp-overlay flex max-h-[100dvh] w-full flex-col overflow-hidden sm:max-h-[calc(100dvh-3rem)] ${panelClassName ?? ''}`}
     >
       {(title || description || showCloseButton) && (
         <DialogHeader onClose={onClose} showCloseButton={showCloseButton}>
@@ -58,11 +58,11 @@ export default function WhatsAppDialog({
       )}
       <DialogBody
         scrollable={bodyScrollable}
-        className={`min-h-0 flex-1 ${!bodyScrollable ? 'overflow-hidden' : ''} ${bodyClassName ?? ''}`}
+        className={`comm-whatsapp-dialog-body min-h-0 flex-1 ${!bodyScrollable ? 'overflow-hidden' : ''} ${bodyClassName ?? ''}`}
       >
         {children}
       </DialogBody>
-      {footer && <DialogFooter>{footer}</DialogFooter>}
+      {footer && <DialogFooter className="comm-whatsapp-dialog-footer">{footer}</DialogFooter>}
     </Dialog>
   );
 }

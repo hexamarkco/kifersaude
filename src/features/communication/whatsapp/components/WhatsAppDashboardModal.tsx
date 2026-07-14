@@ -223,14 +223,14 @@ const buildPriorityItems = (metrics: CommWhatsAppDashboardMetrics): PriorityItem
 
 const toneClasses: Record<DashboardTone, string> = {
   danger: 'border-[var(--danger-border)] bg-[var(--danger-soft)] text-[var(--danger-text)]',
-  warning: 'border-[var(--warning-border))] bg-[var(--warning-soft))] text-[var(--warning-text))]',
+  warning: 'border-[var(--warning-border)] bg-[var(--warning-soft)] text-[var(--warning-text)]',
   neutral: 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]',
   success: 'border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success-text)]',
 };
 
 const toneIconClasses: Record<DashboardTone, string> = {
   danger: 'bg-[var(--danger-soft)] text-[var(--danger-text)]',
-  warning: 'bg-[var(--warning-soft-strong,var(--accent-gold-soft))] text-[var(--warning-text))]',
+  warning: 'bg-[var(--warning-soft)] text-[var(--warning-text)]',
   neutral: 'bg-[var(--bg-surface)] text-[var(--text-secondary)]',
   success: 'bg-[var(--success-soft)] text-[var(--success-text)]',
 };
@@ -346,7 +346,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           Carregando métricas do WhatsApp...
         </div>
       ) : error ? (
-        <div className={`rounded-3xl border p-5 ${toneClasses.danger}`}>
+        <div className={`rounded-[var(--kds-radius-lg)] border p-5 ${toneClasses.danger}`}>
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
             <div>
@@ -357,7 +357,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
         </div>
       ) : metrics ? (
         <div className="space-y-5">
-          <section className={`rounded-3xl border p-4 ${toneClasses[channelHealth.tone]}`}>
+          <section className={`rounded-[var(--kds-radius-lg)] border p-4 ${toneClasses[channelHealth.tone]}`}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${toneIconClasses[channelHealth.tone]}`}>
@@ -384,7 +384,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
           </section>
 
           <section className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-            <div className="space-y-3 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
+            <div className="space-y-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Onde olhar agora</p>
@@ -403,7 +403,7 @@ export default function WhatsAppDashboardModal({ isOpen, onClose }: WhatsAppDash
               </div>
             </div>
 
-            <div className="space-y-3 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
+            <div className="space-y-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">Conversas recentes</p>

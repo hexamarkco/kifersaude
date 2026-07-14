@@ -29,21 +29,21 @@ export function SectionHeader({
     >
       <div className="min-w-0 flex-1">
         {eyebrow && (
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
+          <p className="kds-section-eyebrow">
             {eyebrow}
           </p>
         )}
         <HeadingTag
           className={cx(
-            'font-semibold text-[var(--text-primary)]',
+            'kds-section-title',
             eyebrow ? 'mt-1.5' : '',
-            typeof title === 'string' ? (HeadingTag === 'h2' ? 'text-xl' : 'text-lg') : '',
+            HeadingTag === 'h2' ? 'kds-section-title-h2' : 'kds-section-title-h3',
           )}
         >
           {title}
         </HeadingTag>
         {description && (
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
+          <p className="kds-section-description mt-1">
             {description}
           </p>
         )}
@@ -72,23 +72,23 @@ export function EmptyState({
   return (
     <div
       className={cx(
-        'kds-empty flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] px-6 py-12 text-center',
+        'kds-empty flex flex-col items-center justify-center gap-3 border border-dashed px-6 py-12 text-center',
         className,
       )}
       {...props}
     >
       {icon && (
-        <div className="kds-empty-icon text-[var(--text-muted)]">
+        <div className="kds-empty-icon">
           {icon}
         </div>
       )}
       {title && (
-        <p className="text-sm font-semibold text-[var(--text-secondary)]">
+        <p className="kds-empty-title">
           {title}
         </p>
       )}
       {description && (
-        <p className="max-w-xs text-xs text-[var(--text-muted)]">
+        <p className="kds-empty-description max-w-xs">
           {description}
         </p>
       )}

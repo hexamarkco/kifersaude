@@ -20,7 +20,7 @@ import { useConfirmationModal } from '../hooks/useConfirmationModal';
 import DependentForm from './DependentForm';
 import FilterSingleSelect from './FilterSingleSelect';
 import { toast } from '../lib/toast';
-import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
+import { Button, Checkbox, DateTimePicker, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle, Field, Input, Surface } from '../design-system';
 
 type HolderFormProps = {
   contractId: string;
@@ -479,10 +479,13 @@ export default function HolderForm({
       <Dialog open onOpenChange={(open) => !open && onClose()} size="xl">
         <DialogHeader onClose={onClose}>
           <DialogTitle>{holder ? 'Editar Titular' : 'Dados do Titular'}</DialogTitle>
+          <DialogDescription>
+            Cadastre os dados pessoais, de contato e de elegibilidade do titular.
+          </DialogDescription>
         </DialogHeader>
         <DialogBody className="p-0">
-        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-6">
-          <div className="grid grid-cols-1 gap-6">
+        <form onSubmit={handleSubmit} className="max-h-[70vh] overflow-y-auto p-4 sm:p-5">
+          <div className="grid grid-cols-1 gap-4">
             <Surface variant="muted" padding="sm">
               <h4 className="mb-4 text-base font-semibold text-[var(--text-primary)]">Informacoes Pessoais</h4>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

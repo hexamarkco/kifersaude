@@ -55,14 +55,15 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   return (
     <PageHeader
-      eyebrow="Visao geral"
+      eyebrow="Operacao comercial"
       title="Dashboard"
-      description="Visao geral do seu negocio em tempo real"
+      description="Acompanhe o ritmo do pipeline, da carteira e das conversoes."
       data-panel-animate
+      className="border-b border-[var(--border-subtle)] pb-5"
     >
-      <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex w-full flex-col items-start gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="w-full sm:w-56">
+      <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="grid w-full gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center">
+          <div className="min-w-0 xl:w-52">
             <FilterSingleSelect
               icon={Filter}
               value={periodFilter}
@@ -78,7 +79,7 @@ export function DashboardHeader({
           </div>
 
           {periodFilter === 'personalizado' && (
-            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
+            <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 sm:flex-row sm:items-center xl:w-auto">
               <Input
                 type="text"
                 value={customStartDate}
@@ -106,7 +107,7 @@ export function DashboardHeader({
             </div>
           )}
 
-          <div className="w-full sm:w-56">
+          <div className="min-w-0 xl:w-52">
             <FilterSingleSelect
               icon={Target}
               value={dashboardOriginFilter}
@@ -120,7 +121,7 @@ export function DashboardHeader({
             />
           </div>
 
-          <div className="w-full sm:w-56">
+          <div className="min-w-0 xl:w-52">
             <FilterSingleSelect
               icon={Users}
               value={dashboardOwnerFilter}
@@ -134,13 +135,13 @@ export function DashboardHeader({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Badge tone="neutral" size="sm" className="h-10 justify-center gap-2 whitespace-nowrap normal-case tracking-normal">
             <Clock className="h-4 w-4 text-[var(--brand-primary)]" />
             <span>{lastUpdatedLabel || 'Aguardando atualizacao...'}</span>
           </Badge>
 
-          <Button type="button" onClick={onRefresh} disabled={loading} size="lg">
+          <Button type="button" onClick={onRefresh} disabled={loading} size="md" className="w-full sm:w-auto">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Atualizar agora</span>
           </Button>

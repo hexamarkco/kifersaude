@@ -169,7 +169,7 @@ export default function ReminderSchedulerModal({
       <DialogHeader onClose={onClose}>
         <div><DialogTitle>Agendar novo lembrete</DialogTitle><DialogDescription>{formattedLeadPhone ? `${lead.nome_completo} • ${formattedLeadPhone}` : lead.nome_completo}</DialogDescription></div>
       </DialogHeader>
-      <DialogBody>
+      <DialogBody className="space-y-5">
       <div className="space-y-6">
         <Alert tone="accent">
           <div className="flex items-start gap-3">

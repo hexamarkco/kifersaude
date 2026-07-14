@@ -1,6 +1,6 @@
 import { Bot, Sparkles } from "lucide-react";
 
-import { Badge, SectionHeader, Surface } from "../../../design-system";
+import { Badge, CardIcon, SectionHeader, Surface } from "../../../design-system";
 import AutoContactFlowSettingsScreen from "./AutoContactFlowSettingsScreen";
 
 export default function AutomationSettingsScreen() {
@@ -11,9 +11,9 @@ export default function AutomationSettingsScreen() {
             <div className="space-y-4">
               <Badge tone="gold"><Sparkles className="h-3.5 w-3.5" />Automações</Badge>
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-[var(--kds-radius-lg)] bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+                <CardIcon>
                   <Bot className="h-6 w-6" />
-                </div>
+                </CardIcon>
                 <SectionHeader
                   title="Fluxos de automação"
                   description={

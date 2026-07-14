@@ -1,3 +1,5 @@
+import { Card } from '../../design-system';
+
 type CotadorCatalogMetrics = {
   totalProducts: number;
   totalHospitals: number;
@@ -52,4 +54,3 @@ export default function CotadorCatalogMetricsPanel({ metrics }: CotadorCatalogMe
     </div>
   );
 }
-import { Card } from '../../design-system';

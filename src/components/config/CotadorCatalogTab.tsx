@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -51,12 +51,7 @@ import {
 import { cotadorImportService, type CotadorImportPreview } from '../../features/cotador/services/cotadorImportService';
 import type { CotadorAdministradora, CotadorEntidadeClasse, Operadora } from '../../lib/supabase';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
-import { Alert, Checkbox } from '../../design-system';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import ModalShell from '../ui/ModalShell';
-import Tabs from '../ui/Tabs';
-import Textarea from '../ui/Textarea';
+import { Alert, Button, Checkbox, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle, Input, Tabs, Textarea, type DialogSize } from '../../design-system';
 import FilterSingleSelect from '../FilterSingleSelect';
 import Pagination from '../Pagination';
 import CotadorHospitalMergeSuggestionsPanel, { type NetworkHospitalMergeSuggestion } from './CotadorHospitalMergeSuggestionsPanel';
@@ -890,6 +885,32 @@ function FeedbackBanner({ message }: { message: Message | null }) {
       {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
       <span>{message.text}</span>
     </Alert>
+  );
+}
+
+function CatalogDialog({
+  isOpen,
+  onClose,
+  title,
+  description,
+  size,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  description?: string;
+  size: DialogSize;
+  children: ReactNode;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()} size={size}>
+      <DialogHeader onClose={onClose}>
+        <DialogTitle>{title}</DialogTitle>
+        {description && <DialogDescription>{description}</DialogDescription>}
+      </DialogHeader>
+      <DialogBody>{children}</DialogBody>
+    </Dialog>
   );
 }
 
@@ -3337,7 +3358,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
         </div>
       )}
 
-      <ModalShell
+      <CatalogDialog
         isOpen={importModalOpen}
         onClose={resetImportModal}
         title="Importar catálogo"
@@ -3359,7 +3380,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Arquivo</label>
-            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--surface-muted-bg)] p-4 shadow-[var(--kds-shadow-card)]">
+            <div className="rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4 shadow-sm">
               <input
                 ref={importFileInputRef}
                 type="file"
@@ -3544,9 +3565,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetImportModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={networkImportModalOpen}
         onClose={resetNetworkImportModal}
         title="Importar rede hospitalar"
@@ -3568,7 +3589,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
 
           <div>
             <label className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">Arquivo</label>
-            <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--surface-muted-bg)] p-4 shadow-[var(--kds-shadow-card)]">
+            <div className="rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface-muted)] p-4 shadow-sm">
               <input
                 ref={networkImportFileInputRef}
                 type="file"
@@ -3673,9 +3694,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetNetworkImportModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={networkModalOpen}
         onClose={resetNetworkModal}
         title={selectedNetworkProduct ? `Rede hospitalar · ${selectedNetworkProduct.nome}` : 'Rede hospitalar'}
@@ -3795,9 +3816,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             </div>
           </div>
         )}
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={networkEntryModalOpen}
         onClose={resetNetworkEntryForm}
         title={networkEditingIndex === null ? 'Adicionar hospital da rede' : 'Editar hospital da rede'}
@@ -3858,9 +3879,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetNetworkEntryForm}>Cancelar</Button>
           </div>
         </div>
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={manualMergeModalOpen}
         onClose={resetManualMergeModal}
         title="Mesclar hospitais manualmente"
@@ -3911,9 +3932,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             </Button>
           </div>
         </div>
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={networkHospitalModalOpen}
         onClose={resetNetworkHospitalModal}
         title={selectedNetworkHospital ? `Hospital compartilhado · ${selectedNetworkHospital.nome}` : 'Hospital compartilhado'}
@@ -4004,9 +4025,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             </div>
           </div>
         )}
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={entityModalKind !== null}
         onClose={resetEntityModal}
         title={entityEditingId ? 'Editar item institucional' : 'Novo item institucional'}
@@ -4034,9 +4055,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetEntityModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={lineModalOpen}
         onClose={resetLineModal}
         title={lineEditingId ? 'Editar linha de produto' : 'Nova linha de produto'}
@@ -4068,9 +4089,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetLineModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={productModalOpen}
         onClose={resetProductModal}
         title={productEditingId ? 'Editar produto do Cotador' : 'Novo produto do Cotador'}
@@ -4159,9 +4180,9 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetProductModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>
-      </ModalShell>
+      </CatalogDialog>
 
-      <ModalShell
+      <CatalogDialog
         isOpen={tableModalOpen}
         onClose={resetTableModal}
         title={tableModalMode === 'edit' ? 'Editar tabela comercial' : tableModalMode === 'duplicate' ? 'Criar cópia da tabela' : 'Nova tabela comercial'}
@@ -4369,7 +4390,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
             <Button type="button" variant="secondary" onClick={resetTableModal} disabled={submitting}>Cancelar</Button>
           </div>
         </form>
-      </ModalShell>
+      </CatalogDialog>
 
       {ConfirmationDialog}
     </div>

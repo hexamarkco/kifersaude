@@ -4,21 +4,21 @@ import { Surface } from '../../../design-system';
 
 export function DashboardHeroCard() {
   return (
-    <Surface variant="hero" padding="lg" data-panel-animate>
-      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex-1">
-          <p className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
+    <Surface variant="muted" padding="sm" data-panel-animate>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--accent-gold-hover)]">
             Motivacao do dia
           </p>
-          <h3 className="text-2xl font-bold text-[var(--text-primary)]">
+          <h3 className="mt-1 font-[var(--font-display)] text-xl font-semibold text-[var(--text-primary)]">
             Continue crescendo!
           </h3>
-          <p className="mt-2 text-sm text-[var(--text-secondary)] sm:text-base">
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
             Mantenha seu pipeline ativo e acompanhe suas metricas em tempo real
           </p>
         </div>
-        <div className="hidden flex-shrink-0 items-center justify-center lg:flex">
-          <TrendingUp className="h-28 w-28 opacity-20 text-[var(--brand-primary)]" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--kds-radius-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-muted)] text-[var(--brand-primary)]">
+          <TrendingUp className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
         </div>
       </div>
     </Surface>

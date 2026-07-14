@@ -21,7 +21,17 @@ import ContractForm from "../../components/ContractForm";
 import ContractDetails from "../../components/ContractDetails";
 import FilterSingleSelect from "../../components/FilterSingleSelect";
 import Pagination from "../../components/Pagination";
-import { Badge, Button, Field, Input, PageHeader, Surface, type PanelTone } from "../../design-system";
+import {
+  Badge,
+  Button,
+  Field,
+  Input,
+  OperationalMetricChip,
+  PageHeader,
+  SectionHeader,
+  Surface,
+  type PanelTone,
+} from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { usePanelMotion } from "../../hooks/usePanelMotion";
 import { ContractsPageSkeleton } from "../../components/ui/panelSkeletons";
@@ -544,28 +554,29 @@ export default function ContractsManager({
           data-panel-animate
           actions={(
             <>
-              <Badge tone="neutral" className="gap-2">
-                <span className="text-[var(--text-primary)]">{filteredContracts.length}</span>
-                <span>contratos no recorte</span>
-              </Badge>
-              <Badge tone={upcomingImportantCount > 0 ? "warning" : "neutral"} className="gap-2">
-                <AlertCircle className="h-3.5 w-3.5" />
-                <span className="text-[var(--text-primary)]">{upcomingImportantCount}</span>
-                <span>com data sensível</span>
-              </Badge>
-              <Badge tone={activeFilterCount > 0 ? "accent" : "neutral"} className="gap-2">
-                <Layers className="h-3.5 w-3.5" />
-                <span className="text-[var(--text-primary)]">{activeFilterCount}</span>
-                <span>{activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}</span>
-              </Badge>
+              <OperationalMetricChip value={filteredContracts.length} label="contratos no recorte" />
+              <OperationalMetricChip
+                icon={<AlertCircle className="h-3.5 w-3.5" />}
+                value={upcomingImportantCount}
+                label="com data sensivel"
+                tone={upcomingImportantCount > 0 ? "warning" : "neutral"}
+                active={upcomingImportantCount > 0}
+              />
+              <OperationalMetricChip
+                icon={<Layers className="h-3.5 w-3.5" />}
+                value={activeFilterCount}
+                label={activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}
+                tone={activeFilterCount > 0 ? "accent" : "neutral"}
+                active={activeFilterCount > 0}
+              />
             </>
           )}
         >
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-            <Badge tone="neutral" className="h-11 gap-2 px-3 text-sm normal-case tracking-normal">
-              <Clock3 className="h-4 w-4 text-[var(--brand-primary)]" />
-              <span>{lastUpdatedLabel}</span>
-            </Badge>
+            <OperationalMetricChip
+              icon={<Clock3 className="h-3.5 w-3.5" />}
+              value={lastUpdatedLabel}
+            />
 
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
@@ -595,8 +606,8 @@ export default function ContractsManager({
         </PageHeader>
 
         <Surface className="space-y-5" data-panel-animate>
-          <Surface variant="muted" padding="sm" className="flex flex-col gap-3 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative w-full lg:max-w-2xl">
+          <Surface variant="muted" padding="none" className="kds-op-toolbar">
+            <div className="kds-op-toolbar-search relative">
               <Input
                 type="text"
                 leftIcon={Search}
@@ -605,29 +616,23 @@ export default function ContractsManager({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="kds-op-toolbar-actions">
               <Button
                 type="button"
                 onClick={resetFilters}
                 variant="soft"
+                size="sm"
                 className="whitespace-nowrap"
               >
                 <Filter className="h-4 w-4" />
                 Limpar
               </Button>
-              <Badge tone="neutral" className="h-10 gap-1.5 px-3 text-sm normal-case tracking-normal">
-                <span className="font-semibold text-[var(--text-primary)]">
-                  {filteredContracts.length}
-                </span>
-                <span>contratos</span>
-              </Badge>
+              <OperationalMetricChip value={filteredContracts.length} label="contratos" />
             </div>
           </Surface>
 
           <div>
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-              Filtros principais
-            </h4>
+            <p className="kds-op-section-label mb-3">Filtros principais</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <Field label="Status">
                 <FilterSingleSelect
@@ -712,37 +717,21 @@ export default function ContractsManager({
         </Surface>
 
         <Surface data-panel-animate>
-          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--text-muted)]">
-                Carteira contratual
-              </p>
-              <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
-                Contratos em acompanhamento
-              </h3>
-              <p className="mt-1 max-w-3xl text-sm text-[var(--text-muted)]">
-                Monitore vigência, reajustes, titulares e previsões financeiras
-                sem perder contexto do responsável comercial.
-              </p>
-            </div>
+          <SectionHeader
+            eyebrow="Carteira contratual"
+            title="Contratos em acompanhamento"
+            description="Monitore vigencia, reajustes, titulares e previsoes financeiras sem perder contexto do responsavel comercial."
+            as="h3"
+            className="mb-4"
+            action={(
+              <div className="flex flex-wrap gap-2">
+                <OperationalMetricChip value={filteredContracts.length} label="resultados" />
+                <OperationalMetricChip value={`${currentPage}/${totalPages}`} label="paginas" />
+              </div>
+            )}
+          />
 
-            <div className="flex flex-wrap gap-2">
-              <Badge tone="neutral" className="gap-2">
-                <span className="text-[var(--text-primary)]">
-                  {filteredContracts.length}
-                </span>
-                <span>resultados</span>
-              </Badge>
-              <Badge tone="neutral" className="gap-2">
-                <span className="text-[var(--text-primary)]">
-                  {currentPage}/{totalPages}
-                </span>
-                <span>páginas</span>
-              </Badge>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 p-4 sm:p-5">
+          <div className="grid grid-cols-1 gap-3">
             {paginatedContracts.map((contract) => {
               const bonusValue = getBonusValue(contract);
 
@@ -751,7 +740,7 @@ export default function ContractsManager({
                   key={contract.id}
                   variant="muted"
                   padding="sm"
-                  className="transition-colors hover:border-[var(--border-strong)] sm:p-6"
+                  className="transition-colors sm:p-4"
                 >
                   <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex-1 space-y-3">

@@ -3,10 +3,19 @@ import { AlertCircle, Check, CheckCircle, Plus, Trash2, X } from 'lucide-react';
 import { useConfig } from '../../contexts/ConfigContext';
 import { configService } from '../../lib/configService';
 import { useConfirmationModal } from '../../hooks/useConfirmationModal';
-import Button from '../ui/Button';
-import Input from '../ui/Input';
-import ModalShell from '../ui/ModalShell';
-import { Alert, Card, Checkbox } from '../../design-system';
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Dialog,
+  DialogBody,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  Field,
+  Input,
+} from '../../design-system';
 
 type Message = { type: 'success' | 'error'; text: string };
 
@@ -231,26 +240,35 @@ export default function LeadOriginsManager() {
           );
         })}
       </div>
-      <ModalShell
-        isOpen={isCreateModalOpen}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setNewOrigin('');
+      <Dialog
+        open={isCreateModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateModalOpen(false);
+            setNewOrigin('');
+          }
         }}
-        title="Nova origem"
-        description="Cadastre um novo canal de entrada de leads."
         size="sm"
       >
-        <div className="space-y-4">
-          <div>
-            <label className="kds-field-label mb-2 block">Nome da origem</label>
+        <DialogHeader
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setNewOrigin('');
+          }}
+        >
+          <DialogTitle>Nova origem</DialogTitle>
+          <DialogDescription>Cadastre um novo canal de entrada de leads.</DialogDescription>
+        </DialogHeader>
+        <DialogBody>
+          <div className="space-y-4">
+            <Field label="Nome da origem">
             <Input
               type="text"
               value={newOrigin}
               onChange={(event) => setNewOrigin(event.target.value)}
-               placeholder="Ex: Indicação"
+              placeholder="Ex: Indicação"
             />
-          </div>
+            </Field>
 
           <div className="flex items-center gap-3">
             <Button onClick={() => void handleCreate()} disabled={saving}>
@@ -267,8 +285,9 @@ export default function LeadOriginsManager() {
               Cancelar
             </Button>
           </div>
-        </div>
-      </ModalShell>
+          </div>
+        </DialogBody>
+      </Dialog>
       {ConfirmationDialog}
     </Card>
   );

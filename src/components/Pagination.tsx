@@ -101,6 +101,7 @@ export default function Pagination({
                   onClick={() => onPageChange(page as number)}
                   className={cx('kds-op-page-button', currentPage === page && 'is-active')}
                   aria-current={currentPage === page ? 'page' : undefined}
+                  aria-label={`Ir para a pagina ${page}`}
                 >
                   {page}
                 </button>

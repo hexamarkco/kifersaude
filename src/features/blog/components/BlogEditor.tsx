@@ -3,7 +3,15 @@ import { useMemo, type ChangeEvent } from "react";
 import ReactQuill from "react-quill";
 
 import FilterSingleSelect from "../../../components/FilterSingleSelect";
-import { Button, Checkbox, Field, Input, Surface, Textarea } from "../../../design-system";
+import {
+  Button,
+  Checkbox,
+  Field,
+  Input,
+  PageHeader,
+  Surface,
+  Textarea,
+} from "../../../design-system";
 import {
   BLOG_CATEGORY_OPTIONS,
   BLOG_EDITOR_FORMATS,
@@ -46,23 +54,25 @@ export default function BlogEditor({
   );
 
   return (
-    <Surface className="panel-page-shell space-y-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-          {editingPost ? "Editar Post" : "Novo Post"}
-        </h2>
-        <Button
-          type="button"
-          onClick={onClose}
-          variant="icon"
-          size="icon"
-          aria-label="Fechar editor"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-      </div>
+    <div className="panel-page-shell space-y-6">
+      <PageHeader
+        eyebrow="Conteudo publico"
+        title={editingPost ? "Editar post" : "Novo post"}
+        description="Estruture o artigo, a capa e os metadados para publicacao."
+        actions={(
+          <Button
+            type="button"
+            onClick={onClose}
+            variant="icon"
+            size="icon"
+            aria-label="Fechar editor"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        )}
+      />
 
-      <div className="space-y-6">
+      <Surface className="space-y-6">
         <Field label="Titulo *">
           <Input
             type="text"
@@ -141,7 +151,7 @@ export default function BlogEditor({
             </div>
 
             <div>
-              <label className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center rounded-lg border-dashed px-4 py-3 transition-colors">
+              <label className="kds-surface kds-surface-warning flex cursor-pointer items-center justify-center border-dashed px-4 py-3 transition-colors">
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
@@ -169,13 +179,13 @@ export default function BlogEditor({
             </div>
 
             {formData.cover_image_url && (
-              <div className="mt-2">
+              <Surface padding="none" className="mt-2 overflow-hidden">
                 <img
                   src={formData.cover_image_url}
                   alt="Preview"
-                  className="h-48 w-full rounded-lg object-cover"
+                  className="h-48 w-full object-cover"
                 />
-              </div>
+              </Surface>
             )}
           </div>
         </Field>
@@ -198,7 +208,7 @@ export default function BlogEditor({
 
         <Field label="Conteudo do artigo *">
           <div className="mb-3">
-            <label className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center rounded-lg px-4 py-2 transition-colors">
+            <label className="kds-surface kds-surface-muted inline-flex cursor-pointer items-center px-4 py-2 transition-colors">
               <input
                 type="file"
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
@@ -228,7 +238,7 @@ export default function BlogEditor({
             </p>
           </div>
 
-          <Surface variant="default" padding="none" className="overflow-hidden rounded-lg">
+          <Surface variant="default" padding="none" className="overflow-hidden">
             <ReactQuill
               theme="snow"
               value={formData.content}
@@ -318,7 +328,7 @@ export default function BlogEditor({
             Cancelar
           </Button>
         </div>
-      </div>
-    </Surface>
+      </Surface>
+    </div>
   );
 }

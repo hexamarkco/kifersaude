@@ -21,6 +21,7 @@ import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from "../../../lib/templateVariableSuggestions";
 import {
   Alert,
+  Badge,
   Button,
   Card,
   CardIcon,
@@ -934,10 +935,10 @@ export default function IntegrationsScreen() {
         <Card padding="lg">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--text-muted)]">
+              <Badge tone="gold" className="w-fit">
                 <Plug className="h-3.5 w-3.5 text-[var(--accent-gold)]" />
                 Integrações
-              </div>
+              </Badge>
               <div className="flex items-start gap-4">
                 <CardIcon tone="gold"><ShieldCheck className="h-6 w-6" /></CardIcon>
                 <div className="space-y-2">

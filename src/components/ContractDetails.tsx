@@ -48,8 +48,8 @@ import { useConfirmationModal } from "../hooks/useConfirmationModal";
 import { toast } from "../lib/toast";
 
 const AGE_ADJUSTMENT_MILESTONES = [19, 24, 29, 34, 39, 44, 49, 54, 59];
-const detailPanelClass = "kds-surface kds-surface-default";
-const detailPanelMutedClass = "kds-surface kds-surface-muted";
+const detailPanelClass = "kds-card kds-card-default";
+const detailPanelMutedClass = "kds-card kds-card-muted";
 const detailDividerClass =
   "mt-4 border-t border-[var(--border-subtle)] pt-4";
 const detailTitleClass =
@@ -62,13 +62,13 @@ const detailMutedTextClass = "text-xs text-[var(--text-muted)]";
 const detailLabelTextClass =
   "font-medium text-[var(--text-secondary)]";
 const detailEmptyStateClass =
-  "kds-surface kds-surface-muted border-2 border-dashed py-8 text-center";
+  "kds-card kds-card-muted border-dashed py-8 text-center";
 const detailEmptyCompactClass =
-  "kds-surface kds-surface-default border-dashed p-6 text-center text-sm text-[var(--text-muted)]";
+  "kds-card kds-card-default border-dashed p-4 text-center text-sm text-[var(--text-muted)]";
 const detailAccentLinkClass =
   "text-xs font-semibold text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]";
-const detailPanelSoftClass = "kds-surface kds-surface-muted";
-const detailNestedPanelClass = "kds-surface kds-surface-default";
+const detailPanelSoftClass = "kds-card kds-card-muted";
+const detailNestedPanelClass = "kds-card kds-card-default";
 const detailSectionHeadingClass = `flex items-center gap-2 ${detailTitleClass}`;
 const detailSectionIconClass = "h-5 w-5 text-[var(--brand-primary)]";
 const detailMetricValueClass =
@@ -801,7 +801,7 @@ export default function ContractDetails({
         {canEditContracts && (
           <Button
             onClick={() => setShowEditForm(true)}
-            variant="info"
+            variant="secondary"
             size="sm"
           >
             Editar
@@ -1159,9 +1159,10 @@ export default function ContractDetails({
                 {bonusSummary.hasConfigurations ? (
                   <div className="mb-3 space-y-2">
                     {bonusSummary.configurations.map((item, index) => (
-                      <div
+                      <Surface
                         key={item.id}
-                        className="flex items-center justify-between rounded-[var(--radius-lg)] border border-[var(--border-subtle)] px-3 py-2"
+                        padding="none"
+                        className="flex items-center justify-between px-3 py-2"
                       >
                         <span className={detailBodyTextClass}>
                           Faixa {index + 1}: {item.quantidade} vida(s)
@@ -1172,7 +1173,7 @@ export default function ContractDetails({
                             minimumFractionDigits: 2,
                           })}
                         </span>
-                      </div>
+                      </Surface>
                     ))}
                   </div>
                 ) : (
@@ -1311,7 +1312,7 @@ export default function ContractDetails({
                             setEditingHolder(holderItem);
                             setShowHolderForm(true);
                           }}
-                          variant="info"
+                           variant="secondary"
                           size="icon"
                           aria-label={`Editar titular ${holderItem.nome_completo}`}
                         >
@@ -1465,7 +1466,7 @@ export default function ContractDetails({
                                     setSelectedHolderId(dependent.holder_id);
                                     setShowDependentForm(true);
                                   }}
-                                  variant="info"
+                                  variant="secondary"
                                   size="icon"
                                   aria-label={`Editar dependente ${dependent.nome_completo}`}
                                 >
@@ -1715,7 +1716,7 @@ export default function ContractDetails({
                         <div className="flex items-center gap-1">
                           <Button
                             onClick={() => handleEditInteraction(interaction)}
-                            variant="info"
+                          variant="secondary"
                             size="icon"
                             aria-label={`Editar interacao de ${interaction.responsavel}`}
                           >

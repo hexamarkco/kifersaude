@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { ChevronDown } from 'lucide-react';
 
 import { Button, Checkbox, Popover, PopoverContent, PopoverTrigger } from '../design-system';
+import { cx } from '../lib/cx';
 
 type Option = { value: string; label: string };
 
@@ -12,10 +13,19 @@ type FilterMultiSelectProps = {
   placeholder: string;
   values: string[];
   onChange: (next: string[]) => void;
+  size?: 'default' | 'compact';
 };
 
-export default function FilterMultiSelect({ icon: Icon, options, placeholder, values, onChange }: FilterMultiSelectProps) {
+export default function FilterMultiSelect({
+  icon: Icon,
+  options,
+  placeholder,
+  values,
+  onChange,
+  size = 'default',
+}: FilterMultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const compact = size === 'compact';
   const displayText = useMemo(() => {
     const selected = options.filter((option) => values.includes(option.value));
     if (selected.length === 0) return placeholder;
@@ -25,10 +35,31 @@ export default function FilterMultiSelect({ icon: Icon, options, placeholder, va
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger className="block">
-        <button type="button" className="kds-select panel-ui-input relative h-10 w-full px-9 text-left text-sm" aria-haspopup="listbox" aria-expanded={isOpen}>
-          <Icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
+        <button
+          type="button"
+          className={cx(
+            'kds-select panel-ui-input relative w-full text-left',
+            compact ? 'h-8 px-8 text-xs' : 'h-10 px-9 text-sm',
+          )}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+        >
+          <Icon
+            className={cx(
+              'absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)]',
+              compact ? 'left-2 h-3 w-3' : 'left-3 h-4 w-4',
+            )}
+            aria-hidden="true"
+          />
           <span className={values.length ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}>{displayText}</span>
-          <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
+          <ChevronDown
+            className={cx(
+              'absolute top-1/2 -translate-y-1/2 text-[var(--text-muted)] transition-transform',
+              compact ? 'right-2 h-3 w-3' : 'right-3 h-4 w-4',
+              isOpen && 'rotate-180',
+            )}
+            aria-hidden="true"
+          />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[min(18rem,calc(100vw-1rem))] p-2" role="listbox" aria-label={placeholder}>

@@ -886,12 +886,7 @@ export default function CotadorPlanPickerOverlay({
       isDarkTheme ? 'theme-dark dark' : 'theme-light',
     )}>
       <div className="flex h-full items-stretch justify-center p-4 md:p-6">
-        <div className={cx(
-          'flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-2xl border shadow-[var(--shadow-card)]',
-          isDarkTheme
-            ? 'border-[color:var(--border-default)] bg-[var(--surface-bg)] text-[color:var(--text-primary)]'
-            : 'border-[var(--border-default)] bg-[linear-gradient(180deg,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_0%,color-mix(in_srgb,var(--bg-surface),var(--bg-surface))_100%)] text-[color:var(--text-primary)]',
-        )}>
+        <div className="flex h-full w-full max-w-[1880px] flex-col overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-primary)] shadow-sm">
           <div className="flex items-center justify-between border-b border-[color:var(--border-default)] px-6 py-5 md:px-8">
             <div>
               <p className={cx('text-xs font-semibold uppercase tracking-[0.24em]', isDarkTheme ? 'text-[color:var(--text-primary)]' : 'text-[var(--text-primary)]')}>Adicionar plano</p>
@@ -920,7 +915,7 @@ export default function CotadorPlanPickerOverlay({
               type="button"
               onClick={onClose}
               className={cx(
-                'inline-flex h-11 w-11 items-center justify-center rounded-2xl border transition-colors',
+                'inline-flex h-10 w-10 items-center justify-center rounded-[var(--kds-radius-sm)] border transition-colors',
                 isDarkTheme
                   ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] text-[color:var(--text-secondary)] hover:bg-[color:var(--bg-elevated)] hover:text-[var(--text-primary)]'
                   : 'border-[color:var(--border-default)] bg-[var(--bg-surface)] text-[color:var(--text-primary)] hover:bg-[var(--bg-surface)] hover:text-[color:var(--text-primary)]',
@@ -1013,17 +1008,13 @@ export default function CotadorPlanPickerOverlay({
                                 setSelectedProductKey(null);
                               }}
                               className={cx(
-                                'group w-full cursor-pointer rounded-2xl border p-5 text-left transition-all duration-200',
+                                'group w-full cursor-pointer rounded-[var(--kds-radius-md)] border p-4 text-left transition-colors duration-200',
                                 isActive
-                                  ? isDarkTheme
-                                    ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] shadow-[var(--shadow-card)]'
-                                    : 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] shadow-sm'
-                                  : isDarkTheme
-                                    ? 'border-[color:var(--border-default)] bg-[color:var(--bg-elevated)] hover:-translate-y-0.5 hover:border-[color:var(--border-default)] hover:bg-[color:var(--bg-elevated)]'
-                                    : 'border-[color:var(--border-default)] bg-[var(--bg-surface)] hover:-translate-y-0.5 hover:border-[var(--border-default)] hover:bg-[color:var(--bg-elevated)]',
+                                  ? 'border-[var(--border-accent)] bg-[var(--brand-primary-soft)] shadow-sm'
+                                  : 'border-[var(--border-default)] bg-[var(--bg-surface)] hover:border-[var(--border-accent)] hover:bg-[var(--bg-inset)]',
                               )}
                             >
-                              <div className="flex min-h-[132px] flex-col items-center justify-center gap-4 text-center">
+                              <div className="flex min-h-[116px] flex-col items-center justify-center gap-3 text-center">
                                 <div className={cx(
                                   'flex h-14 w-14 items-center justify-center rounded-2xl border',
                                   isDarkTheme
@@ -1041,7 +1032,7 @@ export default function CotadorPlanPickerOverlay({
                     </div>
 
                     {operatorCards.length > operatorPerPage && (
-                      <div className="mt-4 overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] shadow-sm">
+                      <div className="mt-4 overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
                         <Pagination
                           currentPage={operatorPage}
                           totalPages={totalOperatorPages}
@@ -1065,7 +1056,7 @@ export default function CotadorPlanPickerOverlay({
                           width: floatingMenuPosition.width,
                         }}
                       >
-                        <div className="overflow-hidden rounded-2xl border border-[color:var(--border-default)] bg-[var(--bg-surface)] shadow-[var(--shadow-card)]">
+                        <div className="overflow-hidden rounded-[var(--kds-radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-sm">
                           <div className="border-b border-[color:var(--border-default)] px-4 py-3">
                             <button
                               type="button"

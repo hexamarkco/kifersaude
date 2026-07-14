@@ -16,7 +16,7 @@ import {
   formatProfileLabel,
 } from "../../../lib/accessControl";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
-import { Alert, Badge, Button, Card, Checkbox, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../design-system";
+import { Alert, Badge, Button, Card, CardIcon, Checkbox, Field, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../design-system";
 import { createEmptyPermission } from "./shared/accessControlUtils";
 
 type FeedbackMessage = { type: "success" | "error"; text: string };
@@ -249,9 +249,9 @@ export default function AccessControlManagerScreen() {
     <div className="space-y-6">
       <Card padding="lg">
         <div className="mb-6 flex items-start gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[color:var(--brand-primary-soft)] text-[color:var(--brand-primary)]">
+          <CardIcon>
             <ShieldCheck className="h-5 w-5" />
-          </div>
+          </CardIcon>
           <div>
             <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
               Perfis e permissões dinâmicas
@@ -411,7 +411,6 @@ export default function AccessControlManagerScreen() {
                         type="button"
                         variant="icon"
                         size="icon"
-                        className="h-8 w-8 text-red-600 hover:bg-red-50"
                         title="Excluir perfil"
                         onClick={async () => {
                           const confirmed = await requestConfirmation({

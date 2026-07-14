@@ -53,6 +53,12 @@ import {
   OperationalMetricChip,
   OperationalStatusBadge,
   Surface,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
 import { mapLeadRelations } from "../../lib/leadRelations";
@@ -1948,7 +1954,96 @@ export default function LeadsManager({
                   </div>
                 </Surface>
             )}
-            <div className="kds-op-lead-list">
+            <div className="hidden lg:block">
+              <Table size="sm" stickyHeader className="min-w-[1080px]">
+                <TableHeader>
+                  <TableRow>
+                    {canSelectLeads && <TableHead className="w-10" aria-label="Selecionar" />}
+                    <TableHead>Lead</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Origem e tipo</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead>Próximo retorno</TableHead>
+                    <TableHead>Criado em</TableHead>
+                    <TableHead align="right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLeads.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={canSelectLeads ? 8 : 7}>
+                        <EmptyState
+                          icon={<Users className="h-8 w-8" />}
+                          title="Nenhum lead encontrado"
+                          description="Tente ajustar os filtros ou adicione um novo lead."
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {paginatedLeads.map((lead) => {
+                    const nextReminder = nextReminderByLeadId.get(lead.id);
+
+                    return (
+                      <TableRow
+                        key={lead.id}
+                        selected={selectedLeadIdsSet.has(lead.id)}
+                        className="align-middle"
+                      >
+                        {canSelectLeads && (
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedLeadIdsSet.has(lead.id)}
+                              onChange={() => toggleLeadSelection(lead.id)}
+                              aria-label={`Selecionar lead ${lead.nome_completo}`}
+                            />
+                          </TableCell>
+                        )}
+                        <TableCell className="min-w-64">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLead(lead)}
+                            className="block max-w-72 text-left transition-colors hover:text-[var(--brand-primary)]"
+                          >
+                            <span className="block truncate font-semibold text-[var(--text-primary)]">{lead.nome_completo}</span>
+                            <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{lead.telefone || lead.email || "Sem contato"}</span>
+                          </button>
+                          {leadContractIds.has(lead.id) && <Badge tone="info" size="sm" className="mt-2">Contrato</Badge>}
+                        </TableCell>
+                        <TableCell className="min-w-36">
+                          {canEditLeads ? (
+                            <StatusDropdown currentStatus={lead.status ?? ""} leadId={lead.id} onStatusChange={handleStatusChange} disabled={isBulkUpdating} statusOptions={activeLeadStatuses} />
+                          ) : (
+                            <OperationalStatusBadge statusColor={getStatusColor(lead.status)}>{lead.status ?? "Sem status"}</OperationalStatusBadge>
+                          )}
+                        </TableCell>
+                        <TableCell className="min-w-40">
+                          <span className="block font-medium text-[var(--text-secondary)]">{lead.origem || "Sem origem"}</span>
+                          <span className="mt-1 block text-xs text-[var(--text-muted)]">{lead.tipo_contratacao || "Sem tipo"}</span>
+                        </TableCell>
+                        <TableCell className="min-w-36">{lead.responsavel || "Não atribuído"}</TableCell>
+                        <TableCell className="min-w-40">
+                          {nextReminder ? (
+                            <span className="font-medium text-[var(--accent-gold-hover)]">{formatDateTimeFullBR(nextReminder)}</span>
+                          ) : <span className="text-[var(--text-muted)]">Sem retorno</span>}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{new Date(lead.data_criacao).toLocaleDateString("pt-BR")}</TableCell>
+                        <TableCell align="right">
+                          <div className="flex justify-end gap-1">
+                            <Button onClick={() => setSelectedLead(lead)} variant="secondary" size="icon" title="Abrir lead" aria-label="Abrir lead"><MessageCircle className="h-4 w-4" /></Button>
+                            {canEditLeads && <Button onClick={() => openReminderScheduler(lead)} variant="soft" size="icon" title="Agendar lembrete" aria-label="Agendar lembrete"><Bell className="h-4 w-4" /></Button>}
+                            {canEditLeads && <Button onClick={() => handleConvertToContract(lead)} variant="soft" size="icon" title="Converter em contrato" aria-label="Converter em contrato"><FileText className="h-4 w-4" /></Button>}
+                            {canEditLeads && (!showArchived ? <Button onClick={() => handleArchive(lead.id)} variant="secondary" size="icon" title="Arquivar lead" aria-label="Arquivar lead"><Archive className="h-4 w-4" /></Button> : <Button onClick={() => handleUnarchive(lead.id)} variant="secondary" size="icon" title="Reativar lead" aria-label="Reativar lead"><Users className="h-4 w-4" /></Button>)}
+                            {canEditLeads && <Button onClick={() => handleDeleteLead(lead)} variant="danger" size="icon" title="Excluir lead" aria-label="Excluir lead"><Trash2 className="h-4 w-4" /></Button>}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="kds-op-lead-list lg:hidden">
               {paginatedLeads.map((lead) => (
                 <Surface
                   key={lead.id}

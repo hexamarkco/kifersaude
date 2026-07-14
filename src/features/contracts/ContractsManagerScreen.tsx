@@ -30,6 +30,12 @@ import {
   PageHeader,
   SectionHeader,
   Surface,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   type PanelTone,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
@@ -731,7 +737,77 @@ export default function ContractsManager({
             )}
           />
 
-          <div className="grid grid-cols-1 gap-3">
+          <div className="hidden lg:block">
+            <Table size="sm" stickyHeader className="min-w-[1080px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Contrato</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Operadora e plano</TableHead>
+                  <TableHead>Financeiro</TableHead>
+                  <TableHead>Datas críticas</TableHead>
+                  <TableHead>Responsável</TableHead>
+                  <TableHead align="right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredContracts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7}>
+                      <Surface variant="muted" className="py-12 text-center">
+                        <FileText className="mx-auto mb-4 h-16 w-16 text-[var(--text-muted)]" />
+                        <h3 className="mb-2 text-lg font-medium text-[var(--text-primary)]">Nenhum contrato encontrado</h3>
+                        <p className="text-[var(--text-secondary)]">Tente ajustar os filtros ou adicione um novo contrato.</p>
+                      </Surface>
+                    </TableCell>
+                  </TableRow>
+                )}
+                {paginatedContracts.map((contract) => {
+                  const bonusValue = getBonusValue(contract);
+
+                  return (
+                    <TableRow key={contract.id} className="align-middle">
+                      <TableCell className="min-w-52">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedContract(contract)}
+                          className="block max-w-64 text-left transition-colors hover:text-[var(--brand-primary)]"
+                        >
+                          <span className="block font-semibold text-[var(--text-primary)]">{contract.codigo_contrato}</span>
+                          <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
+                        </button>
+                      </TableCell>
+                      <TableCell className="min-w-36">
+                        <Badge tone={getStatusTone(contract.status)} size="sm">{contract.status}</Badge>
+                        <span className="mt-2 block text-xs text-[var(--text-muted)]">{contract.modalidade}</span>
+                      </TableCell>
+                      <TableCell className="min-w-48">
+                        <span className="block font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora) || "Sem operadora"}</span>
+                        <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{contract.produto_plano || "Sem plano"}</span>
+                      </TableCell>
+                      <TableCell className="min-w-44">
+                        <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>
+                        {contract.comissao_prevista && <span className="mt-1 block text-xs text-[var(--text-muted)]">Comissão: R$ {contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}{bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}</span>}
+                      </TableCell>
+                      <TableCell className="min-w-48">
+                        <div className="flex flex-wrap gap-1">{renderDateBadges(contract)}</div>
+                        <span className="mt-2 block text-xs text-[var(--text-muted)]">{contract.data_renovacao ? `Fidelidade: ${formatDate(contract.data_renovacao, "monthYear")}` : contract.mes_reajuste ? `Reajuste: ${formatDate(contract.mes_reajuste.toString(), "monthOnly")}` : "Sem data próxima"}</span>
+                      </TableCell>
+                      <TableCell className="min-w-32">{contract.responsavel || "Não atribuído"}</TableCell>
+                      <TableCell align="right">
+                        <div className="flex justify-end gap-1">
+                          <Button onClick={() => setSelectedContract(contract)} variant="secondary" size="icon" title="Abrir contrato" aria-label="Abrir contrato"><Eye className="h-4 w-4" /></Button>
+                          {canEditContracts && <Button onClick={() => handleDeleteContract(contract)} variant="danger" size="icon" title="Excluir contrato" aria-label="Excluir contrato"><Trash2 className="h-4 w-4" /></Button>}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 lg:hidden">
             {paginatedContracts.map((contract) => {
               const bonusValue = getBonusValue(contract);
 

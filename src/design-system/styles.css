@@ -1058,14 +1058,14 @@
   justify-content: center;
   gap: 0.35rem;
   border: 1px solid var(--badge-border, var(--border-default));
-  border-radius: var(--radius-full);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--badge-bg, var(--bg-elevated)) 88%, white) 0%, var(--badge-bg, var(--bg-elevated)) 100%);
+  border-radius: var(--radius-sm);
+  background: var(--badge-bg, var(--bg-elevated));
   color: var(--badge-text, var(--text-secondary));
   font: var(--type-badge);
   font-weight: 700;
   letter-spacing: 0.025em;
   text-transform: uppercase;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 0 0 1px color-mix(in srgb, var(--badge-border, var(--border-default)) 16%, transparent), 0 10px 20px -20px var(--badge-glow, transparent);
+  box-shadow: none;
   white-space: nowrap;
 }
 
@@ -3594,6 +3594,14 @@
   border-color: var(--border-default);
   background: var(--bg-surface);
   box-shadow: none;
+}
+
+/* Pills are reserved for counters and circular indicators. Operational controls
+   share the same contained geometry as inputs and buttons. */
+.kds-op-chip {
+  min-height: 2.5rem;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
 }
 
 .kds-op-chip.is-active,

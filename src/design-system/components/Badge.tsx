@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import { isValidElement, type HTMLAttributes, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import { cx } from '../../lib/cx';
@@ -105,8 +105,17 @@ const sizeClasses: Record<BadgeSize, string> = {
   md: 'px-3 py-1.5 text-xs',
 };
 
+const isIconComponent = (icon: BadgeProps['icon']): icon is LucideIcon =>
+  typeof icon === 'function' || (
+    typeof icon === 'object' &&
+    icon !== null &&
+    !isValidElement(icon) &&
+    'render' in icon &&
+    typeof (icon as { render?: unknown }).render === 'function'
+  );
+
 export default function Badge({ tone = 'neutral', size = 'sm', icon, className, children, ...props }: BadgeProps) {
-  const Icon = typeof icon === 'function' ? (icon as LucideIcon) : null;
+  const Icon = isIconComponent(icon) ? icon : null;
 
   return (
     <span className={cx('kds-badge', `kds-badge-${tone}`, sizeClasses[size], className)} {...props}>

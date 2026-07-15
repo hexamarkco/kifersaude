@@ -121,6 +121,12 @@ type CommWhatsAppSendResult = {
   duplicate?: boolean;
 };
 
+export type CommWhatsAppMediaType = 'all' | 'image' | 'video' | 'document' | 'audio';
+
+type ListChatMediaPageParams = ListMessagesPageParams & {
+  mediaType?: CommWhatsAppMediaType;
+};
+
 type CommWhatsAppSendResponsePayload = {
   messageId?: string | null;
   status?: string;
@@ -396,6 +402,8 @@ const parseSendResponse = (data: unknown, fallbackStatus = 'pending'): CommWhats
 
   return { messageId, status, duplicate: payload.duplicate === true };
 };
+
+export type CommWhatsAppChatMediaPage = CommWhatsAppMessagesPage;
 
 const toRecord = (value: unknown): Record<string, unknown> => (
   value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
@@ -1082,6 +1090,29 @@ export const commWhatsAppService = {
     return {
       messages: page,
       hasMore,
+    };
+  },
+
+  async listChatMediaPage(chatId: string, params: ListChatMediaPageParams = {}): Promise<CommWhatsAppChatMediaPage> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar os arquivos do WhatsApp.' });
+
+    const safeLimit = Math.min(Math.max(params.limit ?? 40, 1), 100);
+    const { data, error } = await supabase.rpc('comm_whatsapp_list_chat_media_page' as never, {
+      p_chat_id: chatId,
+      p_media_type: params.mediaType ?? 'all',
+      p_before_message_at: params.before?.messageAt ?? null,
+      p_before_id: params.before?.id ?? null,
+      p_limit: safeLimit + 1,
+    } as never);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar os arquivos do WhatsApp.'));
+    }
+
+    const rows = (data ?? []) as CommWhatsAppMessage[];
+    return {
+      messages: rows.slice(0, safeLimit),
+      hasMore: rows.length > safeLimit,
     };
   },
 

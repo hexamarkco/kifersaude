@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
@@ -56,6 +56,7 @@ import { followUpSalesTechniqueOptions } from './components/followUpSalesTechniq
 import { CONVERSATION_SITUATION_PRESETS } from './components/followUpSituationPresets';
 import WhatsAppMediaDrawer from './components/WhatsAppMediaDrawer';
 import WhatsAppLeadDrawer from './components/WhatsAppLeadDrawer';
+import WhatsAppChatFilesDrawer from './components/WhatsAppChatFilesDrawer';
 import WhatsAppQuickRepliesModal from './components/WhatsAppQuickRepliesModal';
 import WhatsAppStartChatModal from './components/WhatsAppStartChatModal';
 import { WhatsAppInboxSelectionProvider, type WhatsAppInboxSelectionContextValue } from './WhatsAppInboxSelectionContext';
@@ -3123,6 +3124,7 @@ export default function WhatsAppInboxScreen() {
   const [operationalStateLoaded, setOperationalStateLoaded] = useState(false);
   const [operationalStateError, setOperationalStateError] = useState<string | null>(null);
   const [lightboxMessageId, setLightboxMessageId] = useState<string | null>(null);
+  const [chatFilesOpen, setChatFilesOpen] = useState(false);
   const [autoLinkedChatIds, setAutoLinkedChatIds] = useState<Record<string, true>>({});
   const [leadDrawerOpen, setLeadDrawerOpen] = useState(false);
   const [leadPanel, setLeadPanel] = useState<CommWhatsAppLeadPanel | null>(null);
@@ -8709,6 +8711,23 @@ export default function WhatsAppInboxScreen() {
     setMediaDrawerOpen((current) => !current);
   }, []);
 
+  const handleOpenChatFile = useCallback(async (message: CommWhatsAppMessage) => {
+    try {
+      const url = await commWhatsAppService.resolveMediaObjectUrl({
+        mediaId: message.media_id,
+        mediaUrl: message.media_url,
+      });
+      if (!url) {
+        toast.error('Arquivo indisponível no momento.');
+        return;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao abrir arquivo do chat', error);
+      toast.error('Não foi possível abrir este arquivo.');
+    }
+  }, []);
+
   const handleSendDrawerMedia = useCallback(async (item: {
     sendKind: 'image' | 'video';
     sendUrl: string;
@@ -9493,6 +9512,17 @@ export default function WhatsAppInboxScreen() {
                     )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => setChatFilesOpen(true)}
+                      variant={chatFilesOpen ? 'secondary' : 'soft'}
+                      size="icon"
+                      className="rounded-[var(--radius-lg)]"
+                      aria-label="Ver arquivos desta conversa"
+                      title="Arquivos da conversa"
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
                     <Button
                       type="button"
                       onClick={handleToggleChatMessageSearch}
@@ -10787,6 +10817,14 @@ export default function WhatsAppInboxScreen() {
           onClose={() => setMediaDrawerOpen(false)}
           onSelectEmoji={handleInsertEmoji}
           onSendMedia={handleSendDrawerMedia}
+        />
+
+        <WhatsAppChatFilesDrawer
+          chatId={selectedChat?.id ?? null}
+          chatDisplayName={selectedChatDisplayName}
+          isOpen={chatFilesOpen}
+          onClose={() => setChatFilesOpen(false)}
+          onOpenMedia={handleOpenChatFile}
         />
 
         <WhatsAppFollowUpModal

@@ -7367,17 +7367,14 @@ export default function WhatsAppInboxScreen() {
         },
       });
 
-      if (selectedChat && selectedChat.id === editingMessage.chat_id && selectedChat.last_message_at === editingMessage.message_at) {
-        upsertChatLocally({
-          ...selectedChat,
-          last_message_text: editedText,
-          updated_at: editedAt,
-        });
-      } else {
-        setChats((current) => current.map((chat) => chat.id === editingMessage.chat_id && chat.last_message_at === editingMessage.message_at
+      const editedMessageAt = getMessageTimestampMs(editingMessage.message_at);
+      setChats((current) => current.map((chat) => (
+        chat.id === editingMessage.chat_id
+        && editedMessageAt !== null
+        && getMessageTimestampMs(chat.last_message_at) === editedMessageAt
           ? { ...chat, last_message_text: editedText, updated_at: editedAt }
-          : chat));
-      }
+          : chat
+      )));
 
       toast.success('Mensagem editada no WhatsApp.');
       handleCloseEditMessageModal();
@@ -7387,7 +7384,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setSavingMessageEdit(false);
     }
-  }, [editingMessage, editingMessageDraft, handleCloseEditMessageModal, patchMessageLocally, selectedChat, upsertChatLocally]);
+  }, [editingMessage, editingMessageDraft, handleCloseEditMessageModal, patchMessageLocally]);
 
   const handleDeleteMessage = useCallback(async (message: CommWhatsAppMessage) => {
     if (!canDeleteOutboundMessage(message)) {

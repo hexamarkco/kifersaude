@@ -8,6 +8,8 @@ import {
   Save,
   ShieldCheck,
   Facebook,
+  MessageCircle,
+  Sparkles,
   Tag,
 } from "lucide-react";
 
@@ -21,7 +23,6 @@ import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from "../../../lib/templateVariableSuggestions";
 import {
   Alert,
-  Badge,
   Button,
   Card,
   CardIcon,
@@ -30,6 +31,7 @@ import {
   Input,
   SectionHeader,
   Switch,
+  Tabs,
 } from "../../../design-system";
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
 
@@ -421,6 +423,7 @@ const normalizeFollowUpInstructions = (
 };
 
 export default function IntegrationsScreen() {
+  const [activeSection, setActiveSection] = useState<"ai" | "whatsapp" | "tracking">("ai");
   const [aiProviderIntegrations, setAiProviderIntegrations] = useState<
     Record<AiProvider, IntegrationSetting | null>
   >({
@@ -931,32 +934,25 @@ export default function IntegrationsScreen() {
       overlayLabel="Atualizando integrações..."
       stageClassName="min-h-[460px]"
     >
-      <div className="space-y-8">
-        <Card padding="lg">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-4">
-              <Badge tone="gold" className="w-fit">
-                <Plug className="h-3.5 w-3.5 text-[var(--accent-gold)]" />
-                Integrações
-              </Badge>
-              <div className="flex items-start gap-4">
-                <CardIcon tone="gold"><ShieldCheck className="h-6 w-6" /></CardIcon>
-                <div className="space-y-2">
-                  <h2 className="font-[var(--font-display)] text-2xl font-semibold text-[var(--text-primary)]">
-                    Integrações e conectores
-                  </h2>
-                  <p className="max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
-                    Conecte IA, WhatsApp e rastreamento em uma estrutura visual
-                    compatível com as configurações gerais, com menos contraste
-                    solto entre seções.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
+      <div className="space-y-6">
+        <SectionHeader
+          eyebrow="Canais e inteligência"
+          title="Integrações"
+          description="Configure cada conector por finalidade, sem misturar credenciais, automações e rastreamento."
+        />
+        <Tabs
+          items={[
+            { id: "ai", label: "Inteligência artificial", icon: Sparkles },
+            { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+            { id: "tracking", label: "Rastreamento", icon: Tag },
+          ]}
+          value={activeSection}
+          onChange={setActiveSection}
+          variant="underline"
+          listClassName="flex-nowrap overflow-x-auto"
+        />
 
-        <section className="space-y-4">
+        {activeSection === "ai" && <section className="space-y-4">
           <SectionHeader title="Integrações de IA" description="Conecte OpenAI, Gemini e Claude e escolha qual provedor/modelo cada funcionalidade deve usar." />
 
           {aiMessage && (
@@ -1325,17 +1321,19 @@ export default function IntegrationsScreen() {
               </div>
             </Card>
           </div>
-        </section>
+        </section>}
 
-        <section className="space-y-4">
+        {activeSection === "whatsapp" && <section className="space-y-4">
           <SectionHeader title="WhatsApp (Whapi)" description="Conecte o canal de WhatsApp para uso nos fluxos de automação." />
-          <Card>
-            <WhatsAppApiSettingsPanel />
-          </Card>
-        </section>
+          <WhatsAppApiSettingsPanel />
+        </section>}
 
-        <section className="border-t border-[var(--border-subtle)] pt-8">
-          <SectionHeader className="mb-6" title="Rastreamento - Landing Page" description="Configure os códigos de rastreamento para a página de conversão (/lp)" />
+        {activeSection === "tracking" && <section className="space-y-5">
+          <SectionHeader title="Rastreamento da landing page" description="Configure os códigos usados em /lp para medir conversões e campanhas." />
+
+          <Alert tone="info">
+            Os identificadores abaixo são aplicados automaticamente na landing page de conversão.
+          </Alert>
 
           <div className="grid md:grid-cols-2 gap-6">
             <Card>
@@ -1435,22 +1433,7 @@ export default function IntegrationsScreen() {
             </Card>
           </div>
 
-          <Alert tone="warning" className="mt-6">
-            <div className="flex items-start space-x-3">
-              <Info className="mt-0.5 h-5 w-5" />
-              <div className="text-sm">
-                <p className="font-semibold">
-                  Como usar:
-                </p>
-                <p>
-                  Essas configurações serão aplicadas automaticamente na landing
-                  page de conversão (/lp). Meta Pixel e GTM ajudam a rastrear
-                  conversões e otimizar campanhas.
-                </p>
-              </div>
-            </div>
-          </Alert>
-        </section>
+        </section>}
       </div>
     </PanelAdaptiveLoadingFrame>
   );

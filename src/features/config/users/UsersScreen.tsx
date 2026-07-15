@@ -15,6 +15,7 @@ import {
   CheckCircle,
   User as UserIcon,
   Pencil,
+  Search,
 } from "lucide-react";
 import { useConfirmationModal } from "../../../hooks/useConfirmationModal";
 import { formatProfileLabel } from "../../../lib/accessControl";
@@ -35,7 +36,8 @@ import {
   DialogTitle,
   Field,
   Input,
-  Surface,
+  OperationalMetricChip,
+  SectionHeader,
   Table,
   TableBody,
   TableCell,
@@ -65,6 +67,7 @@ export default function UsersScreen() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
   const loadingUi = useAdaptiveLoading(loading);
   const canManageUsers = getRoleModulePermission(
@@ -87,6 +90,19 @@ export default function UsersScreen() {
     () => new Map(accessProfiles.map((profile) => [profile.slug, profile])),
     [accessProfiles],
   );
+
+  const filteredUsers = useMemo(() => {
+    const normalizedTerm = searchTerm.trim().toLocaleLowerCase("pt-BR");
+    if (!normalizedTerm) return users;
+
+    return users.filter((userProfile) => {
+      const profile = profileBySlug.get(userProfile.role);
+      const profileLabel = formatProfileLabel(userProfile.role, profile?.name);
+      return [userProfile.username, userProfile.email, userProfile.role, profileLabel]
+        .filter(Boolean)
+        .some((value) => value.toLocaleLowerCase("pt-BR").includes(normalizedTerm));
+    });
+  }, [profileBySlug, searchTerm, users]);
 
   useEffect(() => {
     void loadUsers();
@@ -326,34 +342,31 @@ export default function UsersScreen() {
       overlayLabel="Atualizando usuários..."
       stageClassName="min-h-[420px]"
     >
-      <div className="panel-page-shell space-y-6">
-        <Surface padding="lg">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-4">
-              <Badge tone="gold"><Shield className="h-3.5 w-3.5" />Usuários</Badge>
-              <div className="flex items-start gap-4">
-                <CardIcon tone="gold">
-                  <Users className="h-6 w-6" />
-                </CardIcon>
-                <div className="space-y-2">
-                  <h2 className="font-[family-name:var(--font-display)] text-2xl font-semibold text-[color:var(--text-primary)]">
-                    Usuários do sistema
-                  </h2>
-                  <p className="max-w-3xl text-sm leading-6 text-[color:var(--text-secondary)]">
-                    Associe cada usuário a um perfil dinâmico de acesso,
-                    mantendo a administração centralizada no mesmo padrão visual
-                    de configurações gerais.
-                  </p>
-                </div>
-              </div>
-            </div>
-
+      <div className="space-y-5">
+        <SectionHeader
+          eyebrow="Equipe e acessos"
+          title="Usuários"
+          description="Gerencie contas e os perfis de acesso da equipe."
+          action={
             <Button onClick={() => setShowAddUser(true)} variant="primary">
               <Plus className="h-4 w-4" />
               <span>Novo Usuário</span>
             </Button>
+          }
+        />
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="w-full sm:max-w-sm">
+            <Input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              leftIcon={Search}
+              placeholder="Buscar por usuário, e-mail ou perfil"
+            />
           </div>
-        </Surface>
+          <OperationalMetricChip value={filteredUsers.length} label={filteredUsers.length === 1 ? "usuário" : "usuários"} />
+        </div>
 
         {message && (
           <Alert tone={message.type === "success" ? "success" : "danger"}>
@@ -368,21 +381,7 @@ export default function UsersScreen() {
           </Alert>
         )}
 
-        <Card padding="lg">
-          <div className="mb-6 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Users className="h-6 w-6 text-[color:var(--brand-primary)]" />
-              <div>
-                <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">
-                  Carteira de usuários
-                </h3>
-                <p className="text-sm text-[color:var(--text-tertiary)]">
-                  Revise perfis, dados de acesso e manutenção da equipe em um
-                  único lugar.
-                </p>
-              </div>
-            </div>
-          </div>
+        <div className="space-y-3">
 
           <div className="hidden lg:block">
             <Table size="sm" stickyHeader className="min-w-[720px]">
@@ -395,14 +394,14 @@ export default function UsersScreen() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="py-12 text-center text-[var(--text-muted)]">
                       Nenhum usuário cadastrado
                     </TableCell>
                   </TableRow>
                 ) : (
-                  users.map((userProfile) => {
+                  filteredUsers.map((userProfile) => {
                     const profile = profileBySlug.get(userProfile.role);
                     const profileLabel = formatProfileLabel(userProfile.role, profile?.name);
                     const isCurrentUser = userProfile.id === currentUserManagementId;
@@ -437,7 +436,7 @@ export default function UsersScreen() {
           </div>
 
           <div className="space-y-3 lg:hidden">
-            {users.length === 0 ? (
+            {filteredUsers.length === 0 ? (
               <Card variant="muted" padding="md" className="py-12 text-center">
                 <Users className="mx-auto mb-4 h-12 w-12 text-[color:var(--text-tertiary)] opacity-40" />
                 <p className="text-[color:var(--text-tertiary)]">
@@ -445,7 +444,7 @@ export default function UsersScreen() {
                 </p>
               </Card>
             ) : (
-              users.map((userProfile) => {
+              filteredUsers.map((userProfile) => {
                 const profile = profileBySlug.get(userProfile.role);
                 const profileLabel = formatProfileLabel(
                   userProfile.role,
@@ -515,32 +514,7 @@ export default function UsersScreen() {
               })
             )}
           </div>
-        </Card>
-
-        <Card variant="muted" padding="lg">
-          <div className="flex items-start space-x-3">
-            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-[color:var(--brand-primary)]" />
-            <div>
-              <h4 className="mb-2 font-semibold text-[color:var(--text-primary)]">
-                Como funciona agora
-              </h4>
-              <ul className="space-y-2 text-sm text-[color:var(--text-tertiary)]">
-                <li>
-                  Os perfis disponíveis aqui são dinâmicos e podem ser criados
-                  na área "Perfis e Acessos".
-                </li>
-                <li>
-                  Perfis marcados como administrativos recebem acesso total ao
-                  sistema automaticamente.
-                </li>
-                <li>
-                  Perfis comuns nascem sem acesso e você libera cada módulo de
-                  forma granular.
-                </li>
-              </ul>
-            </div>
-          </div>
-        </Card>
+        </div>
 
         <Dialog open={showAddUser} onOpenChange={(open) => !open && resetCreateForm()} size="lg">
           <DialogHeader onClose={resetCreateForm}>

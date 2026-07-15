@@ -1,17 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  Calculator,
   CheckCircle,
-  ChevronDown,
   Clock,
-  FileText,
-  ListTree,
   RotateCcw,
   Save,
   Search,
-  Settings,
-  ShieldCheck,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -27,7 +21,7 @@ import CotadorCatalogTab from "../../../components/config/CotadorCatalogTab";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { SystemSettingsSkeleton } from "../../../components/ui/panelSkeletons";
-import { ActionSurface, Alert, Badge, Button, CardIcon, Checkbox, Field, Input, SectionHeader, Select, Surface } from "../../../design-system";
+import { Alert, Badge, Button, Checkbox, Field, Input, SectionHeader, Select, Surface, Tabs } from "../../../design-system";
 import AccessControlManagerScreen from "./AccessControlManagerScreen";
 import {
   areSystemPreferencesEqual,
@@ -51,15 +45,9 @@ export default function SystemSettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<SettingsMessage | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [collapsedSections, setCollapsedSections] = useState<
-    Record<SectionId, boolean>
-  >({
-    general: false,
-    cotador: false,
-    access: false,
-    leads: false,
-    contracts: false,
-  });
+  const [activeSection, setActiveSection] = useState<SectionId>("general");
+  const [activeLeadConfiguration, setActiveLeadConfiguration] = useState("status");
+  const [activeContractConfiguration, setActiveContractConfiguration] = useState("");
   const { loading: configLoading, getRoleModulePermission } = useConfig();
   const loadingUi = useAdaptiveLoading(loading);
   const timezoneOptions = useMemo(
@@ -134,27 +122,6 @@ export default function SystemSettingsScreen() {
       "success",
       "Padrões aplicados. Clique em salvar para confirmar.",
     );
-  };
-
-  const toggleSection = (sectionId: SectionId) => {
-    setCollapsedSections((previous) => ({
-      ...previous,
-      [sectionId]: !previous[sectionId],
-    }));
-  };
-
-  const revealSection = (sectionId: SectionId) => {
-    setCollapsedSections((previous) => ({
-      ...previous,
-      [sectionId]: false,
-    }));
-
-    window.requestAnimationFrame(() => {
-      document.getElementById(`settings-section-${sectionId}`)?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
   };
 
   const normalizedSearchTerm = useMemo(
@@ -251,19 +218,41 @@ export default function SystemSettingsScreen() {
   });
 
   const hasVisibleSections = visibleSections.length > 0;
+  const activeVisibleSection = visibleSections.some(
+    (section) => section.id === activeSection,
+  )
+    ? activeSection
+    : visibleSections[0]?.id;
 
   const hasPendingGeneralChanges = useMemo(
     () => !areSystemPreferencesEqual(settings, savedSettings),
     [savedSettings, settings],
   );
 
-  const shouldExpandSection = (sectionId: SectionId) => {
-    if (normalizedSearchTerm) {
-      return true;
-    }
-
-    return !collapsedSections[sectionId];
-  };
+  const shouldExpandSection = (sectionId: SectionId) =>
+    activeVisibleSection === sectionId;
+  const leadConfigurationTabs = [
+    ...(showLeadStatusManager ? [{ id: "status", label: "Funil" }] : []),
+    ...(showLeadOriginsManager ? [{ id: "origins", label: "Origens" }] : []),
+    ...visibleLeadManagers.map((manager) => ({
+      id: `manager:${manager.category}`,
+      label: manager.title,
+    })),
+  ];
+  const activeLeadConfigurationId = leadConfigurationTabs.some(
+    (tab) => tab.id === activeLeadConfiguration,
+  )
+    ? activeLeadConfiguration
+    : leadConfigurationTabs[0]?.id ?? "status";
+  const contractConfigurationTabs = visibleContractManagers.map((manager) => ({
+    id: manager.category,
+    label: manager.title,
+  }));
+  const activeContractConfigurationId = contractConfigurationTabs.some(
+    (tab) => tab.id === activeContractConfiguration,
+  )
+    ? activeContractConfiguration
+    : contractConfigurationTabs[0]?.id ?? "";
 
   if (loading && !settings) {
     return (
@@ -313,56 +302,37 @@ export default function SystemSettingsScreen() {
           </Alert>
         )}
 
-        <Surface padding="lg">
-          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl">
-              <Badge tone="gold" className="mb-3"><Settings className="h-3.5 w-3.5" />Central de configurações</Badge>
-              <SectionHeader title="Sistema e catálogo comercial no mesmo fluxo" description="Organize preferências, acessos, catálogo comercial, leads e contratos em uma experiência única, com busca e atalhos por área." />
-            </div>
-
+        <Surface padding="md">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <SectionHeader
+              eyebrow="Configuração geral"
+              title="Regras, catálogo e cadastros"
+              description="Encontre e ajuste uma área por vez, sem perder espaço útil para o conteúdo."
+            />
             <div className="w-full xl:max-w-md">
               <Input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por cotador, operadoras, permissões, leads, contratos..."
+                placeholder="Buscar por cotador, permissões, leads ou contratos"
                 leftIcon={Search}
               />
             </div>
           </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-            {visibleSections.map((section) => {
-              const Icon = section.icon;
-              const expanded = shouldExpandSection(section.id);
-
-              return (
-                <ActionSurface
-                  key={section.id}
-                  type="button"
-                  onClick={() => revealSection(section.id)}
-                  variant="muted"
-                  padding="md"
-                  className="min-h-[196px] text-left"
-                >
-                  <CardIcon tone={section.iconTone}>
-                    <Icon className="h-5 w-5" />
-                  </CardIcon>
-                  <div className="mt-5 space-y-2">
-                    <h3 className="text-[1.05rem] font-semibold leading-tight text-[color:var(--text-primary)]">
-                      {section.title}
-                    </h3>
-                    <p className="max-w-[24ch] text-sm leading-7 text-[color:var(--text-secondary)]">
-                      {section.description}
-                    </p>
-                  </div>
-                  <p className="mt-auto pt-5 text-xs font-medium uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
-                    {expanded ? "Visível" : "Fechada"}
-                  </p>
-                </ActionSurface>
-              );
-            })}
-          </div>
+          {hasVisibleSections && (
+            <Tabs
+              items={visibleSections.map(({ id, title, icon }) => ({
+                id,
+                label: title,
+                icon,
+              }))}
+              value={activeVisibleSection ?? "general"}
+              onChange={setActiveSection}
+              variant="underline"
+              className="mt-5"
+              listClassName="flex-nowrap overflow-x-auto"
+            />
+          )}
         </Surface>
 
         {!hasVisibleSections && (
@@ -373,34 +343,12 @@ export default function SystemSettingsScreen() {
           </Surface>
         )}
 
-        {showGeneralSection && (
-          <div id="settings-section-general" className="space-y-4">
-            <ActionSurface
-              type="button"
-              onClick={() => toggleSection("general")}
-              variant="default"
-              padding="sm"
-              className="flex w-full items-start justify-between gap-4 text-left"
-            >
-              <div className="flex items-start gap-3">
-                <CardIcon className="mt-0.5">
-                  <Settings className="h-5 w-5" />
-                </CardIcon>
-                <div>
-                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
-                    Preferências do sistema
-                  </h3>
-                  <p className="text-sm text-[color:var(--text-secondary)]">
-                    Notificações, formato de data, fuso horário e tempo de sessão.
-                  </p>
-                </div>
-              </div>
-              <ChevronDown
-                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
-                  shouldExpandSection("general") ? "rotate-180" : ""
-                }`}
-              />
-            </ActionSurface>
+        {showGeneralSection && shouldExpandSection("general") && (
+          <section id="settings-section-general" className="space-y-4">
+            <SectionHeader
+              title="Preferências do sistema"
+              description="Notificações, formato de data, fuso horário e tempo de sessão."
+            />
 
             {shouldExpandSection("general") && (
               <Surface variant="muted" padding="md">
@@ -554,72 +502,28 @@ export default function SystemSettingsScreen() {
                 </div>
               </Surface>
             )}
-          </div>
+          </section>
         )}
 
-        {showCotadorSection && (
-          <div id="settings-section-cotador" className="space-y-4">
-            <ActionSurface
-              onClick={() => toggleSection("cotador")}
-              variant="default"
-              padding="sm"
-              className="flex w-full items-start justify-between gap-4 text-left"
-            >
-              <div className="flex items-start gap-3">
-                <CardIcon className="mt-0.5">
-                  <Calculator className="h-5 w-5" />
-                </CardIcon>
-                <div>
-                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
-                    Cotador
-                  </h3>
-                  <p className="text-sm text-[color:var(--text-secondary)]">
-                    Administradoras, entidades de classe e produtos do catálogo comercial.
-                  </p>
-                </div>
-              </div>
-              <ChevronDown
-                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
-                  shouldExpandSection("cotador") ? "rotate-180" : ""
-                }`}
-              />
-            </ActionSurface>
+        {showCotadorSection && shouldExpandSection("cotador") && (
+          <section id="settings-section-cotador" className="space-y-4">
+            <SectionHeader
+              title="Catálogo do cotador"
+              description="Operadoras, administradoras, entidades de classe e produtos comerciais."
+            />
 
             {shouldExpandSection("cotador") && (
-              <Surface variant="muted" padding="md">
-                <CotadorCatalogTab embedded />
-              </Surface>
+              <CotadorCatalogTab embedded />
             )}
-          </div>
+          </section>
         )}
 
-        {showAccessSection && (
-          <div id="settings-section-access" className="space-y-4">
-            <ActionSurface
-              onClick={() => toggleSection("access")}
-              variant="default"
-              padding="sm"
-              className="flex w-full items-start justify-between gap-4 text-left"
-            >
-              <div className="flex items-start gap-3">
-                <CardIcon className="mt-0.5">
-                  <ShieldCheck className="h-5 w-5" />
-                </CardIcon>
-                <div>
-                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
-                    Permissões por perfil
-                  </h3>
-                  <p className="text-sm text-[color:var(--text-secondary)]">
-                    Controle de acesso aos módulos para cada tipo de usuário.
-                  </p>
-                </div>
-              </div>
-              <ChevronDown
-                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
-                  shouldExpandSection("access") ? "rotate-180" : ""
-                }`}
-              />
-            </ActionSurface>
+        {showAccessSection && shouldExpandSection("access") && (
+          <section id="settings-section-access" className="space-y-4">
+            <SectionHeader
+              title="Perfis e acessos"
+              description="Controle de acesso aos módulos para cada tipo de usuário."
+            />
 
             {shouldExpandSection("access") && (
               <div className="space-y-4">
@@ -637,36 +541,15 @@ export default function SystemSettingsScreen() {
                 )}
               </div>
             )}
-          </div>
+          </section>
         )}
 
-        {showLeadsSection && (
-          <div id="settings-section-leads" className="space-y-4">
-            <ActionSurface
-              onClick={() => toggleSection("leads")}
-              variant="default"
-              padding="sm"
-              className="flex w-full items-start justify-between gap-4 text-left"
-            >
-              <div className="flex items-start gap-3">
-                <CardIcon className="mt-0.5">
-                  <ListTree className="h-5 w-5" />
-                </CardIcon>
-                <div>
-                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
-                    Leads
-                  </h3>
-                  <p className="text-sm text-[color:var(--text-secondary)]">
-                    Etapas do funil, origens e cadastros de apoio para leads.
-                  </p>
-                </div>
-              </div>
-              <ChevronDown
-                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
-                  shouldExpandSection("leads") ? "rotate-180" : ""
-                }`}
-              />
-            </ActionSurface>
+        {showLeadsSection && shouldExpandSection("leads") && (
+          <section id="settings-section-leads" className="space-y-4">
+            <SectionHeader
+              title="Configurações de leads"
+              description="Etapas do funil, origens e cadastros auxiliares."
+            />
 
             {shouldExpandSection("leads") && (
               <div className="space-y-6">
@@ -681,59 +564,49 @@ export default function SystemSettingsScreen() {
                   </Surface>
                 ) : (
                   <>
-                    {showLeadStatusManager && <LeadStatusManager />}
-                    {showLeadOriginsManager && <LeadOriginsManager />}
-                    {visibleLeadManagers.map((manager) => (
-                      <ConfigOptionManager
-                        key={manager.category}
-                        category={manager.category}
-                        title={manager.title}
-                        description={manager.description}
-                        placeholder={manager.placeholder}
-                      />
-                    ))}
-                    {!showLeadStatusManager &&
-                      !showLeadOriginsManager &&
-                      visibleLeadManagers.length === 0 && (
+                    {leadConfigurationTabs.length > 0 ? (
+                      <>
+                        <Tabs
+                          items={leadConfigurationTabs}
+                          value={activeLeadConfigurationId}
+                          onChange={setActiveLeadConfiguration}
+                          variant="underline"
+                          listClassName="flex-nowrap overflow-x-auto"
+                        />
+                        {activeLeadConfigurationId === "status" && <LeadStatusManager />}
+                        {activeLeadConfigurationId === "origins" && <LeadOriginsManager />}
+                        {activeLeadConfigurationId.startsWith("manager:") && (() => {
+                          const manager = visibleLeadManagers.find(
+                            (item) => `manager:${item.category}` === activeLeadConfigurationId,
+                          );
+                          return manager ? (
+                            <ConfigOptionManager
+                              category={manager.category}
+                              title={manager.title}
+                              description={manager.description}
+                              placeholder={manager.placeholder}
+                            />
+                          ) : null;
+                        })()}
+                      </>
+                    ) : (
                         <Surface variant="muted" padding="md" className="border-dashed text-center text-sm">
                           Nenhum item de leads encontrado para "{searchTerm}".
                         </Surface>
-                      )}
+                    )}
                   </>
                 )}
               </div>
             )}
-          </div>
+          </section>
         )}
 
-        {showContractsSection && (
-          <div id="settings-section-contracts" className="space-y-4">
-            <ActionSurface
-              onClick={() => toggleSection("contracts")}
-              variant="default"
-              padding="sm"
-              className="flex w-full items-start justify-between gap-4 text-left"
-            >
-              <div className="flex items-start gap-3">
-                <CardIcon className="mt-0.5">
-                  <FileText className="h-5 w-5" />
-                </CardIcon>
-                <div>
-                  <h3 className="text-base font-semibold text-[color:var(--text-primary)]">
-                    Contratos
-                  </h3>
-                  <p className="text-sm text-[color:var(--text-secondary)]">
-                    Estados e parametros auxiliares usados no cadastro de
-                    contratos.
-                  </p>
-                </div>
-              </div>
-              <ChevronDown
-                className={`h-5 w-5 text-[color:var(--text-tertiary)] transition-transform ${
-                  shouldExpandSection("contracts") ? "rotate-180" : ""
-                }`}
-              />
-            </ActionSurface>
+        {showContractsSection && shouldExpandSection("contracts") && (
+          <section id="settings-section-contracts" className="space-y-4">
+            <SectionHeader
+              title="Configurações de contratos"
+              description="Estados e parâmetros auxiliares usados no cadastro de contratos."
+            />
 
             {shouldExpandSection("contracts") && (
               <div className="space-y-6">
@@ -747,26 +620,38 @@ export default function SystemSettingsScreen() {
                     </div>
                   </Surface>
                 ) : (
-                  <>
-                    {visibleContractManagers.map((manager) => (
-                      <ConfigOptionManager
-                        key={manager.category}
-                        category={manager.category}
-                        title={manager.title}
-                        description={manager.description}
-                        placeholder={manager.placeholder}
+                  contractConfigurationTabs.length > 0 ? (
+                    <>
+                      <Tabs
+                        items={contractConfigurationTabs}
+                        value={activeContractConfigurationId}
+                        onChange={setActiveContractConfiguration}
+                        variant="underline"
+                        listClassName="flex-nowrap overflow-x-auto"
                       />
-                    ))}
-                    {visibleContractManagers.length === 0 && (
+                      {(() => {
+                        const manager = visibleContractManagers.find(
+                          (item) => item.category === activeContractConfigurationId,
+                        );
+                        return manager ? (
+                          <ConfigOptionManager
+                            category={manager.category}
+                            title={manager.title}
+                            description={manager.description}
+                            placeholder={manager.placeholder}
+                          />
+                        ) : null;
+                      })()}
+                    </>
+                  ) : (
                       <Surface variant="muted" padding="md" className="border-dashed text-center text-sm">
                         Nenhum item de contratos encontrado para "{searchTerm}".
                       </Surface>
-                    )}
-                  </>
+                  )
                 )}
               </div>
             )}
-          </div>
+          </section>
         )}
       </div>
     </PanelAdaptiveLoadingFrame>

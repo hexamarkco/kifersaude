@@ -1409,63 +1409,8 @@
   background: var(--brand-primary-soft) !important;
 }
 
-/* Configuration uses a persistent workspace navigator on wide screens and a
-   compact horizontal strip on smaller viewports. */
-.kds-config-navigation {
-  border-color: var(--border-default);
-  background: var(--bg-surface);
-  box-shadow: var(--shadow-card);
-}
-
-.kds-config-nav-list {
-  display: flex;
-  gap: 0.375rem;
-  overflow-x: auto;
-  padding: 0.125rem;
-}
-
-.kds-config-nav-item {
-  display: flex;
-  min-width: 13.5rem;
-  flex: 1 0 13.5rem;
-  align-items: flex-start;
-  gap: 0.75rem;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  padding: 0.75rem;
-  color: var(--text-secondary);
-  text-align: left;
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
-}
-
-.kds-config-nav-item:hover {
-  border-color: var(--border-default);
-  background: var(--bg-hover);
-}
-
-.kds-config-nav-item.is-active {
-  border-color: var(--brand-primary-border);
-  background: var(--brand-primary-muted);
-}
-
-.kds-config-nav-icon {
-  flex: 0 0 auto;
-}
-
 .kds-config-token {
   border-radius: var(--radius-sm);
-}
-
-@media (min-width: 96rem) {
-  .kds-config-nav-list {
-    flex-direction: column;
-    overflow: visible;
-  }
-
-  .kds-config-nav-item {
-    min-width: 0;
-    flex: 0 0 auto;
-  }
 }
 
 .kds-table-sticky .kds-table-header {

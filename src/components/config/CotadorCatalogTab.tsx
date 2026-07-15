@@ -2710,14 +2710,14 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
     <div className={containerClass}>
       <FeedbackBanner message={message} />
 
-      <div className="rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-[var(--kds-shadow-card)]">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className={embedded ? "border-b border-[var(--border-subtle)] pb-5" : "rounded-[var(--kds-radius-xl)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-[var(--kds-shadow-card)]"}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-[var(--radius-full)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-gold-hover)]">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--accent-gold-hover)]">
               <Layers3 className="h-3.5 w-3.5" />
               Catálogo do Cotador
             </div>
-            <h3 className="text-2xl font-semibold text-[var(--text-primary)]">Configurações</h3>
+            <h3 className="text-xl font-semibold text-[var(--text-primary)]">Catálogo comercial</h3>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -2759,7 +2759,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
         </div>
 
-        <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant="panel" className="mt-6" />
+        <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant={embedded ? "underline" : "panel"} className="mt-5" listClassName="flex-nowrap overflow-x-auto" />
       </div>
 
       {loading ? (

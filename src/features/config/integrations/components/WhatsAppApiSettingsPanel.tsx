@@ -25,11 +25,10 @@ import {
   Alert,
   Button,
   Card,
-  Checkbox,
   Field,
   IconButton,
   Input,
-  SectionHeader,
+  Switch,
 } from "../../../../design-system";
 
 type MessageState = { type: "success" | "error"; text: string } | null;
@@ -255,9 +254,11 @@ export default function WhatsAppApiSettingsPanel() {
           </Alert>
         )}
 
-        <SectionHeader title="Configurações da API Whapi Cloud" />
-
-          <Alert tone="info">
+        <details className="group">
+          <summary className="cursor-pointer text-sm font-medium text-[var(--text-secondary)]">
+            Como conectar um canal na Whapi Cloud
+          </summary>
+          <Alert tone="info" className="mt-3">
             <div className="flex items-start gap-3">
               <Info className="mt-0.5 h-5 w-5 shrink-0" />
               <div className="space-y-2 text-sm">
@@ -285,13 +286,14 @@ export default function WhatsAppApiSettingsPanel() {
               </div>
             </div>
           </Alert>
+        </details>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.6fr)]">
               <Card variant="muted" padding="sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div className="space-y-1">
                     <div className="text-sm font-medium text-[var(--text-primary)]">
-                      Webhook do inbox novo
+                      Webhook do canal
                     </div>
                     <p className="text-xs text-[var(--text-muted)]">
                       Configure este endpoint na Whapi em Body mode com os eventos `messages`, `statuses` e `channel`.
@@ -332,9 +334,10 @@ export default function WhatsAppApiSettingsPanel() {
                     automação marcada como ativa.
                   </p>
                 </div>
-                <Checkbox
+                <Switch
                   checked={enabled}
                   onChange={(event) => setEnabled(event.target.checked)}
+                  aria-label="Ativar canal para automações"
                 />
               </div>
               <p className="mt-3 text-xs text-[var(--text-muted)]">
@@ -343,6 +346,7 @@ export default function WhatsAppApiSettingsPanel() {
               </p>
             </Card>
             <Field
+              className="lg:col-span-2"
               label={
                 <span className="flex items-center gap-2">
                   <Key className="h-4 w-4" />

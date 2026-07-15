@@ -71,7 +71,7 @@ import VariableAutocompleteTextarea from "../../../components/ui/VariableAutocom
 import { AutomationFlowsSkeleton } from "../../../components/ui/panelSkeletons";
 import { useAdaptiveLoading } from "../../../hooks/useAdaptiveLoading";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
-import { ActionSurface, Alert, Button, Card, Checkbox, Input, Surface } from "../../../design-system";
+import { ActionSurface, Alert, Button, Card, Checkbox, Input, OperationalMetricChip, Surface, Tabs } from "../../../design-system";
 
 type MessageState = {
   type: "success" | "error" | "warning";
@@ -125,6 +125,9 @@ export default function AutoContactFlowSettingsScreen() {
   );
   const [flowSearch, setFlowSearch] = useState("");
   const [flowTagFilter, setFlowTagFilter] = useState("all");
+  const [activeWorkspace, setActiveWorkspace] = useState<
+    "flows" | "templates" | "operation"
+  >("flows");
   const [tagDraft, setTagDraft] = useState("");
   const [showSimulation, setShowSimulation] = useState(false);
   const [simulationStart, setSimulationStart] = useState("");
@@ -1549,8 +1552,34 @@ export default function AutoContactFlowSettingsScreen() {
       overlayLabel="Atualizando fluxos de automação..."
       stageClassName="min-h-[520px]"
     >
-      <Surface padding="md" className="panel-page-shell">
+      <div className="panel-page-shell space-y-6">
         <div className="space-y-6">
+          <div className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="kds-op-section-label">Automação comercial</p>
+                <h2 className="kds-section-title kds-section-title-h2 mt-1">Fluxos e mensagens</h2>
+                <p className="kds-section-description mt-1">Organize os fluxos, a biblioteca de templates e os parâmetros operacionais por tarefa.</p>
+              </div>
+              <div className="inline-flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                {autoSaveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className={`h-2 w-2 rounded-full ${autoSaveState === "error" ? "bg-[var(--danger-border)]" : autoSaveState === "saved" ? "bg-[var(--brand-primary)]" : "bg-[var(--border-default)]"}`} />}
+                {autoSaveState === "saving" ? "Salvando" : autoSaveState === "saved" ? "Salvo automaticamente" : autoSaveState === "error" ? "Erro ao salvar" : "Autosave ativo"}
+              </div>
+            </div>
+            <Tabs
+              items={[
+                { id: "flows", label: "Fluxos", icon: ClipboardList },
+                { id: "templates", label: "Templates", icon: MessageCircle },
+                { id: "operation", label: "Operação", icon: Activity },
+              ]}
+              value={activeWorkspace}
+              onChange={setActiveWorkspace}
+              variant="underline"
+              listClassName="flex-nowrap overflow-x-auto"
+            />
+          </div>
+
+          {activeWorkspace === "operation" && (
           <div>
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -1562,82 +1591,12 @@ export default function AutoContactFlowSettingsScreen() {
                 </p>
               </div>
             </div>
-            <div className="mt-4 grid gap-4 md:grid-cols-5">
-              <Card variant="muted" padding="sm">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-                    Fluxos ativos
-                  </div>
-                  <BarChart3 className="w-4 h-4 text-[var(--text-subtle)]" />
-                </div>
-                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
-                  {metrics.totalFlows}
-                </div>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Modelos: {metrics.totalTemplates}
-                </p>
-              </Card>
-              <Card variant="muted" padding="sm">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-                    Etapas totais
-                  </div>
-                  <Timer className="w-4 h-4 text-[var(--text-subtle)]" />
-                </div>
-                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
-                  {metrics.totalSteps}
-                </div>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Condições: {metrics.flowsWithConditions}
-                </p>
-              </Card>
-              <Card variant="muted" padding="sm">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-                    Fluxos tagueados
-                  </div>
-                  <Tag className="w-4 h-4 text-[var(--text-subtle)]" />
-                </div>
-                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
-                  {metrics.taggedFlows}
-                </div>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Tags ativas: {availableTags.length}
-                </p>
-              </Card>
-              <Card variant="muted" padding="sm">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-                    Última atualização
-                  </div>
-                  <Activity className="w-4 h-4 text-[var(--text-subtle)]" />
-                </div>
-                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
-                  {lastRefreshAt.toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  Monitoramento em tempo real
-                </p>
-              </Card>
-              <Card variant="muted" padding="sm">
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-semibold uppercase text-[var(--text-muted)]">
-                    Envios hoje
-                  </div>
-                  <AlarmClock className="w-4 h-4 text-[var(--text-subtle)]" />
-                </div>
-                <div className="text-2xl font-semibold text-[var(--text-primary)] mt-2">
-                  {dailyAutomationLoading ? "..." : (dailyAutomationCount ?? 0)}
-                </div>
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  {dailyAutomationError
-                    ? dailyAutomationError
-                    : "Limites são definidos por fluxo no agendamento."}
-                </p>
-              </Card>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <OperationalMetricChip icon={<BarChart3 className="h-3.5 w-3.5" />} value={metrics.totalFlows} label="fluxos" />
+              <OperationalMetricChip icon={<Timer className="h-3.5 w-3.5" />} value={metrics.totalSteps} label="etapas" />
+              <OperationalMetricChip icon={<Tag className="h-3.5 w-3.5" />} value={metrics.taggedFlows} label="com tags" />
+              <OperationalMetricChip icon={<Activity className="h-3.5 w-3.5" />} value={lastRefreshAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} label="atualizado" />
+              <OperationalMetricChip icon={<AlarmClock className="h-3.5 w-3.5" />} value={dailyAutomationLoading ? "..." : (dailyAutomationCount ?? 0)} label="envios hoje" tone={dailyAutomationError ? "warning" : "neutral"} />
             </div>
 
             <div className="mt-8">
@@ -1865,8 +1824,12 @@ export default function AutoContactFlowSettingsScreen() {
                 </Card>
               </div>
             </div>
+          </div>
 
-            <div className="mt-10 space-y-1">
+          )}
+
+          {activeWorkspace === "flows" && <>
+            <div className="space-y-1">
               <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                 Fluxos e templates
               </h3>
@@ -3516,7 +3479,9 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
             </Alert>
 
-            <div className="border-t border-[var(--border-subtle)] pt-6">
+          </>}
+
+          {activeWorkspace === "templates" && <div className="border-t border-[var(--border-subtle)] pt-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--text-primary)]">
@@ -3629,7 +3594,7 @@ export default function AutoContactFlowSettingsScreen() {
                   })}
                 </div>
               )}
-            </div>
+            </div>}
           </div>
           {isTemplateModalOpen && templateDraft && (
             <ModalShell
@@ -3850,8 +3815,7 @@ export default function AutoContactFlowSettingsScreen() {
               </div>
             </ModalShell>
           )}
-        </div>
-      </Surface>
+      </div>
     </PanelAdaptiveLoadingFrame>
   );
 }

@@ -5257,13 +5257,13 @@ export default function WhatsAppInboxScreen() {
       }
 
       const viewportPadding = 12;
-      const panelWidth = Math.min(496, window.innerWidth - viewportPadding * 2);
-      const panelHeight = Math.min(620, window.innerHeight - viewportPadding * 2);
+      const panelWidth = Math.min(360, window.innerWidth - viewportPadding * 2);
+      const panelHeight = Math.min(400, window.innerHeight - viewportPadding * 2);
       const left = Math.min(
-        Math.max(viewportPadding, triggerRect.right - panelWidth + 72),
+        Math.max(viewportPadding, triggerRect.left),
         window.innerWidth - panelWidth - viewportPadding,
       );
-      const top = Math.max(viewportPadding, triggerRect.top - panelHeight - 12);
+      const top = Math.max(viewportPadding, triggerRect.top - panelHeight - 8);
 
       setMediaDrawerPosition((current) => (
         current

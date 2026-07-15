@@ -166,8 +166,8 @@ const tabsTriggerBaseClass =
 
 const tabsTriggerVariantClasses: Record<PanelTabsVariant, { active: string; idle: string }> = {
   underline: {
-    active: 'kds-tab-underline kds-tab-active rounded-none border-b-2 px-3 py-4',
-    idle: 'kds-tab-underline rounded-none border-b-2 border-transparent px-3 py-4',
+    active: 'kds-tab-underline kds-tab-active border px-3 py-2.5',
+    idle: 'kds-tab-underline border px-3 py-2.5',
   },
   pill: {
     active: 'kds-tab-active',

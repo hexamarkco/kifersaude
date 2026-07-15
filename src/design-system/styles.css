@@ -624,7 +624,7 @@
 }
 
 .kds-button {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   font: var(--type-button);
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -996,8 +996,10 @@
 
 .kds-tabs-list-underline {
   gap: var(--space-1);
-  border-bottom: 1px solid var(--border-default);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-inset) 82%, transparent), transparent);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-inset);
+  padding: var(--space-1);
 }
 
 .kds-tabs-list-pill,
@@ -1015,6 +1017,7 @@
   font: var(--type-button);
   min-height: 2.25rem;
   border: 1px solid transparent;
+  border-radius: var(--radius-lg);
   letter-spacing: 0.01em;
 }
 
@@ -1032,10 +1035,10 @@
 }
 
 .kds-tab-underline.kds-tab-active {
-  border-bottom-color: var(--brand-primary-hover);
-  border-radius: 0;
-  background: transparent;
-  color: var(--accent-gold-hover);
+  border-color: var(--brand-primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--brand-primary-muted);
+  color: var(--brand-primary-hover);
   box-shadow: none;
 }
 
@@ -2448,6 +2451,7 @@
 .kds-calendar-day,
 .calendar-day {
   border-color: var(--border-default) !important;
+  border-radius: var(--radius-lg) !important;
   background: color-mix(in srgb, var(--bg-inset) 70%, transparent);
 }
 
@@ -3121,7 +3125,7 @@
 }
 
 .kds-button {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   letter-spacing: 0;
 }
@@ -3243,7 +3247,7 @@
 .kds-select,
 .kds-textarea {
   border-color: var(--border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--bg-surface);
   color: var(--text-primary);
   box-shadow: none;
@@ -3303,7 +3307,11 @@
 }
 
 .kds-tabs-list-underline {
-  background: transparent;
+  gap: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-muted);
+  padding: var(--space-1);
 }
 
 .kds-tabs-list-pill,
@@ -3315,12 +3323,12 @@
 }
 
 .kds-tab {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   color: var(--text-secondary);
 }
 
 .kds-tab:hover:not(:disabled) {
-  border-color: transparent;
+  border-color: var(--brand-primary-border);
   background: var(--brand-primary-muted);
   color: var(--brand-primary-active);
 }
@@ -3333,7 +3341,9 @@
 }
 
 .kds-tab-underline.kds-tab-active {
-  border-bottom-color: var(--brand-primary);
+  border-color: var(--brand-primary-border);
+  border-radius: var(--radius-lg);
+  background: var(--brand-primary-soft);
   color: var(--brand-primary-active);
 }
 

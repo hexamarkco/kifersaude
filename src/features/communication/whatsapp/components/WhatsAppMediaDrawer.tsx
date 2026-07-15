@@ -477,7 +477,7 @@ export default function WhatsAppMediaDrawer({
       position={position}
       onClose={onClose}
       ariaLabel="Gaveta de emoji, GIF e figurinha"
-      className="comm-whatsapp-popover comm-emoji-picker comm-media-picker w-[min(92vw,31rem)]"
+      className="comm-whatsapp-popover comm-emoji-picker comm-media-picker w-[min(calc(100vw-1.5rem),22.5rem)]"
     >
       {mode === 'emoji' ? (
         <div className="comm-emoji-picker-tabs">
@@ -523,7 +523,7 @@ export default function WhatsAppMediaDrawer({
         </div>
       )}
 
-      <div className="px-4 pt-4">
+      <div className="px-3 pt-3">
         <div className="comm-emoji-search">
           <Search className="comm-emoji-search-icon h-4 w-4" />
           <input
@@ -540,7 +540,7 @@ export default function WhatsAppMediaDrawer({
         </div>
       </div>
 
-      <div className="comm-emoji-picker-scroll overflow-y-auto px-4 pb-4 pt-4" style={{ height: 420 }}>
+      <div className="comm-emoji-picker-scroll overflow-y-auto px-3 pb-3 pt-3" style={{ height: 320 }}>
         {mode === 'emoji' ? (
           searchQuery.trim() ? (
             emojiSearchResults && emojiSearchResults.length > 0 ? (
@@ -549,7 +549,7 @@ export default function WhatsAppMediaDrawer({
                   <h3 className="comm-emoji-picker-section-title">Resultados</h3>
                   <span className="comm-emoji-picker-section-meta">{emojiSearchResults.length}</span>
                 </div>
-                <div className="grid grid-cols-6 gap-1.5">
+                <div className="grid grid-cols-6 gap-1">
                   {emojiSearchResults.map((item) => (
                     <button
                       key={`${item.emoji}-${item.label}`}
@@ -571,12 +571,12 @@ export default function WhatsAppMediaDrawer({
           ) : (
             <div className="space-y-5">
               {recentEmojiItems.length > 0 ? (
-                <section ref={(element) => { sectionRefs.current.recent = element; }} className="space-y-3">
+                <section ref={(element) => { sectionRefs.current.recent = element; }} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <h3 className="comm-emoji-picker-section-title">Recentes</h3>
                     <span className="comm-emoji-picker-section-meta">{recentEmojiItems.length}</span>
                   </div>
-                  <div className="grid grid-cols-6 gap-1.5">
+                  <div className="grid grid-cols-6 gap-1">
                     {recentEmojiItems.map((item) => (
                       <button
                         key={`recent-${item.emoji}`}
@@ -598,13 +598,13 @@ export default function WhatsAppMediaDrawer({
                   ref={(element) => {
                     sectionRefs.current[category.id] = element;
                   }}
-                  className="space-y-3"
+                  className="space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="comm-emoji-picker-section-title">{category.label}</h3>
                     <span className="comm-emoji-picker-section-meta">{category.items.length}</span>
                   </div>
-                  <div className="grid grid-cols-6 gap-1.5">
+                  <div className="grid grid-cols-6 gap-1">
                     {category.items.map((item) => (
                       <button
                         key={`${category.id}-${item.emoji}`}

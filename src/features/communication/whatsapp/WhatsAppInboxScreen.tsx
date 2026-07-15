@@ -8705,6 +8705,7 @@ export default function WhatsAppInboxScreen() {
 
   const handleToggleMediaDrawer = useCallback(() => {
     setAttachmentMenuOpen(false);
+    setComposerAiMenuOpen(false);
     setMediaDrawerOpen((current) => !current);
   }, []);
 
@@ -9891,7 +9892,7 @@ export default function WhatsAppInboxScreen() {
                 )}
               </div>
 
-              <div className="whatsapp-inbox-composer-area border-t p-4 sm:p-5">
+              <div className="whatsapp-inbox-composer-area border-t p-2.5 sm:p-3">
                 <div className={`whatsapp-inbox-composer rounded-xl border ${isVoiceComposerMode ? 'is-voice-mode px-0 py-0' : `px-3 ${isComposerExpanded ? 'py-2.5' : 'py-1.5'}`}`}>
                   <input
                     ref={fileInputRef}
@@ -10085,7 +10086,7 @@ export default function WhatsAppInboxScreen() {
                             onClick={handleToggleMediaDrawer}
                             disabled={!selectedChat}
                             className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${mediaDrawerOpen ? 'is-open' : ''}`}
-                            aria-label="Emojis"
+                            aria-label="Emoji, GIF e figurinha"
                             aria-expanded={mediaDrawerOpen}
                             title="Emoji, GIF e figurinha"
                           >
@@ -10114,7 +10115,7 @@ export default function WhatsAppInboxScreen() {
                             type="button"
                             onClick={handleComposerSubmit}
                             disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
-                            className="whatsapp-inbox-composer-action is-active inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60"
+                            className="whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition disabled:cursor-not-allowed disabled:opacity-60"
                             aria-label="Enviar documento"
                             title={sendDisabledReason ?? undefined}
                           >
@@ -10219,7 +10220,7 @@ export default function WhatsAppInboxScreen() {
                           onClick={handleToggleMediaDrawer}
                           disabled={!selectedChat}
                           className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${mediaDrawerOpen ? 'is-open' : ''}`}
-                          aria-label="Emojis"
+                          aria-label="Emoji, GIF e figurinha"
                           aria-expanded={mediaDrawerOpen}
                           title="Emoji, GIF e figurinha"
                         >
@@ -10248,7 +10249,7 @@ export default function WhatsAppInboxScreen() {
                           type="button"
                           onClick={handleComposerSubmit}
                           disabled={generatingFollowUp || Boolean(sendDisabledReason) || sending}
-                          className="whatsapp-inbox-composer-action is-active inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition disabled:cursor-not-allowed disabled:opacity-60"
+                          className="whatsapp-inbox-composer-action is-active inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] transition disabled:cursor-not-allowed disabled:opacity-60"
                           aria-label="Enviar mídia"
                           title={sendDisabledReason ?? undefined}
                         >
@@ -10365,11 +10366,11 @@ export default function WhatsAppInboxScreen() {
                   <div className={`flex gap-1.5 sm:gap-2 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                     <div ref={attachmentMenuRef} className={`relative flex shrink-0 gap-0.5 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       {attachmentMenuOpen && (
-                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-3 min-w-[228px] overflow-hidden rounded-2xl border p-2 shadow-2xl">
+                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-2 min-w-[208px] overflow-hidden rounded-[var(--radius-lg)] border p-1.5 shadow-xl" role="dialog" aria-label="Anexar arquivo">
                           <button
                             type="button"
                             onClick={() => handleAttachmentMenuAction('document')}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--text-secondary)]">
                               <FileText className="h-4 w-4" />
@@ -10379,7 +10380,7 @@ export default function WhatsAppInboxScreen() {
                           <button
                             type="button"
                             onClick={() => handleAttachmentMenuAction('media')}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
                               <Images className="h-4 w-4" />
@@ -10389,30 +10390,23 @@ export default function WhatsAppInboxScreen() {
                           <button
                             type="button"
                             onClick={() => handleAttachmentMenuAction('audio')}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left"
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
                               <FileAudio className="h-4 w-4" />
                             </span>
                             <span>Áudio</span>
                           </button>
-                          <button
-                            type="button"
-                            disabled
-                            className="whatsapp-inbox-attach-menu-item is-disabled flex w-full items-center gap-3 px-3 py-2.5 text-left"
-                          >
-                            <span className="whatsapp-inbox-attach-menu-icon text-[var(--text-muted)]">
-                              <UserRound className="h-4 w-4" />
-                            </span>
-                            <span>Contato</span>
-                            <span className="whatsapp-inbox-attach-menu-badge ml-auto text-[10px] font-medium">Em breve</span>
-                          </button>
                         </div>
                       )}
 
                       <button
                           type="button"
-                          onClick={() => setAttachmentMenuOpen((current) => !current)}
+                          onClick={() => {
+                            setComposerAiMenuOpen(false);
+                            setMediaDrawerOpen(false);
+                            setAttachmentMenuOpen((current) => !current);
+                          }}
                           disabled={voiceRecordingState !== 'idle' || generatingFollowUp}
                           className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${attachmentMenuOpen ? 'is-open' : ''}`}
                           aria-label="Anexar"
@@ -10426,7 +10420,7 @@ export default function WhatsAppInboxScreen() {
                           onClick={handleToggleMediaDrawer}
                           disabled={!selectedChat}
                           className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${mediaDrawerOpen ? 'is-open' : ''}`}
-                        aria-label="Emojis"
+                        aria-label="Emoji, GIF e figurinha"
                           aria-expanded={mediaDrawerOpen}
                           title="Emoji, GIF e figurinha"
                       >
@@ -10436,7 +10430,7 @@ export default function WhatsAppInboxScreen() {
 
                     <div ref={composerAiMenuRef} className={`relative flex shrink-0 ${isComposerExpanded ? 'items-end' : 'items-center'}`}>
                       {composerAiMenuOpen ? (
-                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-3 min-w-[238px] overflow-hidden rounded-2xl border p-2 shadow-2xl">
+                        <div className="whatsapp-inbox-attach-menu absolute bottom-full left-0 z-[20] mb-2 min-w-[216px] overflow-hidden rounded-[var(--radius-lg)] border p-1.5 shadow-xl" role="dialog" aria-label="Ações de inteligência artificial">
                           <button
                             type="button"
                             onClick={() => {
@@ -10444,7 +10438,7 @@ export default function WhatsAppInboxScreen() {
                               handleQuickRewriteComposerText('grammar');
                             }}
                             disabled={Boolean(composerRewriteDisabledReason) || rewritingComposer}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
                             title={composerRewriteDisabledReason ?? 'Corrigir texto com IA'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
@@ -10459,7 +10453,7 @@ export default function WhatsAppInboxScreen() {
                               handleQuickRewriteComposerText('adapt_context');
                             }}
                             disabled={Boolean(composerRewriteDisabledReason) || rewritingComposer}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
                             title={composerRewriteDisabledReason ?? 'Adaptar texto ao contexto'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--brand-primary)]">
@@ -10474,7 +10468,7 @@ export default function WhatsAppInboxScreen() {
                               handleOpenComposerRewriteModal();
                             }}
                             disabled={Boolean(composerRewriteDisabledReason)}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
                             title={composerRewriteDisabledReason ?? 'Abrir opções de reescrita'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
@@ -10489,7 +10483,7 @@ export default function WhatsAppInboxScreen() {
                               void handleGenerateReplySuggestion(true);
                             }}
                             disabled={Boolean(replySuggestionDisabledReason) || replySuggestionLoading}
-                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-3 px-3 py-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                            className="whatsapp-inbox-attach-menu-item flex w-full items-center gap-2.5 px-2.5 py-2 text-left disabled:cursor-not-allowed disabled:opacity-50"
                             title={replySuggestionDisabledReason ?? 'Sugerir resposta com IA'}
                           >
                             <span className="whatsapp-inbox-attach-menu-icon text-[var(--accent-gold-hover)]">
@@ -10507,7 +10501,7 @@ export default function WhatsAppInboxScreen() {
                                 handleApplyComposerTextFormat('bold');
                               }}
                               disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-8 items-center justify-center rounded-xl text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
+                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-[var(--radius-sm)] text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label="Negrito"
                               title="Negrito"
                             >
@@ -10521,7 +10515,7 @@ export default function WhatsAppInboxScreen() {
                                 handleApplyComposerTextFormat('italic');
                               }}
                               disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-8 items-center justify-center rounded-xl text-sm italic transition disabled:cursor-not-allowed disabled:opacity-50"
+                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-[var(--radius-sm)] text-xs italic transition disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label="Italico"
                               title="Italico"
                             >
@@ -10535,7 +10529,7 @@ export default function WhatsAppInboxScreen() {
                                 handleApplyComposerTextFormat('strike');
                               }}
                               disabled={generatingFollowUp}
-                              className="whatsapp-inbox-composer-icon inline-flex h-8 items-center justify-center rounded-xl text-sm line-through transition disabled:cursor-not-allowed disabled:opacity-50"
+                              className="whatsapp-inbox-composer-icon inline-flex h-7 items-center justify-center rounded-[var(--radius-sm)] text-xs line-through transition disabled:cursor-not-allowed disabled:opacity-50"
                               aria-label="Riscado"
                               title="Riscado"
                             >
@@ -10546,7 +10540,11 @@ export default function WhatsAppInboxScreen() {
                       ) : null}
                       <button
                         type="button"
-                        onClick={() => setComposerAiMenuOpen((current) => !current)}
+                        onClick={() => {
+                          setAttachmentMenuOpen(false);
+                          setMediaDrawerOpen(false);
+                          setComposerAiMenuOpen((current) => !current);
+                        }}
                         disabled={Boolean(composerRewriteDisabledReason) && Boolean(replySuggestionDisabledReason)}
                         className={`whatsapp-inbox-composer-icon inline-flex h-10 w-10 items-center justify-center rounded-xl transition ${composerAiMenuOpen || composerRewriteModalOpen || replySuggestionLoading || replySuggestionText ? 'is-open' : ''}`}
                         aria-label="Ações com IA"
@@ -10644,7 +10642,7 @@ export default function WhatsAppInboxScreen() {
                         type="button"
                         onClick={handleComposerSubmit}
                         disabled={generatingFollowUp || Boolean(sendDisabledReason) || voiceRecordingState === 'requesting'}
-                        className={`whatsapp-inbox-composer-action inline-flex h-11 w-11 items-center justify-center rounded-xl transition ${hasSendPayload ? 'is-active' : ''} ${generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
+                        className={`whatsapp-inbox-composer-action inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] transition ${hasSendPayload ? 'is-active' : ''} ${generatingFollowUp || voiceRecordingState === 'requesting' ? 'cursor-wait opacity-70' : ''}`}
                         aria-label={voiceRecordingState === 'requesting' ? 'Solicitando microfone' : hasSendPayload ? 'Enviar mensagem' : 'Gravar áudio'}
                         title={sendDisabledReason ?? undefined}
                       >

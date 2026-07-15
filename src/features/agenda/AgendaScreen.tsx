@@ -56,7 +56,6 @@ import {
   EmptyState,
   Field,
   Input,
-  KpiCard,
   LoadingState,
   OperationalMetricChip,
   PageHeader,
@@ -65,6 +64,7 @@ import {
   PopoverTrigger,
   SectionHeader,
   Surface,
+  Tabs,
   Textarea,
   type SurfaceVariant,
 } from "../../design-system";
@@ -1099,7 +1099,6 @@ export default function AgendaScreen() {
   const pendingFilteredCount = filteredReminders.filter((item) => !item.lido).length;
   const completedFilteredCount = filteredReminders.filter((item) => item.lido).length;
   const overdueFilteredCount = filteredReminders.filter((item) => isOverdue(item.data_lembrete) && !item.lido).length;
-  const taskFilteredCount = filteredReminders.filter((item) => item.tipo === "Tarefa").length;
   const lastUpdatedLabel = lastUpdated
     ? `Atualizado em ${lastUpdated.toLocaleDateString("pt-BR")} as ${lastUpdated.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
@@ -1405,7 +1404,7 @@ export default function AgendaScreen() {
                   disabled={!hasLeadPhone}
                   variant="soft"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-10 w-10"
                   title={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
                   aria-label={hasLeadPhone ? "Abrir WhatsApp oficial" : "Telefone nao disponivel"}
                 >
@@ -1415,7 +1414,7 @@ export default function AgendaScreen() {
                   <>
                     <Popover open={quickScheduleDropdownId === reminder.id} onOpenChange={(open) => setQuickScheduleDropdownId(open ? reminder.id : null)}>
                       <PopoverTrigger className="inline-flex">
-                        <Button type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" size="icon" className="h-8 w-8" title="Agendar dias uteis e marcar atual como lido" aria-label="Agendar dias uteis e marcar atual como lido">
+                        <Button type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" size="icon" className="h-10 w-10" title="Agendar dias uteis e marcar atual como lido" aria-label="Agendar dias uteis e marcar atual como lido">
                           {isQuickSchedulingCurrentReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                             <span className="relative inline-flex">
                               <CalendarPlus className="h-4 w-4" />
@@ -1452,7 +1451,7 @@ export default function AgendaScreen() {
                   onClick={handleCardAction(() => handleMarkAsRead(reminder.id, reminder.lido))}
                   variant={reminder.lido ? "secondary" : "soft"}
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-10 w-10"
                   title={reminder.lido ? "Marcar como nao lido" : "Marcar como lido"}
                   aria-label={reminder.lido ? "Marcar como nao lido" : "Marcar como lido"}
                 >
@@ -1463,7 +1462,7 @@ export default function AgendaScreen() {
                     onClick={handleCardAction(() => setReschedulingReminderId(reminder.id))}
                     variant="secondary"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-10 w-10"
                     title="Reagendar item"
                     aria-label="Reagendar item"
                   >
@@ -1475,7 +1474,7 @@ export default function AgendaScreen() {
                     onClick={handleCardAction(() => handleMarkLeadAsLost(reminder))}
                     variant="danger"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-10 w-10"
                     title="Marcar lead como perdido e limpar lembretes"
                     aria-label="Marcar lead como perdido e limpar lembretes"
                     disabled={markingLostLeadId === leadId}
@@ -1488,7 +1487,7 @@ export default function AgendaScreen() {
                   onClick={handleCardAction(() => handleDelete(reminder.id))}
                   variant="danger"
                   size="icon"
-                  className="h-8 w-8"
+                  className="h-10 w-10"
                   title="Excluir item"
                   aria-label="Excluir item"
                 >
@@ -1514,32 +1513,27 @@ export default function AgendaScreen() {
       <div className="panel-page-shell space-y-6">
         <PageHeader
           eyebrow="Rotina operacional"
-          title="Agenda unificada"
-          description="Tarefas e lembretes compartilham o mesmo calendario, com filtros, contexto do lead e acoes rapidas no mesmo fluxo."
+          title="Agenda"
+          description="Planeje o dia, trate pendências e mantenha cada próximo passo no contexto do lead."
           actions={(
             <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-              <OperationalMetricChip value={filteredMonthReminders.length} label="itens no mes" />
               <OperationalMetricChip value={pendingFilteredCount} label="pendentes" tone="accent" />
               <OperationalMetricChip value={overdueFilteredCount} label="atrasados" tone="danger" active={overdueFilteredCount > 0} />
+              <Button onClick={() => setOrganizerOpen(true)} variant="secondary" size="sm">
+                <Sparkles className="h-4 w-4" />
+                Organizar
+              </Button>
+              <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="sm">
+                <Plus className="h-4 w-4" />
+                Nova tarefa
+              </Button>
             </div>
           )}
         />
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[
-            { label: "Pendentes", value: pendingFilteredCount, tone: "accent" as const },
-            { label: "Concluidos", value: completedFilteredCount, tone: "success" as const },
-            { label: "Atrasados", value: overdueFilteredCount, tone: "danger" as const },
-            { label: "Tarefas", value: taskFilteredCount, tone: "neutral" as const },
-          ].map((item) => (
-            <KpiCard key={item.label} title={item.label} value={String(item.value)} padding="sm">
-              <Badge tone={item.tone} size="xs">Visao filtrada</Badge>
-            </KpiCard>
-          ))}
-        </div>
-
-        <Surface variant="muted" padding="none" className="kds-op-toolbar">
-              <div className="kds-op-toolbar-search relative">
+        <Surface padding="md" className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(10rem,1fr))]">
+            <div className="relative">
                 <Input
                   type="text"
                   placeholder="Buscar por titulo, descricao, tipo ou lead..."
@@ -1559,29 +1553,8 @@ export default function AgendaScreen() {
                     <X className="h-5 w-5" />
                   </Button>
                 )}
-              </div>
-
-              <div className="kds-op-toolbar-actions">
-                <Button onClick={goToToday} variant="secondary" size="sm">
-                  Hoje
-                </Button>
-                <Button onClick={() => setOrganizerOpen(true)} variant="primary" size="sm">
-                  <Sparkles className="h-4 w-4" />
-                  Organizar follow-ups
-                </Button>
-                <Button onClick={() => setIsAddTaskModalOpen(true)} variant="primary" size="sm">
-                  <Plus className="h-4 w-4" />
-                  Nova tarefa
-                </Button>
-                {filteredReminders.some((item) => !item.lido) && (
-                  <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="sm" className="whitespace-nowrap">
-                    Marcar filtrados como lidos
-                  </Button>
-                )}
-              </div>
-
-              <div className="grid min-w-0 flex-1 basis-full grid-cols-1 gap-2 md:grid-cols-3">
-                <FilterSingleSelect
+            </div>
+            <FilterSingleSelect
                   icon={Tag}
                   value={typeFilter}
                   onChange={setTypeFilter}
@@ -1589,7 +1562,7 @@ export default function AgendaScreen() {
                   includePlaceholderOption={false}
                   options={typeOptions}
                 />
-                <FilterSingleSelect
+            <FilterSingleSelect
                   icon={AlertCircle}
                   value={priorityFilter}
                   onChange={setPriorityFilter}
@@ -1597,7 +1570,7 @@ export default function AgendaScreen() {
                   includePlaceholderOption={false}
                   options={PRIORITY_OPTIONS}
                 />
-                <FilterSingleSelect
+            <FilterSingleSelect
                   icon={Calendar}
                   value={timeFilter}
                   onChange={(val) => setTimeFilter(val as AgendaTimeFilter)}
@@ -1605,68 +1578,48 @@ export default function AgendaScreen() {
                   includePlaceholderOption={false}
                   options={TIME_FILTER_OPTIONS}
                 />
-              </div>
-              <div className="kds-op-toolbar-actions">
+          </div>
+          <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-3 lg:flex-row lg:items-center lg:justify-between">
+            <Tabs
+              items={[
+                { id: "nao-lidos", label: "Pendentes", badge: pendingFilteredCount },
+                { id: "todos", label: "Todos" },
+                { id: "lidos", label: "Concluídos", badge: completedFilteredCount },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              variant="underline"
+              listClassName="flex-nowrap overflow-x-auto border-0 p-0"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={goToToday} variant="secondary" size="sm">Hoje</Button>
+              {filteredReminders.some((item) => !item.lido) && (
+                <Button onClick={() => void handleMarkAllFilteredAsRead()} variant="soft" size="sm">
+                  Marcar como lidos
+                </Button>
+              )}
+              {hasActiveFilters > 0 && (
                 <Button
-                  onClick={() => setStatusFilter("nao-lidos")}
-                  variant={statusFilter === "nao-lidos" ? "primary" : "secondary"}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setTypeFilter("all");
+                    setPriorityFilter("all");
+                    setTimeFilter("todos");
+                    setStatusFilter("todos");
+                  }}
+                  variant="ghost"
                   size="sm"
                 >
-                  Pendentes
+                  Limpar filtros ({hasActiveFilters})
                 </Button>
-                <Button
-                  onClick={() => setStatusFilter("todos")}
-                  variant={statusFilter === "todos" ? "primary" : "secondary"}
-                  size="sm"
-                >
-                  Todos
-                </Button>
-                <Button
-                  onClick={() => setStatusFilter("lidos")}
-                  variant={statusFilter === "lidos" ? "primary" : "secondary"}
-                  size="sm"
-                >
-                  Concluidos
-                </Button>
-                {hasActiveFilters > 0 && (
-                  <Button
-                    onClick={() => {
-                      setSearchQuery("");
-                      setTypeFilter("all");
-                      setPriorityFilter("all");
-                      setStatusFilter("todos");
-                    }}
-                    variant="ghost"
-                    size="sm"
-                    className="whitespace-nowrap"
-                  >
-                    Limpar filtros ({hasActiveFilters})
-                  </Button>
-                )}
-              </div>
+              )}
+            </div>
+          </div>
         </Surface>
 
-        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-          <OperationalMetricChip
-            icon={<Clock3 className="h-3.5 w-3.5" />}
-            value={lastUpdatedLabel}
-          />
-
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <Badge tone="accent" className="gap-2">
-              <Circle className="h-3 w-3" />
-              <span>Itens pendentes</span>
-            </Badge>
-            <Badge tone="success" className="gap-2">
-              <CheckCircle2 className="h-3 w-3" />
-              <span>Itens concluidos</span>
-            </Badge>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(360px,0.82fr)_minmax(0,1.18fr)]">
-          <Surface padding="none" className="overflow-hidden xl:sticky xl:top-4 xl:self-start">
-            <Surface variant="muted" padding="sm" className="flex items-center justify-between gap-2 rounded-none border-x-0 border-t-0 px-4 py-3">
+        <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.28fr)]">
+          <Surface padding="md" className="space-y-4 2xl:sticky 2xl:top-4 2xl:self-start">
+            <div className="flex items-center justify-between gap-2">
                 <Button onClick={goToPreviousMonth} variant="icon" size="icon" aria-label="Mes anterior">
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
@@ -1681,12 +1634,17 @@ export default function AgendaScreen() {
                 <Button onClick={goToNextMonth} variant="icon" size="icon" aria-label="Proximo mes">
                   <ChevronRight className="h-5 w-5" />
                 </Button>
-            </Surface>
-            <div className="p-4">{renderCalendar()}</div>
+            </div>
+            <div>{renderCalendar()}</div>
+            <div className="flex flex-wrap gap-3 border-t border-[var(--border-subtle)] pt-3 text-xs text-[var(--text-muted)]">
+              <span className="inline-flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-[var(--brand-primary)] text-[var(--brand-primary)]" /> Pendentes</span>
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-3.5 w-3.5 text-[var(--success)]" /> Concluídos</span>
+              <span className="ml-auto">{lastUpdatedLabel}</span>
+            </div>
           </Surface>
 
           <Surface padding="none" className="overflow-hidden">
-            <Surface padding="sm" className="sticky top-0 z-10 rounded-none border-x-0 border-t-0 px-4 py-4">
+            <div className="sticky top-0 z-10 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-5">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <SectionHeader
                     eyebrow="Dia selecionado"
@@ -1733,24 +1691,20 @@ export default function AgendaScreen() {
                     {error}
                   </Alert>
                 )}
-            </Surface>
+            </div>
 
             <div className={`max-h-[calc(100vh-18rem)] min-h-96 overflow-y-auto px-4 py-4 ${selectedDateDensity === "compact" ? "space-y-3" : "space-y-4"}`}>
                 {selectedDateSections.length > 0 ? (
                   selectedDateSections.map((section) => (
                     <section key={section.id} className="space-y-2">
-                      <Surface
-                        variant={section.tone === "accent" ? "strong" : section.tone}
-                        padding="sm"
-                        className="sticky top-0 z-10 -mx-1 py-2"
-                      >
+                      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] py-2">
                         <SectionHeader
                           as="h3"
                           title={section.title}
                           description={section.description}
-                          action={<Badge size="sm" tone={section.tone}>{section.items.length}</Badge>}
                         />
-                      </Surface>
+                        <Badge size="sm" tone={section.tone}>{section.items.length}</Badge>
+                      </div>
                       <div className={selectedDateDensity === "compact" ? "space-y-2" : "space-y-3"}>
                         {section.items.map(renderReminderCard)}
                       </div>

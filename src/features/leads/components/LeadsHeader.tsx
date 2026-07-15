@@ -66,6 +66,7 @@ export function LeadsHeader({
             value={viewMode}
             onChange={onViewModeChange}
             variant="pill"
+            size="md"
             listClassName="w-full sm:w-auto"
             triggerClassName="flex-1 sm:flex-initial"
           />
@@ -83,7 +84,7 @@ export function LeadsHeader({
             rel="noopener noreferrer"
             className={getPanelButtonClass({
               variant: "secondary",
-              size: "sm",
+              size: "md",
               className: "w-full sm:w-auto",
             })}
             title="Documentacao da API"
@@ -97,7 +98,7 @@ export function LeadsHeader({
             onClick={onRefresh}
             disabled={loading}
             variant="secondary"
-            size="sm"
+            size="md"
             className="w-full sm:w-auto"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -108,7 +109,7 @@ export function LeadsHeader({
             type="button"
             onClick={onToggleArchived}
             variant={showArchived ? "warning" : "soft"}
-            size="sm"
+            size="md"
             className="w-full sm:w-auto"
             aria-pressed={showArchived}
           >
@@ -120,7 +121,7 @@ export function LeadsHeader({
             type="button"
             onClick={onCreateLead}
             disabled={!canEditLeads}
-            size="sm"
+            size="md"
             className="w-full sm:w-auto"
             title={
               !canEditLeads

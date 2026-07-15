@@ -1580,7 +1580,7 @@ export default function LeadsManager({
                 type="button"
                 onClick={resetFilters}
                 variant="soft"
-                size="sm"
+                size="md"
                 className="whitespace-nowrap"
               >
                 <Filter className="h-4 w-4" />
@@ -1590,7 +1590,7 @@ export default function LeadsManager({
                 type="button"
                 onClick={handleExportFilteredLeads}
                 variant="secondary"
-                size="sm"
+                size="md"
                 className="whitespace-nowrap"
               >
                 <Download className="h-4 w-4" />
@@ -1600,7 +1600,7 @@ export default function LeadsManager({
                 type="button"
                 onClick={handleExportCurrentPage}
                 variant="secondary"
-                size="sm"
+                size="md"
                 className="whitespace-nowrap"
               >
                 <Download className="h-4 w-4" />

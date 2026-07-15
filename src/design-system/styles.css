@@ -1007,7 +1007,7 @@
 .kds-tab {
   color: var(--text-muted);
   font: var(--type-button);
-  min-height: 3rem;
+  min-height: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   letter-spacing: 0.01em;
@@ -1062,7 +1062,6 @@
 }
 
 .kds-tabs-list-pill .kds-tab {
-  min-height: 2.25rem;
   border-color: var(--border-strong);
   border-radius: var(--radius-full);
   background: transparent;
@@ -3606,6 +3605,10 @@
   border-radius: var(--radius-md);
   padding: 0.5rem 0.75rem;
 }
+
+.kds-op-chip-sm { min-height: 2rem; padding: 0.35rem 0.625rem; }
+.kds-op-chip-md { min-height: 2.5rem; }
+.kds-op-chip-lg { min-height: 3rem; padding: 0.625rem 0.875rem; }
 
 .kds-op-chip.is-active,
 .kds-op-chip:hover {

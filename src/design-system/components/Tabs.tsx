@@ -5,6 +5,7 @@ import {
   getPanelTabsTriggerClass,
   panelTabsBadgeClass,
   type PanelTabsVariant,
+  type PanelTabsSize,
 } from '../tokens';
 
 export type TabItem<T extends string> = {
@@ -16,12 +17,14 @@ export type TabItem<T extends string> = {
 };
 
 export type TabsVariant = PanelTabsVariant;
+export type TabsSize = PanelTabsSize;
 
 export type TabsProps<T extends string> = {
   items: readonly TabItem<T>[];
   value: T;
   onChange: (next: T) => void;
   variant?: TabsVariant;
+  size?: TabsSize;
   className?: string;
   listClassName?: string;
   triggerClassName?: string;
@@ -32,6 +35,7 @@ export default function Tabs<T extends string>({
   value,
   onChange,
   variant = 'underline',
+  size = 'md',
   className,
   listClassName,
   triggerClassName,
@@ -58,6 +62,7 @@ export default function Tabs<T extends string>({
               className={getPanelTabsTriggerClass({
                 variant,
                 isActive,
+                size,
                 className: triggerClassName,
               })}
             >

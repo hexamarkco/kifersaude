@@ -3,6 +3,7 @@ import type { CSSProperties, HTMLAttributes, ReactNode } from 'react';
 import { cx } from '../../lib/cx';
 
 export type OperationalTone = 'neutral' | 'accent' | 'gold' | 'success' | 'warning' | 'danger' | 'info';
+export type OperationalMetricChipSize = 'sm' | 'md' | 'lg';
 
 export type OperationalMetricChipProps = HTMLAttributes<HTMLSpanElement> & {
   icon?: ReactNode;
@@ -10,6 +11,7 @@ export type OperationalMetricChipProps = HTMLAttributes<HTMLSpanElement> & {
   label?: ReactNode;
   tone?: OperationalTone;
   active?: boolean;
+  size?: OperationalMetricChipSize;
 };
 
 export function OperationalMetricChip({
@@ -18,12 +20,13 @@ export function OperationalMetricChip({
   label,
   tone = 'neutral',
   active = false,
+  size = 'md',
   className,
   ...props
 }: OperationalMetricChipProps) {
   return (
     <span
-      className={cx('kds-op-chip', `kds-op-chip-${tone}`, active && 'is-active', className)}
+      className={cx('kds-op-chip', `kds-op-chip-${tone}`, `kds-op-chip-${size}`, active && 'is-active', className)}
       {...props}
     >
       {icon && <span className="kds-op-chip-icon">{icon}</span>}

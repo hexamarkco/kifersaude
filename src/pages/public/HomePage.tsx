@@ -22,13 +22,7 @@ import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
 import { Input } from '../../design-system';
 import { formatPhoneInput } from '../../lib/inputFormatters';
-import {
-  getSupabaseErrorMessage,
-  supabase,
-  type ConfigOption,
-  type LeadOrigem,
-  type LeadStatusConfig,
-} from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
 
 type ContractKind = 'PF' | 'MEI' | 'CNPJ';
@@ -40,10 +34,6 @@ type QuoteFormValues = {
   tipoContratacao: ContractKind;
   numeroVidas: string;
   idadeTitular: string;
-};
-
-type ContractTypeRow = ConfigOption & {
-  nome?: string | null;
 };
 
 type PartnerLogo = {
@@ -201,12 +191,6 @@ const createInitialAgeRangeCounts = () =>
     return accumulator;
   }, {} as Record<(typeof AGE_RANGES)[number], string>);
 
-const normalizeText = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-
 const buildWhatsAppUrl = (message: string) => `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
 
 const normalizeLeadPhone = (value: string) => {
@@ -217,37 +201,6 @@ const normalizeLeadPhone = (value: string) => {
   }
 
   return digits.slice(0, 11);
-};
-
-const findOriginId = (origins: LeadOrigem[]) => {
-  const priorities = ['site', 'home', 'inicio', 'organico', 'organico site', 'landing'];
-  const match = origins.find((origin) => {
-    const normalized = normalizeText(origin.nome);
-    return priorities.some((term) => normalized.includes(term));
-  });
-
-  return match?.id ?? origins[0]?.id ?? null;
-};
-
-const findStatusId = (statuses: LeadStatusConfig[]) => {
-  const match = statuses.find((status) => normalizeText(status.nome).includes('novo'));
-  return match?.id ?? statuses[0]?.id ?? null;
-};
-
-const resolveContractTypeId = (rows: ContractTypeRow[], contractKind: ContractKind) => {
-  const aliases: Record<ContractKind, string[]> = {
-    PF: ['pf', 'pessoa fisica', 'pessoa fisica individual', 'individual', 'familiar'],
-    MEI: ['mei', 'pme', 'empresa', 'empresarial', 'cnpj', 'pj'],
-    CNPJ: ['cnpj', 'pme', 'empresa', 'empresarial', 'pj', 'coletivo empresarial'],
-  };
-
-  const targets = aliases[contractKind];
-  const match = rows.find((row) => {
-    const candidate = normalizeText(`${row.label} ${row.value} ${row.nome ?? ''}`);
-    return targets.some((target) => candidate.includes(target));
-  });
-
-  return match?.id ?? null;
 };
 
 const normalizePublicMetric = (value: unknown): PublicMetric | null => {
@@ -308,9 +261,6 @@ export default function HomePage() {
     idadeTitular: '',
   });
   const [ageRangeCounts, setAgeRangeCounts] = useState(createInitialAgeRangeCounts());
-  const [origins, setOrigins] = useState<LeadOrigem[]>([]);
-  const [statuses, setStatuses] = useState<LeadStatusConfig[]>([]);
-  const [contractTypeRows, setContractTypeRows] = useState<ContractTypeRow[]>([]);
   const [publicMetrics, setPublicMetrics] = useState<PublicMetric[]>(fallbackPublicMetrics);
   const [submitting, setSubmitting] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
@@ -333,32 +283,6 @@ export default function HomePage() {
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-
-    const loadPublicData = async () => {
-      const [originsResponse, statusesResponse, contractTypesResponse] = await Promise.all([
-        supabase.from('lead_origens').select('*').eq('ativo', true),
-        supabase.from('lead_status_config').select('*').eq('ativo', true).order('ordem', { ascending: true }),
-        supabase.from('lead_tipos_contratacao').select('*').eq('ativo', true).order('ordem', { ascending: true }),
-      ]);
-
-      if (!active) {
-        return;
-      }
-
-      setOrigins(originsResponse.data ?? []);
-      setStatuses(statusesResponse.data ?? []);
-      setContractTypeRows((contractTypesResponse.data ?? []) as ContractTypeRow[]);
-    };
-
-    void loadPublicData();
-
-    return () => {
-      active = false;
     };
   }, []);
 
@@ -444,6 +368,7 @@ export default function HomePage() {
     const cleanName = formData.nome.trim();
     const cleanCity = formData.cidade.trim();
     const cleanPhone = normalizeLeadPhone(formData.telefone);
+    const website = new FormData(event.currentTarget).get('website');
 
     if (cleanName.length < 3) {
       toast.warning('Preencha seu nome completo para continuar.');
@@ -465,6 +390,11 @@ export default function HomePage() {
       return;
     }
 
+    if (totalLives > 99) {
+      toast.warning('Informe no maximo 99 vidas no contrato.');
+      return;
+    }
+
     if (totalLives > 1 && filledAgeRanges.length === 0) {
       toast.warning('Distribua as vidas nas faixas etárias para continuar.');
       return;
@@ -480,6 +410,12 @@ export default function HomePage() {
       return;
     }
 
+    const holderAge = Number(formData.idadeTitular);
+    if (totalLives === 1 && (!Number.isInteger(holderAge) || holderAge < 0 || holderAge > 120)) {
+      toast.warning('Informe uma idade valida para prosseguir.');
+      return;
+    }
+
     const agesText =
       totalLives === 1
         ? `1 vida - idade: ${formData.idadeTitular.trim()}`
@@ -488,39 +424,46 @@ export default function HomePage() {
     setSubmitting(true);
 
     const payload = {
-      nome_completo: cleanName,
-      telefone: cleanPhone,
-      cidade: cleanCity,
-      origem_id: findOriginId(origins),
-      status_id: findStatusId(statuses),
-      tipo_contratacao_id: resolveContractTypeId(contractTypeRows, formData.tipoContratacao),
-      observacoes: `Lead site | Visual 11/2025 | Tipo: ${formData.tipoContratacao} | Cidade: ${cleanCity} | Beneficiários: ${agesText}`,
-      data_criacao: new Date().toISOString(),
-      ultimo_contato: new Date().toISOString(),
-      arquivado: false,
+      name: cleanName,
+      phone: cleanPhone,
+      city: cleanCity,
+      contractType: formData.tipoContratacao,
+      totalLives,
+      ageSummary:
+        totalLives === 1
+          ? { type: 'single', age: holderAge }
+          : {
+              type: 'ranges',
+              counts: Object.fromEntries(
+                AGE_RANGES.map((range) => [range.replace(/\s+/g, ''), Number.parseInt(ageRangeCounts[range], 10) || 0]),
+              ),
+            },
+      website: typeof website === 'string' ? website : '',
     };
 
-    const { error } = await supabase.from('leads').insert([payload]);
+    try {
+      const { error } = await supabase.functions.invoke('public-lead-submit', { body: payload });
+      if (error) {
+        throw error;
+      }
 
-    if (error) {
-      toast.error(getSupabaseErrorMessage(error, 'Não foi possível enviar a cotação agora. Tente novamente ou fale no WhatsApp.'));
+      const whatsappMessage = [
+        'Olá! Acabei de preencher a cotação no site da Kifer.',
+        `Nome: ${cleanName}`,
+        `Cidade: ${cleanCity}`,
+        `Tipo: ${formData.tipoContratacao}`,
+        `Beneficiários: ${agesText}`,
+      ].join('\n');
+
+      openWhatsApp(whatsappMessage);
+      toast.success('Cotação enviada com sucesso. Abrimos o WhatsApp para agilizar o atendimento.');
+      resetForm();
+      setShowQuoteModal(false);
+    } catch {
+      toast.error('Não foi possível enviar a cotação agora. Tente novamente ou fale no WhatsApp.');
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    const whatsappMessage = [
-      'Olá! Acabei de preencher a cotação no site da Kifer.',
-      `Nome: ${cleanName}`,
-      `Cidade: ${cleanCity}`,
-      `Tipo: ${formData.tipoContratacao}`,
-      `Beneficiários: ${agesText}`,
-    ].join('\n');
-
-    openWhatsApp(whatsappMessage);
-    toast.success('Cotação enviada com sucesso. Abrimos o WhatsApp para agilizar o atendimento.');
-    resetForm();
-    setShowQuoteModal(false);
-    setSubmitting(false);
   };
 
   const renderQuoteFields = () => (
@@ -655,6 +598,11 @@ export default function HomePage() {
           />
         </div>
       ) : null}
+
+      <div className="absolute h-px w-px overflow-hidden whitespace-nowrap opacity-0 pointer-events-none" aria-hidden="true">
+        <label htmlFor="quote-website">Website</label>
+        <input id="quote-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
     </>
   );
 

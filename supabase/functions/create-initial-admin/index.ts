@@ -36,17 +36,25 @@ Deno.serve(async (req) => {
     }
 
     const bootstrapToken = Deno.env.get('CREATE_INITIAL_ADMIN_TOKEN')?.trim();
-    if (bootstrapToken) {
-      const providedToken = req.headers.get('x-bootstrap-token')?.trim();
-      if (!providedToken || providedToken !== bootstrapToken) {
-        return new Response(
-          JSON.stringify({ error: 'Token de bootstrap invalido.' }),
-          {
-            status: 401,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
+    if (!bootstrapToken) {
+      return new Response(
+        JSON.stringify({ error: 'CREATE_INITIAL_ADMIN_TOKEN deve estar configurado para habilitar o bootstrap.' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    const providedToken = req.headers.get('x-bootstrap-token')?.trim();
+    if (!providedToken || providedToken !== bootstrapToken) {
+      return new Response(
+        JSON.stringify({ error: 'Token de bootstrap invalido.' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -54,12 +62,13 @@ Deno.serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    const { data: existingProfiles } = await serviceClient
+    const { data: existingAdmins } = await serviceClient
       .from('user_profiles')
       .select('id')
+      .eq('role', 'admin')
       .limit(1);
 
-    if (existingProfiles && existingProfiles.length > 0) {
+    if (existingAdmins && existingAdmins.length > 0) {
       return new Response(
         JSON.stringify({ error: 'Já existe um usuário administrador. Esta função só pode ser usada para criar o primeiro admin.' }),
         {
@@ -108,11 +117,28 @@ Deno.serve(async (req) => {
       );
     }
 
+    const userId = authData.user?.id;
+    if (!userId) {
+      throw new Error('Usuario criado sem identificador.');
+    }
+
+    const { data: updatedProfile, error: profileError } = await serviceClient
+      .from('user_profiles')
+      .update({ role: 'admin' })
+      .eq('id', userId)
+      .select('id')
+      .maybeSingle();
+
+    if (profileError || !updatedProfile) {
+      await serviceClient.auth.admin.deleteUser(userId);
+      throw new Error('Nao foi possivel atribuir o perfil administrativo.');
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         message: 'Usuário administrador criado com sucesso',
-        user_id: authData.user?.id
+        user_id: userId
       }),
       {
         status: 200,

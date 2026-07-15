@@ -1,6 +1,5 @@
 import type { IntegrationSetting } from "../../../../lib/supabase";
 
-export const LEGACY_GPT_SLUG = "gpt_transcription";
 export const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
 export const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
 export const AI_PROVIDER_CLAUDE_SLUG = "ai_provider_claude";
@@ -24,7 +23,6 @@ export type ModelOption = { value: string; label: string };
 
 export type AiProviderFormState = {
   enabled: boolean;
-  apiKey: string;
 };
 
 export type AiTaskRouteState = {
@@ -59,12 +57,12 @@ export const AI_PROVIDER_META: Record<AiProvider, AiProviderMeta> = {
   gemini: {
     slug: AI_PROVIDER_GEMINI_SLUG,
     name: "Google Gemini",
-    description: "Conecte sua API key do Gemini para usar modelos da Google.",
+    description: "Use modelos Gemini com a credencial protegida no Edge Secret.",
   },
   claude: {
     slug: AI_PROVIDER_CLAUDE_SLUG,
     name: "Claude (Anthropic)",
-    description: "Conecte sua API key da Anthropic para usar modelos Claude.",
+    description: "Use modelos Claude com a credencial protegida no Edge Secret.",
   },
 };
 
@@ -182,9 +180,9 @@ export const createDefaultProviderForms = (): Record<
   AiProvider,
   AiProviderFormState
 > => ({
-  openai: { enabled: false, apiKey: "" },
-  gemini: { enabled: false, apiKey: "" },
-  claude: { enabled: false, apiKey: "" },
+  openai: { enabled: false },
+  gemini: { enabled: false },
+  claude: { enabled: false },
 });
 
 export const createDefaultRoutingForm = (): AiRoutingFormState => ({
@@ -210,29 +208,11 @@ export const createDefaultRoutingForm = (): AiRoutingFormState => ({
   },
 });
 
-export const normalizeProviderSettings = (
-  provider: AiProvider,
-  integration: IntegrationSetting | null,
-  legacyIntegration: IntegrationSetting | null,
-): AiProviderFormState => {
+export const normalizeProviderSettings = (integration: IntegrationSetting | null): AiProviderFormState => {
   const settings = isRecord(integration?.settings) ? integration.settings : {};
-  const legacySettings = isRecord(legacyIntegration?.settings)
-    ? legacyIntegration.settings
-    : {};
-  const legacyApiKey =
-    provider === "openai" ? toTrimmedString(legacySettings.apiKey) : "";
-  const apiKey = toTrimmedString(settings.apiKey) || legacyApiKey;
-
-  const enabled =
-    typeof settings.enabled === "boolean"
-      ? settings.enabled
-      : provider === "openai"
-        ? apiKey.length > 0
-        : false;
 
   return {
-    enabled,
-    apiKey,
+    enabled: settings.enabled === true,
   };
 };
 

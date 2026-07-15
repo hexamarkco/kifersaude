@@ -13,6 +13,7 @@ import {
   calculateCotadorEstimatedMonthlyTotal,
   buildCotadorQuoteDraft,
   buildCotadorQuoteItemFromCatalogItem,
+  decodeCotadorCatalogItemKey,
   formatCotadorDateTime,
   saveCotadorQuotesToStorage,
   sortCotadorQuotesByRecent,
@@ -265,7 +266,7 @@ export default function CotadorScreen() {
   }, [activeQuote]);
 
   const activePlanCatalogKey = useMemo(
-    () => (catalogItemKey ? decodeURIComponent(catalogItemKey) : null),
+    () => decodeCotadorCatalogItemKey(catalogItemKey),
     [catalogItemKey],
   );
 

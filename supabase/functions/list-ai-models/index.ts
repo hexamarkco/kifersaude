@@ -1,3 +1,8 @@
+// @ts-expect-error Deno npm import
+import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { getAiProviderApiKey, type AiProvider } from '../_shared/ai-router.ts';
+import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -5,10 +10,11 @@ const corsHeaders = {
 };
 
 declare const Deno: {
+  env: {
+    get: (key: string) => string | undefined;
+  };
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
-
-type AiProvider = 'openai' | 'gemini' | 'claude';
 
 type ModelOption = {
   value: string;
@@ -128,16 +134,8 @@ const parseClaudeModels = (payload: unknown): ModelOption[] => {
   return uniqueOptions(options);
 };
 
-const getProviderErrorMessage = async (response: Response, provider: AiProvider): Promise<string> => {
-  const responseText = (await response.text()).trim();
-  const compactError = responseText.replace(/\s+/g, ' ').slice(0, 400);
-
-  if (!compactError) {
-    return `${provider} retornou erro HTTP ${response.status}.`;
-  }
-
-  return `${provider} retornou erro HTTP ${response.status}: ${compactError}`;
-};
+const getProviderErrorMessage = (response: Response, provider: AiProvider): string =>
+  `${provider} retornou erro HTTP ${response.status}.`;
 
 const listOpenAiModels = async (apiKey: string): Promise<ModelOption[]> => {
   const response = await fetch('https://api.openai.com/v1/models', {
@@ -148,7 +146,7 @@ const listOpenAiModels = async (apiKey: string): Promise<ModelOption[]> => {
   });
 
   if (!response.ok) {
-    throw new Error(await getProviderErrorMessage(response, 'openai'));
+    throw new Error(getProviderErrorMessage(response, 'openai'));
   }
 
   const payload = await response.json().catch(() => ({}));
@@ -162,7 +160,7 @@ const listGeminiModels = async (apiKey: string): Promise<ModelOption[]> => {
   });
 
   if (!response.ok) {
-    throw new Error(await getProviderErrorMessage(response, 'gemini'));
+    throw new Error(getProviderErrorMessage(response, 'gemini'));
   }
 
   const payload = await response.json().catch(() => ({}));
@@ -179,7 +177,7 @@ const listClaudeModels = async (apiKey: string): Promise<ModelOption[]> => {
   });
 
   if (!response.ok) {
-    throw new Error(await getProviderErrorMessage(response, 'claude'));
+    throw new Error(getProviderErrorMessage(response, 'claude'));
   }
 
   const payload = await response.json().catch(() => ({}));
@@ -198,6 +196,17 @@ const listModelsByProvider = async (provider: AiProvider, apiKey: string): Promi
   return listClaudeModels(apiKey);
 };
 
+const createAdminClient = () => {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Credenciais do Supabase nao configuradas.');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -211,9 +220,39 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const payload = (await req.json()) as Record<string, unknown>;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const supabaseAdmin = createAdminClient();
+
+    const authResult = await authorizeDashboardUser({
+      req,
+      supabaseUrl,
+      supabaseAnonKey,
+      supabaseAdmin,
+      module: 'config-integrations',
+      requiredPermission: 'edit',
+    });
+
+    if (!authResult.authorized) {
+      return new Response(JSON.stringify(authResult.body), {
+        status: authResult.status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const payload = await req.json().catch(() => null);
+    if (
+      !isRecord(payload) ||
+      Object.keys(payload).length !== 1 ||
+      !Object.prototype.hasOwnProperty.call(payload, 'provider')
+    ) {
+      return new Response(JSON.stringify({ error: 'O corpo deve conter somente o provedor.' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const providerCandidate = toTrimmedString(payload.provider).toLowerCase();
-    const apiKey = toTrimmedString(payload.apiKey);
 
     if (!isAiProvider(providerCandidate)) {
       return new Response(JSON.stringify({ error: 'Provedor invalido.' }), {
@@ -222,9 +261,10 @@ Deno.serve(async (req) => {
       });
     }
 
+    const apiKey = getAiProviderApiKey(providerCandidate);
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'API key obrigatoria.' }), {
-        status: 400,
+      return new Response(JSON.stringify({ error: 'Credencial do provedor nao configurada.' }), {
+        status: 503,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -237,9 +277,8 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error('[list-ai-models] erro inesperado', error);
-    const message = error instanceof Error ? error.message : 'Erro interno ao listar modelos.';
 
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: 'Erro interno ao listar modelos.' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import {
   supabase,
   UserProfile,
-  getUserManagementId,
 } from "../../../lib/supabase";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useConfig } from "../../../contexts/ConfigContext";
@@ -258,7 +257,7 @@ export default function UsersScreen() {
       setEditingUser(null);
       setEditUserPassword("");
 
-      const currentProfileId = getUserManagementId(user) ?? user?.id;
+      const currentProfileId = user?.id;
       if (currentProfileId && editingUser.id === currentProfileId) {
         await refreshProfile();
       }
@@ -318,7 +317,7 @@ export default function UsersScreen() {
   };
 
   const hasUsersSnapshot = users.length > 0;
-  const currentUserManagementId = getUserManagementId(user) ?? user?.id ?? null;
+  const currentUserManagementId = user?.id ?? null;
 
   if (!canManageUsers) {
     return (

@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Eye,
-  EyeOff,
   Info,
-  KeyRound,
   Plug,
   Save,
   ShieldCheck,
@@ -27,7 +24,6 @@ import {
   Card,
   CardIcon,
   Checkbox,
-  IconButton,
   Input,
   SectionHeader,
   Switch,
@@ -35,7 +31,6 @@ import {
 } from "../../../design-system";
 import WhatsAppApiSettingsPanel from "./components/WhatsAppApiSettingsPanel";
 
-const LEGACY_GPT_SLUG = "gpt_transcription";
 const AI_PROVIDER_OPENAI_SLUG = "ai_provider_openai";
 const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
 const AI_PROVIDER_CLAUDE_SLUG = "ai_provider_claude";
@@ -62,7 +57,6 @@ type ModelOption = { value: string; label: string };
 
 type AiProviderFormState = {
   enabled: boolean;
-  apiKey: string;
 };
 
 type AiTaskRouteState = {
@@ -97,12 +91,12 @@ const AI_PROVIDER_META: Record<AiProvider, AiProviderMeta> = {
   gemini: {
     slug: AI_PROVIDER_GEMINI_SLUG,
     name: "Google Gemini",
-    description: "Conecte sua API key do Gemini para usar modelos da Google.",
+    description: "Use modelos Gemini com a credencial protegida no Edge Secret.",
   },
   claude: {
     slug: AI_PROVIDER_CLAUDE_SLUG,
     name: "Claude (Anthropic)",
-    description: "Conecte sua API key da Anthropic para usar modelos Claude.",
+    description: "Use modelos Claude com a credencial protegida no Edge Secret.",
   },
 };
 
@@ -316,15 +310,12 @@ const createDefaultProviderForms = (): Record<
 > => ({
   openai: {
     enabled: false,
-    apiKey: "",
   },
   gemini: {
     enabled: false,
-    apiKey: "",
   },
   claude: {
     enabled: false,
-    apiKey: "",
   },
 });
 
@@ -351,31 +342,11 @@ const createDefaultRoutingForm = (): AiRoutingFormState => ({
   },
 });
 
-const normalizeProviderSettings = (
-  provider: AiProvider,
-  integration: IntegrationSetting | null,
-  legacyIntegration: IntegrationSetting | null,
-): AiProviderFormState => {
+const normalizeProviderSettings = (integration: IntegrationSetting | null): AiProviderFormState => {
   const settings = isRecord(integration?.settings) ? integration.settings : {};
-  const legacySettings = isRecord(legacyIntegration?.settings)
-    ? legacyIntegration.settings
-    : {};
-
-  const legacyApiKey =
-    provider === "openai" ? toTrimmedString(legacySettings.apiKey) : "";
-
-  const apiKey = toTrimmedString(settings.apiKey) || legacyApiKey;
-
-  const enabled =
-    typeof settings.enabled === "boolean"
-      ? settings.enabled
-      : provider === "openai"
-        ? apiKey.length > 0
-        : false;
 
   return {
-    enabled,
-    apiKey,
+    enabled: settings.enabled === true,
   };
 };
 
@@ -456,14 +427,6 @@ export default function IntegrationsScreen() {
   const [savingAiRouting, setSavingAiRouting] = useState(false);
   const [savingAiFollowUpPrompt, setSavingAiFollowUpPrompt] = useState(false);
   const [aiMessage, setAiMessage] = useState<MessageState>(null);
-  const [showProviderApiKey, setShowProviderApiKey] = useState<
-    Record<AiProvider, boolean>
-  >({
-    openai: false,
-    gemini: false,
-    claude: false,
-  });
-
   const [metaPixelIntegration, setMetaPixelIntegration] =
     useState<IntegrationSetting | null>(null);
   const [metaPixelId, setMetaPixelId] = useState("");
@@ -480,21 +443,7 @@ export default function IntegrationsScreen() {
 
   const loadingUi = useAdaptiveLoading(loadingAi);
 
-  const loadProviderModels = useCallback(async (provider: AiProvider, apiKey: string) => {
-    const normalizedApiKey = apiKey.trim();
-
-    if (!normalizedApiKey) {
-      setAiProviderModels((prev) => ({
-        ...prev,
-        [provider]: {
-          loading: false,
-          options: [],
-          error: null,
-        },
-      }));
-      return;
-    }
-
+  const loadProviderModels = useCallback(async (provider: AiProvider) => {
     setAiProviderModels((prev) => ({
       ...prev,
       [provider]: {
@@ -510,7 +459,6 @@ export default function IntegrationsScreen() {
         {
           body: {
             provider,
-            apiKey: normalizedApiKey,
           },
         },
       );
@@ -540,7 +488,7 @@ export default function IntegrationsScreen() {
         [provider]: {
           loading: false,
           options: [],
-          error: "Não foi possível carregar os modelos da API do provedor.",
+          error: "Não foi possível carregar os modelos. Confirme o Edge Secret deste provedor.",
         },
       }));
     }
@@ -557,14 +505,12 @@ export default function IntegrationsScreen() {
         claudeIntegration,
         routingIntegration,
         followUpPromptIntegration,
-        legacyGptIntegration,
       ] = await Promise.all([
         configService.getIntegrationSetting(AI_PROVIDER_OPENAI_SLUG),
         configService.getIntegrationSetting(AI_PROVIDER_GEMINI_SLUG),
         configService.getIntegrationSetting(AI_PROVIDER_CLAUDE_SLUG),
         configService.getIntegrationSetting(AI_ROUTING_SLUG),
         configService.getIntegrationSetting(AI_FOLLOW_UP_PROMPT_SLUG),
-        configService.getIntegrationSetting(LEGACY_GPT_SLUG),
       ]);
 
       const nextProviderIntegrations: Record<
@@ -577,13 +523,9 @@ export default function IntegrationsScreen() {
       };
 
       const nextProviderForms: Record<AiProvider, AiProviderFormState> = {
-        openai: normalizeProviderSettings(
-          "openai",
-          openaiIntegration,
-          legacyGptIntegration,
-        ),
-        gemini: normalizeProviderSettings("gemini", geminiIntegration, null),
-        claude: normalizeProviderSettings("claude", claudeIntegration, null),
+        openai: normalizeProviderSettings(openaiIntegration),
+        gemini: normalizeProviderSettings(geminiIntegration),
+        claude: normalizeProviderSettings(claudeIntegration),
       };
 
       setAiProviderIntegrations(nextProviderIntegrations);
@@ -597,9 +539,8 @@ export default function IntegrationsScreen() {
       setAiProviderModels(createDefaultProviderModelsState());
 
       for (const provider of AI_PROVIDER_ORDER) {
-        const apiKey = nextProviderForms[provider].apiKey;
-        if (apiKey.trim()) {
-          void loadProviderModels(provider, apiKey);
+        if (nextProviderForms[provider].enabled) {
+          void loadProviderModels(provider);
         }
       }
     } catch (error) {
@@ -647,7 +588,6 @@ export default function IntegrationsScreen() {
 
     const settingsPayload = {
       enabled: currentForm.enabled,
-      apiKey: currentForm.apiKey.trim(),
     };
 
     const integration = aiProviderIntegrations[provider];
@@ -681,12 +621,11 @@ export default function IntegrationsScreen() {
         ...prev,
         [provider]: {
           enabled: settingsPayload.enabled,
-          apiKey: settingsPayload.apiKey,
         },
       }));
 
-      if (settingsPayload.apiKey) {
-        void loadProviderModels(provider, settingsPayload.apiKey);
+      if (settingsPayload.enabled) {
+        void loadProviderModels(provider);
       } else {
         setAiProviderModels((prev) => ({
           ...prev,
@@ -973,12 +912,11 @@ export default function IntegrationsScreen() {
               const providerMeta = AI_PROVIDER_META[provider];
               const formState = aiProviderForms[provider];
               const providerModelsState = aiProviderModels[provider];
-              const hasApiKey = formState.apiKey.trim().length > 0;
 
               const providerModelsHint = providerModelsState.loading
                 ? "Carregando modelos da API para o roteamento..."
-                : !hasApiKey
-                  ? "Salve uma API key para carregar modelos no roteamento por funcionalidade."
+                : !formState.enabled
+                  ? "Ative o provedor para validar o Edge Secret e carregar modelos."
                   : providerModelsState.error
                     ? providerModelsState.error
                     : providerModelsState.options.length > 0
@@ -1011,38 +949,10 @@ export default function IntegrationsScreen() {
                       />
                   </div>
 
-                  <div className="mt-4">
-                    <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
-                      API Key
-                    </label>
-                    <div>
-                      <Input
-                        type={
-                          showProviderApiKey[provider] ? "text" : "password"
-                        }
-                        value={formState.apiKey}
-                        onChange={(event) =>
-                          setAiProviderForms((prev) => ({
-                            ...prev,
-                            [provider]: {
-                              ...prev[provider],
-                              apiKey: event.target.value,
-                            },
-                          }))
-                        }
-                        leftIcon={KeyRound}
-                        action={
-                          <IconButton
-                            aria-label={showProviderApiKey[provider] ? "Ocultar API key" : "Exibir API key"}
-                            onClick={() => setShowProviderApiKey((prev) => ({ ...prev, [provider]: !prev[provider] }))}
-                          >
-                            {showProviderApiKey[provider] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </IconButton>
-                        }
-                        placeholder="Informe a API key"
-                        autoComplete="off"
-                      />
-                    </div>
+                  <div className="mt-4 rounded-[var(--kds-radius-sm)] border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-2">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                      Credencial protegida por Edge Secret
+                    </p>
                     <p className="mt-2 text-xs text-[var(--text-muted)]">
                       {providerModelsHint}
                     </p>
@@ -1085,8 +995,8 @@ export default function IntegrationsScreen() {
                   const routeState = aiRoutingForm[task.key];
                   const providerModelsState =
                     aiProviderModels[routeState.provider];
-                  const providerApiKey =
-                    aiProviderForms[routeState.provider].apiKey.trim();
+                  const providerEnabled =
+                    aiProviderForms[routeState.provider].enabled;
                   const providerModelOptions = getCompatibleModelOptions(
                     task.key,
                     routeState.provider,
@@ -1115,8 +1025,8 @@ export default function IntegrationsScreen() {
 
                   const modelFieldPlaceholder = providerModelsState.loading
                     ? "Carregando modelos..."
-                    : !providerApiKey
-                      ? "Salve a API key do provedor"
+                    : !providerEnabled
+                      ? "Ative o provedor"
                       : providerModelOptions.length > 0
                         ? "Selecione o modelo"
                         : "Nenhum modelo disponível";
@@ -1151,18 +1061,15 @@ export default function IntegrationsScreen() {
                                 : "openai";
                               const nextProviderModelsState =
                                 aiProviderModels[nextProvider];
-                              const nextProviderApiKey =
-                                aiProviderForms[nextProvider].apiKey.trim();
+                              const nextProviderEnabled =
+                                aiProviderForms[nextProvider].enabled;
 
                               if (
-                                nextProviderApiKey &&
+                                nextProviderEnabled &&
                                 nextProviderModelsState.options.length === 0 &&
                                 !nextProviderModelsState.loading
                               ) {
-                                void loadProviderModels(
-                                  nextProvider,
-                                  nextProviderApiKey,
-                                );
+                                void loadProviderModels(nextProvider);
                               }
 
                               const nextModel = getPreferredTaskModel(
@@ -1217,8 +1124,8 @@ export default function IntegrationsScreen() {
                               ? routeError
                               : providerModelsState.loading
                               ? "Consultando modelos na API do provedor..."
-                              : !providerApiKey
-                                ? "Configure e salve a API key deste provedor para carregar os modelos."
+                              : !providerEnabled
+                                ? "Ative este provedor e confirme o Edge Secret para carregar os modelos."
                                 : providerModelsState.error
                                   ? providerModelsState.error
                                   : providerModelOptions.length > 0

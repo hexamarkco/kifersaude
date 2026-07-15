@@ -163,26 +163,9 @@ export async function waitForSupabaseSession(options: {
   throw new Error(options.errorMessage ?? 'Sua sessão ainda não está pronta. Atualize a página ou entre novamente.');
 }
 
-export function getUserManagementId(user: Pick<User, 'id' | 'user_metadata' | 'app_metadata'> | null | undefined): string | null {
-  if (!user) {
-    return null;
-  }
-
-  const candidates = [
-    user.user_metadata?.user_management_id,
-    user.user_metadata?.user_management_user_id,
-    user.user_metadata?.user_id,
-    user.app_metadata?.user_management_id,
-    user.app_metadata?.user_id,
-  ];
-
-  for (const value of candidates) {
-    if (typeof value === 'string' && value.trim() !== '') {
-      return value;
-    }
-  }
-
-  return user.id ?? null;
+export function getAuthenticatedUserId(user: Pick<User, 'id'> | null | undefined): string | null {
+  const userId = user?.id?.trim();
+  return userId || null;
 }
 
 export async function fetchAllPages<T>(

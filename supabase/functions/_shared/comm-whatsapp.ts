@@ -12,6 +12,8 @@ export const COMM_WHATSAPP_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 export const COMM_WHATSAPP_CHANNEL_SLUG = 'primary';
 export const COMM_WHATSAPP_MODULE = 'whatsapp-inbox';
 
+const MAX_WHAPI_MEDIA_RESPONSE_BYTES = 32 * 1024 * 1024;
+
 export type CommWhatsAppChannelRow = {
   id: string;
   slug: string;
@@ -35,6 +37,7 @@ export type CommWhatsAppChannelRow = {
 export type CommWhatsAppSettings = {
   enabled: boolean;
   token: string;
+  nonSecretSettings: Record<string, unknown>;
 };
 
 export type CommWhatsAppPersistMessageInput = {
@@ -150,18 +153,25 @@ export type CommWhatsAppReactionEvent = {
   reactedAt: string;
 };
 
-const getSettingsToken = (settings: Record<string, unknown>): string => {
-  const directToken = sanitizeWhapiToken(toTrimmedString(settings.token));
-  if (directToken) return directToken;
-  return sanitizeWhapiToken(toTrimmedString(settings.apiKey));
-};
-
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 export const toTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 export const sanitizeWhapiToken = (value: string): string => value.replace(/^Bearer\s+/i, '').trim();
+
+const getWhapiToken = (): string => sanitizeWhapiToken(Deno.env.get('WHAPI_TOKEN') || '');
+
+const getNonSecretCommWhatsAppSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
+  const nonSecretSettings: Record<string, unknown> = {};
+
+  for (const key of Object.keys(settings)) {
+    if (key === 'token' || key === 'apiKey') continue;
+    nonSecretSettings[key] = settings[key];
+  }
+
+  return nonSecretSettings;
+};
 
 export const normalizePhoneDigits = (value: unknown): string => {
   const raw = toTrimmedString(value);
@@ -1890,6 +1900,60 @@ export const MIME_TO_EXT: Record<string, string> = {
 
 const mimeTypeToExtension = (mimeType: string): string => MIME_TO_EXT[mimeType] || '.ogg';
 
+export const isTrustedWhapiMediaUrl = (value: unknown): boolean => {
+  const rawUrl = toTrimmedString(value);
+  if (!rawUrl) return false;
+
+  try {
+    const mediaUrl = new URL(rawUrl);
+    const whapiUrl = new URL(WHAPI_BASE_URL);
+
+    return mediaUrl.protocol === 'https:'
+      && whapiUrl.protocol === 'https:'
+      && !mediaUrl.username
+      && !mediaUrl.password
+      && !mediaUrl.port
+      && mediaUrl.origin === whapiUrl.origin
+      && mediaUrl.hostname === whapiUrl.hostname;
+  } catch {
+    return false;
+  }
+};
+
+const readWhapiMediaBlob = async (response: Response): Promise<Blob> => {
+  const contentLength = Number(response.headers.get('content-length'));
+  if (Number.isSafeInteger(contentLength) && contentLength > MAX_WHAPI_MEDIA_RESPONSE_BYTES) {
+    throw new Error('A midia da Whapi excede o limite de 32 MiB.');
+  }
+
+  if (!response.body) {
+    return new Blob();
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_WHAPI_MEDIA_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new Error('A midia da Whapi excede o limite de 32 MiB.');
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return new Blob(chunks, { type: response.headers.get('content-type') || '' });
+};
+
 async function fetchWhapiMediaBlob(params: {
   token: string;
   mediaId?: string | null;
@@ -1910,7 +1974,7 @@ async function fetchWhapiMediaBlob(params: {
 
     const stripMimeParameters = (value: string): string => value.split(';')[0]?.trim() || value.trim();
 
-    const blob = await response.blob();
+    const blob = await readWhapiMediaBlob(response);
     const cleanFallbackMime = params.fallbackMimeType?.trim() ? stripMimeParameters(params.fallbackMimeType.trim()) : '';
     const rawMimeType = stripMimeParameters(response.headers.get('content-type') || '') || cleanFallbackMime || blob.type || 'audio/ogg';
     const contentDisposition = response.headers.get('content-disposition')?.trim() || '';
@@ -1926,16 +1990,18 @@ async function fetchWhapiMediaBlob(params: {
     return { blob, mimeType, fileName };
   };
 
-  if (params.mediaUrl?.trim()) {
+  const mediaUrl = toTrimmedString(params.mediaUrl);
+  if (isTrustedWhapiMediaUrl(mediaUrl)) {
     try {
-      const response = await fetch(params.mediaUrl.trim(), {
+      const response = await fetch(mediaUrl, {
         method: 'GET',
         headers,
+        redirect: 'error',
       });
 
       return await buildResult(response);
     } catch {
-      // Fall through to mediaId resolution below.
+      // Rejected URLs and failed direct downloads resolve through the Whapi media endpoint.
     }
   }
 
@@ -1947,6 +2013,7 @@ async function fetchWhapiMediaBlob(params: {
   const response = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
     method: 'GET',
     headers,
+    redirect: 'error',
   });
 
   return await buildResult(response);
@@ -2102,7 +2169,7 @@ export async function ensureCommWhatsAppSettings(
         slug: COMM_WHATSAPP_INTEGRATION_SLUG,
         name: 'Integração WhatsApp',
         description: 'Configurações do canal principal de WhatsApp via Whapi.',
-        settings: { enabled: false, token: '' },
+        settings: { enabled: false },
       })
       .select('settings')
       .single();
@@ -2113,15 +2180,18 @@ export async function ensureCommWhatsAppSettings(
 
     return {
       enabled: false,
-      token: '',
+      token: getWhapiToken(),
+      nonSecretSettings: { enabled: false },
     };
   }
 
   const settings = isRecord(existing.settings) ? existing.settings : {};
+  const nonSecretSettings = getNonSecretCommWhatsAppSettings(settings);
 
   return {
     enabled: typeof settings.enabled === 'boolean' ? settings.enabled : false,
-    token: getSettingsToken(settings),
+    token: getWhapiToken(),
+    nonSecretSettings,
   };
 }
 

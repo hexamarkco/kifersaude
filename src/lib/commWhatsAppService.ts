@@ -13,7 +13,6 @@ import {
 export type CommWhatsAppOperationalState = {
   channel: CommWhatsAppChannel | null;
   configEnabled: boolean;
-  tokenConfigured: boolean;
 };
 
 export type CommWhatsAppDashboardRecentChat = {
@@ -596,7 +595,6 @@ export const commWhatsAppService = {
     const rows = Array.isArray(data) ? data : [];
     const row = (rows[0] ?? null) as (CommWhatsAppChannel & {
       config_enabled?: boolean | null;
-      token_configured?: boolean | null;
     }) | null;
 
     if (!row) {
@@ -623,7 +621,6 @@ export const commWhatsAppService = {
         updated_at: row.updated_at,
       },
       configEnabled: row.config_enabled === true,
-      tokenConfigured: row.token_configured === true,
     };
   },
 

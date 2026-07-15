@@ -2,7 +2,7 @@
 
 ## Pré-requisitos
 
-- Node.js 18+ e npm
+- Node.js 20+ e npm
 
 ## Configuração de variáveis de ambiente
 

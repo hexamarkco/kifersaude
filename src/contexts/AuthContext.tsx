@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, UserProfile, getUserManagementId } from '../lib/supabase';
+import { supabase, UserProfile, getAuthenticatedUserId } from '../lib/supabase';
 import { User, Session } from '@supabase/supabase-js';
 
 type AuthContextType = {
@@ -58,33 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
     setUser(null);
     setUserProfile(null);
-  };
-
-  const resolveRoleFromMetadata = (userToResolve: User | null): string | null => {
-    if (!userToResolve) {
-      return null;
-    }
-
-    const metadataCandidates = [
-      userToResolve.app_metadata?.role,
-      userToResolve.user_metadata?.role,
-      userToResolve.app_metadata?.assigned_role,
-      userToResolve.user_metadata?.assigned_role,
-    ];
-
-    for (const candidate of metadataCandidates) {
-      if (typeof candidate !== 'string') {
-        continue;
-      }
-
-      const normalized = candidate.trim().toLowerCase();
-
-      if (normalized) {
-        return normalized;
-      }
-    }
-
-    return null;
   };
 
   const loadUserProfile = async (profileId: string | null) => {
@@ -149,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          const profileId = getUserManagementId(session.user);
+          const profileId = getAuthenticatedUserId(session.user);
           console.log('👤 Carregando perfil do usuário:', profileId ?? 'indisponível');
           await loadUserProfile(profileId);
         }
@@ -180,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Only load profile on SIGNED_IN event, not on INITIAL_SESSION
       if (_event === 'SIGNED_IN' && session?.user) {
         (async () => {
-          const profileId = getUserManagementId(session.user);
+          const profileId = getAuthenticatedUserId(session.user);
           await loadUserProfile(profileId);
         })();
       } else if (!session?.user) {
@@ -273,12 +246,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = async () => {
     if (user) {
-      await loadUserProfile(getUserManagementId(user));
+      await loadUserProfile(getAuthenticatedUserId(user));
     }
   };
 
-  const metadataRole = resolveRoleFromMetadata(user);
-  const role = userProfile?.role ?? metadataRole ?? 'observer';
+  const role = userProfile?.role ?? 'observer';
   const isAdmin = role === 'admin';
   const isObserver = role === 'observer';
 

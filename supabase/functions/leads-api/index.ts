@@ -154,29 +154,6 @@ const extractCredentialCandidates = (value: unknown): string[] => {
   return Array.from(candidates);
 };
 
-const getUserManagementId = (user: any): string | null => {
-  if (!user || typeof user !== 'object') {
-    return null;
-  }
-
-  const candidates = [
-    user.user_metadata?.user_management_id,
-    user.user_metadata?.user_management_user_id,
-    user.user_metadata?.user_id,
-    user.app_metadata?.user_management_id,
-    user.app_metadata?.user_id,
-    user.id,
-  ];
-
-  for (const value of candidates) {
-    if (typeof value === 'string' && value.trim() !== '') {
-      return value.trim();
-    }
-  }
-
-  return null;
-};
-
 const normalizeDashboardRole = (value: unknown): DashboardRole | null => {
   if (typeof value !== 'string') {
     return null;
@@ -185,28 +162,6 @@ const normalizeDashboardRole = (value: unknown): DashboardRole | null => {
   const normalized = value.trim().toLowerCase();
   if (normalized === 'admin' || normalized === 'observer') {
     return normalized;
-  }
-
-  return null;
-};
-
-const resolveRoleFromMetadata = (user: any): DashboardRole | null => {
-  if (!user || typeof user !== 'object') {
-    return null;
-  }
-
-  const candidates = [
-    user.app_metadata?.role,
-    user.user_metadata?.role,
-    user.app_metadata?.assigned_role,
-    user.user_metadata?.assigned_role,
-  ];
-
-  for (const candidate of candidates) {
-    const role = normalizeDashboardRole(candidate);
-    if (role) {
-      return role;
-    }
   }
 
   return null;
@@ -299,7 +254,7 @@ const authorizeDashboardUser = async ({
     };
   }
 
-  const profileId = getUserManagementId(user);
+  const profileId = typeof user.id === 'string' ? user.id.trim() : '';
   if (!profileId) {
     return {
       authorized: false,
@@ -313,30 +268,26 @@ const authorizeDashboardUser = async ({
     };
   }
 
-  let role = resolveRoleFromMetadata(user);
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', profileId)
+    .maybeSingle();
 
-  if (!role) {
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', profileId)
-      .maybeSingle();
-
-    if (profileError) {
-      return {
-        authorized: false,
-        response: jsonResponse(
-          {
-            success: false,
-            error: 'Erro ao validar permissões do usuário',
-          },
-          500,
-        ),
-      };
-    }
-
-    role = normalizeDashboardRole(profile?.role);
+  if (profileError) {
+    return {
+      authorized: false,
+      response: jsonResponse(
+        {
+          success: false,
+          error: 'Erro ao validar permissões do usuário',
+        },
+        500,
+      ),
+    };
   }
+
+  const role = normalizeDashboardRole(profile?.role);
 
   if (!role) {
     return {
@@ -397,7 +348,6 @@ type AutoContactSettings = {
   enabled: boolean;
   baseUrl: string;
   sessionId: string;
-  apiKey: string;
   statusOnSend: string;
   messageFlow: AutoContactStep[];
   scheduling?: {
@@ -549,7 +499,6 @@ type AutoContactSchedulingSettings = {
 type AutoContactFlowSettings = {
   enabled: boolean;
   autoSend: boolean;
-  apiKey: string;
   messageTemplates: AutoContactTemplate[];
   flows: AutoContactFlow[];
   scheduling: AutoContactSchedulingSettings;
@@ -1212,6 +1161,10 @@ const MAX_WHAPI_TEMPORARY_RETRIES = 3;
 const WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS = [1500, 4000];
 const WHAPI_RETRY_DELAYS_MS = [2 * 60 * 1000, 10 * 60 * 1000, 30 * 60 * 1000];
 
+const sanitizeWhapiToken = (value: string | null | undefined): string => value?.replace(/^Bearer\s+/i, '').trim() ?? '';
+
+const getWhapiToken = (): string => sanitizeWhapiToken(Deno.env.get('WHAPI_TOKEN') || '');
+
 type WhapiContactCheckResult = {
   exists: boolean;
   chatId: string | null;
@@ -1406,15 +1359,15 @@ const getJobRuntimeContext = (payload: unknown): Record<string, string> => {
   return normalizedWhatsappValid ? { whatsapp_valid: normalizedWhatsappValid } : {};
 };
 
-const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null): Promise<WhapiContactCheckResult> => {
+const checkWhatsAppExistence = async (telefone?: string | null): Promise<WhapiContactCheckResult> => {
   const digits = toWhapiPhoneNumber(telefone);
   if (!digits || !isValidWhatsappNumber(telefone)) {
     return { exists: false, chatId: null };
   }
 
-  const token = sanitizeWhapiToken(apiKey);
+  const token = getWhapiToken();
   if (!token) {
-    throw new Error('Token da Whapi Cloud nao configurado para validar WhatsApp.');
+    throw new Error('WHAPI_TOKEN não configurado para validar WhatsApp.');
   }
 
   const controller = new AbortController();
@@ -1481,12 +1434,17 @@ const checkWhatsAppExistence = async (apiKey: string, telefone?: string | null):
   return { exists: false, chatId: null };
 };
 
-const resolveWhatsappValid = async (lead: any, apiKey: string): Promise<string> => {
+const resolveWhatsappValid = async (lead: any): Promise<string> => {
   const fallbackValue = normalizeBooleanConditionValue(lead?.whatsapp_valid);
+
+  if (!getWhapiToken()) {
+    console.warn('Validação de WhatsApp desativada: WHAPI_TOKEN não configurado.', { leadId: lead?.id ?? null });
+    return fallbackValue ?? 'false';
+  }
 
   for (let attempt = 0; attempt <= WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS.length; attempt += 1) {
     try {
-      const result = await checkWhatsAppExistence(apiKey, lead?.telefone);
+      const result = await checkWhatsAppExistence(lead?.telefone);
       return result.exists ? 'true' : 'false';
     } catch (error) {
       if (isTemporaryWhapiError(error) && attempt < WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS.length) {
@@ -1594,21 +1552,24 @@ const applyInvalidNumberAction = async ({
 
 async function sendWhatsappMessages({
   endpoint,
-  apiKey,
   chatId,
   messages,
 }: {
   endpoint: string;
-  apiKey: string;
   chatId: string;
   messages: string[];
 }): Promise<void> {
+  const token = getWhapiToken();
+  if (!token) {
+    throw new Error('WHAPI_TOKEN não configurado para enviar mensagens.');
+  }
+
   for (const content of messages) {
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': token,
       },
       body: JSON.stringify({
         chatId,
@@ -1650,7 +1611,6 @@ const normalizeAutoContactSettings = (settings: any): AutoContactSettings | null
         : 'http://localhost:3000',
     sessionId:
       typeof settings.sessionId === 'string' && settings.sessionId.trim() ? settings.sessionId.trim() : '',
-    apiKey: typeof settings.apiKey === 'string' ? settings.apiKey : '',
     statusOnSend:
       typeof settings.statusOnSend === 'string' && settings.statusOnSend.trim()
         ? settings.statusOnSend.trim()
@@ -1776,8 +1736,6 @@ const applyTemplateVariables = (template: string, lead: any, timeZone?: string) 
   return applyFormulaTokens(withVariables, context);
 };
 
-const sanitizeWhapiToken = (token: string): string => token?.replace(/^Bearer\s+/i, '').trim();
-
 const normalizeMessageType = (type: unknown): FlowMessageType =>
   type === 'image' || type === 'video' || type === 'audio' || type === 'document' ? type : 'text';
 
@@ -1854,13 +1812,6 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
       message: composedMessage || templateMessage,
     };
   });
-
-  const apiKeyValue =
-    typeof settings.apiKey === 'string'
-      ? settings.apiKey
-      : typeof settings.token === 'string'
-        ? settings.token
-        : '';
 
   const rawFlows = Array.isArray(settings.flows) ? settings.flows : [];
   const fallbackTemplateId = messageTemplates[0]?.id ?? '';
@@ -2172,7 +2123,6 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
   return {
     enabled: settings.enabled !== false,
     autoSend: settings.autoSend !== false,
-    apiKey: apiKeyValue,
     messageTemplates,
     flows: normalizedFlows,
     scheduling,
@@ -2707,7 +2657,7 @@ async function processFlowJobs({
       if (jobRuntimeContext.whatsapp_valid) {
         leadWithRelations.whatsapp_valid = jobRuntimeContext.whatsapp_valid;
       } else if (usesWhatsappValidCondition(flow)) {
-        leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations, settings.apiKey);
+        leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations);
       }
 
       if (
@@ -2727,6 +2677,16 @@ async function processFlowJobs({
     try {
       let flowDailyUsageCacheKey: string | null = null;
       if (job.action_type === 'send_message') {
+        if (!getWhapiToken()) {
+          const reason = 'WHAPI_TOKEN não configurado; envio de WhatsApp desativado.';
+          logWithContext(reason, { jobId: job.id, leadId: lead.id, flowId: flow.id });
+          await supabase
+            .from('auto_contact_flow_jobs')
+            .update({ status: 'skipped', last_error: reason })
+            .eq('id', job.id);
+          continue;
+        }
+
         if (flowDailySendLimit) {
           const { dayKey, start, end } = buildTimeZoneDayWindow(now, effectiveScheduling.timezone);
           flowDailyUsageCacheKey = `${flow.id}:${dayKey}`;
@@ -2787,7 +2747,6 @@ async function processFlowJobs({
           lead: leadWithRelations,
           contentType: payload.contentType,
           content: payload.content,
-          settings,
         });
 
         const contactNowIso = new Date().toISOString();
@@ -3080,24 +3039,22 @@ async function sendAutoContactMessage({
   lead,
   contentType,
   content,
-  settings,
 }: {
   lead: any;
   contentType: FlowMessageType;
   content: string | { url: string; caption?: string; filename?: string };
-  settings: AutoContactFlowSettings;
 }): Promise<void> {
   const whapiPhone = toWhapiPhoneNumber(lead?.telefone || '');
   if (!whapiPhone || !isValidWhatsappNumber(lead?.telefone || '')) {
     throw new Error('Telefone inválido para envio automático.');
   }
 
-  const apiKey = sanitizeWhapiToken(settings.apiKey);
-  if (!apiKey) {
-    throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
+  const token = getWhapiToken();
+  if (!token) {
+    throw new Error('WHAPI_TOKEN não configurado para envio automático.');
   }
 
-  const whatsappCheck = await checkWhatsAppExistence(apiKey, lead?.telefone);
+  const whatsappCheck = await checkWhatsAppExistence(lead?.telefone);
   if (!whatsappCheck.exists) {
     throw new Error('Numero nao possui WhatsApp.');
   }
@@ -3126,7 +3083,7 @@ async function sendAutoContactMessage({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${token}`,
         Accept: 'application/json',
       },
       body: JSON.stringify(body),
@@ -3222,6 +3179,12 @@ async function triggerAutoContactForLead({
     return;
   }
 
+  const token = getWhapiToken();
+  if (!token) {
+    logWithContext('Automação de WhatsApp desativada: WHAPI_TOKEN não configurado');
+    return;
+  }
+
   const message = applyTemplateVariables(firstStep.message, lead, settings.scheduling?.timezone);
 
   try {
@@ -3230,7 +3193,7 @@ async function triggerAutoContactForLead({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': settings.apiKey,
+        'x-api-key': token,
       },
       body: JSON.stringify({
         chatId: `${whapiPhone}@s.whatsapp.net`,
@@ -3312,8 +3275,8 @@ async function runAutoContactFlowEngine({
       return;
     }
 
-    if (!settings.apiKey) {
-      logWithContext('Fluxo automático sem token configurado');
+    if (!getWhapiToken()) {
+      logWithContext('Fluxo automático de WhatsApp desativado: WHAPI_TOKEN não configurado');
       return;
     }
 
@@ -3329,7 +3292,7 @@ async function runAutoContactFlowEngine({
     leadWithRelations.status = leadWithRelations.status || 'Novo';
 
     if (settings.flows.some(usesWhatsappValidCondition)) {
-      leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations, settings.apiKey);
+      leadWithRelations.whatsapp_valid = await resolveWhatsappValid(leadWithRelations);
     }
 
     const matchingFlow =
@@ -3522,6 +3485,13 @@ Deno.serve(async (req: Request) => {
           return false;
         }
 
+        if (!getWhapiToken()) {
+          logWithContext('Fallback legado de WhatsApp desativado: WHAPI_TOKEN não configurado', {
+            leadId: record.id,
+          });
+          return false;
+        }
+
         logWithContext('Flow engine indisponível, tentando fallback legado', {
           leadId: record.id,
           reason,
@@ -3553,12 +3523,20 @@ Deno.serve(async (req: Request) => {
         });
       }
 
+      if (!getWhapiToken()) {
+        logWithContext('Fluxo automático de WhatsApp desativado: WHAPI_TOKEN não configurado', { leadId: record.id });
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: 'whapi_token_missing' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const mappedLead = mapLeadForMatch(record);
       const mappedOldLead = oldRecord && typeof oldRecord === 'object' ? mapLeadForMatch(oldRecord) : null;
       if (settings.flows.some(usesWhatsappValidCondition)) {
-        mappedLead.whatsapp_valid = await resolveWhatsappValid(mappedLead, settings.apiKey);
+        mappedLead.whatsapp_valid = await resolveWhatsappValid(mappedLead);
         if (mappedOldLead) {
-          mappedOldLead.whatsapp_valid = await resolveWhatsappValid(mappedOldLead, settings.apiKey);
+          mappedOldLead.whatsapp_valid = await resolveWhatsappValid(mappedOldLead);
         }
       }
 
@@ -3871,10 +3849,18 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      if (!getWhapiToken()) {
+        logWithContext('Envio manual de WhatsApp bloqueado: WHAPI_TOKEN não configurado');
+        return new Response(JSON.stringify({ success: false, error: 'WHAPI_TOKEN não configurado para envio de mensagens' }), {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       const endpoint = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
 
       try {
-        await sendWhatsappMessages({ endpoint, apiKey: settings.apiKey, chatId, messages });
+        await sendWhatsappMessages({ endpoint, chatId, messages });
         logWithContext('Envio manual de automação concluído', { chatId });
 
         return new Response(JSON.stringify({ success: true }), {

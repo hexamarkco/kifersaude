@@ -103,7 +103,12 @@ else
 fi
 
 shopt -s nullglob
-function_paths=("$FUNCTIONS_DIR"/*/)
+function_paths=()
+for function_path in "$FUNCTIONS_DIR"/*/; do
+  if [[ "$(basename "$function_path")" != "_shared" ]]; then
+    function_paths+=("$function_path")
+  fi
+done
 
 if (( ${#function_paths[@]} == 0 )); then
   echo "[ERRO] Nenhuma function encontrada em $FUNCTIONS_DIR"
@@ -118,12 +123,18 @@ if [[ -f "$STATE_FILE" ]]; then
   done <"$STATE_FILE"
 fi
 
+shared_hash=""
+if [[ -d "$FUNCTIONS_DIR/_shared" ]]; then
+  shared_hash="$(compute_function_hash "$FUNCTIONS_DIR/_shared")"
+fi
+
 deployed_count=0
 skipped_count=0
 failed_count=0
 NO_VERIFY_JWT_FUNCTIONS=(
   "create-initial-admin"
   "comm-whatsapp-webhook"
+  "public-lead-submit"
 )
 
 next_state_file="$(mktemp "$STATE_DIR/supabase-functions-state.XXXXXX")"
@@ -132,7 +143,7 @@ trap 'rm -f "$next_state_file"' EXIT
 for function_path in "${function_paths[@]}"; do
   function_name="$(basename "$function_path")"
   deploy_args=()
-  current_hash="$(compute_function_hash "$function_path")"
+  current_hash="$(printf '%s|%s' "$(compute_function_hash "$function_path")" "$shared_hash" | sha256sum | cut -d' ' -f1)"
   previous_hash="${previous_hashes[$function_name]:-}"
 
   if [[ -n "$previous_hash" && "$previous_hash" == "$current_hash" ]]; then

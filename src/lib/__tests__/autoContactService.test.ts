@@ -52,7 +52,6 @@ test('mantem canal desativado quando enabled esta false no banco', () => {
   const settings = normalizeAutoContactSettings({
     enabled: false,
     autoSend: true,
-    apiKey: 'token',
     flows: [],
     messageTemplates: [],
   });

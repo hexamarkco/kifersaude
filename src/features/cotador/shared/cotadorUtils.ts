@@ -23,6 +23,18 @@ import { DEFAULT_COTADOR_FILTERS } from './cotadorTypes';
 
 const modalityLabelMap = new Map(COTADOR_MODALITY_OPTIONS.map((option) => [option.value, option.label]));
 
+export const decodeCotadorCatalogItemKey = (value: string | null | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+};
+
 const normalizeCotadorText = (value?: string | null) =>
   (value ?? '')
     .normalize('NFD')

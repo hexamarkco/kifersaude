@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Copy,
-  Eye,
-  EyeOff,
   Info,
-  Key,
   RefreshCcw,
   Save,
   ShieldCheck,
@@ -25,7 +22,6 @@ import {
   Alert,
   Button,
   Card,
-  Field,
   IconButton,
   Input,
   Switch,
@@ -39,6 +35,7 @@ type ChannelAdminState = {
     last_health_check_at?: string | null;
   };
   config: {
+    tokenConfigured?: boolean;
     webhookUrl?: string;
   };
 };
@@ -52,11 +49,10 @@ export default function WhatsAppApiSettingsPanel() {
   const [saving, setSaving] = useState(false);
   const [refreshingHealth, setRefreshingHealth] = useState(false);
   const [statusMessage, setStatusMessage] = useState<MessageState>(null);
-  const [showApiKey, setShowApiKey] = useState(false);
   const loadingUi = useAdaptiveLoading(loading);
 
   const [enabled, setEnabled] = useState(false);
-  const [token, setToken] = useState("");
+  const [tokenConfigured, setTokenConfigured] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [channelStatus, setChannelStatus] = useState("unknown");
   const [channelPhone, setChannelPhone] = useState("");
@@ -71,6 +67,7 @@ export default function WhatsAppApiSettingsPanel() {
     }
 
     const payload = (data ?? {}) as ChannelAdminState;
+    setTokenConfigured(payload.config?.tokenConfigured === true);
     setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
     setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
     setChannelPhone(payload.channel?.phone_number?.trim() || "");
@@ -91,7 +88,6 @@ export default function WhatsAppApiSettingsPanel() {
       setAutoContactSettings(normalized);
 
       setEnabled(normalized.enabled);
-      setToken(normalized.apiKey || "");
     } catch (error) {
       console.error("[WhatsAppApiSettings] Error loading settings:", error);
       setStatusMessage({
@@ -136,8 +132,6 @@ export default function WhatsAppApiSettingsPanel() {
     const newSettings = {
       enabled,
       autoSend: currentAutoSend,
-      apiKey: token.trim(),
-      token: token.trim(),
       messageTemplates: currentMessageTemplates,
       flows: currentFlows,
       scheduling: currentScheduling,
@@ -166,7 +160,6 @@ export default function WhatsAppApiSettingsPanel() {
       setAutoContactIntegration(updatedIntegration);
       setAutoContactSettings(normalized);
       setEnabled(normalized.enabled);
-      setToken(normalized.apiKey || "");
       await loadChannelState();
 
       setStatusMessage({
@@ -281,7 +274,7 @@ export default function WhatsAppApiSettingsPanel() {
                   <li>Após o login, vá para o painel de controle</li>
                   <li>Configure um canal conectando seu WhatsApp</li>
                   <li>Copie o token de autenticação do seu canal</li>
-                  <li>Cole o token no campo abaixo</li>
+                  <li>Adicione-o como <code>WHAPI_TOKEN</code> nos Edge Secrets do Supabase</li>
                 </ol>
               </div>
             </div>
@@ -345,34 +338,19 @@ export default function WhatsAppApiSettingsPanel() {
                 Configurações &gt; Automações.
               </p>
             </Card>
-            <Field
+            <Alert
               className="lg:col-span-2"
-              label={
-                <span className="flex items-center gap-2">
-                  <Key className="h-4 w-4" />
-                  Token da Whapi Cloud
-                </span>
-              }
-              description="Este token será usado para autenticação com a API da Whapi Cloud."
+              tone={tokenConfigured ? "success" : "warning"}
             >
-              <div>
-                <Input
-                  type={showApiKey ? "text" : "password"}
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  className="font-mono"
-                  action={
-                    <IconButton
-                      aria-label={showApiKey ? "Ocultar token" : "Exibir token"}
-                      onClick={() => setShowApiKey(!showApiKey)}
-                    >
-                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </IconButton>
-                  }
-                  placeholder="Token da Whapi Cloud (sem incluir 'Bearer')"
-                />
+              <div className="space-y-1 text-sm">
+                <p className="font-semibold">Credencial Whapi protegida</p>
+                <p>
+                  {tokenConfigured
+                    ? "WHAPI_TOKEN está configurado nos Edge Secrets."
+                    : "Configure WHAPI_TOKEN nos Edge Secrets do Supabase para ativar a comunicação."}
+                </p>
               </div>
-            </Field>
+            </Alert>
           </div>
 
           <div className="flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">

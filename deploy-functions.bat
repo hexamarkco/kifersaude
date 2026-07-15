@@ -98,7 +98,17 @@ set /a SUCCESS=0
 set /a FAIL=0
 set "EXIT_CODE=0"
 rem Sempre adicione aqui toda Edge Function que precisa de --no-verify-jwt.
-set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook comm-whatsapp-webhook comm-whatsapp-media comm-whatsapp-transcribe create-initial-admin whatsapp-broadcast"
+set "NO_VERIFY_JWT_FUNCTIONS=whatsapp-webhook comm-whatsapp-webhook comm-whatsapp-media comm-whatsapp-transcribe create-initial-admin public-lead-submit whatsapp-broadcast"
+
+set "SHARED_HASH="
+if exist "supabase\functions\_shared" (
+  call :compute_hash "supabase\functions\_shared" SHARED_HASH
+  if errorlevel 1 (
+    echo [ERRO] Falha ao calcular hash de supabase\functions\_shared.
+    set "EXIT_CODE=1"
+    goto :end
+  )
+)
 
 for /d %%D in ("supabase\functions\*") do (
   if exist "%%~fD\index.ts" (
@@ -115,6 +125,8 @@ for /d %%D in ("supabase\functions\*") do (
       set "SHOULD_DEPLOY="
       echo [ERRO] Falha ao calcular hash de "!FUNCTION_NAME!".
     )
+
+    if defined SHOULD_DEPLOY if defined SHARED_HASH set "CURRENT_HASH=!CURRENT_HASH!|!SHARED_HASH!"
 
     call set "PREVIOUS_HASH=%%STATE_!FUNCTION_NAME!%%"
 

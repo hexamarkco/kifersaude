@@ -35,6 +35,7 @@ import { AUTO_CONTACT_TEMPLATE_VARIABLE_SUGGESTIONS } from "../../../../lib/temp
 import { type LeadStatusConfig } from "../../../../lib/supabase";
 import { buildFlowGraphFromFlow } from "../../../../lib/autoContactFlowGraph";
 import { buildAutoContactFlowTextExport } from "../../../../lib/autoContactFlowExport";
+import { evaluateSafeFormula } from "../../../../lib/safeFormula";
 import MultiSelectDropdown from "../../../../components/config/MultiSelectDropdown";
 import FilterSingleSelect from "../../../../components/FilterSingleSelect";
 import VariableAutocompleteTextarea from "../../../../components/ui/VariableAutocompleteTextarea";
@@ -94,50 +95,10 @@ const buildPreviewContext = () => {
   };
 };
 
-const formulaUtils = {
-  if: (condition: boolean, truthy: unknown, falsy: unknown) =>
-    condition ? truthy : falsy,
-  concat: (...args: unknown[]) =>
-    args.map((item) => String(item ?? "")).join(""),
-  lower: (value: unknown) => String(value ?? "").toLowerCase(),
-  upper: (value: unknown) => String(value ?? "").toUpperCase(),
-  len: (value: unknown) => String(value ?? "").length,
-  number: (value: unknown) => Number(value),
-  now: () => new Date(),
-  dateAdd: (
-    date: unknown,
-    amount: number,
-    unit: "minutes" | "hours" | "days",
-  ) => {
-    const base = date instanceof Date ? date : new Date(String(date));
-    const delta =
-      unit === "days" ? 86400000 : unit === "hours" ? 3600000 : 60000;
-    return new Date(base.getTime() + amount * delta);
-  },
-  formatDate: (date: unknown) => {
-    const parsed = date instanceof Date ? date : new Date(String(date));
-    if (Number.isNaN(parsed.getTime())) return "";
-    return parsed.toLocaleDateString("pt-BR");
-  },
-};
-
 const evaluateExpression = (
   expression: string,
   context: Record<string, unknown>,
-): unknown => {
-  const trimmed = expression.trim().replace(/^=+\s*/, "");
-  if (!trimmed) return null;
-  try {
-    const fn = new Function(
-      "ctx",
-      "utils",
-      `with(ctx){with(utils){return (${trimmed});}}`,
-    );
-    return fn(context, formulaUtils);
-  } catch {
-    return null;
-  }
-};
+): unknown => evaluateSafeFormula(expression, context);
 
 const applyFormulaTokens = (
   value: string,

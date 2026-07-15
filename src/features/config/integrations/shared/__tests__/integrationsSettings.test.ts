@@ -22,32 +22,21 @@ test("normalizeModelOptions removes duplicates and preserves labels", () => {
   ]);
 });
 
-test("normalizeProviderSettings reads current and legacy api keys", () => {
+test("normalizeProviderSettings reads only the non-secret enabled flag", () => {
   const openAiSettings = normalizeProviderSettings(
-    "openai",
     {
       id: "1",
       slug: "ai_provider_openai",
       name: "OpenAI",
-      settings: { apiKey: "new-key", enabled: true },
-      created_at: "",
-      updated_at: "",
-    },
-    {
-      id: "2",
-      slug: "gpt_transcription",
-      name: "Legacy GPT",
-      settings: { apiKey: "legacy-key" },
+      settings: { enabled: true },
       created_at: "",
       updated_at: "",
     },
   );
 
-  const geminiSettings = normalizeProviderSettings("gemini", null, null);
+  const geminiSettings = normalizeProviderSettings(null);
 
-  assert.equal(openAiSettings.apiKey, "new-key");
   assert.equal(openAiSettings.enabled, true);
-  assert.equal(geminiSettings.apiKey, "");
   assert.equal(geminiSettings.enabled, false);
 });
 

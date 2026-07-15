@@ -217,9 +217,11 @@ export default function AgendaScreen() {
   const [savingTask, setSavingTask] = useState(false);
   const [organizerOpen, setOrganizerOpen] = useState(false);
   const pendingRefreshIdsRef = useRef<Set<string>>(new Set());
+  const loadRemindersRequestIdRef = useRef(0);
   const { requestConfirmation, ConfirmationDialog } = useConfirmationModal();
 
   const loadReminders = useCallback(async (options?: { showLoading?: boolean }) => {
+    const requestId = ++loadRemindersRequestIdRef.current;
     const showLoading = options?.showLoading ?? false;
 
     if (showLoading) {
@@ -240,10 +242,6 @@ export default function AgendaScreen() {
           }>,
       );
 
-      setReminders(remindersData);
-      setLastUpdated(new Date());
-      setError(null);
-
       const contractIds = Array.from(
         new Set(
           remindersData
@@ -257,8 +255,6 @@ export default function AgendaScreen() {
       fetchedContracts.forEach((contract) => {
         nextContractsMap.set(contract.id, contract);
       });
-
-      setContractsMap(nextContractsMap);
 
       const contractLeadIds = Array.from(
         new Set(fetchedContracts.map((contract) => contract.lead_id).filter((id): id is string => Boolean(id))),
@@ -279,12 +275,24 @@ export default function AgendaScreen() {
         nextLeadsMap.set(lead.id, lead);
       });
 
+      if (requestId !== loadRemindersRequestIdRef.current) {
+        return;
+      }
+
+      setReminders(remindersData);
+      setLastUpdated(new Date());
+      setError(null);
+      setContractsMap(nextContractsMap);
       setLeadsMap(nextLeadsMap);
     } catch (loadError) {
+      if (requestId !== loadRemindersRequestIdRef.current) {
+        return;
+      }
+
       console.error("Erro ao carregar agenda:", loadError);
       setError("Nao foi possivel carregar a agenda agora.");
     } finally {
-      if (showLoading) {
+      if (requestId === loadRemindersRequestIdRef.current) {
         setLoading(false);
       }
     }

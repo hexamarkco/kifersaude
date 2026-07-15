@@ -6,9 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
 };
 
-type UserMetadata = {
-  user_metadata?: Record<string, unknown> | null;
-  app_metadata?: Record<string, unknown> | null;
+type AuthenticatedUser = {
   id?: string;
 };
 
@@ -27,29 +25,12 @@ type RequestBody = {
   };
 };
 
-function getUserManagementId(user: UserMetadata | null | undefined): string | null {
-  if (!user) {
-    return null;
-  }
-
-  const candidates = [
-    user.user_metadata?.user_management_id,
-    user.user_metadata?.user_management_user_id,
-    user.user_metadata?.user_id,
-    user.app_metadata?.user_management_id,
-    user.app_metadata?.user_id,
-  ];
-
-  for (const value of candidates) {
-    if (typeof value === 'string' && value.trim() !== '') {
-      return value;
-    }
-  }
-
-  return typeof user.id === 'string' && user.id.trim() !== '' ? user.id : null;
+function getAuthenticatedUserId(user: AuthenticatedUser | null | undefined): string | null {
+  const userId = user?.id?.trim();
+  return userId || null;
 }
 
-async function canManageUsers(serviceClient: ReturnType<typeof createClient>, profileId: string) {
+async function getUserManagerAccess(serviceClient: ReturnType<typeof createClient>, profileId: string) {
   const { data: profile, error: profileError } = await serviceClient
     .from('user_profiles')
     .select('role')
@@ -57,7 +38,7 @@ async function canManageUsers(serviceClient: ReturnType<typeof createClient>, pr
     .maybeSingle();
 
   if (profileError || !profile?.role) {
-    return false;
+    return null;
   }
 
   const { data: accessProfile } = await serviceClient
@@ -67,7 +48,7 @@ async function canManageUsers(serviceClient: ReturnType<typeof createClient>, pr
     .maybeSingle();
 
   if (accessProfile?.is_admin || profile.role === 'admin') {
-    return true;
+    return { isAdmin: true };
   }
 
   const { data: permission } = await serviceClient
@@ -79,7 +60,21 @@ async function canManageUsers(serviceClient: ReturnType<typeof createClient>, pr
     .limit(1)
     .maybeSingle();
 
-  return Boolean(permission?.can_edit);
+  return permission?.can_edit ? { isAdmin: false } : null;
+}
+
+async function isAssignableRole(
+  serviceClient: ReturnType<typeof createClient>,
+  role: string,
+  isAdmin: boolean,
+): Promise<boolean> {
+  const { data: accessProfile, error } = await serviceClient
+    .from('access_profiles')
+    .select('is_admin')
+    .eq('slug', role)
+    .maybeSingle();
+
+  return !error && Boolean(accessProfile) && (isAdmin || !accessProfile.is_admin);
 }
 
 Deno.serve(async (req) => {
@@ -130,7 +125,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const profileId = getUserManagementId(user);
+    const profileId = getAuthenticatedUserId(user);
 
     if (!profileId) {
       return new Response(JSON.stringify({ error: 'Perfil nao encontrado' }), {
@@ -139,8 +134,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const allowed = await canManageUsers(serviceClient, profileId);
-    if (!allowed) {
+    const managerAccess = await getUserManagerAccess(serviceClient, profileId);
+    if (!managerAccess) {
       return new Response(JSON.stringify({ error: 'Permissoes insuficientes' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -159,6 +154,13 @@ Deno.serve(async (req) => {
       if (!username || !email || password.length < 6) {
         return new Response(JSON.stringify({ error: 'Dados invalidos para criacao do usuario' }), {
           status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (!(await isAssignableRole(serviceClient, role, managerAccess.isAdmin))) {
+        return new Response(JSON.stringify({ error: 'Perfil de acesso invalido ou nao permitido' }), {
+          status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -182,7 +184,6 @@ Deno.serve(async (req) => {
         email_confirm: true,
         user_metadata: {
           username,
-          role,
           email,
         },
       });
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const managedUserId = getUserManagementId(createdUser.user) ?? createdUser.user.id;
+      const managedUserId = createdUser.user.id;
       const { error: profileUpdateError } = await serviceClient
         .from('user_profiles')
         .update({
@@ -251,7 +252,14 @@ Deno.serve(async (req) => {
       }
 
       if (typeof updates.role === 'string' && updates.role.trim()) {
-        profileUpdates.role = updates.role.trim();
+        const role = updates.role.trim();
+        if (!(await isAssignableRole(serviceClient, role, managerAccess.isAdmin))) {
+          return new Response(JSON.stringify({ error: 'Perfil de acesso invalido ou nao permitido' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        profileUpdates.role = role;
       }
 
       if (typeof updates.email === 'string' && updates.email.trim()) {

@@ -3311,11 +3311,7 @@ export default function WhatsAppInboxScreen() {
       return 'Não foi possível verificar o canal do WhatsApp agora.';
     }
 
-    if (!operationalState?.tokenConfigured) {
-      return 'Token da Whapi não configurado em /painel/config.';
-    }
-
-    if (!operationalState.configEnabled) {
+    if (!operationalState?.configEnabled) {
       return 'Envio do WhatsApp está desabilitado em /painel/config.';
     }
 
@@ -4736,15 +4732,6 @@ export default function WhatsAppInboxScreen() {
     const state = operationalState;
     if (!state) {
       return null;
-    }
-
-    if (!state.tokenConfigured) {
-      return {
-        tone: 'danger' as const,
-        icon: AlertTriangle,
-        title: 'Token da Whapi ausente',
-        description: 'Configure o token em /painel/config para liberar envios no inbox.',
-      };
     }
 
     if (!state.configEnabled) {

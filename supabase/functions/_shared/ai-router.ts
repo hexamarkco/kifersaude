@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type AiProvider = 'openai' | 'gemini' | 'claude';
+export type AiProvider = 'openai' | 'gemini' | 'claude';
+
+declare const Deno: {
+  env: {
+    get: (key: string) => string | undefined;
+  };
+};
 
 export type AiTask = 'rewrite_message' | 'follow_up_generation' | 'whatsapp_audio_transcription' | 'follow_up_agenda_organization';
 
@@ -134,6 +140,17 @@ const toBoolean = (value: unknown, fallback = false): boolean => {
 
 const isAiProvider = (value: string): value is AiProvider => value === 'openai' || value === 'gemini' || value === 'claude';
 
+export const getAiProviderApiKey = (provider: AiProvider): string => {
+  const secretName =
+    provider === 'openai'
+      ? 'OPENAI_API_KEY'
+      : provider === 'gemini'
+        ? 'GEMINI_API_KEY'
+        : 'ANTHROPIC_API_KEY';
+
+  return Deno.env.get(secretName)?.trim() || '';
+};
+
 const getTaskDefaultModel = (task: AiTask, provider: AiProvider, settings: ProviderSettings): string => {
   if (task === 'whatsapp_audio_transcription') {
     if (provider === 'openai') {
@@ -170,12 +187,10 @@ const normalizeProviderSettings = (
   settings: Record<string, unknown>,
   legacySettings: Record<string, unknown>,
 ): ProviderSettings => {
-  const legacyApiKey = toTrimmedString(legacySettings.apiKey);
   const legacyTextModel =
     toTrimmedString(legacySettings.textModel) || toTrimmedString(legacySettings.model) || OPENAI_DEFAULT_TEXT_MODEL;
 
-  const apiKey =
-    toTrimmedString(settings.apiKey) || (provider === 'openai' ? legacyApiKey : '');
+  const apiKey = getAiProviderApiKey(provider);
 
   const defaultModelText =
     toTrimmedString(settings.defaultModelText) ||

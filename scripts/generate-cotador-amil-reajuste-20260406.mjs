@@ -16,7 +16,14 @@ const env = Object.fromEntries(
     }),
 );
 
-const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_SERVICE_ROLE_KEY);
+const supabaseUrl = env.VITE_SUPABASE_URL;
+const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  throw new Error('VITE_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY devem estar configuradas na .env.local.');
+}
+
+const supabase = createClient(supabaseUrl, serviceRoleKey);
 const cotadorJsonDir = path.resolve(process.cwd(), 'cotador-json');
 
 const buildPriceRow = (values) => Object.fromEntries(AGE_RANGES.map((range, index) => [range, values[index]]));

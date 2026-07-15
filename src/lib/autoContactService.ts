@@ -1,11 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Lead, supabase } from './supabase';
+import { supabase, type Lead } from './supabase';
 import { BRAZIL_STATES } from './brasilLocations';
 import { formatGreetingTitle, getGreetingForDate } from './greeting';
-import {
-  normalizeAutoContactChatId,
-  sendAutoContactWhatsAppMessage,
-} from './autoContactWhatsAppService';
+import { evaluateSafeFormula } from './safeFormula';
 
 export const AUTO_CONTACT_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 
@@ -203,7 +200,6 @@ export type AutoContactLoggingSettings = {
 export type AutoContactSettings = {
   enabled: boolean;
   autoSend: boolean;
-  apiKey: string;
   messageTemplates: AutoContactTemplate[];
   flows: AutoContactFlow[];
   scheduling: AutoContactSchedulingSettings;
@@ -395,37 +391,20 @@ const buildFormulaContext = (lead: Lead, _timeZone: string): FormulaContext => {
   };
 };
 
-const formulaUtils = {
-  if: (condition: boolean, truthy: unknown, falsy: unknown) => (condition ? truthy : falsy),
-  concat: (...args: unknown[]) => args.map((item) => String(item ?? '')).join(''),
-  lower: (value: unknown) => String(value ?? '').toLowerCase(),
-  upper: (value: unknown) => String(value ?? '').toUpperCase(),
-  len: (value: unknown) => String(value ?? '').length,
-  number: (value: unknown) => Number(value),
-  now: () => new Date(),
-  dateAdd: (date: unknown, amount: number, unit: 'minutes' | 'hours' | 'days') => {
-    const base = date instanceof Date ? date : new Date(String(date));
-    const delta = unit === 'days' ? 86400000 : unit === 'hours' ? 3600000 : 60000;
-    return new Date(base.getTime() + amount * delta);
-  },
-  formatDate: (date: unknown, format: 'date' | 'datetime' = 'date') => {
-    const parsed = date instanceof Date ? date : new Date(String(date));
-    if (Number.isNaN(parsed.getTime())) return '';
-    return format === 'datetime'
-      ? parsed.toLocaleString('pt-BR', { timeZone: DEFAULT_SCHEDULING.timezone })
-      : parsed.toLocaleDateString('pt-BR', { timeZone: DEFAULT_SCHEDULING.timezone });
-  },
+const formatFormulaDate = (date: unknown, format?: unknown): string => {
+  const parsed = date instanceof Date
+    ? date
+    : typeof date === 'string' || typeof date === 'number'
+      ? new Date(date)
+      : new Date(Number.NaN);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return format === 'datetime'
+    ? parsed.toLocaleString('pt-BR', { timeZone: DEFAULT_SCHEDULING.timezone })
+    : parsed.toLocaleDateString('pt-BR', { timeZone: DEFAULT_SCHEDULING.timezone });
 };
 
 const evaluateExpression = (expression: string, context: FormulaContext): unknown => {
-  const trimmed = expression.trim().replace(/^=+\s*/, '');
-  if (!trimmed) return null;
-  try {
-    const fn = new Function('ctx', 'utils', `with(ctx){with(utils){return (${trimmed});}}`);
-    return fn(context, formulaUtils);
-  } catch {
-    return null;
-  }
+  return evaluateSafeFormula(expression, context, { formatDate: formatFormulaDate });
 };
 
 const applyFormulaTokens = (value: string, context: FormulaContext): string =>
@@ -570,7 +549,6 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
       message: composedMessage || templateMessage,
     };
   });
-  const apiKeyValue = typeof settings.apiKey === 'string' ? settings.apiKey : (typeof settings.token === 'string' ? settings.token : '');
   const rawFlows =
     Array.isArray(settings.flows) && settings.flows.length > 0 ? settings.flows : DEFAULT_AUTO_CONTACT_FLOWS;
   const fallbackTemplateId = messageTemplates[0]?.id ?? '';
@@ -925,7 +903,6 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
   return {
     enabled: settings.enabled !== false,
     autoSend: settings.autoSend !== false,
-    apiKey: apiKeyValue,
     messageTemplates,
     flows: normalizedFlows.length ? normalizedFlows : DEFAULT_AUTO_CONTACT_FLOWS,
     scheduling,
@@ -955,8 +932,6 @@ export const applyTemplateVariables = (
   const context = buildFormulaContext(lead, timeZone);
   return applyFormulaTokens(withVariables, context);
 };
-
-const normalizePhone = (phone: string) => phone.replace(/\D/g, '');
 
 const normalizeBooleanConditionValue = (value: unknown): 'true' | 'false' | null => {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
@@ -1229,61 +1204,13 @@ export const getNextAllowedSendAt = (
   return candidate;
 };
 
-export async function sendAutoContactMessage({
-  lead,
-  contentType,
-  content,
-  settings,
-}: {
+export async function sendAutoContactMessage(_params: {
   lead: Lead;
   contentType: 'string' | 'image' | 'video' | 'audio' | 'document';
   content: string | { url: string; caption?: string; filename?: string };
   settings: AutoContactSettings;
 }): Promise<void> {
-  const normalizedPhone = normalizePhone(lead.telefone || '');
-  if (!normalizedPhone) {
-    throw new Error('Telefone inválido para envio automático.');
-  }
-
-  if (!settings.apiKey) {
-    throw new Error('Token da Whapi Cloud não configurado na integração de mensagens automáticas.');
-  }
-
-  const chatId = normalizeAutoContactChatId(normalizedPhone);
-
-  console.info('[AutoContact] Enviando automação via Whapi Cloud', {
-    leadId: lead.id,
-    normalizedPhone,
-    chatId,
-  });
-
-  try {
-    if (contentType === 'string') {
-      await sendAutoContactWhatsAppMessage({
-        token: settings.apiKey,
-        chatId,
-        contentType: 'string',
-        content: content as string,
-      });
-      return;
-    }
-
-    const media = content as { url: string; caption?: string; filename?: string };
-    await sendAutoContactWhatsAppMessage({
-      token: settings.apiKey,
-      chatId,
-      contentType,
-      content: {
-        url: media.url,
-        caption: media.caption,
-        filename: contentType === 'document' ? media.filename : undefined,
-      },
-    });
-  } catch (error) {
-    const details = error instanceof Error ? error.message : String(error);
-    console.error('[AutoContact] Erro ao enviar mensagem automática:', details);
-    throw error;
-  }
+  throw new Error('O envio de automações é processado exclusivamente pelo worker do servidor.');
 }
 
 const shouldExitFlow = (flow: AutoContactFlow, lead: Lead, event?: string): boolean => {

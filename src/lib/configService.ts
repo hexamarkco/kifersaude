@@ -305,90 +305,14 @@ const normalizeIntegrationSetting = (row: IntegrationSetting): IntegrationSettin
   return { ...row, settings };
 };
 
-const LOCAL_INTEGRATIONS_KEY = 'integration_settings_fallback';
-
-const canUseLocalStorage = () => typeof window !== 'undefined' && !!window.localStorage;
-
-const loadLocalIntegrations = (): IntegrationSetting[] => {
-  if (!canUseLocalStorage()) return [];
-
-  const raw = window.localStorage.getItem(LOCAL_INTEGRATIONS_KEY);
-  if (!raw) return [];
-
+if (typeof window !== 'undefined') {
+  // Purge the legacy cache because integration settings can contain API credentials.
   try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .map((item) => normalizeIntegrationSetting(item as IntegrationSetting))
-      .filter((item) => typeof item.slug === 'string' && item.slug.trim());
-  } catch (error) {
-    console.warn('Unable to parse local integration settings', error);
-    return [];
+    window.localStorage.removeItem('integration_settings_fallback');
+  } catch {
+    // Storage can be unavailable in privacy-restricted browser contexts.
   }
-};
-
-const persistLocalIntegrations = (items: IntegrationSetting[]) => {
-  if (!canUseLocalStorage()) return;
-
-  try {
-    window.localStorage.setItem(LOCAL_INTEGRATIONS_KEY, JSON.stringify(items));
-  } catch (error) {
-    console.warn('Unable to persist local integration settings', error);
-  }
-};
-
-const storeLocalIntegrationSetting = (integration: IntegrationSetting): IntegrationSetting => {
-  const normalized = normalizeIntegrationSetting(integration);
-  const list = loadLocalIntegrations();
-  const index = list.findIndex((item) => item.slug === normalized.slug || item.id === normalized.id);
-
-  if (index >= 0) {
-    list[index] = { ...list[index], ...normalized };
-  } else {
-    list.push(normalized);
-  }
-
-  persistLocalIntegrations(list);
-  return normalized;
-};
-
-const getLocalIntegrationSetting = (slug: string): IntegrationSetting | null => {
-  const list = loadLocalIntegrations();
-  return list.find((item) => item.slug === slug) ?? null;
-};
-
-const createLocalIntegrationSetting = (
-  payload: Pick<IntegrationSetting, 'slug' | 'name'> & Partial<Pick<IntegrationSetting, 'description' | 'settings'>>,
-): IntegrationSetting => {
-  const now = new Date().toISOString();
-  const integration: IntegrationSetting = {
-    id: `local-${payload.slug}`,
-    slug: payload.slug,
-    name: payload.name,
-    description: payload.description ?? null,
-    settings: payload.settings ?? {},
-    created_at: now,
-    updated_at: now,
-  };
-
-  return storeLocalIntegrationSetting(integration);
-};
-
-const updateLocalIntegrationSetting = (
-  id: string,
-  updates: Partial<Pick<IntegrationSetting, 'name' | 'description' | 'settings'>>,
-): IntegrationSetting | null => {
-  const existing = loadLocalIntegrations();
-  const index = existing.findIndex((item) => item.id === id);
-  if (index === -1) return null;
-
-  const now = new Date().toISOString();
-  const updated = normalizeIntegrationSetting({ ...existing[index], ...updates, updated_at: now } as IntegrationSetting);
-  existing[index] = updated;
-  persistLocalIntegrations(existing);
-  return updated;
-};
+}
 
 export const configService = {
   async getAccessProfiles(): Promise<AccessProfile[]> {
@@ -1066,8 +990,6 @@ export const configService = {
   },
 
   async getIntegrationSetting(slug: string): Promise<IntegrationSetting | null> {
-    const localIntegration = getLocalIntegrationSetting(slug);
-
     try {
       const { data, error } = await supabase
         .from('integration_settings')
@@ -1078,27 +1000,23 @@ export const configService = {
 
       if (error) {
         if (isTableMissingError(error, 'integration_settings')) {
-          console.warn('integration_settings table not found. Using local fallback.');
-          return localIntegration;
+          console.warn('integration_settings table not found.');
+          return null;
         }
 
         throw error;
       }
 
       const normalized = data ? normalizeIntegrationSetting(data as IntegrationSetting) : null;
-      if (normalized) {
-        storeLocalIntegrationSetting(normalized);
-      }
-
-      return normalized ?? localIntegration;
+      return normalized;
     } catch (error) {
       if (isTableMissingError(error, 'integration_settings')) {
-        console.warn('integration_settings table not found. Using local fallback.');
-        return localIntegration;
+        console.warn('integration_settings table not found.');
+        return null;
       }
 
       console.error('Error loading integration setting:', error);
-      return localIntegration;
+      return null;
     }
   },
 
@@ -1123,17 +1041,8 @@ export const configService = {
       }
 
       const normalized = data ? normalizeIntegrationSetting(data as IntegrationSetting) : null;
-      if (normalized) {
-        storeLocalIntegrationSetting(normalized);
-      }
-
       return { data: normalized, error: null };
     } catch (error) {
-      if (isTableMissingError(error, 'integration_settings')) {
-        const localIntegration = createLocalIntegrationSetting(payload);
-        return { data: localIntegration, error: null };
-      }
-
       console.error('Error creating integration setting:', error);
       return { data: null, error: toPostgrestError(error) };
     }
@@ -1157,30 +1066,8 @@ export const configService = {
       }
 
       const normalized = data ? normalizeIntegrationSetting(data as IntegrationSetting) : null;
-      if (normalized) {
-        storeLocalIntegrationSetting(normalized);
-      }
-
       return { data: normalized, error: null };
     } catch (error) {
-      if (isTableMissingError(error, 'integration_settings')) {
-        const localIntegration = updateLocalIntegrationSetting(id, updates);
-        if (!localIntegration) {
-          return {
-            data: null,
-            error: {
-              message: 'Configuração local não encontrada.',
-              details: 'Nenhuma configuração local foi criada para esta integração.',
-              hint: '',
-              code: 'PGRST404',
-              name: 'PostgrestError',
-            },
-          };
-        }
-
-        return { data: localIntegration, error: null };
-      }
-
       console.error('Error updating integration setting:', error);
       return { data: null, error: toPostgrestError(error) };
     }

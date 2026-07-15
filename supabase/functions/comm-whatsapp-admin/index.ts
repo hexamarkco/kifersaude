@@ -12,8 +12,6 @@ import {
   parseWhapiError,
   readResponsePayload,
   sanitizeChannelForClient,
-  sanitizeWhapiToken,
-  toTrimmedString,
   WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
 
@@ -26,7 +24,6 @@ declare const Deno: {
 
 type AdminRequestBody = {
   action?: 'getConfig' | 'saveConfig' | 'refreshHealth';
-  token?: string;
   enabled?: boolean;
 };
 
@@ -52,7 +49,6 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
     channel: sanitizeChannelForClient(channel),
     config: {
       enabled: settings.enabled,
-      token: settings.token,
       tokenConfigured: Boolean(settings.token),
       webhookUrl: buildWebhookUrl(supabaseUrl, channel.webhook_secret),
     },
@@ -61,16 +57,14 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
 
 async function persistConfig(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
-  payload: { enabled: boolean; token: string },
+  payload: { enabled: boolean; nonSecretSettings: Record<string, unknown> },
 ) {
-  const sanitizedToken = sanitizeWhapiToken(payload.token);
-
   const { error: settingsError } = await supabaseAdmin
     .from('integration_settings')
     .update({
       settings: {
+        ...payload.nonSecretSettings,
         enabled: payload.enabled,
-        token: sanitizedToken,
       },
       updated_at: getNowIso(),
     })
@@ -96,7 +90,7 @@ async function persistConfig(
 async function refreshHealth(supabaseAdmin: ReturnType<typeof createAdminClient>) {
   const channel = await ensurePrimaryChannel(supabaseAdmin);
   const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
-  const token = sanitizeWhapiToken(settings.token);
+  const token = settings.token;
 
   if (!settings.enabled) {
     throw new Error('Integração WhatsApp desabilitada.');
@@ -196,12 +190,12 @@ Deno.serve(async (req: Request) => {
     const action = body.action || 'getConfig';
 
     await ensurePrimaryChannel(supabaseAdmin);
-    await ensureCommWhatsAppSettings(supabaseAdmin);
+    const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
 
     if (action === 'saveConfig') {
       await persistConfig(supabaseAdmin, {
         enabled: body.enabled === true,
-        token: toTrimmedString(body.token),
+        nonSecretSettings: settings.nonSecretSettings,
       });
     }
 

@@ -44,36 +44,6 @@ export const isServiceRoleRequest = (req: Request, serviceRoleKey: string): bool
   return apikey === expected;
 };
 
-const getUserManagementId = (user: Record<string, unknown> | null | undefined): string | null => {
-  if (!user) return null;
-
-  const userMetadata =
-    user.user_metadata && typeof user.user_metadata === 'object'
-      ? (user.user_metadata as Record<string, unknown>)
-      : null;
-  const appMetadata =
-    user.app_metadata && typeof user.app_metadata === 'object'
-      ? (user.app_metadata as Record<string, unknown>)
-      : null;
-
-  const candidates: unknown[] = [
-    userMetadata?.user_management_id,
-    userMetadata?.user_management_user_id,
-    userMetadata?.user_id,
-    appMetadata?.user_management_id,
-    appMetadata?.user_id,
-    user.id,
-  ];
-
-  for (const candidate of candidates) {
-    if (typeof candidate === 'string' && candidate.trim()) {
-      return candidate.trim();
-    }
-  }
-
-  return null;
-};
-
 export async function authorizeDashboardUser({
   req,
   supabaseUrl,
@@ -120,7 +90,7 @@ export async function authorizeDashboardUser({
     };
   }
 
-  const profileId = getUserManagementId(user as unknown as Record<string, unknown>);
+  const profileId = readTrimmedString(user.id);
   if (!profileId) {
     return {
       authorized: false,

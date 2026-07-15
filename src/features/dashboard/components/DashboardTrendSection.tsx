@@ -108,7 +108,7 @@ export function DashboardTrendSection({
               items={DASHBOARD_METRIC_TABS}
               value={selectedMetric}
               onChange={onSelectedMetricChange}
-              variant="panel"
+              variant="pill"
               listClassName="w-full xl:w-auto"
             />
 

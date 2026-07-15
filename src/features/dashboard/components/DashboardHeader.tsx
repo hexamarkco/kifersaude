@@ -136,7 +136,7 @@ export function DashboardHeader({
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Badge tone="neutral" size="sm" className="h-10 justify-center gap-2 whitespace-nowrap normal-case tracking-normal">
+          <Badge tone="neutral" size="sm" className="h-10 justify-center gap-2 rounded-[var(--radius-lg)] whitespace-nowrap normal-case tracking-normal">
             <Clock className="h-4 w-4 text-[var(--brand-primary)]" />
             <span>{lastUpdatedLabel || 'Aguardando atualizacao...'}</span>
           </Badge>

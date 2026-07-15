@@ -85,7 +85,7 @@ export default function WhatsAppStartChatModal({
           items={SOURCE_TABS}
           value={source}
           onChange={setSource}
-          variant="panel"
+          variant="pill"
           listClassName="w-full sm:w-auto"
           triggerClassName="flex-1 sm:flex-initial"
         />

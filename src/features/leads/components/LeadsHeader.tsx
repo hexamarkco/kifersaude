@@ -65,7 +65,7 @@ export function LeadsHeader({
             items={VIEW_MODE_TABS}
             value={viewMode}
             onChange={onViewModeChange}
-            variant="panel"
+            variant="pill"
             listClassName="w-full sm:w-auto"
             triggerClassName="flex-1 sm:flex-initial"
           />

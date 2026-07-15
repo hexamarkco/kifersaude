@@ -1589,7 +1589,7 @@ export default function AgendaScreen() {
               value={statusFilter}
               onChange={setStatusFilter}
               variant="underline"
-              listClassName="flex-nowrap overflow-x-auto border-0 p-0"
+              listClassName="flex-nowrap overflow-x-auto"
             />
             <div className="flex flex-wrap items-center gap-2">
               <Button onClick={goToToday} variant="secondary" size="sm">Hoje</Button>

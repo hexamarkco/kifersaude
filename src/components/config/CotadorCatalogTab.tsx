@@ -2759,7 +2759,7 @@ export default function CotadorCatalogTab({ embedded = false }: CotadorCatalogTa
           </div>
         </div>
 
-        <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant={embedded ? "underline" : "panel"} className="mt-5" listClassName="flex-nowrap overflow-x-auto" />
+        <Tabs items={tabs} value={activeTab} onChange={setActiveTab} variant={embedded ? "underline" : "pill"} className="mt-5" listClassName="flex-nowrap overflow-x-auto" />
       </div>
 
       {loading ? (

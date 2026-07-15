@@ -9514,7 +9514,7 @@ export default function WhatsAppInboxScreen() {
                       onClick={() => setChatFilesOpen(true)}
                       variant={chatFilesOpen ? 'secondary' : 'soft'}
                       size="icon"
-                      className="rounded-[var(--radius-lg)]"
+                      className="rounded-xl"
                       aria-label="Ver arquivos desta conversa"
                       title="Arquivos da conversa"
                     >

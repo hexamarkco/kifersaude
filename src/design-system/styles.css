@@ -2285,9 +2285,11 @@
   align-items: flex-start;
   gap: 0.75rem;
   overflow: hidden;
-  padding: 1rem 1rem 1.1rem;
+  min-height: 4.25rem;
+  padding: 0.875rem 1rem 1.05rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--toast-border, var(--border-default));
+  border-left: 3px solid var(--toast-color, var(--brand-primary));
   background:
     radial-gradient(circle at 8% 0%, color-mix(in srgb, var(--toast-color, var(--brand-primary)) 14%, transparent), transparent 34%),
     linear-gradient(180deg, color-mix(in srgb, var(--bg-elevated) 96%, transparent), color-mix(in srgb, var(--bg-inset) 96%, transparent));
@@ -2326,13 +2328,15 @@
 }
 
 .kds-toast-title {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--toast-color, var(--text-primary));
 }
 
 .kds-toast-description {
+  margin-top: 0.125rem;
   font-size: 0.8125rem;
+  line-height: 1.4;
   color: var(--text-secondary);
 }
 
@@ -2341,7 +2345,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
   color: var(--text-muted);
   border-radius: var(--radius-sm);
   transition: color 150ms;

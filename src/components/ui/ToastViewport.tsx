@@ -44,7 +44,7 @@ export default function ToastViewport() {
   if (items.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed right-4 top-4 z-[160] flex w-[min(92vw,24rem)] flex-col gap-3">
+    <div className="pointer-events-none fixed bottom-5 right-5 z-[500] flex w-[min(calc(100vw-2.5rem),22rem)] flex-col gap-3 sm:bottom-6 sm:right-6">
       {items.map((item) => {
         const meta = toneMeta[item.tone];
 

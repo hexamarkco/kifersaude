@@ -4224,7 +4224,7 @@ export default function WhatsAppInboxScreen() {
       messagesSignatureRef.current = nextSignature;
 
       if (payload.eventType === 'INSERT') {
-        if (isNearBottomRef.current || incomingMessage?.direction === 'outbound') {
+        if (isNearBottomRef.current) {
           pendingScrollModeRef.current = 'bottom';
           pendingScrollTopRef.current = null;
           pendingScrollHeightRef.current = null;
@@ -4233,7 +4233,7 @@ export default function WhatsAppInboxScreen() {
           pendingScrollTopRef.current = messagesContainerRef.current?.scrollTop ?? 0;
           pendingScrollHeightRef.current = null;
         }
-      } else if (payload.eventType === 'UPDATE' && (isNearBottomRef.current || incomingMessage?.direction === 'outbound')) {
+      } else if (payload.eventType === 'UPDATE' && isNearBottomRef.current) {
         pendingScrollModeRef.current = 'bottom';
         pendingScrollTopRef.current = null;
         pendingScrollHeightRef.current = null;

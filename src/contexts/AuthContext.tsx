@@ -24,7 +24,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const loadingProfileRef = useState<{ [key: string]: boolean }>({})[0];
 
   const getAuthErrorMessage = (error: unknown): string => {
     if (error instanceof Error) {
@@ -66,14 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Prevent duplicate calls
-    if (loadingProfileRef[profileId]) {
-      console.log('⏭️ Pulando carregamento duplicado do perfil');
-      return;
-    }
-
-    loadingProfileRef[profileId] = true;
-
     try {
       console.log('📥 Carregando perfil...');
       const { data, error } = await supabase
@@ -93,8 +84,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('❌ Erro ao carregar perfil do usuário:', error);
       setUserProfile(null);
-    } finally {
-      loadingProfileRef[profileId] = false;
     }
   };
 

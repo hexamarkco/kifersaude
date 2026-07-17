@@ -374,13 +374,13 @@ export const getDirectChatDisplayNameCandidate = (
   return pickHumanName(
     message.chat_name,
     message.from_name,
+    isRecord(message.business) ? message.business.name : null,
+    isRecord(message.profile) ? message.profile.name : null,
+    isRecord(message.chat) ? message.chat.name : null,
     message.pushname,
     message.push_name,
     message.notify_name,
     message.sender_name,
-    isRecord(message.chat) ? message.chat.name : null,
-    isRecord(message.business) ? message.business.name : null,
-    isRecord(message.profile) ? message.profile.name : null,
   );
 };
 
@@ -392,10 +392,25 @@ export const isPhoneLabelLikeDisplayName = (value: string): boolean => {
   return /^\+?\d+$/.test(withoutSymbols);
 };
 
+export const isSentenceLikeDisplayName = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+
+  if (trimmed.length > 50) return true;
+
+  const wordCount = trimmed.split(/\s+/).length;
+  if (wordCount > 6) return true;
+
+  if (/[.!?]\s+\p{L}/u.test(trimmed)) return true;
+
+  return false;
+};
+
 export const isValidCommWhatsAppDisplayName = (value: unknown): value is string => {
   const trimmed = toTrimmedString(value);
   if (!trimmed) return false;
   if (isPhoneLabelLikeDisplayName(trimmed)) return false;
+  if (isSentenceLikeDisplayName(trimmed)) return false;
   return /[\p{L}\p{N}]/u.test(trimmed);
 };
 

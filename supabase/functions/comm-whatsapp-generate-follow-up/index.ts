@@ -1151,7 +1151,8 @@ Deno.serve(async (req: Request) => {
 
     const configuredPromptBase = configuredInstructions || [
       `Voce gera sugestoes de follow-up prontas para envio no WhatsApp da operacao ${companyName}.`,
-      'Gere uma unica mensagem pronta para envio no WhatsApp.',
+      'Cada mensagem deve ser contextualizada no historico real do chat: retome o ultimo assunto tratado, use os detalhes especificos da conversa e evite frases que servem para qualquer lead.',
+      'A mensagem precisa soar como uma continuacao natural do ultimo contato, nao como um template pre-definido.',
     ].join('\n');
 
     const selectedContextPromptSection = buildSelectedContextPromptSection({
@@ -1168,6 +1169,7 @@ Deno.serve(async (req: Request) => {
       'Leia todo o historico antes de responder e respeite a cronologia do transcript.',
       'Considere as datas e horas do transcript como a referencia temporal principal.',
       'Nao invente fatos, promessas, dados, respostas do cliente ou combinados que nao estejam no historico.',
+      'USE DETALHES ESPECIFICOS do historico na mensagem: retome produtos, valores, objecoes, prazos e combinados reais da conversa. A mensagem final deve ser claramente baseada no conteudo do transcript, nao em templates genericos.',
       responseFormatInstruction,
       selectedContextPromptSection,
       `Instrucao de tom desta geracao:\n${getFollowUpToneInstruction(effectiveTone)} Aplique este tom com seriedade na mensagem final.`,
@@ -1180,10 +1182,13 @@ Deno.serve(async (req: Request) => {
     const baseUserPrompt = [
       baseContextPrompt,
       '',
-      'Tarefa:',
+      'Instrucao critica — siga exatamente:',
+      '1. ANTES de escrever, analise o historico e extraia: ultimo topico tratado, produto/plano discutido, objecoes do cliente, prazos acordados, duvidas especificas, valor mencionado, etapa da conversa.',
+      '2. Use esses detalhes CONCRETOS para compor o follow-up. A mensagem deve fazer sentido APENAS para este lead nesta conversa — jamais use frases coringas que caberiam em qualquer chat.',
+      '3. Retome exatamente de onde parou, como se fosse o corretor continuando a conversa real. Uma pergunta por vez, passo a passo.',
       shouldGenerateVariations
-        ? `Gere ${variantCount} variacoes da proxima mensagem de follow-up mais adequada para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
-        : 'Gere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
+        ? `\nGere ${variantCount} variacoes da proxima mensagem de follow-up mais adequada para enviar agora neste chat. Cada variacao deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.`
+        : '\nGere a proxima mensagem de follow-up mais adequada para enviar agora neste chat. A mensagem deve soar humana, comercialmente coerente e pronta para copiar e enviar no WhatsApp.',
     ].join('\n');
 
     const userPrompt = refinementMode
@@ -1213,7 +1218,7 @@ Deno.serve(async (req: Request) => {
       aiContext,
       systemPrompt,
       userPrompt,
-      temperature: 0.5,
+      temperature: 0.7,
       maxTokens: shouldGenerateVariations ? Math.min(900, 260 * variantCount) : 320,
     });
 
@@ -1222,7 +1227,7 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: 0.5,
+      temperature: 0.7,
       maxTokens: shouldGenerateVariations ? Math.min(900, 260 * variantCount) : 320,
     });
 

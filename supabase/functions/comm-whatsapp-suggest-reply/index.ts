@@ -280,6 +280,7 @@ Deno.serve(async (req: Request) => {
     const systemPrompt = [
       `Voce sugere respostas prontas para o WhatsApp da operacao ${companyName}.`,
       'Use como base o historico do chat atual e o padrao real das mensagens enviadas pela operacao.',
+      'USE DETALHES ESPECIFICOS do historico: retome o ultimo topico, produto, duvida ou objecao. Nao gere mensagens genericas que caberiam em qualquer chat.',
       'A resposta deve soar humana, consultiva, natural e coerente com o jeito da Kifer Saude escrever.',
       'Padrao obrigatorio da operacao: conduza a conversa passo a passo, com mensagens curtas e uma unica pergunta por vez.',
       'Nunca envie uma lista de perguntas para coletar dados. Nao use bullets, numeracao ou checklist para pedir informacoes, salvo se o cliente pedir explicitamente uma lista.',
@@ -309,6 +310,9 @@ Deno.serve(async (req: Request) => {
       composerDraft ? 'Rascunho atual no composer:' : '',
       composerDraft || '',
       '',
+      'Instrucao critica:',
+      'ANTES de escrever, extraia do historico: ultimo topico, produto/plano em discussao, duvida ou objecao do cliente, etapa atual.',
+      'Use esses detalhes CONCRETOS — a resposta deve fazer sentido APENAS para este lead nesta conversa, jamais uma frase generica.',
       'Tarefa:',
       mode === 'complete_draft'
         ? 'Gere uma versao final da mensagem considerando o rascunho atual e o contexto. Mantenha uma unica pergunta por mensagem.'
@@ -320,7 +324,7 @@ Deno.serve(async (req: Request) => {
       task: 'follow_up_generation',
       systemPrompt,
       userPrompt,
-      temperature: composerDraft ? 0.35 : 0.5,
+      temperature: composerDraft ? 0.5 : 0.7,
       maxTokens: 360,
     });
 

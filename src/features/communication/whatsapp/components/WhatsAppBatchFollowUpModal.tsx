@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, CalendarPlus, Check, CheckCircle2, Clock3, Loader2, MessageSquare, Plus, Send, Sparkles } from 'lucide-react';
+import { AlertCircle, CalendarPlus, Check, CheckCircle2, Clock3, Loader2, MessageSquare, RotateCcw, Send, Settings, Sparkles, X } from 'lucide-react';
 
-import { Button, Textarea } from '../../../../design-system';
+import { Button, Progress, Stepper, Textarea } from '../../../../design-system';
 import VariableAutocompleteTextarea from '../../../../components/ui/VariableAutocompleteTextarea';
 import { WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS } from '../../../../lib/templateVariableSuggestions';
 import { splitWhatsAppMessageSegments } from '../../../../lib/whatsAppMessageSegments';
@@ -12,6 +12,8 @@ import { CONVERSATION_SITUATION_PRESETS } from './followUpSituationPresets';
 import WhatsAppDialog from './WhatsAppDialog';
 
 // ---- Constants ----
+
+const CONCURRENCY = 3;
 
 const followUpToneOptions: Array<{
   value: CommWhatsAppFollowUpTone;
@@ -25,48 +27,43 @@ const followUpToneOptions: Array<{
   { value: 'premium', label: 'Premium', description: 'Comunica cuidado, exclusividade e atenção personalizada.' },
 ];
 
-type SimpleRefinementAction = {
+const SIMPLE_REFINEMENT_ACTIONS: Array<{
   id: CommWhatsAppRewriteTone;
   label: string;
   description: string;
-};
-
-const SIMPLE_REFINEMENT_ACTIONS: SimpleRefinementAction[] = [
-  { id: 'shorter', label: 'Encurtar', description: 'Reescrever a sugestão de forma mais curta e objetiva.' },
-  { id: 'friendly', label: 'Mais amigável', description: 'Deixar a mensagem mais leve, humana e acolhedora.' },
-  { id: 'assertive', label: 'Mais direta', description: 'Tornar o próximo passo mais claro sem soar agressivo.' },
-  { id: 'professional', label: 'Mais profissional', description: 'Ajustar o texto para um tom mais consultivo e profissional.' },
+  icon: typeof Sparkles;
+}> = [
+  { id: 'shorter', label: 'Encurtar', description: 'Reescrever de forma mais curta e objetiva.', icon: X },
+  { id: 'friendly', label: 'Suavizar', description: 'Deixar mais leve, humana e acolhedora.', icon: Sparkles },
+  { id: 'assertive', label: 'Objetivar', description: 'Tornar o próximo passo mais claro.', icon: Check },
+  { id: 'professional', label: 'Profissionalizar', description: 'Ajustar para tom consultivo e profissional.', icon: Settings },
 ];
 
-type FollowUpRefinementAction = {
+const FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS: Array<{
   id: string;
   label: string;
   description: string;
   instruction: string;
-};
-
-const FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS: FollowUpRefinementAction[] = [
+}> = [
   {
     id: 'add-context',
-    label: 'Usar contexto do chat',
-    description: 'Refinar considerando o histórico e o momento atual da conversa.',
+    label: 'Usar contexto',
+    description: 'Refinar considerando o histórico da conversa.',
     instruction: 'Refine a mensagem usando o contexto completo do chat. Preserve apenas fatos confirmados no histórico e deixe o próximo passo mais coerente com a conversa.',
   },
   {
     id: 'reduce-pressure',
     label: 'Menos pressão',
-    description: 'Diminuir insistência e cobrança no follow-up.',
+    description: 'Diminuir insistência e cobrança.',
     instruction: 'Refine a mensagem para reduzir pressão e cobrança. Mantenha cordialidade, naturalidade e uma pergunta simples para facilitar resposta.',
   },
   {
     id: 'clear-next-step',
-    label: 'Próximo passo claro',
-    description: 'Reforçar uma ação objetiva para avançar a conversa.',
+    label: 'Próximo passo',
+    description: 'Reforçar ação objetiva.',
     instruction: 'Refine a mensagem para terminar com um próximo passo claro, simples e fácil de responder, sem inventar combinados ou dados.',
   },
 ];
-
-const CONCURRENCY = 3;
 
 const formatNextActionDate = (value?: string | null) => {
   if (!value) return 'Sem data sugerida';
@@ -164,7 +161,18 @@ export default function WhatsAppBatchFollowUpModal({
   const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
   const [refiningActionId, setRefiningActionId] = useState<string | null>(null);
   const [sentSummary, setSentSummary] = useState<SentSummary | null>(null);
+  const [configOpen, setConfigOpen] = useState(false);
   const cancelRequestedRef = useRef(false);
+
+  const currentStep = phase === 'loading' ? 0 : phase === 'generating' ? 1 : phase === 'sending' ? 3 : phase === 'sent' ? 4 : items.some((i) => i.status === 'pending') ? 1 : 2;
+
+  const steps = [
+    { label: 'Carregar', description: 'Buscando pendências' },
+    { label: 'Gerar', description: 'Criar sugestões IA' },
+    { label: 'Revisar', description: 'Ajustar mensagens' },
+    { label: 'Enviar', description: 'Disparar mensagens' },
+    { label: 'Concluído', description: 'Resumo do envio' },
+  ];
 
   // Load pending chats on open
   useEffect(() => {
@@ -174,16 +182,14 @@ export default function WhatsAppBatchFollowUpModal({
     setPhase('loading');
     setActiveItemIndex(null);
     setSentSummary(null);
+    setConfigOpen(false);
 
     void (async () => {
       try {
         const pendingChats = await commWhatsAppService.getPendingFollowUpChats();
         const seenReminderIds = new Set<string>();
         const mapped: BatchItemState[] = pendingChats.filter((chat) => {
-          if (seenReminderIds.has(chat.reminder_id)) {
-            return false;
-          }
-
+          if (seenReminderIds.has(chat.reminder_id)) return false;
           seenReminderIds.add(chat.reminder_id);
           return true;
         }).map((chat) => ({
@@ -212,20 +218,15 @@ export default function WhatsAppBatchFollowUpModal({
           sendSegmentsTotal: 0,
         }));
         setItems(mapped);
-        if (mapped.length > 0) {
-          setActiveItemIndex(0);
-        }
+        if (mapped.length > 0) setActiveItemIndex(0);
         setPhase('ready');
-        if (mapped.length === 0) {
-          toast.info('Nenhum follow-up pendente para hoje.');
-        }
+        if (mapped.length === 0) toast.info('Nenhum follow-up pendente para hoje.');
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Erro ao carregar follow-ups pendentes.';
-        toast.error(message);
+        toast.error(error instanceof Error ? error.message : 'Erro ao carregar follow-ups pendentes.');
         onClose();
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onClose não pode estar aqui porque a referência muda a cada render do modal de agenda, causando flash/refetch
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const activeItem = activeItemIndex !== null ? items[activeItemIndex] : null;
@@ -236,10 +237,15 @@ export default function WhatsAppBatchFollowUpModal({
 
   const pendingCount = items.filter((i) => i.status === 'pending' && i.selected).length;
   const readyCount = items.filter((i) => i.status === 'ready' && i.selected).length;
+  const failedGenCount = items.filter((i) => i.status === 'failed' && i.selected).length;
+  const currentSendingItem = items.find((i) => i.sendStatus === 'sending') ?? null;
+  const totalCount = items.length;
+  const selectedCount = items.filter((i) => i.selected).length;
+  const allSelected = items.length > 0 && items.every((i) => i.selected);
+
   const sendingItems = items.filter((i) => i.selected && ['queued', 'sending', 'sent', 'failed'].includes(i.sendStatus));
   const sentItemsCount = sendingItems.filter((i) => i.sendStatus === 'sent').length;
   const failedItemsCount = sendingItems.filter((i) => i.sendStatus === 'failed').length;
-  const currentSendingItem = items.find((i) => i.sendStatus === 'sending') ?? null;
   const sendingTotal = sendingItems.length;
   const sendingFinished = sentItemsCount + failedItemsCount;
   const sendingProgressPercent = sendingTotal > 0 ? Math.round((sendingFinished / sendingTotal) * 100) : 0;
@@ -298,7 +304,6 @@ export default function WhatsAppBatchFollowUpModal({
   };
 
   const handleToggleSelectAll = () => {
-    const allSelected = items.every((i) => i.selected);
     setItems((prev) => prev.map((it) => ({ ...it, selected: !allSelected })));
   };
 
@@ -323,7 +328,7 @@ export default function WhatsAppBatchFollowUpModal({
 
   // ---- Context refinement ----
 
-  const handleContextRefinement = async (action: FollowUpRefinementAction) => {
+  const handleContextRefinement = async (action: typeof FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS[number]) => {
     const idx = activeItemIndex;
     if (idx === null || !activeItem?.generatedText.trim() || refiningActionId) return;
     setRefiningActionId(action.id);
@@ -379,6 +384,30 @@ export default function WhatsAppBatchFollowUpModal({
     });
   };
 
+  // ---- Batch apply config to all ----
+
+  const handleBatchApplyTone = (tone: CommWhatsAppFollowUpTone) => {
+    setItems((prev) => prev.map((it) => ({
+      ...it,
+      tone,
+      manualContext: { ...it.manualContext, tone: true },
+    })));
+    toast.success(`Tom "${followUpToneOptions.find((o) => o.value === tone)?.label}" aplicado a todos.`);
+  };
+
+  const handleBatchApplySituationPreset = (presetId: string) => {
+    setItems((prev) => prev.map((it) => {
+      const current = it.selectedSituationPresetIds;
+      const next = current.includes(presetId) ? current.filter((id) => id !== presetId) : [...current, presetId];
+      return {
+        ...it,
+        selectedSituationPresetIds: next,
+        manualContext: { ...it.manualContext, situationPresetIds: next.length > 0 },
+      };
+    }));
+    toast.success('Cenário atualizado para todos os leads.');
+  };
+
   // ---- Bulk generate ----
 
   const handleGenerateAll = async () => {
@@ -387,7 +416,11 @@ export default function WhatsAppBatchFollowUpModal({
       .filter((idx) => idx !== -1);
 
     if (targetIndices.length === 0) {
-      toast.warning('Nenhum item pendente para gerar.');
+      if (items.some((it) => it.selected && it.status === 'ready')) {
+        toast.info('Todos os selecionados já foram gerados.');
+      } else {
+        toast.warning('Nenhum item pendente para gerar.');
+      }
       return;
     }
 
@@ -463,10 +496,7 @@ export default function WhatsAppBatchFollowUpModal({
 
     setPhase('sending');
     setItems((prev) => prev.map((item) => {
-      if (!readyItems.some((readyItem) => readyItem.reminderId === item.reminderId)) {
-        return item;
-      }
-
+      if (!readyItems.some((readyItem) => readyItem.reminderId === item.reminderId)) return item;
       return {
         ...item,
         sendStatus: 'queued',
@@ -516,11 +546,7 @@ export default function WhatsAppBatchFollowUpModal({
       console.error('[WhatsAppBatchFollowUpModal] erro ao enviar:', error);
       setItems((prev) => prev.map((item) => (
         item.sendStatus === 'queued' || item.sendStatus === 'sending'
-          ? {
-              ...item,
-              sendStatus: 'failed',
-              sendError: error instanceof Error ? error.message : 'Erro desconhecido ao enviar.',
-            }
+          ? { ...item, sendStatus: 'failed', sendError: error instanceof Error ? error.message : 'Erro desconhecido ao enviar.' }
           : item
       )));
       setSentSummary({
@@ -537,9 +563,7 @@ export default function WhatsAppBatchFollowUpModal({
   // ---- Close / cancel ----
 
   const handleClose = () => {
-    if (phase === 'generating') {
-      cancelRequestedRef.current = true;
-    }
+    if (phase === 'generating') cancelRequestedRef.current = true;
     onClose();
   };
 
@@ -550,31 +574,43 @@ export default function WhatsAppBatchFollowUpModal({
       <WhatsAppDialog isOpen={isOpen} onClose={onClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]"
         footer={<div className="flex items-center justify-end gap-2"><Button variant="secondary" onClick={onClose}>Fechar</Button></div>}
       >
-        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4">
-          <CheckCircle2 className="h-12 w-12 text-[var(--success)]" />
-          <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Follow-ups enviados
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] px-4 py-3 text-sm font-medium text-[var(--success-text)]">
-              <CheckCircle2 className="h-4 w-4" />
-              {sentSummary.sentCount} enviado(s)
+        <div className="flex flex-col items-center gap-6 py-12">
+          <div className="rounded-full border-4 p-4" style={{ borderColor: 'var(--success)', background: 'var(--success-soft)' }}>
+            <CheckCircle2 className="h-10 w-10" style={{ color: 'var(--success-text)' }} />
+          </div>
+          <div className="text-center">
+            <p className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Follow-ups enviados</p>
+            <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>Resumo do disparo em lote</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex items-center gap-2.5 rounded-xl border px-5 py-3 shadow-sm" style={{ borderColor: 'var(--success-border)', background: 'var(--success-soft)' }}>
+              <CheckCircle2 className="h-5 w-5" style={{ color: 'var(--success-text)' }} />
+              <div>
+                <p className="text-lg font-bold" style={{ color: 'var(--success-text)' }}>{sentSummary.sentCount}</p>
+                <p className="text-xs font-medium" style={{ color: 'var(--success-text)' }}>enviado(s)</p>
+              </div>
             </div>
             {sentSummary.scheduledCount > 0 ? (
-              <div className="flex items-center gap-2 rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] px-4 py-3 text-sm font-medium text-[var(--info-text)]">
-                <CalendarPlus className="h-4 w-4" />
-                {sentSummary.scheduledCount} agendado(s)
+              <div className="flex items-center gap-2.5 rounded-xl border px-5 py-3 shadow-sm" style={{ borderColor: 'var(--info-border)', background: 'var(--info-soft)' }}>
+                <CalendarPlus className="h-5 w-5" style={{ color: 'var(--info-text)' }} />
+                <div>
+                  <p className="text-lg font-bold" style={{ color: 'var(--info-text)' }}>{sentSummary.scheduledCount}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--info-text)' }}>agendado(s)</p>
+                </div>
               </div>
             ) : null}
             {sentSummary.failedCount > 0 ? (
-              <div className="flex items-center gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 text-sm font-medium text-[var(--danger-text)]">
-                <AlertCircle className="h-4 w-4" />
-                <span>{sentSummary.failedCount} falha(s)</span>
+              <div className="flex items-center gap-2.5 rounded-xl border px-5 py-3 shadow-sm" style={{ borderColor: 'var(--danger-border)', background: 'var(--danger-soft)' }}>
+                <AlertCircle className="h-5 w-5" style={{ color: 'var(--danger-text)' }} />
+                <div>
+                  <p className="text-lg font-bold" style={{ color: 'var(--danger-text)' }}>{sentSummary.failedCount}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--danger-text)' }}>falha(s)</p>
+                </div>
               </div>
             ) : null}
           </div>
           {sentSummary.errorMessage ? (
-            <p className="max-w-md text-center text-xs text-[var(--danger-text)]">{sentSummary.errorMessage}</p>
+            <p className="max-w-md text-center text-sm" style={{ color: 'var(--danger-text)' }}>{sentSummary.errorMessage}</p>
           ) : null}
         </div>
       </WhatsAppDialog>
@@ -586,15 +622,11 @@ export default function WhatsAppBatchFollowUpModal({
   if (phase === 'loading') {
     return (
       <WhatsAppDialog isOpen={isOpen} onClose={handleClose} title="Follow-ups em lote" description="" size="xl" panelClassName="max-w-[90rem]" footer={null}>
-        <div className="flex min-h-[400px] items-center justify-center">
-          <div className="flex items-center gap-3 rounded-2xl border px-5 py-4 shadow-sm" style={{
-            borderColor: 'var(--border-subtle)',
-            background: 'var(--bg-surface)',
-          }}>
-            <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--brand-primary)' }} />
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-              Carregando follow-ups pendentes...
-            </span>
+        <div className="flex min-h-[420px] flex-col items-center justify-center gap-5">
+          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--brand-primary)' }} />
+          <div className="text-center">
+            <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Buscando follow-ups pendentes...</p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>Aguarde enquanto carregamos os leads com follow-up atrasado.</p>
           </div>
         </div>
       </WhatsAppDialog>
@@ -608,48 +640,53 @@ export default function WhatsAppBatchFollowUpModal({
       isOpen={isOpen}
       onClose={handleClose}
       title="Follow-ups em lote"
-      description="Gerencie e envie follow-ups para vários leads de uma vez. Cada lead tem seus próprios ajustes de tom, cenário e instruções."
+      description={phase === 'sending' ? '' : 'Selecione, gere e envie follow-ups para vários leads de uma vez.'}
       size="xl"
       panelClassName="max-w-[90rem]"
       footer={
         <div className="flex items-center justify-between gap-3">
+          {/* Left footer: contextual actions */}
           <div className="flex items-center gap-2">
-            {phase === 'sending' ? (
-              <div className="min-w-[280px] max-w-[520px] space-y-1.5">
-                <div className="flex items-center justify-between gap-3 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                  <span>
-                    Enviando {sendingFinished} de {sendingTotal}
-                    {currentSendingItem ? ` - ${currentSendingItem.leadName || 'Sem nome'}` : ''}
-                  </span>
-                  <span>{sendingProgressPercent}%</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full" style={{ background: 'var(--bg-elevated)' }}>
-                  <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${sendingProgressPercent}%`,
-                      background: 'var(--brand-primary)',
-                    }}
-                  />
-                </div>
-              </div>
-            ) : phase === 'generating' ? (
+            {phase === 'generating' ? (
               <Button variant="secondary" size="sm" className="rounded-xl" onClick={() => { cancelRequestedRef.current = true; }}>
-                Cancelar
+                Cancelar geração
               </Button>
+            ) : phase === 'sending' ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Enviando {sendingFinished} de {sendingTotal}</span>
+                </div>
+                <Progress value={sendingProgressPercent} size="sm" className="min-w-[160px]" showLabel />
+              </div>
             ) : (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="rounded-xl"
-                onClick={() => void handleGenerateAll()}
-                disabled={pendingCount === 0}
-              >
-                <Sparkles className="mr-1.5 h-4 w-4" />
-                Gerar pendentes ({pendingCount})
-              </Button>
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-xl"
+                  onClick={() => void handleGenerateAll()}
+                  disabled={pendingCount === 0}
+                >
+                  <Sparkles className="mr-1.5 h-4 w-4" />
+                  Gerar {pendingCount} pendente(s)
+                </Button>
+                {readyCount > 0 ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => setConfigOpen((v) => !v)}
+                  >
+                    <Settings className="mr-1.5 h-4 w-4" />
+                    Configurar IA
+                  </Button>
+                ) : null}
+              </>
             )}
           </div>
+
+          {/* Right footer: close + send */}
           <div className="flex items-center gap-2">
             <Button variant="secondary" size="sm" className="rounded-xl" onClick={handleClose} disabled={phase === 'sending'}>
               Fechar
@@ -659,108 +696,180 @@ export default function WhatsAppBatchFollowUpModal({
               size="sm"
               className="rounded-xl"
               onClick={() => void handleSendSelected()}
-                disabled={readyCount === 0 || phase === 'sending'}
-                loading={phase === 'sending'}
-              >
-                <Send className="mr-1.5 h-4 w-4" />
-              {phase === 'sending' ? `Enviando (${sendingFinished}/${sendingTotal})` : `Enviar selecionados (${readyCount})`}
+              disabled={readyCount === 0 || phase === 'sending'}
+              loading={phase === 'sending'}
+            >
+              <Send className="mr-1.5 h-4 w-4" />
+              {phase === 'sending' ? `Enviando (${sendingFinished}/${sendingTotal})` : `Enviar ${readyCount} selecionado(s)`}
             </Button>
           </div>
         </div>
       }
     >
-      <div className="flex min-h-[500px] gap-5">
-        {/* Sidebar */}
-        <aside className="w-[260px] shrink-0 space-y-2">
-          <div className="flex items-center justify-between gap-2 px-1">
-            <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-muted)' }}>
-              {items.length} lead(s)
+      <div className="flex min-h-[520px] flex-col gap-4">
+        {/* Stepper header */}
+        <div className="px-1">
+          <Stepper currentStep={currentStep} steps={steps} />
+        </div>
+
+        {/* Stats bar */}
+        <div className="flex items-center justify-between gap-4 px-1">
+          <div className="flex items-center gap-3">
+            <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-secondary)',
+            }}>
+              {selectedCount}/{totalCount} selecionados
             </span>
-            <button
-              type="button"
-              onClick={handleToggleSelectAll}
-              className="text-[11px] font-semibold transition hover:opacity-70"
-              style={{ color: 'var(--brand-primary)' }}
-            >
-              {items.every((i) => i.selected) ? 'Desmarcar todos' : 'Selecionar todos'}
-            </button>
-          </div>
-          <div className="max-h-[480px] space-y-1 overflow-y-auto pr-2">
-            {items.map((item, index) => {
-              const isActive = activeItemIndex === index;
-              const statusIcon = phase === 'sending' && item.sendStatus === 'sending' ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: 'var(--brand-primary)' }} />
-              ) : phase === 'sending' && item.sendStatus === 'sent' ? (
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--success)]" />
-              ) : phase === 'sending' && item.sendStatus === 'failed' ? (
-                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-[var(--danger)]" />
-              ) : phase === 'sending' && item.sendStatus === 'queued' ? (
-                <Clock3 className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
-              ) : item.status === 'generating' ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" style={{ color: 'var(--brand-primary)' }} />
-              ) : item.status === 'ready' ? (
-                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--success)]" />
-              ) : item.status === 'failed' ? (
-                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-[var(--danger)]" />
-              ) : null;
-
-              return (
-                <div key={item.reminderId} className="flex items-center gap-2">
-                  <div
-                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${phase === 'sending' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-                    style={{
-                      borderColor: item.selected ? 'var(--brand-primary)' : 'var(--border-default)',
-                      background: item.selected ? 'var(--brand-primary)' : 'transparent',
-                    }}
-                    onClick={() => {
-                      if (phase !== 'sending') handleToggleSelect(item.chatId);
-                    }}
-                  >
-                    {item.selected && <Check className="h-3 w-3 text-[var(--text-on-brand)]" />}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveItemIndex(index)}
-                    className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs transition ${
-                      isActive
-                        ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]'
-                        : 'border-transparent bg-transparent hover:bg-[var(--bg-elevated)]'
-                    }`}
-                  >
-                    {statusIcon}
-                    <span className="min-w-0 flex-1 truncate font-medium">{item.leadName || 'Sem nome'}</span>
-                    {phase === 'sending' && item.sendStatus === 'sending' && item.sendSegmentsTotal > 1 ? (
-                      <span className="shrink-0 text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>
-                        {item.sendSegmentsSent}/{item.sendSegmentsTotal}
-                      </span>
-                    ) : null}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </aside>
-
-        {/* Editor + Preview */}
-        {activeItem ? (
-          <div className="grid min-w-0 flex-1 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.72fr)]">
-            {/* Main editor */}
-            <section className="min-w-0 space-y-4">
-              <div className="rounded-2xl border p-4 shadow-sm" style={{
-                borderColor: 'var(--border-subtle)',
-                background: 'var(--bg-surface)',
+            {pendingCount > 0 ? (
+              <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{
+                background: 'var(--warning-soft)',
+                color: 'var(--warning-text)',
               }}>
-                <div className="flex flex-col gap-4">
-                  {/* Header: lead name + generate buttons */}
-                  <div className="flex items-center justify-between gap-3">
+                {pendingCount} pendente(s)
+              </span>
+            ) : null}
+            {readyCount > 0 ? (
+              <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{
+                background: 'var(--success-soft)',
+                color: 'var(--success-text)',
+              }}>
+                {readyCount} pronto(s)
+              </span>
+            ) : null}
+            {failedGenCount > 0 ? (
+              <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider" style={{
+                background: 'var(--danger-soft)',
+                color: 'var(--danger-text)',
+              }}>
+                {failedGenCount} falha(s)
+              </span>
+            ) : null}
+          </div>
+          {phase === 'sending' ? (
+            <span className="text-xs font-semibold" style={{ color: currentSendingItem ? 'var(--brand-primary)' : 'var(--text-muted)' }}>
+              {currentSendingItem ? `Enviando: ${currentSendingItem.leadName || 'Sem nome'}` : 'Finalizando...'}
+            </span>
+          ) : null}
+        </div>
+
+        {/* Main content */}
+        <div className="flex min-h-0 flex-1 gap-5 overflow-hidden">
+          {/* Sidebar */}
+          <aside className="flex w-[248px] shrink-0 flex-col gap-2">
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                Leads
+              </span>
+              <button
+                type="button"
+                onClick={handleToggleSelectAll}
+                className="text-[11px] font-semibold transition hover:opacity-70"
+                style={{ color: 'var(--brand-primary)' }}
+                disabled={phase === 'sending'}
+              >
+                {allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+              </button>
+            </div>
+            <div className="flex-1 space-y-1 overflow-y-auto pr-1.5">
+              {items.map((item, index) => {
+                const isActive = activeItemIndex === index;
+
+                let statusDot: 'pending' | 'generating' | 'ready' | 'failed' | 'sending' | 'sent' | 'error';
+                if (phase === 'sending') {
+                  if (item.sendStatus === 'sending') statusDot = 'sending';
+                  else if (item.sendStatus === 'sent') statusDot = 'sent';
+                  else if (item.sendStatus === 'failed') statusDot = 'error';
+                  else if (item.sendStatus === 'queued') statusDot = 'pending';
+                  else statusDot = item.status === 'ready' ? 'ready' : 'pending';
+                } else {
+                  statusDot = item.status === 'generating' ? 'generating' : item.status === 'ready' ? 'ready' : item.status === 'failed' ? 'failed' : 'pending';
+                }
+
+                const statusColors: Record<string, { dot: string; bg: string }> = {
+                  pending: { dot: 'var(--text-muted)', bg: 'transparent' },
+                  generating: { dot: 'var(--brand-primary)', bg: 'var(--brand-primary-soft)' },
+                  ready: { dot: 'var(--success)', bg: 'var(--success-soft)' },
+                  failed: { dot: 'var(--danger)', bg: 'var(--danger-soft)' },
+                  sending: { dot: 'var(--brand-primary)', bg: 'var(--brand-primary-soft)' },
+                  sent: { dot: 'var(--success)', bg: 'var(--success-soft)' },
+                  error: { dot: 'var(--danger)', bg: 'var(--danger-soft)' },
+                };
+
+                const colors = statusColors[statusDot];
+
+                return (
+                  <div key={item.reminderId} className="flex items-center gap-1.5">
+                    <div
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${phase === 'sending' ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                      style={{
+                        borderColor: item.selected ? 'var(--brand-primary)' : 'var(--border-default)',
+                        background: item.selected ? 'var(--brand-primary)' : 'transparent',
+                      }}
+                      onClick={() => { if (phase !== 'sending') handleToggleSelect(item.chatId); }}
+                    >
+                      {item.selected && <Check className="h-3 w-3" style={{ color: 'var(--text-on-brand)' }} />}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveItemIndex(index)}
+                      className={`flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-xs transition ${
+                        isActive
+                          ? 'shadow-sm'
+                          : 'hover:bg-[var(--bg-elevated)]'
+                      }`}
+                      style={{
+                        background: isActive ? colors.bg || 'var(--bg-elevated)' : 'transparent',
+                        border: isActive ? `1px solid ${colors.dot || 'transparent'}` : '1px solid transparent',
+                      }}
+                    >
+                      <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+                        {statusDot === 'generating' || statusDot === 'sending' ? (
+                          <Loader2 className="h-3 w-3 animate-spin" style={{ color: colors.dot }} />
+                        ) : (
+                          <span className="block h-2 w-2 rounded-full" style={{ background: colors.dot }} />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {item.leadName || 'Sem nome'}
+                      </span>
+                      {phase === 'sending' && item.sendStatus === 'sending' && item.sendSegmentsTotal > 1 ? (
+                        <span className="shrink-0 text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>
+                          {item.sendSegmentsSent}/{item.sendSegmentsTotal}
+                        </span>
+                      ) : null}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* Editor + Preview */}
+          {activeItem ? (
+            <div className="flex min-w-0 flex-1 gap-5 overflow-hidden">
+              {/* Main editor */}
+              <section className="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+                {/* Message editor card */}
+                <div className="rounded-2xl border p-4 shadow-sm" style={{
+                  borderColor: 'var(--border-subtle)',
+                  background: 'var(--bg-surface)',
+                }}>
+                  {/* Header */}
+                  <div className="mb-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
-                        {activeItem.leadName || 'Sem nome'}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>
+                          {activeItem.leadName || 'Sem nome'}
+                        </h3>
+                        {activeItem.status === 'ready' ? (
+                          <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: 'var(--success)' }} />
+                        ) : activeItem.status === 'failed' ? (
+                          <AlertCircle className="h-4 w-4 shrink-0" style={{ color: 'var(--danger)' }} />
+                        ) : null}
+                      </div>
                       {activeItem.leadPhone ? (
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                          {activeItem.leadPhone}
-                        </p>
+                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>{activeItem.leadPhone}</p>
                       ) : null}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
@@ -771,7 +880,7 @@ export default function WhatsAppBatchFollowUpModal({
                         onClick={() => void handleGenerateItem(activeItemIndex!)}
                       >
                         <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                        {activeItem.generatedText.trim() ? 'Gerar novamente' : 'Gerar'}
+                        {activeItem.generatedText.trim() ? 'Regenerar' : 'Gerar'}
                       </Button>
                       <Button
                         variant="soft" size="sm" className="rounded-xl"
@@ -779,402 +888,442 @@ export default function WhatsAppBatchFollowUpModal({
                         disabled={activeItem.status === 'generating' || phase === 'sending'}
                         onClick={() => void handleGenerateItem(activeItemIndex!, { variantCount: 3 })}
                       >
-                        <Plus className="mr-1.5 h-3.5 w-3.5" />
+                        <Sparkles className="mr-1.5 h-3.5 w-3.5" />
                         3 opções
                       </Button>
                     </div>
                   </div>
 
                   {/* AI Context Rationale */}
-                  {(activeItem.selectedSituationPresetIds.length > 0 || activeItem.selectedSalesTechniques.length > 0 || activeItem.aiContextRationale) ? (
-                    <div className="rounded-2xl border px-3 py-2 text-xs" style={{
+                  {activeItem.aiContextRationale ? (
+                    <div className="mb-4 rounded-xl border px-3 py-2.5 text-xs leading-5" style={{
                       borderColor: 'var(--brand-primary-border)',
                       background: 'var(--brand-primary-soft)',
                       color: 'var(--accent-gold-hover)',
                     }}>
                       <div className="flex items-center gap-2 font-semibold">
-                        <Sparkles className="h-3.5 w-3.5" />
-                        <span>IA aplicou o contexto da conversa</span>
+                        <Sparkles className="h-3.5 w-3.5 shrink-0" />
+                        <span>Contexto aplicado pela IA</span>
                       </div>
-                      {activeItem.aiContextRationale ? (
-                        <p className="mt-1 leading-5 opacity-85">{activeItem.aiContextRationale}</p>
-                      ) : null}
+                      <p className="mt-1 opacity-85">{activeItem.aiContextRationale}</p>
                     </div>
                   ) : null}
 
-                  {/* Situation presets */}
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Cenário</h3>
-                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>IA seleciona ao gerar</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {CONVERSATION_SITUATION_PRESETS.map((preset) => {
-                        const activeOption = activeItem.selectedSituationPresetIds.includes(preset.id);
-                        return (
-                          <Button
-                            key={preset.id} type="button"
-                            variant={activeOption ? 'primary' : 'soft'} size="sm"
-                            onClick={() => handleToggleSituationPreset(preset.id)}
-                            disabled={phase !== 'ready'}
-                            title={activeOption ? `Remover cenário: ${preset.label}` : `Aplicar cenário: ${preset.label}`}
+                  {/* Variations carousel */}
+                  {activeItem.variations.length > 0 ? (
+                    <div className="mb-4">
+                      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+                        Variações disponíveis
+                      </p>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {activeItem.variations.map((variation, index) => (
+                          <button
+                            key={`${variation.label}:${index}`}
+                            type="button"
+                            onClick={() => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: variation.text }))}
+                            disabled={phase !== 'ready' || Boolean(refiningActionId)}
+                            className="min-w-[14rem] max-w-[18rem] rounded-xl border px-3 py-2.5 text-left text-xs transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-60"
+                            style={{
+                              borderColor: 'var(--border-subtle)',
+                              background: 'var(--bg-elevated)',
+                            }}
                           >
-                            {activeOption && <Check className="h-3.5 w-3.5" />}
-                            {preset.label}
-                          </Button>
-                        );
-                      })}
+                            <span className="block truncate font-bold" style={{ color: 'var(--text-primary)' }}>
+                              {variation.label}
+                            </span>
+                            <span className="mt-1.5 line-clamp-2 block leading-5" style={{ color: 'var(--text-muted)' }}>
+                              {variation.text}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Textarea with word count */}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <label className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                      Mensagem
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider" style={{
+                        borderColor: 'var(--border-subtle)',
+                        background: 'var(--bg-elevated)',
+                        color: 'var(--accent-gold-hover)',
+                      }}>
+                        {activeMessageSegments.length || 1} blocos
+                      </span>
+                      {activeItem.generatedText.trim() ? (
+                        <span className="rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider" style={{
+                          borderColor: 'var(--border-subtle)',
+                          background: 'var(--bg-elevated)',
+                          color: 'var(--text-muted)',
+                        }}>
+                          {activeItem.generatedText.trim().length} caracteres
+                        </span>
+                      ) : null}
                     </div>
                   </div>
+                  <Textarea
+                    value={activeItem.generatedText}
+                    onChange={(e) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: e.target.value }))}
+                    rows={6}
+                    className="min-h-[160px] text-sm leading-6"
+                    placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
+                    disabled={phase !== 'ready' || Boolean(refiningActionId)}
+                  />
 
-                  {/* Tone selector */}
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Tom</h3>
-                      <span className="text-[11px] font-medium" style={{ color: 'var(--accent-gold-hover)' }}>
-                        {followUpToneOptions.find((o) => o.value === activeItem.tone)?.label ?? 'Consultivo'}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Tom do follow-up">
-                      {followUpToneOptions.map((option) => {
-                        const activeOption = activeItem.tone === option.value;
+                  {/* Refinement toolbar */}
+                  {activeItem.generatedText.trim() ? (
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <span className="mr-1 text-[11px] font-semibold" style={{ color: 'var(--text-muted)' }}>Refinar:</span>
+                      {SIMPLE_REFINEMENT_ACTIONS.map((action) => {
+                        const Icon = action.icon;
                         return (
                           <button
-                            key={option.value} type="button" role="radio"
-                            aria-checked={activeOption}
-                            onClick={() => handleChangeTone(option.value)}
-                            disabled={phase !== 'ready'}
-                            title={option.description}
-                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                              activeOption
-                                ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
-                                : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary-border)]'
-                            }`}
+                            key={action.id}
+                            type="button"
+                            onClick={() => void handleSimpleRefinement(action.id)}
+                            disabled={phase !== 'ready' || Boolean(refiningActionId)}
+                            title={action.description}
+                            className="flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-50"
+                            style={{
+                              borderColor: 'var(--border-subtle)',
+                              background: 'var(--bg-elevated)',
+                              color: 'var(--text-secondary)',
+                            }}
                           >
-                            {option.label}
+                            {refiningActionId === action.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Icon className="h-3 w-3" />
+                            )}
+                            {action.label}
                           </button>
                         );
                       })}
+                      <span className="mx-1 h-4 w-px" style={{ background: 'var(--border-subtle)' }} />
+                      {FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS.map((action) => (
+                        <button
+                          key={action.id}
+                          type="button"
+                          onClick={() => void handleContextRefinement(action)}
+                          disabled={phase !== 'ready' || Boolean(refiningActionId)}
+                          title={action.description}
+                          className="flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-50"
+                          style={{
+                            borderColor: 'var(--border-subtle)',
+                            background: 'var(--bg-elevated)',
+                            color: 'var(--text-secondary)',
+                          }}
+                        >
+                          {refiningActionId === action.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RotateCcw className="h-3 w-3" />
+                          )}
+                          {action.label}
+                        </button>
+                      ))}
                     </div>
-                  </div>
+                  ) : null}
 
-                  {/* Custom instructions */}
-                  <details className="rounded-2xl border p-3" style={{
-                    borderColor: 'var(--border-subtle)',
-                    background: 'var(--bg-elevated)',
-                  }} open={Boolean(activeItem.customInstructions.trim())}>
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Instruções extras</h3>
-                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-                          Instruções e variáveis para personalizar o follow-up.
-                        </p>
-                      </div>
-                      <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{
+                  {/* Error state */}
+                  {activeItem.status === 'failed' && activeItem.error ? (
+                    <div className="mt-3 flex items-center gap-2 rounded-xl border px-3 py-2" style={{
+                      borderColor: 'var(--danger-border)',
+                      background: 'var(--danger-soft)',
+                    }}>
+                      <AlertCircle className="h-4 w-4 shrink-0" style={{ color: 'var(--danger-text)' }} />
+                      <span className="text-xs" style={{ color: 'var(--danger-text)' }}>{activeItem.error}</span>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+
+              {/* Right panel: Preview + Config */}
+              <aside className="flex w-[300px] shrink-0 flex-col gap-4 overflow-y-auto">
+                {/* WhatsApp Preview */}
+                <div className="rounded-2xl border p-4 shadow-sm" style={{
+                  borderColor: 'var(--border-subtle)',
+                  background: 'var(--bg-elevated)',
+                }}>
+                  <div className="mb-3 flex items-center gap-2 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                    <MessageSquare className="h-4 w-4" />
+                    Preview WhatsApp
+                  </div>
+                  <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
+                    {activeMessageSegments.length > 0 ? (
+                      activeMessageSegments.map((segment, index) => (
+                        <div key={`${index}:${segment}`} className="flex flex-col items-start">
+                          <div className="max-w-[90%] rounded-2xl rounded-bl-sm border px-4 py-3 shadow-sm" style={{
+                            borderColor: 'var(--border-subtle)',
+                            background: 'var(--bg-surface)',
+                          }}>
+                            <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--text-primary)' }}>
+                              {segment}
+                            </p>
+                          </div>
+                          <div className="mt-1 flex items-center gap-2 pl-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--accent-gold-hover)' }}>
+                              Bloco {index + 1}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border-2 border-dashed px-4 py-10 text-center" style={{
                         borderColor: 'var(--border-subtle)',
                         background: 'var(--bg-surface)',
-                        color: 'var(--text-muted)',
                       }}>
-                        {activeItem.customInstructions.trim() ? 'Ativo' : 'Abrir'}
-                      </span>
-                    </summary>
-                    <div className="mt-3">
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--text-secondary)' }}>
-                          Instruções personalizadas
-                        </span>
-                        <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                          Digite {'{{'} para variáveis
-                        </span>
+                        <MessageSquare className="mx-auto mb-2 h-8 w-8" style={{ color: 'var(--text-muted)' }} />
+                        <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                          Gere ou escreva uma sugestão para visualizar.
+                        </p>
                       </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Next action */}
+                {activeItem.nextAction ? (
+                  <div className="rounded-2xl border p-4 shadow-sm" style={{
+                    borderColor: 'var(--brand-primary-border)',
+                    background: 'var(--bg-surface)',
+                  }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                          <CalendarPlus className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
+                          Próxima ação
+                        </div>
+                        <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
+                          {activeItem.nextAction.reason}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider" style={{
+                        borderColor: 'var(--border-subtle)',
+                        background: 'var(--bg-elevated)',
+                        color: 'var(--accent-gold-hover)',
+                      }}>
+                        {activeItem.nextAction.type === 'schedule' ? 'Agendar' : activeItem.nextAction.type === 'wait' ? 'Aguardar' : 'Perdido?'}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2" style={{ color: 'var(--text-secondary)' }}>
+                      <div className="rounded-xl border px-3 py-2" style={{
+                        borderColor: 'var(--border-subtle)',
+                        background: 'var(--bg-elevated)',
+                      }}>
+                        <div className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                          {formatNextActionDate(activeItem.nextAction.suggestedDateTime)}
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1">
+                          <Clock3 className="h-3.5 w-3.5" />
+                          Tentativa {activeItem.nextAction.attemptNumber}/{activeItem.nextAction.maxAttempts}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border px-3 py-2" style={{
+                        borderColor: 'var(--border-subtle)',
+                        background: 'var(--bg-elevated)',
+                      }}>
+                        <div className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                          Prioridade {activeItem.nextAction.priority}
+                        </div>
+                        <div className="mt-0.5">
+                          Dia: {activeItem.nextAction.dayLoad ?? 0}/{activeItem.nextAction.dailyCapacity} pendentes
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
+                      {activeItem.nextAction.giveUpRecommendation}
+                    </p>
+                  </div>
+                ) : null}
+
+                {/* Configuração da IA accordion */}
+                <details
+                  className="rounded-2xl border shadow-sm"
+                  style={{
+                    borderColor: 'var(--border-subtle)',
+                    background: 'var(--bg-surface)',
+                  }}
+                  open={configOpen || activeItem.customInstructions.trim().length > 0 || activeItem.selectedSalesTechniques.length > 0}
+                  onToggle={(e) => setConfigOpen(e.currentTarget.open)}
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                      <div>
+                        <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Configurar IA</h3>
+                        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                          Tom, cenário, técnicas e instruções
+                        </p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider" style={{
+                      borderColor: 'var(--border-subtle)',
+                      background: 'var(--bg-elevated)',
+                      color: 'var(--text-muted)',
+                    }}>
+                      {configOpen ? 'Recolher' : 'Abrir'}
+                    </span>
+                  </summary>
+                  <div className="space-y-4 border-t px-4 pb-4 pt-3" style={{ borderColor: 'var(--border-subtle)' }}>
+                    {/* Tone */}
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Tom</h4>
+                        <button
+                          type="button"
+                          className="text-[10px] font-semibold underline transition hover:opacity-70"
+                          style={{ color: 'var(--brand-primary)' }}
+                          onClick={() => handleBatchApplyTone(activeItem.tone)}
+                          disabled={phase !== 'ready'}
+                        >
+                          Aplicar a todos
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {followUpToneOptions.map((option) => {
+                          const activeOption = activeItem.tone === option.value;
+                          return (
+                            <button
+                              key={option.value} type="button"
+                              onClick={() => handleChangeTone(option.value)}
+                              disabled={phase !== 'ready'}
+                              title={option.description}
+                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                                activeOption
+                                  ? 'shadow-sm'
+                                  : 'hover:border-[var(--brand-primary-border)]'
+                              }`}
+                              style={{
+                                borderColor: activeOption ? 'var(--brand-primary)' : 'var(--border-subtle)',
+                                background: activeOption ? 'var(--brand-primary-soft)' : 'var(--bg-elevated)',
+                                color: activeOption ? 'var(--accent-gold-hover)' : 'var(--text-secondary)',
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Situation presets */}
+                    <div>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Cenário</h4>
+                        <button
+                          type="button"
+                          className="text-[10px] font-semibold underline transition hover:opacity-70"
+                          style={{ color: 'var(--brand-primary)' }}
+                          onClick={() => {
+                            const activePresets = activeItem.selectedSituationPresetIds;
+                            if (activePresets.length > 0) {
+                              activePresets.forEach((id) => handleBatchApplySituationPreset(id));
+                            } else {
+                              handleBatchApplySituationPreset(CONVERSATION_SITUATION_PRESETS[0].id);
+                            }
+                          }}
+                          disabled={phase !== 'ready'}
+                        >
+                          Aplicar a todos
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {CONVERSATION_SITUATION_PRESETS.map((preset) => {
+                          const activeOption = activeItem.selectedSituationPresetIds.includes(preset.id);
+                          return (
+                            <button
+                              key={preset.id} type="button"
+                              onClick={() => handleToggleSituationPreset(preset.id)}
+                              disabled={phase !== 'ready'}
+                              title={activeOption ? `Remover: ${preset.label}` : `Aplicar: ${preset.label}`}
+                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                                activeOption ? 'shadow-sm' : 'hover:border-[var(--brand-primary-border)]'
+                              }`}
+                              style={{
+                                borderColor: activeOption ? 'var(--brand-primary)' : 'var(--border-subtle)',
+                                background: activeOption ? 'var(--brand-primary-soft)' : 'var(--bg-elevated)',
+                                color: activeOption ? 'var(--accent-gold-hover)' : 'var(--text-secondary)',
+                              }}
+                            >
+                              {activeOption && <Check className="mr-1 inline h-3 w-3" />}
+                              {preset.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Sales techniques */}
+                    <div>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                        Técnicas avançadas
+                      </h4>
+                      <div className="max-h-32 space-y-1 overflow-y-auto pr-1" role="group" aria-label="Técnicas de venda">
+                        {followUpSalesTechniqueOptions.map((technique) => {
+                          const selected = activeItem.selectedSalesTechniques.includes(technique.id);
+                          return (
+                            <button
+                              key={technique.id} type="button"
+                              onClick={() => handleToggleSalesTechnique(technique.id)}
+                              aria-pressed={selected}
+                              disabled={phase !== 'ready'}
+                              title={technique.description}
+                              className={`flex w-full items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-[11px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                                selected
+                                  ? 'shadow-sm'
+                                  : 'hover:border-[var(--brand-primary)]'
+                              }`}
+                              style={{
+                                borderColor: selected ? 'var(--brand-primary)' : 'var(--border-subtle)',
+                                background: selected ? 'var(--brand-primary-soft)' : 'var(--bg-elevated)',
+                                color: selected ? 'var(--accent-gold-hover)' : 'var(--text-secondary)',
+                              }}
+                            >
+                              {selected ? <Check className="h-3 w-3 shrink-0" /> : <span className="h-3 w-3 shrink-0 rounded-full border" style={{ borderColor: 'var(--border-subtle)' }} />}
+                              <span>{technique.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Custom instructions */}
+                    <div>
+                      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                        Instruções extras
+                      </h4>
                       <VariableAutocompleteTextarea
                         value={activeItem.customInstructions}
                         onChange={(val) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { customInstructions: val }))}
                         suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
-                        rows={4}
+                        rows={3}
                         size="compact"
-                        placeholder={'Ex.:\n- Fale mais curto.\n- Não insista demais.\n- Termine com uma pergunta objetiva.'}
+                        placeholder={'Ex.: Fale mais curto, não insista, termine com pergunta objetiva.'}
                         disabled={phase !== 'ready' || Boolean(refiningActionId)}
                       />
                     </div>
-                  </details>
-                </div>
+                  </div>
+                </details>
+              </aside>
+            </div>
+          ) : (
+            <div className="flex min-w-0 flex-1 items-center justify-center">
+              <div className="text-center">
+                <MessageSquare className="mx-auto mb-3 h-10 w-10" style={{ color: 'var(--text-muted)' }} />
+                <p className="font-semibold" style={{ color: 'var(--text-secondary)' }}>
+                  Nenhum lead carregado
+                </p>
+                <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Selecione um lead na lista ao lado para começar.
+                </p>
               </div>
-
-              {/* Message area */}
-              <div className="rounded-2xl border p-4 shadow-sm" style={{
-                borderColor: 'var(--border-subtle)',
-                background: 'var(--bg-surface)',
-              }}>
-                <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Mensagem</h3>
-                    <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
-                      Edite o texto final ou refine com um clique.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                    <div className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{
-                      borderColor: 'var(--border-subtle)',
-                      background: 'var(--bg-elevated)',
-                      color: 'var(--accent-gold-hover)',
-                    }}>
-                      {activeMessageSegments.length || 1} mensagem(ns)
-                    </div>
-                    {activeItem.generatedText.trim() ? (
-                      <div className="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{
-                        borderColor: 'var(--border-subtle)',
-                        background: 'var(--bg-elevated)',
-                        color: 'var(--text-muted)',
-                      }}>
-                        {activeItem.generatedText.trim().length} caracteres
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* Refinement buttons */}
-                <div className="mb-3 flex flex-wrap gap-2" aria-label="Refinamentos da mensagem sugerida">
-                  {SIMPLE_REFINEMENT_ACTIONS.map((action) => (
-                    <Button
-                      key={action.id} type="button" variant="secondary" size="sm"
-                      onClick={() => void handleSimpleRefinement(action.id)}
-                      loading={refiningActionId === action.id}
-                      disabled={phase !== 'ready' || Boolean(refiningActionId) || !activeItem.generatedText.trim()}
-                      title={action.description}
-                    >
-                      {action.label}
-                    </Button>
-                  ))}
-                  {FOLLOW_UP_CONTEXT_REFINEMENT_ACTIONS.map((action) => (
-                    <Button
-                      key={action.id} type="button" variant="secondary" size="sm"
-                      onClick={() => void handleContextRefinement(action)}
-                      loading={refiningActionId === action.id}
-                      disabled={phase !== 'ready' || Boolean(refiningActionId) || !activeItem.generatedText.trim()}
-                      title={action.description}
-                    >
-                      {action.label}
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Variations carousel */}
-                {activeItem.variations.length > 0 ? (
-                  <div className="mb-3 flex gap-2 overflow-x-auto pb-1" aria-label="Variações geradas">
-                    {activeItem.variations.map((variation, index) => (
-                      <button
-                        key={`${variation.label}:${index}`}
-                        type="button"
-                        onClick={() => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: variation.text }))}
-                        disabled={phase !== 'ready' || Boolean(refiningActionId)}
-                        className="min-w-[12rem] max-w-[16rem] rounded-xl border px-3 py-2 text-left text-xs transition hover:border-[var(--brand-primary-border)] disabled:cursor-not-allowed disabled:opacity-60" style={{
-                          borderColor: 'var(--border-subtle)',
-                          background: 'var(--bg-elevated)',
-                        }}
-                      >
-                        <span className="block truncate font-semibold" style={{ color: 'var(--text-primary)' }}>
-                          {variation.label}
-                        </span>
-                        <span className="mt-1 line-clamp-2 block leading-5" style={{ color: 'var(--text-muted)' }}>
-                          {variation.text}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
-                {/* Textarea */}
-                <Textarea
-                  value={activeItem.generatedText}
-                  onChange={(e) => setItems((prev) => updateItemInList(prev, activeItemIndex!, { generatedText: e.target.value }))}
-                  rows={8}
-                  className="min-h-[200px] text-sm leading-6"
-                  placeholder="A sugestão de follow-up vai aparecer aqui. Você também pode escrever manualmente."
-                  disabled={phase !== 'ready' || Boolean(refiningActionId)}
-                />
-
-                {/* Falha error */}
-                {activeItem.status === 'failed' && activeItem.error ? (
-                  <div className="mt-2 flex items-center gap-2 text-xs text-[var(--danger-text)]">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                    <span>{activeItem.error}</span>
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            {/* Preview + Next Action + Techniques */}
-            <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
-              {/* Preview */}
-              <div className="rounded-2xl border p-4" style={{
-                borderColor: 'var(--border-subtle)',
-                background: 'var(--bg-elevated)',
-              }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      <MessageSquare className="h-4 w-4" />
-                      Preview
-                    </div>
-                    <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
-                      Como será enviado no WhatsApp.
-                    </p>
-                  </div>
-                  <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{
-                    borderColor: 'var(--border-subtle)',
-                    background: 'var(--bg-surface)',
-                    color: 'var(--text-muted)',
-                  }}>
-                    {activeMessageSegments.length || 1} bloco(s)
-                  </span>
-                </div>
-
-                <div className="mt-4 max-h-[320px] space-y-3 overflow-y-auto pr-1">
-                  {activeMessageSegments.length > 0 ? (
-                    activeMessageSegments.map((segment, index) => (
-                      <div key={`${index}:${segment}`} className="rounded-xl border shadow-sm" style={{
-                        borderColor: 'var(--border-subtle)',
-                        background: 'var(--bg-surface)',
-                      }}>
-                        <div className="rounded-t-xl border-b px-3 py-2" style={{
-                          borderColor: 'var(--border-subtle)',
-                          background: 'var(--bg-elevated)',
-                        }}>
-                          <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--accent-gold-hover)' }}>
-                            Mensagem {index + 1}
-                          </span>
-                        </div>
-                        <div className="p-3">
-                          <p className="whitespace-pre-wrap break-words text-sm leading-6" style={{ color: 'var(--text-primary)' }}>
-                            {segment}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-xl border-2 border-dashed px-4 py-10 text-center" style={{
-                      borderColor: 'var(--border-subtle)',
-                      background: 'var(--bg-surface)',
-                    }}>
-                      <MessageSquare className="mx-auto mb-2 h-8 w-8" style={{ color: 'var(--text-muted)' }} />
-                      <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        Gere ou escreva uma sugestão para visualizar.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Next action */}
-              {activeItem.nextAction ? (
-                <div className="rounded-2xl border p-4 shadow-sm" style={{
-                  borderColor: 'var(--brand-primary-border)',
-                  background: 'var(--bg-surface)',
-                }}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        <CalendarPlus className="h-4 w-4" style={{ color: 'var(--brand-primary)' }} />
-                        Próxima ação sugerida
-                      </div>
-                      <p className="mt-1 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
-                        {activeItem.nextAction.reason}
-                      </p>
-                    </div>
-                    <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{
-                      borderColor: 'var(--border-subtle)',
-                      background: 'var(--bg-elevated)',
-                      color: 'var(--accent-gold-hover)',
-                    }}>
-                      {activeItem.nextAction.type === 'schedule' ? 'Agendar' : activeItem.nextAction.type === 'wait' ? 'Aguardar' : 'Perdido?'}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2" style={{ color: 'var(--text-secondary)' }}>
-                    <div className="rounded-xl border px-3 py-2" style={{
-                      borderColor: 'var(--border-subtle)',
-                      background: 'var(--bg-elevated)',
-                    }}>
-                      <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        {formatNextActionDate(activeItem.nextAction.suggestedDateTime)}
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1">
-                        <Clock3 className="h-3.5 w-3.5" />
-                        Tentativa {activeItem.nextAction.attemptNumber}/{activeItem.nextAction.maxAttempts}
-                      </div>
-                    </div>
-                    <div className="rounded-xl border px-3 py-2" style={{
-                      borderColor: 'var(--border-subtle)',
-                      background: 'var(--bg-elevated)',
-                    }}>
-                      <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        Prioridade {activeItem.nextAction.priority}
-                      </div>
-                      <div className="mt-0.5">
-                        Dia: {activeItem.nextAction.dayLoad ?? 0}/{activeItem.nextAction.dailyCapacity} pendentes
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="mt-3 text-xs leading-5" style={{ color: 'var(--text-muted)' }}>
-                    {activeItem.nextAction.giveUpRecommendation}
-                  </p>
-                </div>
-              ) : null}
-
-              {/* Sales techniques */}
-              <details className="group rounded-2xl border p-4" style={{
-                borderColor: 'var(--border-subtle)',
-                background: 'var(--bg-surface)',
-              }} open={activeItem.selectedSalesTechniques.length > 0}>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Técnicas avançadas</h3>
-                    <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
-                      Opcional para a próxima geração.
-                    </p>
-                  </div>
-                  <span className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]" style={{
-                    borderColor: 'var(--border-subtle)',
-                    background: 'var(--bg-elevated)',
-                    color: 'var(--text-muted)',
-                  }}>
-                    {activeItem.selectedSalesTechniques.length || 'Abrir'}
-                  </span>
-                </summary>
-                <div className="mt-3 max-h-36 space-y-2 overflow-y-auto pr-1" role="group" aria-label="Técnicas de venda para o follow-up">
-                  {followUpSalesTechniqueOptions.map((technique) => {
-                    const selected = activeItem.selectedSalesTechniques.includes(technique.id);
-                    return (
-                      <button
-                        key={technique.id} type="button"
-                        onClick={() => handleToggleSalesTechnique(technique.id)}
-                        aria-pressed={selected}
-                        disabled={phase !== 'ready'}
-                        title={technique.description}
-                        className={`flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                          selected
-                            ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-soft)] text-[var(--accent-gold-hover)] shadow-sm'
-                            : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--brand-primary)]'
-                        }`}
-                      >
-                        {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border" style={{ borderColor: 'var(--border-subtle)' }} />}
-                        <span>{technique.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </details>
-            </aside>
-          </div>
-        ) : (
-          <div className="flex min-w-0 flex-1 items-center justify-center">
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Selecione um lead na lista ao lado.
-            </p>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </WhatsAppDialog>
   );

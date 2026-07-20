@@ -62,7 +62,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="h-12 px-4 text-base"
+                size="large"
                 placeholder="seu.usuario"
               />
             </div>
@@ -78,7 +78,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 px-4 text-base"
+                size="large"
                 placeholder="********"
               />
             </div>

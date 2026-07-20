@@ -20,7 +20,7 @@ import {
 
 import PublicBrandMark from '../../components/public/PublicBrandMark';
 import PublicSeo, { type PublicFaqItem } from '../../components/public/PublicSeo';
-import { Input } from '../../design-system';
+import { Input, Select } from '../../design-system';
 import { formatPhoneInput } from '../../lib/inputFormatters';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
@@ -478,7 +478,7 @@ export default function HomePage() {
           required
           value={formData.nome}
           onChange={(event) => setFormData((current) => ({ ...current, nome: event.target.value }))}
-          className="h-12 px-4 text-base"
+          size="large"
           placeholder="Seu nome"
         />
       </div>
@@ -498,7 +498,7 @@ export default function HomePage() {
               telefone: formatPhoneInput(event.target.value),
             }))
           }
-          className="h-12 px-4 text-base"
+          size="large"
           placeholder="(21) 99999-9999"
         />
       </div>
@@ -513,7 +513,7 @@ export default function HomePage() {
           required
           value={formData.cidade}
           onChange={(event) => setFormData((current) => ({ ...current, cidade: event.target.value }))}
-          className="h-12 px-4 text-base"
+          size="large"
           placeholder="Sua cidade"
         />
       </div>
@@ -522,7 +522,7 @@ export default function HomePage() {
         <label className="mb-2 block text-sm font-semibold text-[color:var(--text-primary)]" htmlFor="quote-contract-type">
           Tipo de contratação *
         </label>
-        <select
+        <Select
           id="quote-contract-type"
           value={formData.tipoContratacao}
           onChange={(event) =>
@@ -531,12 +531,13 @@ export default function HomePage() {
               tipoContratacao: event.target.value as ContractKind,
             }))
           }
-          className="kds-select h-12 px-4 text-base"
-        >
-          <option value="PF">Pessoa física</option>
-          <option value="MEI">MEI</option>
-          <option value="CNPJ">CNPJ</option>
-        </select>
+          size="large"
+          options={[
+            { value: 'PF', label: 'Pessoa física' },
+            { value: 'MEI', label: 'MEI' },
+            { value: 'CNPJ', label: 'CNPJ' },
+          ]}
+        />
       </div>
 
       <div>
@@ -550,7 +551,7 @@ export default function HomePage() {
           required
           value={formData.numeroVidas}
           onChange={(event) => setFormData((current) => ({ ...current, numeroVidas: event.target.value }))}
-          className="h-12 px-4 text-base"
+          size="large"
           placeholder="Ex: 1, 2, 3"
         />
       </div>
@@ -574,7 +575,7 @@ export default function HomePage() {
                   pattern="\d*"
                   value={ageRangeCounts[range]}
                   onChange={(event) => updateAgeRangeCount(range, event.target.value)}
-                  className="mt-2 h-10 px-3"
+                  className="mt-2"
                   placeholder="Qtd."
                 />
               </div>
@@ -593,7 +594,7 @@ export default function HomePage() {
             required
             value={formData.idadeTitular}
             onChange={(event) => setFormData((current) => ({ ...current, idadeTitular: event.target.value }))}
-            className="h-12 px-4 text-base"
+            size="large"
             placeholder="Informe a idade"
           />
         </div>

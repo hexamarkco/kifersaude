@@ -14,6 +14,7 @@ type MultiSelectDropdownProps = {
   onChange: (values: string[]) => void;
   placeholder?: string;
   label?: string;
+  size?: 'compact' | 'default' | 'large';
 };
 
 export default function MultiSelectDropdown({
@@ -22,6 +23,7 @@ export default function MultiSelectDropdown({
   onChange,
   placeholder = 'Selecione...',
   label,
+  size = 'compact',
 }: MultiSelectDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -54,7 +56,12 @@ export default function MultiSelectDropdown({
       <PopoverTrigger>
       <button
         type="button"
-        className="kds-select h-8 w-full px-2.5 pr-8 text-left"
+        className={cx(
+          'kds-select w-full text-left',
+          size === 'compact' && 'h-8 px-2.5 pr-8 text-xs',
+          size === 'default' && 'h-10 px-3 pr-9 text-sm',
+          size === 'large' && 'h-12 px-3.5 pr-10 text-base',
+        )}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >

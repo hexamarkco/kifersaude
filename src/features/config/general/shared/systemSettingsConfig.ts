@@ -1,5 +1,4 @@
 import {
-  Calculator,
   FileText,
   ListTree,
   Settings,
@@ -13,7 +12,6 @@ import type { SystemSettings } from "../../../../lib/supabase";
 export type SettingsMessage = { type: "success" | "error"; text: string };
 export type SectionId =
   | "general"
-  | "cotador"
   | "access"
   | "leads"
   | "contracts";
@@ -116,14 +114,6 @@ export const SECTION_OVERVIEW: SectionOverview[] = [
     icon: ShieldCheck,
     iconTone: "terracotta",
     searchTerms: ["acesso", "perfil", "permissoes", "admin", "observer"],
-  },
-  {
-    id: "cotador",
-    title: "Cotador",
-    description: "Operadoras, administradoras, linhas, produtos, tabelas e regras comerciais.",
-    icon: Calculator,
-    iconTone: "terracotta",
-    searchTerms: ["cotador", "operadora", "operadoras", "administradora", "administradoras", "entidade", "entidades", "produto", "produtos", "linha", "linhas", "tabela", "tabelas", "mei", "coparticipacao", "catalogo", "comissao", "bonus", "prazo"],
   },
   {
     id: "leads",

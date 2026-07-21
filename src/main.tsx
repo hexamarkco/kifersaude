@@ -8,8 +8,6 @@ import {
   BlogTab,
   ConfigPage,
   ContractsManagerWrapper,
-  CotadorSharePage,
-  CotadorWrapper,
   DashboardWrapper,
   FinanceiroAgendaTab,
   FinanceiroComissoesTab,
@@ -48,7 +46,6 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/como-funciona" element={<Navigate to="/" replace />} />
             <Route path="/depoimentos" element={<Navigate to="/" replace />} />
             <Route path="/faq" element={<Navigate to="/" replace />} />
-            <Route path="/cotador/compartilhar/:shareToken" element={<CotadorSharePage />} />
             <Route path="/planos/*" element={<Navigate to="/" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route
@@ -64,10 +61,6 @@ createRoot(document.getElementById('root')!).render(
               <Route index element={<Navigate to="/painel/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardWrapper />} />
               <Route path="leads" element={<LeadsManagerWrapper />} />
-              <Route path="cotador" element={<CotadorWrapper />} />
-              <Route path="cotador/configuracoes" element={<CotadorWrapper />} />
-              <Route path="cotador/:quoteId/plano/:catalogItemKey" element={<CotadorWrapper />} />
-              <Route path="cotador/:quoteId" element={<CotadorWrapper />} />
               <Route path="contratos" element={<ContractsManagerWrapper />} />
               <Route path="comissoes" element={<FinanceiroComissoesTab />} />
               <Route path="agenda" element={<FinanceiroAgendaTab />} />

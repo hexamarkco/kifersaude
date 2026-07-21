@@ -3,14 +3,12 @@ import { lazy } from 'react';
 import { LoadingState } from '../design-system';
 
 export const HomePage = lazy(() => import('../pages/public/HomePage'));
-export const CotadorSharePage = lazy(() => import('../pages/public/CotadorSharePage'));
 export const PainelWrapper = lazy(() => import('../pages/PainelWrapper'));
 export const ProtectedRoute = lazy(() => import('../components/ProtectedRoute'));
 export const LoginPage = lazy(() => import('../pages/LoginPage'));
 export const DashboardWrapper = lazy(() => import('../pages/routes/DashboardWrapper'));
 export const LeadsManagerWrapper = lazy(() => import('../pages/routes/LeadsManagerWrapper'));
 export const ContractsManagerWrapper = lazy(() => import('../pages/routes/ContractsManagerWrapper'));
-export const CotadorWrapper = lazy(() => import('../pages/routes/CotadorWrapper'));
 export const WhatsAppInboxWrapper = lazy(() => import('../pages/routes/WhatsAppInboxWrapper'));
 export const WhatsAppCampaignsWrapper = lazy(() => import('../pages/routes/WhatsAppCampaignsWrapper'));
 export const WhatsAppCampaignDetailWrapper = lazy(() => import('../pages/routes/WhatsAppCampaignDetailWrapper'));

@@ -303,7 +303,7 @@ export default function WhatsAppApiSettingsPanel() {
                 </div>
 
                 <div className="mt-3 relative">
-                  <Input readOnly value={webhookUrl} className="font-mono text-xs pr-10" />
+                  <Input readOnly value={webhookUrl} size="compact" className="font-mono pr-10" />
                   <IconButton
                     variant="icon"
                     aria-label="Copiar webhook"

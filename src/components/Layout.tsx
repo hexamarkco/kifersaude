@@ -19,7 +19,6 @@ import {
   Send,
   ChevronLeft,
   ChevronRight,
-  Calculator,
   Menu,
   X,
   type LucideIcon,
@@ -141,7 +140,6 @@ export default function Layout({
 
   const crmChildren: TabConfig[] = [
     { id: 'leads', label: 'Leads', icon: Users, badge: newLeadsCount },
-    { id: 'cotador', label: 'Cotador', icon: Calculator },
     { id: 'contracts', label: 'Contratos', icon: FileText },
     { id: 'agenda', label: 'Agenda', icon: Calendar, badge: unreadReminders },
   ].filter(child => canView(child.id));

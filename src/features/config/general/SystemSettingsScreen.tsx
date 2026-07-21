@@ -17,7 +17,6 @@ import { type SystemSettings } from "../../../lib/supabase";
 import ConfigOptionManager from "../../../components/config/ConfigOptionManager";
 import LeadOriginsManager from "../../../components/config/LeadOriginsManager";
 import LeadStatusManager from "../../../components/config/LeadStatusManager";
-import CotadorCatalogTab from "../../../components/config/CotadorCatalogTab";
 import { PanelAdaptiveLoadingFrame } from "../../../components/ui/panelLoading";
 import { Skeleton } from "../../../components/ui/Skeleton";
 import { SystemSettingsSkeleton } from "../../../components/ui/panelSkeletons";
@@ -164,11 +163,6 @@ export default function SystemSettingsScreen() {
   const showAccessSection =
     canViewAccessSettings &&
     matchesConfigSearch(normalizedSearchTerm, SECTION_OVERVIEW[1].searchTerms);
-  const showCotadorSection = matchesConfigSearch(
-    normalizedSearchTerm,
-    SECTION_OVERVIEW[2].searchTerms,
-  );
-
   const showLeadStatusManager = matchesConfigSearch(normalizedSearchTerm, [
     "status dos leads",
     "status",
@@ -206,8 +200,6 @@ export default function SystemSettingsScreen() {
           return showGeneralSection;
         case "access":
           return showAccessSection;
-        case "cotador":
-        return showCotadorSection;
       case "leads":
         return showLeadsSection;
       case "contracts":
@@ -314,7 +306,7 @@ export default function SystemSettingsScreen() {
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por cotador, permissões, leads ou contratos"
+                placeholder="Buscar por permissões, leads ou contratos"
                 leftIcon={Search}
               />
             </div>
@@ -501,19 +493,6 @@ export default function SystemSettingsScreen() {
                   </Button>
                 </div>
               </Surface>
-            )}
-          </section>
-        )}
-
-        {showCotadorSection && shouldExpandSection("cotador") && (
-          <section id="settings-section-cotador" className="space-y-4">
-            <SectionHeader
-              title="Catálogo do cotador"
-              description="Operadoras, administradoras, entidades de classe e produtos comerciais."
-            />
-
-            {shouldExpandSection("cotador") && (
-              <CotadorCatalogTab embedded />
             )}
           </section>
         )}

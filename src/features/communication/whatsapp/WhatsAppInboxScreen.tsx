@@ -2294,8 +2294,8 @@ function RetryMediaButton({
       onClick={onRetry}
       disabled={loading}
       variant="soft"
-      size="sm"
-      className="whatsapp-inbox-retry-button h-8 rounded-xl px-3 text-[11px]"
+      size="xs"
+      className="whatsapp-inbox-retry-button rounded-xl px-3 text-[11px]"
     >
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <SendHorizontal className="h-3.5 w-3.5" />}
       Reenviar
@@ -2985,9 +2985,9 @@ function WhatsAppMessageBody({
               <Button
                 type="button"
                 variant="soft"
-                size="sm"
+                size="xs"
                 onClick={() => onTranscribe(message)}
-                className="h-8 rounded-xl px-3 text-[11px]"
+                className="rounded-xl px-3 text-[11px]"
               >
                 {transcriptionStatus === 'failed' ? 'Tentar novamente' : message.transcription_text?.trim() ? 'Retranscrever' : 'Transcrever'}
               </Button>
@@ -9684,8 +9684,8 @@ export default function WhatsAppInboxScreen() {
                       onClick={() => void handleLoadOlderMessages()}
                       disabled={loadingOlderMessages}
                       variant="secondary"
-                      size="sm"
-                      className="whatsapp-inbox-load-older h-8 rounded-xl px-3.5 text-[11px]"
+                      size="xs"
+                      className="whatsapp-inbox-load-older rounded-xl px-3.5 text-[11px]"
                     >
                       {loadingOlderMessages ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -10348,15 +10348,15 @@ export default function WhatsAppInboxScreen() {
                           )}
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {replySuggestionText ? (
-                              <Button type="button" size="sm" className="h-8 rounded-xl px-3 text-[11px]" onClick={handleApplyReplySuggestion}>
+                              <Button type="button" size="xs" className="rounded-xl px-3 text-[11px]" onClick={handleApplyReplySuggestion}>
                                 Aplicar
                               </Button>
                             ) : null}
                             <Button
                               type="button"
                               variant="secondary"
-                              size="sm"
-                              className="h-8 rounded-xl px-3 text-[11px]"
+                              size="xs"
+                              className="rounded-xl px-3 text-[11px]"
                               onClick={() => void handleGenerateReplySuggestion(true)}
                               disabled={replySuggestionLoading}
                             >
@@ -10365,8 +10365,8 @@ export default function WhatsAppInboxScreen() {
                             <Button
                               type="button"
                               variant="ghost"
-                              size="sm"
-                              className="h-8 rounded-xl px-3 text-[11px]"
+                              size="xs"
+                              className="rounded-xl px-3 text-[11px]"
                               onClick={handleDismissReplySuggestion}
                               disabled={replySuggestionLoading && !replySuggestionText}
                             >
@@ -10579,8 +10579,8 @@ export default function WhatsAppInboxScreen() {
                             <Button
                               type="button"
                               variant="secondary"
-                              size="sm"
-                              className="h-8 rounded-xl px-3 text-[11px]"
+                              size="xs"
+                              className="rounded-xl px-3 text-[11px]"
                               onMouseDown={(event) => {
                                 event.preventDefault();
                                 handleOpenQuickReplySettings();

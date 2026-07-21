@@ -36,6 +36,7 @@ const AI_PROVIDER_GEMINI_SLUG = "ai_provider_gemini";
 const AI_PROVIDER_CLAUDE_SLUG = "ai_provider_claude";
 const AI_ROUTING_SLUG = "ai_routing";
 const AI_FOLLOW_UP_PROMPT_SLUG = "ai_follow_up_prompt";
+const AI_REPLY_SUGGESTION_PROMPT_SLUG = "ai_reply_suggestion_prompt";
 
 const META_PIXEL_SLUG = "meta_pixel";
 const GTM_SLUG = "google_tag_manager";
@@ -426,6 +427,10 @@ export default function IntegrationsScreen() {
   });
   const [savingAiRouting, setSavingAiRouting] = useState(false);
   const [savingAiFollowUpPrompt, setSavingAiFollowUpPrompt] = useState(false);
+  const [aiReplySuggestionIntegration, setAiReplySuggestionIntegration] =
+    useState<IntegrationSetting | null>(null);
+  const [aiReplySuggestionInstructions, setAiReplySuggestionInstructions] = useState("");
+  const [savingAiReplySuggestion, setSavingAiReplySuggestion] = useState(false);
   const [aiMessage, setAiMessage] = useState<MessageState>(null);
   const [metaPixelIntegration, setMetaPixelIntegration] =
     useState<IntegrationSetting | null>(null);
@@ -505,12 +510,14 @@ export default function IntegrationsScreen() {
         claudeIntegration,
         routingIntegration,
         followUpPromptIntegration,
+        replySuggestionIntegration,
       ] = await Promise.all([
         configService.getIntegrationSetting(AI_PROVIDER_OPENAI_SLUG),
         configService.getIntegrationSetting(AI_PROVIDER_GEMINI_SLUG),
         configService.getIntegrationSetting(AI_PROVIDER_CLAUDE_SLUG),
         configService.getIntegrationSetting(AI_ROUTING_SLUG),
         configService.getIntegrationSetting(AI_FOLLOW_UP_PROMPT_SLUG),
+        configService.getIntegrationSetting(AI_REPLY_SUGGESTION_PROMPT_SLUG),
       ]);
 
       const nextProviderIntegrations: Record<
@@ -535,6 +542,10 @@ export default function IntegrationsScreen() {
       setAiFollowUpPromptIntegration(followUpPromptIntegration);
       setAiFollowUpInstructions(
         normalizeFollowUpInstructions(followUpPromptIntegration),
+      );
+      setAiReplySuggestionIntegration(replySuggestionIntegration);
+      setAiReplySuggestionInstructions(
+        normalizeFollowUpInstructions(replySuggestionIntegration),
       );
       setAiProviderModels(createDefaultProviderModelsState());
 
@@ -763,6 +774,45 @@ export default function IntegrationsScreen() {
     }
 
     setSavingAiFollowUpPrompt(false);
+  };
+
+  const handleSaveReplySuggestionPrompt = async () => {
+    setSavingAiReplySuggestion(true);
+    setAiMessage(null);
+
+    const settingsPayload = {
+      instructions: aiReplySuggestionInstructions.trim(),
+    };
+
+    const result = aiReplySuggestionIntegration?.id
+      ? await configService.updateIntegrationSetting(
+          aiReplySuggestionIntegration.id,
+          { settings: settingsPayload },
+        )
+      : await configService.createIntegrationSetting({
+          slug: AI_REPLY_SUGGESTION_PROMPT_SLUG,
+          name: "IA - Sugestão de resposta",
+          description:
+            "Instrui a IA do WhatsApp sobre como sugerir respostas no inbox.",
+          settings: settingsPayload,
+        });
+
+    if (result.error) {
+      setAiMessage({
+        type: "error",
+        text: "Erro ao salvar as instruções de sugestão de resposta.",
+      });
+    } else {
+      const savedIntegration = result.data ?? aiReplySuggestionIntegration;
+      setAiReplySuggestionIntegration(savedIntegration);
+      setAiReplySuggestionInstructions(settingsPayload.instructions);
+      setAiMessage({
+        type: "success",
+        text: "Instruções de sugestão de resposta atualizadas com sucesso.",
+      });
+    }
+
+    setSavingAiReplySuggestion(false);
   };
 
   const handleSaveMetaPixel = async () => {
@@ -1223,6 +1273,61 @@ export default function IntegrationsScreen() {
                     {savingAiFollowUpPrompt
                       ? "Salvando..."
                       : "Salvar instruções de follow-up"}
+                  </span>
+                </Button>
+              </div>
+            </Card>
+
+            <Card>
+              <div className="mb-3">
+                <h3 className="font-[var(--font-display)] text-lg font-semibold text-[var(--text-primary)]">
+                  Sugestão de resposta no WhatsApp
+                </h3>
+                <p className="text-sm text-[var(--text-muted)]">
+                  Instrua a IA sobre como sugerir respostas direto no inbox. O
+                  sistema já analisa seu estilo real de escrita automaticamente.
+                  Use este campo para orientações complementares.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
+                    Instruções adicionais
+                  </label>
+                  <VariableAutocompleteTextarea
+                    value={aiReplySuggestionInstructions}
+                    onChange={setAiReplySuggestionInstructions}
+                    rows={8}
+                    suggestions={WHATSAPP_FOLLOW_UP_VARIABLE_SUGGESTIONS}
+                    className="text-sm"
+                    placeholder={
+                      "Exemplo:\n" +
+                      "- Responda como se fosse eu, não like um robô.\n" +
+                      "- Seja direta e evite rodeios.\n" +
+                      "- Use emojis com moderação.\n" +
+                      "- Quando fizer sentido, termine com uma pergunta."
+                    }
+                  />
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
+                    Dica: quanto mais específica for a instrução, mais fiel ao
+                    seu estilo será a sugestão. O sistema também analisa
+                    automaticamente o comprimento, tom, uso de perguntas e
+                    padrões das suas mensagens reais.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-end border-t border-[var(--border-subtle)] pt-4">
+                <Button
+                  onClick={handleSaveReplySuggestionPrompt}
+                  loading={savingAiReplySuggestion}
+                >
+                  {!savingAiReplySuggestion && <Save className="w-4 h-4" />}
+                  <span>
+                    {savingAiReplySuggestion
+                      ? "Salvando..."
+                      : "Salvar instruções de resposta"}
                   </span>
                 </Button>
               </div>

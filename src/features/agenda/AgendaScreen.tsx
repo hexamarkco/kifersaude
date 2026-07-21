@@ -1422,7 +1422,7 @@ export default function AgendaScreen() {
                   <>
                     <Popover open={quickScheduleDropdownId === reminder.id} onOpenChange={(open) => setQuickScheduleDropdownId(open ? reminder.id : null)}>
                       <PopoverTrigger className="inline-flex">
-                        <Button type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" size="icon" className="h-10 w-10" title="Agendar dias uteis e marcar atual como lido" aria-label="Agendar dias uteis e marcar atual como lido">
+                        <Button type="button" disabled={isQuickSchedulingCurrentReminder} variant="primary" size="icon" title="Agendar dias uteis e marcar atual como lido" aria-label="Agendar dias uteis e marcar atual como lido">
                           {isQuickSchedulingCurrentReminder ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                             <span className="relative inline-flex">
                               <CalendarPlus className="h-4 w-4" />

@@ -738,7 +738,7 @@ export default function ContractsManager({
           />
 
           <div className="hidden lg:block">
-            <Table size="sm" stickyHeader className="min-w-[1080px]">
+            <Table size="sm" stickyHeader>
               <TableHeader>
                 <TableRow>
                   <TableHead>Contrato</TableHead>
@@ -767,33 +767,33 @@ export default function ContractsManager({
 
                   return (
                     <TableRow key={contract.id} className="align-middle">
-                      <TableCell className="min-w-52">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedContract(contract)}
-                          className="block max-w-64 text-left transition-colors hover:text-[var(--brand-primary)]"
-                        >
-                          <span className="block font-semibold text-[var(--text-primary)]">{contract.codigo_contrato}</span>
-                          <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
-                        </button>
-                      </TableCell>
-                      <TableCell className="min-w-36">
-                        <Badge tone={getStatusTone(contract.status)} size="sm">{contract.status}</Badge>
-                        <span className="mt-2 block text-xs text-[var(--text-muted)]">{contract.modalidade}</span>
-                      </TableCell>
-                      <TableCell className="min-w-48">
-                        <span className="block font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora) || "Sem operadora"}</span>
-                        <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{contract.produto_plano || "Sem plano"}</span>
-                      </TableCell>
-                      <TableCell className="min-w-44">
-                        <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>
-                        {contract.comissao_prevista && <span className="mt-1 block text-xs text-[var(--text-muted)]">Comissão: R$ {contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}{bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}</span>}
-                      </TableCell>
-                      <TableCell className="min-w-48">
-                        <div className="flex flex-wrap gap-1">{renderDateBadges(contract)}</div>
-                        <span className="mt-2 block text-xs text-[var(--text-muted)]">{contract.data_renovacao ? `Fidelidade: ${formatDate(contract.data_renovacao, "monthYear")}` : contract.mes_reajuste ? `Reajuste: ${formatDate(contract.mes_reajuste.toString(), "monthOnly")}` : "Sem data próxima"}</span>
-                      </TableCell>
-                      <TableCell className="min-w-32">{contract.responsavel || "Não atribuído"}</TableCell>
+                    <TableCell>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedContract(contract)}
+                        className="block max-w-64 text-left transition-colors hover:text-[var(--brand-primary)]"
+                      >
+                        <span className="block truncate font-semibold text-[var(--text-primary)]">{contract.codigo_contrato}</span>
+                        <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{getContractDisplayName(contract)}</span>
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      <Badge tone={getStatusTone(contract.status)} size="sm">{contract.status}</Badge>
+                      <span className="mt-2 block text-xs text-[var(--text-muted)]">{contract.modalidade}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="block font-medium text-[var(--text-secondary)]">{normalizeOperadoraLabel(contract.operadora) || "Sem operadora"}</span>
+                      <span className="mt-1 block truncate text-xs text-[var(--text-muted)]">{contract.produto_plano || "Sem plano"}</span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="block font-medium text-[var(--text-primary)]">{contract.mensalidade_total ? `R$ ${contract.mensalidade_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "Mensalidade não informada"}</span>
+                      {contract.comissao_prevista && <span className="mt-1 block text-xs text-[var(--text-muted)]">Comissão: R$ {contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}{bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}</span>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">{renderDateBadges(contract)}</div>
+                      <span className="mt-2 block text-xs text-[var(--text-muted)]">{contract.data_renovacao ? `Fidelidade: ${formatDate(contract.data_renovacao, "monthYear")}` : contract.mes_reajuste ? `Reajuste: ${formatDate(contract.mes_reajuste.toString(), "monthOnly")}` : "Sem data próxima"}</span>
+                    </TableCell>
+                    <TableCell>{contract.responsavel || "Não atribuído"}</TableCell>
                       <TableCell align="right">
                         <div className="flex justify-end gap-1">
                           <Button onClick={() => setSelectedContract(contract)} variant="secondary" size="icon" title="Abrir contrato" aria-label="Abrir contrato"><Eye className="h-4 w-4" /></Button>

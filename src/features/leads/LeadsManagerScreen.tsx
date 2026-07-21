@@ -1955,7 +1955,7 @@ export default function LeadsManager({
                 </Surface>
             )}
             <div className="hidden lg:block">
-              <Table size="sm" stickyHeader className="min-w-[1080px]">
+              <Table size="sm" stickyHeader>
                 <TableHeader>
                   <TableRow>
                     {canSelectLeads && <TableHead className="w-10" aria-label="Selecionar" />}
@@ -1998,7 +1998,7 @@ export default function LeadsManager({
                             />
                           </TableCell>
                         )}
-                        <TableCell className="min-w-64">
+                        <TableCell>
                           <button
                             type="button"
                             onClick={() => setSelectedLead(lead)}
@@ -2009,19 +2009,19 @@ export default function LeadsManager({
                           </button>
                           {leadContractIds.has(lead.id) && <Badge tone="info" size="sm" className="mt-2">Contrato</Badge>}
                         </TableCell>
-                        <TableCell className="min-w-36">
+                        <TableCell>
                           {canEditLeads ? (
                             <StatusDropdown currentStatus={lead.status ?? ""} leadId={lead.id} onStatusChange={handleStatusChange} disabled={isBulkUpdating} statusOptions={activeLeadStatuses} />
                           ) : (
                             <OperationalStatusBadge statusColor={getStatusColor(lead.status)}>{lead.status ?? "Sem status"}</OperationalStatusBadge>
                           )}
                         </TableCell>
-                        <TableCell className="min-w-40">
+                        <TableCell>
                           <span className="block font-medium text-[var(--text-secondary)]">{lead.origem || "Sem origem"}</span>
                           <span className="mt-1 block text-xs text-[var(--text-muted)]">{lead.tipo_contratacao || "Sem tipo"}</span>
                         </TableCell>
-                        <TableCell className="min-w-36">{lead.responsavel || "Não atribuído"}</TableCell>
-                        <TableCell className="min-w-40">
+                        <TableCell>{lead.responsavel || "Não atribuído"}</TableCell>
+                        <TableCell>
                           {nextReminder ? (
                             <span className="font-medium text-[var(--accent-gold-hover)]">{formatDateTimeFullBR(nextReminder)}</span>
                           ) : <span className="text-[var(--text-muted)]">Sem retorno</span>}

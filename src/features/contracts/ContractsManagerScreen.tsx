@@ -738,7 +738,7 @@ export default function ContractsManager({
           />
 
           <div className="hidden lg:block">
-            <Table size="sm" stickyHeader>
+            <Table size="sm" stickyHeader className="kds-table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead>Contrato</TableHead>

@@ -1403,6 +1403,13 @@
   border-collapse: collapse;
   font-family: var(--font-sans);
 }
+.kds-table-fixed {
+  table-layout: fixed;
+}
+.kds-table-fixed .kds-table-cell {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
 
 .kds-table-md { font-size: 0.8125rem; }
 .kds-table-sm { font-size: 0.75rem; }

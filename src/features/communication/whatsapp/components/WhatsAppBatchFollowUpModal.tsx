@@ -697,9 +697,8 @@ export default function WhatsAppBatchFollowUpModal({
               className="rounded-xl"
               onClick={() => void handleSendSelected()}
               disabled={readyCount === 0 || phase === 'sending'}
-              loading={phase === 'sending'}
             >
-              <Send className="mr-1.5 h-4 w-4" />
+              {phase === 'sending' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Send className="mr-1.5 h-4 w-4" />}
               {phase === 'sending' ? `Enviando (${sendingFinished}/${sendingTotal})` : `Enviar ${readyCount} selecionado(s)`}
             </Button>
           </div>

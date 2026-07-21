@@ -220,13 +220,13 @@ const buildStyleProfile = (outboundMessages: MessageRow[]): StyleProfile => {
     : ['sem fechamento'];
 
   // Emoji usage
-  const emojiRegex = /[\p{Emoji}]/u;
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F600}-\u{1F64F}]/u;
   const emojiCount = texts.filter((t) => emojiRegex.test(t)).length;
   const usesEmoji = emojiCount / texts.length > 0.05;
 
   // Formality detection
   const formalMarkers = texts.filter((t) => /(sr\.?|sra\.?|senhor|senhora|por gentileza|gostaria de|encaminhar)/i.test(t)).length;
-  const informalMarkers = texts.filter((t) /(vc|voce|ta|tá|ok|beleza|blz|foi|show|curtir|tranquilo|tranquila)/i.test(t)).length;
+  const informalMarkers = texts.filter((t) => /(vc|voce|ta|tá|ok|beleza|blz|foi|show|curtir|tranquilo|tranquila)/i.test(t)).length;
   const formality = formalMarkers > informalMarkers ? 'formal' : informalMarkers > formalMarkers ? 'informal' : 'neutro';
 
   // Message structure analysis

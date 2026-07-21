@@ -113,9 +113,22 @@ export const isSupabaseConnectivityError = (error: unknown): boolean => {
   return message.includes('falha de rede ao conectar com o supabase');
 };
 
+type FunctionsErrorLike = Error & {
+  context?: { status?: number; data?: { error?: string } };
+};
+
 export const getSupabaseErrorMessage = (error: unknown, fallbackMessage: string): string => {
   if (isSupabaseConnectivityError(error)) {
     return (error as Error).message;
+  }
+
+  // Edge function responses carry the real error in context.data.error
+  if (
+    error instanceof Error
+    && 'context' in error
+    && (error as FunctionsErrorLike).context?.data?.error
+  ) {
+    return (error as FunctionsErrorLike).context!.data!.error!;
   }
 
   if (error instanceof Error && error.message.trim()) {

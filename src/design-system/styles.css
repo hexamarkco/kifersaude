@@ -1406,7 +1406,9 @@
 .kds-table-fixed {
   table-layout: fixed;
 }
+.kds-table-fixed .kds-table-head,
 .kds-table-fixed .kds-table-cell {
+  white-space: normal;
   overflow-wrap: break-word;
   word-break: break-word;
 }

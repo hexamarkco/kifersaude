@@ -423,7 +423,7 @@ export default function ContractsManager({
           key={`${contract.id}-${badge.key}`}
           tone={badge.tone}
           size="sm"
-          className="px-3 py-1 text-xs"
+          className="max-w-full whitespace-normal break-words px-3 py-1 text-left text-xs"
         >
           {badge.label}
         </Badge>

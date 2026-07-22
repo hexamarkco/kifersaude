@@ -36,6 +36,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  Tooltip,
   type PanelTone,
 } from "../../design-system";
 import { useConfirmationModal } from "../../hooks/useConfirmationModal";
@@ -412,23 +413,40 @@ export default function ContractsManager({
     }
   };
 
-  const renderDateBadges = (contract: Contract) => {
+  const renderDateBadges = (contract: Contract, compact = false) => {
     const participants = [
       ...(holders[contract.id] || []),
       ...(dependentsByContract[contract.id] || []),
     ];
-    const badges = getContractManagerHighlightBadges(contract, participants).map(
-      (badge) => (
+    const shortLabels: Record<string, string> = {
+      activation: "Ativação",
+      "fidelity-ended": "Fidelidade",
+      "fidelity-upcoming": "Fidelidade",
+      "annual-adjustment-count": "Reajuste",
+      "age-adjustment-count": "Faixa etária",
+      adjustment: "Reajuste",
+      commission: "Comissão",
+      bonus: "Bônus",
+    };
+    const badges = getContractManagerHighlightBadges(contract, participants).map((badge) => {
+      const badgeElement = (
         <Badge
-          key={`${contract.id}-${badge.key}`}
           tone={badge.tone}
           size="sm"
-          className="max-w-full whitespace-normal break-words px-3 py-1 text-left text-xs"
+          className={compact ? "px-3 py-1 text-xs" : "max-w-full whitespace-normal break-words px-3 py-1 text-left text-xs"}
         >
-          {badge.label}
+          {compact ? shortLabels[badge.key] ?? badge.label : badge.label}
         </Badge>
-      ),
-    );
+      );
+
+      return compact ? (
+        <Tooltip key={`${contract.id}-${badge.key}`} content={badge.label} size="sm">
+          {badgeElement}
+        </Tooltip>
+      ) : (
+        <span key={`${contract.id}-${badge.key}`}>{badgeElement}</span>
+      );
+    });
 
     if (badges.length === 0) return null;
 
@@ -790,8 +808,7 @@ export default function ContractsManager({
                       {contract.comissao_prevista && <span className="mt-1 block text-xs text-[var(--text-muted)]">Comissão: R$ {contract.comissao_prevista.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}{bonusValue !== null ? ` · Bônus: R$ ${bonusValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : ""}</span>}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">{renderDateBadges(contract)}</div>
-                      <span className="mt-2 block text-xs text-[var(--text-muted)]">{contract.data_renovacao ? `Fidelidade: ${formatDate(contract.data_renovacao, "monthYear")}` : contract.mes_reajuste ? `Reajuste: ${formatDate(contract.mes_reajuste.toString(), "monthOnly")}` : "Sem data próxima"}</span>
+                      <div className="flex flex-wrap gap-1">{renderDateBadges(contract, true)}</div>
                     </TableCell>
                     <TableCell>{contract.responsavel || "Não atribuído"}</TableCell>
                       <TableCell align="right">

@@ -10,13 +10,12 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiContactId,
+  extractWhapiContactName,
   extractWhapiContactPhone,
-  extractWhapiContactSaved,
   extractWhapiContactShortName,
   fetchWhapiChatName,
   fetchWhapiContacts,
   getCommWhatsAppPhoneLookupKeys,
-  extractWhapiSavedContactName,
   getNowIso,
   isValidCommWhatsAppDisplayName,
   normalizeCommWhatsAppPhone,
@@ -84,6 +83,8 @@ async function getLatestCacheSync(channelId: string, supabaseAdmin: ReturnType<t
     .from('comm_whatsapp_phone_contacts_cache')
     .select('last_synced_at')
     .eq('channel_id', channelId)
+    .not('contact_id', 'like', 'manual:%')
+    .not('contact_id', 'like', 'chat:%')
     .order('last_synced_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -117,12 +118,13 @@ async function syncContactsToCache(params: {
 
   const rows = fetchedContacts
     .map((contact) => {
-      const saved = extractWhapiContactSaved(contact);
       const phoneNumber = extractWhapiContactPhone(contact);
       const contactId = extractWhapiContactId(contact);
-      const displayName = saved ? extractWhapiSavedContactName(contact) : '';
+      // GET /contacts is Whapi's complete phone-contact list. Some records omit
+      // a display name or the legacy `saved` flag, but remain valid contacts.
+      const displayName = extractWhapiContactName(contact) || phoneNumber;
 
-      if (!saved || !phoneNumber || !contactId || !displayName) {
+      if (!phoneNumber || !contactId) {
         return null;
       }
 

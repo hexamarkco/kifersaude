@@ -3238,6 +3238,7 @@ export default function WhatsAppInboxScreen() {
   const replySuggestionKeyRef = useRef('');
   const leadSearchRequestIdRef = useRef(0);
   const startChatSourcesRequestIdRef = useRef(0);
+  const startChatContactsSyncedRef = useRef(false);
   const chatAgendaSummaryLeadIdRef = useRef<string | null>(null);
   const {
     searchDraft,
@@ -4517,7 +4518,7 @@ export default function WhatsAppInboxScreen() {
     }
   }, []);
 
-  const refreshStartChatSources = useCallback(async (query: string, page: number = 1, appendSavedContacts: boolean = false) => {
+  const refreshStartChatSources = useCallback(async (query: string, page: number = 1, appendSavedContacts: boolean = false, forceSavedContactsSync: boolean = false) => {
     const requestId = ++startChatSourcesRequestIdRef.current;
     const normalizedQuery = query.trim();
 
@@ -4529,7 +4530,12 @@ export default function WhatsAppInboxScreen() {
     }
 
     try {
-      const contactsPagePromise = commWhatsAppService.listSavedContacts({ query: normalizedQuery, page, pageSize: 50 });
+      const contactsPagePromise = commWhatsAppService.listSavedContacts({
+        query: normalizedQuery,
+        page,
+        pageSize: 50,
+        forceSync: forceSavedContactsSync,
+      });
       const leadsPromise = appendSavedContacts
         ? Promise.resolve(latestCrmStartResultsRef.current)
         : commWhatsAppService.searchCrmLeads({ query: normalizedQuery, limit: 20 });
@@ -5465,11 +5471,14 @@ export default function WhatsAppInboxScreen() {
 
   useEffect(() => {
     if (!startChatModalOpen) {
+      startChatContactsSyncedRef.current = false;
       return;
     }
 
+    const forceSavedContactsSync = !startChatContactsSyncedRef.current;
+    startChatContactsSyncedRef.current = true;
     const timeoutId = window.setTimeout(() => {
-      void refreshStartChatSources(startChatQuery, 1, false);
+      void refreshStartChatSources(startChatQuery, 1, false, forceSavedContactsSync);
     }, 250);
 
     return () => window.clearTimeout(timeoutId);

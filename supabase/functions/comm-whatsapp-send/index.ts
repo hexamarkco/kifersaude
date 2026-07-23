@@ -533,16 +533,14 @@ async function sendDocumentWhapi(params: {
   file: File;
   quotedMessageId?: string;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
-  const uploadForm = new FormData();
-  uploadForm.append('media', params.file, params.file.name);
-
   const uploadResponse = await fetch(`${WHAPI_BASE_URL}/media`, {
     method: 'POST',
     headers: {
+      'Content-Type': stripMimeParameters(params.file.type || 'application/octet-stream'),
       Accept: 'application/json',
       Authorization: `Bearer ${params.token}`,
     },
-    body: uploadForm,
+    body: params.file,
   });
   const uploadPayload = await readResponsePayload(uploadResponse);
 

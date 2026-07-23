@@ -1546,6 +1546,15 @@ export const extractWhapiUploadMediaId = (payload: unknown): string => {
       const nestedId = toTrimmedString(payload.media.id) || toTrimmedString(payload.media.media_id);
       if (nestedId) return nestedId;
     }
+
+    if (Array.isArray(payload.media)) {
+      for (const item of payload.media) {
+        if (isRecord(item)) {
+          const nestedId = toTrimmedString(item.id) || toTrimmedString(item.media_id);
+          if (nestedId) return nestedId;
+        }
+      }
+    }
   }
 
   return '';

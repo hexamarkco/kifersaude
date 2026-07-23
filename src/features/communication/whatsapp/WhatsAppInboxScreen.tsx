@@ -10331,7 +10331,7 @@ export default function WhatsAppInboxScreen() {
                     </div>
                   ) : null}
 
-                  {voiceRecordingState === 'recording' || voiceAttachment || visualComposerAttachments.length > 0 ? null : (
+                  {voiceRecordingState === 'recording' || voiceAttachment || visualComposerAttachments.length > 0 || documentComposerAttachments.length > 0 ? null : (
                   <>
                   {(replySuggestionLoading || replySuggestionText || replySuggestionError) && !quickReplyMenuOpen ? (
                     <div className="mb-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-2.5 shadow-sm">

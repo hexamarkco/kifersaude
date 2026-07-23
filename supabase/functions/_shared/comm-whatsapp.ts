@@ -629,7 +629,7 @@ export const extractWhapiMediaMeta = (message: unknown): CommWhatsAppMediaMeta =
     mediaId: toTrimmedString(payload.id) || null,
     mediaUrl: toTrimmedString(payload.link) || null,
     mediaMimeType: toTrimmedString(payload.mime_type) || null,
-    mediaFileName: toTrimmedString(payload.file_name) || toTrimmedString(payload.filename) || null,
+    mediaFileName: normalizeWhapiMediaFileName(payload.file_name) || normalizeWhapiMediaFileName(payload.filename) || null,
     mediaSizeBytes: toNullableNumber(payload.file_size),
     mediaDurationSeconds: toNullableNumber(payload.seconds),
     mediaCaption: toTrimmedString(payload.caption) || null,
@@ -1509,10 +1509,23 @@ export const extractWhapiMediaId = (payload: unknown): string => {
       if (nestedId) return nestedId;
     }
 
+    const nestedRecords = [payload.document, payload.image, payload.video, payload.audio, payload.voice, payload.sticker];
+    for (const item of nestedRecords) {
+      if (isRecord(item)) {
+        const nestedId = toTrimmedString(item.id) || toTrimmedString(item.media_id);
+        if (nestedId) return nestedId;
+      }
+    }
+
+    if (isRecord(payload.message)) {
+      const nestedId = extractWhapiMediaId(payload.message);
+      if (nestedId) return nestedId;
+    }
+
     if (Array.isArray(payload.data)) {
       for (const item of payload.data) {
         if (isRecord(item)) {
-          const itemId = toTrimmedString(item.id) || toTrimmedString(item.media_id);
+          const itemId = extractWhapiMediaId(item);
           if (itemId) return itemId;
         }
       }
@@ -1655,6 +1668,26 @@ export const extractWhapiContactName = (payload: unknown): string => {
   }
 
   return '';
+};
+
+export const normalizeWhapiMediaFileName = (value: unknown): string => {
+  const original = toTrimmedString(value);
+  if (!original || !/[\u00c2\u00c3\u00e2]/.test(original)) return original;
+
+  const byteValues = Array.from(original, (character) => character.charCodeAt(0));
+  if (byteValues.some((byte) => byte > 0xff)) return original;
+
+  try {
+    const repaired = new TextDecoder('utf-8', { fatal: true }).decode(Uint8Array.from(byteValues));
+    const encoded = new TextEncoder().encode(repaired);
+    if (encoded.length !== byteValues.length || encoded.some((byte, index) => byte !== byteValues[index])) {
+      return original;
+    }
+
+    return repaired;
+  } catch {
+    return original;
+  }
 };
 
 export const extractWhapiContactSaved = (payload: unknown): boolean => {

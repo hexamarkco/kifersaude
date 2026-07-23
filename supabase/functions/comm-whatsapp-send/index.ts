@@ -526,6 +526,68 @@ async function sendAudioLikeWhapi(params: {
   };
 }
 
+async function sendDocumentWhapi(params: {
+  token: string;
+  chatId: string;
+  caption: string;
+  file: File;
+  quotedMessageId?: string;
+}): Promise<{ response: Response; payload: unknown; mediaId: string }> {
+  const uploadForm = new FormData();
+  uploadForm.append('media', params.file, params.file.name);
+
+  const uploadResponse = await fetch(`${WHAPI_BASE_URL}/media`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: uploadForm,
+  });
+  const uploadPayload = await readResponsePayload(uploadResponse);
+
+  if (!uploadResponse.ok) {
+    return { response: uploadResponse, payload: uploadPayload, mediaId: '' };
+  }
+
+  const mediaId = extractWhapiUploadMediaId(uploadPayload);
+  if (!mediaId) {
+    return {
+      response: new Response(JSON.stringify({ error: 'A Whapi nao retornou o MediaID do documento.' }), { status: 502 }),
+      payload: { error: 'A Whapi nao retornou o MediaID do documento.' },
+      mediaId: '',
+    };
+  }
+
+  const messagePayload: Record<string, unknown> = {
+    to: params.chatId,
+    media: mediaId,
+    filename: params.file.name,
+  };
+  if (params.caption) {
+    messagePayload.caption = params.caption;
+  }
+  if (params.quotedMessageId) {
+    messagePayload.quoted = params.quotedMessageId;
+  }
+
+  const response = await fetch(`${WHAPI_BASE_URL}/messages/document`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: JSON.stringify(messagePayload),
+  });
+
+  return {
+    response,
+    payload: await readResponsePayload(response),
+    mediaId,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -668,6 +730,7 @@ Deno.serve(async (req: Request) => {
 
     let whapiResponse: Response;
     let uploadedMediaId = '';
+    let preparedWhapiPayload: unknown | undefined;
     const quoteMetadata = buildQuoteMetadata({
       quotedMessageId,
       quotedPreviewText,
@@ -779,6 +842,17 @@ Deno.serve(async (req: Request) => {
             headers: jsonHeaders,
           },
         );
+      } else if (mediaKind === 'document') {
+        const documentResult = await sendDocumentWhapi({
+          token,
+          chatId,
+          caption: text,
+          file: mediaFile,
+          quotedMessageId,
+        });
+        whapiResponse = documentResult.response;
+        uploadedMediaId = documentResult.mediaId;
+        preparedWhapiPayload = documentResult.payload;
       } else {
         const messageForm = new FormData();
         messageForm.append('to', chatId);
@@ -832,7 +906,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const whapiPayload = await readResponsePayload(whapiResponse);
+    const whapiPayload = preparedWhapiPayload ?? await readResponsePayload(whapiResponse);
 
     if (!whapiResponse.ok) {
       const errorMessage = parseWhapiError(whapiPayload);

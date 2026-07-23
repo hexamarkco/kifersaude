@@ -2061,6 +2061,26 @@ export async function getCachedCommWhatsAppMedia(supabaseAdmin: SupabaseClient, 
   return data ?? null;
 }
 
+export async function archiveCommWhatsAppMedia(supabaseAdmin: SupabaseClient, params: {
+  mediaId: string;
+  blob: Blob;
+  mimeType?: string | null;
+}): Promise<void> {
+  const mediaId = toTrimmedString(params.mediaId);
+  if (!mediaId) return;
+
+  const { error } = await supabaseAdmin.storage
+    .from(COMM_WHATSAPP_MEDIA_BUCKET)
+    .upload(getCommWhatsAppMediaStoragePath(mediaId), params.blob, {
+      contentType: params.mimeType?.trim() || params.blob.type || 'application/octet-stream',
+      upsert: true,
+    });
+
+  if (error) {
+    throw new Error(`Falha ao arquivar midia do WhatsApp: ${error.message}`);
+  }
+}
+
 export async function cacheCommWhatsAppMedia(supabaseAdmin: SupabaseClient, params: {
   token: string;
   mediaId?: string | null;

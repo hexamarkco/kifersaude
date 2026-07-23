@@ -2,6 +2,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
+  archiveCommWhatsAppMedia,
   COMM_WHATSAPP_MODULE,
   WHAPI_BASE_URL,
   corsHeaders,
@@ -706,6 +707,21 @@ Deno.serve(async (req: Request) => {
         }
 
         const deliveryStatus = resolveWhapiOutboundDeliveryStatus(whapiPayload, externalMessageId);
+        if (uploadedMediaId) {
+          try {
+            await archiveCommWhatsAppMedia(supabaseAdmin, {
+              mediaId: uploadedMediaId,
+              blob: mediaFile,
+              mimeType: stripMimeParameters(mediaFile.type || 'application/octet-stream'),
+            });
+          } catch (error) {
+            console.error('[comm-whatsapp-send] falha ao arquivar midia outbound', {
+              mediaId: uploadedMediaId,
+              messageId: externalMessageId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
 
         const nowIso = getNowIso();
         const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
@@ -850,6 +866,21 @@ Deno.serve(async (req: Request) => {
     const deliveryStatus = resolveWhapiOutboundDeliveryStatus(whapiPayload, externalMessageId);
 
     uploadedMediaId = uploadedMediaId || extractWhapiMediaId(whapiPayload);
+    if (mediaFile && uploadedMediaId) {
+      try {
+        await archiveCommWhatsAppMedia(supabaseAdmin, {
+          mediaId: uploadedMediaId,
+          blob: mediaFile,
+          mimeType: stripMimeParameters(mediaFile.type || 'application/octet-stream'),
+        });
+      } catch (error) {
+        console.error('[comm-whatsapp-send] falha ao arquivar midia outbound', {
+          mediaId: uploadedMediaId,
+          messageId: externalMessageId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     const nowIso = getNowIso();
     const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
     const phoneDigits = extractPhoneFromChatId(chatId);

@@ -43,8 +43,11 @@ export default function ToastViewport() {
 
   if (items.length === 0) return null;
 
+  const isDarkThemeActive = typeof document !== 'undefined'
+    && document.querySelector('.painel-theme')?.classList.contains('theme-dark');
+
   return (
-    <div className="pointer-events-none fixed bottom-5 right-5 z-[500] flex w-[min(calc(100vw-2.5rem),22rem)] flex-col gap-3 sm:bottom-6 sm:right-6">
+    <div className={`modal-theme-host painel-theme kifer-ds ${isDarkThemeActive ? 'theme-dark' : 'theme-light'} pointer-events-none fixed bottom-5 right-5 z-[500] flex w-[min(calc(100vw-2.5rem),22rem)] flex-col gap-3 sm:bottom-6 sm:right-6`}>
       {items.map((item) => {
         const meta = toneMeta[item.tone];
 

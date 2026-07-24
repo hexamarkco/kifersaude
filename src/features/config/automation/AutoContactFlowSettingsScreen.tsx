@@ -144,6 +144,9 @@ export default function AutoContactFlowSettingsScreen() {
     string | null
   >(null);
   const [flowEditorMode] = useState<"basic" | "advanced">("advanced");
+  const [flowDetailTab, setFlowDetailTab] = useState<
+    "journey" | "settings" | "test"
+  >("journey");
   const autoSaveReadyRef = useRef(false);
   const autoSaveSkipRef = useRef(false);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -1412,12 +1415,14 @@ export default function AutoContactFlowSettingsScreen() {
       setShowSimulation(false);
       setSimulationStart("");
       setTagDraft("");
+      setFlowDetailTab("journey");
       return;
     }
     setShowSimulation(false);
     setSimulationStart("");
     setTestStepId("");
     setTagDraft("");
+    setFlowDetailTab("journey");
   }, [activeFlowId]);
 
   const handleSendFlowTest = async () => {
@@ -2040,26 +2045,27 @@ export default function AutoContactFlowSettingsScreen() {
                   onClose={() => setActiveFlowId(null)}
                   size="xl"
                   panelClassName="max-w-6xl 2xl:max-w-7xl"
-                  bodyClassName="p-6"
+                  bodyClassName="p-0"
                   showCloseButton={false}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
+                  <div className="sticky top-0 z-20 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-5 py-4 sm:px-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <div className="text-xs font-semibold text-[var(--text-subtle)] uppercase">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text-subtle)]">
                         Fluxo {activeFlowIndex + 1}
                       </div>
-                      <h4 className="text-lg font-semibold text-[var(--text-primary)]">
-                        Detalhes do fluxo
+                      <h4 className="mt-1 font-[var(--font-display)] text-2xl font-semibold text-[var(--text-primary)]">
+                        {activeFlow.name || "Novo fluxo"}
                       </h4>
-                      <p className="text-sm text-[var(--text-muted)] mt-1">
-                        Ajuste regras, sequência de ações e status final do
-                        fluxo selecionado.
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        Organize a jornada, as regras operacionais e os testes em um só lugar.
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <Button
                         onClick={() => {
-                          setShowSimulation((previous) => !previous);
+                          setFlowDetailTab("test");
+                          setShowSimulation(true);
                           if (!simulationStart) {
                             setSimulationStart(getLocalDateTimeValue());
                           }
@@ -2068,7 +2074,7 @@ export default function AutoContactFlowSettingsScreen() {
                         size="sm"
                       >
                         <Timer className="w-4 h-4" />
-                        {showSimulation ? "Ocultar simulação" : "Simular fluxo"}
+                        Testar fluxo
                       </Button>
                       <Button
                         onClick={handleSaveFlow}
@@ -2094,9 +2100,30 @@ export default function AutoContactFlowSettingsScreen() {
                         Fechar
                       </Button>
                     </div>
+                    </div>
+
+                    <Tabs
+                      className="mt-5"
+                      variant="underline"
+                      value={flowDetailTab}
+                      onChange={(next) => {
+                        setFlowDetailTab(next);
+                        if (next === "test") {
+                          setShowSimulation(true);
+                          if (!simulationStart) setSimulationStart(getLocalDateTimeValue());
+                        }
+                      }}
+                      items={[
+                        { id: "journey", label: "Jornada", icon: Activity },
+                        { id: "settings", label: "Regras e agenda", icon: ShieldCheck },
+                        { id: "test", label: "Simular e testar", icon: Timer },
+                      ]}
+                    />
                   </div>
 
-                  <div className="space-y-6 pt-4">
+                  <div className="space-y-5 p-5 sm:p-6">
+                    {flowDetailTab === "settings" && (
+                      <>
                     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                       <div className="space-y-4">
                         <div className="space-y-2">
@@ -2243,7 +2270,20 @@ export default function AutoContactFlowSettingsScreen() {
                         </div>
                       </div>
                     </div>
+                      </>
+                    )}
 
+                    {flowDetailTab === "journey" && <>
+                    <div className="flex flex-wrap items-end justify-between gap-3 rounded-[var(--kds-radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-3">
+                      <div>
+                        <h5 className="text-sm font-semibold text-[var(--text-primary)]">Jornada do lead</h5>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">Clique em um bloco para editar o gatilho, condições e ações. O canvas ocupa a área principal para facilitar a leitura da sequência.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-[var(--text-secondary)]">
+                        <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-1">{activeFlow.steps.length} etapas</span>
+                        <span className="kds-config-token border border-[var(--border-subtle)] px-2 py-1">{getFlowConditionPreview(activeFlow)}</span>
+                      </div>
+                    </div>
                     <FlowBuilder
                       flow={activeFlow}
                       messageTemplates={messageTemplatesDraft}
@@ -2269,7 +2309,9 @@ export default function AutoContactFlowSettingsScreen() {
                         });
                       }}
                     />
+                    </>}
 
+                    {flowDetailTab === "settings" && <>
                     <div className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -3204,7 +3246,9 @@ export default function AutoContactFlowSettingsScreen() {
                       </div>
                     )}
 
-                    {showSimulation && (
+                    </>}
+
+                    {flowDetailTab === "test" && showSimulation && (
                       <div className="space-y-4 rounded-2xl border border-[var(--brand-primary-border)] bg-gradient-to-br from-[color:var(--brand-primary-soft)] via-[color:var(--bg-surface)] to-[color:var(--accent-gold-soft)] p-5 shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="space-y-1">

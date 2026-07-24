@@ -65,3 +65,26 @@ test('keeps explicit archive patch alive through stale refetches until TTL', () 
   assert.equal(afterTtl.is_archived, false);
   assert.equal(state.has(activeChat.id), false);
 });
+
+test('releases an archive patch when a newer server message unarchives the chat', () => {
+  const state = new Map<string, PendingChatInboxStatePatch>();
+  const activeChat = baseChat({ is_archived: false, archived_at: null });
+  const archivedAt = new Date(Date.now() - 1_000).toISOString();
+  const patch: PendingChatInboxStatePatch = {
+    is_archived: true,
+    archived_at: archivedAt,
+    __issuedAt: Date.now(),
+    __actions: { isArchived: Date.now() },
+  };
+  mergePendingChatInboxState(state, activeChat.id, patch);
+
+  const serverChat = baseChat({
+    is_archived: false,
+    archived_at: null,
+    last_message_at: new Date(Date.now() + 1_000).toISOString(),
+  });
+  const result = applyPendingChatInboxState([serverChat], state)[0];
+
+  assert.equal(result.is_archived, false);
+  assert.equal(state.has(activeChat.id), false);
+});

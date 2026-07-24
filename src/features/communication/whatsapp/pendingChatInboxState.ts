@@ -110,11 +110,21 @@ export const applyPendingChatInboxState = (
 
   if (typeof remaining.is_archived === 'boolean') {
     const shouldProtectArchivePatch = withinProtection && Boolean(pendingState.__actions?.isArchived);
+    const archivedAt = getMessageTimestampMs(remaining.archived_at);
+    const serverMessageAt = getMessageTimestampMs(chat.last_message_at);
+    const serverUnarchivedByNewMessage = remaining.is_archived
+      && !chat.is_archived
+      && archivedAt !== null
+      && serverMessageAt !== null
+      && serverMessageAt > archivedAt;
     if (chat.is_archived === remaining.is_archived) {
       if (!shouldProtectArchivePatch) {
         delete remaining.is_archived;
         delete remaining.archived_at;
       }
+    } else if (serverUnarchivedByNewMessage) {
+      delete remaining.is_archived;
+      delete remaining.archived_at;
     } else if (!withinProtection) {
       delete remaining.is_archived;
       delete remaining.archived_at;

@@ -182,7 +182,7 @@ export default function SystemSettingsScreen() {
   const showLeadsSection =
     matchesConfigSearch(
       normalizedSearchTerm,
-      SECTION_OVERVIEW[3].searchTerms,
+      SECTION_OVERVIEW[2].searchTerms,
     ) ||
     showLeadStatusManager ||
     showLeadOriginsManager ||
@@ -191,7 +191,7 @@ export default function SystemSettingsScreen() {
   const showContractsSection =
     matchesConfigSearch(
       normalizedSearchTerm,
-      SECTION_OVERVIEW[4].searchTerms,
+      SECTION_OVERVIEW[3].searchTerms,
     ) || visibleContractManagers.length > 0;
 
   const visibleSections = SECTION_OVERVIEW.filter((section) => {

@@ -1140,7 +1140,7 @@ export default function IntegrationsScreen() {
                             placeholder="Selecione o provedor"
                             includePlaceholderOption={false}
                             options={getProviderOptionsForTask(task.key)}
-                            size="compact"
+                            size="large"
                           />
                         </div>
 
@@ -1163,7 +1163,7 @@ export default function IntegrationsScreen() {
                             placeholder={modelFieldPlaceholder}
                             includePlaceholderOption={false}
                             options={modelOptions}
-                            size="compact"
+                            size="large"
                             disabled={
                               providerModelsState.loading ||
                               modelOptions.length === 0

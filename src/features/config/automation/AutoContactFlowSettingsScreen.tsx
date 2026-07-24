@@ -1734,7 +1734,7 @@ export default function AutoContactFlowSettingsScreen() {
                         placeholder="Selecione um fuso"
                         includePlaceholderOption={false}
                         options={timezoneOptions}
-                        size="compact"
+                        size="large"
                       />
                     </div>
                   </div>
@@ -1804,7 +1804,7 @@ export default function AutoContactFlowSettingsScreen() {
                               refreshSeconds: Number(event.target.value),
                             }))
                           }
-                          size="compact"
+                          size="large"
                         />
                       </div>
                       <div>
@@ -1856,7 +1856,7 @@ export default function AutoContactFlowSettingsScreen() {
                               retentionDays: Number(event.target.value),
                             }))
                           }
-                          size="compact"
+                          size="large"
                         />
                       </div>
                       <label className="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] mt-6">

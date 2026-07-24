@@ -66,3 +66,23 @@ test('runtime so fica ativo quando enabled e autoSend estao ligados', () => {
   assert.equal(isAutoContactRuntimeEnabled({ enabled: true, autoSend: false }), false);
   assert.equal(isAutoContactRuntimeEnabled({ enabled: false, autoSend: true }), false);
 });
+
+test('normaliza régua de inatividade com intervalo mínimo de 24 horas', () => {
+  const settings = normalizeAutoContactSettings({
+    enabled: true,
+    autoSend: true,
+    messageTemplates: [{ id: 'template-1', name: 'Follow-up', message: 'Olá' }],
+    flows: [{
+      id: 'inactivity-flow',
+      name: 'Sem resposta',
+      triggerType: 'inactivity_duration',
+      triggerStatuses: ['Contato Inicial', 'Em Atendimento'],
+      triggerDurationHours: 2,
+      steps: [{ id: 'step-1', delayValue: 24, delayUnit: 'hours', actionType: 'send_message', templateId: 'template-1' }],
+    }],
+  });
+
+  assert.equal(settings.flows[0]?.triggerType, 'inactivity_duration');
+  assert.equal(settings.flows[0]?.triggerDurationHours, 24);
+  assert.deepEqual(settings.flows[0]?.triggerStatuses, ['Contato Inicial', 'Em Atendimento']);
+});

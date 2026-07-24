@@ -12,6 +12,19 @@ const ACTION_NODE_GAP = 140;
 
 const createNodeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+const getTriggerLabel = (triggerType: AutoContactFlow['triggerType']) => {
+  switch (triggerType) {
+    case 'status_changed':
+      return 'Mudança de status';
+    case 'status_duration':
+      return 'Tempo em status';
+    case 'inactivity_duration':
+      return 'Tempo sem interação';
+    default:
+      return 'Lead criado';
+  }
+};
+
 export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGraph => {
   if (flow.flowGraph?.nodes?.length) {
     const triggerNode = flow.flowGraph.nodes.find(n => n.type === 'trigger');
@@ -20,11 +33,7 @@ export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGr
     }
     
     const triggerType = flow.triggerType ?? 'lead_created';
-    const triggerLabel = triggerType === 'lead_created' 
-      ? 'Lead criado' 
-      : triggerType === 'status_changed' 
-        ? 'Mudança de status' 
-        : 'Tempo em status';
+    const triggerLabel = getTriggerLabel(triggerType);
     
     return {
       ...flow.flowGraph,
@@ -52,11 +61,7 @@ export const buildFlowGraphFromFlow = (flow: AutoContactFlow): AutoContactFlowGr
 
   const triggerId = createNodeId('trigger');
   const triggerType = flow.triggerType ?? 'lead_created';
-  const triggerLabel = triggerType === 'lead_created' 
-    ? 'Lead criado' 
-    : triggerType === 'status_changed' 
-      ? 'Mudança de status' 
-      : 'Tempo em status';
+  const triggerLabel = getTriggerLabel(triggerType);
   
   nodes.push({
     id: triggerId,

@@ -61,7 +61,7 @@ type FlowBuilderProps = {
   leadStatuses: LeadStatusConfig[];
   onChangeGraph: (graph: AutoContactFlowGraph) => void;
   onTriggerChange?: (
-    triggerType: "lead_created" | "status_changed" | "status_duration",
+    triggerType: "lead_created" | "status_changed" | "status_duration" | "inactivity_duration",
     triggerStatuses: string[],
     triggerDurationHours: number,
   ) => void;
@@ -186,6 +186,10 @@ const TriggerNode = ({ data }: { data: AutoContactFlowGraphNodeData }) => {
         return data.triggerStatuses?.length
           ? `Dispara após ${data.triggerDurationHours ?? 24}h em: ${data.triggerStatuses.join(", ")}`
           : `Dispara após ${data.triggerDurationHours ?? 24}h em status específico`;
+      case "inactivity_duration":
+        return data.triggerStatuses?.length
+          ? `Dispara após ${data.triggerDurationHours ?? 24}h sem interação em: ${data.triggerStatuses.join(", ")}`
+          : `Dispara após ${data.triggerDurationHours ?? 24}h sem interação`;
       default:
         return "Dispara quando um lead é criado";
     }
@@ -519,6 +523,9 @@ export default function FlowBuilder({
         } else if (triggerType === "status_duration") {
           txt += `  Tipo: Dispara após ${data.triggerDurationHours || 24}h no status\n`;
           txt += `  Status: ${data.triggerStatuses?.join(", ") || "Não definido"}\n`;
+        } else if (triggerType === "inactivity_duration") {
+          txt += `  Tipo: Dispara após ${data.triggerDurationHours || 24}h sem interação\n`;
+          txt += `  Status: ${data.triggerStatuses?.join(", ") || "Não definido"}\n`;
         }
         txt += "\n";
       }
@@ -828,7 +835,7 @@ export default function FlowBuilder({
         selectedNode.data.triggerDurationHours ??
         24;
       onTriggerChange(
-        triggerType as "lead_created" | "status_changed" | "status_duration",
+        triggerType as "lead_created" | "status_changed" | "status_duration" | "inactivity_duration",
         triggerStatuses,
         triggerDurationHours,
       );
@@ -1149,13 +1156,16 @@ export default function FlowBuilder({
                       const triggerType = value as
                         | "lead_created"
                         | "status_changed"
-                        | "status_duration";
+                        | "status_duration"
+                        | "inactivity_duration";
                       const label =
                         triggerType === "lead_created"
                           ? "Lead criado"
                           : triggerType === "status_changed"
                             ? "Mudança de status"
-                            : "Tempo em status";
+                            : triggerType === "status_duration"
+                              ? "Tempo em status"
+                              : "Tempo sem interação";
                       updateSelectedNode({
                         triggerType,
                         label,
@@ -1164,7 +1174,7 @@ export default function FlowBuilder({
                             ? (selectedNode.data.triggerStatuses ?? [])
                             : [],
                         triggerDurationHours:
-                          triggerType === "status_duration"
+                          triggerType === "status_duration" || triggerType === "inactivity_duration"
                             ? (selectedNode.data.triggerDurationHours ?? 24)
                             : 24,
                       });
@@ -1175,12 +1185,14 @@ export default function FlowBuilder({
                       { value: "lead_created", label: "Lead criado" },
                       { value: "status_changed", label: "Mudança de status" },
                       { value: "status_duration", label: "Tempo em status" },
+                      { value: "inactivity_duration", label: "Tempo sem interação" },
                     ]}
                   />
                 </div>
 
                 {(selectedNode.data.triggerType === "status_changed" ||
-                  selectedNode.data.triggerType === "status_duration") && (
+                  selectedNode.data.triggerType === "status_duration" ||
+                  selectedNode.data.triggerType === "inactivity_duration") && (
                   <div>
                     <MultiSelectDropdown
                       options={leadStatuses
@@ -1197,19 +1209,24 @@ export default function FlowBuilder({
                       label="Status do lead"
                     />
                     <div className="mt-1 text-[10px] text-[var(--text-subtle)]">
-                      Selecione um ou mais status
+                      {selectedNode.data.triggerType === "inactivity_duration"
+                        ? "Selecione os status monitorados pela régua"
+                        : "Selecione um ou mais status"}
                     </div>
                   </div>
                 )}
 
-                {selectedNode.data.triggerType === "status_duration" && (
+                {(selectedNode.data.triggerType === "status_duration" ||
+                  selectedNode.data.triggerType === "inactivity_duration") && (
                   <div>
                     <label className="mb-1 block text-[11px] text-[var(--text-muted)]">
-                      Tempo no status (horas)
+                      {selectedNode.data.triggerType === "inactivity_duration"
+                        ? "Tempo sem interação (horas)"
+                        : "Tempo no status (horas)"}
                     </label>
                     <Input
                       type="number"
-                      min={1}
+                      min={selectedNode.data.triggerType === "inactivity_duration" ? 24 : 1}
                       value={selectedNode.data.triggerDurationHours ?? 24}
                       onChange={(event) =>
                         updateSelectedNode({
@@ -1219,8 +1236,9 @@ export default function FlowBuilder({
                       size="compact"
                     />
                     <div className="mt-1 text-[10px] text-[var(--text-subtle)]">
-                      O fluxo será executado quando o lead estiver há mais de X
-                      horas neste(s) status
+                      {selectedNode.data.triggerType === "inactivity_duration"
+                        ? "Mínimo de 24 horas. Uma resposta do cliente cancela a régua."
+                        : "O fluxo será executado quando o lead estiver há mais de X horas neste(s) status"}
                     </div>
                   </div>
                 )}

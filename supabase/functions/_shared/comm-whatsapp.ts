@@ -298,7 +298,11 @@ export const formatPhoneLabel = (value: unknown): string => {
 export const unixTimestampToIso = (value: unknown): string | null => {
   const numeric = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(numeric) || numeric <= 0) return null;
-  return new Date(numeric * 1000).toISOString();
+
+  // Whapi normally returns seconds, but historical records may contain milliseconds or microseconds.
+  const timestampMs = numeric >= 1e15 ? numeric / 1000 : numeric >= 1e12 ? numeric : numeric * 1000;
+  const date = new Date(timestampMs);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 };
 
 export const stringTimestampToIso = (value: unknown): string | null => {
@@ -1629,8 +1633,22 @@ export const extractWhapiMessages = (payload: unknown): Array<Record<string, unk
       return payload.messages.filter(isRecord);
     }
 
+    if (isRecord(payload.message)) {
+      return [payload.message];
+    }
+
     if (Array.isArray(payload.data)) {
       return payload.data.filter(isRecord);
+    }
+
+    if (isRecord(payload.data)) {
+      if (Array.isArray(payload.data.messages)) {
+        return payload.data.messages.filter(isRecord);
+      }
+
+      if (isRecord(payload.data.message)) {
+        return [payload.data.message];
+      }
     }
   }
 

@@ -555,7 +555,9 @@ Deno.serve(async (req: Request) => {
       })
       .eq('id', channel.id);
 
-    const messageItems = eventType === 'messages' ? extractWhapiMessages(payload) : [];
+    const messageItems = eventType === 'messages' || eventType === 'message'
+      ? extractWhapiMessages(payload)
+      : [];
 
     if (messageItems.length > 0) {
       for (const rawItem of messageItems) {

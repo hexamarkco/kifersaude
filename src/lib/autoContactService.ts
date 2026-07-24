@@ -114,7 +114,7 @@ export type AutoContactFlowCondition = {
 
 export type AutoContactFlowEvent = 'lead_created' | 'status_changed';
 
-export type AutoContactFlowTriggerType = 'lead_created' | 'status_changed' | 'status_duration';
+export type AutoContactFlowTriggerType = 'lead_created' | 'status_changed' | 'status_duration' | 'inactivity_duration';
 
 export type AutoContactFlowScheduling = {
   startHour: string;
@@ -657,6 +657,18 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
                 step: node?.data?.step as AutoContactFlowStep | undefined,
                 conditions: Array.isArray(node?.data?.conditions) ? node.data.conditions : undefined,
                 conditionLogic: node?.data?.conditionLogic === 'any' ? 'any' : 'all',
+                triggerType:
+                  node?.data?.triggerType === 'status_changed' ||
+                  node?.data?.triggerType === 'status_duration' ||
+                  node?.data?.triggerType === 'inactivity_duration'
+                    ? node.data.triggerType
+                    : 'lead_created',
+                triggerStatuses: Array.isArray(node?.data?.triggerStatuses)
+                  ? node.data.triggerStatuses.filter((status: unknown) => typeof status === 'string')
+                  : [],
+                triggerDurationHours: Number.isFinite(Number(node?.data?.triggerDurationHours))
+                  ? Number(node.data.triggerDurationHours)
+                  : 24,
               },
             } as AutoContactFlowGraphNode;
           })
@@ -857,15 +869,18 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         id: flowId,
         name: typeof flow?.name === 'string' ? flow.name : '',
         triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
-        triggerType: (flow?.triggerType === 'status_changed' || flow?.triggerType === 'status_duration' 
+        triggerType: (flow?.triggerType === 'status_changed' || flow?.triggerType === 'status_duration' || flow?.triggerType === 'inactivity_duration'
           ? flow.triggerType 
           : 'lead_created') as AutoContactFlowTriggerType,
         triggerStatuses: Array.isArray(flow?.triggerStatuses) 
           ? flow.triggerStatuses.filter((s: unknown) => typeof s === 'string') 
           : [],
-        triggerDurationHours: Number.isFinite(Number(flow?.triggerDurationHours)) 
-          ? Number(flow.triggerDurationHours) 
-          : 24,
+        triggerDurationHours:
+          flow?.triggerType === 'inactivity_duration'
+            ? Math.max(24, Number.isFinite(Number(flow?.triggerDurationHours)) ? Number(flow.triggerDurationHours) : 24)
+            : Number.isFinite(Number(flow?.triggerDurationHours)) && Number(flow.triggerDurationHours) >= 1
+              ? Number(flow.triggerDurationHours)
+              : 24,
         steps: normalizedSteps,
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
         invalidNumberAction: normalizeInvalidNumberAction(flow?.invalidNumberAction),
@@ -1446,7 +1461,7 @@ const matchesAutoContactFlow = (flow: AutoContactFlow, lead: Lead, event?: strin
     }
   }
   
-  if (triggerType === 'status_duration') {
+  if (triggerType === 'status_duration' || triggerType === 'inactivity_duration') {
     return false;
   }
 

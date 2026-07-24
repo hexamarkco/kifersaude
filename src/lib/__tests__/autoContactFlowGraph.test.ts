@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
 import type { AutoContactFlow } from '../autoContactService';
-import { expandFlowGraphToFlows } from '../autoContactFlowGraph';
+import { buildFlowGraphFromFlow, expandFlowGraphToFlows } from '../autoContactFlowGraph';
 
 const buildBaseFlow = (): AutoContactFlow => ({
   id: 'flow-branch',
@@ -170,4 +170,20 @@ test('expandFlowGraphToFlows preserves prefix conditions and steps for every bra
       ['whatsapp_valid', 'not_equals', 'true'],
     ],
   );
+});
+
+test('buildFlowGraphFromFlow represents the inactivity trigger', () => {
+  const graph = buildFlowGraphFromFlow({
+    ...buildBaseFlow(),
+    flowGraph: undefined,
+    triggerType: 'inactivity_duration',
+    triggerStatuses: ['Contato Inicial', 'Em Atendimento'],
+    triggerDurationHours: 48,
+  });
+  const trigger = graph.nodes.find((node) => node.type === 'trigger');
+
+  assert.equal(trigger?.data.label, 'Tempo sem interação');
+  assert.equal(trigger?.data.triggerType, 'inactivity_duration');
+  assert.equal(trigger?.data.triggerDurationHours, 48);
+  assert.deepEqual(trigger?.data.triggerStatuses, ['Contato Inicial', 'Em Atendimento']);
 });

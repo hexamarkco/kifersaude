@@ -118,12 +118,16 @@ const formatTrigger = (flow: AutoContactFlow, triggerNode?: AutoContactFlowGraph
   const triggerDurationHours = triggerNode?.data.triggerDurationHours ?? flow.triggerDurationHours ?? 24;
   const lines = [`Type: ${triggerType}`];
 
-  if (triggerType === 'status_changed' || triggerType === 'status_duration') {
+  if (triggerType === 'status_changed' || triggerType === 'status_duration' || triggerType === 'inactivity_duration') {
     lines.push(`Statuses: ${triggerStatuses.length ? triggerStatuses.join(', ') : '(any status)'}`);
   }
 
   if (triggerType === 'status_duration') {
     lines.push(`Duration in status: ${triggerDurationHours}h`);
+  }
+
+  if (triggerType === 'inactivity_duration') {
+    lines.push(`Duration without interaction: ${triggerDurationHours}h`);
   }
 
   if (flow.triggerStatus?.trim()) {

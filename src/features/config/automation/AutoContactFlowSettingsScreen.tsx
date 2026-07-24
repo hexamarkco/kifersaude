@@ -131,6 +131,10 @@ export default function AutoContactFlowSettingsScreen() {
   const [tagDraft, setTagDraft] = useState("");
   const [showSimulation, setShowSimulation] = useState(false);
   const [simulationStart, setSimulationStart] = useState("");
+  const [testPhone, setTestPhone] = useState("");
+  const [testName, setTestName] = useState("Contato de teste");
+  const [testStepId, setTestStepId] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
   const [lastRefreshAt, setLastRefreshAt] = useState(() => new Date());
   const [dailyAutomationCount, setDailyAutomationCount] = useState<
     number | null
@@ -1269,6 +1273,13 @@ export default function AutoContactFlowSettingsScreen() {
       ? applyFlowGraphToFlow(activeFlow, activeFlow.flowGraph)
       : activeFlow;
   }, [activeFlow]);
+  const testableSteps = useMemo(
+    () =>
+      (simulationFlow?.steps ?? []).filter(
+        (step) => step.actionType === "send_message",
+      ),
+    [simulationFlow],
+  );
   const simulationInputValue = simulationStart || getLocalDateTimeValue();
   const simulationBaseDate = useMemo(() => {
     const parsed = new Date(simulationInputValue);
@@ -1405,8 +1416,44 @@ export default function AutoContactFlowSettingsScreen() {
     }
     setShowSimulation(false);
     setSimulationStart("");
+    setTestStepId("");
     setTagDraft("");
   }, [activeFlowId]);
+
+  const handleSendFlowTest = async () => {
+    if (!activeFlow) return;
+    const stepId = testStepId || testableSteps[0]?.id;
+    if (!stepId || !testPhone.trim()) {
+      setStatusMessage({
+        type: "warning",
+        text: "Informe um número de WhatsApp e selecione uma etapa para o teste.",
+      });
+      return;
+    }
+
+    setSendingTest(true);
+    setStatusMessage(null);
+    const { data, error } = await supabase.functions.invoke("leads-api", {
+      headers: { "x-action": "test-flow" },
+      body: {
+        flow_id: activeFlow.id,
+        step_id: stepId,
+        test_phone: testPhone.trim(),
+        test_name: testName.trim() || "Contato de teste",
+      },
+    });
+    setSendingTest(false);
+
+    if (error || !data?.success) {
+      setStatusMessage({
+        type: "error",
+        text: data?.error || error?.message || "Não foi possível enviar a mensagem de teste.",
+      });
+      return;
+    }
+
+    setStatusMessage({ type: "success", text: "Mensagem de teste enviada para o número informado." });
+  };
 
   useEffect(() => {
     if (!monitoringDraft.realtimeEnabled) return;
@@ -1737,7 +1784,7 @@ export default function AutoContactFlowSettingsScreen() {
                         className="mt-1"
                       />
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-3 sm:grid-cols-2">
                       <div>
                         <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                           Atualização (segundos)
@@ -3272,6 +3319,70 @@ export default function AutoContactFlowSettingsScreen() {
                                 </div>
                               </div>
                             </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-[var(--brand-primary-border)] bg-[var(--bg-surface)] p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
+                                <MessageCircle className="h-4 w-4" />
+                                Envio de teste
+                              </div>
+                              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                Envia somente a etapa escolhida para seu número. Não cria jobs, não altera o lead e não executa ações de status.
+                              </p>
+                            </div>
+                            <span className="kds-config-token border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-3 py-1 text-[11px] text-[var(--text-primary)]">
+                              Whapi real
+                            </span>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <label className="grid gap-1 text-xs font-semibold text-[var(--text-secondary)]">
+                              Nome de teste
+                              <Input
+                                value={testName}
+                                onChange={(event) => setTestName(event.target.value)}
+                                size="compact"
+                              />
+                            </label>
+                            <label className="grid gap-1 text-xs font-semibold text-[var(--text-secondary)]">
+                              WhatsApp de teste
+                              <Input
+                                type="tel"
+                                placeholder="11999999999"
+                                value={testPhone}
+                                onChange={(event) => setTestPhone(event.target.value)}
+                                size="compact"
+                              />
+                            </label>
+                            <FilterSingleSelect
+                              icon={MessageCircle}
+                              size="compact"
+                              value={testStepId || testableSteps[0]?.id || ""}
+                              onChange={setTestStepId}
+                              placeholder="Etapa para testar"
+                              options={testableSteps.map((step, index) => ({
+                                value: step.id,
+                                label: `Etapa ${index + 1}: ${getSimulationStepLabel(step)}`,
+                              }))}
+                            />
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-xs text-[var(--text-muted)]">
+                              Salve o fluxo antes do teste para garantir que a etapa selecionada seja a versão publicada.
+                            </p>
+                            <Button
+                              size="sm"
+                              onClick={() => void handleSendFlowTest()}
+                              loading={sendingTest}
+                              disabled={testableSteps.length === 0 || !testPhone.trim()}
+                            >
+                              {!sendingTest && <MessageCircle className="h-4 w-4" />}
+                              Enviar teste
+                            </Button>
                           </div>
                         </div>
 

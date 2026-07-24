@@ -472,7 +472,7 @@ type AutoContactFlow = {
   id: string;
   name: string;
   triggerStatus: string;
-  triggerType?: 'lead_created' | 'status_changed' | 'status_duration';
+  triggerType?: 'lead_created' | 'status_changed' | 'status_duration' | 'inactivity_duration';
   triggerStatuses?: string[];
   triggerDurationHours?: number;
   steps: AutoContactFlowStep[];
@@ -2095,15 +2095,18 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
         name: typeof flow?.name === 'string' ? flow.name : '',
         triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
         triggerType:
-          flow?.triggerType === 'status_changed' || flow?.triggerType === 'status_duration'
+          flow?.triggerType === 'status_changed' ||
+          flow?.triggerType === 'status_duration' ||
+          flow?.triggerType === 'inactivity_duration'
             ? flow.triggerType
             : 'lead_created',
         triggerStatuses: Array.isArray(flow?.triggerStatuses)
           ? flow.triggerStatuses.filter((status: unknown) => typeof status === 'string')
           : [],
-        triggerDurationHours: Number.isFinite(Number(flow?.triggerDurationHours))
-          ? Number(flow.triggerDurationHours)
-          : 24,
+        triggerDurationHours:
+          flow?.triggerType === 'inactivity_duration'
+            ? Math.max(24, Number.isFinite(Number(flow?.triggerDurationHours)) ? Number(flow.triggerDurationHours) : 24)
+            : Math.max(1, Number.isFinite(Number(flow?.triggerDurationHours)) ? Number(flow.triggerDurationHours) : 24),
         steps: normalizedSteps,
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
         conditionLogic: flow?.conditionLogic === 'any' ? 'any' : 'all',
@@ -2380,7 +2383,7 @@ const matchesAutoContactFlow = (
       }
     }
 
-    if (triggerType === 'status_duration') {
+    if (triggerType === 'status_duration' || triggerType === 'inactivity_duration') {
       return false;
     }
   }
@@ -2429,6 +2432,44 @@ const getDelaySeconds = (step: AutoContactFlowStep, lead?: any): number => {
     return Math.max(0, step.delayValue) * 60 * 60;
   }
   return Math.max(0, step.delayHours) * 60 * 60;
+};
+
+async function getLatestChatMessageAt({
+  supabase,
+  leadId,
+  direction,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  leadId: string;
+  direction?: 'inbound';
+}): Promise<string | null> {
+  const { data: chats, error: chatsError } = await supabase
+    .from('comm_whatsapp_chats')
+    .select('id')
+    .eq('lead_id', leadId);
+
+  if (chatsError || !chats?.length) return null;
+
+  let query = supabase
+    .from('comm_whatsapp_messages')
+    .select('message_at')
+    .in('chat_id', chats.map((chat) => chat.id))
+    .order('message_at', { ascending: false })
+    .limit(1);
+
+  if (direction) {
+    query = query.eq('direction', direction);
+  }
+
+  const { data: message } = await query.maybeSingle();
+  return typeof message?.message_at === 'string' ? message.message_at : null;
+}
+
+const isAfter = (candidate: string | null, reference: string): boolean => {
+  if (!candidate) return false;
+  const candidateTime = new Date(candidate).getTime();
+  const referenceTime = new Date(reference).getTime();
+  return Number.isFinite(candidateTime) && Number.isFinite(referenceTime) && candidateTime > referenceTime;
 };
 
 async function scheduleFlowJobs({
@@ -2628,6 +2669,14 @@ async function processFlowJobs({
         flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : settings.scheduling.allowedWeekdays,
       dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
     };
+    if (flow.triggerType === 'inactivity_duration') {
+      effectiveScheduling.dailySendLimit = Math.min(
+        20,
+        effectiveScheduling.dailySendLimit && effectiveScheduling.dailySendLimit > 0
+          ? effectiveScheduling.dailySendLimit
+          : 20,
+      );
+    }
     const rawFlowDailySendLimit = Number(effectiveScheduling.dailySendLimit);
     const flowDailySendLimit =
       Number.isFinite(rawFlowDailySendLimit) && rawFlowDailySendLimit > 0
@@ -2672,6 +2721,30 @@ async function processFlowJobs({
           .update({ status: 'skipped', last_error: 'Condições não atendidas' })
           .eq('id', job.id);
       continue;
+    }
+
+    const inactivityStartedAt =
+      flow.triggerType === 'inactivity_duration' &&
+      job.action_payload &&
+      typeof job.action_payload === 'object' &&
+      typeof job.action_payload.inactivity_started_at === 'string'
+        ? job.action_payload.inactivity_started_at
+        : null;
+    if (inactivityStartedAt) {
+      const latestInboundAt = await getLatestChatMessageAt({
+        supabase,
+        leadId: lead.id,
+        direction: 'inbound',
+      });
+      if (isAfter(latestInboundAt, inactivityStartedAt)) {
+        const reason = 'Cliente respondeu após o início da régua de inatividade';
+        await supabase
+          .from('auto_contact_flow_jobs')
+          .update({ status: 'skipped', last_error: reason })
+          .eq('id', job.id);
+        await cancelFlowJobs({ supabase, leadId: lead.id, flowId: flow.id, reason });
+        continue;
+      }
     }
 
     try {
@@ -3707,10 +3780,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (action === 'check-status-duration' && req.method === 'POST') {
+    if ((action === 'check-status-duration' || action === 'check-inactivity-duration') && req.method === 'POST') {
       const deniedResponse = assertInternalServiceRole(req, supabaseServiceKey);
       if (deniedResponse) {
-        logWithContext('Unauthorized check-status-duration request', {
+        logWithContext('Unauthorized duration-check request', {
           method: req.method,
           path,
           action,
@@ -3721,6 +3794,10 @@ Deno.serve(async (req: Request) => {
       const payload = await req.json().catch(() => null);
       const leadId = payload?.lead_id ?? null;
       const flowId = payload?.flow_id ?? null;
+      const inactivityStartedAt =
+        typeof payload?.inactivity_started_at === 'string' && !Number.isNaN(new Date(payload.inactivity_started_at).getTime())
+          ? payload.inactivity_started_at
+          : null;
 
       const lookups = await getLookups();
       const settings = await loadAutoContactFlowSettings(supabase);
@@ -3737,8 +3814,9 @@ Deno.serve(async (req: Request) => {
         targetFlow = settings.flows.find(f => f.id === flowId) ?? null;
       }
 
-      if (!targetFlow || targetFlow.triggerType !== 'status_duration') {
-        return new Response(JSON.stringify({ success: false, error: 'Flow not found or not a status_duration flow' }), {
+      const expectedTriggerType = action === 'check-inactivity-duration' ? 'inactivity_duration' : 'status_duration';
+      if (!targetFlow || targetFlow.triggerType !== expectedTriggerType) {
+        return new Response(JSON.stringify({ success: false, error: `Flow not found or not a ${expectedTriggerType} flow` }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -3771,19 +3849,62 @@ Deno.serve(async (req: Request) => {
           });
         }
 
-        const { error: execError } = await supabase
-          .from('auto_contact_flow_executions')
-          .upsert({
-            lead_id: leadId,
-            flow_id: targetFlow.id,
-          }, {
-            onConflict: 'lead_id,flow_id',
-            ignoreDuplicates: true,
-          });
+        if (targetFlow.triggerType === 'inactivity_duration') {
+          if (triggerStatuses.length === 0) {
+            return new Response(JSON.stringify({ success: false, error: 'Inactivity flows require at least one trigger status' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
 
-        if (execError) {
-          logWithContext('Error recording flow execution', { leadId, flowId: targetFlow.id, error: execError.message });
+          if (!inactivityStartedAt) {
+            return new Response(JSON.stringify({ success: false, error: 'Missing inactivity reference timestamp' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+
+          const latestActivityAt = await getLatestChatMessageAt({ supabase, leadId });
+          if (isAfter(latestActivityAt, inactivityStartedAt)) {
+            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'new_chat_activity' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+
+          const { data: activeJobs } = await supabase
+            .from('auto_contact_flow_jobs')
+            .select('id')
+            .eq('lead_id', leadId)
+            .eq('flow_id', targetFlow.id)
+            .in('status', ['pending', 'processing'])
+            .limit(1);
+          if (activeJobs?.length) {
+            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'active_inactivity_flow' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
         }
+
+        if (targetFlow.triggerType === 'status_duration') {
+          const { error: execError } = await supabase
+            .from('auto_contact_flow_executions')
+            .upsert({
+              lead_id: leadId,
+              flow_id: targetFlow.id,
+            }, {
+              onConflict: 'lead_id,flow_id',
+              ignoreDuplicates: true,
+            });
+
+          if (execError) {
+            logWithContext('Error recording flow execution', { leadId, flowId: targetFlow.id, error: execError.message });
+          }
+        }
+
+        const runtimeContext = buildFlowRuntimeContext(targetFlow, mappedLead) ?? {};
+        if (inactivityStartedAt) runtimeContext.inactivity_started_at = inactivityStartedAt;
 
         await scheduleFlowJobs({
           supabase,
@@ -3791,6 +3912,7 @@ Deno.serve(async (req: Request) => {
           lead: mappedLead,
           flow: targetFlow,
           scheduling: settings.scheduling,
+          runtimeContext,
         });
 
         return new Response(JSON.stringify({ success: true, leadId, flowId: targetFlow.id }), {
@@ -3803,6 +3925,66 @@ Deno.serve(async (req: Request) => {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+
+    if (action === 'test-flow' && req.method === 'POST') {
+      const authResult = await authorizeDashboard(ADMIN_ROLE_SET);
+      if (!authResult.authorized) {
+        return authResult.response;
+      }
+
+      const payload = await req.json().catch(() => null);
+      const flowId = typeof payload?.flow_id === 'string' ? payload.flow_id.trim() : '';
+      const stepId = typeof payload?.step_id === 'string' ? payload.step_id.trim() : '';
+      const testPhone = typeof payload?.test_phone === 'string' ? payload.test_phone.trim() : '';
+      const testName = typeof payload?.test_name === 'string' ? payload.test_name.trim() : 'Contato de teste';
+
+      if (!flowId || !stepId || !testPhone) {
+        return jsonResponse({ success: false, error: 'Informe fluxo, etapa e número de teste.' }, 400);
+      }
+
+      if (!getWhapiToken()) {
+        return jsonResponse({ success: false, error: 'WHAPI_TOKEN não configurado para envio de teste.' }, 503);
+      }
+
+      const settings = await loadAutoContactFlowSettings(supabase);
+      const flow = settings?.flows.find((item) => item.id === flowId);
+      const step = flow?.steps.find((item) => item.id === stepId);
+      if (!flow || !step || step.actionType !== 'send_message') {
+        return jsonResponse({ success: false, error: 'Etapa de mensagem não encontrada no fluxo salvo.' }, 404);
+      }
+
+      const testLead = {
+        id: 'flow-test',
+        nome_completo: testName || 'Contato de teste',
+        telefone: testPhone,
+        status: flow.triggerStatuses?.[0] ?? flow.triggerStatus ?? 'Teste',
+      };
+      const messagePayload = step.messageSource === 'custom'
+        ? buildCustomMessagePayload(step.customMessage, testLead, settings?.scheduling.timezone)
+        : (() => {
+            const template = settings?.messageTemplates.find((item) => item.id === step.templateId) ?? null;
+            const message = getTemplateMessage(template);
+            return message.trim()
+              ? {
+                  contentType: 'text' as const,
+                  content: applyTemplateVariables(message, testLead, settings?.scheduling.timezone),
+                }
+              : null;
+          })();
+
+      if (!messagePayload) {
+        return jsonResponse({ success: false, error: 'A etapa não possui uma mensagem válida para teste.' }, 400);
+      }
+
+      await sendAutoContactMessage({
+        lead: testLead,
+        contentType: messagePayload.contentType,
+        content: messagePayload.content,
+      });
+
+      logWithContext('Mensagem de teste de fluxo enviada', { flowId, stepId });
+      return jsonResponse({ success: true, message: 'Mensagem de teste enviada.' }, 200);
     }
 
     if (action === 'manual-automation' && req.method === 'POST') {

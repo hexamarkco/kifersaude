@@ -1166,6 +1166,15 @@ export const commWhatsAppService = {
     });
 
     if (error) {
+      const context = (error as { context?: unknown }).context;
+      if (context instanceof Response) {
+        const payload = await context.clone().json().catch(() => null) as { error?: unknown } | null;
+        const message = typeof payload?.error === 'string' ? payload.error.trim() : '';
+        if (message) {
+          throw new Error(message);
+        }
+      }
+
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar o historico da conversa.'));
     }
 

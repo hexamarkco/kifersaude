@@ -598,10 +598,13 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  let supabaseAdmin: ReturnType<typeof createAdminClient> | null = null;
+  let sendRequestId: string | null = null;
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
-    const supabaseAdmin = createAdminClient();
+    supabaseAdmin = createAdminClient();
 
     const authResult = await authorizeDashboardUser({
       req,
@@ -721,6 +724,7 @@ Deno.serve(async (req: Request) => {
         remoteUrl: remoteUrl || null,
       },
     });
+    sendRequestId = sendRequest.row?.id ?? null;
 
     if (!sendRequest.reserved) {
       return buildDuplicateSendResponse(sendRequest.row);
@@ -1012,6 +1016,17 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error('[comm-whatsapp-send] erro inesperado', error);
+    if (supabaseAdmin && sendRequestId) {
+      try {
+        await failSendRequest(
+          supabaseAdmin,
+          sendRequestId,
+          error instanceof Error ? error.message : 'Erro interno ao enviar mensagem.',
+        );
+      } catch (cleanupError) {
+        console.error('[comm-whatsapp-send] erro ao encerrar tentativa falha', cleanupError);
+      }
+    }
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Erro interno ao enviar mensagem.' }),
       {

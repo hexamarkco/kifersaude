@@ -1,6 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
+import {
+  ensurePrimaryChannel,
+  extractWhapiMessageId,
+  formatPhoneLabel,
+  persistCommWhatsAppMessage,
+  resolveWhapiOutboundDeliveryStatus,
+} from '../_shared/comm-whatsapp.ts';
 const DEFAULT_GREETING_TIMEZONE = 'America/Sao_Paulo';
 
 const buildHourFormatter = (timeZone: string) =>
@@ -2817,6 +2824,7 @@ async function processFlowJobs({
         }
 
         await sendAutoContactMessage({
+          supabase,
           lead: leadWithRelations,
           contentType: payload.contentType,
           content: payload.content,
@@ -3109,10 +3117,12 @@ async function processFlowJobs({
 }
 
 async function sendAutoContactMessage({
+  supabase,
   lead,
   contentType,
   content,
 }: {
+  supabase: ReturnType<typeof createClient>;
   lead: any;
   contentType: FlowMessageType;
   content: string | { url: string; caption?: string; filename?: string };
@@ -3188,6 +3198,60 @@ async function sendAutoContactMessage({
     if (sent === false) {
       throw new Error('Whapi nao confirmou o envio da mensagem (sent=false).');
     }
+  }
+
+  const externalMessageId = extractWhapiMessageId(responsePayload);
+  if (!externalMessageId) {
+    log('Mensagem automatica enviada sem identificador da Whapi; aguardando webhook para persistencia.', {
+      leadId: lead?.id,
+      chatId,
+    });
+    return;
+  }
+
+  try {
+    const channel = await ensurePrimaryChannel(supabase);
+    const nowIso = new Date().toISOString();
+    const media = contentType === 'text' ? null : content as { url: string; caption?: string; filename?: string };
+    const textContent = contentType === 'text' ? content as string : media?.caption ?? null;
+
+    await persistCommWhatsAppMessage(supabase, {
+      channelId: channel.id,
+      externalChatId: chatId,
+      phoneNumber: whapiPhone,
+      displayName: lead?.nome_completo || formatPhoneLabel(whapiPhone),
+      pushName: null,
+      lastMessageText: textContent,
+      lastMessageDirection: 'outbound',
+      lastMessageAt: nowIso,
+      incrementUnread: false,
+      externalMessageId,
+      direction: 'outbound',
+      messageType: contentType,
+      deliveryStatus: resolveWhapiOutboundDeliveryStatus(responsePayload, externalMessageId),
+      textContent,
+      createdBy: null,
+      source: 'auto_contact',
+      senderName: null,
+      senderPhone: channel.phone_number,
+      statusUpdatedAt: nowIso,
+      errorMessage: null,
+      mediaId: null,
+      mediaUrl: media?.url ?? null,
+      mediaMimeType: null,
+      mediaFileName: media?.filename ?? null,
+      mediaSizeBytes: null,
+      mediaDurationSeconds: null,
+      mediaCaption: media?.caption ?? null,
+      metadata: { provider: 'whapi', automation: 'auto_contact', lead_id: lead?.id ?? null },
+    });
+  } catch (error) {
+    // The message was accepted by Whapi; avoid retrying it solely because local history failed.
+    log('Mensagem automatica enviada, mas nao foi possivel persisti-la no Inbox.', {
+      leadId: lead?.id,
+      chatId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 

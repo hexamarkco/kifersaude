@@ -163,6 +163,8 @@ export type AutoContactFlow = {
   triggerType: AutoContactFlowTriggerType;
   triggerStatuses: string[];
   triggerDurationHours: number;
+  /** ISO timestamp after which leads become eligible for duration-based triggers. */
+  triggerActivatedAt?: string;
   steps: AutoContactFlowStep[];
   finalStatus?: string;
   invalidNumberAction?: AutoContactInvalidNumberAction;
@@ -881,6 +883,10 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
             : Number.isFinite(Number(flow?.triggerDurationHours)) && Number(flow.triggerDurationHours) >= 1
               ? Number(flow.triggerDurationHours)
               : 24,
+        triggerActivatedAt:
+          typeof flow?.triggerActivatedAt === 'string' && !Number.isNaN(Date.parse(flow.triggerActivatedAt))
+            ? flow.triggerActivatedAt
+            : undefined,
         steps: normalizedSteps,
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
         invalidNumberAction: normalizeInvalidNumberAction(flow?.invalidNumberAction),

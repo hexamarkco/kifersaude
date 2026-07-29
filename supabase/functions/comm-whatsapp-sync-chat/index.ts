@@ -1,6 +1,6 @@
 // @ts-expect-error Deno npm import
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
-import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
+import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
   applyCommWhatsAppMessageEdit,
   cacheCommWhatsAppMedia,
@@ -152,22 +152,25 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     const supabaseAdmin = createAdminClient();
 
-    const authResult = await authorizeDashboardUser({
-      req,
-      supabaseUrl,
-      supabaseAnonKey,
-      supabaseAdmin,
-      module: COMM_WHATSAPP_MODULE,
-      requiredPermission: 'view',
-    });
-
-    if (!authResult.authorized) {
-      return new Response(JSON.stringify(authResult.body), {
-        status: authResult.status,
-        headers: jsonHeaders,
+    if (!isServiceRoleRequest(req, serviceRoleKey)) {
+      const authResult = await authorizeDashboardUser({
+        req,
+        supabaseUrl,
+        supabaseAnonKey,
+        supabaseAdmin,
+        module: COMM_WHATSAPP_MODULE,
+        requiredPermission: 'view',
       });
+
+      if (!authResult.authorized) {
+        return new Response(JSON.stringify(authResult.body), {
+          status: authResult.status,
+          headers: jsonHeaders,
+        });
+      }
     }
 
     const body = (await req.json().catch(() => ({}))) as SyncBody;

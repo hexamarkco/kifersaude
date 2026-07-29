@@ -1018,7 +1018,19 @@ export const extractWhapiEditedMessageEvent = (
     eventAction,
   ).toLowerCase();
 
-  const likelyEditEvent = normalizedActionType.includes('edit') || normalizedActionType.includes('edited');
+  // Whapi can emit edits as an explicit `edit` action or as a PATCH payload
+  // containing edited fields, depending on the channel webhook mode.
+  const hasEditedFields = Boolean(
+    message.edited_message_id
+    || message.edited_text
+    || message.edited_body
+    || action?.edited_message
+    || action?.edited_text
+    || action?.edited_body,
+  );
+  const likelyEditEvent = normalizedActionType.includes('edit')
+    || normalizedActionType.includes('edited')
+    || (normalizedActionType === 'patch' && hasEditedFields);
   if (!likelyEditEvent) {
     return null;
   }

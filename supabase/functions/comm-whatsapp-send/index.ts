@@ -600,6 +600,7 @@ Deno.serve(async (req: Request) => {
 
   let supabaseAdmin: ReturnType<typeof createAdminClient> | null = null;
   let sendRequestId: string | null = null;
+  let providerAcceptedMessage: { externalMessageId: string; deliveryStatus: string } | null = null;
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -772,6 +773,7 @@ Deno.serve(async (req: Request) => {
         }
 
         const deliveryStatus = resolveWhapiOutboundDeliveryStatus(whapiPayload, externalMessageId);
+        providerAcceptedMessage = { externalMessageId, deliveryStatus };
         if (uploadedMediaId) {
           try {
             await archiveCommWhatsAppMedia(supabaseAdmin, {
@@ -940,6 +942,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const deliveryStatus = resolveWhapiOutboundDeliveryStatus(whapiPayload, externalMessageId);
+    providerAcceptedMessage = { externalMessageId, deliveryStatus };
 
     uploadedMediaId = uploadedMediaId || extractWhapiMediaId(whapiPayload);
     if (mediaFile && uploadedMediaId) {
@@ -1016,6 +1019,23 @@ Deno.serve(async (req: Request) => {
     );
   } catch (error) {
     console.error('[comm-whatsapp-send] erro inesperado', error);
+    if (supabaseAdmin && sendRequestId && providerAcceptedMessage) {
+      // Whapi already accepted the message. Do not invite a duplicate retry just
+      // because persistence or a post-send operation failed locally.
+      await completeSendRequest(supabaseAdmin, sendRequestId, providerAcceptedMessage);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          messageId: providerAcceptedMessage.externalMessageId,
+          status: providerAcceptedMessage.deliveryStatus,
+          persistencePending: true,
+        }),
+        {
+          status: 202,
+          headers: jsonHeaders,
+        },
+      );
+    }
     if (supabaseAdmin && sendRequestId) {
       try {
         await failSendRequest(

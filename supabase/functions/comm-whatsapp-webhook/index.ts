@@ -502,7 +502,7 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  if (req.method !== 'POST') {
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
     return new Response(JSON.stringify({ error: 'Metodo nao permitido' }), {
       status: 405,
       headers: jsonHeaders,

@@ -203,6 +203,10 @@ const getNestedRecord = (value: unknown, key: string): Record<string, unknown> =
   return nested && typeof nested === 'object' && !Array.isArray(nested) ? nested as Record<string, unknown> : {};
 };
 
+const toRecord = (value: unknown): Record<string, unknown> => (
+  value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+);
+
 const getOptionalString = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim() : null;
 
 const chunkArray = <T,>(items: T[], size: number): T[][] => {
@@ -217,6 +221,48 @@ const createLockToken = () => {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
   return `campaign-lock-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 };
+
+class CampaignTargetLeaseLostError extends Error {
+  constructor() {
+    super('A reserva do alvo da campanha expirou ou foi assumida por outro worker.');
+    this.name = 'CampaignTargetLeaseLostError';
+  }
+}
+
+class CampaignProviderAcceptedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CampaignProviderAcceptedError';
+  }
+}
+
+async function updateClaimedTarget(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  target: TargetRow,
+  update: Record<string, unknown>,
+) {
+  const lockToken = toTrimmedString(target.lock_token);
+  if (!lockToken) {
+    throw new CampaignTargetLeaseLostError();
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_targets')
+    .update(update)
+    .eq('id', target.id)
+    .eq('status', 'sending')
+    .eq('lock_token', lockToken)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Erro ao atualizar alvo reservado da campanha: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new CampaignTargetLeaseLostError();
+  }
+}
 
 const parseTimeOfDayToMinutes = (value: string | null) => {
   if (!value) return null;
@@ -474,6 +520,85 @@ async function insertEvent(
   });
 }
 
+async function createProviderAcceptedPersistenceEvent(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: { campaignId: string; targetId: string; payload: Record<string, unknown> },
+) {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_events')
+    .insert({
+      campaign_id: params.campaignId,
+      target_id: params.targetId,
+      event_type: 'target_provider_accepted_persistence_pending',
+      payload: params.payload,
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    throw new CampaignProviderAcceptedError(
+      error?.message || 'Nao foi possivel registrar o aceite da Whapi para reconciliacao.',
+    );
+  }
+
+  return data as { id: string };
+}
+
+async function createCampaignSendStartedEvent(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: { campaignId: string; targetId: string; payload: Record<string, unknown> },
+) {
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_events')
+    .insert({
+      campaign_id: params.campaignId,
+      target_id: params.targetId,
+      event_type: 'target_provider_send_started',
+      payload: params.payload,
+    })
+    .select('id')
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message || 'Nao foi possivel registrar a tentativa de envio da campanha.');
+  }
+
+  return data as { id: string };
+}
+
+async function resolveCampaignSendStartedEvent(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: { eventId: string; resolution: string },
+) {
+  const { data: event, error: eventError } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_events')
+    .select('payload')
+    .eq('id', params.eventId)
+    .maybeSingle();
+
+  if (eventError || !event) {
+    throw new Error(eventError?.message || 'Marcador de tentativa de envio nao encontrado.');
+  }
+
+  const payload = toRecord(event.payload);
+  if (payload.resolved_at) return;
+
+  const { error } = await supabaseAdmin
+    .from('comm_whatsapp_campaign_events')
+    .update({
+      payload: {
+        ...payload,
+        resolved_at: getNowIso(),
+        resolution: params.resolution,
+      },
+    })
+    .eq('id', params.eventId);
+
+  if (error) {
+    throw new Error(`Erro ao encerrar tentativa de envio da campanha: ${error.message}`);
+  }
+}
+
 async function materializeCrmTargets(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   campaign: CampaignRow,
@@ -596,7 +721,7 @@ async function materializeCrmTargets(
 async function recomputeCampaignCounters(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId: string) {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
-    .select('status')
+    .select('status,responded_at')
     .eq('campaign_id', campaignId);
 
   if (error) {
@@ -608,7 +733,7 @@ async function recomputeCampaignCounters(supabaseAdmin: ReturnType<typeof create
   const invalid = count(['invalid']);
   const failed = count(['failed']);
   const sent = count(['sent']);
-  const responded = count(['responded']);
+  const responded = rows.filter((row) => String(row.status) === 'responded' || Boolean(row.responded_at)).length;
   const stopped = count(['stopped', 'cancelled']);
   const pending = count(['pending', 'scheduled', 'sending']);
 
@@ -677,11 +802,36 @@ async function activateCampaign(
   return { campaignId: campaign.id, status: nextStatus, materialized, counters };
 }
 
+async function findInboundCampaignChat(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  target: Pick<TargetRow, 'phone_digits' | 'sent_at'>,
+) {
+  if (!target.sent_at) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('comm_whatsapp_chats')
+    .select('id,last_message_at,last_message_direction')
+    .eq('phone_digits', target.phone_digits)
+    .eq('last_message_direction', 'inbound')
+    .gt('last_message_at', target.sent_at)
+    .order('last_message_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Erro ao localizar resposta da campanha: ${error.message}`);
+  }
+
+  return data as { id: string; last_message_at: string | null; last_message_direction: string | null } | null;
+}
+
 async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId?: string) {
   let query = supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
-    .select('id,campaign_id,lead_id,phone_digits,sent_at')
-    .in('status', ['sent', 'scheduled', 'sending'])
+    .select('id,campaign_id,lead_id,phone_digits,sent_at,responded_at')
+    .in('status', ['sent', 'scheduled'])
     .not('sent_at', 'is', null)
     .limit(500);
 
@@ -695,16 +845,9 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
   }
 
   let responded = 0;
+  const stopOnReplyByCampaign = new Map<string, boolean>();
   for (const target of data ?? []) {
-    const { data: chat } = await supabaseAdmin
-      .from('comm_whatsapp_chats')
-      .select('id,last_message_at,last_message_direction')
-      .eq('phone_digits', target.phone_digits)
-      .eq('last_message_direction', 'inbound')
-      .gt('last_message_at', target.sent_at)
-      .order('last_message_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const chat = await findInboundCampaignChat(supabaseAdmin, target as Pick<TargetRow, 'phone_digits' | 'sent_at'>);
 
     if (!chat) continue;
 
@@ -724,10 +867,29 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
     }
 
     const nowIso = getNowIso();
-    await supabaseAdmin
+    let stopOnReply = stopOnReplyByCampaign.get(target.campaign_id);
+    if (stopOnReply === undefined) {
+      stopOnReply = (await getCampaign(supabaseAdmin, target.campaign_id)).stop_on_reply;
+      stopOnReplyByCampaign.set(target.campaign_id, stopOnReply);
+    }
+
+    const responseUpdate = stopOnReply
+      ? { status: 'responded', responded_at: chat.last_message_at || nowIso, chat_id: chat.id }
+      : { responded_at: chat.last_message_at || nowIso, chat_id: chat.id };
+    const { data: updatedTarget, error: updateTargetError } = await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
-      .update({ status: 'responded', responded_at: chat.last_message_at || nowIso, chat_id: chat.id })
-      .eq('id', target.id);
+      .update(responseUpdate)
+      .eq('id', target.id)
+      .is('responded_at', null)
+      .in('status', ['sent', 'scheduled'])
+      .select('id')
+      .maybeSingle();
+
+    if (updateTargetError) {
+      throw new Error(`Erro ao registrar resposta da campanha: ${updateTargetError.message}`);
+    }
+
+    if (!updatedTarget) continue;
 
     if (inboundMessage) {
       await classifyInboundCampaignIntent({
@@ -744,6 +906,212 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
   }
 
   return responded;
+}
+
+async function reconcileAcceptedCampaignPersistences(params: {
+  supabaseAdmin: ReturnType<typeof createAdminClient>;
+  channelId: string;
+  senderPhone: string | null;
+  senderName: string | null;
+}) {
+  const { data, error } = await params.supabaseAdmin
+    .from('comm_whatsapp_campaign_events')
+    .select('id,campaign_id,target_id,payload')
+    .eq('event_type', 'target_provider_accepted_persistence_pending')
+    .is('payload->>recovered_at', null)
+    .order('created_at', { ascending: true })
+    .limit(100);
+
+  if (error) {
+    throw new Error(`Erro ao buscar persistencias pendentes de campanhas: ${error.message}`);
+  }
+
+  const campaigns = new Map<string, CampaignRow>();
+  let recovered = 0;
+
+  for (const event of data ?? []) {
+    const payload = toRecord(event.payload);
+    if (payload.recovered_at || !event.target_id) continue;
+
+    const externalMessageId = toTrimmedString(payload.externalMessageId);
+    const messageText = toTrimmedString(payload.messageText);
+    const phoneDigits = normalizeCommWhatsAppPhone(payload.phoneDigits);
+    if (!externalMessageId || !messageText || !phoneDigits) continue;
+
+    try {
+      let campaign = campaigns.get(event.campaign_id);
+      if (!campaign) {
+        campaign = await getCampaign(params.supabaseAdmin, event.campaign_id);
+        campaigns.set(event.campaign_id, campaign);
+      }
+
+      const stepIndex = Math.max(Number(payload.stepIndex) || 0, 0);
+      const sentAt = toTrimmedString(payload.sentAt) || getNowIso();
+      const deliveryStatus = toTrimmedString(payload.deliveryStatus) || 'sent';
+      const externalChatId = buildWhapiDirectChatId(phoneDigits);
+      const displayName = toTrimmedString(payload.displayName) || formatPhoneLabel(phoneDigits);
+      const persisted = await persistCommWhatsAppMessage(params.supabaseAdmin, {
+        channelId: params.channelId,
+        externalChatId,
+        phoneNumber: phoneDigits,
+        displayName,
+        pushName: null,
+        lastMessageText: messageText,
+        lastMessageDirection: 'outbound',
+        lastMessageAt: sentAt,
+        incrementUnread: false,
+        externalMessageId,
+        direction: 'outbound',
+        messageType: 'text',
+        deliveryStatus,
+        textContent: messageText,
+        createdBy: campaign.created_by,
+        source: 'campaign',
+        senderPhone: params.senderPhone,
+        senderName: params.senderName,
+        statusUpdatedAt: sentAt,
+        errorMessage: null,
+        mediaId: null,
+        mediaUrl: null,
+        mediaMimeType: null,
+        mediaFileName: null,
+        mediaSizeBytes: null,
+        mediaDurationSeconds: null,
+        mediaCaption: null,
+        metadata: {
+          provider: 'whapi',
+          campaign_id: event.campaign_id,
+          campaign_target_id: event.target_id,
+          campaign_step_index: stepIndex,
+          recovered_after_provider_acceptance: true,
+        },
+      });
+
+      const targetStatus = toTrimmedString(payload.targetStatus);
+      const nextStepIndex = Number(payload.nextStepIndex);
+      const nextSendAt = toTrimmedString(payload.nextSendAt) || null;
+      const shouldFinalizeTarget = (targetStatus === 'scheduled' || targetStatus === 'sent')
+        && Number.isFinite(nextStepIndex);
+
+      if (shouldFinalizeTarget) {
+        const expectedStepIndex = Math.max(0, Math.floor(nextStepIndex));
+        const { data: finalizedTarget, error: finalizeTargetError } = await params.supabaseAdmin
+          .from('comm_whatsapp_campaign_targets')
+          .update({
+            status: targetStatus,
+            sent_at: sentAt,
+            chat_id: persisted.chatId,
+            current_step_index: expectedStepIndex,
+            next_send_at: nextSendAt,
+            next_retry_at: null,
+            external_message_id: externalMessageId,
+            error_message: null,
+            locked_at: null,
+            lock_token: null,
+          })
+          .eq('id', event.target_id)
+          .in('status', ['sending', 'failed'])
+          .select('id')
+          .maybeSingle();
+
+        if (finalizeTargetError) {
+          throw new Error(`Erro ao finalizar alvo recuperado da campanha: ${finalizeTargetError.message}`);
+        }
+
+        if (!finalizedTarget) {
+          // A prior run may have finalized the target immediately before it
+          // crashed. Only accept that state when it matches this exact send.
+          const { data: currentTarget, error: currentTargetError } = await params.supabaseAdmin
+            .from('comm_whatsapp_campaign_targets')
+            .select('status,external_message_id,current_step_index')
+            .eq('id', event.target_id)
+            .maybeSingle();
+
+          if (currentTargetError) {
+            throw new Error(`Erro ao verificar alvo recuperado da campanha: ${currentTargetError.message}`);
+          }
+
+          const alreadyFinalized = currentTarget
+            && currentTarget.status === targetStatus
+            && currentTarget.external_message_id === externalMessageId
+            && Number(currentTarget.current_step_index) === expectedStepIndex;
+          if (!alreadyFinalized) {
+            throw new Error('O alvo recuperado nao foi finalizado e nao corresponde ao envio aceito pela Whapi.');
+          }
+        }
+
+        if (targetStatus === 'scheduled') {
+          await params.supabaseAdmin
+            .from('comm_whatsapp_campaigns')
+            .update({ status: 'queued', completed_at: null, last_error: null })
+            .eq('id', event.campaign_id)
+          .eq('status', 'completed');
+        }
+      } else {
+        const { error: updateTargetError } = await params.supabaseAdmin
+          .from('comm_whatsapp_campaign_targets')
+          .update({ chat_id: persisted.chatId, error_message: null })
+          .eq('id', event.target_id)
+          .eq('external_message_id', externalMessageId);
+
+        if (updateTargetError) {
+          throw new Error(`Erro ao atualizar chat do alvo recuperado da campanha: ${updateTargetError.message}`);
+        }
+      }
+
+      const recoveredAt = getNowIso();
+      const sendStartedEventId = toTrimmedString(payload.sendStartedEventId);
+      if (sendStartedEventId) {
+        await resolveCampaignSendStartedEvent(params.supabaseAdmin, {
+          eventId: sendStartedEventId,
+          resolution: 'provider_accepted_recovered',
+        });
+      }
+
+      const { data: recoveredEvent, error: recoverEventError } = await params.supabaseAdmin
+        .from('comm_whatsapp_campaign_events')
+        .update({
+          payload: {
+            ...payload,
+            recovered_at: recoveredAt,
+            last_recovery_error: null,
+          },
+        })
+        .eq('id', event.id)
+        .select('id')
+        .maybeSingle();
+
+      if (recoverEventError || !recoveredEvent) {
+        throw new Error(recoverEventError?.message || 'Nao foi possivel marcar a persistencia aceita como recuperada.');
+      }
+
+      await insertEvent(params.supabaseAdmin, {
+        campaignId: event.campaign_id,
+        targetId: event.target_id,
+        eventType: 'target_provider_accepted_persistence_recovered',
+        payload: { externalMessageId, recoveredAt },
+      });
+      recovered += 1;
+    } catch (recoveryError) {
+      const errorMessage = recoveryError instanceof Error ? recoveryError.message : 'Erro ao recuperar persistencia pendente.';
+      await params.supabaseAdmin
+        .from('comm_whatsapp_campaign_events')
+        .update({
+          payload: {
+            ...payload,
+            last_recovery_error: errorMessage,
+            last_recovery_attempt_at: getNowIso(),
+          },
+        })
+        .eq('id', event.id);
+      console.error('[comm-whatsapp-campaign-worker] falha ao recuperar mensagem aceita pela Whapi', {
+        eventId: event.id,
+        error: errorMessage,
+      });
+    }
+  }
+
+  return recovered;
 }
 
 async function listTargetsForProcessing(
@@ -815,18 +1183,15 @@ async function releaseTargetAfterFailure(
   const canRetry = Boolean(params.retryable) && attempts < MAX_SEND_ATTEMPTS;
   const nextRetryAt = canRetry ? getNextRetryAt(attempts) : null;
 
-  await supabaseAdmin
-    .from('comm_whatsapp_campaign_targets')
-    .update({
-      status: canRetry ? 'scheduled' : (params.status ?? 'failed'),
-      error_message: params.errorMessage,
-      retry_count: canRetry ? (Number(params.target.retry_count) || 0) + 1 : Number(params.target.retry_count) || 0,
-      next_retry_at: nextRetryAt,
-      locked_at: null,
-      lock_token: null,
-      last_attempt_at: getNowIso(),
-    })
-    .eq('id', params.target.id);
+  await updateClaimedTarget(supabaseAdmin, params.target, {
+    status: canRetry ? 'scheduled' : (params.status ?? 'failed'),
+    error_message: params.errorMessage,
+    retry_count: canRetry ? (Number(params.target.retry_count) || 0) + 1 : Number(params.target.retry_count) || 0,
+    next_retry_at: nextRetryAt,
+    locked_at: null,
+    lock_token: null,
+    last_attempt_at: getNowIso(),
+  });
 
   return { status: canRetry ? 'retry_scheduled' : (params.status ?? 'failed'), retrying: canRetry, nextRetryAt };
 }
@@ -836,11 +1201,7 @@ async function releaseClaimedTarget(
   target: TargetRow,
   status: 'scheduled' | 'cancelled',
 ) {
-  await supabaseAdmin
-    .from('comm_whatsapp_campaign_targets')
-    .update({ status, locked_at: null, lock_token: null })
-    .eq('id', target.id)
-    .eq('status', 'sending');
+  await updateClaimedTarget(supabaseAdmin, target, { status, locked_at: null, lock_token: null });
 }
 
 async function sendTarget(params: {
@@ -858,10 +1219,13 @@ async function sendTarget(params: {
   const nowIso = getNowIso();
 
   if (!phoneDigits || !chatId) {
-    await supabaseAdmin
-      .from('comm_whatsapp_campaign_targets')
-      .update({ status: 'invalid', error_message: 'Telefone invalido.', last_attempt_at: nowIso, locked_at: null, lock_token: null })
-      .eq('id', target.id);
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'invalid',
+      error_message: 'Telefone invalido.',
+      last_attempt_at: nowIso,
+      locked_at: null,
+      lock_token: null,
+    });
     return { status: 'invalid' };
   }
 
@@ -873,11 +1237,29 @@ async function sendTarget(params: {
     .maybeSingle();
 
   if (optOut) {
-    await supabaseAdmin
-      .from('comm_whatsapp_campaign_targets')
-      .update({ status: 'stopped', stopped_at: nowIso, stopped_reason: 'opt_out', last_attempt_at: nowIso, locked_at: null, lock_token: null })
-      .eq('id', target.id);
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'stopped',
+      stopped_at: nowIso,
+      stopped_reason: 'opt_out',
+      last_attempt_at: nowIso,
+      locked_at: null,
+      lock_token: null,
+    });
     return { status: 'stopped', reason: 'opt_out' };
+  }
+
+  if (campaign.stop_on_reply && target.sent_at) {
+    const replyChat = await findInboundCampaignChat(supabaseAdmin, target);
+    if (replyChat) {
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'responded',
+        responded_at: replyChat.last_message_at || nowIso,
+        chat_id: replyChat.id,
+        locked_at: null,
+        lock_token: null,
+      });
+      return { status: 'responded' };
+    }
   }
 
   const lead = await getLeadById(supabaseAdmin, target.lead_id);
@@ -888,88 +1270,274 @@ async function sendTarget(params: {
   const nextStep = steps[stepPosition + 1] ?? null;
   const text = resolveMessageText(step.message_text, { lead, target }).trim();
   if (!text) {
-    await supabaseAdmin
-      .from('comm_whatsapp_campaign_targets')
-      .update({ status: 'failed', error_message: 'Mensagem vazia apos aplicar variaveis.', last_attempt_at: nowIso, locked_at: null, lock_token: null })
-      .eq('id', target.id);
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'failed',
+      error_message: 'Mensagem vazia apos aplicar variaveis.',
+      last_attempt_at: nowIso,
+      locked_at: null,
+      lock_token: null,
+    });
     return { status: 'failed' };
   }
 
-  const response = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${params.token}`,
-    },
-    body: JSON.stringify({ to: chatId, body: text }),
+  // Refresh the lease immediately before a provider side effect so a stale
+  // worker cannot send after another worker has reclaimed the target.
+  await updateClaimedTarget(supabaseAdmin, target, { locked_at: nowIso });
+
+  // This marker is intentionally written before the provider request. If the
+  // process dies after dispatching it, a future claim is blocked rather than
+  // risking a duplicate campaign message.
+  const sendStartedPayload = {
+    startedAt: nowIso,
+    phoneDigits,
+    messageText: text,
+    stepIndex: step.step_index,
+  };
+  const sendStartedEvent = await createCampaignSendStartedEvent(supabaseAdmin, {
+    campaignId: campaign.id,
+    targetId: target.id,
+    payload: sendStartedPayload,
   });
 
-  const payload = await readResponsePayload(response);
+  let response: Response;
+  let payload: unknown;
+  try {
+    response = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${params.token}`,
+      },
+      body: JSON.stringify({ to: chatId, body: text }),
+    });
+    payload = await readResponsePayload(response);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';
+    const failureResult = await releaseTargetAfterFailure(supabaseAdmin, {
+      target,
+      errorMessage,
+      // A network failure after request dispatch is ambiguous. Do not retry
+      // automatically and risk sending the same campaign step twice.
+      retryable: false,
+    });
+    await insertEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      eventType: 'target_failed_ambiguous_provider_result',
+      payload: { error: errorMessage, sendStartedEventId: sendStartedEvent.id },
+    });
+    return { status: failureResult.status, error: errorMessage };
+  }
+
   if (!response.ok) {
     const errorMessage = parseWhapiError(payload) || 'Falha ao enviar mensagem na Whapi.';
-    const failureResult = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage, retryable: response.status >= 429 || response.status >= 500 });
-    await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: failureResult.retrying ? 'target_retry_scheduled' : 'target_failed', payload: { error: errorMessage, nextRetryAt: failureResult.nextRetryAt } });
+    // A client error is a confirmed provider rejection, except for request
+    // timeout, where the provider may still have accepted the message.
+    const providerRejectedRequest = response.status >= 400 && response.status < 500 && response.status !== 408;
+    if (providerRejectedRequest) {
+      await resolveCampaignSendStartedEvent(supabaseAdmin, {
+        eventId: sendStartedEvent.id,
+        resolution: 'provider_rejected_request',
+      });
+    }
+    const failureResult = await releaseTargetAfterFailure(supabaseAdmin, {
+      target,
+      errorMessage,
+      // Only a confirmed rate limit is retried automatically. Other failures
+      // require intervention, and ambiguous requests retain their marker.
+      retryable: providerRejectedRequest && response.status === 429,
+    });
+    await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: failureResult.retrying ? 'target_retry_scheduled' : 'target_failed', payload: { error: errorMessage, nextRetryAt: failureResult.nextRetryAt, sendStartedEventId: sendStartedEvent.id } });
+    return { status: failureResult.status, error: errorMessage };
+  }
+
+  if (payload && typeof payload === 'object' && !Array.isArray(payload) && (payload as Record<string, unknown>).sent === false) {
+    const errorMessage = parseWhapiError(payload) || 'A Whapi nao confirmou o envio da mensagem.';
+    await resolveCampaignSendStartedEvent(supabaseAdmin, {
+      eventId: sendStartedEvent.id,
+      resolution: 'provider_reported_not_sent',
+    });
+    const failureResult = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage, retryable: false });
+    await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: 'target_failed', payload: { error: errorMessage, sendStartedEventId: sendStartedEvent.id } });
     return { status: failureResult.status, error: errorMessage };
   }
 
   const externalMessageId = extractWhapiMessageId(payload);
+  if (!externalMessageId) {
+    const errorMessage = 'A Whapi respondeu com sucesso, mas nao retornou o identificador da mensagem. O alvo exige revisao antes de novo envio.';
+    const failureResult = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage, retryable: false });
+    await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: 'target_failed_ambiguous_provider_result', payload: { error: errorMessage, sendStartedEventId: sendStartedEvent.id } });
+    return { status: failureResult.status, error: errorMessage };
+  }
+
   const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, externalMessageId);
   const displayName = lead?.nome_completo || target.display_name || formatPhoneLabel(phoneDigits);
-  const persistResult = await persistCommWhatsAppMessage(supabaseAdmin, {
-    channelId: params.channelId,
-    externalChatId: chatId,
-    phoneNumber: phoneDigits,
-    displayName,
-    pushName: null,
-    lastMessageText: text,
-    lastMessageDirection: 'outbound',
-    lastMessageAt: nowIso,
-    incrementUnread: false,
-    externalMessageId: externalMessageId || null,
-    direction: 'outbound',
-    messageType: 'text',
-    deliveryStatus,
-    textContent: text,
-    createdBy: campaign.created_by,
-    source: 'campaign',
-    senderPhone: params.senderPhone,
-    senderName: params.senderName,
-    statusUpdatedAt: nowIso,
-    errorMessage: null,
-    mediaId: null,
-    mediaUrl: null,
-    mediaMimeType: null,
-    mediaFileName: null,
-    mediaSizeBytes: null,
-    mediaDurationSeconds: null,
-    mediaCaption: null,
-    metadata: {
-      provider: 'whapi',
-      campaign_id: campaign.id,
-      campaign_target_id: target.id,
-      campaign_step_index: step.step_index,
-    },
-  });
-
   const nextSendAt = nextStep ? new Date(Date.now() + getDelayMs(nextStep)).toISOString() : null;
+  const targetStatus = nextStep ? 'scheduled' : 'sent';
+  const acceptedPayload = {
+    externalMessageId,
+    deliveryStatus,
+    messageText: text,
+    phoneDigits,
+    displayName,
+    sentAt: nowIso,
+    stepIndex: step.step_index,
+    targetStatus,
+    nextStepIndex: nextStep ? nextStep.step_index : step.step_index,
+    nextSendAt,
+    sendStartedEventId: sendStartedEvent.id,
+  };
 
-  await supabaseAdmin
-    .from('comm_whatsapp_campaign_targets')
-    .update({
-      status: nextStep ? 'scheduled' : 'sent',
+  let pendingPersistenceEvent: { id: string };
+  try {
+    pendingPersistenceEvent = await createProviderAcceptedPersistenceEvent(supabaseAdmin, {
+      campaignId: campaign.id,
+      targetId: target.id,
+      payload: acceptedPayload,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Nao foi possivel registrar o aceite da Whapi.';
+    try {
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'failed',
+        error_message: 'Mensagem pode ter sido aceita pela Whapi, mas nao foi possivel registrar a reconciliacao.',
+        locked_at: null,
+        lock_token: null,
+      });
+    } catch (checkpointError) {
+      throw new CampaignProviderAcceptedError(
+        checkpointError instanceof Error ? checkpointError.message : errorMessage,
+      );
+    }
+    throw new CampaignProviderAcceptedError(errorMessage);
+  }
+
+  try {
+    await resolveCampaignSendStartedEvent(supabaseAdmin, {
+      eventId: sendStartedEvent.id,
+      resolution: 'provider_accepted_checkpointed',
+    });
+  } catch (error) {
+    throw new CampaignProviderAcceptedError(
+      error instanceof Error ? error.message : 'Nao foi possivel encerrar a tentativa aceita pela Whapi.',
+    );
+  }
+
+  let persisted: Awaited<ReturnType<typeof persistCommWhatsAppMessage>>;
+  try {
+    persisted = await persistCommWhatsAppMessage(supabaseAdmin, {
+      channelId: params.channelId,
+      externalChatId: chatId,
+      phoneNumber: phoneDigits,
+      displayName,
+      pushName: null,
+      lastMessageText: text,
+      lastMessageDirection: 'outbound',
+      lastMessageAt: nowIso,
+      incrementUnread: false,
+      externalMessageId,
+      direction: 'outbound',
+      messageType: 'text',
+      deliveryStatus,
+      textContent: text,
+      createdBy: campaign.created_by,
+      source: 'campaign',
+      senderPhone: params.senderPhone,
+      senderName: params.senderName,
+      statusUpdatedAt: nowIso,
+      errorMessage: null,
+      mediaId: null,
+      mediaUrl: null,
+      mediaMimeType: null,
+      mediaFileName: null,
+      mediaSizeBytes: null,
+      mediaDurationSeconds: null,
+      mediaCaption: null,
+      metadata: {
+        provider: 'whapi',
+        campaign_id: campaign.id,
+        campaign_target_id: target.id,
+        campaign_step_index: step.step_index,
+      },
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro ao persistir mensagem aceita pela Whapi.';
+    try {
+      await updateClaimedTarget(supabaseAdmin, target, {
+        status: 'failed',
+        error_message: 'Mensagem aceita pela Whapi; persistencia local pendente.',
+        locked_at: null,
+        lock_token: null,
+      });
+    } catch (checkpointError) {
+      throw new CampaignProviderAcceptedError(
+        checkpointError instanceof Error ? checkpointError.message : errorMessage,
+      );
+    }
+    await params.supabaseAdmin
+      .from('comm_whatsapp_campaign_events')
+      .update({
+        payload: {
+          ...acceptedPayload,
+          error: errorMessage,
+          last_recovery_error: errorMessage,
+        },
+      })
+      .eq('id', pendingPersistenceEvent.id);
+    return { status: 'failed', externalMessageId, deliveryStatus, persistencePending: true };
+  }
+
+  try {
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: targetStatus,
       sent_at: nowIso,
-      chat_id: persistResult.chatId || target.chat_id,
+      chat_id: persisted.chatId || target.chat_id,
       current_step_index: nextStep ? nextStep.step_index : step.step_index,
       next_send_at: nextSendAt,
       next_retry_at: null,
-      external_message_id: externalMessageId || null,
+      external_message_id: externalMessageId,
       error_message: null,
       last_attempt_at: nowIso,
       locked_at: null,
       lock_token: null,
+    });
+  } catch (checkpointError) {
+    throw new CampaignProviderAcceptedError(
+      checkpointError instanceof Error ? checkpointError.message : 'Nao foi possivel finalizar o alvo aceito pela Whapi.',
+    );
+  }
+
+  try {
+    await resolveCampaignSendStartedEvent(supabaseAdmin, {
+      eventId: sendStartedEvent.id,
+      resolution: 'provider_accepted_persisted',
+    });
+  } catch (error) {
+    throw new CampaignProviderAcceptedError(
+      error instanceof Error ? error.message : 'Nao foi possivel encerrar a tentativa persistida da Whapi.',
+    );
+  }
+
+  const persistedAt = getNowIso();
+  const { data: persistedEvent, error: persistEventError } = await params.supabaseAdmin
+    .from('comm_whatsapp_campaign_events')
+    .update({
+      payload: {
+        ...acceptedPayload,
+        recovered_at: persistedAt,
+        persisted_at: persistedAt,
+      },
     })
-    .eq('id', target.id);
+    .eq('id', pendingPersistenceEvent.id)
+    .select('id')
+    .maybeSingle();
+
+  if (persistEventError || !persistedEvent) {
+    throw new CampaignProviderAcceptedError(
+      persistEventError?.message || 'Nao foi possivel concluir o checkpoint da mensagem aceita pela Whapi.',
+    );
+  }
 
   await insertEvent(supabaseAdmin, {
     campaignId: campaign.id,
@@ -977,7 +1545,7 @@ async function sendTarget(params: {
     eventType: nextStep ? 'target_step_sent' : 'target_sent',
     payload: { externalMessageId, deliveryStatus, stepIndex: step.step_index, nextStepIndex: nextStep?.step_index ?? null, nextSendAt },
   });
-  return { status: nextStep ? 'scheduled' : 'sent', externalMessageId, deliveryStatus };
+  return { status: targetStatus, externalMessageId, deliveryStatus };
 }
 
 async function processCampaigns(
@@ -991,6 +1559,12 @@ async function processCampaigns(
   if (!settings.enabled) throw new Error('Integracao WhatsApp desabilitada.');
   if (!token) throw new Error('Token da Whapi nao configurado.');
 
+  await reconcileAcceptedCampaignPersistences({
+    supabaseAdmin,
+    channelId: channel.id,
+    senderPhone: channel.phone_number,
+    senderName: channel.connected_user_name,
+  });
   await reconcileResponses(supabaseAdmin, params.campaignId);
 
   let query = supabaseAdmin
@@ -1023,6 +1597,7 @@ async function processCampaigns(
 
     await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'running', started_at: getNowIso(), last_error: null }).eq('id', campaign.id);
     const dailyLimit = Number(campaign.daily_send_limit);
+    let remainingDailySlots: number | null = null;
     if (Number.isFinite(dailyLimit) && dailyLimit > 0) {
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { count, error: sentCountError } = await supabaseAdmin
@@ -1035,8 +1610,13 @@ async function processCampaigns(
         await supabaseAdmin.from('comm_whatsapp_campaigns').update({ last_error: `Limite de ${dailyLimit} envios a cada 24 horas atingido.` }).eq('id', campaign.id);
         continue;
       }
+      remainingDailySlots = Math.max(0, dailyLimit - (count ?? 0));
     }
-    const campaignLimit = Math.min(Math.max(campaign.pacing_per_minute || 1, 1), maxLimit - processed);
+    const campaignLimit = Math.min(
+      Math.max(campaign.pacing_per_minute || 1, 1),
+      maxLimit - processed,
+      remainingDailySlots ?? Number.POSITIVE_INFINITY,
+    );
     if (campaignLimit <= 0) break;
 
     const targets = await listTargetsForProcessing(supabaseAdmin, campaign, campaignLimit);
@@ -1059,9 +1639,26 @@ async function processCampaigns(
           senderName: channel.connected_user_name,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Erro inesperado ao enviar mensagem.';
-        result = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage: message, retryable: true });
-        await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: result.status === 'retry_scheduled' ? 'target_retry_scheduled' : 'target_failed', payload: { error: message } });
+        if (error instanceof CampaignTargetLeaseLostError) {
+          result = { status: 'lease_lost' };
+          await insertEvent(supabaseAdmin, {
+            campaignId: campaign.id,
+            targetId: target.id,
+            eventType: 'target_lease_lost',
+            payload: { error: error.message },
+          });
+        } else if (error instanceof CampaignProviderAcceptedError) {
+          result = { status: 'provider_accepted_unreconciled' };
+          console.error('[comm-whatsapp-campaign-worker] mensagem aceita pela Whapi sem checkpoint completo', {
+            campaignId: campaign.id,
+            targetId: target.id,
+            error: error.message,
+          });
+        } else {
+          const message = error instanceof Error ? error.message : 'Erro inesperado ao enviar mensagem.';
+          result = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage: message, retryable: true });
+          await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: result.status === 'retry_scheduled' ? 'target_retry_scheduled' : 'target_failed', payload: { error: message } });
+        }
       }
       processed += 1;
       if (result.status === 'sent' || result.status === 'scheduled') sent += 1;

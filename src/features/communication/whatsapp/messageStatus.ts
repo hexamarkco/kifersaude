@@ -57,6 +57,22 @@ export const getMessageClientRequestId = (message?: CommWhatsAppMessage | null) 
   return String(metadata.client_request_id ?? metadata.clientRequestId ?? '').trim();
 };
 
+export const getMessageDisplayMetadataSignature = (message?: CommWhatsAppMessage | null) => {
+  const metadata = readMetadata(message);
+  return JSON.stringify({
+    quote: metadata.quote ?? null,
+    contact_card: metadata.contact_card ?? null,
+    link_preview: metadata.link_preview ?? null,
+    reactions: Array.isArray(metadata.reactions) ? metadata.reactions : [],
+    edited: metadata.edited === true,
+    edited_at: metadata.edited_at ?? null,
+    original_text_content: metadata.original_text_content ?? null,
+    deleted: metadata.deleted === true,
+    deleted_at: metadata.deleted_at ?? null,
+    whapi_patch: metadata.whapi_patch ?? null,
+  });
+};
+
 export const getMessageIdentityKey = (message: CommWhatsAppMessage) => {
   const clientRequestId = getMessageClientRequestId(message);
   if (clientRequestId) {

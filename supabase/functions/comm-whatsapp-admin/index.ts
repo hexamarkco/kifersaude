@@ -4,9 +4,11 @@ import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   buildWebhookUrl,
   COMM_WHATSAPP_INTEGRATION_SLUG,
+  COMM_WHATSAPP_WEBHOOK_SECRET_HEADER,
   corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  getCommWhatsAppWebhookSecret,
   getHealthStatusText,
   getNowIso,
   parseWhapiError,
@@ -44,6 +46,7 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
   const channel = await ensurePrimaryChannel(supabaseAdmin);
   const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
+  const webhookSecretConfigured = Boolean(getCommWhatsAppWebhookSecret());
 
   return {
     channel: sanitizeChannelForClient(channel),
@@ -51,6 +54,8 @@ async function buildAdminState(supabaseAdmin: ReturnType<typeof createAdminClien
       enabled: settings.enabled,
       tokenConfigured: Boolean(settings.token),
       webhookUrl: buildWebhookUrl(supabaseUrl, channel.webhook_secret),
+      webhookAuthentication: webhookSecretConfigured ? 'header' : 'legacy_query',
+      webhookHeaderName: webhookSecretConfigured ? COMM_WHATSAPP_WEBHOOK_SECRET_HEADER : null,
     },
   };
 }

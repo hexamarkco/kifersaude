@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'vitest';
 
 import type { CommWhatsAppMessage } from '../../../../lib/supabase';
-import { mergeCommWhatsAppMessages, resolveDeliveryStatus } from '../messageStatus';
+import {
+  getMessageDisplayMetadataSignature,
+  mergeCommWhatsAppMessages,
+  resolveDeliveryStatus,
+} from '../messageStatus';
 
 const baseMessage = (overrides: Partial<CommWhatsAppMessage>): CommWhatsAppMessage => ({
   id: overrides.id ?? 'message-1',
@@ -110,4 +114,24 @@ test('merges by id when identity keys diverge (webhook-first race)', () => {
   assert.equal(merged[0].id, 'server-1');
   assert.ok(merged[0].metadata.client_request_id, 'client_request_id should survive');
   assert.equal(merged[0].metadata.client_request_id, 'req-1');
+});
+
+test('includes displayed metadata in the update signature', () => {
+  const base = baseMessage({
+    metadata: {
+      link_preview: { url: 'https://example.com', title: 'Original' },
+      reactions: [],
+    },
+  });
+  const updated = baseMessage({
+    metadata: {
+      link_preview: { url: 'https://example.com', title: 'Atualizado' },
+      reactions: [{ actor_key: '5511999999999', emoji: '👍' }],
+    },
+  });
+
+  assert.notEqual(
+    getMessageDisplayMetadataSignature(base),
+    getMessageDisplayMetadataSignature(updated),
+  );
 });

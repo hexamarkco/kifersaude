@@ -37,6 +37,8 @@ type ChannelAdminState = {
   config: {
     tokenConfigured?: boolean;
     webhookUrl?: string;
+    webhookAuthentication?: "header" | "legacy_query";
+    webhookHeaderName?: string | null;
   };
 };
 
@@ -54,6 +56,9 @@ export default function WhatsAppApiSettingsPanel() {
   const [enabled, setEnabled] = useState(false);
   const [tokenConfigured, setTokenConfigured] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookAuthentication, setWebhookAuthentication] =
+    useState<"header" | "legacy_query">("legacy_query");
+  const [webhookHeaderName, setWebhookHeaderName] = useState("");
   const [channelStatus, setChannelStatus] = useState("unknown");
   const [channelPhone, setChannelPhone] = useState("");
 
@@ -69,6 +74,12 @@ export default function WhatsAppApiSettingsPanel() {
     const payload = (data ?? {}) as ChannelAdminState;
     setTokenConfigured(payload.config?.tokenConfigured === true);
     setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
+    setWebhookAuthentication(
+      payload.config?.webhookAuthentication === "header"
+        ? "header"
+        : "legacy_query",
+    );
+    setWebhookHeaderName(payload.config?.webhookHeaderName?.trim() || "");
     setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
     setChannelPhone(payload.channel?.phone_number?.trim() || "");
   }, []);
@@ -185,6 +196,12 @@ export default function WhatsAppApiSettingsPanel() {
 
       const payload = (data ?? {}) as ChannelAdminState;
       setWebhookUrl(payload.config?.webhookUrl?.trim() || "");
+      setWebhookAuthentication(
+        payload.config?.webhookAuthentication === "header"
+          ? "header"
+          : "legacy_query",
+      );
+      setWebhookHeaderName(payload.config?.webhookHeaderName?.trim() || "");
       setChannelStatus(payload.channel?.connection_status?.trim() || "unknown");
       setChannelPhone(payload.channel?.phone_number?.trim() || "");
       toast.success("Saúde do canal atualizada.");
@@ -289,7 +306,9 @@ export default function WhatsAppApiSettingsPanel() {
                       Webhook do canal
                     </div>
                     <p className="text-xs text-[var(--text-muted)]">
-                      Configure este endpoint na Whapi em Body mode com os eventos `messages`, `statuses` e `channel`.
+                      {webhookAuthentication === "header"
+                        ? `Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel, usando o header ${webhookHeaderName || "X-Kifer-Webhook-Secret"}.`
+                        : "Configure este endpoint na Whapi em Body mode com os eventos messages, statuses e channel."}
                     </p>
                     <p className="text-xs text-[var(--text-muted)]">
                       Status atual: <span className="font-semibold text-[var(--text-secondary)]">{channelStatus || "unknown"}</span>
@@ -314,6 +333,15 @@ export default function WhatsAppApiSettingsPanel() {
                     <Copy className="w-4 h-4" />
                   </IconButton>
                 </div>
+                {webhookAuthentication === "header" ? (
+                  <p className="mt-2 text-xs text-[var(--text-muted)]">
+                    O valor do header fica somente nos Edge Secrets e nao e exibido no painel.
+                  </p>
+                ) : (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    Migre para `COMM_WHATSAPP_WEBHOOK_SECRET` e um header customizado da Whapi para remover o segredo da URL.
+                  </p>
+                )}
               </Card>
 
               <Card variant="muted" padding="sm">

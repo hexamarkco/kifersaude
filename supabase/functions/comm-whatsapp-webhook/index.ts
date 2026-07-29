@@ -5,6 +5,7 @@ import {
   cacheCommWhatsAppMedia,
   cacheCommWhatsAppChatContactName,
   COMM_WHATSAPP_CHANNEL_SLUG,
+  COMM_WHATSAPP_WEBHOOK_SECRET_HEADER,
   corsHeaders,
   extractWhapiDeletedMessageEvent,
   ensureCommWhatsAppSettings,
@@ -15,11 +16,11 @@ import {
   extractWhapiQuotedMessageMeta,
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
-  extractWhapiMessages,
   extractWhapiMediaMeta,
   fetchWhapiChatName,
   fetchWhapiContactName,
   formatPhoneLabel,
+  getCommWhatsAppWebhookSecret,
   getDirectChatDisplayNameCandidate,
   getHealthStatusText,
   getNowIso,
@@ -37,6 +38,12 @@ import {
   unixTimestampToIso,
   updateCommWhatsAppMessageStatus,
 } from '../_shared/comm-whatsapp.ts';
+import {
+  buildWhapiWebhookMessageReceiptKey,
+  extractWhapiWebhookMessageItems,
+  hasWhapiPatchTextChange,
+  type WhapiWebhookMessagePatch,
+} from '../_shared/whapi-webhook-parser.ts';
 
 type ChannelRow = {
   id: string;
@@ -79,12 +86,6 @@ const createServiceClient = () => {
   }
 
   return createClient(supabaseUrl, serviceRoleKey);
-};
-
-const buildMessageEventKey = (eventAction: string, message: Record<string, unknown>) => {
-  const messageId = toTrimmedString(message.id);
-  const timestamp = toTrimmedString(message.timestamp);
-  return `message:${eventAction}:${messageId || 'no-id'}:${timestamp || 'no-ts'}`;
 };
 
 const buildStatusEventKey = (eventAction: string, status: Record<string, unknown>) => {
@@ -198,13 +199,16 @@ async function persistMessageFromWebhook(
   message: Record<string, unknown>,
   whapiToken: string,
   eventAction: string,
+  patch: WhapiWebhookMessagePatch | null,
 ) {
   const externalChatId = resolveMessageChatId(message);
   if (!externalChatId || !isDirectWhapiChatId(externalChatId)) {
     return null;
   }
 
-  const reactionEvent = extractWhapiReactionEvent(message, eventAction);
+  const mutationSource = patch?.trigger ?? message;
+  const summaryText = summarizeWhapiMessage(message);
+  const reactionEvent = extractWhapiReactionEvent(mutationSource, eventAction);
   if (reactionEvent?.targetExternalMessageId) {
     const { data: targetMessage, error: targetMessageError } = await supabaseAdmin
       .from('comm_whatsapp_messages')
@@ -267,7 +271,7 @@ async function persistMessageFromWebhook(
     }
   }
 
-  const deletedEvent = extractWhapiDeletedMessageEvent(message, eventAction);
+  const deletedEvent = extractWhapiDeletedMessageEvent(mutationSource, eventAction);
   if (deletedEvent?.targetExternalMessageId) {
     const deletedTarget = await markCommWhatsAppMessageDeleted(supabaseAdmin, {
       channelId: channel.id,
@@ -284,7 +288,21 @@ async function persistMessageFromWebhook(
     }
   }
 
-  const editedEvent = extractWhapiEditedMessageEvent(message, eventAction);
+  const explicitEditedEvent = extractWhapiEditedMessageEvent(mutationSource, eventAction);
+  const patchEditedEvent = !explicitEditedEvent?.editedText
+    && hasWhapiPatchTextChange(patch)
+    && toTrimmedString(message.id)
+    && summaryText !== '[Mensagem]'
+    ? {
+        eventExternalMessageId: null,
+        targetExternalMessageId: toTrimmedString(message.id),
+        editedText: summaryText,
+        originalText: null,
+        editedAt: unixTimestampToIso(patch?.trigger?.timestamp) || getNowIso(),
+        actionType: 'patch',
+      }
+    : null;
+  const editedEvent = explicitEditedEvent?.editedText ? explicitEditedEvent : patchEditedEvent;
   if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
     const editedTarget = await applyCommWhatsAppMessageEdit(supabaseAdmin, {
       channelId: channel.id,
@@ -305,7 +323,7 @@ async function persistMessageFromWebhook(
   const direction = message.from_me === true ? 'outbound' : 'inbound';
   const phoneDigits = extractPhoneFromChatId(externalChatId);
   const messageName = getDirectChatDisplayNameCandidate(message, direction);
-  const whapiChatName = whapiToken
+  const whapiChatName = !patch && whapiToken
     ? await fetchWhapiChatName({ token: whapiToken, chatId: externalChatId }).catch(() => '')
     : '';
   let resolvedName = whapiChatName || messageName;
@@ -334,7 +352,7 @@ async function persistMessageFromWebhook(
     });
   }
 
-  if (!resolvedName && whapiToken) {
+  if (!resolvedName && !patch && whapiToken) {
     resolvedName = await fetchWhapiContactName({ token: whapiToken, contactId: phoneDigits }).catch(() => '');
   }
 
@@ -354,7 +372,9 @@ async function persistMessageFromWebhook(
   const linkPreviewMeta = extractWhapiLinkPreviewMeta(message);
   const quoteMeta = extractWhapiQuotedMessageMeta(message);
   const contactCardMeta = extractWhapiContactCardMeta(message);
-  const summaryText = summarizeWhapiMessage(message);
+  const patchStatusUpdatedAt = patch
+    ? unixTimestampToIso(patch.trigger?.timestamp) || messageAt
+    : messageAt;
   const result = await persistCommWhatsAppMessage(supabaseAdmin, {
     channelId: channel.id,
     externalChatId,
@@ -364,7 +384,7 @@ async function persistMessageFromWebhook(
     lastMessageText: summaryText,
     lastMessageDirection: direction,
     lastMessageAt: messageAt,
-    incrementUnread: direction === 'inbound',
+    incrementUnread: !patch && direction === 'inbound',
     externalMessageId: externalMessageId || null,
     direction,
     messageType: toTrimmedString(message.type) || 'text',
@@ -374,7 +394,7 @@ async function persistMessageFromWebhook(
     source: toTrimmedString(message.source) || null,
     senderName: getDirectChatDisplayNameCandidate(message, direction) || null,
     senderPhone: direction === 'outbound' ? channel.phone_number || null : phoneDigits || null,
-    statusUpdatedAt: messageAt,
+    statusUpdatedAt: patchStatusUpdatedAt,
     errorMessage: null,
     mediaId: mediaMeta.mediaId,
     mediaUrl: mediaMeta.mediaUrl,
@@ -392,6 +412,14 @@ async function persistMessageFromWebhook(
       link_preview: linkPreviewMeta,
       ...(quoteMeta ? { quote: quoteMeta } : {}),
       ...(contactCardMeta ? { contact_card: contactCardMeta } : {}),
+      ...(patch ? {
+        whapi_patch: {
+          changes: patch.changes,
+          trigger_id: toTrimmedString(patch.trigger?.id) || null,
+          ...(isRecord(message.poll) ? { poll: message.poll } : {}),
+          ...(Array.isArray(message.reactions) ? { reactions: message.reactions } : {}),
+        },
+      } : {}),
       edited: editedEvent ? true : false,
       edited_at: editedEvent?.editedAt ?? null,
       original_text_content: editedEvent?.originalText ?? null,
@@ -399,7 +427,7 @@ async function persistMessageFromWebhook(
     },
   });
 
-  if (whapiToken && mediaMeta.mediaId) {
+  if (!patch && whapiToken && mediaMeta.mediaId) {
     await cacheCommWhatsAppMedia(supabaseAdmin, {
       token: whapiToken,
       mediaId: mediaMeta.mediaId,
@@ -514,7 +542,11 @@ Deno.serve(async (req: Request) => {
     const channel = (await ensurePrimaryChannel(supabaseAdmin)) as ChannelRow;
     const requestUrl = new URL(req.url);
     const channelSlug = requestUrl.searchParams.get('channel')?.trim() || COMM_WHATSAPP_CHANNEL_SLUG;
-    const secret = requestUrl.searchParams.get('secret')?.trim() || '';
+    const legacySecret = requestUrl.searchParams.get('secret')?.trim() || '';
+    const configuredWebhookSecret = getCommWhatsAppWebhookSecret();
+    const providedSecret = configuredWebhookSecret
+      ? req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER)?.trim() || ''
+      : legacySecret;
 
     if (channelSlug !== channel.slug) {
       return new Response(JSON.stringify({ error: 'Canal invalido' }), {
@@ -523,7 +555,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!secret || secret !== channel.webhook_secret) {
+    const expectedSecret = configuredWebhookSecret || channel.webhook_secret;
+    if (!providedSecret || providedSecret !== expectedSecret) {
       return new Response(JSON.stringify({ error: 'Webhook nao autorizado' }), {
         status: 401,
         headers: jsonHeaders,
@@ -556,20 +589,30 @@ Deno.serve(async (req: Request) => {
       .eq('id', channel.id);
 
     const messageItems = eventType === 'messages' || eventType === 'message'
-      ? extractWhapiMessages(payload)
+      ? extractWhapiWebhookMessageItems(payload)
       : [];
 
     if (messageItems.length > 0) {
       for (const rawItem of messageItems) {
-        const item = withResolvedMessageChatId(rawItem);
+        const item = {
+          ...rawItem,
+          message: withResolvedMessageChatId(rawItem.message),
+        };
 
-        const chatId = resolveMessageChatId(item);
+        const chatId = resolveMessageChatId(item.message);
         if (!chatId || !isDirectWhapiChatId(chatId)) continue;
 
-        const eventKey = buildMessageEventKey(eventAction, item);
+        const eventKey = buildWhapiWebhookMessageReceiptKey(eventAction, item);
         if (await hasEventReceipt(supabaseAdmin, eventKey)) continue;
 
-        const chat = await persistMessageFromWebhook(supabaseAdmin, channel, item, whapiToken, eventAction);
+        const chat = await persistMessageFromWebhook(
+          supabaseAdmin,
+          channel,
+          item.message,
+          whapiToken,
+          eventAction,
+          item.patch,
+        );
         if (!chat) continue;
 
         await recordEventReceipt(
@@ -577,11 +620,11 @@ Deno.serve(async (req: Request) => {
           channel.id,
           eventKey,
           'message',
-          toTrimmedString(item.id) || null,
+          toTrimmedString(item.receipt.id) || toTrimmedString(item.message.id) || null,
           {
             event_action: eventAction,
             chat_id: chatId,
-            from_me: item.from_me === true,
+            from_me: item.message.from_me === true,
           },
         );
       }

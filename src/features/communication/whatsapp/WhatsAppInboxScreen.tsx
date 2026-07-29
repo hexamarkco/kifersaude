@@ -70,6 +70,7 @@ import {
   mergeCommWhatsAppMessage,
   mergeCommWhatsAppMessages,
   messagesReferToSameDelivery,
+  getMessageDisplayMetadataSignature,
   normalizeDeliveryStatus,
   resolveDeliveryStatus,
 } from './messageStatus';
@@ -830,14 +831,6 @@ const getMessageContactCardInfo = (message?: CommWhatsAppMessage | null): Messag
     count: count || (kind === 'contact' ? 1 : 0),
     items,
   };
-};
-
-const getMessageMetadataSignature = (message: CommWhatsAppMessage) => {
-  const metadata = getMessageMetadataRecord(message);
-  return JSON.stringify({
-    quote: readRecord(metadata.quote),
-    contact_card: readRecord(metadata.contact_card),
-  });
 };
 
 const createVirtualAnchorRect = (anchor: PointerAnchor) => ({
@@ -3410,7 +3403,7 @@ export default function WhatsAppInboxScreen() {
       items
         .map(
           (message) =>
-            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.message_at}:${message.text_content ?? ''}:${message.message_type}:${message.media_id ?? ''}:${message.media_url ?? ''}:${message.media_file_name ?? ''}:${message.media_caption ?? ''}:${message.transcription_text ?? ''}:${message.transcription_status ?? ''}:${message.transcription_error ?? ''}:${getMessageMetadataSignature(message)}`,
+            `${message.id}:${message.external_message_id ?? ''}:${message.delivery_status}:${message.status_updated_at ?? ''}:${message.message_at}:${message.text_content ?? ''}:${message.message_type}:${message.media_id ?? ''}:${message.media_url ?? ''}:${message.media_file_name ?? ''}:${message.media_caption ?? ''}:${message.transcription_text ?? ''}:${message.transcription_status ?? ''}:${message.transcription_error ?? ''}:${getMessageDisplayMetadataSignature(message)}`,
         )
         .join('|'),
     [],

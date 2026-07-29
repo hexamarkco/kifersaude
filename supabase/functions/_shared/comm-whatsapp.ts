@@ -3,14 +3,16 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-Supabase-Api-Version, X-Region, Accept',
+  'Access-Control-Allow-Methods': 'POST, PUT, PATCH, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, X-Supabase-Api-Version, X-Region, Accept, X-Kifer-Webhook-Secret',
 };
 
 export const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 export const COMM_WHATSAPP_INTEGRATION_SLUG = 'whatsapp_auto_contact';
 export const COMM_WHATSAPP_CHANNEL_SLUG = 'primary';
 export const COMM_WHATSAPP_MODULE = 'whatsapp-inbox';
+export const COMM_WHATSAPP_WEBHOOK_SECRET_ENV = 'COMM_WHATSAPP_WEBHOOK_SECRET';
+export const COMM_WHATSAPP_WEBHOOK_SECRET_HEADER = 'X-Kifer-Webhook-Secret';
 
 const MAX_WHAPI_MEDIA_RESPONSE_BYTES = 32 * 1024 * 1024;
 
@@ -161,6 +163,9 @@ export const toTrimmedString = (value: unknown): string => (typeof value === 'st
 export const sanitizeWhapiToken = (value: string): string => value.replace(/^Bearer\s+/i, '').trim();
 
 const getWhapiToken = (): string => sanitizeWhapiToken(Deno.env.get('WHAPI_TOKEN') || '');
+
+export const getCommWhatsAppWebhookSecret = (): string =>
+  toTrimmedString(Deno.env.get(COMM_WHATSAPP_WEBHOOK_SECRET_ENV));
 
 const getNonSecretCommWhatsAppSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
   const nonSecretSettings: Record<string, unknown> = {};
@@ -1781,12 +1786,16 @@ export const getHealthStatusText = (payload: unknown): string => {
   return 'unknown';
 };
 
-export const buildWebhookUrl = (supabaseUrl: string, secret: string): string => {
+export const buildWebhookUrl = (supabaseUrl: string, legacySecret: string): string => {
   const normalizedUrl = supabaseUrl.replace(/\/$/, '');
-  const query = new URLSearchParams({
-    channel: COMM_WHATSAPP_CHANNEL_SLUG,
-    secret,
-  });
+  const query = new URLSearchParams({ channel: COMM_WHATSAPP_CHANNEL_SLUG });
+
+  // Once the Edge Secret is configured, Whapi authenticates with a custom
+  // header and the callback URL no longer carries a reusable credential.
+  if (!getCommWhatsAppWebhookSecret() && legacySecret) {
+    query.set('secret', legacySecret);
+  }
+
   return `${normalizedUrl}/functions/v1/comm-whatsapp-webhook?${query.toString()}`;
 };
 

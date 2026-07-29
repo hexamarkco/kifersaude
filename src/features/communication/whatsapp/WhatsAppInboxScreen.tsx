@@ -3549,7 +3549,7 @@ export default function WhatsAppInboxScreen() {
           return null;
         }
 
-        const baseShortcut = buildQuickReplyShortcut(name, index);
+        const baseShortcut = buildQuickReplyShortcut(quickReply.shortcut || name, index);
         let shortcut = baseShortcut;
         let duplicateIndex = 2;
 

@@ -195,12 +195,16 @@ export default function WhatsAppCampaignsScreen() {
   const [sendWindowStart, setSendWindowStart] = useState('');
   const [sendWindowEnd, setSendWindowEnd] = useState('');
   const [pacingPerMinute, setPacingPerMinute] = useState(12);
+  const [dailySendLimit, setDailySendLimit] = useState<number | null>(null);
+  const [reactivationMode, setReactivationMode] = useState(false);
+  const [inactiveDays, setInactiveDays] = useState(90);
+  const [recentCampaignDays, setRecentCampaignDays] = useState(30);
   const [variableAutocomplete, setVariableAutocomplete] = useState<VariableAutocompleteState | null>(null);
   const stepTextareaRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
 
   const csvTargets = useMemo(() => parseCsvTargets(csvText), [csvText]);
   const leadStatusOptions = useMemo(
-    () => leadStatuses.filter((status) => status.ativo).map((status) => ({ value: status.nome, label: status.nome })),
+    () => leadStatuses.map((status) => ({ value: status.nome, label: status.nome })),
     [leadStatuses],
   );
   const leadOwnerOptions = useMemo(
@@ -266,6 +270,10 @@ export default function WhatsAppCampaignsScreen() {
     setSendWindowStart('');
     setSendWindowEnd('');
     setPacingPerMinute(12);
+    setDailySendLimit(null);
+    setReactivationMode(false);
+    setInactiveDays(90);
+    setRecentCampaignDays(30);
     setVariableAutocomplete(null);
   };
 
@@ -306,6 +314,15 @@ export default function WhatsAppCampaignsScreen() {
       setSendWindowStart(campaign.send_window_start ? campaign.send_window_start.slice(0, 5) : '');
       setSendWindowEnd(campaign.send_window_end ? campaign.send_window_end.slice(0, 5) : '');
       setPacingPerMinute(campaign.pacing_per_minute || 12);
+      setDailySendLimit(campaign.daily_send_limit ?? null);
+      const lastContactBefore = typeof filters.last_contact_before === 'string' ? filters.last_contact_before : '';
+      setReactivationMode(Boolean(lastContactBefore));
+      if (lastContactBefore) {
+        const days = Math.floor((Date.now() - new Date(lastContactBefore).getTime()) / (24 * 60 * 60 * 1000));
+        if (Number.isFinite(days) && days > 0) setInactiveDays(days);
+      }
+      const storedRecentDays = Number(filters.exclude_recent_campaign_days);
+      if (Number.isFinite(storedRecentDays) && storedRecentDays >= 0) setRecentCampaignDays(storedRecentDays);
       setCampaignModalOpen(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel carregar este disparo para edicao.');
@@ -338,7 +355,10 @@ export default function WhatsAppCampaignsScreen() {
             filters: {
               statuses: leadStatusFilters,
               responsaveis: leadOwnerFilters,
-              only_active: true,
+              last_contact_before: reactivationMode
+                ? new Date(Date.now() - inactiveDays * 24 * 60 * 60 * 1000).toISOString()
+                : null,
+              exclude_recent_campaign_days: reactivationMode ? recentCampaignDays : 0,
               exclude_opt_out: true,
             },
           }
@@ -367,6 +387,7 @@ export default function WhatsAppCampaignsScreen() {
         messageText: firstMessageText,
         scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
         pacingPerMinute,
+        dailySendLimit,
         sendWindowStart: sendWindowStart || null,
         sendWindowEnd: sendWindowEnd || null,
         stopOnReply: true,
@@ -646,6 +667,20 @@ export default function WhatsAppCampaignsScreen() {
               <Field label="Responsavel">
                 <FilterMultiSelect icon={UserCircle} options={leadOwnerOptions} placeholder="Todos os responsaveis" values={leadOwnerFilters} onChange={setLeadOwnerFilters} />
               </Field>
+              <label className="md:col-span-2 flex items-start gap-3 text-sm text-[color:var(--panel-text-soft)]">
+                <Checkbox checked={reactivationMode} onChange={(event) => setReactivationMode(event.target.checked)} />
+                <span><span className="font-medium text-[color:var(--panel-text)]">Modo reativação segura</span><br />Exige último contato antigo e suprime quem recebeu outra campanha recentemente.</span>
+              </label>
+              {reactivationMode && (
+                <div className="md:col-span-2 grid gap-3 sm:grid-cols-2">
+                  <Field label="Sem contato há pelo menos (dias)">
+                    <Input type="number" min={1} value={inactiveDays} onChange={(event) => setInactiveDays(Math.max(1, Number(event.target.value) || 1))} />
+                  </Field>
+                  <Field label="Suprimir campanha recente (dias)">
+                    <Input type="number" min={0} value={recentCampaignDays} onChange={(event) => setRecentCampaignDays(Math.max(0, Number(event.target.value) || 0))} />
+                  </Field>
+                </div>
+              )}
               <p className="md:col-span-2 text-xs text-[color:var(--panel-text-muted)]">O worker vai materializar os alvos no momento de ativar a campanha, removendo arquivados, duplicados, numeros invalidos e opt-outs.</p>
             </Surface>
           ) : (
@@ -783,6 +818,9 @@ export default function WhatsAppCampaignsScreen() {
             </Field>
             <Field label="Ritmo por minuto">
               <Input type="number" min={1} max={120} value={pacingPerMinute} onChange={(event) => setPacingPerMinute(Number(event.target.value) || 1)} />
+            </Field>
+            <Field label="Limite a cada 24h">
+              <Input type="number" min={1} max={120} value={dailySendLimit ?? ''} placeholder="Sem limite" onChange={(event) => { const value = Number(event.target.value); setDailySendLimit(Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 120) : null); }} />
             </Field>
             <Field label="Janela inicio">
               <Input type="time" value={sendWindowStart} onChange={(event) => setSendWindowStart(event.target.value)} />

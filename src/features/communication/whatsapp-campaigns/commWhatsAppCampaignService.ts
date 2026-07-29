@@ -13,6 +13,7 @@ export type CommWhatsAppCampaign = {
   message_text: string;
   scheduled_at: string | null;
   pacing_per_minute: number;
+  daily_send_limit: number | null;
   send_window_start: string | null;
   send_window_end: string | null;
   stop_on_reply: boolean;
@@ -89,6 +90,7 @@ export type CreateCampaignInput = {
   messageText: string;
   scheduledAt?: string | null;
   pacingPerMinute: number;
+  dailySendLimit?: number | null;
   sendWindowStart?: string | null;
   sendWindowEnd?: string | null;
   stopOnReply: boolean;
@@ -459,6 +461,7 @@ export const commWhatsAppCampaignService = {
         message_text: input.messageText.trim(),
         scheduled_at: input.scheduledAt || null,
         pacing_per_minute: input.pacingPerMinute,
+        daily_send_limit: input.dailySendLimit ?? null,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
         stop_on_reply: input.stopOnReply,
@@ -541,6 +544,7 @@ export const commWhatsAppCampaignService = {
         message_text: input.messageText.trim(),
         scheduled_at: input.scheduledAt || null,
         pacing_per_minute: input.pacingPerMinute,
+        daily_send_limit: input.dailySendLimit ?? null,
         send_window_start: input.sendWindowStart || null,
         send_window_end: input.sendWindowEnd || null,
         stop_on_reply: input.stopOnReply,

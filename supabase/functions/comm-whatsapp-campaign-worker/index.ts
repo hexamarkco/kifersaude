@@ -45,6 +45,7 @@ type CampaignRow = {
   message_text: string;
   scheduled_at: string | null;
   pacing_per_minute: number;
+  daily_send_limit: number | null;
   send_window_start: string | null;
   send_window_end: string | null;
   stop_on_reply: boolean;
@@ -86,6 +87,7 @@ type LeadRow = {
   responsavel: string | null;
   responsavel_id: string | null;
   arquivado: boolean | null;
+  ultimo_contato: string | null;
 };
 
 type InboundMessageRow = {
@@ -444,7 +446,7 @@ async function authorizeRequest(req: Request, supabaseAdmin: ReturnType<typeof c
 async function getCampaign(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId: string): Promise<CampaignRow> {
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,send_window_start,send_window_end,stop_on_reply,created_by')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by')
     .eq('id', campaignId)
     .maybeSingle();
 
@@ -483,12 +485,17 @@ async function materializeCrmTargets(
   const responsaveis = Array.isArray(filters.responsaveis)
     ? filters.responsaveis.map((value) => toTrimmedString(value)).filter(Boolean)
     : [getOptionalString(filters.responsavel)].filter((value): value is string => Boolean(value));
+  const lastContactBefore = getOptionalString(filters.last_contact_before);
+  const rawRecentCampaignDays = Number(filters.exclude_recent_campaign_days);
+  const excludeRecentCampaignDays = Number.isFinite(rawRecentCampaignDays)
+    ? Math.min(Math.max(Math.floor(rawRecentCampaignDays), 0), 365)
+    : 0;
 
   const leads: LeadRow[] = [];
   for (let from = 0; ; from += CRM_TARGET_PAGE_SIZE) {
     let query = supabaseAdmin
       .from('leads')
-      .select('id,nome_completo,telefone,status,responsavel,responsavel_id,arquivado')
+      .select('id,nome_completo,telefone,status,responsavel,responsavel_id,arquivado,ultimo_contato')
       .eq('arquivado', false)
       .not('telefone', 'is', null)
       .order('created_at', { ascending: true })
@@ -500,6 +507,10 @@ async function materializeCrmTargets(
 
     if (responsaveis.length > 0) {
       query = query.in('responsavel', responsaveis);
+    }
+
+    if (lastContactBefore) {
+      query = query.lt('ultimo_contato', lastContactBefore);
     }
 
     const { data, error } = await query;
@@ -549,8 +560,23 @@ async function materializeCrmTargets(
   }
 
   const validRows = normalizedRows.filter((row) => !blockedPhones.has(row.phone_digits));
+  const recentlyContactedPhones = new Set<string>();
+  if (excludeRecentCampaignDays > 0) {
+    const cutoff = new Date(Date.now() - excludeRecentCampaignDays * 24 * 60 * 60 * 1000).toISOString();
+    for (const phoneChunk of chunkArray(validRows.map((row) => row.phone_digits), OPT_OUT_LOOKUP_CHUNK_SIZE)) {
+      const { data: recentTargets, error: recentTargetsError } = await supabaseAdmin
+        .from('comm_whatsapp_campaign_targets')
+        .select('phone_digits')
+        .neq('campaign_id', campaign.id)
+        .in('phone_digits', phoneChunk)
+        .gte('sent_at', cutoff);
+      if (recentTargetsError) throw new Error(`Erro ao consultar contatos recentes: ${recentTargetsError.message}`);
+      for (const row of recentTargets ?? []) recentlyContactedPhones.add(String(row.phone_digits));
+    }
+  }
+  const eligibleRows = validRows.filter((row) => !recentlyContactedPhones.has(row.phone_digits));
 
-  for (const rowsChunk of chunkArray(validRows, CRM_TARGET_INSERT_CHUNK_SIZE)) {
+  for (const rowsChunk of chunkArray(eligibleRows, CRM_TARGET_INSERT_CHUNK_SIZE)) {
     const { error: insertError } = await supabaseAdmin
       .from('comm_whatsapp_campaign_targets')
       .upsert(rowsChunk, { onConflict: 'campaign_id,phone_digits', ignoreDuplicates: true });
@@ -562,8 +588,8 @@ async function materializeCrmTargets(
 
   return {
     total: normalizedRows.length,
-    valid: validRows.length,
-    invalid: normalizedRows.length - validRows.length,
+    valid: eligibleRows.length,
+    invalid: normalizedRows.length - eligibleRows.length,
   };
 }
 
@@ -969,7 +995,7 @@ async function processCampaigns(
 
   let query = supabaseAdmin
     .from('comm_whatsapp_campaigns')
-    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,send_window_start,send_window_end,stop_on_reply,created_by')
+    .select('id,name,status,audience_source,audience_config,message_text,scheduled_at,pacing_per_minute,daily_send_limit,send_window_start,send_window_end,stop_on_reply,created_by')
     .in('status', ['queued', 'running', 'scheduled'])
     .order('created_at', { ascending: true })
     .limit(params.campaignId ? 1 : 5);
@@ -996,6 +1022,20 @@ async function processCampaigns(
     }
 
     await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'running', started_at: getNowIso(), last_error: null }).eq('id', campaign.id);
+    const dailyLimit = Number(campaign.daily_send_limit);
+    if (Number.isFinite(dailyLimit) && dailyLimit > 0) {
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count, error: sentCountError } = await supabaseAdmin
+        .from('comm_whatsapp_campaign_targets')
+        .select('id', { count: 'exact', head: true })
+        .eq('campaign_id', campaign.id)
+        .gte('sent_at', cutoff);
+      if (sentCountError) throw new Error(`Erro ao consultar limite diário: ${sentCountError.message}`);
+      if ((count ?? 0) >= dailyLimit) {
+        await supabaseAdmin.from('comm_whatsapp_campaigns').update({ last_error: `Limite de ${dailyLimit} envios a cada 24 horas atingido.` }).eq('id', campaign.id);
+        continue;
+      }
+    }
     const campaignLimit = Math.min(Math.max(campaign.pacing_per_minute || 1, 1), maxLimit - processed);
     if (campaignLimit <= 0) break;
 

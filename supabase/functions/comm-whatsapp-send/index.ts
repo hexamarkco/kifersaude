@@ -481,58 +481,30 @@ async function sendDocumentWhapi(params: {
   file: File;
   quotedMessageId?: string;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
-  const uploadForm = new FormData();
-  uploadForm.append('media', params.file, params.file.name);
-
-  const uploadResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/media`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${params.token}`,
-    },
-    body: uploadForm,
-  }, 30_000);
-  const uploadPayload = await readResponsePayload(uploadResponse);
-
-  if (!uploadResponse.ok) {
-    return { response: uploadResponse, payload: uploadPayload, mediaId: '' };
-  }
-
-  const mediaId = extractWhapiUploadMediaId(uploadPayload);
-  if (!mediaId) {
-    return {
-      response: new Response(JSON.stringify({ error: 'A Whapi nao retornou o MediaID do documento.' }), { status: 502 }),
-      payload: { error: 'A Whapi nao retornou o MediaID do documento.' },
-      mediaId: '',
-    };
-  }
-
-  const messagePayload: Record<string, unknown> = {
-    to: params.chatId,
-    media: mediaId,
-    filename: params.file.name,
-  };
+  const form = new FormData();
+  form.append('to', params.chatId);
+  form.append('media', params.file, params.file.name);
+  form.append('filename', params.file.name);
   if (params.caption) {
-    messagePayload.caption = params.caption;
+    form.append('caption', params.caption);
   }
   if (params.quotedMessageId) {
-    messagePayload.quoted = params.quotedMessageId;
+    form.append('quoted', params.quotedMessageId);
   }
 
   const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/document`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       Accept: 'application/json',
       Authorization: `Bearer ${params.token}`,
     },
-    body: JSON.stringify(messagePayload),
-  }, 15_000);
+    body: form,
+  }, 30_000);
 
   return {
     response,
     payload: await readResponsePayload(response),
-    mediaId,
+    mediaId: '',
   };
 }
 

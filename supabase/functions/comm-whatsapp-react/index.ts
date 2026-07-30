@@ -2,11 +2,13 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
+  applyCommWhatsAppMessageMutation,
   COMM_WHATSAPP_MODULE,
   WHAPI_BASE_URL,
   corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  getNowIso,
   parseWhapiError,
   readResponsePayload,
   toTrimmedString,
@@ -94,17 +96,6 @@ Deno.serve(async (req: Request) => {
     }
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
-    const { data: targetMessage, error: messageError } = await supabaseAdmin
-      .from('comm_whatsapp_messages')
-      .select('id, metadata')
-      .eq('channel_id', channel.id)
-      .eq('external_message_id', messageId)
-      .maybeSingle();
-
-    if (messageError) {
-      throw new Error(`Erro ao localizar mensagem para reação: ${messageError.message}`);
-    }
-
     const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}/reaction`, {
       method: emoji ? 'PUT' : 'DELETE',
       headers: {
@@ -120,44 +111,21 @@ Deno.serve(async (req: Request) => {
       throw new Error(parseWhapiError(payload) || 'Não foi possível atualizar a reação da mensagem.');
     }
 
-    if (targetMessage) {
-      const metadata = targetMessage.metadata && typeof targetMessage.metadata === 'object' && !Array.isArray(targetMessage.metadata)
-        ? targetMessage.metadata as Record<string, unknown>
-        : {};
-      const reactions = Array.isArray(metadata.reactions)
-        ? metadata.reactions.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null && !Array.isArray(item))
-        : [];
-      const withoutSelfReaction = reactions.filter((item) => toTrimmedString(item.actor_key) !== 'self');
-      const nextReactions = emoji
-        ? [
-            ...withoutSelfReaction,
-            {
-              actor_key: 'self',
-              emoji,
-              from_me: true,
-              from: channel.phone_number || null,
-              from_name: channel.connected_user_name || null,
-              reacted_at: new Date().toISOString(),
-              target_external_message_id: messageId,
-            },
-          ]
-        : withoutSelfReaction;
-
-      const { error: updateError } = await supabaseAdmin
-        .from('comm_whatsapp_messages')
-        .update({
-          metadata: {
-            ...metadata,
-            reactions: nextReactions,
-            last_reaction_at: new Date().toISOString(),
-          },
-        })
-        .eq('id', targetMessage.id);
-
-      if (updateError) {
-        throw new Error(`Erro ao atualizar reação da mensagem no banco: ${updateError.message}`);
-      }
-    }
+    const reactedAt = getNowIso();
+    await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+      channelId: channel.id,
+      targetExternalMessageId: messageId,
+      mutationType: 'reaction',
+      occurredAt: reactedAt,
+      payload: {
+        actor_key: 'self',
+        emoji: emoji || null,
+        from_me: true,
+        from: channel.phone_number || null,
+        from_name: channel.connected_user_name || null,
+      },
+      dedupeKey: `manual-reaction:${messageId}:${reactedAt}`,
+    });
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: jsonHeaders });
   } catch (error) {

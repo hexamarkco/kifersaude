@@ -2,7 +2,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
-  applyCommWhatsAppMessageEdit,
+  applyCommWhatsAppMessageMutation,
   COMM_WHATSAPP_MODULE,
   WHAPI_BASE_URL,
   corsHeaders,
@@ -13,7 +13,6 @@ import {
   formatPhoneLabel,
   getNowIso,
   isDirectWhapiChatId,
-  markCommWhatsAppMessageDeleted,
   normalizeWhapiChatId,
   persistCommWhatsAppMessage,
   parseWhapiError,
@@ -261,21 +260,18 @@ Deno.serve(async (req: Request) => {
       }
 
       const editedAt = getNowIso();
-      const editResult = await applyCommWhatsAppMessageEdit(supabaseAdmin, {
+      await applyCommWhatsAppMessageMutation(supabaseAdmin, {
         channelId: channel.id,
         targetExternalMessageId: externalMessageId,
-        editedText: nextText,
-        editedAt,
-        originalText: toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || null,
-        actionType: 'manual_edit',
+        mutationType: 'edit',
+        occurredAt: editedAt,
+        payload: {
+          edited_text: nextText,
+          original_text: toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || null,
+          action_type: 'manual_edit',
+        },
+        dedupeKey: `manual-edit:${externalMessageId}:${editedAt}`,
       });
-
-      if (!editResult) {
-        return new Response(JSON.stringify({ error: 'Mensagem editada na Whapi, mas nao encontrada para atualizar no inbox.' }), {
-          status: 404,
-          headers: jsonHeaders,
-        });
-      }
 
       return new Response(JSON.stringify({
         success: true,
@@ -393,13 +389,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const deletedAt = getNowIso();
-    await markCommWhatsAppMessageDeleted(supabaseAdmin, {
+    await applyCommWhatsAppMessageMutation(supabaseAdmin, {
       channelId: channel.id,
       targetExternalMessageId: externalMessageId,
-      deletedAt,
-      originalText: toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || null,
-      actionType: 'manual_delete',
-      deletedBy: 'self',
+      mutationType: 'delete',
+      occurredAt: deletedAt,
+      payload: {
+        original_text: toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || null,
+        action_type: 'manual_delete',
+        deleted_by: 'self',
+      },
+      dedupeKey: `manual-delete:${externalMessageId}:${deletedAt}`,
     });
 
     return new Response(JSON.stringify({

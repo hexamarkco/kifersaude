@@ -117,6 +117,15 @@ type WorkerRunResult = {
   stopped?: number;
 };
 
+type CampaignDispatchReservation = {
+  result: 'reserved' | 'rate_limited' | 'daily_limited' | 'lease_lost';
+  event_id: string | null;
+  attempts: number | null;
+  retry_at: string | null;
+  reason: string | null;
+  reserved_at: string | null;
+};
+
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 const CRM_TARGET_PAGE_SIZE = 1000;
 const CRM_TARGET_INSERT_CHUNK_SIZE = 500;
@@ -544,31 +553,9 @@ async function createProviderAcceptedPersistenceEvent(
   return data as { id: string };
 }
 
-async function createCampaignSendStartedEvent(
-  supabaseAdmin: ReturnType<typeof createAdminClient>,
-  params: { campaignId: string; targetId: string; payload: Record<string, unknown> },
-) {
-  const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_campaign_events')
-    .insert({
-      campaign_id: params.campaignId,
-      target_id: params.targetId,
-      event_type: 'target_provider_send_started',
-      payload: params.payload,
-    })
-    .select('id')
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message || 'Nao foi possivel registrar a tentativa de envio da campanha.');
-  }
-
-  return data as { id: string };
-}
-
 async function resolveCampaignSendStartedEvent(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
-  params: { eventId: string; resolution: string },
+  params: { eventId: string; resolution: string; dispatchPermitState?: 'accepted' | 'released' },
 ) {
   const { data: event, error: eventError } = await supabaseAdmin
     .from('comm_whatsapp_campaign_events')
@@ -581,22 +568,60 @@ async function resolveCampaignSendStartedEvent(
   }
 
   const payload = toRecord(event.payload);
-  if (payload.resolved_at) return;
+  const nextPayload = {
+    ...payload,
+    ...(payload.resolved_at ? {} : {
+      resolved_at: getNowIso(),
+      resolution: params.resolution,
+    }),
+    ...(params.dispatchPermitState ? { dispatch_permit_state: params.dispatchPermitState } : {}),
+  };
+
+  if (
+    payload.resolved_at
+    && (!params.dispatchPermitState || payload.dispatch_permit_state === params.dispatchPermitState)
+  ) return;
 
   const { error } = await supabaseAdmin
     .from('comm_whatsapp_campaign_events')
     .update({
-      payload: {
-        ...payload,
-        resolved_at: getNowIso(),
-        resolution: params.resolution,
-      },
+      payload: nextPayload,
     })
     .eq('id', params.eventId);
 
   if (error) {
     throw new Error(`Erro ao encerrar tentativa de envio da campanha: ${error.message}`);
   }
+}
+
+async function reserveCampaignDispatch(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: {
+    campaignId: string;
+    target: TargetRow;
+    payload: Record<string, unknown>;
+  },
+): Promise<CampaignDispatchReservation> {
+  const lockToken = toTrimmedString(params.target.lock_token);
+  if (!lockToken) throw new CampaignTargetLeaseLostError();
+
+  const { data, error } = await supabaseAdmin.rpc('reserve_comm_whatsapp_campaign_dispatch', {
+    p_campaign_id: params.campaignId,
+    p_target_id: params.target.id,
+    p_lock_token: lockToken,
+    p_payload: params.payload,
+  });
+
+  if (error) {
+    throw new Error(`Erro ao reservar envio da campanha: ${error.message}`);
+  }
+
+  const reservation = (Array.isArray(data) ? data[0] : data) as CampaignDispatchReservation | null;
+  if (!reservation) {
+    throw new Error('A reserva de envio da campanha nao retornou resultado.');
+  }
+
+  return reservation;
 }
 
 async function materializeCrmTargets(
@@ -1065,6 +1090,7 @@ async function reconcileAcceptedCampaignPersistences(params: {
         await resolveCampaignSendStartedEvent(params.supabaseAdmin, {
           eventId: sendStartedEventId,
           resolution: 'provider_accepted_recovered',
+          dispatchPermitState: 'accepted',
         });
       }
 
@@ -1196,6 +1222,19 @@ async function releaseTargetAfterFailure(
   return { status: canRetry ? 'retry_scheduled' : (params.status ?? 'failed'), retrying: canRetry, nextRetryAt };
 }
 
+async function deferClaimedTargetForDispatchGate(
+  supabaseAdmin: ReturnType<typeof createAdminClient>,
+  params: { target: TargetRow; retryAt: string; reason: string },
+) {
+  await updateClaimedTarget(supabaseAdmin, params.target, {
+    status: 'scheduled',
+    error_message: params.reason,
+    next_retry_at: params.retryAt,
+    locked_at: null,
+    lock_token: null,
+  });
+}
+
 async function releaseClaimedTarget(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
   target: TargetRow,
@@ -1280,24 +1319,36 @@ async function sendTarget(params: {
     return { status: 'failed' };
   }
 
-  // Refresh the lease immediately before a provider side effect so a stale
-  // worker cannot send after another worker has reclaimed the target.
-  await updateClaimedTarget(supabaseAdmin, target, { locked_at: nowIso });
-
-  // This marker is intentionally written before the provider request. If the
-  // process dies after dispatching it, a future claim is blocked rather than
-  // risking a duplicate campaign message.
+  // This transaction serializes the campaign-wide daily cap and pace before
+  // it creates the durable marker that protects the provider request.
   const sendStartedPayload = {
     startedAt: nowIso,
     phoneDigits,
     messageText: text,
     stepIndex: step.step_index,
   };
-  const sendStartedEvent = await createCampaignSendStartedEvent(supabaseAdmin, {
+  const dispatchReservation = await reserveCampaignDispatch(supabaseAdmin, {
     campaignId: campaign.id,
-    targetId: target.id,
+    target,
     payload: sendStartedPayload,
   });
+
+  if (dispatchReservation.result === 'lease_lost') {
+    throw new CampaignTargetLeaseLostError();
+  }
+
+  if (dispatchReservation.result !== 'reserved' || !dispatchReservation.event_id) {
+    const retryAt = dispatchReservation.retry_at || new Date(Date.now() + 60 * 1000).toISOString();
+    await deferClaimedTargetForDispatchGate(supabaseAdmin, {
+      target,
+      retryAt,
+      reason: dispatchReservation.reason || 'A campanha ainda nao possui um slot de envio disponivel.',
+    });
+    return { status: 'deferred', retryAt, reason: dispatchReservation.reason };
+  }
+
+  target.attempts = Math.max(Number(dispatchReservation.attempts) || 0, 0);
+  const sendStartedEvent = { id: dispatchReservation.event_id };
 
   let response: Response;
   let payload: unknown;
@@ -1339,6 +1390,7 @@ async function sendTarget(params: {
       await resolveCampaignSendStartedEvent(supabaseAdmin, {
         eventId: sendStartedEvent.id,
         resolution: 'provider_rejected_request',
+        dispatchPermitState: 'released',
       });
     }
     const failureResult = await releaseTargetAfterFailure(supabaseAdmin, {
@@ -1357,6 +1409,7 @@ async function sendTarget(params: {
     await resolveCampaignSendStartedEvent(supabaseAdmin, {
       eventId: sendStartedEvent.id,
       resolution: 'provider_reported_not_sent',
+      dispatchPermitState: 'released',
     });
     const failureResult = await releaseTargetAfterFailure(supabaseAdmin, { target, errorMessage, retryable: false });
     await insertEvent(supabaseAdmin, { campaignId: campaign.id, targetId: target.id, eventType: 'target_failed', payload: { error: errorMessage, sendStartedEventId: sendStartedEvent.id } });
@@ -1417,6 +1470,7 @@ async function sendTarget(params: {
     await resolveCampaignSendStartedEvent(supabaseAdmin, {
       eventId: sendStartedEvent.id,
       resolution: 'provider_accepted_checkpointed',
+      dispatchPermitState: 'accepted',
     });
   } catch (error) {
     throw new CampaignProviderAcceptedError(
@@ -1512,6 +1566,7 @@ async function sendTarget(params: {
     await resolveCampaignSendStartedEvent(supabaseAdmin, {
       eventId: sendStartedEvent.id,
       resolution: 'provider_accepted_persisted',
+      dispatchPermitState: 'accepted',
     });
   } catch (error) {
     throw new CampaignProviderAcceptedError(
@@ -1596,26 +1651,9 @@ async function processCampaigns(
     }
 
     await supabaseAdmin.from('comm_whatsapp_campaigns').update({ status: 'running', started_at: getNowIso(), last_error: null }).eq('id', campaign.id);
-    const dailyLimit = Number(campaign.daily_send_limit);
-    let remainingDailySlots: number | null = null;
-    if (Number.isFinite(dailyLimit) && dailyLimit > 0) {
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { count, error: sentCountError } = await supabaseAdmin
-        .from('comm_whatsapp_campaign_targets')
-        .select('id', { count: 'exact', head: true })
-        .eq('campaign_id', campaign.id)
-        .gte('sent_at', cutoff);
-      if (sentCountError) throw new Error(`Erro ao consultar limite diário: ${sentCountError.message}`);
-      if ((count ?? 0) >= dailyLimit) {
-        await supabaseAdmin.from('comm_whatsapp_campaigns').update({ last_error: `Limite de ${dailyLimit} envios a cada 24 horas atingido.` }).eq('id', campaign.id);
-        continue;
-      }
-      remainingDailySlots = Math.max(0, dailyLimit - (count ?? 0));
-    }
     const campaignLimit = Math.min(
       Math.max(campaign.pacing_per_minute || 1, 1),
       maxLimit - processed,
-      remainingDailySlots ?? Number.POSITIVE_INFINITY,
     );
     if (campaignLimit <= 0) break;
 

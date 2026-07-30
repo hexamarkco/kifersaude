@@ -15,6 +15,7 @@ export const COMM_WHATSAPP_WEBHOOK_SECRET_ENV = 'COMM_WHATSAPP_WEBHOOK_SECRET';
 export const COMM_WHATSAPP_WEBHOOK_SECRET_HEADER = 'X-Kifer-Webhook-Secret';
 
 const MAX_WHAPI_MEDIA_RESPONSE_BYTES = 32 * 1024 * 1024;
+const DEFAULT_WHAPI_REQUEST_TIMEOUT_MS = 12_000;
 
 export type CommWhatsAppChannelRow = {
   id: string;
@@ -155,6 +156,22 @@ export type CommWhatsAppReactionEvent = {
   reactedAt: string;
 };
 
+export type CommWhatsAppMessageMutationInput = {
+  channelId: string;
+  targetExternalMessageId: string;
+  mutationType: 'edit' | 'delete' | 'reaction';
+  eventExternalMessageId?: string | null;
+  occurredAt: string;
+  payload: Record<string, unknown>;
+  dedupeKey: string;
+};
+
+export type CommWhatsAppMessageMutationResult = {
+  chatId: string | null;
+  applied: boolean;
+  queued: boolean;
+};
+
 export const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -166,6 +183,21 @@ const getWhapiToken = (): string => sanitizeWhapiToken(Deno.env.get('WHAPI_TOKEN
 
 export const getCommWhatsAppWebhookSecret = (): string =>
   toTrimmedString(Deno.env.get(COMM_WHATSAPP_WEBHOOK_SECRET_ENV));
+
+export async function fetchWhapiWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = DEFAULT_WHAPI_REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 const getNonSecretCommWhatsAppSettings = (settings: Record<string, unknown>): Record<string, unknown> => {
   const nonSecretSettings: Record<string, unknown> = {};
@@ -260,6 +292,11 @@ export const normalizeWhapiChatId = (value: unknown): string => {
     return phone ? `${phone}@s.whatsapp.net` : normalizedDomain;
   }
 
+  if (/@lid$/i.test(raw)) {
+    const identifier = raw.replace(/@lid$/i, '').trim();
+    return identifier ? `${identifier}@lid` : '';
+  }
+
   if (raw.includes('@')) {
     return raw;
   }
@@ -273,13 +310,17 @@ export const buildWhapiDirectChatId = (value: unknown): string => {
   return phone ? `${phone}@s.whatsapp.net` : '';
 };
 
+export const isWhapiPhoneDirectChatId = (value: unknown): boolean => /@s\.whatsapp\.net$/i.test(normalizeWhapiChatId(value));
+
+export const isWhapiLidChatId = (value: unknown): boolean => /@lid$/i.test(normalizeWhapiChatId(value));
+
 export const isDirectWhapiChatId = (value: unknown): boolean => {
-  const chatId = normalizeWhapiChatId(value);
-  return /@s\.whatsapp\.net$/i.test(chatId);
+  return isWhapiPhoneDirectChatId(value) || isWhapiLidChatId(value);
 };
 
 export const extractPhoneFromChatId = (value: unknown): string => {
   const chatId = normalizeWhapiChatId(value);
+  if (!isWhapiPhoneDirectChatId(chatId)) return '';
   return chatId.replace(/@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
 };
 
@@ -324,6 +365,36 @@ export const stringTimestampToIso = (value: unknown): string | null => {
 };
 
 export const getNowIso = (): string => new Date().toISOString();
+
+export async function applyCommWhatsAppMessageMutation(
+  supabaseAdmin: SupabaseClient,
+  input: CommWhatsAppMessageMutationInput,
+): Promise<CommWhatsAppMessageMutationResult> {
+  const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_apply_message_mutation', {
+    p_channel_id: input.channelId,
+    p_target_external_message_id: input.targetExternalMessageId,
+    p_mutation_type: input.mutationType,
+    p_event_external_message_id: input.eventExternalMessageId || null,
+    p_occurred_at: input.occurredAt,
+    p_payload: input.payload,
+    p_dedupe_key: input.dedupeKey,
+  });
+
+  if (error) {
+    throw new Error(`Erro ao aplicar mutacao da mensagem do WhatsApp: ${error.message}`);
+  }
+
+  const result = (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  if (!result) {
+    throw new Error('A mutacao da mensagem do WhatsApp nao retornou resultado.');
+  }
+
+  return {
+    chatId: toTrimmedString(result.chat_id) || null,
+    applied: result.applied === true,
+    queued: result.queued === true,
+  };
+}
 
 export async function cacheCommWhatsAppChatContactName(
   supabaseAdmin: SupabaseClient,
@@ -1803,7 +1874,7 @@ export async function fetchWhapiChatName(params: {
   token: string;
   chatId: string;
 }): Promise<string> {
-  const response = await fetch(`${WHAPI_BASE_URL}/chats/${encodeURIComponent(params.chatId)}`, {
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/chats/${encodeURIComponent(params.chatId)}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -1823,7 +1894,7 @@ export async function fetchWhapiContactName(params: {
   token: string;
   contactId: string;
 }): Promise<string> {
-  const response = await fetch(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(params.contactId)}`, {
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(params.contactId)}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -1839,24 +1910,88 @@ export async function fetchWhapiContactName(params: {
   return extractWhapiContactSaved(payload) ? extractWhapiContactName(payload) : '';
 }
 
-export async function fetchWhapiChatMessages(params: {
+export async function resolveWhapiLidToPhone(params: {
   token: string;
   chatId: string;
-}): Promise<Array<Record<string, unknown>>> {
-  const response = await fetch(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(params.chatId)}`, {
+}): Promise<string> {
+  const chatId = normalizeWhapiChatId(params.chatId);
+  if (!isWhapiLidChatId(chatId)) return extractPhoneFromChatId(chatId);
+
+  const response = await fetchWhapiWithTimeout(
+    `${WHAPI_BASE_URL}/contacts/ids/${encodeURIComponent(chatId)}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${params.token}`,
+      },
+    },
+  );
+  if (!response.ok) return '';
+
+  const payload = await readResponsePayload(response);
+  if (!isRecord(payload)) return '';
+
+  const candidates = [payload.id, payload.phone, payload.wa_id, payload.contact_id, isRecord(payload.data) ? payload.data.id : null];
+  for (const candidate of candidates) {
+    const phone = extractPhoneFromChatId(candidate) || normalizeCommWhatsAppPhone(candidate);
+    if (phone) return phone;
+  }
+
+  return '';
+}
+
+export type WhapiChatMessagesPage = {
+  messages: Array<Record<string, unknown>>;
+  nextOffset: number;
+  hasMore: boolean;
+};
+
+export async function fetchWhapiChatMessagesPage(params: {
+  token: string;
+  chatId: string;
+  count?: number;
+  offset?: number;
+  timeTo?: number;
+  sort?: 'asc' | 'desc';
+}): Promise<WhapiChatMessagesPage> {
+  const count = Math.min(Math.max(Math.floor(Number(params.count) || 100), 1), 500);
+  const offset = Math.max(Math.floor(Number(params.offset) || 0), 0);
+  const timeTo = Number(params.timeTo);
+  const url = new URL(`${WHAPI_BASE_URL}/messages/list/${encodeURIComponent(params.chatId)}`);
+  url.searchParams.set('count', String(count));
+  url.searchParams.set('offset', String(offset));
+  url.searchParams.set('sort', params.sort === 'asc' ? 'asc' : 'desc');
+  if (Number.isFinite(timeTo) && timeTo > 0) {
+    url.searchParams.set('time_to', String(Math.floor(timeTo)));
+  }
+
+  const response = await fetchWhapiWithTimeout(url.toString(), {
     method: 'GET',
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${params.token}`,
     },
   });
-
   const payload = await readResponsePayload(response);
   if (!response.ok) {
     throw new Error(parseWhapiError(payload) || 'Falha ao consultar mensagens do chat na Whapi.');
   }
 
-  return extractWhapiMessages(payload);
+  const messages = extractWhapiMessages(payload);
+  return {
+    messages,
+    nextOffset: offset + messages.length,
+    hasMore: messages.length >= count,
+  };
+}
+
+export async function fetchWhapiChatMessages(params: {
+  token: string;
+  chatId: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const page = await fetchWhapiChatMessagesPage({ ...params, sort: 'desc' });
+  return page.messages;
 }
 
 export async function fetchWhapiMessage(params: {
@@ -1868,7 +2003,7 @@ export async function fetchWhapiMessage(params: {
     return null;
   }
 
-  const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}`, {
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -2089,10 +2224,10 @@ async function fetchWhapiMediaBlob(params: {
   const mediaUrl = toTrimmedString(params.mediaUrl);
   if (isTrustedWhapiMediaUrl(mediaUrl)) {
     try {
-      const response = await fetch(mediaUrl, {
-        method: 'GET',
-        headers,
-        redirect: 'error',
+        const response = await fetchWhapiWithTimeout(mediaUrl, {
+          method: 'GET',
+          headers,
+          redirect: 'error',
       });
 
       return await buildResult(response);
@@ -2106,7 +2241,7 @@ async function fetchWhapiMediaBlob(params: {
     throw new Error('A mensagem nao possui MediaID nem URL valida para transcricao.');
   }
 
-  const response = await fetch(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/media/${encodeURIComponent(mediaId)}`, {
     method: 'GET',
     headers,
     redirect: 'error',
@@ -2162,7 +2297,7 @@ export async function archiveCommWhatsAppMedia(supabaseAdmin: SupabaseClient, pa
   }
 }
 
-export async function cacheCommWhatsAppMedia(supabaseAdmin: SupabaseClient, params: {
+export async function archiveCommWhatsAppMediaFromWhapi(supabaseAdmin: SupabaseClient, params: {
   token: string;
   mediaId?: string | null;
   mediaUrl?: string | null;
@@ -2185,18 +2320,25 @@ export async function cacheCommWhatsAppMedia(supabaseAdmin: SupabaseClient, para
   }
 
   const result = await fetchWhapiMediaBlob(params);
-
   if (mediaId) {
-    await supabaseAdmin.storage
-      .from(COMM_WHATSAPP_MEDIA_BUCKET)
-      .upload(getCommWhatsAppMediaStoragePath(mediaId), result.blob, {
-        contentType: result.mimeType,
-        upsert: true,
-      })
-      .catch(() => null);
+    await archiveCommWhatsAppMedia(supabaseAdmin, {
+      mediaId,
+      blob: result.blob,
+      mimeType: result.mimeType,
+    });
   }
 
   return { ...result, cached: false };
+}
+
+export async function cacheCommWhatsAppMedia(supabaseAdmin: SupabaseClient, params: {
+  token: string;
+  mediaId?: string | null;
+  mediaUrl?: string | null;
+  fallbackFileName?: string | null;
+  fallbackMimeType?: string | null;
+}): Promise<{ blob: Blob; mimeType: string; fileName: string; cached: boolean }> {
+  return await archiveCommWhatsAppMediaFromWhapi(supabaseAdmin, params);
 }
 
 export async function checkWhapiContactExists(params: {

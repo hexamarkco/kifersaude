@@ -220,7 +220,7 @@ const buildStyleProfile = (outboundMessages: MessageRow[]): StyleProfile => {
     : ['sem fechamento'];
 
   // Emoji usage
-  const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F600}-\u{1F64F}]/u;
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}]/u;
   const emojiCount = texts.filter((t) => emojiRegex.test(t)).length;
   const usesEmoji = emojiCount / texts.length > 0.05;
 
@@ -231,7 +231,6 @@ const buildStyleProfile = (outboundMessages: MessageRow[]): StyleProfile => {
 
   // Message structure analysis
   const hasLineBreaks = texts.filter((t) => t.includes('\n')).length / texts.length > 0.2;
-  const avgOpeningLength = openings.reduce((s, o) => s + o.length, 0) / openings.length;
   const structureDesc = hasLineBreaks
     ? 'frequentemente usa paragrafos/multiplas linhas'
     : avgLength < 100

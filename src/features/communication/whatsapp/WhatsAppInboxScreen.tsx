@@ -3209,6 +3209,7 @@ export default function WhatsAppInboxScreen() {
   const pendingScrollHeightRef = useRef<number | null>(null);
   const isNearBottomRef = useRef(true);
   const selectedChatIdRef = useRef<string | null>(null);
+  const historyRecoveryCursorByChatIdRef = useRef<Map<string, { nextOffset: number; timeTo: number }>>(new Map());
   const chatIdFromUrlRef = useRef<string | null>(null);
   const chatsRequestIdRef = useRef(0);
   const chatPollBackoffRef = useRef(0);
@@ -8545,11 +8546,39 @@ export default function WhatsAppInboxScreen() {
     setSyncingHistoryChatId(targetChat.id);
 
     try {
-      const result = await commWhatsAppService.syncChatHistory(targetChat.external_chat_id);
+      const savedCursor = historyRecoveryCursorByChatIdRef.current.get(targetChat.id);
+      let timeTo = savedCursor?.timeTo ?? Math.floor(Date.now() / 1000);
+      let offset = savedCursor?.nextOffset ?? 0;
+      let pages = 0;
+      let imported = 0;
+      let hasMore = true;
+
+      while (hasMore && pages < 10) {
+        const result = await commWhatsAppService.syncChatHistory(targetChat.external_chat_id, {
+          offset,
+          count: 100,
+          timeTo,
+        });
+        imported += result.imported;
+        hasMore = result.hasMore && result.nextOffset !== null;
+        timeTo = result.timeTo ?? timeTo;
+        offset = result.nextOffset ?? offset;
+        if (hasMore) {
+          historyRecoveryCursorByChatIdRef.current.set(targetChat.id, { nextOffset: offset, timeTo });
+        } else {
+          historyRecoveryCursorByChatIdRef.current.delete(targetChat.id);
+        }
+        pages += 1;
+      }
+
       await Promise.all([loadMessages(targetChat, 'initial'), loadChats()]);
 
-      if (result.imported > 0) {
-        toast.success(`Historico consultado na Whapi (${result.imported} mensagens retornadas). Use "Carregar mais" para navegar nas mais antigas.`);
+      if (imported > 0) {
+        toast.success(
+          hasMore
+            ? `Historico sincronizado (${imported} mensagens). Ainda ha mais mensagens; execute a recuperacao novamente para continuar.`
+            : `Historico sincronizado (${imported} mensagens). Use "Carregar mais" para navegar nas mais antigas.`,
+        );
       } else {
         toast.info('A Whapi nao retornou mensagens adicionais para esta conversa agora.');
       }

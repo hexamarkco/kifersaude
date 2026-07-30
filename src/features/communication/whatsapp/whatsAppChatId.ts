@@ -19,6 +19,11 @@ export const normalizeWhapiDirectChatId = (value?: string | null) => {
     return phone ? `${phone}@s.whatsapp.net` : normalizedDomain;
   }
 
+  if (/@lid$/i.test(raw)) {
+    const identifier = raw.replace(/@lid$/i, '').trim();
+    return identifier ? `${identifier}@lid` : '';
+  }
+
   if (raw.includes('@')) return raw;
 
   const phone = normalizeCommWhatsAppPhoneDigits(raw);

@@ -1,14 +1,11 @@
 // @ts-expect-error Deno npm import
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
-  applyCommWhatsAppMessageEdit,
-  cacheCommWhatsAppMedia,
-  cacheCommWhatsAppChatContactName,
+  applyCommWhatsAppMessageMutation,
   COMM_WHATSAPP_CHANNEL_SLUG,
   COMM_WHATSAPP_WEBHOOK_SECRET_HEADER,
   corsHeaders,
   extractWhapiDeletedMessageEvent,
-  ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiContactCardMeta,
   extractWhapiEditedMessageEvent,
@@ -17,8 +14,6 @@ import {
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
-  fetchWhapiChatName,
-  fetchWhapiContactName,
   formatPhoneLabel,
   getCommWhatsAppWebhookSecret,
   getDirectChatDisplayNameCandidate,
@@ -26,9 +21,7 @@ import {
   getNowIso,
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
-  isValidCommWhatsAppDisplayName,
   isRecord,
-  markCommWhatsAppMessageDeleted,
   normalizeCommWhatsAppPhone,
   normalizeWhapiChatId,
   persistCommWhatsAppMessage,
@@ -197,7 +190,6 @@ async function persistMessageFromWebhook(
   supabaseAdmin: SupabaseClient,
   channel: ChannelRow,
   message: Record<string, unknown>,
-  whapiToken: string,
   eventAction: string,
   patch: WhapiWebhookMessagePatch | null,
 ) {
@@ -210,82 +202,46 @@ async function persistMessageFromWebhook(
   const summaryText = summarizeWhapiMessage(message);
   const reactionEvent = extractWhapiReactionEvent(mutationSource, eventAction);
   if (reactionEvent?.targetExternalMessageId) {
-    const { data: targetMessage, error: targetMessageError } = await supabaseAdmin
-      .from('comm_whatsapp_messages')
-      .select('id, chat_id, metadata')
-      .eq('channel_id', channel.id)
-      .eq('external_message_id', reactionEvent.targetExternalMessageId)
-      .maybeSingle();
+    const mutation = await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+      channelId: channel.id,
+      targetExternalMessageId: reactionEvent.targetExternalMessageId,
+      mutationType: 'reaction',
+      eventExternalMessageId: reactionEvent.eventExternalMessageId,
+      occurredAt: reactionEvent.reactedAt,
+      payload: {
+        actor_key: reactionEvent.actorKey,
+        emoji: reactionEvent.emoji,
+        from_me: reactionEvent.fromMe,
+        from: reactionEvent.from,
+        from_name: reactionEvent.fromName,
+      },
+      dedupeKey: reactionEvent.eventExternalMessageId
+        || `reaction:${reactionEvent.targetExternalMessageId}:${reactionEvent.actorKey}:${reactionEvent.reactedAt}`,
+    });
 
-    if (targetMessageError) {
-      throw new Error(`Erro ao localizar mensagem reagida: ${targetMessageError.message}`);
-    }
-
-    if (targetMessage) {
-      const metadata = isRecord(targetMessage.metadata) ? targetMessage.metadata : {};
-      const reactions = Array.isArray(metadata.reactions)
-        ? metadata.reactions.filter((item): item is Record<string, unknown> => isRecord(item))
-        : [];
-      const withoutActorReaction = reactions.filter((item) => toTrimmedString(item.actor_key) !== reactionEvent.actorKey);
-      const nextReactions = reactionEvent.emoji
-        ? [
-            ...withoutActorReaction,
-            {
-              actor_key: reactionEvent.actorKey,
-              emoji: reactionEvent.emoji,
-              from_me: reactionEvent.fromMe,
-              from: reactionEvent.from,
-              from_name: reactionEvent.fromName,
-              reacted_at: reactionEvent.reactedAt,
-              target_external_message_id: reactionEvent.targetExternalMessageId,
-            },
-          ]
-        : withoutActorReaction;
-
-      const { error: updateReactionError } = await supabaseAdmin
-        .from('comm_whatsapp_messages')
-        .update({
-          metadata: {
-            ...metadata,
-            reactions: nextReactions,
-            last_reaction_at: reactionEvent.reactedAt,
-          },
-          status_updated_at: reactionEvent.reactedAt,
-        })
-        .eq('id', targetMessage.id);
-
-      if (updateReactionError) {
-        throw new Error(`Erro ao atualizar reações da mensagem: ${updateReactionError.message}`);
-      }
-
-      if (reactionEvent.eventExternalMessageId) {
-        await supabaseAdmin
-          .from('comm_whatsapp_messages')
-          .delete()
-          .eq('channel_id', channel.id)
-          .eq('external_message_id', reactionEvent.eventExternalMessageId)
-          .eq('message_type', 'action');
-      }
-
-      return { id: targetMessage.chat_id };
-    }
+    // A reaction action is never a standalone Inbox message. A durable pending
+    // mutation preserves it until the base message arrives.
+    return { id: mutation.chatId || '' };
   }
 
   const deletedEvent = extractWhapiDeletedMessageEvent(mutationSource, eventAction);
   if (deletedEvent?.targetExternalMessageId) {
-    const deletedTarget = await markCommWhatsAppMessageDeleted(supabaseAdmin, {
+    const mutation = await applyCommWhatsAppMessageMutation(supabaseAdmin, {
       channelId: channel.id,
       targetExternalMessageId: deletedEvent.targetExternalMessageId,
-      deletedAt: deletedEvent.deletedAt,
-      originalText: deletedEvent.originalText,
-      actionType: deletedEvent.actionType,
-      deletedBy: deletedEvent.deletedBy,
+      mutationType: 'delete',
       eventExternalMessageId: deletedEvent.eventExternalMessageId,
+      occurredAt: deletedEvent.deletedAt,
+      payload: {
+        original_text: deletedEvent.originalText,
+        action_type: deletedEvent.actionType,
+        deleted_by: deletedEvent.deletedBy,
+      },
+      dedupeKey: deletedEvent.eventExternalMessageId
+        || `delete:${deletedEvent.targetExternalMessageId}:${deletedEvent.deletedAt}`,
     });
 
-    if (deletedTarget) {
-      return { id: deletedTarget.chatId };
-    }
+    return { id: mutation.chatId || '' };
   }
 
   const explicitEditedEvent = extractWhapiEditedMessageEvent(mutationSource, eventAction);
@@ -304,18 +260,23 @@ async function persistMessageFromWebhook(
     : null;
   const editedEvent = explicitEditedEvent?.editedText ? explicitEditedEvent : patchEditedEvent;
   if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
-    const editedTarget = await applyCommWhatsAppMessageEdit(supabaseAdmin, {
+    const mutation = await applyCommWhatsAppMessageMutation(supabaseAdmin, {
       channelId: channel.id,
-      eventExternalMessageId: editedEvent.eventExternalMessageId,
       targetExternalMessageId: editedEvent.targetExternalMessageId,
-      editedText: editedEvent.editedText,
-      editedAt: editedEvent.editedAt || getNowIso(),
-      originalText: editedEvent.originalText,
-      actionType: editedEvent.actionType,
+      mutationType: 'edit',
+      eventExternalMessageId: editedEvent.eventExternalMessageId,
+      occurredAt: editedEvent.editedAt || getNowIso(),
+      payload: {
+        edited_text: editedEvent.editedText,
+        original_text: editedEvent.originalText,
+        action_type: editedEvent.actionType,
+      },
+      dedupeKey: editedEvent.eventExternalMessageId
+        || `edit:${editedEvent.targetExternalMessageId}:${editedEvent.editedAt || message.id || getNowIso()}`,
     });
 
-    if (editedTarget) {
-      return { id: editedTarget.chatId };
+    if (explicitEditedEvent || mutation.applied) {
+      return { id: mutation.chatId || '' };
     }
   }
 
@@ -323,10 +284,7 @@ async function persistMessageFromWebhook(
   const direction = message.from_me === true ? 'outbound' : 'inbound';
   const phoneDigits = extractPhoneFromChatId(externalChatId);
   const messageName = getDirectChatDisplayNameCandidate(message, direction);
-  const whapiChatName = !patch && whapiToken
-    ? await fetchWhapiChatName({ token: whapiToken, chatId: externalChatId }).catch(() => '')
-    : '';
-  let resolvedName = whapiChatName || messageName;
+  let resolvedName = messageName;
 
   if (
     resolvedName &&
@@ -342,18 +300,6 @@ async function persistMessageFromWebhook(
 
   if (!resolvedName && existingChat?.push_name && !isOwnChannelName(existingChat.push_name, channel.connected_user_name)) {
     resolvedName = existingChat.push_name;
-  }
-
-  if (isValidCommWhatsAppDisplayName(whapiChatName) && !isOwnChannelName(whapiChatName, channel.connected_user_name)) {
-    await cacheCommWhatsAppChatContactName(supabaseAdmin, {
-      channelId: channel.id,
-      phoneNumber: phoneDigits,
-      displayName: whapiChatName,
-    });
-  }
-
-  if (!resolvedName && !patch && whapiToken) {
-    resolvedName = await fetchWhapiContactName({ token: whapiToken, contactId: phoneDigits }).catch(() => '');
   }
 
   const fallbackDisplayName = formatPhoneLabel(phoneDigits);
@@ -379,8 +325,8 @@ async function persistMessageFromWebhook(
     channelId: channel.id,
     externalChatId,
     phoneNumber: phoneDigits || null,
-      displayName,
-      pushName: resolvedName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
+    displayName,
+    pushName: resolvedName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
     lastMessageText: summaryText,
     lastMessageDirection: direction,
     lastMessageAt: messageAt,
@@ -427,19 +373,6 @@ async function persistMessageFromWebhook(
     },
   });
 
-  if (!patch && whapiToken && mediaMeta.mediaId) {
-    await cacheCommWhatsAppMedia(supabaseAdmin, {
-      token: whapiToken,
-      mediaId: mediaMeta.mediaId,
-      mediaUrl: mediaMeta.mediaUrl,
-      fallbackMimeType: mediaMeta.mediaMimeType,
-      fallbackFileName: mediaMeta.mediaFileName,
-    }).catch((error) => {
-      console.warn('[comm-whatsapp-webhook] falha ao arquivar mídia do WhatsApp', error);
-      return null;
-    });
-  }
-
   return { id: result.chatId };
 }
 
@@ -456,11 +389,13 @@ async function applyMessageStatus(
   const statusUpdatedAt = stringTimestampToIso(statusItem.timestamp) || getNowIso();
 
   if (deliveryStatus === 'deleted') {
-    await markCommWhatsAppMessageDeleted(supabaseAdmin, {
+    await applyCommWhatsAppMessageMutation(supabaseAdmin, {
       channelId,
       targetExternalMessageId: externalMessageId,
-      deletedAt: statusUpdatedAt,
-      actionType: 'deleted',
+      mutationType: 'delete',
+      occurredAt: statusUpdatedAt,
+      payload: { action_type: 'deleted', deleted_by: null },
+      dedupeKey: `status-delete:${externalMessageId}:${statusUpdatedAt}`,
     });
     return;
   }
@@ -571,9 +506,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const settings = await ensureCommWhatsAppSettings(supabaseAdmin);
-    const whapiToken = settings.token;
-
     const event = isRecord(payload.event) ? payload.event : {};
     const eventType = toTrimmedString(event.type).toLowerCase();
     const eventAction = toTrimmedString(event.event).toLowerCase();
@@ -609,7 +541,6 @@ Deno.serve(async (req: Request) => {
           supabaseAdmin,
           channel,
           item.message,
-          whapiToken,
           eventAction,
           item.patch,
         );

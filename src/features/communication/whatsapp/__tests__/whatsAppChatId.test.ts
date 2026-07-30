@@ -17,3 +17,7 @@ test('canonicalizes direct Whapi chat ids before sending', () => {
 test('preserves non-direct chat identifiers', () => {
   assert.equal(normalizeWhapiDirectChatId('120363000000000000@g.us'), '120363000000000000@g.us');
 });
+
+test('canonicalizes direct LID identifiers without treating them as phone numbers', () => {
+  assert.equal(normalizeWhapiDirectChatId('123456789@LID'), '123456789@lid');
+});

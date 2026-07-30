@@ -2,8 +2,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
-  applyCommWhatsAppMessageEdit,
-  cacheCommWhatsAppMedia,
+  applyCommWhatsAppMessageMutation,
   cacheCommWhatsAppChatContactName,
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -18,21 +17,22 @@ import {
   extractWhapiReactionEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
-  fetchWhapiChatMessages,
+  fetchWhapiChatMessagesPage,
   fetchWhapiChatName,
   fetchWhapiContactName,
   formatPhoneLabel,
   getDirectChatDisplayNameCandidate,
   getNowIso,
   isDirectWhapiChatId,
+  isWhapiLidChatId,
   isPhoneLabelLikeDisplayName,
   isValidCommWhatsAppDisplayName,
-  markCommWhatsAppMessageDeleted,
   normalizeWhapiChatId,
   persistCommWhatsAppMessage,
   summarizeWhapiMessage,
   toTrimmedString,
   unixTimestampToIso,
+  resolveWhapiLidToPhone,
 } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
@@ -44,6 +44,9 @@ declare const Deno: {
 
 type SyncBody = {
   chatId?: string;
+  offset?: number;
+  count?: number;
+  timeTo?: number;
 };
 
 type ChatRow = {
@@ -175,6 +178,12 @@ Deno.serve(async (req: Request) => {
 
     const body = (await req.json().catch(() => ({}))) as SyncBody;
     const externalChatId = normalizeWhapiChatId(body.chatId);
+    const offset = Math.max(Math.floor(Number(body.offset) || 0), 0);
+    const pageSize = Math.min(Math.max(Math.floor(Number(body.count) || 100), 1), 500);
+    const requestedTimeTo = Number(body.timeTo);
+    const timeTo = Number.isFinite(requestedTimeTo) && requestedTimeTo > 0
+      ? Math.floor(requestedTimeTo)
+      : Math.floor(Date.now() / 1000);
 
     if (!externalChatId || !isDirectWhapiChatId(externalChatId)) {
       return new Response(JSON.stringify({ error: 'Conversa invalida para sincronizacao.' }), {
@@ -199,7 +208,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
-    const phoneDigits = extractPhoneFromChatId(externalChatId);
+    let phoneDigits = extractPhoneFromChatId(externalChatId);
+    if (!phoneDigits && isWhapiLidChatId(externalChatId)) {
+      phoneDigits = await resolveWhapiLidToPhone({ token: settings.token, chatId: externalChatId }).catch(() => '');
+    }
     const existingChat = await findExistingChat(supabaseAdmin, channel.id, externalChatId);
     let whapiName = await fetchWhapiChatName({ token: settings.token, chatId: externalChatId }).catch(() => '');
     if (
@@ -213,7 +225,7 @@ Deno.serve(async (req: Request) => {
       whapiName = '';
     }
 
-    if (isValidCommWhatsAppDisplayName(whapiName) && !isOwnChannelName(whapiName, channel.connected_user_name)) {
+    if (phoneDigits && isValidCommWhatsAppDisplayName(whapiName) && !isOwnChannelName(whapiName, channel.connected_user_name)) {
       await cacheCommWhatsAppChatContactName(supabaseAdmin, {
         channelId: channel.id,
         phoneNumber: phoneDigits,
@@ -221,7 +233,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!whapiName) {
+    if (!whapiName && phoneDigits) {
       whapiName = await fetchWhapiContactName({ token: settings.token, contactId: phoneDigits }).catch(() => '');
     }
     const existingLooksLikeOwnName = Boolean(
@@ -241,8 +253,8 @@ Deno.serve(async (req: Request) => {
         {
           channel_id: channel.id,
           external_chat_id: externalChatId,
-          phone_number: phoneDigits,
-          phone_digits: phoneDigits,
+          phone_number: phoneDigits || '',
+          phone_digits: phoneDigits || '',
           display_name: displayName,
           push_name: whapiName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
         },
@@ -255,7 +267,15 @@ Deno.serve(async (req: Request) => {
       throw new Error(chatError?.message || 'Nao foi possivel preparar a conversa para sincronizacao.');
     }
 
-    const messages = dedupeWhapiHistoryMessages(await fetchWhapiChatMessages({ token: settings.token, chatId: externalChatId }));
+    const messagePage = await fetchWhapiChatMessagesPage({
+      token: settings.token,
+      chatId: externalChatId,
+      count: pageSize,
+      offset,
+      timeTo,
+      sort: 'asc',
+    });
+    const messages = dedupeWhapiHistoryMessages(messagePage.messages);
     const orderedMessages = [...messages].sort((a, b) => {
       const aTime = Number(a.timestamp ?? 0);
       const bTime = Number(b.timestamp ?? 0);
@@ -268,101 +288,62 @@ Deno.serve(async (req: Request) => {
     for (const message of orderedMessages) {
       const reactionEvent = extractWhapiReactionEvent(message, 'messages');
       if (reactionEvent?.targetExternalMessageId) {
-        const { data: targetMessage, error: targetMessageError } = await supabaseAdmin
-          .from('comm_whatsapp_messages')
-          .select('id, metadata')
-          .eq('channel_id', channel.id)
-          .eq('external_message_id', reactionEvent.targetExternalMessageId)
-          .maybeSingle();
-
-        if (targetMessageError) {
-          throw new Error(`Erro ao localizar mensagem reagida na sincronização: ${targetMessageError.message}`);
-        }
-
-        if (targetMessage) {
-          const metadata = targetMessage.metadata && typeof targetMessage.metadata === 'object' && !Array.isArray(targetMessage.metadata)
-            ? targetMessage.metadata as Record<string, unknown>
-            : {};
-          const reactions = Array.isArray(metadata.reactions)
-            ? metadata.reactions.filter((item): item is Record<string, unknown> => item && typeof item === 'object' && !Array.isArray(item))
-            : [];
-          const withoutActorReaction = reactions.filter((item) => toTrimmedString(item.actor_key) !== reactionEvent.actorKey);
-          const nextReactions = reactionEvent.emoji
-            ? [
-                ...withoutActorReaction,
-                {
-                  actor_key: reactionEvent.actorKey,
-                  emoji: reactionEvent.emoji,
-                  from_me: reactionEvent.fromMe,
-                  from: reactionEvent.from,
-                  from_name: reactionEvent.fromName,
-                  reacted_at: reactionEvent.reactedAt,
-                  target_external_message_id: reactionEvent.targetExternalMessageId,
-                },
-              ]
-            : withoutActorReaction;
-
-          const { error: updateReactionError } = await supabaseAdmin
-            .from('comm_whatsapp_messages')
-            .update({
-              metadata: {
-                ...metadata,
-                reactions: nextReactions,
-                last_reaction_at: reactionEvent.reactedAt,
-              },
-              status_updated_at: reactionEvent.reactedAt,
-            })
-            .eq('id', targetMessage.id);
-
-          if (updateReactionError) {
-            throw new Error(`Erro ao sincronizar reações da mensagem: ${updateReactionError.message}`);
-          }
-
-          if (reactionEvent.eventExternalMessageId) {
-            await supabaseAdmin
-              .from('comm_whatsapp_messages')
-              .delete()
-              .eq('channel_id', channel.id)
-              .eq('external_message_id', reactionEvent.eventExternalMessageId)
-              .eq('message_type', 'action');
-          }
-
-          continue;
-        }
+        await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+          channelId: channel.id,
+          targetExternalMessageId: reactionEvent.targetExternalMessageId,
+          mutationType: 'reaction',
+          eventExternalMessageId: reactionEvent.eventExternalMessageId,
+          occurredAt: reactionEvent.reactedAt,
+          payload: {
+            actor_key: reactionEvent.actorKey,
+            emoji: reactionEvent.emoji,
+            from_me: reactionEvent.fromMe,
+            from: reactionEvent.from,
+            from_name: reactionEvent.fromName,
+          },
+          dedupeKey: reactionEvent.eventExternalMessageId
+            || `history-reaction:${reactionEvent.targetExternalMessageId}:${reactionEvent.actorKey}:${reactionEvent.reactedAt}`,
+        });
+        continue;
       }
 
       const deletedEvent = extractWhapiDeletedMessageEvent(message, 'messages');
       if (deletedEvent?.targetExternalMessageId) {
-        const deletedTarget = await markCommWhatsAppMessageDeleted(supabaseAdmin, {
+        await applyCommWhatsAppMessageMutation(supabaseAdmin, {
           channelId: channel.id,
           targetExternalMessageId: deletedEvent.targetExternalMessageId,
-          deletedAt: deletedEvent.deletedAt,
-          originalText: deletedEvent.originalText,
-          actionType: deletedEvent.actionType,
-          deletedBy: deletedEvent.deletedBy,
+          mutationType: 'delete',
           eventExternalMessageId: deletedEvent.eventExternalMessageId,
+          occurredAt: deletedEvent.deletedAt,
+          payload: {
+            original_text: deletedEvent.originalText,
+            action_type: deletedEvent.actionType,
+            deleted_by: deletedEvent.deletedBy,
+          },
+          dedupeKey: deletedEvent.eventExternalMessageId
+            || `history-delete:${deletedEvent.targetExternalMessageId}:${deletedEvent.deletedAt}`,
         });
-
-        if (deletedTarget) {
-          continue;
-        }
+        continue;
       }
 
       const editedEvent = extractWhapiEditedMessageEvent(message, 'messages');
       if (editedEvent?.targetExternalMessageId && editedEvent.editedText) {
-        const editedTarget = await applyCommWhatsAppMessageEdit(supabaseAdmin, {
+        const editedAt = editedEvent.editedAt || getNowIso();
+        await applyCommWhatsAppMessageMutation(supabaseAdmin, {
           channelId: channel.id,
-          eventExternalMessageId: editedEvent.eventExternalMessageId,
           targetExternalMessageId: editedEvent.targetExternalMessageId,
-          editedText: editedEvent.editedText,
-          editedAt: editedEvent.editedAt || getNowIso(),
-          originalText: editedEvent.originalText,
-          actionType: editedEvent.actionType,
+          mutationType: 'edit',
+          eventExternalMessageId: editedEvent.eventExternalMessageId,
+          occurredAt: editedAt,
+          payload: {
+            edited_text: editedEvent.editedText,
+            original_text: editedEvent.originalText,
+            action_type: editedEvent.actionType,
+          },
+          dedupeKey: editedEvent.eventExternalMessageId
+            || `history-edit:${editedEvent.targetExternalMessageId}:${editedAt}`,
         });
-
-        if (editedTarget) {
-          continue;
-        }
+        continue;
       }
 
       const direction = message.from_me === true ? 'outbound' : 'inbound';
@@ -448,19 +429,6 @@ Deno.serve(async (req: Request) => {
         },
       });
 
-      if (mediaMeta.mediaId) {
-        await cacheCommWhatsAppMedia(supabaseAdmin, {
-          token: settings.token,
-          mediaId: mediaMeta.mediaId,
-          mediaUrl: mediaMeta.mediaUrl,
-          fallbackMimeType: mediaMeta.mediaMimeType,
-          fallbackFileName: mediaMeta.mediaFileName,
-        }).catch((error) => {
-          console.warn('[comm-whatsapp-sync-chat] falha ao arquivar mídia do WhatsApp', error);
-          return null;
-        });
-      }
-
       if (persisted.inserted) {
         insertedCount += 1;
       } else {
@@ -468,7 +436,17 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, fetched: orderedMessages.length, imported: insertedCount, inserted: insertedCount, updated: updatedCount }), {
+    const hasMore = messagePage.hasMore && messagePage.nextOffset > offset;
+    return new Response(JSON.stringify({
+      success: true,
+      fetched: orderedMessages.length,
+      imported: insertedCount,
+      inserted: insertedCount,
+      updated: updatedCount,
+      hasMore,
+      nextOffset: hasMore ? messagePage.nextOffset : null,
+      timeTo,
+    }), {
       status: 200,
       headers: jsonHeaders,
     });

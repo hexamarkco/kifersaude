@@ -1160,9 +1160,12 @@ export const commWhatsAppService = {
     return messages;
   },
 
-  async syncChatHistory(chatId: string): Promise<{ imported: number; fetched: number; inserted: number; updated: number }> {
+  async syncChatHistory(
+    chatId: string,
+    options: { offset?: number; count?: number; timeTo?: number } = {},
+  ): Promise<{ imported: number; fetched: number; inserted: number; updated: number; hasMore: boolean; nextOffset: number | null; timeTo: number | null }> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-sync-chat', {
-      body: { chatId },
+      body: { chatId, ...options },
     });
 
     if (error) {
@@ -1178,12 +1181,23 @@ export const commWhatsAppService = {
       throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel sincronizar o historico da conversa.'));
     }
 
-    const payload = (data ?? {}) as { imported?: number; fetched?: number; inserted?: number; updated?: number };
+    const payload = (data ?? {}) as {
+      imported?: number;
+      fetched?: number;
+      inserted?: number;
+      updated?: number;
+      hasMore?: boolean;
+      nextOffset?: number | null;
+      timeTo?: number | null;
+    };
     return {
       imported: typeof payload.imported === 'number' ? payload.imported : 0,
       fetched: typeof payload.fetched === 'number' ? payload.fetched : 0,
       inserted: typeof payload.inserted === 'number' ? payload.inserted : typeof payload.imported === 'number' ? payload.imported : 0,
       updated: typeof payload.updated === 'number' ? payload.updated : 0,
+      hasMore: payload.hasMore === true,
+      nextOffset: typeof payload.nextOffset === 'number' && payload.nextOffset >= 0 ? payload.nextOffset : null,
+      timeTo: typeof payload.timeTo === 'number' && payload.timeTo > 0 ? payload.timeTo : null,
     };
   },
 

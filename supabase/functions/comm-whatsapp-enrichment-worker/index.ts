@@ -7,12 +7,15 @@ import {
   corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  extractPhoneFromChatId,
   fetchWhapiChatName,
   fetchWhapiContactName,
   getNowIso,
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
   isValidCommWhatsAppDisplayName,
+  isWhapiLidChatId,
+  resolveWhapiLidToPhone,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
 
@@ -139,6 +142,31 @@ async function processIdentityJob(params: {
 
   if (error) throw new Error(`Erro ao carregar chat para enriquecimento: ${error.message}`);
   if (!chat || !isDirectWhapiChatId(chat.external_chat_id)) return;
+
+  if (isWhapiLidChatId(chat.external_chat_id)) {
+    const resolvedPhone = await resolveWhapiLidToPhone({ token: params.token, chatId: chat.external_chat_id }).catch(() => '');
+    if (resolvedPhone) {
+      const phoneChatId = `${resolvedPhone}@s.whatsapp.net`;
+      const { data: reconcileData, error: reconcileError } = await params.supabaseAdmin.rpc('comm_whatsapp_reconcile_lid_identifier', {
+        p_channel_id: chat.channel_id,
+        p_lid_external_chat_id: chat.external_chat_id,
+        p_phone_external_chat_id: phoneChatId,
+      });
+      if (!reconcileError && reconcileData) {
+        const reconcileRow = Array.isArray(reconcileData) ? reconcileData[0] : reconcileData;
+        if (reconcileRow?.merged && reconcileRow.chat_id) {
+          const { data: canonicalChat } = await params.supabaseAdmin
+            .from('comm_whatsapp_chats')
+            .select('id,channel_id,external_chat_id,phone_digits,push_name')
+            .eq('id', reconcileRow.chat_id)
+            .maybeSingle();
+          if (canonicalChat) {
+            chat = canonicalChat;
+          }
+        }
+      }
+    }
+  }
 
   let displayName = await fetchWhapiChatName({ token: params.token, chatId: chat.external_chat_id });
   if (

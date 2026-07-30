@@ -7,6 +7,7 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
+  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   parseWhapiError,
@@ -347,7 +348,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const caption = retryTarget.media_caption || (retryTarget.text_content?.startsWith('[') ? '' : retryTarget.text_content || '');
-    const response = await fetch(`${WHAPI_BASE_URL}/messages/${retryTarget.message_type}`, {
+    const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${retryTarget.message_type}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -359,7 +360,7 @@ Deno.serve(async (req: Request) => {
         media: retryTarget.media_id,
         caption: retryTarget.message_type === 'voice' ? undefined : caption || undefined,
       }),
-    });
+    }, 30_000);
 
     const whapiPayload = await readResponsePayload(response);
 

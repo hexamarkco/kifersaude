@@ -209,10 +209,26 @@ Deno.serve(async (req: Request) => {
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
     let phoneDigits = extractPhoneFromChatId(externalChatId);
+    let canonicalExternalChatId = externalChatId;
     if (!phoneDigits && isWhapiLidChatId(externalChatId)) {
       phoneDigits = await resolveWhapiLidToPhone({ token: settings.token, chatId: externalChatId }).catch(() => '');
+      if (phoneDigits) {
+        const phoneChatId = `${phoneDigits}@s.whatsapp.net`;
+        const { data: reconcileData, error: reconcileError } = await supabaseAdmin.rpc('comm_whatsapp_reconcile_lid_identifier', {
+          p_channel_id: channel.id,
+          p_lid_external_chat_id: externalChatId,
+          p_phone_external_chat_id: phoneChatId,
+        });
+        if (!reconcileError && reconcileData) {
+          const reconcileRow = Array.isArray(reconcileData) ? reconcileData[0] : reconcileData;
+          if (reconcileRow?.merged && reconcileRow.external_chat_id) {
+            canonicalExternalChatId = reconcileRow.external_chat_id;
+            phoneDigits = extractPhoneFromChatId(canonicalExternalChatId) || phoneDigits;
+          }
+        }
+      }
     }
-    const existingChat = await findExistingChat(supabaseAdmin, channel.id, externalChatId);
+    const existingChat = await findExistingChat(supabaseAdmin, channel.id, canonicalExternalChatId);
     let whapiName = await fetchWhapiChatName({ token: settings.token, chatId: externalChatId }).catch(() => '');
     if (
       whapiName &&
@@ -252,7 +268,7 @@ Deno.serve(async (req: Request) => {
       .upsert(
         {
           channel_id: channel.id,
-          external_chat_id: externalChatId,
+          external_chat_id: canonicalExternalChatId,
           phone_number: phoneDigits || '',
           phone_digits: phoneDigits || '',
           display_name: displayName,

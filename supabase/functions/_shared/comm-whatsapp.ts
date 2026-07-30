@@ -179,7 +179,7 @@ export const toTrimmedString = (value: unknown): string => (typeof value === 'st
 
 export const sanitizeWhapiToken = (value: string): string => value.replace(/^Bearer\s+/i, '').trim();
 
-const getWhapiToken = (): string => sanitizeWhapiToken(Deno.env.get('WHAPI_TOKEN') || '');
+export const getWhapiToken = (): string => sanitizeWhapiToken(Deno.env.get('WHAPI_TOKEN') || '');
 
 export const getCommWhatsAppWebhookSecret = (): string =>
   toTrimmedString(Deno.env.get(COMM_WHATSAPP_WEBHOOK_SECRET_ENV));
@@ -1857,15 +1857,9 @@ export const getHealthStatusText = (payload: unknown): string => {
   return 'unknown';
 };
 
-export const buildWebhookUrl = (supabaseUrl: string, legacySecret: string): string => {
+export const buildWebhookUrl = (supabaseUrl: string): string => {
   const normalizedUrl = supabaseUrl.replace(/\/$/, '');
   const query = new URLSearchParams({ channel: COMM_WHATSAPP_CHANNEL_SLUG });
-
-  // Once the Edge Secret is configured, Whapi authenticates with a custom
-  // header and the callback URL no longer carries a reusable credential.
-  if (!getCommWhatsAppWebhookSecret() && legacySecret) {
-    query.set('secret', legacySecret);
-  }
 
   return `${normalizedUrl}/functions/v1/comm-whatsapp-webhook?${query.toString()}`;
 };
@@ -2044,13 +2038,13 @@ export async function fetchWhapiContactsPage(params: {
     query.set('offset', String(Math.max(0, Math.floor(params.offset))));
   }
 
-  const response = await fetch(`${WHAPI_BASE_URL}/contacts${query.size ? `?${query.toString()}` : ''}`, {
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/contacts${query.size ? `?${query.toString()}` : ''}`, {
     method: 'GET',
     headers: {
       Accept: 'application/json',
       Authorization: `Bearer ${params.token}`,
     },
-  });
+  }, 15_000);
 
   const payload = await readResponsePayload(response);
   if (!response.ok) {
@@ -2350,7 +2344,7 @@ export async function checkWhapiContactExists(params: {
     return false;
   }
 
-  const response = await fetch(`${WHAPI_BASE_URL}/contacts`, {
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/contacts`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -2361,7 +2355,7 @@ export async function checkWhapiContactExists(params: {
       contacts: [digits],
       force_check: true,
     }),
-  });
+  }, 10_000);
 
   if (!response.ok) {
     return false;

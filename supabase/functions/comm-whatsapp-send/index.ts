@@ -12,6 +12,7 @@ import {
   extractWhapiMediaId,
   extractWhapiMessageId,
   extractWhapiUploadMediaId,
+  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   isDirectWhapiChatId,
@@ -369,12 +370,12 @@ const deriveVoiceFileName = (mimeType: string, originalName: string) => {
 };
 
 const fileBytesToDataUrl = (bytes: Uint8Array, mimeType: string, fileName: string) => {
-  let binary = '';
-  for (let index = 0; index < bytes.length; index += 1) {
-    binary += String.fromCharCode(bytes[index]);
+  const chunks: string[] = [];
+  const chunkSize = 0xFFFF;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    chunks.push(String.fromCharCode(...bytes.subarray(i, i + chunkSize)));
   }
-
-  return `data:${mimeType};name=${fileName};base64,${btoa(binary)}`;
+  return `data:${mimeType};name=${fileName};base64,${btoa(chunks.join(''))}`;
 };
 
 async function sendAudioLikeWhapi(params: {
@@ -393,137 +394,83 @@ async function sendAudioLikeWhapi(params: {
       ? deriveVoiceFileName(cleanMimeType, params.file.name || 'voice-note')
       : sanitizeFileName(params.file.name || 'audio-file', 'audio-file');
 
+  const AUDIO_KIND_TIMEOUT_MS = 30_000;
+  const AUDIO_UPLOAD_TIMEOUT_MS = 60_000;
+
+  const freshFile = new File([bytes], normalizedFileName, { type: cleanMimeType });
+
+  const buildWhapiFormData = (form: FormData) => {
+    form.append('to', params.chatId);
+    if (params.kind !== 'voice' && params.caption) form.append('caption', params.caption);
+    if (params.kind === 'voice' && params.waveform) form.append('waveform', params.waveform);
+    if (params.quotedMessageId) form.append('quoted', params.quotedMessageId);
+  };
+
+  // 1st attempt: FormData with file attachment
+  const formData = new FormData();
+  buildWhapiFormData(formData);
+  formData.append('media', freshFile, freshFile.name);
+
+  let response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${params.token}` },
+    body: formData,
+  }, AUDIO_KIND_TIMEOUT_MS);
+  let payload = await readResponsePayload(response);
+
+  if (response.ok) {
+    return { response, payload, mediaId: extractWhapiMediaId(payload) };
+  }
+
+  // 2nd attempt: Upload media to Whapi, then send by media ID
+  const uploadForm = new FormData();
+  uploadForm.append('media', freshFile, freshFile.name);
+
+  const uploadResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/media`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${params.token}` },
+    body: uploadForm,
+  }, AUDIO_UPLOAD_TIMEOUT_MS);
+  const uploadPayload = await readResponsePayload(uploadResponse);
+
+  if (uploadResponse.ok) {
+    const uploadedMediaId = extractWhapiUploadMediaId(uploadPayload);
+    if (uploadedMediaId) {
+      const mediaIdPayload: Record<string, unknown> = { to: params.chatId, media: uploadedMediaId };
+
+      if (params.kind !== 'voice' && params.caption) mediaIdPayload.caption = params.caption;
+      if (params.kind === 'voice' && params.waveform) mediaIdPayload.waveform = params.waveform;
+      if (params.quotedMessageId) mediaIdPayload.quoted = params.quotedMessageId;
+
+      response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${params.token}` },
+        body: JSON.stringify(mediaIdPayload),
+      }, AUDIO_KIND_TIMEOUT_MS);
+      payload = await readResponsePayload(response);
+
+      return { response, payload, mediaId: uploadedMediaId };
+    }
+  }
+
+  // 3rd attempt: JSON with data-URL (last resort)
   const jsonPayload: Record<string, unknown> = {
     to: params.chatId,
     media: fileBytesToDataUrl(bytes, cleanMimeType, normalizedFileName),
   };
 
-  if (params.kind !== 'voice' && params.caption) {
-    jsonPayload.caption = params.caption;
-  }
+  if (params.kind !== 'voice' && params.caption) jsonPayload.caption = params.caption;
+  if (params.kind === 'voice' && params.waveform) jsonPayload.waveform = params.waveform;
+  if (params.quotedMessageId) jsonPayload.quoted = params.quotedMessageId;
 
-  if (params.kind === 'voice' && params.waveform) {
-    jsonPayload.waveform = params.waveform;
-  }
-
-  if (params.quotedMessageId) {
-    jsonPayload.quoted = params.quotedMessageId;
-  }
-
-  let response = await fetch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
+  response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${params.token}`,
-    },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${params.token}` },
     body: JSON.stringify(jsonPayload),
-  });
-  let payload = await readResponsePayload(response);
-
-  if (response.ok) {
-    return {
-      response,
-      payload,
-      mediaId: extractWhapiMediaId(payload),
-    };
-  }
-
-  const freshFile = new File([bytes], normalizedFileName, { type: cleanMimeType });
-  const messageForm = new FormData();
-  messageForm.append('to', params.chatId);
-  if (params.kind !== 'voice' && params.caption) {
-    messageForm.append('caption', params.caption);
-  }
-  if (params.kind === 'voice' && params.waveform) {
-    messageForm.append('waveform', params.waveform);
-  }
-  if (params.quotedMessageId) {
-    messageForm.append('quoted', params.quotedMessageId);
-  }
-  messageForm.append('media', freshFile, freshFile.name);
-
-  response = await fetch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${params.token}`,
-    },
-    body: messageForm,
-  });
+  }, AUDIO_KIND_TIMEOUT_MS);
   payload = await readResponsePayload(response);
 
-  if (response.ok) {
-    return {
-      response,
-      payload,
-      mediaId: extractWhapiMediaId(payload),
-    };
-  }
-
-  const uploadForm = new FormData();
-  uploadForm.append('media', freshFile, freshFile.name);
-
-  const uploadResponse = await fetch(`${WHAPI_BASE_URL}/media`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${params.token}`,
-    },
-    body: uploadForm,
-  });
-  const uploadPayload = await readResponsePayload(uploadResponse);
-
-  if (!uploadResponse.ok) {
-    return {
-      response: uploadResponse,
-      payload: uploadPayload,
-      mediaId: '',
-    };
-  }
-
-  const uploadedMediaId = extractWhapiUploadMediaId(uploadPayload);
-  if (!uploadedMediaId) {
-    return {
-      response: uploadResponse,
-      payload: uploadPayload,
-      mediaId: '',
-    };
-  }
-
-  const mediaIdPayload: Record<string, unknown> = {
-    to: params.chatId,
-    media: uploadedMediaId,
-  };
-
-  if (params.kind !== 'voice' && params.caption) {
-    mediaIdPayload.caption = params.caption;
-  }
-
-  if (params.kind === 'voice' && params.waveform) {
-    mediaIdPayload.waveform = params.waveform;
-  }
-
-  if (params.quotedMessageId) {
-    mediaIdPayload.quoted = params.quotedMessageId;
-  }
-
-  response = await fetch(`${WHAPI_BASE_URL}/messages/${params.kind}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${params.token}`,
-    },
-    body: JSON.stringify(mediaIdPayload),
-  });
-  payload = await readResponsePayload(response);
-
-  return {
-    response,
-    payload,
-    mediaId: uploadedMediaId,
-  };
+  return { response, payload, mediaId: extractWhapiMediaId(payload) };
 }
 
 async function sendDocumentWhapi(params: {
@@ -533,15 +480,17 @@ async function sendDocumentWhapi(params: {
   file: File;
   quotedMessageId?: string;
 }): Promise<{ response: Response; payload: unknown; mediaId: string }> {
-  const uploadResponse = await fetch(`${WHAPI_BASE_URL}/media`, {
+  const uploadForm = new FormData();
+  uploadForm.append('media', params.file, params.file.name);
+
+  const uploadResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/media`, {
     method: 'POST',
     headers: {
-      'Content-Type': stripMimeParameters(params.file.type || 'application/octet-stream'),
       Accept: 'application/json',
       Authorization: `Bearer ${params.token}`,
     },
-    body: params.file,
-  });
+    body: uploadForm,
+  }, 30_000);
   const uploadPayload = await readResponsePayload(uploadResponse);
 
   if (!uploadResponse.ok) {
@@ -569,7 +518,7 @@ async function sendDocumentWhapi(params: {
     messagePayload.quoted = params.quotedMessageId;
   }
 
-  const response = await fetch(`${WHAPI_BASE_URL}/messages/document`, {
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/document`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -577,7 +526,7 @@ async function sendDocumentWhapi(params: {
       Authorization: `Bearer ${params.token}`,
     },
     body: JSON.stringify(messagePayload),
-  });
+  }, 15_000);
 
   return {
     response,
@@ -868,14 +817,14 @@ Deno.serve(async (req: Request) => {
         }
         messageForm.append('media', mediaFile, mediaFile.name);
 
-        whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
+        whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${mediaKind}`, {
           method: 'POST',
           headers: {
             Accept: 'application/json',
             Authorization: `Bearer ${token}`,
           },
           body: messageForm,
-        });
+        }, 30_000);
       }
     } else {
       const textPayload: Record<string, unknown> = {
@@ -886,7 +835,7 @@ Deno.serve(async (req: Request) => {
         textPayload.quoted = quotedMessageId;
       }
 
-      whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
+      whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -898,7 +847,7 @@ Deno.serve(async (req: Request) => {
 
       if (whapiResponse.status >= 500) {
         await new Promise((resolve) => setTimeout(resolve, 900));
-        whapiResponse = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
+        whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -906,7 +855,7 @@ Deno.serve(async (req: Request) => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(textPayload),
-        });
+        }, 15_000);
       }
     }
 

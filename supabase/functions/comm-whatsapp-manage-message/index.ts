@@ -10,6 +10,7 @@ import {
   ensurePrimaryChannel,
   extractPhoneFromChatId,
   extractWhapiMessageId,
+  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   isDirectWhapiChatId,
@@ -231,7 +232,7 @@ Deno.serve(async (req: Request) => {
         editPayload.filename = mediaFileName;
       }
 
-      const response = await fetch(`${WHAPI_BASE_URL}/messages/${isMediaEdit ? messageType : 'text'}`, {
+      const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${isMediaEdit ? messageType : 'text'}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -239,7 +240,7 @@ Deno.serve(async (req: Request) => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(editPayload),
-      });
+      }, 15_000);
       const payload = await readResponsePayload(response);
 
       if (!response.ok) {
@@ -293,7 +294,7 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(externalMessageId)}`, {
+      const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(externalMessageId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -304,7 +305,7 @@ Deno.serve(async (req: Request) => {
           to: targetChatId,
           force: true,
         }),
-      });
+      }, 15_000);
       const payload = await readResponsePayload(response);
 
       if (!response.ok) {
@@ -372,13 +373,13 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(externalMessageId)}`, {
+    const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(externalMessageId)}`, {
       method: 'DELETE',
       headers: {
         Accept: 'application/json',
         Authorization: `Bearer ${token}`,
       },
-    });
+    }, 15_000);
     const payload = await readResponsePayload(response);
 
     if (!response.ok) {

@@ -8,6 +8,7 @@ import {
   corsHeaders,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
+  fetchWhapiWithTimeout,
   getNowIso,
   parseWhapiError,
   readResponsePayload,
@@ -96,7 +97,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
-    const response = await fetch(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}/reaction`, {
+    const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}/reaction`, {
       method: emoji ? 'PUT' : 'DELETE',
       headers: {
         Accept: 'application/json',
@@ -104,7 +105,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(emoji ? { to: chatId, emoji } : { to: chatId }),
-    });
+    }, 15_000);
 
     const payload = await readResponsePayload(response);
     if (!response.ok) {

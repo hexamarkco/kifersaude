@@ -9,6 +9,7 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
+  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   normalizeCommWhatsAppPhone,
@@ -1353,7 +1354,7 @@ async function sendTarget(params: {
   let response: Response;
   let payload: unknown;
   try {
-    response = await fetch(`${WHAPI_BASE_URL}/messages/text`, {
+    response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1361,7 +1362,7 @@ async function sendTarget(params: {
         Authorization: `Bearer ${params.token}`,
       },
       body: JSON.stringify({ to: chatId, body: text }),
-    });
+    }, 15_000);
     payload = await readResponsePayload(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';

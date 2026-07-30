@@ -45,7 +45,6 @@ type ChannelRow = {
   whapi_channel_id: string | null;
   phone_number: string | null;
   connected_user_name: string | null;
-  webhook_secret: string;
 };
 
 type ChatRow = {
@@ -477,11 +476,15 @@ Deno.serve(async (req: Request) => {
     const channel = (await ensurePrimaryChannel(supabaseAdmin)) as ChannelRow;
     const requestUrl = new URL(req.url);
     const channelSlug = requestUrl.searchParams.get('channel')?.trim() || COMM_WHATSAPP_CHANNEL_SLUG;
-    const legacySecret = requestUrl.searchParams.get('secret')?.trim() || '';
-    const configuredWebhookSecret = getCommWhatsAppWebhookSecret();
-    const providedSecret = configuredWebhookSecret
-      ? req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER)?.trim() || ''
-      : legacySecret;
+    const webhookSecret = getCommWhatsAppWebhookSecret();
+
+    if (!webhookSecret) {
+      console.error('[comm-whatsapp-webhook] segredo do webhook nao configurado via env COMM_WHATSAPP_WEBHOOK_SECRET');
+      return new Response(JSON.stringify({ error: 'Webhook nao configurado' }), {
+        status: 500,
+        headers: jsonHeaders,
+      });
+    }
 
     if (channelSlug !== channel.slug) {
       return new Response(JSON.stringify({ error: 'Canal invalido' }), {
@@ -490,8 +493,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const expectedSecret = configuredWebhookSecret || channel.webhook_secret;
-    if (!providedSecret || providedSecret !== expectedSecret) {
+    const providedSecret = req.headers.get(COMM_WHATSAPP_WEBHOOK_SECRET_HEADER)?.trim() || '';
+    if (!providedSecret || providedSecret !== webhookSecret) {
       return new Response(JSON.stringify({ error: 'Webhook nao autorizado' }), {
         status: 401,
         headers: jsonHeaders,

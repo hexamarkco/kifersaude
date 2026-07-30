@@ -4,9 +4,16 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
   ensurePrimaryChannel,
   extractWhapiMessageId,
+  fetchWhapiWithTimeout,
   formatPhoneLabel,
+  getWhapiToken,
+  normalizeWhapiChatId,
+  parseWhapiError,
   persistCommWhatsAppMessage,
+  readResponsePayload,
   resolveWhapiOutboundDeliveryStatus,
+  sanitizeWhapiToken,
+  WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
 const DEFAULT_GREETING_TIMEZONE = 'America/Sao_Paulo';
 
@@ -1162,15 +1169,10 @@ function normalizeTelefone(telefone: string): string {
   return telefone.replace(/\D/g, '');
 }
 
-const WHAPI_BASE_URL = 'https://gate.whapi.cloud';
 const WHAPI_REQUEST_TIMEOUT_MS = 15000;
 const MAX_WHAPI_TEMPORARY_RETRIES = 3;
 const WHAPI_CONTACT_VALIDATION_RETRY_DELAYS_MS = [1500, 4000];
 const WHAPI_RETRY_DELAYS_MS = [2 * 60 * 1000, 10 * 60 * 1000, 30 * 60 * 1000];
-
-const sanitizeWhapiToken = (value: string | null | undefined): string => value?.replace(/^Bearer\s+/i, '').trim() ?? '';
-
-const getWhapiToken = (): string => sanitizeWhapiToken(Deno.env.get('WHAPI_TOKEN') || '');
 
 type WhapiContactCheckResult = {
   exists: boolean;
@@ -1196,68 +1198,7 @@ const sleep = (ms: number): Promise<void> =>
     setTimeout(resolve, ms);
   });
 
-const normalizeWhapiChatId = (value: unknown): string | null => {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  if (!trimmed) return null;
 
-  if (trimmed.includes('@')) {
-    if (/@c\.us$/i.test(trimmed)) {
-      return trimmed.replace(/@c\.us$/i, '@s.whatsapp.net');
-    }
-    return trimmed;
-  }
-
-  const digits = normalizeTelefone(trimmed);
-  if (!digits) return null;
-  return `${digits}@s.whatsapp.net`;
-};
-
-const parseWhapiError = (payload: unknown): string => {
-  if (typeof payload === 'string') {
-    return payload;
-  }
-
-  if (payload && typeof payload === 'object') {
-    const record = payload as Record<string, unknown>;
-
-    if (typeof record.error === 'string') {
-      return record.error;
-    }
-
-    if (record.error && typeof record.error === 'object') {
-      const nested = record.error as Record<string, unknown>;
-      if (typeof nested.message === 'string') {
-        return nested.message;
-      }
-    }
-
-    if (typeof record.message === 'string') {
-      return record.message;
-    }
-
-    if (typeof record.details === 'string') {
-      return record.details;
-    }
-  }
-
-  try {
-    return JSON.stringify(payload);
-  } catch {
-    return 'Erro ao processar resposta da Whapi.';
-  }
-};
-
-const readWhapiPayload = async (response: Response): Promise<unknown> => {
-  const raw = await response.text();
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return raw;
-  }
-};
 
 const isTemporaryWhapiError = (error: unknown): boolean => {
   if (error instanceof TemporaryWhapiError) return true;
@@ -1404,7 +1345,7 @@ const checkWhatsAppExistence = async (telefone?: string | null): Promise<WhapiCo
     clearTimeout(timeoutId);
   }
 
-  const payload = await readWhapiPayload(response);
+  const payload = await readResponsePayload(response);
 
   if (!response.ok) {
     const errorText = parseWhapiError(payload);
@@ -3181,7 +3122,7 @@ async function sendAutoContactMessage({
     clearTimeout(timeoutId);
   }
 
-  const responsePayload = await readWhapiPayload(response);
+  const responsePayload = await readResponsePayload(response);
 
   if (!response.ok) {
     const errorText = parseWhapiError(responsePayload);

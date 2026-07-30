@@ -1,292 +1,478 @@
-# Auditoria Tecnica: Whapi e Inbox
+# Auditoria Técnica: Integração Whapi e Módulo Inbox
 
-Data: 2026-07-29
+**Data:** 2026-07-29
+**Status:** Diagnóstico completo, sem alterações de código.
 
-Esta auditoria foi concluida sem alteracoes de codigo, banco, configuracoes ou dados.
+---
 
 ## 1. Resumo Executivo
 
-Conclusao: a integracao funciona para mensagens diretas, envio, status e recuperacao manual, mas ha riscos relevantes de seguranca e consistencia antes de considera-la robusta para operacao continua.
+A integração com a Whapi e o módulo de Inbox do WhatsApp estão funcionais para o fluxo principal (envio/recebimento de mensagens de texto, mídia, reações), mas apresentam riscos críticos de segurança, inconsistências de concorrência e lacunas de observabilidade que precisam de correção antes de considerar o sistema robusto para operação contínua em escala.
 
-| Prioridade | Achado principal | Impacto |
-|---|---|---|
-| P0 | `webhook_secret` pode ser lido por usuarios autenticados com acesso ao Inbox | Forja de webhooks e insercao indevida de mensagens |
-| P1 | Payloads oficiais `messages.patch` nao sao processados | Edicoes e atualizacoes podem sumir silenciosamente |
-| P1 | Worker de campanhas pode duplicar envios em falhas ambiguas | Cliente recebe mensagens repetidas |
-| P1 | Limites, locks e `stop_on_reply` nao sao estritamente garantidos | Excesso de disparos ou follow-up apos resposta |
-| P1 | Webhook bloqueia em consultas e downloads remotos por mensagem | Latencia, retries e perda de estabilidade sob volume |
-| P2 | Sincronizacao de historico e uma pagina unica e nao suporta `@LID` | Historico incompleto e chats potencialmente ignorados |
-| P2 | Atualizacoes de reacoes/link previews podem nao atualizar a tela | Inbox fica visualmente desatualizado |
-
-Fatos confirmados sao baseados no codigo e migrations atuais. Hipoteses dependem da configuracao remota atual da Whapi, que nao esta versionada no repositorio.
-
-Validacoes executadas:
-
-- `npm test`: 72 testes aprovados.
-- `npm run migrations:check`: aprovado.
-- `npm run lint`: falha existente em `supabase/functions/comm-whatsapp-suggest-reply/index.ts` por `no-misleading-character-class`.
-- Nao ha cobertura automatizada suficiente para Edge Functions, payloads reais da Whapi, concorrencia de campanhas ou recuperacao de webhooks.
-
-## 2. Visao Geral Da Implementacao Atual
-
-```text
-Whapi
-  -> comm-whatsapp-webhook
-  -> comm_whatsapp_persist_message
-  -> comm_whatsapp_chats / comm_whatsapp_messages
-  -> Realtime + polling
-  -> WhatsAppInboxScreen
-
-Usuario do Inbox
-  -> comm-whatsapp-send
-  -> comm-whatsapp-manage-message
-  -> comm-whatsapp-react
-  -> Whapi
-
-Campanhas / automacoes
-  -> comm-whatsapp-campaign-worker
-  -> Whapi /messages/text
-  -> persistencia local
-
-Recuperacao manual
-  -> comm-whatsapp-sync-chat
-  -> Whapi /messages/list/{chatId}
-  -> persistencia local
-```
-
-| Area | Implementacao atual |
+**Achados por severidade:**
+| Severidade | Quantidade |
 |---|---|
-| Entrada | `comm-whatsapp-webhook` aceita `POST`, `PUT`, `PATCH` e `DELETE` |
-| Persistencia | RPC `comm_whatsapp_persist_message`, com deduplicacao por `external_message_id` |
-| Status | `comm_whatsapp_update_message_status` mantem status pendente antes da mensagem existir |
-| Midia | Arquivamento proprio em Storage e proxy por `comm-whatsapp-media` |
-| Inbox | Realtime por conversa selecionada, polling de chats e mensagens |
-| Campanhas | Worker com claim SQL via `FOR UPDATE SKIP LOCKED` |
-| Identidade | Busca nome do chat/contato na Whapi e associa lead por telefone quando ha uma unica correspondencia |
-| Escopo | Chats diretos `@s.whatsapp.net`; grupos e `@LID` nao sao suportados no fluxo atual |
+| Crítico | 1 |
+| Alto | 9 |
+| Médio | 9 |
+| Baixo | 6 |
 
-Pontos positivos:
+**Principais riscos:**
+- **Crítico:** Segredo do webhook exposto a qualquer usuário autenticado do Inbox
+- **Alto:** Mensagens do tipo `messages.patch` são silenciosamente descartadas
+- **Alto:** Campanhas podem duplicar envios em falhas ambíguas de rede
+- **Alto:** Timeouts inconsistentes — várias chamadas à Whapi sem proteção de timeout
+- **Alto:** Token da Whapi pode estar exposto em variável de ambiente sem criptografia
 
-- Tokens da Whapi sao tratados no backend; o cliente nao recebe o token.
-- Midias nao dependem apenas de URLs temporarias da Whapi.
-- Status recebidos antes da mensagem possuem tabela pendente e trigger de reconciliacao.
-- Envio manual possui reserva por `clientRequestId`.
-- O worker usa locks SQL, o que reduz duplicidade em cenarios normais.
+---
 
-### Compatibilidade Com A Whapi
+## 2. Visão Geral da Implementação Atual
 
-| Recurso Whapi | Estado atual |
+### Arquitetura
+
+```
+Whapi Cloud (gate.whapi.cloud)
+  │
+  ├─ POST /messages/text            → comm-whatsapp-send
+  ├─ POST /messages/{kind}          → comm-whatsapp-send (mídia)
+  ├─ POST /media                    → comm-whatsapp-send (upload)
+  ├─ GET  /messages/{id}            → comm-whatsapp-refresh-message-status
+  ├─ GET  /messages/list/{chatId}   → comm-whatsapp-sync-chat
+  ├─ GET  /chats/{chatId}           → comm-whatsapp-sync-chat / comm-whatsapp-contacts
+  ├─ GET  /contacts                 → comm-whatsapp-contacts
+  ├─ POST /contacts                 → leads-api (verificação de existência)
+  ├─ POST /messages/{id}/reaction   → comm-whatsapp-react
+  ├─ POST /messages/{id} (forward)  → comm-whatsapp-manage-message
+  ├─ DELETE /messages/{id}          → comm-whatsapp-manage-message
+  └─ Webhook (POST/PUT/PATCH/DELETE) → comm-whatsapp-webhook
+       │
+       └─ Messages → comm_whatsapp_persist_message → comm_whatsapp_messages
+       └─ Statuses → comm_whatsapp_update_message_status
+       └─ Health   → comm_whatsapp_channels (health_snapshot)
+```
+
+### Edge Functions envolvidas (13)
+
+| Função | Arquivo | Papel |
+|---|---|---|
+| comm-whatsapp-webhook | `supabase/functions/comm-whatsapp-webhook/index.ts` | Recebe callbacks da Whapi |
+| comm-whatsapp-send | `supabase/functions/comm-whatsapp-send/index.ts` | Envia mensagens (texto e mídia) |
+| comm-whatsapp-sync-chat | `supabase/functions/comm-whatsapp-sync-chat/index.ts` | Sincroniza histórico do chat |
+| comm-whatsapp-contacts | `supabase/functions/comm-whatsapp-contacts/index.ts` | Gerencia contatos e cache |
+| comm-whatsapp-manage-message | `supabase/functions/comm-whatsapp-manage-message/index.ts` | Editar, excluir, encaminhar |
+| comm-whatsapp-react | `supabase/functions/comm-whatsapp-react/index.ts` | Reagir a mensagens |
+| comm-whatsapp-refresh-message-status | `supabase/functions/comm-whatsapp-refresh-message-status/index.ts` | Atualizar status pendente |
+| comm-whatsapp-retry-message | `supabase/functions/comm-whatsapp-retry-message/index.ts` | Reenviar mídia falha |
+| comm-whatsapp-media | `supabase/functions/comm-whatsapp-media/index.ts` | Proxy de mídia (cache + Whapi) |
+| comm-whatsapp-campaign-worker | `supabase/functions/comm-whatsapp-campaign-worker/index.ts` | Disparo de campanhas |
+| comm-whatsapp-admin | `supabase/functions/comm-whatsapp-admin/index.ts` | Configuração do canal |
+| leads-api | `supabase/functions/leads-api/index.ts` | Auto contact flow (reimplementa chamadas Whapi) |
+| _shared/comm-whatsapp | `supabase/functions/_shared/comm-whatsapp.ts` | Biblioteca compartilhada (~2550 linhas) |
+
+### Frontend
+
+| Arquivo | Papel |
 |---|---|
-| `POST /messages/text` | Compativel |
-| Status `statuses.post` e `statuses.put` | Compativel |
-| Webhook por `POST`/`PUT`/`PATCH`/`DELETE` | Metodo aceito, mas payload `PATCH` nao e totalmente interpretado |
-| `messages.patch` com `messages_updates` | Nao compativel |
-| `chats.patch` com labels/mute/archive | Nao consumido |
-| Identificadores `@LID` | Nao compativel |
-| Header customizado de webhook | Nao usado |
-| Resync de mensagem ausente | Nao usado |
-| Marcacao individual de leitura na Whapi | Nao usada |
+| `src/lib/commWhatsAppService.ts` | Service layer (1839 linhas) |
+| `src/features/communication/whatsapp/WhatsAppInboxScreen.tsx` | Tela principal do Inbox (11187 linhas) |
+| `src/lib/notificationService.ts` | Notificações e realtime |
+| `src/features/communication/whatsapp/hooks/*` | Hooks (realtime, deep link, polling, gravação) |
+| `src/features/communication/whatsapp/messageStatus.ts` | Utilitários de status |
+| `src/features/communication/whatsapp/whatsAppChatId.ts` | Normalização de Chat ID |
+
+### Banco de dados (tabelas principais)
+
+- `comm_whatsapp_channels` — Canais configurados
+- `comm_whatsapp_chats` — Conversas
+- `comm_whatsapp_messages` — Mensagens
+- `comm_whatsapp_event_receipts` — Deduplicação de webhooks
+- `comm_whatsapp_phone_contacts_cache` — Cache de contatos
+- `comm_whatsapp_send_requests` — Reserva de envio
+- `comm_whatsapp_campaign_targets` — Alvos de campanha
+
+---
+
+## 3. Bugs e Usos Incorretos
+
+### Críticos
+
+#### C01. Segredo do Webhook Exposto a Usuários do Inbox `[Confirmado]`
+
+- **Localização:** `supabase/migrations/20260911407000_allow_comm_whatsapp_channel_read_for_inbox.sql:5-9` (RLS policy); `supabase/functions/_shared/comm-whatsapp.ts:1860-1871` (buildWebhookUrl)
+- **Comportamento atual:** A RLS policy permite SELECT em toda a tabela `comm_whatsapp_channels` para usuários autorizados do Inbox. O campo `webhook_secret` é legível via API REST. Além disso, `buildWebhookUrl()` inclui o segredo como query parameter na URL quando não há Edge Secret configurado.
+- **Por que está incorreto:** Qualquer usuário autenticado com acesso ao módulo `whatsapp-inbox` pode obter o segredo e forjar webhooks.
+- **Impacto:** Forja de mensagens, inserção indevida em conversas, ativação de automações baseadas em inbound.
+- **Severidade:** Crítico
+- **Correção:** (a) Rotacionar o segredo atual; (b) configurar Edge Secret `COMM_WHATSAPP_WEBHOOK_SECRET`; (c) configurar header customizado na Whapi; (d) remover `webhook_secret` das colunas selecionáveis pela RLS.
+
+---
+
+### Altos
+
+#### A01. `messages.patch` Descartado Silenciosamente `[Confirmado]`
+
+- **Localização:** `supabase/functions/comm-whatsapp-webhook/index.ts:523-561`; `supabase/functions/_shared/whapi-webhook-parser.ts:57-84`
+- **Comportamento atual:** O webhook aceita HTTP PATCH, mas `extractWhapiWebhookMessageItems` só processa `payload.messages`, `payload.message` ou `payload.data`. Payloads `messages.patch` oficiais da Whapi com `messages_updates[].after_update` são ignorados.
+- **Impacto:** Edições, votos em enquetes e mutações parciais são confirmadas (200 OK) mas nunca persistem.
+- **Severidade:** Alto
+- **Correção:** Implementar processamento explícito para envelopes `messages_updates` conforme a [documentação da Whapi](https://support.whapi.cloud/help-desk/receiving/webhooks/incoming-webhooks-format/incoming-message.md).
+
+#### A02. Timeouts Inconsistentes — Chamadas sem `fetchWhapiWithTimeout` `[Confirmado]`
+
+- **Localizações:**
+  - `supabase/functions/_shared/comm-whatsapp.ts:2047` — `fetchWhapiContactsPage` usa `fetch` direto
+  - `supabase/functions/_shared/comm-whatsapp.ts:2353` — `checkWhapiContactExists` usa `fetch` direto
+  - `supabase/functions/comm-whatsapp-send/index.ts:413,446,467,511,536,572,871,889,901` — Todas as chamadas Whapi usam `fetch` direto
+  - `supabase/functions/comm-whatsapp-manage-message/index.ts:234,296,375` — `fetch` direto sem timeout
+  - `supabase/functions/comm-whatsapp-react/index.ts:99` — `fetch` direto
+  - `supabase/functions/comm-whatsapp-retry-message/index.ts:350` — `fetch` direto
+  - `supabase/functions/leads-api/index.ts:3165` — `fetch` direto
+- **Comportamento atual:** Grande parte das chamadas HTTP para Whapi não usa `AbortController`. Dependem do timeout padrão da plataforma (Deno: 1min, Edge Runtime: variável).
+- **Impacto:** Funções podem ficar suspensas até o timeout da plataforma, aumentando latência e custo.
+- **Severidade:** Alto
+- **Correção:** Centralizar cliente HTTP no `_shared/comm-whatsapp.ts` e usar exclusivamente `fetchWhapiWithTimeout` em todas as funções.
+
+#### A03. Token da Whapi Redundante e Sem Criptografia em Duas Origens `[Confirmado]`
+
+- **Localizações:**
+  - `supabase/functions/_shared/comm-whatsapp.ts:182` — `getWhapiToken()` lê de `Deno.env.get('WHAPI_TOKEN')`
+  - `supabase/functions/leads-api/index.ts:1173` — `getWhapiToken()` lê de `Deno.env.get('WHAPI_TOKEN')` (duplicado)
+  - `supabase/functions/_shared/comm-whatsapp.ts:2440-2453` — `ensureCommWhatsAppSettings` retorna `token: getWhapiToken()`
+- **Comportamento atual:** O token é armazenado prioritariamente na env var `WHAPI_TOKEN` (não no banco). As configurações da integração (`integration_settings.settings`) podem conter um `token` que é ignorado em favor da env var.
+- **Impacto:** Rotação de token exige redeploy das Edge Functions. Se a env var não estiver definida, todas as operações falham silenciosamente.
+- **Severidade:** Alto
+- **Correção:** Unificar a fonte do token (banco com fallback para env var). Adicionar criptografia em repouso no banco e validação na inicialização.
+
+#### A04. `leads-api` Duplica Constantes e Helpers da Whapi `[Confirmado]`
+
+- **Localização:** `supabase/functions/leads-api/index.ts:1165-1249`
+- **Comportamento atual:** `leads-api/index.ts` redefine `WHAPI_BASE_URL`, `parseWhapiError`, `normalizeWhapiChatId`, `sanitizeWhapiToken`, `getWhapiToken` e `readWhapiPayload` em vez de importar de `_shared/comm-whatsapp.ts`.
+- **Por que está incorreto:** A versão duplicada de `normalizeWhapiChatId` (linha 1199) não trata identificadores `@lid`. Qualquer mudança na shared library precisa ser replicada manualmente.
+- **Impacto:** Risco de divergência entre as implementações. Identificadores `@lid` podem ser rejeitados no fluxo de auto-contact.
+- **Severidade:** Alto
+- **Correção:** Importar as funções de `_shared/comm-whatsapp.ts` e remover as duplicações.
+
+#### A05. Envio de Campanhas Não é Idempotente após Aceitação Ambígua `[Confirmado]`
+
+- **Localização:** `supabase/functions/comm-whatsapp-campaign-worker/index.ts:1353-1365,1427-1467`
+- **Comportamento atual:** O worker envia a mensagem para Whapi, e só depois persiste localmente. Se a persistência falha, o alvo é liberado para retry, podendo reenviar a mesma mensagem.
+- **Impacto:** Cliente recebe mensagens duplicadas.
+- **Severidade:** Alto
+- **Correção:** Usar outbox transacional com estados `reserved → provider_accepted → persisted`. Só permitir retry quando houver prova de que a Whapi rejeitou o envio.
+
+#### A06. Lock de Campanha e Limites Não Garantidos Atomicamente `[Confirmado]`
+
+- **Localização:** `supabase/functions/comm-whatsapp-campaign-worker/index.ts` (múltiplas seções)
+- **Comportamento atual:** Updates posteriores ao claim SQL filtram apenas por `id`, não por `lock_token`. Limite diário consultado antes do claim, não reservado atomicamente. `stop_on_reply` não tem acionamento imediato.
+- **Impacto:** Race conditions, ultrapassagem de limites, follow-up após resposta.
+- **Severidade:** Alto
+- **Correção:** Validar `id + status + lock_token` em toda transição. Reservar limite diário atomicamente. Implementar `stop_on_reply` via trigger de mensagem inbound.
 
-Referencias oficiais:
+#### A07. Envio de Áudio Usa Data URL Ineficiente para Arquivos Grandes `[Confirmado]`
 
-- [Webhooks e modos de entrega](https://support.whapi.cloud/help-desk/receiving/webhooks/detailed-webhook-settings.md)
-- [Formato de mensagens recebidas](https://support.whapi.cloud/help-desk/receiving/webhooks/incoming-webhooks-format/incoming-message.md)
-- [Status de mensagens](https://support.whapi.cloud/help-desk/receiving/webhooks/incoming-webhooks-format/sent-message.md)
-- [Eventos de chat](https://support.whapi.cloud/help-desk/receiving/webhooks/incoming-webhooks-format/chats.md)
+- **Localização:** `supabase/functions/comm-whatsapp-send/index.ts:371-378,396-398`
+- **Comportamento atual:** `fileBytesToDataUrl` percorre byte a byte do arquivo e gera uma Data URL base64 inline no JSON. O payload JSON inteiro é enviado no corpo do POST.
+- **Por que está incorreto:** `btoa()` tem limite de 32MB em algumas implementações. O loop char-by-char é extremamente ineficiente para áudios comuns (1-5MB). Data URLs aumentam ~33% o tamanho da requisição.
+- **Impacto:** Envio de áudio pode falhar ou ser extremamente lento para arquivos maiores.
+- **Severidade:** Alto
+- **Correção:** Usar `FormData` como primeira tentativa (já implementado como fallback). Remover a abordagem de Data URL ou torná-la último recurso.
 
-## 3. Bugs, Riscos E Inconsistencias
+#### A08. `checkWhapiContactExists` e `fetchWhapiContactsPage` Sem Timeout `[Confirmado]`
 
-### P0-01. Segredo Do Webhook Exposto A Usuarios Do Inbox `[Confirmado]`
+- **Localização:** `supabase/functions/_shared/comm-whatsapp.ts:2353,2047`
+- **Comportamento atual:** Contrariando o padrão estabelecido de usar `fetchWhapiWithTimeout`, estas duas funções usam `fetch` bruto.
+- **Impacto:** Podem travar a thread em caso de instabilidade da Whapi.
+- **Severidade:** Alto
+- **Correção:** Substituir por `fetchWhapiWithTimeout` com timeout adequado.
 
-**Evidencia.** `comm_whatsapp_channels.webhook_secret` e uma coluna comum da tabela em `supabase/migrations/20260910100000_add_comm_whatsapp_inbox_mvp.sql:77-95`. A policy em `supabase/migrations/20260911407000_allow_comm_whatsapp_channel_read_for_inbox.sql:5-9` permite `SELECT` da tabela inteira para usuarios autorizados do Inbox.
+---
 
-**Comportamento atual.** O segredo e usado como query string em `supabase/functions/comm-whatsapp-webhook/index.ts:515-531` e e incluido na URL por `supabase/functions/_shared/comm-whatsapp.ts:1784-1791`.
+### Médios
 
-**Impacto tecnico.** Um usuario autenticado com permissao de visualizacao pode consultar a tabela via API REST e obter o segredo. Com ele, pode enviar payloads forjados ao webhook.
+#### M01. Retry de Texto com Delay Fixo e Apenas Uma Tentativa `[Confirmado]`
 
-**Impacto para usuarios.** Conversas falsas, mensagens nao lidas falsas, associacao indevida a leads e possivel disparo de automacoes baseadas em mensagens inbound.
+- **Localização:** `supabase/functions/comm-whatsapp-send/index.ts:899-910`
+- **Comportamento atual:** Em caso de 500, espera 900ms (hardcoded) e tenta novamente uma única vez. Sem backoff progressivo.
+- **Severidade:** Médio
+- **Correção:** Usar retry configurável com backoff exponencial e jitter.
 
-**Correcao.** Rotacionar o segredo, remove-lo da leitura direta, mover a validacao para Edge Secret e configurar um header secreto na Whapi. A Whapi suporta headers customizados via `/settings`.
+#### M02. Webhook Bloqueia em Chamadas Remotas por Mensagem `[Confirmado]`
 
-### P1-02. `messages.patch` Documentado Pela Whapi E Descartado Silenciosamente `[Confirmado]`
+- **Localização:** `supabase/functions/comm-whatsapp-webhook/index.ts:304-339,402-412`
+- **Comportamento atual:** Para cada mensagem, consulta nome do chat na Whapi antes de persistir. Download de mídia também é síncrono.
+- **Impacto:** Webhooks lentos, retries do provedor, risco de timeout.
+- **Severidade:** Médio
+- **Correção:** Persistir primeiro o mínimo. Enriquecimento de nome e download de mídia em job assíncrono deduplicado.
 
-**Evidencia.** A Whapi envia atualizacoes em `messages_updates` para eventos `messages.patch`. O parser atual aceita apenas `messages`, `message` ou `data` em `supabase/functions/_shared/comm-whatsapp.ts:1638-1668`.
+#### M03. Sincronização de Histórico sem Paginação Completa e sem Suporte a `@LID` `[Confirmado]`
 
-**Comportamento atual.** O webhook aceita HTTP `PATCH`, mas em `supabase/functions/comm-whatsapp-webhook/index.ts:558-587` nao encontra itens no payload oficial `messages_updates`, responde `200 {"success":true}` e nao persiste nada.
+- **Localização:** `supabase/functions/_shared/comm-whatsapp.ts:1989-1995,1961`
+- **Comportamento atual:** `fetchWhapiChatMessages` faz apenas uma chamada. `isDirectWhapiChatId` rejeita `@lid`. Sync é uma página única, sem cursor.
+- **Impacto:** Histórico incompleto, chats `@lid` ignorados.
+- **Severidade:** Médio
+- **Correção:** Implementar paginação completa. Suportar resolução `@lid → phone`.
 
-**Impacto tecnico.** Edicoes, mudancas parciais, votos de enquete e outras atualizacoes podem ser confirmadas para a Whapi sem chegar ao banco.
+#### M04. Edições e Reações sem Ordenação Durável `[Confirmado]`
 
-**Impacto para usuarios.** O Inbox pode mostrar texto antigo, preview antigo ou estado divergente do WhatsApp.
+- **Localização:** `supabase/functions/_shared/comm-whatsapp.ts:1333-1346,1397-1494`
+- **Comportamento atual:** Edição que chega antes da mensagem-base não é guardada. Duas reações concorrentes podem sobrescrever. Edição antiga recebida depois pode sobrescrever texto atual.
+- **Impacto:** Estado inconsistente entre Whapi e banco.
+- **Severidade:** Médio
+- **Correção:** Criar `comm_whatsapp_pending_message_mutations` com timestamp e aplicação condicional pós-inserção.
 
-**Correcao.** Criar um adaptador explicito para envelopes Whapi:
+#### M05. Webhook Não Preserva Payload Bruto `[Confirmado]`
 
-```text
-messages.post/put    -> payload.messages
-messages.patch       -> payload.messages_updates[].after_update
-messages.delete      -> payload especifico de remocao
-statuses.post/put    -> payload.statuses
-chats.patch          -> payload.chats_updates
-```
+- **Localização:** `supabase/functions/comm-whatsapp-webhook/index.ts:549-560`
+- **Comportamento atual:** Apenas resumo em `comm_whatsapp_event_receipts`. Payload bruto não é arquivado.
+- **Impacto:** Impossível reproduzir eventos históricos para diagnóstico.
+- **Severidade:** Médio
+- **Correção:** Arquivar payload bruto em Storage privado com retenção curta e acesso restrito.
 
-O reparo manual da conversa do Junior recuperou dados por `comm-whatsapp-sync-chat`; isso nao comprova que o webhook processa `messages.patch`.
+#### M06. Frontend Não Reage a Atualizações de Reação/Link Preview `[Confirmado]`
 
-### P1-03. Envio De Campanhas Nao E Idempotente Apos Aceitacao Ambigua Da Whapi `[Confirmado]`
+- **Localização:** `src/features/communication/whatsapp/messageStatus.ts` (assinatura de metadados)
+- **Comportamento atual:** `getMessageMetadataSignature` ignora `reactions`, `link_preview`, `edited_at`, `status_updated_at`. Updates que alteram só esses campos são descartados.
+- **Impacto:** Reações e previews podem não aparecer sem recarregar.
+- **Severidade:** Médio
+- **Correção:** Incluir campos relevantes na assinatura. Usar `updated_at` da mensagem para aceitar updates.
 
-**Evidencia.** O worker chama a Whapi em `supabase/functions/comm-whatsapp-campaign-worker/index.ts:898-906` e so depois persiste a mensagem e finaliza o alvo em `919-972`.
+#### M07. Salvar Contato Salva Apenas no Cache Local `[Confirmado]`
 
-**Comportamento atual.** Se a Whapi aceitar a mensagem, mas a persistencia local falhar ou a conexao cair antes da resposta, o `catch` libera o alvo para retry.
+- **Localização:** `supabase/functions/comm-whatsapp-contacts/index.ts:288-336`
+- **Comportamento atual:** Contato salvo no Inbox não é refletido no WhatsApp/Whapi.
+- **Impacto:** Semântica ambígua para o usuário.
+- **Severidade:** Médio
+- **Decisão:** Definir se é feature interna de CRM ou se deve espelhar no WhatsApp.
 
-**Impacto tecnico.** A nova tentativa pode enviar a mesma mensagem novamente.
+#### M08. `notificationService` Assina Tabela Inteira `comm_whatsapp_chats` `[Confirmado]`
 
-**Impacto para usuarios.** Clientes recebem mensagens duplicadas e a equipe perde confianca na regua.
+- **Localização:** `src/lib/notificationService.ts:131-147`
+- **Comportamento atual:** A subscription Realtime escuta INSERT/UPDATE/DELETE na tabela `comm_whatsapp_chats` inteira, sem filtro.
+- **Impacto:** Todo update em qualquer chat dispara notificação. Carga desnecessária no Realtime e no frontend.
+- **Severidade:** Médio
+- **Correção:** Adicionar filtro por `channel_id` ou usar função RPC dedicada com polling seletivo.
 
-**Correcao.** Usar uma outbox transacional por alvo, com estados como `reserved`, `provider_accepted`, `persisted` e `reconciliation_required`. So permitir retry quando houver prova de que a Whapi nao aceitou o envio.
+#### M09. `sendDocumentWhapi` Define `Content-Type` Explicitamente para Upload de Arquivo `[Confirmado]`
 
-O envio manual esta melhor protegido em `supabase/functions/comm-whatsapp-send/index.ts:1020-1037`, mas ainda depende do webhook para recuperar mensagens aceitas com `persistencePending`.
+- **Localização:** `supabase/functions/comm-whatsapp-send/index.ts:536-544`
+- **Comportamento atual:** O upload de documento define `Content-Type: application/octet-stream` (ou o mime do arquivo) no corpo da requisição. Quando o corpo é um `File`, o `Content-Type` deve ser `multipart/form-data` ou omitido para que o runtime defina o boundary.
+- **Por que está incorreto:** Definir `Content-Type: application/octet-stream` com um `File` no corpo faz o servidor interpretar o arquivo como corpo bruto, não como upload multipart. A Whapi pode não reconhecer o `filename`.
+- **Impacto:** Upload de documentos pode falhar ou perder o nome original do arquivo.
+- **Severidade:** Médio
+- **Correção:** Usar `FormData` para upload, similar ao que é feito no fallback de áudio, ou usar `Content-Type: multipart/form-data` com boundary.
 
-### P1-04. Regras De Campanha Nao Sao Estritamente Aplicadas `[Confirmado]`
+---
 
-**Evidencia.** `lock_token` e criado no claim SQL, mas updates posteriores filtram somente por `id`, como em `supabase/functions/comm-whatsapp-campaign-worker/index.ts:957-972`.
+### Baixos
 
-**Comportamento atual.** Um worker antigo pode concluir ou liberar um alvo apos seu lock expirar e ser reassumido por outro worker. O limite diario e consultado antes de claimar o lote. Se faltava uma vaga, o worker ainda pode claimar e enviar ate o tamanho inteiro do lote. `pacing_per_minute` controla tamanho do lote, nao ritmo temporal real. `stop_on_reply` e carregado, mas nao e consultado pelo processamento. Respostas sao detectadas por polling no inicio da execucao, nao como evento imediato.
+#### B01. Constante Mágica `900ms` sem Documentação `[Confirmado]`
 
-**Impacto tecnico.** Race conditions, ultrapassagem de limites, mensagens apos resposta e duplicidade sob concorrencia.
+- **Localização:** `supabase/functions/comm-whatsapp-send/index.ts:900`
+- **Severidade:** Baixo
+- **Correção:** Extrair para constante nomeada com comentário explicativo.
 
-**Impacto para usuarios.** Follow-up apos o cliente responder, volume inadequado e maior risco operacional no WhatsApp.
+#### B02. `isTrustedWhapiMediaUrl` Valida Hostname Fixo `gate.whapi.cloud` `[Confirmado]`
 
-**Correcao.** Toda transicao deve validar `id`, `status='sending'` e `lock_token`. O limite diario deve ser reservado atomicamente no banco. `stop_on_reply` precisa ter comportamento explicito e acionamento imediato por mensagem inbound.
+- **Localização:** `supabase/functions/_shared/comm-whatsapp.ts:2134-2152`
+- **Severidade:** Baixo
+- **Observação:** Se a Whapi mudar o CDN para outro subdomínio, o bloqueio quebrará a exibição de mídia. Considerar validação mais flexível (ex: *.whapi.cloud).
 
-```sql
-UPDATE comm_whatsapp_campaign_targets
-SET status = 'sent', lock_token = NULL
-WHERE id = :target_id
-  AND status = 'sending'
-  AND lock_token = :lock_token;
-```
+#### B03. Frontend Polling Agressivo (5s-8s) `[Confirmado]`
 
-### P1-05. Webhook Bloqueia Em Chamadas Remotas Por Mensagem `[Confirmado]`
+- **Localização:** `src/features/communication/whatsapp/WhatsAppInboxScreen.tsx:87-89`
+- **Severidade:** Baixo
+- **Observação:** 5s para mensagens + 8s para chats + 30s para estado operacional pode gerar carga significativa no banco com múltiplos usuários simultâneos.
 
-**Evidencia.** Para cada mensagem, o webhook consulta nome do chat e possivelmente do contato antes de persistir em `supabase/functions/comm-whatsapp-webhook/index.ts:304-339`. Tambem aguarda o arquivamento de midia em `402-412`.
+#### B04. `leads-api` Importa `ensurePrimaryChannel` mas usa Token Diferente `[Confirmado]`
 
-**Comportamento atual.** Uma mensagem inbound pode disparar multiplas chamadas remotas sincronas, sem timeout local.
+- **Localização:** `supabase/functions/leads-api/index.ts:3213` (chama `ensurePrimaryChannel` de shared, mas usa `getWhapiToken()` local)
+- **Severidade:** Baixo
+- **Observação:** Inconsistência: usa `ensurePrimaryChannel` da shared library, mas token próprio.
 
-**Impacto tecnico.** Webhooks lentos, retries do provedor, pressao na Whapi, duplicidade de trabalho e maior risco de timeout.
+#### B05. Role de Serviço Usada em Todas as Funções `[Confirmado]`
 
-**Impacto para usuarios.** Mensagens podem demorar a aparecer no Inbox em picos de volume.
+- **Localização:** Todas as Edge Functions usam `supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)`
+- **Severidade:** Baixo (por design)
+- **Observação:** Embora seja prática comum em Edge Functions, o uso de service_role key em todas as operações significa que não há RLS sendo aplicada nas operações de banco das Edge Functions.
 
-**Correcao.** Persistir primeiro o minimo necessario. Enriquecimento de nome e download de midia devem usar job deduplicado, TTL de cache e processamento assincrono confiavel.
+#### B06. Documentação de Webhooks Desatualizada `[Confirmado]`
 
-### P2-06. Edicoes E Reacoes Nao Tem Ordenacao Duravel `[Confirmado]`
+- **Localização:** N/A
+- **Severidade:** Baixo
+- **Observação:** A configuração de webhook no admin (`comm-whatsapp-admin`) expõe a URL com query parameter `secret` que pode estar desatualizada em relação à prática de segurança atual.
 
-**Evidencia.** `applyCommWhatsAppMessageEdit` retorna sem acao quando a mensagem-base ainda nao existe em `supabase/functions/_shared/comm-whatsapp.ts:1333-1346`. Reacoes leem, alteram e regravam o JSON inteiro em `supabase/functions/comm-whatsapp-webhook/index.ts:220-251`.
+---
 
-**Comportamento atual.** Edicao ou exclusao que chega antes da mensagem-base nao e guardada para aplicacao posterior. Duas reacoes concorrentes podem sobrescrever uma a outra. Uma edicao antiga recebida depois de uma mais recente pode sobrescrever o texto atual.
+## 4. Riscos de Segurança e Confiabilidade
 
-**Impacto tecnico.** Estado eventual inconsistente entre Whapi e banco.
+| Risco | Probabilidade | Impacto | Prioridade |
+|---|---|---|---|
+| Forja de webhook via segredo exposto | Alta | Crítico | Imediata |
+| Exposição do token Whapi em logs/crash | Média | Alto | Curto prazo |
+| Race condition em campanhas | Média | Alto | Curto prazo |
+| Perda de mensagens `PATCH` | Alta | Alto | Imediata |
+| Duplicação de envio em falha ambígua | Média | Alto | Curto prazo |
+| Timeout em operações sem AbortController | Média | Médio | Curto prazo |
+| Vazamento de dados em payloads arquivados | Baixa | Médio | Médio prazo |
+| Divergência entre código duplicated (leads-api) | Baixa | Médio | Médio prazo |
 
-**Correcao.** Criar `comm_whatsapp_pending_message_mutations`, com chave por mensagem externa, timestamp do evento e aplicacao condicional apos insercao da mensagem-base. Atualizar reacoes em SQL atomico.
+---
 
-Observacao: status de entrega ja tem tratamento pendente adequado em `supabase/migrations/20260911414000_harden_comm_whatsapp_message_status_resolution.sql`.
+## 5. Melhorias Recomendadas
 
-### P2-07. Sincronizacao Nao Pagina Historico E Rejeita `@LID` `[Confirmado]`
+### 5.1 Arquitetura e Organização
 
-**Evidencia.** `fetchWhapiChatMessages` faz uma unica chamada para `/messages/list/{chatId}` em `supabase/functions/_shared/comm-whatsapp.ts:1833-1851`. `isDirectWhapiChatId` aceita apenas `@s.whatsapp.net` em `271-274`.
-
-**Comportamento atual.** A sincronizacao recupera somente a pagina retornada pela Whapi. Nao ha cursor, offset ou mecanismo de continuacao. Chats individuais identificados como `@LID` sao recusados, embora a documentacao os suporte.
-
-**Impacto tecnico.** Recuperacao parcial de historico e possiveis mensagens ignoradas apos mudancas de identificadores do WhatsApp.
-
-**Correcao.** Implementar paginacao conforme a referencia atual da Whapi, suportar resolucao de `@LID` para telefone e usar resync somente para recuperacao controlada.
-
-A Whapi alerta que `resync=true` dispara novo webhook; o fluxo precisa evitar reprocessamento indevido.
-
-### P2-08. Eventos De Chat Da Whapi Nao Sao Consumidos `[Confirmado]`
-
-**Evidencia.** O webhook trata mensagens, status, canal e usuario. Nao ha tratamento para `chats.post`, `chats.patch` ou `chats.delete`.
-
-**Comportamento atual.** Labels, archive, mute, pin, unread e mudancas feitas no celular/WhatsApp Web nao atualizam o estado local.
-
-**Impacto para usuarios.** O Inbox pode divergir do WhatsApp principal.
-
-**Decisao necessaria.** Definir se o Inbox e a fonte de verdade para estado operacional ou se deve espelhar o WhatsApp. Se o estado for local por decisao de produto, desabilitar eventos irrelevantes na Whapi e documentar a diferenca.
-
-### P2-09. Reacoes E Previews Podem Nao Atualizar Na Tela `[Confirmado]`
-
-**Evidencia.** `getMessageMetadataSignature` considera apenas `quote` e `contact_card` em `src/features/communication/whatsapp/WhatsAppInboxScreen.tsx:835-840`. A assinatura usada para aceitar updates em `3408-3416` ignora `reactions`, `link_preview`, `edited_at` e `status_updated_at`.
-
-**Comportamento atual.** Um update realtime que altere apenas reacoes ou preview pode ser descartado porque a assinatura visual parece igual.
-
-**Impacto para usuarios.** Reacoes enviadas por outra pessoa ou atualizacoes de link preview podem aparecer apenas depois de recarregar a conversa.
-
-**Correcao.** Incluir no diff os metadados exibidos pela UI ou usar uma versao/`updated_at` da mensagem para aceitar updates.
-
-### P2-10. Salvar Contato Salva Apenas No Cache Local `[Confirmado]`
-
-**Evidencia.** `saveContactToCache` grava em `comm_whatsapp_phone_contacts_cache` em `supabase/functions/comm-whatsapp-contacts/index.ts:288-336`; nao existe chamada a Whapi para criar o contato.
-
-**Comportamento atual.** Um contato marcado como salvo no Inbox pode nao existir como contato salvo no WhatsApp conectado.
-
-**Impacto para usuarios.** A semantica de salvar contato pode induzir expectativa errada.
-
-**Decisao necessaria.** Definir se salvar e um recurso interno de CRM ou se deve refletir no WhatsApp. Se for espelhado, integrar o endpoint oficial de criacao de contatos.
-
-### P2-11. Baixa Capacidade De Auditoria E Replay `[Confirmado]`
-
-**Evidencia.** O webhook armazena apenas resumo em `comm_whatsapp_event_receipts`; nao preserva payload bruto recebido.
-
-**Comportamento atual.** Nao e possivel reproduzir com precisao um payload historico de edicao, exclusao ou mudanca parcial.
-
-**Impacto tecnico.** Diagnostico de perda de evento, divergencia e bugs de parser fica limitado.
-
-**Correcao.** Retomar o padrao definido no projeto: payload bruto em Storage privado, resumo leve em banco, retencao curta, acesso administrativo e mascaramento de campos sensiveis quando necessario.
-
-### P3-12. Chamadas HTTP Nao Tem Politica Uniforme De Timeout `[Confirmado]`
-
-**Evidencia.** Chamadas para Whapi em webhook, sync, campanhas e contatos usam `fetch` direto, sem `AbortController` ou classificacao centralizada de erro.
-
-**Impacto tecnico.** Funcoes podem ficar presas ate o timeout da plataforma; falhas transitorias e respostas ambiguas tem tratamento desigual.
-
-**Correcao.** Centralizar cliente Whapi com timeout, classificacao `4xx`/`429`/`5xx`/rede, retry seguro e telemetria por endpoint.
-
-## 4. Recursos Da Whapi Ainda Nao Aproveitados
-
-| Recurso | Uso recomendado | Prioridade |
+| Melhoria | Benefício | Prioridade |
 |---|---|---|
-| [Headers customizados de webhook](https://support.whapi.cloud/help-desk/account-and-whapi-channels/customizable-webhook-headers.md) | Substituir segredo na query string por header privado | P0 |
-| [Webhook persistente e backoff](https://support.whapi.cloud/help-desk/receiving/webhooks/detailed-webhook-settings.md) | Garantir retry de callbacks apos indisponibilidade | P1 |
-| [`messages.patch`](https://support.whapi.cloud/help-desk/receiving/webhooks/incoming-webhooks-format/incoming-message.md) | Atualizar edicoes, votos e mutacoes de mensagem | P1 |
-| [`chats.patch` e labels](https://support.whapi.cloud/help-desk/receiving/webhooks/incoming-webhooks-format/chats/how-to-track-chat-labels-via-webhook.md) | Espelhar labels e estado operacional, se for decisao de produto | P2 |
-| [Resync de mensagem](https://support.whapi.cloud/help-desk/receiving/http-api/restoring-missing-messages-using-resync.md) | Recuperar mensagem especifica ausente, com protecao contra reprocessamento | P2 |
-| [Suporte a `@LID`](https://support.whapi.cloud/help-desk/receiving/http-api/retrieve-a-specific-users-chat-history.md) | Resolver identificadores novos de contatos individuais | P2 |
-| [Marcar mensagem como lida](https://support.whapi.cloud/help-desk/hints/automatically-mark-incoming-whatsapp-messages-as-read.md) | Definir politica explicita entre leitura interna e recibo azul no WhatsApp | P2 |
-| [Adicionar contatos](https://support.whapi.cloud/help-desk/contacts/add-contacts.md) | Espelhar salvar contato, se esse for o comportamento esperado | P3 |
-| Presence e calls | Util apenas se houver necessidade operacional real | P3 |
+| Cliente HTTP Whapi centralizado com timeout, retry e métricas | Consistência, resiliência, observabilidade | Alta |
+| Unificar `leads-api` para usar shared library | Reduzir duplicação e divergência | Alta |
+| Criar abstração de outbox transacional para envios | Idempotência garantida | Alta |
+| Separar webhook handler em camadas (parse → validate → process → persist) | Testabilidade, manutenibilidade | Média |
 
-Nao e recomendado ativar `auto_read_messages` globalmente sem decisao de produto. Para atendimento humano, marcar tudo como lido automaticamente pode induzir recibo azul antes da analise de um operador.
+### 5.2 Tipagem e Validação
 
-## 5. Plano De Acao Priorizado
-
-| Fase | Acao | Criterio de aceite |
+| Melhoria | Benefício | Prioridade |
 |---|---|---|
-| P0 | Remover segredo do webhook da query e da leitura direta da tabela | Usuario do Inbox nao consegue selecionar o segredo; callback valido ainda e aceito |
-| P0 | Rotacionar o segredo atual e configurar header customizado Whapi | Callback com segredo antigo falha; novo header funciona |
-| P1 | Implementar parser tipado para `messages`, `messages_updates`, remocoes e status | Fixtures oficiais de `post`, `put`, `patch` e `delete` persistem corretamente |
-| P1 | Criar outbox idempotente para campanhas | Dois workers concorrentes nao duplicam envio; falha pos-aceite nao reenvia |
-| P1 | Tornar locks, limite diario e `stop_on_reply` atomicos | Limite nao e ultrapassado; resposta interrompe proximos passos corretamente |
-| P1 | Tirar lookup de nomes e download de midia do hot path | Webhook responde rapidamente mesmo quando Whapi esta lenta |
-| P2 | Paginar sync e suportar `@LID` | Historico completo e chat `@LID` e reconciliado |
-| P2 | Criar fila de mutacoes pendentes | Edit/delete/reaction antes da mensagem-base e aplicado depois |
-| P2 | Corrigir assinatura de metadata no frontend | Reacao, preview e edicao aparecem sem reload |
-| P2 | Definir fonte de verdade para archive, mute, pin, labels e leitura | Comportamento documentado e consistente entre Inbox e WhatsApp |
-| P2 | Arquivar payloads de webhook com retencao e acesso restrito | Evento problematico pode ser reproduzido sem expor dados ao painel |
-| P3 | Centralizar cliente HTTP da Whapi | Timeout, retry e metricas padronizados em todas as funcoes |
+| Tipos Whapi oficiais (gerados da documentação ou OpenAPI) | Type safety, catch de breaking changes | Alta |
+| Validação de payload de webhook com Zod ou similar | Rejeitar payloads malformados cedo | Média |
+| Schema registry para eventos de webhook | Versionamento e compatibilidade | Média |
 
-Ordem recomendada de implementacao:
+### 5.3 Observabilidade
 
-1. Seguranca do webhook.
-2. Parser de eventos `PATCH` e testes com fixtures oficiais.
-3. Idempotencia e concorrencia de campanhas.
-4. Reducao de latencia do webhook.
-5. Sync, `@LID`, UI e observabilidade.
+| Melhoria | Benefício | Prioridade |
+|---|---|---|
+| Log estruturado com correlation-id por webhook | Rastreamento ponta a ponta | Alta |
+| Métricas: latência/erro por endpoint Whapi | Detecção precoce de degradação | Alta |
+| Arquivamento de payload bruto de webhook | Auditoria e replay | Média |
+| Health check com alerta se não há webhook há N minutos | Detecção de canal inativo | Alta |
 
-Nenhuma mudanca foi aplicada durante esta auditoria.
+### 5.4 Performance
+
+| Melhoria | Benefício | Prioridade |
+|---|---|---|
+| Job queue para download de mídia e enriquecimento | Webhook responde em ms, não segundos | Alta |
+| Pool de conexões HTTP para Whapi | Redução de latência | Média |
+| Cache de contatos mais agressivo (TTL 5min em vez de 30min) | Dados mais frescos sem chamadas extras | Média |
+| Otimizar polling do frontend com backoff adaptativo | Reduzir carga do banco | Baixa |
+
+### 5.5 Idempotência
+
+| Melhoria | Benefício | Prioridade |
+|---|---|---|
+| Fila de mutações pendentes (edit/delete/reaction) | Ordenação correta e aplicação retardada | Alta |
+| Outbox transacional para campanhas | Zero duplicidade mesmo em falhas | Alta |
+| Reserva de limite diário atômica | Limite respeitado sob concorrência | Alta |
+
+### 5.6 Testes
+
+| Melhoria | Benefício | Prioridade |
+|---|---|---|
+| Testes de integração com fixtures reais da Whapi | Validar parsing de cada tipo de payload | Alta |
+| Testes de concorrência para campaign worker | Detectar race conditions | Alta |
+| Testes de webhook replay (payload archive → reprocess) | Validar idempotência | Médio |
+| Fuzz testing para parsers de webhook | Robustez contra payloads maliciosos | Médio |
+
+### 5.7 Experiência do Usuário
+
+| Melhoria | Benefício | Prioridade |
+|---|---|---|
+| Indicador visual de "Whapi instável" no Inbox | Reduz frustração do usuário | Média |
+| Feedback de progresso em envio de mídia grande | UX mais transparente | Média |
+| Sincronização bidirecional de status de leitura | Alinhar recibo azul com política do produto | Média |
+
+---
+
+## 6. Rotas e Funcionalidades Whapi Não Utilizadas
+
+### 6.1 Recomendadas para Implementação
+
+| Recurso | Rota/Mecanismo | Caso de Uso | Benefício | Complexidade | Prioridade |
+|---|---|---|---|---|---|
+| Header customizado de webhook | Configuração via `/settings` ou painel Whapi | Substituir segredo na query string por header fixo | Segurança do webhook | Baixa | **Crítica** |
+| `messages.patch` completo | Webhook `messages_updates[]` | Edições, votos, mutações | Consistência de dados | Média | **Alta** |
+| `chats.patch` (labels, mute, archive) | Webhook `chats_updates[]` | Espelhar estado do WhatsApp | Consistência entre dispositivos | Média | Média |
+| Resync de mensagem específica | `resync=true` no webhook | Recuperar mensagem perdida sem sync total | Confiabilidade | Média | Média |
+| Marcar mensagem como lida | `PUT /messages/{id}/read` | Recibo azul condicional | UX de atendimento | Baixa | Média |
+| `@LID` resolution | `GET /contacts/ids/{lid}` | Suportar novos identificadores do WhatsApp | Cobertura de contatos | Média | Média |
+
+### 6.2 Não Recomendadas no Momento
+
+| Recurso | Motivo |
+|---|---|
+| `GET /chats` (listar conversas) | Já temos nosso próprio catálogo local, manter synced traria complexidade adicional sem ganho claro |
+| Presence tracking (`presence.*`) | Sem caso de uso definido no contexto de CRM |
+| Group management (`groups.*`) | Fora do escopo de inbox individual |
+| Business profile API | Sem aplicação imediata no CRM |
+| WhatsApp catalogs/products | Fora do escopo do produto |
+
+---
+
+## 7. Plano de Ação Priorizado
+
+### Correções Imediatas (P0 — dias)
+
+| # | Ação | Critério de Aceite |
+|---|---|---|
+| 1 | Remover `webhook_secret` da RLS policy de `comm_whatsapp_channels` | Usuário Inbox não consegue SELECT no campo |
+| 2 | Configurar Edge Secret `COMM_WHATSAPP_WEBHOOK_SECRET` | Callback com segredo antigo falha |
+| 3 | Configurar header customizado na Whapi | Callback sem header correto falha |
+| 4 | Rotacionar o segredo atual | URLs antigas com `?secret=` são rejeitadas |
+| 5 | Implementar parser para `messages_updates` (PATCH) | Testes com fixtures Whapi `PATCH` persistem corretamente |
+
+### Melhorias de Curto Prazo (P1 — semanas)
+
+| # | Ação | Critério de Aceite |
+|---|---|---|
+| 6 | Unificar `leads-api` com shared library | Remove código duplicado, adiciona suporte `@lid` |
+| 7 | Centralizar cliente HTTP Whapi com `fetchWhapiWithTimeout` | Toda chamada Whapi tem timeout configurado |
+| 8 | Refatorar `sendAudioLikeWhapi` para priorizar `FormData` | Data URL removida, upload eficiente |
+| 9 | Criar outbox transacional para campanhas | Zero duplicidade em falha pós-aceite |
+| 10 | Tornar locks e limites de campanha atômicos | Locks validam `id + status + lock_token` |
+| 11 | Remover lookup de nome do hot path do webhook | Webhook persiste em ms, enriquecimento em job |
+| 12 | Revisar `sendDocumentWhapi` para usar `FormData` | Upload de documentos preserva nome do arquivo |
+| 13 | Adicionar health-check com alerta de webhook silencioso | Alerta se `last_webhook_received_at > N minutos` |
+
+### Evoluções de Médio Prazo (P2 — meses)
+
+| # | Ação | Critério de Aceite |
+|---|---|---|
+| 14 | Implementar paginação completa e suporte a `@lid` no sync | Histórico completo recuperado |
+| 15 | Criar fila de mutações pendentes | Edit/delete/reaction antes da base é aplicado depois |
+| 16 | Corrigir assinatura de metadata no frontend | Reação, preview e edição aparecem sem reload |
+| 17 | Arquivar payload bruto de webhook em Storage | Evento pode ser reproduzido sem expor dados |
+| 18 | Adicionar log estruturado com correlation-id | Rastreamento ponta a ponta de eventos |
+| 19 | Implementar teste de integração com fixtures Whapi | Pipeline detecta breaking change na API |
+| 20 | Definir política de sincronização de archive/mute/pin | Comportamento documentado e testado |
+
+---
+
+## Tabela Consolidada
+
+| Prioridade | Severidade | Tipo | Problema/Melhoria | Localização | Impacto | Ação Recomendada |
+|---|---|---|---|---|---|---|
+| P0 | Crítico | Segurança | Segredo do webhook exposto a usuários do Inbox | `20260911407000_allow_comm_whatsapp_channel_read_for_inbox.sql`, `_shared/comm-whatsapp.ts:1860` | Forja de webhooks, inserção indevida | Remover RLS, configurar Edge Secret + header |
+| P0 | Alto | Bug | `messages.patch` descartado silenciosamente | `whapi-webhook-parser.ts:57`, webhook `index.ts:523` | Edições/mutações não persistem | Implementar parser de `messages_updates` |
+| P1 | Alto | Bug | Timeouts inconsistentes — chamadas sem AbortController | Múltiplas funções (send, manage, react, retry, leads-api) | Edge Functions podem travar | Centralizar cliente HTTP com timeout |
+| P1 | Alto | Arquitetura | Token Whapi duplicado e sem criptografia | `_shared/comm-whatsapp.ts:182`, `leads-api/index.ts:1173` | Rotação difícil, risco de exposição | Unificar fonte, adicionar criptografia |
+| P1 | Alto | Arquitetura | `leads-api` duplica constantes e helpers | `leads-api/index.ts:1165-1249` | Divergência entre implementações | Importar de `_shared/comm-whatsapp.ts` |
+| P1 | Alto | Bug | Campanhas não idempotentes após aceitação ambígua | `campaign-worker/index.ts:1353` | Mensagens duplicadas para cliente | Outbox transacional |
+| P1 | Alto | Bug | Lock de campanha sem validação atômica | `campaign-worker/index.ts` (múltiplas seções) | Race conditions, limites ultrapassados | Validar `id + status + lock_token` |
+| P1 | Alto | Bug | Envio de áudio usa Data URL ineficiente | `comm-whatsapp-send/index.ts:371-398` | Falha com arquivos grandes | Priorizar FormData |
+| P1 | Alto | Bug | `checkWhapiContactExists` sem timeout | `_shared/comm-whatsapp.ts:2353` | Pode travar | Usar `fetchWhapiWithTimeout` |
+| P1 | Médio | Segurança | `webhook_secret` em query string nas URLs | `_shared/comm-whatsapp.ts:1866-1868` | Vazamento em logs | Migrar para header secreto |
+| P1 | Médio | Bug | `sendDocumentWhapi` com Content-Type incorreto | `comm-whatsapp-send/index.ts:536` | Upload pode falhar | Usar FormData |
+| P2 | Médio | Performance | Webhook bloqueia em chamadas remotas | `webhook/index.ts:304-339` | Latência em pico de volume | Job assíncrono para enriquecimento |
+| P2 | Médio | Bug | Sync sem paginação e sem suporte `@lid` | `_shared/comm-whatsapp.ts:1989,1961` | Histórico incompleto | Paginar, resolver `@lid` |
+| P2 | Médio | Bug | Edições/reactions sem ordenação durável | `_shared/comm-whatsapp.ts:1333-1346` | Estado inconsistente | Fila de mutações pendentes |
+| P2 | Médio | Observabilidade | Payload bruto não preservado | `webhook/index.ts:549-560` | Diagnóstico limitado | Arquivar em Storage |
+| P2 | Médio | UX | Frontend ignora updates de reaction/preview | `messageStatus.ts` | Tela desatualizada | Corrigir assinatura de metadados |
+| P2 | Médio | Performance | Frontend assina tabela inteira `comm_whatsapp_chats` | `notificationService.ts:131` | Carga excessiva no Realtime | Filtrar subscription |
+| P2 | Médio | UX | Salvar contato só no cache local | `comm-whatsapp-contacts/index.ts:288` | Semântica ambígua | Decidir comportamento esperado |
+| P3 | Baixo | Manutenibilidade | Constante mágica 900ms | `comm-whatsapp-send/index.ts:900` | Dificulta ajuste | Extrair para constante |
+| P3 | Baixo | Performance | Polling frontend agressivo (5-8s) | `WhatsAppInboxScreen.tsx:87-89` | Carga no banco | Backoff adaptativo |
+| P3 | Baixo | Manutenibilidade | `isTrustedWhapiMediaUrl` com hostname fixo | `_shared/comm-whatsapp.ts:2134` | Pode quebrar com mudança da Whapi | Validar por padrão, não hostname |
+| P3 | Baixo | Manutenibilidade | Service role em todas as funções | Todas Edge Functions | RLS não é usada | Revisar necessidade (por design) |
+
+---
+
+*Auditoria realizada sem alterações de código, banco, configurações ou dados.*

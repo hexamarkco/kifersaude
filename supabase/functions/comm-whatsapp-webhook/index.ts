@@ -372,6 +372,18 @@ async function persistMessageFromWebhook(
     },
   });
 
+  if (direction === 'inbound' && !patch) {
+    try {
+      await supabaseAdmin.rpc('resolve_comm_whatsapp_campaign_stop_on_reply', {
+        p_external_chat_id: externalChatId,
+        p_message_at: messageAt,
+      });
+    } catch {
+      // Non-critical: stop_on_reply is best-effort. Failure does not
+      // affect message persistence.
+    }
+  }
+
   return { id: result.chatId };
 }
 

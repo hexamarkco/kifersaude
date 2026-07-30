@@ -113,22 +113,33 @@ export const isSupabaseConnectivityError = (error: unknown): boolean => {
   return message.includes('falha de rede ao conectar com o supabase');
 };
 
-type FunctionsErrorLike = Error & {
-  context?: { status?: number; data?: { error?: string } };
-};
-
 export const getSupabaseErrorMessage = (error: unknown, fallbackMessage: string): string => {
   if (isSupabaseConnectivityError(error)) {
     return (error as Error).message;
   }
 
-  // Edge function responses carry the real error in context.data.error
-  if (
-    error instanceof Error
-    && 'context' in error
-    && (error as FunctionsErrorLike).context?.data?.error
-  ) {
-    return (error as FunctionsErrorLike).context!.data!.error!;
+  if (error instanceof Error && 'context' in error) {
+    const ctx = (error as Error & { context: unknown }).context;
+
+    // FunctionsHttpError (v2) — context is the raw Response, body not yet consumed
+    if (typeof Response !== 'undefined' && ctx instanceof Response) {
+      return `Edge Function retornou status ${ctx.status}`;
+    }
+
+    // legacy (v1) — context.data.error carries the edge function JSON body
+    if (
+      ctx
+      && typeof ctx === 'object'
+      && 'data' in (ctx as Record<string, unknown>)
+    ) {
+      const data = (ctx as Record<string, unknown>).data as Record<string, unknown> | undefined;
+      if (data && typeof data === 'object' && 'error' in data) {
+        const msg = (data as Record<string, unknown>).error;
+        if (typeof msg === 'string' && msg.trim()) {
+          return msg.trim();
+        }
+      }
+    }
   }
 
   if (error instanceof Error && error.message.trim()) {

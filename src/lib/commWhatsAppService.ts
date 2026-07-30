@@ -963,7 +963,7 @@ export const commWhatsAppService = {
   },
 
   async lookupSavedContactsByPhones(params: { phoneNumbers: string[]; forceSync?: boolean }): Promise<CommWhatsAppPhoneContact[]> {
-    const { data, error } = await supabase.functions.invoke('comm-whatsapp-contacts', {
+    const { data, error, response } = await supabase.functions.invoke('comm-whatsapp-contacts', {
       body: {
         action: 'lookupContactsByPhones',
         phoneNumbers: params.phoneNumbers,
@@ -972,7 +972,17 @@ export const commWhatsAppService = {
     });
 
     if (error) {
-      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel localizar contatos salvos do WhatsApp.'));
+      // FunctionsHttpError.context is the raw Response — try to read the body for the actual error
+      let actualError = '';
+      if (response && typeof (response as Response).json === 'function') {
+        try {
+          const body = await (response as Response).clone().json() as { error?: string };
+          if (body?.error) actualError = body.error;
+        } catch {
+          // response body may already be consumed or not parseable
+        }
+      }
+      throw new Error(actualError || getSupabaseErrorMessage(error, 'Nao foi possivel localizar contatos salvos do WhatsApp.'));
     }
 
     const payload = (data ?? {}) as { contacts?: CommWhatsAppPhoneContact[] };

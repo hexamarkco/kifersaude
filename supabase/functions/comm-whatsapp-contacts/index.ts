@@ -420,11 +420,15 @@ Deno.serve(async (req: Request) => {
 
     const latestSync = await getLatestCacheSync(channel.id, supabaseAdmin);
     if (body.forceSync === true || isCacheStale(latestSync)) {
-      await syncContactsToCache({
-        supabaseAdmin,
-        channelId: channel.id,
-        token: settings.token,
-      });
+      try {
+        await syncContactsToCache({
+          supabaseAdmin,
+          channelId: channel.id,
+          token: settings.token,
+        });
+      } catch (syncError) {
+        console.error('[comm-whatsapp-contacts] sync ignorado, servindo cache existente:', syncError);
+      }
     }
 
     if (action === 'listContacts') {

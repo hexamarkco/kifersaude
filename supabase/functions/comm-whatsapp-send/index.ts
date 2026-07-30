@@ -6,6 +6,7 @@ import {
   COMM_WHATSAPP_MODULE,
   WHAPI_BASE_URL,
   corsHeaders,
+  createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractPhoneFromChatId,
@@ -845,8 +846,10 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify(textPayload),
       });
 
+      const TEXT_SEND_RETRY_DELAY_MS = 900;
+
       if (whapiResponse.status >= 500) {
-        await new Promise((resolve) => setTimeout(resolve, 900));
+        await new Promise((resolve) => setTimeout(resolve, TEXT_SEND_RETRY_DELAY_MS));
         whapiResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
           method: 'POST',
           headers: {

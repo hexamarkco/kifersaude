@@ -6,16 +6,15 @@ import {
   COMM_WHATSAPP_INTEGRATION_SLUG,
   COMM_WHATSAPP_WEBHOOK_SECRET_HEADER,
   corsHeaders,
+  createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
-  fetchWhapiWithTimeout,
   getCommWhatsAppWebhookSecret,
   getHealthStatusText,
   getNowIso,
   parseWhapiError,
   readResponsePayload,
   sanitizeChannelForClient,
-  WHAPI_BASE_URL,
 } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
@@ -106,13 +105,9 @@ async function refreshHealth(supabaseAdmin: ReturnType<typeof createAdminClient>
     throw new Error('Token da Whapi nao configurado.');
   }
 
-  const healthResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/health`, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  }, 10_000);
+  const whapi = createWhapiClient(token);
+
+  const healthResponse = await whapi.health();
   const healthPayload = await readResponsePayload(healthResponse);
 
   if (!healthResponse.ok) {
@@ -121,14 +116,7 @@ async function refreshHealth(supabaseAdmin: ReturnType<typeof createAdminClient>
 
   let limitsPayload: unknown = null;
   try {
-    const limitsResponse = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/limits`, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    }, 10_000);
-
+    const limitsResponse = await whapi.limits();
     limitsPayload = await readResponsePayload(limitsResponse);
     if (!limitsResponse.ok) {
       limitsPayload = null;

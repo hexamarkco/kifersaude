@@ -4,13 +4,12 @@ import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   applyCommWhatsAppMessageMutation,
   COMM_WHATSAPP_MODULE,
-  WHAPI_BASE_URL,
   corsHeaders,
+  createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractPhoneFromChatId,
   extractWhapiMessageId,
-  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   isDirectWhapiChatId,
@@ -232,15 +231,8 @@ Deno.serve(async (req: Request) => {
         editPayload.filename = mediaFileName;
       }
 
-      const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${isMediaEdit ? messageType : 'text'}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(editPayload),
-      }, 15_000);
+      const whapi = createWhapiClient(token);
+      const response = await whapi.editMessage(externalMessageId, JSON.stringify(editPayload), isMediaEdit ? messageType : 'text');
       const payload = await readResponsePayload(response);
 
       if (!response.ok) {
@@ -294,18 +286,8 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(externalMessageId)}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          to: targetChatId,
-          force: true,
-        }),
-      }, 15_000);
+      const whapi = createWhapiClient(token);
+      const response = await whapi.forwardMessage(externalMessageId, JSON.stringify({ to: targetChatId, force: true }), {});
       const payload = await readResponsePayload(response);
 
       if (!response.ok) {
@@ -373,13 +355,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(externalMessageId)}`, {
-      method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    }, 15_000);
+    const whapi = createWhapiClient(token);
+    const response = await whapi.deleteMessage(externalMessageId);
     const payload = await readResponsePayload(response);
 
     if (!response.ok) {

@@ -4,11 +4,10 @@ import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   applyCommWhatsAppMessageMutation,
   COMM_WHATSAPP_MODULE,
-  WHAPI_BASE_URL,
   corsHeaders,
+  createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
-  fetchWhapiWithTimeout,
   getNowIso,
   parseWhapiError,
   readResponsePayload,
@@ -97,15 +96,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
-    const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${encodeURIComponent(messageId)}/reaction`, {
-      method: emoji ? 'PUT' : 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${settings.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emoji ? { to: chatId, emoji } : { to: chatId }),
-    }, 15_000);
+    const whapi = createWhapiClient(settings.token);
+    const response = await whapi.sendReaction(messageId, chatId, emoji || null);
 
     const payload = await readResponsePayload(response);
     if (!response.ok) {

@@ -91,19 +91,21 @@ export default function WhatsAppStartChatModal({
         />
 
         {source === 'manual' ? (
-          <Surface variant="muted" padding="sm" className="space-y-4">
-            <div>
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Iniciar por número</p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
-              <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting}>
-                {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
-                Iniciar chat
-              </Button>
-            </div>
-          </Surface>
+          <div className="flex min-h-0 flex-1 flex-col gap-4">
+            <Surface variant="muted" padding="sm" className="min-h-0 flex-1 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Iniciar por número</p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
+                <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting}>
+                  {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
+                  Iniciar chat
+                </Button>
+              </div>
+            </Surface>
+          </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
             <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} disabled={starting} />

@@ -3,20 +3,18 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
 import {
-  WHAPI_BASE_URL,
   buildWhapiDirectChatId,
   corsHeaders,
+  createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
-  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   normalizeCommWhatsAppPhone,
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
-  resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -1354,15 +1352,8 @@ async function sendTarget(params: {
   let response: Response;
   let payload: unknown;
   try {
-    response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/text`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${params.token}`,
-      },
-      body: JSON.stringify({ to: chatId, body: text }),
-    }, 15_000);
+    const whapi = createWhapiClient(params.token);
+    response = await whapi.sendText(chatId, text);
     payload = await readResponsePayload(response);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Falha de rede ao enviar mensagem na Whapi.';

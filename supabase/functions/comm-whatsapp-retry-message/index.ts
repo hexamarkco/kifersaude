@@ -4,10 +4,10 @@ import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   COMM_WHATSAPP_MODULE,
   WHAPI_BASE_URL,
+  createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiMessageId,
-  fetchWhapiWithTimeout,
   formatPhoneLabel,
   getNowIso,
   parseWhapiError,
@@ -348,19 +348,17 @@ Deno.serve(async (req: Request) => {
     }
 
     const caption = retryTarget.media_caption || (retryTarget.text_content?.startsWith('[') ? '' : retryTarget.text_content || '');
-    const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/messages/${retryTarget.message_type}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
+    const whapi = createWhapiClient(token);
+    const response = await whapi.post(
+      `${WHAPI_BASE_URL}/messages/${retryTarget.message_type}`,
+      JSON.stringify({
         to: retryTarget.external_chat_id,
         media: retryTarget.media_id,
         caption: retryTarget.message_type === 'voice' ? undefined : caption || undefined,
       }),
-    }, 30_000);
+      { 'Content-Type': 'application/json' },
+      30_000,
+    );
 
     const whapiPayload = await readResponsePayload(response);
 

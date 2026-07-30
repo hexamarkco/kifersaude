@@ -4551,10 +4551,8 @@ export default function WhatsAppInboxScreen() {
       }
 
       console.error('[WhatsAppInbox] erro ao carregar fontes para novo chat', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível carregar os contatos salvos.');
       if (!appendSavedContacts) {
-        setSavedContacts([]);
-        setSavedContactsTotal(0);
-        setSavedContactsHasMore(false);
         setCrmStartResults([]);
       }
     } finally {

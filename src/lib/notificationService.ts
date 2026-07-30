@@ -128,26 +128,36 @@ class NotificationService {
       return;
     }
 
-    this.inboxChannelSubscription = supabase
-      .channel('comm-whatsapp-inbox-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'comm_whatsapp_chats',
-        },
-        (payload) => {
-          const chat = payload.new as CommWhatsAppChat | null;
-          const previousChat = payload.old as Partial<CommWhatsAppChat> | null;
+    void commWhatsAppService.getOperationalState()
+      .then((state) => {
+        const channelId = state?.channel?.id;
+        if (!channelId) return;
 
-          this.handleInboxChatChange(chat, previousChat, payload.eventType);
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.warn('[Notifications] realtime de mensagens do inbox indisponivel; polling do contador permanece ativo.');
-        }
+        this.inboxChannelSubscription = supabase
+          .channel('comm-whatsapp-inbox-notifications')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'comm_whatsapp_chats',
+              filter: `channel_id=eq.${channelId}`,
+            },
+            (payload) => {
+              const chat = payload.new as CommWhatsAppChat | null;
+              const previousChat = payload.old as Partial<CommWhatsAppChat> | null;
+
+              this.handleInboxChatChange(chat, previousChat, payload.eventType);
+            }
+          )
+          .subscribe((status) => {
+            if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.warn('[Notifications] realtime de mensagens do inbox indisponivel; polling do contador permanece ativo.');
+            }
+          });
+      })
+      .catch((error) => {
+        console.warn('[Notifications] nao foi possivel obter o canal para filtrar subscription realtime.', error);
       });
   }
 

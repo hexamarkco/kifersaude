@@ -100,6 +100,36 @@ const buildUserEventKey = (eventAction: string, payload: Record<string, unknown>
   return `user:${eventAction}:${toTrimmedString(user?.id) || 'unknown'}`;
 };
 
+async function archiveRawPayload(
+  supabaseAdmin: SupabaseClient,
+  correlationId: string,
+  rawText: string,
+  eventType: string,
+  eventAction: string,
+): Promise<string | null> {
+  try {
+    const dateStr = getNowIso().slice(0, 10);
+    const path = `${dateStr}/${correlationId}_${eventType}_${eventAction}.json`;
+
+    const { error } = await supabaseAdmin.storage
+      .from('whapi-webhook-archive')
+      .upload(path, rawText, {
+        contentType: 'application/json',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error(`[${correlationId}] erro ao arquivar payload bruto: ${error.message}`);
+      return null;
+    }
+
+    return path;
+  } catch (e) {
+    console.error(`[${correlationId}] erro ao arquivar payload bruto: ${e instanceof Error ? e.message : 'desconhecido'}`);
+    return null;
+  }
+}
+
 async function recordEventReceipt(
   supabaseAdmin: SupabaseClient,
   channelId: string,
@@ -107,6 +137,7 @@ async function recordEventReceipt(
   eventType: string,
   resourceId: string | null,
   summary: Record<string, unknown>,
+  payloadArchivePath?: string | null,
 ) {
   const { error } = await supabaseAdmin
     .from('comm_whatsapp_event_receipts')
@@ -116,6 +147,7 @@ async function recordEventReceipt(
       event_type: eventType,
       resource_id: resourceId,
       summary,
+      payload_archive_path: payloadArchivePath || null,
     });
 
   if (error) {
@@ -472,6 +504,8 @@ async function syncChannelUser(
 }
 
 Deno.serve(async (req: Request) => {
+  const correlationId = crypto.randomUUID();
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -483,6 +517,8 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  let startedAt = 0;
+
   try {
     const supabaseAdmin = createServiceClient();
     const channel = (await ensurePrimaryChannel(supabaseAdmin)) as ChannelRow;
@@ -491,7 +527,7 @@ Deno.serve(async (req: Request) => {
     const webhookSecret = getCommWhatsAppWebhookSecret();
 
     if (!webhookSecret) {
-      console.error('[comm-whatsapp-webhook] segredo do webhook nao configurado via env COMM_WHATSAPP_WEBHOOK_SECRET');
+      console.error(`[${correlationId}] segredo do webhook nao configurado via env COMM_WHATSAPP_WEBHOOK_SECRET`);
       return new Response(JSON.stringify({ error: 'Webhook nao configurado' }), {
         status: 500,
         headers: jsonHeaders,
@@ -513,7 +549,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const payload = await req.json().catch(() => null);
+    const rawPayloadText = await req.text().catch(() => null);
+    if (!rawPayloadText) {
+      return new Response(JSON.stringify({ error: 'Payload vazio' }), {
+        status: 400,
+        headers: jsonHeaders,
+      });
+    }
+
+    const payload = JSON.parse(rawPayloadText);
     if (!isRecord(payload)) {
       return new Response(JSON.stringify({ error: 'Payload invalido' }), {
         status: 400,
@@ -525,6 +569,15 @@ Deno.serve(async (req: Request) => {
     const eventType = toTrimmedString(event.type).toLowerCase();
     const eventAction = toTrimmedString(event.event).toLowerCase();
     const nowIso = getNowIso();
+
+    console.log(`[${correlationId}] entry event_type=${eventType} event_action=${eventAction} method=${req.method}`);
+
+    startedAt = Date.now();
+
+    const archivePath = await archiveRawPayload(supabaseAdmin, correlationId, rawPayloadText, eventType, eventAction);
+    if (!archivePath) {
+      console.warn(`[${correlationId}] payload bruto nao arquivado (nao critico)`);
+    }
 
     await supabaseAdmin
       .from('comm_whatsapp_channels')
@@ -572,6 +625,7 @@ Deno.serve(async (req: Request) => {
             chat_id: chatId,
             from_me: item.message.from_me === true,
           },
+          archivePath,
         );
       }
     }
@@ -596,6 +650,7 @@ Deno.serve(async (req: Request) => {
             status: toTrimmedString(item.status),
             recipient_id: normalizeWhapiChatId(item.recipient_id),
           },
+          archivePath,
         );
       }
     }
@@ -612,6 +667,7 @@ Deno.serve(async (req: Request) => {
           event_action: eventAction,
           status: getHealthStatusText(payload),
         },
+        archivePath,
       );
 
       if (accepted) {
@@ -631,6 +687,7 @@ Deno.serve(async (req: Request) => {
           event_action: eventAction,
           user_id: normalizeCommWhatsAppPhone((payload.user as Record<string, unknown>).id),
         },
+        archivePath,
       );
 
       if (accepted) {
@@ -638,12 +695,16 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const elapsed = Date.now() - startedAt;
+    console.log(`[${correlationId}] complete elapsed=${elapsed}ms success=true`);
+
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: jsonHeaders,
     });
   } catch (error) {
-    console.error('[comm-whatsapp-webhook] erro inesperado', error);
+    const elapsed = Date.now() - (startedAt || 0);
+    console.error(`[${correlationId}] error elapsed=${elapsed}ms`, error);
 
     try {
       const supabaseAdmin = createServiceClient();
@@ -656,7 +717,7 @@ Deno.serve(async (req: Request) => {
         })
         .eq('id', channel.id);
     } catch (secondaryError) {
-      console.error('[comm-whatsapp-webhook] falha ao persistir erro', secondaryError);
+      console.error(`[${correlationId}] falha ao persistir erro`, secondaryError);
     }
 
     return new Response(

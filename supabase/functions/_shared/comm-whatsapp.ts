@@ -37,6 +37,224 @@ export type CommWhatsAppChannelRow = {
   updated_at: string;
 };
 
+export const DEFAULT_WHAPI_RETRY_COUNT = 1;
+export const DEFAULT_WHAPI_RETRY_DELAY_MS = 1_000;
+
+export type WhapiSendTextOpts = {
+  replyMessageId?: string;
+  replyPreviewText?: string;
+  replyType?: string;
+  replyAuthorPhone?: string;
+};
+
+export type WhapiPagination = {
+  count?: number;
+  offset?: number;
+  sort?: 'asc' | 'desc';
+  timeTo?: number;
+};
+
+export type WhapiClient = {
+  health(): Promise<Response>;
+  limits(): Promise<Response>;
+  sendText(chatId: string, text: string, opts?: WhapiSendTextOpts): Promise<Response>;
+  sendMedia(kind: string, body: BodyInit | FormData, headers: Record<string, string>, timeoutMs?: number): Promise<Response>;
+  uploadMedia(body: FormData, timeoutMs?: number): Promise<Response>;
+  fetchMessage(messageId: string): Promise<Response>;
+  fetchChatMessages(chatId: string, pagination?: WhapiPagination): Promise<Response>;
+  fetchChat(chatId: string): Promise<Response>;
+  fetchContact(contactId: string): Promise<Response>;
+  resolveLid(chatId: string): Promise<Response>;
+  checkContact(phone: string): Promise<Response>;
+  fetchContacts(pagination?: WhapiPagination): Promise<Response>;
+  deleteMessage(messageId: string): Promise<Response>;
+  editMessage(messageId: string, body: BodyInit, kind: string): Promise<Response>;
+  forwardMessage(messageId: string, body: BodyInit, headers: Record<string, string>): Promise<Response>;
+  sendReaction(messageId: string, chatId: string, emoji: string | null): Promise<Response>;
+  get(url: string, timeoutMs?: number): Promise<Response>;
+  post(url: string, body: BodyInit, headers: Record<string, string>, timeoutMs?: number): Promise<Response>;
+  del(url: string, timeoutMs?: number): Promise<Response>;
+  put(url: string, body: BodyInit, headers: Record<string, string>, timeoutMs?: number): Promise<Response>;
+};
+
+function whapiRetryFetch(
+  url: string,
+  init: RequestInit,
+  timeoutMs = DEFAULT_WHAPI_REQUEST_TIMEOUT_MS,
+  retries = DEFAULT_WHAPI_RETRY_COUNT,
+): Promise<Response> {
+  return whapiRetryFetchImpl(url, init, timeoutMs, retries);
+}
+
+async function whapiRetryFetchImpl(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  retries: number,
+): Promise<Response> {
+  let response = await fetchWhapiWithTimeout(url, init, timeoutMs);
+
+  for (let attempt = 0; attempt < retries && response.status >= 429; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, DEFAULT_WHAPI_RETRY_DELAY_MS * (attempt + 1)));
+    response = await fetchWhapiWithTimeout(url, init, timeoutMs);
+  }
+
+  return response;
+}
+
+export const createWhapiClient = (token: string): WhapiClient => {
+  const authHeaders = {
+    'Authorization': `Bearer ${sanitizeWhapiToken(token)}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+
+  const client: WhapiClient = {
+    health: () => whapiRetryFetch(`${WHAPI_BASE_URL}/health`, { headers: authHeaders }),
+
+    limits: () => whapiRetryFetch(`${WHAPI_BASE_URL}/limits`, { headers: authHeaders }),
+
+    sendText: (chatId, text, opts) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/messages/text`,
+      {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          to: chatId,
+          body: text,
+          ...(opts?.replyMessageId ? {
+            quoted: {
+              id: opts.replyMessageId,
+              preview_text: opts.replyPreviewText,
+              type: opts.replyType,
+              author_phone: opts.replyAuthorPhone,
+            },
+          } : {}),
+        }),
+      },
+    ),
+
+    sendMedia: (kind, body, extraHeaders, timeoutMs) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/messages/${kind}`,
+      { method: 'POST', headers: { ...authHeaders, ...extraHeaders }, body },
+      timeoutMs,
+    ),
+
+    uploadMedia: (body, timeoutMs) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/media`,
+      { method: 'POST', headers: { Authorization: authHeaders.Authorization }, body },
+      timeoutMs || 60_000,
+    ),
+
+    fetchMessage: (messageId) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/messages/${messageId}`,
+      { headers: authHeaders },
+    ),
+
+    fetchChatMessages: (chatId, pagination) => {
+      const params = new URLSearchParams();
+      if (pagination?.count) params.set('count', String(pagination.count));
+      if (pagination?.offset) params.set('count', String(pagination.offset));
+      if (pagination?.sort) params.set('sort', pagination.sort);
+      if (pagination?.timeTo) params.set('time_to', String(pagination.timeTo));
+
+      const qs = params.toString();
+      return whapiRetryFetch(
+        `${WHAPI_BASE_URL}/messages/list/${chatId}${qs ? `?${qs}` : ''}`,
+        { headers: authHeaders },
+      );
+    },
+
+    fetchChat: (chatId) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/chats/${chatId}`,
+      { headers: authHeaders },
+    ),
+
+    fetchContact: (contactId) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/contacts/${contactId}`,
+      { headers: authHeaders },
+    ),
+
+    resolveLid: (chatId) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/contacts/ids/${chatId}`,
+      { headers: authHeaders },
+    ),
+
+    checkContact: (phone) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/contacts`,
+      {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ blocking: 'wait', contacts: [phone] }),
+      },
+    ),
+
+    fetchContacts: (pagination) => {
+      const params = new URLSearchParams();
+      if (pagination?.count) params.set('count', String(pagination.count));
+      if (pagination?.offset) params.set('count', String(pagination.offset));
+
+      const qs = params.toString();
+      return whapiRetryFetch(
+        `${WHAPI_BASE_URL}/contacts${qs ? `?${qs}` : ''}`,
+        { headers: authHeaders },
+      );
+    },
+
+    deleteMessage: (messageId) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/messages/${messageId}`,
+      { method: 'DELETE', headers: authHeaders },
+    ),
+
+    editMessage: (messageId, body, kind) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/messages/${kind}`,
+      {
+        method: 'POST',
+        headers: authHeaders,
+        body,
+      },
+    ),
+
+    forwardMessage: (messageId, body, extraHeaders) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/messages/${messageId}`,
+      { method: 'POST', headers: { ...authHeaders, ...extraHeaders }, body },
+    ),
+
+    sendReaction: (messageId, chatId, emoji) => {
+      if (emoji) {
+        return whapiRetryFetch(
+          `${WHAPI_BASE_URL}/messages/${messageId}/reaction`,
+          {
+            method: 'PUT',
+            headers: authHeaders,
+            body: JSON.stringify({ to: chatId, emoji }),
+          },
+        );
+      }
+
+      return whapiRetryFetch(
+        `${WHAPI_BASE_URL}/messages/${messageId}/reaction`,
+        { method: 'DELETE', headers: authHeaders, body: JSON.stringify({ to: chatId }) },
+      );
+    },
+
+    get: (url, timeoutMs) => whapiRetryFetch(url, { headers: authHeaders }, timeoutMs),
+    post: (url, body, extraHeaders, timeoutMs) => whapiRetryFetch(
+      url,
+      { method: 'POST', headers: { ...authHeaders, ...extraHeaders }, body },
+      timeoutMs,
+    ),
+    del: (url, timeoutMs) => whapiRetryFetch(url, { method: 'DELETE', headers: authHeaders }, timeoutMs),
+    put: (url, body, extraHeaders, timeoutMs) => whapiRetryFetch(
+      url,
+      { method: 'PUT', headers: { ...authHeaders, ...extraHeaders }, body },
+      timeoutMs,
+    ),
+  };
+
+  return client;
+};
+
 export type CommWhatsAppSettings = {
   enabled: boolean;
   token: string;
@@ -2131,15 +2349,12 @@ export const isTrustedWhapiMediaUrl = (value: unknown): boolean => {
 
   try {
     const mediaUrl = new URL(rawUrl);
-    const whapiUrl = new URL(WHAPI_BASE_URL);
 
     return mediaUrl.protocol === 'https:'
-      && whapiUrl.protocol === 'https:'
       && !mediaUrl.username
       && !mediaUrl.password
       && !mediaUrl.port
-      && mediaUrl.origin === whapiUrl.origin
-      && mediaUrl.hostname === whapiUrl.hostname;
+      && mediaUrl.hostname.endsWith('.whapi.cloud');
   } catch {
     return false;
   }

@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
-import { Button, Dialog, DialogBody, DialogHeader, DialogTitle } from '../../../design-system';
+import { Button, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
@@ -3052,6 +3052,9 @@ export default function WhatsAppInboxScreen() {
   const [quickReplies, setQuickReplies] = useState<WhatsAppQuickReply[]>(DEFAULT_QUICK_REPLIES);
   const [quickRepliesModalOpen, setQuickRepliesModalOpen] = useState(false);
   const [savingQuickReplies, setSavingQuickReplies] = useState(false);
+  const [saveContactDialogOpen, setSaveContactDialogOpen] = useState(false);
+  const [saveContactName, setSaveContactName] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
   const [whatsAppAgendaOpen, setWhatsAppAgendaOpen] = useState(false);
   const [whatsAppDashboardOpen, setWhatsAppDashboardOpen] = useState(false);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
@@ -8056,6 +8059,32 @@ export default function WhatsAppInboxScreen() {
     }
   }, [loadChats, refreshStartChatSources, startChatQuery]);
 
+  const handleSaveContactToPhonebook = useCallback(async () => {
+    const name = saveContactName.trim();
+    if (!name) {
+      toast.error('Informe um nome para salvar o contato.');
+      return;
+    }
+    if (!selectedChat) return;
+
+    setSavingContact(true);
+    try {
+      await commWhatsAppService.saveContact({
+        phoneNumber: selectedChat.phone_number,
+        displayName: name,
+      });
+      toast.success('Contato salvo com sucesso.');
+      setSaveContactDialogOpen(false);
+      void refreshStartChatSources(startChatQuery, 1, false);
+      void loadChats();
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao salvar contato', error);
+      toast.error(error instanceof Error ? error.message : 'Nao foi possivel salvar o contato.');
+    } finally {
+      setSavingContact(false);
+    }
+  }, [saveContactName, selectedChat, loadChats, refreshStartChatSources, startChatQuery]);
+
   const syncComposerSelection = useCallback((target: HTMLTextAreaElement | null) => {
     if (!target) {
       return;
@@ -9489,8 +9518,20 @@ export default function WhatsAppInboxScreen() {
                       </span>
                     ) : null}
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
+                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-secondary)]">
                     <span>{formatCommWhatsAppPhoneLabel(selectedChat.phone_number)}</span>
+                    {!selectedChat.saved_contact_name ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSaveContactName(selectedChatDisplayName);
+                          setSaveContactDialogOpen(true);
+                        }}
+                        className="text-xs font-semibold text-[var(--brand-primary)] hover:underline"
+                      >
+                        + Salvar contato
+                      </button>
+                    ) : null}
                     {leadPanel?.responsavel_label ? <span>Responsável: {leadPanel.responsavel_label}</span> : null}
                   </div>
                   {nextChatReminderSummary ? (
@@ -10887,6 +10928,45 @@ export default function WhatsAppInboxScreen() {
             defaultType="Follow-up"
           />
         ) : null}
+
+        <Dialog open={saveContactDialogOpen} onOpenChange={(open) => !open && setSaveContactDialogOpen(false)} size="sm">
+          <DialogHeader onClose={() => setSaveContactDialogOpen(false)} showCloseButton>
+            <DialogTitle>Salvar contato</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <DialogDescription>
+              Este contato ainda n&atilde;o est&aacute; salvo na sua agenda. Escolha um nome para salva-lo.
+            </DialogDescription>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">
+                Nome do contato
+              </label>
+              <input
+                id="save-contact-name"
+                type="text"
+                value={saveContactName}
+                onChange={(e) => setSaveContactName(e.target.value)}
+                className="w-full rounded-lg border border-[var(--border-strong)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none ring-[var(--brand-primary)] focus:ring-2"
+                placeholder="Nome do contato"
+                autoFocus
+                disabled={savingContact}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !savingContact) {
+                    void handleSaveContactToPhonebook();
+                  }
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setSaveContactDialogOpen(false)} disabled={savingContact}>
+                Cancelar
+              </Button>
+              <Button variant="primary" onClick={handleSaveContactToPhonebook} loading={savingContact} disabled={savingContact}>
+                Salvar
+              </Button>
+            </div>
+          </DialogBody>
+        </Dialog>
 
         <WhatsAppLeadDrawer
           isOpen={leadDrawerOpen}

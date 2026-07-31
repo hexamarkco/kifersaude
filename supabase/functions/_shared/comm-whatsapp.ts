@@ -2550,6 +2550,39 @@ export async function cacheCommWhatsAppMedia(supabaseAdmin: SupabaseClient, para
   return await archiveCommWhatsAppMediaFromWhapi(supabaseAdmin, params);
 }
 
+export async function addWhapiContact(params: {
+  token: string;
+  phone: string;
+  name: string;
+}): Promise<Record<string, unknown> | null> {
+  const digits = normalizeCommWhatsAppPhone(params.phone);
+  const displayName = toTrimmedString(params.name);
+  if (!digits || !isValidCommWhatsAppDisplayName(displayName)) {
+    return null;
+  }
+
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/contacts`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: JSON.stringify({ phone: digits, name: displayName }),
+  }, 10_000);
+
+  if (!response.ok) {
+    const payload = await readResponsePayload(response).catch(() => null);
+    if (isRecord(payload) && isRecord(payload.error) && payload.error.code === 409) {
+      return null;
+    }
+    throw new Error(parseWhapiError(payload) || 'Falha ao adicionar contato na Whapi.');
+  }
+
+  const payload = await readResponsePayload(response);
+  return isRecord(payload) ? payload : null;
+}
+
 export async function checkWhapiContactExists(params: {
   token: string;
   contactId: string;

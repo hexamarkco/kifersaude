@@ -2,6 +2,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
+  addWhapiContact,
   buildWhapiDirectChatId,
   cacheCommWhatsAppChatContactName,
   checkWhapiContactExists,
@@ -635,6 +636,21 @@ Deno.serve(async (req: Request) => {
           status: 400,
           headers: jsonHeaders,
         });
+      }
+
+      try {
+        await addWhapiContact({ token: settings.token, phone: phoneNumber, name: displayName });
+      } catch {
+        return new Response(JSON.stringify({ error: 'Falha ao adicionar contato na Whapi. Verifique se o numero e valido.' }), {
+          status: 502,
+          headers: jsonHeaders,
+        });
+      }
+
+      try {
+        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
+      } catch {
+        console.warn('[comm-whatsapp-contacts] sync apos salvar contato ignorado, servindo cache existente');
       }
 
       const savedContact = await saveContactToCache({

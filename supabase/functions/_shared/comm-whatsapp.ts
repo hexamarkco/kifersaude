@@ -1994,7 +1994,7 @@ export const extractWhapiContactPhone = (payload: unknown): string => {
 export const extractWhapiContactName = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
 
-  const candidates = [payload.name, payload.short, payload.short_name, payload.full_name];
+  const candidates = [payload.name, payload.pushname, payload.short, payload.short_name, payload.full_name];
   for (const candidate of candidates) {
     const normalized = toTrimmedString(candidate);
     if (isValidCommWhatsAppDisplayName(normalized)) return normalized;
@@ -2032,7 +2032,7 @@ export const extractWhapiSavedContactName = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
   if (!extractWhapiContactSaved(payload)) return '';
 
-  const candidates = [payload.name, payload.short, payload.short_name, payload.full_name];
+  const candidates = [payload.name, payload.pushname, payload.short, payload.short_name, payload.full_name];
   for (const candidate of candidates) {
     const normalized = toTrimmedString(candidate);
     if (isValidCommWhatsAppDisplayName(normalized)) return normalized;

@@ -3046,6 +3046,11 @@ export default function WhatsAppInboxScreen() {
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [archivedSectionOpen, setArchivedSectionOpen] = useState(false);
+  const [archivedChatsCount, setArchivedChatsCount] = useState<number | null>(null);
+  const [archivedChatsLoading, setArchivedChatsLoading] = useState(false);
+  const [archivedChatsLoadingMore, setArchivedChatsLoadingMore] = useState(false);
+  const [archivedChatsHasMore, setArchivedChatsHasMore] = useState(false);
+  const [archivedChatsPage, setArchivedChatsPage] = useState(0);
   const [updatingChatStateId, setUpdatingChatStateId] = useState<string | null>(null);
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [quickReplyIntegration, setQuickReplyIntegration] = useState<IntegrationSetting | null>(null);
@@ -3194,6 +3199,7 @@ export default function WhatsAppInboxScreen() {
   const loadChatsRef = useRef<() => Promise<unknown> | void>(() => {});
   const loadMessagesRef = useRef<(chat: CommWhatsAppChat | null, reason?: MessageLoadReason) => Promise<unknown> | void>(() => {});
   const archivedSectionOpenRef = useRef<boolean>(false);
+  const archivedChatsPageRef = useRef<number>(0);
   const latestChatsLoadedAtRef = useRef<number>(0);
   const latestMessagesRef = useRef<CommWhatsAppMessage[]>([]);
   const latestCrmStartResultsRef = useRef<CommWhatsAppLeadSearchResult[]>([]);
@@ -3432,7 +3438,7 @@ export default function WhatsAppInboxScreen() {
     return remaining <= SCROLL_BOTTOM_THRESHOLD_PX;
   }, []);
 
-  const archivedChatsCount = useMemo(() => chats.filter((chat) => chat.is_archived).length, [chats]);
+  const archivedChatsCountValue = archivedChatsCount ?? 0;
 
   const selectedChat = useMemo(
     () => chats.find((chat) => chat.id === selectedChatId) ?? null,
@@ -4800,6 +4806,10 @@ export default function WhatsAppInboxScreen() {
   }, [archivedSectionOpen]);
 
   useEffect(() => {
+    archivedChatsPageRef.current = archivedChatsPage;
+  }, [archivedChatsPage]);
+
+  useEffect(() => {
     latestMessagesRef.current = messages;
   }, [messages]);
 
@@ -5494,13 +5504,16 @@ export default function WhatsAppInboxScreen() {
     setChats((current) => applyFrontendSavedContactNames(current));
   }, [applyFrontendSavedContactNames, savedContacts]);
 
-  const loadChats = useCallback(async (loadOptions: { sections?: Array<'active' | 'archived'> } = {}) => {
+  const loadChats = useCallback(async (loadOptions: { sections?: Array<'active' | 'archived'>; partialArchived?: boolean } = {}) => {
     // BUG FIX (BUG #7): por default carregamos APENAS a secao que o usuario
     // esta visualizando. Os chats da outra secao continuam em memoria (e sao
     // recarregados sob demanda quando o usuario alterna). Isso reduz drasticamente
     // o trafego de polling (8s) em contas com muitos chats arquivados.
     const requestedSections = loadOptions.sections
       ?? (archivedSectionOpenRef.current ? (['archived'] as const) : (['active'] as const));
+    // Secao arquivada carrega parcialmente (pagina a pagina com "Carregar mais")
+    // por padrao quando o chamador nao pede explicitamente as secoes (ex.: polling).
+    const partialArchived = loadOptions.partialArchived ?? !loadOptions.sections;
 
     const loadKey = JSON.stringify({
       activity: chatActivityFilter,
@@ -5520,8 +5533,11 @@ export default function WhatsAppInboxScreen() {
         const fetchChatSection = async (archivedFilter: 'active' | 'archived') => {
           const all: CommWhatsAppChat[] = [];
           let offset = 0;
+          const isArchivedPartial = partialArchived && archivedFilter === 'archived';
+          const maxPages = isArchivedPartial ? Math.max(1, archivedChatsPageRef.current) : Number.POSITIVE_INFINITY;
+          let pagesFetched = 0;
 
-          while (true) {
+          while (pagesFetched < maxPages) {
             let page: CommWhatsAppChat[] = [];
             for (let attempt = 0; attempt <= EMPTY_CHAT_LIST_RETRY_DELAYS_MS.length; attempt += 1) {
               page = await commWhatsAppService.listChats({
@@ -5550,12 +5566,18 @@ export default function WhatsAppInboxScreen() {
             }
 
             all.push(...page);
+            pagesFetched += 1;
 
             if (page.length < CHAT_PAGE_SIZE) {
               break;
             }
 
             offset += page.length;
+          }
+
+          if (isArchivedPartial) {
+            setArchivedChatsHasMore(offset > 0 && all.length >= CHAT_PAGE_SIZE);
+            setArchivedChatsPage(pagesFetched);
           }
 
           return all;
@@ -5700,6 +5722,79 @@ export default function WhatsAppInboxScreen() {
 
   loadChatsRef.current = loadChats;
 
+  const refreshArchivedChatsCount = useCallback(async () => {
+    try {
+      const count = await commWhatsAppService.getArchivedChatsCount();
+      setArchivedChatsCount(count);
+    } catch (error) {
+      if (!isSupabaseConnectivityError(error)) {
+        console.warn('[WhatsAppInbox] erro ao carregar contagem de arquivados', error);
+      }
+    }
+  }, []);
+
+  const handleLoadMoreArchivedChats = useCallback(async () => {
+    if (archivedChatsLoading || archivedChatsLoadingMore || !archivedChatsHasMore) {
+      return;
+    }
+
+    setArchivedChatsLoadingMore(true);
+    const nextPageIndex = archivedChatsPage;
+
+    try {
+      const page = await commWhatsAppService.listChats({
+        activityFilter: chatActivityFilter,
+        leadStatusFilters,
+        archivedFilter: 'archived',
+        limit: CHAT_PAGE_SIZE,
+        offset: nextPageIndex * CHAT_PAGE_SIZE,
+      });
+
+      setArchivedChatsHasMore(page.length >= CHAT_PAGE_SIZE);
+      setArchivedChatsPage(nextPageIndex + 1);
+
+      setChats((current) => {
+        const previousChats = current;
+        const previousChatsById = new Map(previousChats.map((chat) => [chat.id, chat] as const));
+        const transformed = applyPendingChatInboxState(
+          applyFrontendSavedContactNames(
+            applyPrefetchedLeadNames(page.map((chat) => preserveUsefulChatPreview(chat, previousChatsById.get(chat.id) ?? null))),
+          ),
+          pendingChatInboxStateRef.current,
+        );
+
+        const nextById = new Map<string, CommWhatsAppChat>();
+        for (const chat of current) {
+          nextById.set(chat.id, chat);
+        }
+        for (const chat of transformed) {
+          nextById.set(chat.id, chat);
+        }
+
+        const sorted = sortChatsByInboxOrder(Array.from(nextById.values()));
+        chatsSignatureRef.current = buildChatsSignature(sorted);
+        return sorted;
+      });
+    } catch (error) {
+      console.error('[WhatsAppInbox] erro ao carregar mais arquivados', error);
+      if (!isSupabaseConnectivityError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Não foi possível carregar mais conversas arquivadas.');
+      }
+    } finally {
+      setArchivedChatsLoadingMore(false);
+    }
+  }, [
+    applyFrontendSavedContactNames,
+    applyPrefetchedLeadNames,
+    buildChatsSignature,
+    chatActivityFilter,
+    leadStatusFilters,
+    archivedChatsHasMore,
+    archivedChatsLoading,
+    archivedChatsLoadingMore,
+    archivedChatsPage,
+  ]);
+
   const handleSwitchArchivedSection = useCallback((nextArchivedSectionOpen: boolean) => {
     setArchivedSectionOpen(nextArchivedSectionOpen);
 
@@ -5717,8 +5812,17 @@ export default function WhatsAppInboxScreen() {
       setSelectedChatId(nextChat?.id ?? null);
     }
 
-    void loadChats({ sections: nextArchivedSectionOpen ? ['archived', 'active'] : ['active'] });
-  }, [chatMatchesActiveFilters, loadChats]);
+    if (nextArchivedSectionOpen) {
+      setArchivedChatsLoading(true);
+      setArchivedChatsLoadingMore(false);
+      void loadChats({ sections: ['archived', 'active'], partialArchived: true })
+        .catch(() => undefined)
+        .finally(() => setArchivedChatsLoading(false));
+      void refreshArchivedChatsCount();
+    } else {
+      void loadChats({ sections: ['active'] });
+    }
+  }, [chatMatchesActiveFilters, loadChats, refreshArchivedChatsCount]);
 
   useWhatsAppInboxDeepLink({
     searchParams,
@@ -6087,7 +6191,7 @@ export default function WhatsAppInboxScreen() {
 
     const bootstrap = async () => {
       setLoading(true);
-      await Promise.all([loadChats({ sections: ['active'] }), loadOperationalState()]);
+      await Promise.all([loadChats({ sections: ['active'] }), loadOperationalState(), refreshArchivedChatsCount()]);
       if (active) {
         setLoading(false);
       }
@@ -6098,7 +6202,7 @@ export default function WhatsAppInboxScreen() {
     return () => {
       active = false;
     };
-  }, [loadChats, loadOperationalState]);
+  }, [loadChats, loadOperationalState, refreshArchivedChatsCount]);
 
   useEffect(() => {
     const channel = supabase
@@ -6187,6 +6291,7 @@ export default function WhatsAppInboxScreen() {
 
       timeoutId = window.setTimeout(() => {
         void loadChats();
+        void refreshArchivedChatsCount();
         scheduleNext();
       }, delay);
     };
@@ -6194,7 +6299,7 @@ export default function WhatsAppInboxScreen() {
     scheduleNext();
 
     return () => window.clearTimeout(timeoutId);
-  }, [loadChats, pollingEnabled]);
+  }, [loadChats, pollingEnabled, refreshArchivedChatsCount]);
 
   useEffect(() => {
     if (!pollingEnabled) {
@@ -8683,6 +8788,7 @@ export default function WhatsAppInboxScreen() {
       upsertChatLocally(updatedChat);
 
       if (typeof options.isArchived === 'boolean') {
+        void refreshArchivedChatsCount();
         if (archiveConfirmed) {
           toast.success(options.isArchived ? 'Conversa arquivada.' : 'Conversa removida dos arquivados.');
         } else {
@@ -8708,7 +8814,7 @@ export default function WhatsAppInboxScreen() {
     } finally {
       setUpdatingChatStateId((current) => (current === chat.id ? null : current));
     }
-  }, [loadChats, upsertChatLocally]);
+  }, [loadChats, refreshArchivedChatsCount, upsertChatLocally]);
 
   const handleDeleteChat = useCallback(async (chat: CommWhatsAppChat) => {
     if (deletingChatId) {
@@ -9272,17 +9378,17 @@ export default function WhatsAppInboxScreen() {
                     onClick={() => handleSwitchArchivedSection(!archivedSectionOpen)}
                     className="rounded-xl"
                     aria-label="Chats arquivados"
-                    title={archivedChatsCount > 0 ? `Chats arquivados (${archivedChatsCount})` : 'Chats arquivados'}
+                    title={archivedChatsCountValue > 0 ? `Chats arquivados (${archivedChatsCountValue})` : 'Chats arquivados'}
                   >
                     <span className="relative inline-flex">
                       <Archive className="h-4 w-4" />
-                      {archivedChatsCount > 0 ? (
+                      {archivedChatsCountValue > 0 ? (
                         <span className="absolute -right-2 -top-2 inline-flex min-w-[18px] items-center justify-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none" style={{
                           borderColor: 'var(--brand-primary-border)',
                           background: 'var(--brand-primary)',
                           color: 'var(--text-on-brand)',
                         }}>
-                          {archivedChatsCount > 99 ? '99+' : archivedChatsCount}
+                          {archivedChatsCountValue > 99 ? '99+' : archivedChatsCountValue}
                         </span>
                       ) : null}
                     </span>
@@ -9362,7 +9468,7 @@ export default function WhatsAppInboxScreen() {
                 <Archive className="h-4 w-4 text-[var(--text-muted)]" />
                 <span>Conversas arquivadas</span>
                 <span className="ml-auto text-xs font-medium text-[var(--text-muted)]">
-                  {archivedChatsCount > 0 ? `${archivedChatsCount} ${archivedChatsCount === 1 ? 'chat' : 'chats'}` : '0 chats'}
+                  {archivedChatsLoading ? 'Carregando...' : archivedChatsCountValue > 0 ? `${archivedChatsCountValue} ${archivedChatsCountValue === 1 ? 'chat' : 'chats'}` : '0 chats'}
                 </span>
               </div>
             ) : null}
@@ -9443,7 +9549,12 @@ export default function WhatsAppInboxScreen() {
                   />
                 ))}
               </>
-            )) : sidebarChats.length === 0 ? (
+            )) : archivedSectionOpen && archivedChatsLoading && sidebarChats.length === 0 ? (
+              <div className="flex min-h-[240px] items-center justify-center text-sm text-[var(--text-secondary)]">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Carregando conversas arquivadas...
+              </div>
+            ) : sidebarChats.length === 0 ? (
               <div className="whatsapp-inbox-empty-state flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[var(--kds-radius-lg)] border border-dashed p-6 text-center">
                 {archivedSectionOpen ? <Archive className="h-8 w-8 whatsapp-inbox-empty-icon" /> : <MessageCircle className="h-8 w-8 whatsapp-inbox-empty-icon" />}
                 <div className="space-y-1">
@@ -9484,6 +9595,19 @@ export default function WhatsAppInboxScreen() {
                     }}
                   />
                 ))}
+                {archivedSectionOpen && archivedChatsHasMore ? (
+                  <div className="px-4 py-3">
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => void handleLoadMoreArchivedChats()}
+                      loading={archivedChatsLoadingMore}
+                      disabled={archivedChatsLoadingMore}
+                    >
+                      {archivedChatsLoadingMore ? 'Carregando...' : 'Carregar mais arquivados'}
+                    </Button>
+                  </div>
+                ) : null}
               </>
             )}
           </div>

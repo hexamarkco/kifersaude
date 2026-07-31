@@ -573,6 +573,22 @@ export const commWhatsAppService = {
     return count ?? 0;
   },
 
+  async getArchivedChatsCount(): Promise<number> {
+    await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para carregar a contagem de conversas arquivadas do WhatsApp.' });
+
+    const { count, error } = await supabase
+      .from('comm_whatsapp_chats')
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .eq('is_archived', true);
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar a contagem de conversas arquivadas do WhatsApp.'));
+    }
+
+    return count ?? 0;
+  },
+
   rememberLocalMediaPreview(messageId: string, objectUrl: string) {
     if (!messageId || !objectUrl) return;
     localMediaPreviewByMessageId.set(messageId, objectUrl);

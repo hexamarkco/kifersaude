@@ -12,6 +12,7 @@ import {
   extractWhapiLinkPreviewMeta,
   extractWhapiQuotedMessageMeta,
   extractWhapiReactionEvent,
+  extractWhapiStarEvent,
   extractPhoneFromChatId,
   extractWhapiMediaMeta,
   formatPhoneLabel,
@@ -252,6 +253,24 @@ async function persistMessageFromWebhook(
 
     // A reaction action is never a standalone Inbox message. A durable pending
     // mutation preserves it until the base message arrives.
+    return { id: mutation.chatId || '' };
+  }
+
+  const starEvent = extractWhapiStarEvent(mutationSource, eventAction);
+  if (starEvent?.targetExternalMessageId) {
+    const mutation = await applyCommWhatsAppMessageMutation(supabaseAdmin, {
+      channelId: channel.id,
+      targetExternalMessageId: starEvent.targetExternalMessageId,
+      mutationType: 'star',
+      eventExternalMessageId: starEvent.eventExternalMessageId,
+      occurredAt: starEvent.starredAt,
+      payload: {
+        starred: starEvent.starred,
+      },
+      dedupeKey: starEvent.eventExternalMessageId
+        || `star:${starEvent.targetExternalMessageId}:${starEvent.starredAt}`,
+    });
+
     return { id: mutation.chatId || '' };
   }
 

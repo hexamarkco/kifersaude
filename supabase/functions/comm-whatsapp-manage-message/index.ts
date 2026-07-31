@@ -34,6 +34,8 @@ type ManageMessageBody = {
   action?: string;
   text?: string;
   targetChatId?: string;
+  targetChatIds?: string[];
+  starred?: boolean;
 };
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
@@ -96,7 +98,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (action !== 'edit' && action !== 'delete' && action !== 'forward') {
+    if (action !== 'edit' && action !== 'delete' && action !== 'forward' && action !== 'star') {
       return new Response(JSON.stringify({ error: 'Acao invalida para a mensagem.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -278,77 +280,140 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === 'forward') {
-      const targetChatId = normalizeWhapiChatId(body.targetChatId);
-      if (!targetChatId || !isDirectWhapiChatId(targetChatId)) {
+      const requestedTargets = Array.isArray(body.targetChatIds)
+        ? body.targetChatIds.map((value) => normalizeWhapiChatId(value)).filter(Boolean).slice(0, 20)
+        : [];
+      const singleTarget = normalizeWhapiChatId(body.targetChatId);
+      const targetChatIds = singleTarget
+        ? [singleTarget]
+        : requestedTargets;
+
+      if (targetChatIds.length === 0) {
         return new Response(JSON.stringify({ error: 'Conversa de destino invalida para encaminhar.' }), {
           status: 400,
           headers: jsonHeaders,
         });
       }
 
+      for (const targetChatId of targetChatIds) {
+        if (!isDirectWhapiChatId(targetChatId)) {
+          return new Response(JSON.stringify({ error: 'Conversa de destino invalida para encaminhar.' }), {
+            status: 400,
+            headers: jsonHeaders,
+          });
+        }
+      }
+
       const whapi = createWhapiClient(token);
-      const response = await whapi.forwardMessage(externalMessageId, JSON.stringify({ to: targetChatId, force: true }), {});
+      const forwarded: Array<{ targetChatId: string; messageId: string | null; status: string }> = [];
+
+      for (const targetChatId of targetChatIds) {
+        const response = await whapi.forwardMessage(externalMessageId, JSON.stringify({ to: targetChatId, force: true }), {});
+        const payload = await readResponsePayload(response);
+
+        if (!response.ok) {
+          return new Response(JSON.stringify({ error: parseWhapiError(payload) || `Falha ao encaminhar mensagem para ${targetChatId} na Whapi.` }), {
+            status: response.status,
+            headers: jsonHeaders,
+          });
+        }
+
+        const forwardedMessageId = extractWhapiMessageId(payload);
+        const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, forwardedMessageId);
+        const nowIso = getNowIso();
+        const { data: targetChat } = await supabaseAdmin
+          .from('comm_whatsapp_chats')
+          .select('display_name, push_name')
+          .eq('channel_id', channel.id)
+          .eq('external_chat_id', targetChatId)
+          .maybeSingle();
+        const phoneDigits = extractPhoneFromChatId(targetChatId);
+        const summaryText = toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || '[Mensagem encaminhada]';
+
+        await persistCommWhatsAppMessage(supabaseAdmin, {
+          channelId: channel.id,
+          externalChatId: targetChatId,
+          phoneNumber: phoneDigits || null,
+          displayName: toTrimmedString(targetChat?.display_name) || formatPhoneLabel(phoneDigits),
+          pushName: toTrimmedString(targetChat?.push_name) || null,
+          lastMessageText: summaryText,
+          lastMessageDirection: 'outbound',
+          lastMessageAt: nowIso,
+          incrementUnread: false,
+          externalMessageId: forwardedMessageId || null,
+          direction: 'outbound',
+          messageType: toTrimmedString(message.message_type) || 'text',
+          deliveryStatus,
+          textContent: summaryText,
+          createdBy: authResult.user.profileId,
+          source: 'api',
+          senderPhone: channel.phone_number,
+          senderName: channel.connected_user_name,
+          statusUpdatedAt: nowIso,
+          errorMessage: null,
+          mediaId: null,
+          mediaUrl: null,
+          mediaMimeType: null,
+          mediaFileName: null,
+          mediaSizeBytes: null,
+          mediaDurationSeconds: null,
+          mediaCaption: null,
+          metadata: {
+            provider: 'whapi',
+            forwarded: true,
+            forwarded_from_external_message_id: externalMessageId,
+          },
+        });
+
+        forwarded.push({
+          targetChatId,
+          messageId: forwardedMessageId || null,
+          status: deliveryStatus,
+        });
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        action: 'forward',
+        forwarded,
+      }), {
+        status: 200,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (action === 'star') {
+      const starred = body.starred === true;
+
+      const whapi = createWhapiClient(token);
+      const response = await whapi.starMessage(externalMessageId, starred);
       const payload = await readResponsePayload(response);
 
       if (!response.ok) {
-        return new Response(JSON.stringify({ error: parseWhapiError(payload) || 'Falha ao encaminhar mensagem na Whapi.' }), {
+        return new Response(JSON.stringify({ error: parseWhapiError(payload) || 'Falha ao atualizar a estrela na Whapi.' }), {
           status: response.status,
           headers: jsonHeaders,
         });
       }
 
-      const forwardedMessageId = extractWhapiMessageId(payload);
-      const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, forwardedMessageId);
-      const nowIso = getNowIso();
-      const { data: targetChat } = await supabaseAdmin
-        .from('comm_whatsapp_chats')
-        .select('display_name, push_name')
-        .eq('channel_id', channel.id)
-        .eq('external_chat_id', targetChatId)
-        .maybeSingle();
-      const phoneDigits = extractPhoneFromChatId(targetChatId);
-      const summaryText = toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || '[Mensagem encaminhada]';
-
-      await persistCommWhatsAppMessage(supabaseAdmin, {
+      const starredAt = getNowIso();
+      await applyCommWhatsAppMessageMutation(supabaseAdmin, {
         channelId: channel.id,
-        externalChatId: targetChatId,
-        phoneNumber: phoneDigits || null,
-        displayName: toTrimmedString(targetChat?.display_name) || formatPhoneLabel(phoneDigits),
-        pushName: toTrimmedString(targetChat?.push_name) || null,
-        lastMessageText: summaryText,
-        lastMessageDirection: 'outbound',
-        lastMessageAt: nowIso,
-        incrementUnread: false,
-        externalMessageId: forwardedMessageId || null,
-        direction: 'outbound',
-        messageType: toTrimmedString(message.message_type) || 'text',
-        deliveryStatus,
-        textContent: summaryText,
-        createdBy: authResult.user.profileId,
-        source: 'api',
-        senderPhone: channel.phone_number,
-        senderName: channel.connected_user_name,
-        statusUpdatedAt: nowIso,
-        errorMessage: null,
-        mediaId: null,
-        mediaUrl: null,
-        mediaMimeType: null,
-        mediaFileName: null,
-        mediaSizeBytes: null,
-        mediaDurationSeconds: null,
-        mediaCaption: null,
-        metadata: {
-          provider: 'whapi',
-          forwarded: true,
-          forwarded_from_external_message_id: externalMessageId,
+        targetExternalMessageId: externalMessageId,
+        mutationType: 'star',
+        occurredAt: starredAt,
+        payload: {
+          starred,
+          action_type: starred ? 'manual_star' : 'manual_unstar',
         },
+        dedupeKey: `manual-star:${externalMessageId}:${starredAt}`,
       });
 
       return new Response(JSON.stringify({
         success: true,
-        action: 'forward',
-        messageId: forwardedMessageId || null,
-        status: deliveryStatus,
+        action: 'star',
+        starred,
+        starredAt,
       }), {
         status: 200,
         headers: jsonHeaders,

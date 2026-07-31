@@ -1049,6 +1049,27 @@ export const commWhatsAppService = {
     return payload.contact;
   },
 
+  async renameContact(params: { phoneNumber: string; displayName: string }): Promise<CommWhatsAppSavedContactResult> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-contacts', {
+      body: {
+        action: 'renameContact',
+        phoneNumber: params.phoneNumber,
+        displayName: params.displayName,
+      },
+    });
+
+    if (error) {
+      throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel renomear o contato do WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { contact?: CommWhatsAppSavedContactResult };
+    if (!payload.contact) {
+      throw new Error('O contato renomeado nao retornou dados suficientes.');
+    }
+
+    return payload.contact;
+  },
+
   async findExistingChat(params: { leadId?: string | null; phoneDigits?: string[] }): Promise<CommWhatsAppChat | null> {
     const normalizedLeadId = params.leadId?.trim() || null;
     const normalizedPhoneDigits = Array.from(new Set((params.phoneDigits ?? []).map((value) => value.trim()).filter(Boolean)));
@@ -1755,6 +1776,26 @@ export const commWhatsAppService = {
     }
   },
 
+  async starMessage(messageId: string, starred: boolean): Promise<{ starred: boolean; starredAt: string | null }> {
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-manage-message', {
+      body: {
+        messageId,
+        action: 'star',
+        starred,
+      },
+    });
+
+    if (error) {
+      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel atualizar a estrela da mensagem no WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { starred?: boolean; starredAt?: string | null };
+    return {
+      starred: payload.starred === true,
+      starredAt: typeof payload.starredAt === 'string' ? payload.starredAt : null,
+    };
+  },
+
   async editMessage(messageId: string, text: string): Promise<{ editedText: string; editedAt: string | null }> {
     const { data, error } = await supabase.functions.invoke('comm-whatsapp-manage-message', {
       body: {
@@ -1807,6 +1848,35 @@ export const commWhatsAppService = {
     }
 
     return parseSendResponse(data);
+  },
+
+  async forwardMessageToChats(messageId: string, targetChatIds: string[]): Promise<Array<{ targetChatId: string; messageId: string | null; status: string }>> {
+    const uniqueTargets = Array.from(new Set(targetChatIds.map((value) => value.trim()).filter(Boolean)));
+
+    if (uniqueTargets.length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase.functions.invoke('comm-whatsapp-manage-message', {
+      body: {
+        messageId,
+        action: 'forward',
+        targetChatIds: uniqueTargets,
+      },
+    });
+
+    if (error) {
+      throw new Error(await getFunctionInvokeErrorMessage(error, 'Nao foi possivel encaminhar a mensagem no WhatsApp.'));
+    }
+
+    const payload = (data ?? {}) as { forwarded?: Array<{ targetChatId?: string; messageId?: string | null; status?: string }> };
+    return Array.isArray(payload.forwarded)
+      ? payload.forwarded.map((item) => ({
+          targetChatId: typeof item.targetChatId === 'string' ? item.targetChatId : '',
+          messageId: typeof item.messageId === 'string' && item.messageId ? item.messageId : null,
+          status: typeof item.status === 'string' ? item.status : 'pending',
+        }))
+      : [];
   },
 
   async resolveMediaObjectUrl(params: { mediaId?: string | null; mediaUrl?: string | null }): Promise<string | null> {

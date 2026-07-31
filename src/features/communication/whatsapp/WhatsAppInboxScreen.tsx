@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArchiveRestore, Bell, BellOff, CalendarDays, Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock3, Cog, Copy, Download, FileAudio, FileImage, FileText, FolderOpen, Forward, Headphones, Images, Info, Link2, Loader2, MapPin, MessageCircle, Mic, Pause, Pencil, Pin, Play, Plus, Reply, RotateCw, Search, SendHorizontal, SlidersHorizontal, Smile, Sparkles, Star, Sticker, Trash2, UserRound, Volume2, Vote, WifiOff, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import '../communicationTerracotta.css';
 import Input from '../../../components/ui/Input';
-import { Button, Dialog, DialogBody, DialogDescription, DialogHeader, DialogTitle } from '../../../design-system';
+import { Button, Dialog, DialogBody, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../../design-system';
 import LeadForm from '../../../components/LeadForm';
 import PanelPopoverShell from '../../../components/ui/PanelPopoverShell';
 import { getPanelButtonClass } from '../../../components/ui/standards';
@@ -522,6 +522,13 @@ const canReplyOrForwardMessage = (message: CommWhatsAppMessage) => {
   return message.direction !== 'system'
     && Boolean(message.external_message_id?.trim())
     && message.delivery_status.trim().toLowerCase() !== 'deleted';
+};
+
+const isMessageStarred = (message: CommWhatsAppMessage) => {
+  const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+    ? message.metadata as Record<string, unknown>
+    : {};
+  return metadata.starred === true;
 };
 
 const getQuotePayloadFromMessage = (message: CommWhatsAppMessage) => ({
@@ -3106,7 +3113,8 @@ export default function WhatsAppInboxScreen() {
   const [replyTargetMessage, setReplyTargetMessage] = useState<CommWhatsAppMessage | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<CommWhatsAppMessage | null>(null);
   const [forwardSearch, setForwardSearch] = useState('');
-  const [forwardingChatId, setForwardingChatId] = useState<string | null>(null);
+  const [forwardingTargetIds, setForwardingTargetIds] = useState<string[]>([]);
+  const [forwardingInProgress, setForwardingInProgress] = useState(false);
   const [openReactionPickerMessageId, setOpenReactionPickerMessageId] = useState<string | null>(null);
   const [reactionPickerPosition, setReactionPickerPosition] = useState<{ top: number; left: number } | null>(null);
   const [openMessageActionMenuMessageId, setOpenMessageActionMenuMessageId] = useState<string | null>(null);
@@ -7345,6 +7353,40 @@ export default function WhatsAppInboxScreen() {
     }
   }, [patchMessageReactionLocally, selectedChat?.external_chat_id]);
 
+  const handleToggleStarMessage = useCallback(async (message: CommWhatsAppMessage) => {
+    if (!message.external_message_id) {
+      return;
+    }
+
+    const metadata = message.metadata && typeof message.metadata === 'object' && !Array.isArray(message.metadata)
+      ? message.metadata as Record<string, unknown>
+      : {};
+    const currentStarred = metadata.starred === true;
+    const nextStarred = !currentStarred;
+
+    patchMessageLocally(message.id, {
+      metadata: {
+        ...metadata,
+        starred: nextStarred,
+        starred_at: new Date().toISOString(),
+      },
+    });
+
+    try {
+      await commWhatsAppService.starMessage(message.id, nextStarred);
+    } catch (error) {
+      patchMessageLocally(message.id, {
+        metadata: {
+          ...metadata,
+          starred: currentStarred,
+          starred_at: metadata.starred_at,
+        },
+      });
+      console.error('[WhatsAppInbox] erro ao atualizar estrela da mensagem', error);
+      toast.error(error instanceof Error ? error.message : 'Não foi possível atualizar a estrela da mensagem.');
+    }
+  }, [patchMessageLocally]);
+
   const handleOpenEditMessageModal = useCallback((message: CommWhatsAppMessage) => {
     if (!canEditOutboundMessage(message)) {
       toast.error('Esta mensagem nao pode ser editada no momento.');
@@ -7382,6 +7424,7 @@ export default function WhatsAppInboxScreen() {
 
     setForwardingMessage(message);
     setForwardSearch('');
+    setForwardingTargetIds([]);
     setMessageActionMenuPointerAnchor(null);
     setOpenMessageActionMenuMessageId(null);
   }, []);
@@ -7389,28 +7432,56 @@ export default function WhatsAppInboxScreen() {
   const handleCloseForwardMessageModal = useCallback(() => {
     setForwardingMessage(null);
     setForwardSearch('');
-    setForwardingChatId(null);
+    setForwardingTargetIds([]);
+    setForwardingInProgress(false);
   }, []);
 
-  const handleForwardMessage = useCallback(async (targetChat: CommWhatsAppChat) => {
-    if (!forwardingMessage) {
+  const handleToggleForwardTarget = useCallback((chatId: string) => {
+    setForwardingTargetIds((current) => (
+      current.includes(chatId) ? current.filter((id) => id !== chatId) : [...current, chatId]
+    ));
+  }, []);
+
+  const handleForwardToSelectedChats = useCallback(async () => {
+    if (!forwardingMessage || forwardingInProgress) {
       return;
     }
 
-    setForwardingChatId(targetChat.id);
+    if (forwardingTargetIds.length === 0) {
+      toast.error('Selecione pelo menos uma conversa para encaminhar.');
+      return;
+    }
+
+    setForwardingInProgress(true);
 
     try {
-      await commWhatsAppService.forwardMessage(forwardingMessage.id, targetChat.external_chat_id);
-      await Promise.all([loadChats(), targetChat.id === selectedChatIdRef.current ? loadMessages(targetChat, 'send') : Promise.resolve()]);
-      toast.success('Mensagem encaminhada.');
+      const targetChats = forwardTargetChats.filter((chat) => forwardingTargetIds.includes(chat.id));
+      const forwardedCount = await commWhatsAppService.forwardMessageToChats(
+        forwardingMessage.id,
+        targetChats.map((chat) => chat.external_chat_id),
+      );
+
+      const affectedChatIds = targetChats.map((chat) => chat.id);
+      const reloads: Array<Promise<unknown>> = [loadChats()];
+      if (selectedChatIdRef.current && affectedChatIds.includes(selectedChatIdRef.current)) {
+        const selectedChatSnapshot = latestChatsRef.current.find((chat) => chat.id === selectedChatIdRef.current) ?? null;
+        if (selectedChatSnapshot) {
+          reloads.push(loadMessages(selectedChatSnapshot, 'send'));
+        }
+      }
+
+      await Promise.all(reloads);
+
+      if (forwardedCount.length > 0) {
+        toast.success(`Mensagem encaminhada para ${forwardedCount.length} ${forwardedCount.length === 1 ? 'conversa' : 'conversas'}.`);
+      }
       handleCloseForwardMessageModal();
     } catch (error) {
       console.error('[WhatsAppInbox] erro ao encaminhar mensagem', error);
       toast.error(error instanceof Error ? error.message : 'Nao foi possivel encaminhar a mensagem.');
-    } finally {
-      setForwardingChatId(null);
+      setForwardingInProgress(false);
     }
-  }, [forwardingMessage, handleCloseForwardMessageModal, loadChats, loadMessages]);
+  }, [forwardingInProgress, forwardingMessage, forwardingTargetIds, forwardTargetChats, handleCloseForwardMessageModal, loadChats, loadMessages]);
 
   const handleSaveEditedMessage = useCallback(async () => {
     if (!editingMessage) {
@@ -8172,13 +8243,23 @@ export default function WhatsAppInboxScreen() {
     }
     if (!selectedChat) return;
 
+    const isRenaming = Boolean(selectedChat.saved_contact_name?.trim());
+
     setSavingContact(true);
     try {
-      await commWhatsAppService.saveContact({
-        phoneNumber: selectedChat.phone_number,
-        displayName: name,
-      });
-      toast.success('Contato salvo com sucesso.');
+      if (isRenaming) {
+        await commWhatsAppService.renameContact({
+          phoneNumber: selectedChat.phone_number,
+          displayName: name,
+        });
+        toast.success('Contato renomeado com sucesso.');
+      } else {
+        await commWhatsAppService.saveContact({
+          phoneNumber: selectedChat.phone_number,
+          displayName: name,
+        });
+        toast.success('Contato salvo com sucesso.');
+      }
       setSaveContactDialogOpen(false);
       void refreshStartChatSources(startChatQuery, 1, false);
       void loadChats();
@@ -9655,7 +9736,19 @@ export default function WhatsAppInboxScreen() {
                       >
                         + Salvar contato
                       </button>
-                    ) : null}
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSaveContactName(selectedChat.saved_contact_name || selectedChatDisplayName);
+                          setSaveContactDialogOpen(true);
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Renomear contato
+                      </button>
+                    )}
                     {leadPanel?.responsavel_label ? <span>Responsável: {leadPanel.responsavel_label}</span> : null}
                   </div>
                   {nextChatReminderSummary ? (
@@ -10050,6 +10143,22 @@ export default function WhatsAppInboxScreen() {
                                   title="Mais acoes"
                                 >
                                   <ChevronDown className={`h-3.5 w-3.5 transition ${openMessageActionMenuMessageId === message.id ? 'rotate-180' : ''}`} />
+                                </button>
+                              ) : null}
+                              {showReplyForwardActions ? (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleToggleStarMessage(message)}
+                                  className={cx(
+                                    'inline-flex h-5 w-5 items-center justify-center rounded-md transition hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-hover)]',
+                                    isMessageStarred(message)
+                                      ? 'text-[var(--accent-gold)]'
+                                      : 'text-[var(--text-secondary)] opacity-0 pointer-events-none group-hover/message:opacity-100 group-hover/message:pointer-events-auto group-focus-within/message:opacity-100 group-focus-within/message:pointer-events-auto',
+                                  )}
+                                  aria-label={isMessageStarred(message) ? 'Remover estrela da mensagem' : 'Estrelar mensagem'}
+                                  title={isMessageStarred(message) ? 'Remover estrela' : 'Estrelar mensagem'}
+                                >
+                                  <Star className={cx('h-3.5 w-3.5', isMessageStarred(message) ? 'fill-current' : '')} />
                                 </button>
                               ) : null}
                               <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
@@ -10928,28 +11037,53 @@ export default function WhatsAppInboxScreen() {
                   onChange={(event) => setForwardSearch(event.target.value)}
                   placeholder="Buscar conversa"
                 />
-                <div className="max-h-[50vh] space-y-1 overflow-y-auto pr-1">
-                  {forwardTargetChats.length > 0 ? forwardTargetChats.map((chat) => (
-                    <button
-                      key={chat.id}
-                      type="button"
-                      onClick={() => void handleForwardMessage(chat)}
-                      disabled={forwardingChatId === chat.id}
-                      className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}</p>
-                        <p className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
-                      </div>
-                      {forwardingChatId === chat.id ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Forward className="h-4 w-4 shrink-0 text-[var(--text-muted)]" />}
-                    </button>
-                  )) : (
+                <div className="max-h-[45vh] space-y-1 overflow-y-auto pr-1">
+                  {forwardTargetChats.length > 0 ? forwardTargetChats.map((chat) => {
+                    const isSelected = forwardingTargetIds.includes(chat.id);
+                    return (
+                      <button
+                        key={chat.id}
+                        type="button"
+                        onClick={() => handleToggleForwardTarget(chat.id)}
+                        disabled={forwardingInProgress}
+                        className={cx(
+                          'flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-[var(--bg-hover)] disabled:opacity-70',
+                          isSelected ? 'bg-[var(--brand-primary-soft)] ring-1 ring-[var(--brand-primary-border)]' : '',
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{getSafeChatDisplayName(chat, channelState?.connected_user_name ?? null)}</p>
+                          <p className="truncate text-xs text-[var(--text-secondary)]">{formatCommWhatsAppPhoneLabel(chat.phone_number)}</p>
+                        </div>
+                        {isSelected ? (
+                          <Check className="h-4 w-4 shrink-0 text-[var(--brand-primary)]" />
+                        ) : (
+                          <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--border-strong)] bg-[var(--bg-surface)]" />
+                        )}
+                      </button>
+                    );
+                  }) : (
                     <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-5 text-center text-sm text-[var(--text-secondary)]">
                       Nenhuma conversa encontrada.
                     </div>
                   )}
                 </div>
               </DialogBody>
+              <DialogFooter className="gap-2">
+                <Button variant="secondary" onClick={handleCloseForwardMessageModal} disabled={forwardingInProgress}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => void handleForwardToSelectedChats()}
+                  loading={forwardingInProgress}
+                  disabled={forwardingInProgress || forwardingTargetIds.length === 0}
+                >
+                  {forwardingTargetIds.length > 0
+                    ? `Encaminhar para ${forwardingTargetIds.length} ${forwardingTargetIds.length === 1 ? 'conversa' : 'conversas'}`
+                    : 'Encaminhar'}
+                </Button>
+              </DialogFooter>
           </Dialog>
         ) : null}
 
@@ -11055,11 +11189,13 @@ export default function WhatsAppInboxScreen() {
 
         <Dialog open={saveContactDialogOpen} onOpenChange={(open) => !open && setSaveContactDialogOpen(false)} size="sm">
           <DialogHeader onClose={() => setSaveContactDialogOpen(false)} showCloseButton>
-            <DialogTitle>Salvar contato</DialogTitle>
+            <DialogTitle>{selectedChat?.saved_contact_name ? 'Renomear contato' : 'Salvar contato'}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-4">
             <DialogDescription>
-              Este contato ainda n&atilde;o est&aacute; salvo na sua agenda. Escolha um nome para salva-lo.
+              {selectedChat?.saved_contact_name
+                ? 'Atualize o nome salvo na sua agenda do WhatsApp.'
+                : 'Este contato ainda n&atilde;o est&aacute; salvo na sua agenda. Escolha um nome para salva-lo.'}
             </DialogDescription>
             <div>
               <label className="mb-1 block text-sm font-medium text-[var(--text-primary)]" htmlFor="save-contact-name">
@@ -11086,7 +11222,7 @@ export default function WhatsAppInboxScreen() {
                 Cancelar
               </Button>
               <Button variant="primary" onClick={handleSaveContactToPhonebook} loading={savingContact} disabled={savingContact}>
-                Salvar
+                {selectedChat?.saved_contact_name ? 'Renomear' : 'Salvar'}
               </Button>
             </div>
           </DialogBody>
@@ -11223,6 +11359,18 @@ export default function WhatsAppInboxScreen() {
                   >
                     <Forward className="h-4 w-4 shrink-0" />
                     <span>Encaminhar mensagem</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleToggleStarMessage(openMessageActionMenuMessage);
+                      setOpenMessageActionMenuMessageId(null);
+                      setMessageActionMenuPointerAnchor(null);
+                    }}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--text-primary)] transition hover:bg-[var(--bg-hover)]"
+                  >
+                    <Star className={cx('h-4 w-4 shrink-0', isMessageStarred(openMessageActionMenuMessage) ? 'fill-current text-[var(--accent-gold)]' : '')} />
+                    <span>{isMessageStarred(openMessageActionMenuMessage) ? 'Remover estrela' : 'Estrelar mensagem'}</span>
                   </button>
                 </>
               ) : null}

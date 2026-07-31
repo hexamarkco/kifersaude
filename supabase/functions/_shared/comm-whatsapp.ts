@@ -71,6 +71,7 @@ export type WhapiClient = {
   editMessage(messageId: string, body: BodyInit, kind: string): Promise<Response>;
   forwardMessage(messageId: string, body: BodyInit, headers: Record<string, string>): Promise<Response>;
   sendReaction(messageId: string, chatId: string, emoji: string | null): Promise<Response>;
+  starMessage(messageId: string, starred: boolean): Promise<Response>;
   get(url: string, timeoutMs?: number): Promise<Response>;
   post(url: string, body: BodyInit, headers: Record<string, string>, timeoutMs?: number): Promise<Response>;
   del(url: string, timeoutMs?: number): Promise<Response>;
@@ -238,6 +239,15 @@ export const createWhapiClient = (token: string): WhapiClient => {
       );
     },
 
+    starMessage: (messageId, starred) => whapiRetryFetch(
+      `${WHAPI_BASE_URL}/messages/${messageId}/star`,
+      {
+        method: 'PUT',
+        headers: authHeaders,
+        body: JSON.stringify({ starred }),
+      },
+    ),
+
     get: (url, timeoutMs) => whapiRetryFetch(url, { headers: authHeaders }, timeoutMs),
     post: (url, body, extraHeaders, timeoutMs) => whapiRetryFetch(
       url,
@@ -374,10 +384,17 @@ export type CommWhatsAppReactionEvent = {
   reactedAt: string;
 };
 
+export type CommWhatsAppStarEvent = {
+  eventExternalMessageId: string | null;
+  targetExternalMessageId: string | null;
+  starred: boolean;
+  starredAt: string;
+};
+
 export type CommWhatsAppMessageMutationInput = {
   channelId: string;
   targetExternalMessageId: string;
-  mutationType: 'edit' | 'delete' | 'reaction';
+  mutationType: 'edit' | 'delete' | 'reaction' | 'star';
   eventExternalMessageId?: string | null;
   occurredAt: string;
   payload: Record<string, unknown>;
@@ -1523,6 +1540,61 @@ export const extractWhapiReactionEvent = (
   };
 };
 
+export const extractWhapiStarEvent = (
+  message: unknown,
+  eventAction: string,
+): CommWhatsAppStarEvent | null => {
+  if (!isRecord(message)) {
+    return null;
+  }
+
+  const action = isRecord(message.action) ? message.action : null;
+  const context = isRecord(message.context) ? message.context : null;
+  const normalizedActionType = firstNonEmpty(
+    action?.type,
+    action?.event,
+    action?.action,
+    eventAction,
+  ).toLowerCase();
+
+  const isStarAction = normalizedActionType === 'star'
+    || normalizedActionType === 'starred'
+    || normalizedActionType === 'unstar'
+    || normalizedActionType === 'unstarred';
+  if (!isStarAction) {
+    return null;
+  }
+
+  const targetExternalMessageId = firstNonEmpty(
+    toTrimmedString(message.id),
+    action?.target,
+    action?.target_message_id,
+    action?.targetMessageId,
+    context?.quoted_id,
+    context?.stanza_id,
+    context?.message_id,
+    context?.messageId,
+  ) || null;
+
+  if (!targetExternalMessageId) {
+    return null;
+  }
+
+  const explicitStarred = firstNonEmpty(action?.starred, message.starred);
+  const starred = explicitStarred === 'true' || explicitStarred === true
+    ? true
+    : explicitStarred === 'false' || explicitStarred === false
+      ? false
+      : normalizedActionType === 'unstar' || normalizedActionType === 'unstarred';
+
+  return {
+    eventExternalMessageId: toTrimmedString(message.id) || null,
+    targetExternalMessageId,
+    starred,
+    starredAt: unixTimestampToIso(message.timestamp) || stringTimestampToIso(message.timestamp) || getNowIso(),
+  };
+};
+
 export async function markCommWhatsAppMessageDeleted(
   supabaseAdmin: SupabaseClient,
   input: {
@@ -2577,6 +2649,36 @@ export async function addWhapiContact(params: {
       return null;
     }
     throw new Error(parseWhapiError(payload) || 'Falha ao adicionar contato na Whapi.');
+  }
+
+  const payload = await readResponsePayload(response);
+  return isRecord(payload) ? payload : null;
+}
+
+export async function editWhapiContact(params: {
+  token: string;
+  phone: string;
+  name: string;
+}): Promise<Record<string, unknown> | null> {
+  const digits = normalizeCommWhatsAppPhone(params.phone);
+  const displayName = toTrimmedString(params.name);
+  if (!digits || !isValidCommWhatsAppDisplayName(displayName)) {
+    return null;
+  }
+
+  const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/contacts/${encodeURIComponent(digits)}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${params.token}`,
+    },
+    body: JSON.stringify({ name: displayName }),
+  }, 10_000);
+
+  if (!response.ok) {
+    const payload = await readResponsePayload(response).catch(() => null);
+    throw new Error(parseWhapiError(payload) || 'Falha ao renomear contato na Whapi.');
   }
 
   const payload = await readResponsePayload(response);

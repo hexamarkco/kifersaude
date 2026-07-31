@@ -8,6 +8,7 @@ import {
   checkWhapiContactExists,
   COMM_WHATSAPP_MODULE,
   corsHeaders,
+  editWhapiContact,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiContactId,
@@ -31,7 +32,7 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
-type ContactsAction = 'listContacts' | 'lookupContactsByPhones' | 'startChat' | 'saveContact';
+type ContactsAction = 'listContacts' | 'lookupContactsByPhones' | 'startChat' | 'saveContact' | 'renameContact';
 
 type ContactsRequestBody = {
   action?: ContactsAction;
@@ -651,6 +652,52 @@ Deno.serve(async (req: Request) => {
         await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
       } catch {
         console.warn('[comm-whatsapp-contacts] sync apos salvar contato ignorado, servindo cache existente');
+      }
+
+      const savedContact = await saveContactToCache({
+        supabaseAdmin,
+        channelId: channel.id,
+        phoneNumber,
+        displayName,
+      });
+
+      return new Response(JSON.stringify({ success: true, contact: savedContact }), {
+        status: 200,
+        headers: jsonHeaders,
+      });
+    }
+
+    if (action === 'renameContact') {
+      const phoneNumber = normalizeCommWhatsAppPhone(body.phoneNumber);
+      const displayName = toTrimmedString(body.displayName);
+
+      if (!phoneNumber) {
+        return new Response(JSON.stringify({ error: 'Numero invalido para renomear o contato.' }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      if (!displayName) {
+        return new Response(JSON.stringify({ error: 'Informe um nome para renomear o contato.' }), {
+          status: 400,
+          headers: jsonHeaders,
+        });
+      }
+
+      try {
+        await editWhapiContact({ token: settings.token, phone: phoneNumber, name: displayName });
+      } catch {
+        return new Response(JSON.stringify({ error: 'Falha ao renomear contato na Whapi. Verifique se o numero ja esta salvo.' }), {
+          status: 502,
+          headers: jsonHeaders,
+        });
+      }
+
+      try {
+        await syncContactsToCache({ supabaseAdmin, channelId: channel.id, token: settings.token });
+      } catch {
+        console.warn('[comm-whatsapp-contacts] sync apos renomear contato ignorado, servindo cache existente');
       }
 
       const savedContact = await saveContactToCache({

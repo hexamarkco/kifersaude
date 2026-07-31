@@ -2382,14 +2382,79 @@ const getDelaySeconds = (step: AutoContactFlowStep, lead?: any): number => {
   return Math.max(0, step.delayHours) * 60 * 60;
 };
 
+const HIDDEN_PREVIEW_TEXTS = new Set([
+  '[mensagem]', '[mensagem sem texto]', '[mensagem sem conteudo]', '[mensagem sem conteúdo]',
+  '[payload invalido]', '[payload inválido]', '[acao]', '[ação]', '[action]', '[reacao]', '[reação]',
+  '[reaction]', '[atualizacao de midia]', '[atualização de mídia]', '[media update]', '[voto em enquete]',
+]);
+
+const VISIBLE_MEDIA_MARKERS = new Set([
+  '[imagem]', '[video]', '[documento]', '[audio]', '[link]',
+  '[localizacao]', '[sticker]', '[contato]', '[enquete]', '[resposta]', '[mensagem interativa]',
+]);
+
+const isHiddenPreviewText = (text: string | null | undefined, messageType?: string | null): boolean => {
+  const value = (text ?? '').trim().toLowerCase();
+  if (!value) return false;
+
+  if (HIDDEN_PREVIEW_TEXTS.has(value)) return true;
+
+  const messageTypeKey = (messageType ?? '').trim().toLowerCase();
+  const messageMarker = messageTypeKey
+    ? (messageTypeKey === 'text' ? '[mensagem]'
+      : messageTypeKey === 'image' ? '[imagem]'
+      : messageTypeKey === 'video' || messageTypeKey === 'gif' || messageTypeKey === 'short' ? '[video]'
+      : messageTypeKey === 'audio' || messageTypeKey === 'voice' ? '[audio]'
+      : messageTypeKey === 'document' ? '[documento]'
+      : messageTypeKey === 'link_preview' ? '[link]'
+      : messageTypeKey === 'location' || messageTypeKey === 'live_location' ? '[localizacao]'
+      : messageTypeKey === 'sticker' ? '[sticker]'
+      : messageTypeKey === 'contact' || messageTypeKey === 'contact_list' ? '[contato]'
+      : messageTypeKey === 'poll' ? '[enquete]'
+      : messageTypeKey === 'reply' ? '[resposta]'
+      : messageTypeKey === 'interactive' || messageTypeKey === 'hsm' || messageTypeKey === 'carousel' ? '[mensagem interativa]'
+      : '[' + messageTypeKey + ']')
+    : null;
+
+  if (messageMarker && value === messageMarker && !VISIBLE_MEDIA_MARKERS.has(messageMarker)) return true;
+
+  if (/^\[[^\]]+\]$/.test(value) && !VISIBLE_MEDIA_MARKERS.has(value)) return true;
+
+  return false;
+};
+
+const isMessageVisible = (msg: { text_content?: string | null; media_caption?: string | null; message_type?: string | null }): boolean => {
+  const caption = msg.media_caption?.trim();
+  const text = msg.text_content?.trim();
+  const msgType = msg.message_type;
+
+  if (caption && !isHiddenPreviewText(caption, msgType)) return true;
+  if (text && !isHiddenPreviewText(text, msgType)) return true;
+
+  if (msgType === 'image') return true;
+  if (msgType === 'video' || msgType === 'gif' || msgType === 'short') return true;
+  if (msgType === 'audio' || msgType === 'voice') return true;
+  if (msgType === 'document') return true;
+  if (msgType === 'sticker') return true;
+  if (msgType === 'location' || msgType === 'live_location') return true;
+  if (msgType === 'contact' || msgType === 'contact_list') return true;
+  if (msgType === 'poll') return true;
+  if (msgType === 'interactive' || msgType === 'hsm' || msgType === 'carousel') return true;
+  if (msgType === 'reply') return true;
+
+  return false;
+};
+
 async function getLatestChatMessageAt({
   supabase,
   leadId,
   direction,
+  visibleOnly = true,
 }: {
   supabase: ReturnType<typeof createClient>;
   leadId: string;
   direction?: 'inbound';
+  visibleOnly?: boolean;
 }): Promise<string | null> {
   const { data: chats, error: chatsError } = await supabase
     .from('comm_whatsapp_chats')
@@ -2400,17 +2465,30 @@ async function getLatestChatMessageAt({
 
   let query = supabase
     .from('comm_whatsapp_messages')
-    .select('message_at')
+    .select('message_at, text_content, media_caption, message_type')
     .in('chat_id', chats.map((chat) => chat.id))
     .order('message_at', { ascending: false })
-    .limit(1);
+    .limit(visibleOnly ? 50 : 1);
 
   if (direction) {
     query = query.eq('direction', direction);
   }
 
-  const { data: message } = await query.maybeSingle();
-  return typeof message?.message_at === 'string' ? message.message_at : null;
+  const { data: messages } = await query;
+
+  if (!messages?.length) return null;
+
+  if (!visibleOnly) {
+    return typeof messages[0]?.message_at === 'string' ? messages[0].message_at : null;
+  }
+
+  for (const msg of messages) {
+    if (isMessageVisible(msg) && typeof msg.message_at === 'string') {
+      return msg.message_at;
+    }
+  }
+
+  return null;
 }
 
 const isAfter = (candidate: string | null, reference: string): boolean => {
@@ -2617,14 +2695,6 @@ async function processFlowJobs({
         flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : settings.scheduling.allowedWeekdays,
       dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
     };
-    if (flow.triggerType === 'inactivity_duration') {
-      effectiveScheduling.dailySendLimit = Math.min(
-        20,
-        effectiveScheduling.dailySendLimit && effectiveScheduling.dailySendLimit > 0
-          ? effectiveScheduling.dailySendLimit
-          : 20,
-      );
-    }
     const rawFlowDailySendLimit = Number(effectiveScheduling.dailySendLimit);
     const flowDailySendLimit =
       Number.isFinite(rawFlowDailySendLimit) && rawFlowDailySendLimit > 0

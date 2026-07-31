@@ -39,6 +39,7 @@ import {
   type AutoContactFlow,
   type AutoContactFlowActionType,
   type AutoContactFlowCondition,
+  type AutoContactFlowTriggerType,
   type AutoContactFlowGraph,
   type AutoContactFlowMessageSource,
   type AutoContactFlowStep,
@@ -606,11 +607,20 @@ export default function AutoContactFlowSettingsScreen() {
           const exitConditionLogic: AutoContactFlow["exitConditionLogic"] =
             effectiveFlow.exitConditionLogic === "all" ? "all" : "any";
 
+          const triggerType: AutoContactFlowTriggerType =
+            effectiveFlow.triggerType ?? "lead_created";
+
+          const triggerActivatedAt =
+            effectiveFlow.triggerActivatedAt?.trim() ||
+            (triggerType === "inactivity_duration"
+              ? new Date().toISOString()
+              : undefined);
+
           return {
             id: effectiveFlow.id?.trim() ? effectiveFlow.id : `flow-${flowKey}`,
             name: effectiveFlow.name?.trim() || `Fluxo ${flowIndex + 1}`,
             triggerStatus: effectiveFlow.triggerStatus?.trim() || "",
-            triggerType: effectiveFlow.triggerType ?? "lead_created",
+            triggerType,
             triggerStatuses: Array.isArray(effectiveFlow.triggerStatuses)
               ? effectiveFlow.triggerStatuses.filter(
                   (status) => typeof status === "string" && status.trim(),
@@ -621,6 +631,7 @@ export default function AutoContactFlowSettingsScreen() {
             )
               ? Number(effectiveFlow.triggerDurationHours)
               : 24,
+            triggerActivatedAt,
             steps,
             finalStatus: effectiveFlow.finalStatus?.trim() || "",
             invalidNumberAction: effectiveFlow.invalidNumberAction ?? "none",

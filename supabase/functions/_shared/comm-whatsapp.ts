@@ -2025,7 +2025,7 @@ export const normalizeWhapiMediaFileName = (value: unknown): string => {
 
 export const extractWhapiContactSaved = (payload: unknown): boolean => {
   if (!isRecord(payload)) return false;
-  return payload.saved === true;
+  return payload.phonebook === true || payload.saved === true;
 };
 
 export const extractWhapiSavedContactName = (payload: unknown): string => {

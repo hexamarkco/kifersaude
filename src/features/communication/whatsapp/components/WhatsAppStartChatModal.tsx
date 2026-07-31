@@ -92,37 +92,39 @@ export default function WhatsAppStartChatModal({
 
         {source === 'manual' ? (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
-            <Surface variant="muted" padding="sm" className="min-h-0 flex-1 space-y-4">
-              <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Iniciar por número</p>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
-                <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting}>
-                  {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
-                  Iniciar chat
-                </Button>
+            <Surface variant="muted" padding="sm" className="min-h-0 flex-1 overflow-y-auto">
+              <div className="flex min-h-[320px] flex-col justify-center">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">Iniciar por número</p>
+                  <p className="mt-1 text-sm text-[var(--text-muted)]">Digite um número com DDD. O inbox valida se ele existe no WhatsApp antes de abrir a conversa.</p>
+                </div>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <Input value={manualPhone} onChange={(event) => onManualPhoneChange(event.target.value)} placeholder="Ex.: 21999999999" leftIcon={Phone} disabled={starting} />
+                  <Button onClick={onStartFromManual} loading={startingKey === 'manual'} disabled={starting}>
+                    {!startingKey && <MessageSquarePlus className="h-4 w-4" />}
+                    Iniciar chat
+                  </Button>
+                </div>
               </div>
             </Surface>
           </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col gap-4">
             <Input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder={`Buscar em ${sourceTitle.toLowerCase()}`} leftIcon={Search} disabled={starting} />
-            <Surface variant="muted" padding="sm" className="min-h-0 flex-1 overflow-y-auto">
+            <Surface variant="muted" padding="sm" className="min-h-[320px] flex-1 overflow-y-auto">
               {source === 'saved' && (
                 <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
                   {contactsTotal} contatos salvos
                 </div>
               )}
               {(source === 'saved' ? contactsLoading : crmLoading) ? (
-                <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--text-muted)]">
+                <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Carregando {source === 'saved' ? 'contatos salvos' : 'leads do CRM'}...
                 </div>
               ) : source === 'saved' ? (
                 contacts.length === 0 ? (
-                  <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--text-muted)]">
+                  <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
                     Nenhum contato salvo encontrado.
                   </div>
                 ) : (
@@ -153,7 +155,7 @@ export default function WhatsAppStartChatModal({
                   </div>
                 )
               ) : crmLeads.length === 0 ? (
-                <div className="flex min-h-[180px] items-center justify-center text-sm text-[var(--text-muted)]">
+                <div className="flex h-[200px] items-center justify-center text-sm text-[var(--text-muted)]">
                   Nenhum lead encontrado.
                 </div>
               ) : (

@@ -12,6 +12,7 @@ import {
   extractWhapiContactId,
   extractWhapiContactName,
   extractWhapiContactPhone,
+  extractWhapiContactSaved,
   extractWhapiContactShortName,
   fetchWhapiChatName,
   fetchWhapiContacts,
@@ -117,11 +118,12 @@ async function syncContactsToCache(params: {
   const nowIso = getNowIso();
 
   const rows = fetchedContacts
+    .filter((contact) => extractWhapiContactSaved(contact))
     .map((contact) => {
       const phoneNumber = extractWhapiContactPhone(contact);
       const contactId = extractWhapiContactId(contact);
-      // GET /contacts is Whapi's complete phone-contact list. Some records omit
-      // a display name or the legacy `saved` flag, but remain valid contacts.
+      // Only contacts with phonebook: true are truly saved.
+      // Non-phonebook contacts are chat-derived and handled separately.
       const displayName = extractWhapiContactName(contact) || phoneNumber;
 
       if (!phoneNumber || !contactId) {

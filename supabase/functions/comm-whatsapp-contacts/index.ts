@@ -162,21 +162,37 @@ async function syncContactsToCache(params: {
       fetchedCount: fetchedContacts.length,
     });
   } else {
-    const syncedContactIds = rows.map((row) => row.contact_id);
-    let cleanupQuery = params.supabaseAdmin
+    const syncedContactIds = new Set(rows.map((row) => row.contact_id));
+
+    const { data: existingIds, error: listError } = await params.supabaseAdmin
       .from('comm_whatsapp_phone_contacts_cache')
-      .delete()
+      .select('contact_id')
       .eq('channel_id', params.channelId)
       .not('contact_id', 'like', 'manual:%')
       .not('contact_id', 'like', 'chat:%');
 
-    if (syncedContactIds.length > 0) {
-      cleanupQuery = cleanupQuery.not('contact_id', 'in', `(${syncedContactIds.map((id) => `"${id}"`).join(',')})`);
+    if (listError) {
+      throw new Error(`Erro ao listar cache de contatos do WhatsApp: ${listError.message}`);
     }
 
-    const { error: cleanupError } = await cleanupQuery;
-    if (cleanupError) {
-      throw new Error(`Erro ao limpar cache obsoleto de contatos do WhatsApp: ${cleanupError.message}`);
+    const staleIds = (existingIds ?? [])
+      .map((row) => row.contact_id)
+      .filter((id) => !syncedContactIds.has(id));
+
+    if (staleIds.length > 0) {
+      const { error: cleanupError } = await params.supabaseAdmin
+        .from('comm_whatsapp_phone_contacts_cache')
+        .delete()
+        .eq('channel_id', params.channelId)
+        .in('contact_id', staleIds);
+
+      if (cleanupError) {
+        const details = [cleanupError.message];
+        if (cleanupError.details) details.push(`detalhes: ${cleanupError.details}`);
+        if (cleanupError.hint) details.push(`dica: ${cleanupError.hint}`);
+        if (cleanupError.code) details.push(`codigo: ${cleanupError.code}`);
+        throw new Error(`Erro ao limpar cache obsoleto de contatos do WhatsApp: ${details.join(' | ')}`);
+      }
     }
   }
 

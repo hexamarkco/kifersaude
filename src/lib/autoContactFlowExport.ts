@@ -149,7 +149,21 @@ const describeStep = (
   ];
 
   if (step.actionType === 'send_message') {
-    if (step.messageSource === 'custom') {
+    if (Array.isArray(step.messages) && step.messages.length > 0) {
+      lines.push(`Source: multi (${step.messages.length} mensagens)`);
+      step.messages.forEach((item, index) => {
+        if (item?.templateId) {
+          const template = templates.find((t) => t.id === item.templateId) ?? null;
+          lines.push(
+            `  Mensagem ${index + 1}: template "${template?.name ?? item.templateId}"`,
+          );
+        } else if (item?.custom) {
+          lines.push(
+            `  Mensagem ${index + 1}: custom | ${previewText(item.custom.text ?? item.custom.caption ?? item.custom.mediaUrl ?? '')}`,
+          );
+        }
+      });
+    } else if (step.messageSource === 'custom') {
       lines.push(`Source: custom`);
       lines.push(`Payload: ${step.customMessage?.type ?? 'text'} | ${previewText(step.customMessage?.text ?? step.customMessage?.caption ?? step.customMessage?.mediaUrl ?? '')}`);
     } else {
@@ -352,10 +366,20 @@ const buildDiagnostics = (
 
     if (node.type === 'action' && node.data.step?.actionType === 'send_message') {
       const step = node.data.step;
-      if (step.messageSource === 'custom' && !step.customMessage?.text?.trim() && !step.customMessage?.mediaUrl?.trim()) {
+      const hasMultiMessages = Array.isArray(step.messages) && step.messages.length > 0;
+      if (hasMultiMessages) {
+        const emptyCount = (step.messages ?? []).filter(
+          (item) =>
+            !item?.templateId &&
+            !item?.custom?.text?.trim() &&
+            !item?.custom?.mediaUrl?.trim(),
+        ).length;
+        if (emptyCount > 0) {
+          diagnostics.push(`Action ${node.id} has ${emptyCount} message(s) without template or text/media.`);
+        }
+      } else if (step.messageSource === 'custom' && !step.customMessage?.text?.trim() && !step.customMessage?.mediaUrl?.trim()) {
         diagnostics.push(`Action ${node.id} has a custom message without text or media.`);
-      }
-      if (step.messageSource !== 'custom') {
+      } else if (!hasMultiMessages && step.messageSource !== 'custom') {
         const template = options.messageTemplates.find((item) => item.id === step.templateId);
         if (!template) {
           diagnostics.push(`Action ${node.id} references a missing template (${step.templateId || 'empty'}).`);

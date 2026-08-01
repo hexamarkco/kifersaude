@@ -161,6 +161,7 @@ export type AutoContactFlow = {
   id: string;
   name: string;
   triggerStatus: string;
+  ativo?: boolean;
   triggerType: AutoContactFlowTriggerType;
   triggerStatuses: string[];
   triggerDurationHours: number;
@@ -890,6 +891,7 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
         id: flowId,
         name: typeof flow?.name === 'string' ? flow.name : '',
         triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
+        ativo: flow?.ativo !== false,
         triggerType: (flow?.triggerType === 'status_changed' || flow?.triggerType === 'status_duration' || flow?.triggerType === 'inactivity_duration'
           ? flow.triggerType 
           : 'lead_created') as AutoContactFlowTriggerType,

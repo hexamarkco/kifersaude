@@ -487,6 +487,7 @@ type AutoContactFlow = {
   id: string;
   name: string;
   triggerStatus: string;
+  ativo?: boolean;
   triggerType?: 'lead_created' | 'status_changed' | 'status_duration' | 'inactivity_duration';
   triggerStatuses?: string[];
   triggerDurationHours?: number;
@@ -2061,6 +2062,7 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
         id: flowId,
         name: typeof flow?.name === 'string' ? flow.name : '',
         triggerStatus: typeof flow?.triggerStatus === 'string' ? flow.triggerStatus : '',
+        ativo: flow?.ativo !== false,
         triggerType:
           flow?.triggerType === 'status_changed' ||
           flow?.triggerType === 'status_duration' ||
@@ -2882,6 +2884,14 @@ async function processFlowJobs({
       continue;
     }
 
+    if (flow.ativo === false) {
+      await supabase
+        .from('auto_contact_flow_jobs')
+        .update({ status: 'skipped', last_error: 'Fluxo desativado' })
+        .eq('id', job.id);
+      continue;
+    }
+
     const effectiveScheduling: AutoContactSchedulingSettings = {
       ...settings.scheduling,
       startHour: flow.scheduling?.startHour ?? settings.scheduling.startHour,
@@ -3676,7 +3686,9 @@ async function runAutoContactFlowEngine({
     }
 
     const matchingFlow =
-      settings.flows.find((flow) => matchesAutoContactFlow(flow, leadWithRelations, event)) ?? null;
+      settings.flows.find(
+        (flow) => flow.ativo !== false && matchesAutoContactFlow(flow, leadWithRelations, event),
+      ) ?? null;
     if (!matchingFlow) {
       logWithContext('Nenhum fluxo automático corresponde ao lead recém-criado', { leadId: lead.id });
       return;
@@ -4128,6 +4140,13 @@ Deno.serve(async (req: Request) => {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
+      }
+
+      if (targetFlow.ativo === false) {
+        return new Response(
+          JSON.stringify({ success: true, skipped: true, reason: 'flow_disabled' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
       }
 
       if (leadId) {

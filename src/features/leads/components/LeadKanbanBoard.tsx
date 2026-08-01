@@ -41,7 +41,7 @@ export default function LeadKanbanBoard({
     });
 
     localLeads.forEach((lead) => {
-      if (lead.arquivado || !lead.status) {
+      if (!lead.status) {
         return;
       }
 
@@ -95,7 +95,6 @@ export default function LeadKanbanBoard({
         supabase
           .from("leads")
           .select("*")
-          .eq("arquivado", false)
           .in(
             "status",
             statusColumns.map((column) => column.nome),
@@ -138,7 +137,6 @@ export default function LeadKanbanBoard({
           event: "*",
           schema: "public",
           table: "leads",
-          filter: "arquivado=eq.false",
         },
         () => {
           void loadLeads();

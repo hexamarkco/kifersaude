@@ -1192,7 +1192,7 @@ export default function FlowBuilder({
                     </label>
                     <Input
                       type="number"
-                      min={selectedNode.data.triggerType === "inactivity_duration" ? 24 : 1}
+                      min={1}
                       value={selectedNode.data.triggerDurationHours ?? 24}
                       onChange={(event) =>
                         updateSelectedNode({
@@ -1203,7 +1203,7 @@ export default function FlowBuilder({
                     />
                     <div className="mt-1 text-[10px] text-[var(--text-subtle)]">
                       {selectedNode.data.triggerType === "inactivity_duration"
-                        ? "Mínimo de 24 horas. Uma resposta do cliente cancela a régua."
+                        ? "Mínimo de 1 hora. Uma resposta do cliente cancela a régua."
                         : "O fluxo será executado quando o lead estiver há mais de X horas neste(s) status"}
                     </div>
                   </div>

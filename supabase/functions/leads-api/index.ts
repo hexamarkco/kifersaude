@@ -2073,9 +2073,9 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
           ? flow.triggerStatuses.filter((status: unknown) => typeof status === 'string')
           : [],
         triggerDurationHours:
-          flow?.triggerType === 'inactivity_duration'
-            ? Math.max(24, Number.isFinite(Number(flow?.triggerDurationHours)) ? Number(flow.triggerDurationHours) : 24)
-            : Math.max(1, Number.isFinite(Number(flow?.triggerDurationHours)) ? Number(flow.triggerDurationHours) : 24),
+          Number.isFinite(Number(flow?.triggerDurationHours)) && Number(flow.triggerDurationHours) >= 1
+            ? Math.max(1, Number(flow.triggerDurationHours))
+            : 24,
         steps: normalizedSteps,
         finalStatus: typeof flow?.finalStatus === 'string' ? flow.finalStatus : '',
         conditionLogic: flow?.conditionLogic === 'any' ? 'any' : 'all',

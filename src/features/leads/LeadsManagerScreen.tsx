@@ -13,7 +13,6 @@ import {
   Search,
   Filter,
   MessageCircle,
-  Archive,
   FileText,
   Calendar,
   Users,
@@ -147,7 +146,6 @@ export default function LeadsManager({
   const [viewMode, setViewMode] = useState<LeadsViewMode>("list");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(25);
-  const [showArchived, setShowArchived] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [leadContractIds, setLeadContractIds] = useState<Set<string>>(
     new Set(),
@@ -155,9 +153,6 @@ export default function LeadsManager({
   const [bulkStatus, setBulkStatus] = useState("");
   const [bulkResponsavel, setBulkResponsavel] = useState("");
   const [bulkProximoRetorno, setBulkProximoRetorno] = useState("");
-  const [bulkArchiveAction, setBulkArchiveAction] = useState<
-    "none" | "archive" | "unarchive"
-  >("none");
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
   const leadsRootRef = useRef<HTMLDivElement | null>(null);
   const hasAnimatedSectionsRef = useRef(false);
@@ -508,9 +503,7 @@ export default function LeadsManager({
   }, [tipoContratacaoOptions]);
 
   const filteredLeads = useMemo(() => {
-    let filtered = leads.filter((lead) =>
-      showArchived ? lead.arquivado : !lead.arquivado,
-    );
+    let filtered = leads;
 
     const selectedStatusSet = new Set(filterStatus);
     const selectedResponsavelSet = new Set(filterResponsavel);
@@ -717,7 +710,6 @@ export default function LeadsManager({
     filterProximoRetornoTo,
     isObserver,
     isOriginVisibleToObserver,
-    showArchived,
     sortDirection,
     sortField,
   ]);
@@ -728,16 +720,6 @@ export default function LeadsManager({
       setCurrentPage(total);
     }
   }, [filteredLeads.length, itemsPerPage, currentPage]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [showArchived]);
-
-  useEffect(() => {
-    if (showArchived && viewMode === "kanban") {
-      setViewMode("list");
-    }
-  }, [showArchived, viewMode]);
 
   const totalPages = Math.max(
     1,
@@ -804,14 +786,12 @@ export default function LeadsManager({
 
     return `${date} as ${time}`;
   }, [lastUpdated]);
-  const contentSectionTitle = showArchived
-    ? "Leads arquivados"
-    : viewMode === "kanban"
+  const contentSectionTitle =
+    viewMode === "kanban"
       ? "Pipeline comercial"
       : "Leads em acompanhamento";
-  const contentSectionDescription = showArchived
-    ? "Revise historicos, acompanhe reativacoes e recupere oportunidades com contexto completo."
-    : viewMode === "kanban"
+  const contentSectionDescription =
+    viewMode === "kanban"
       ? "Visualize gargalos por etapa, ajuste WIP e mova leads rapidamente entre os status."
       : "Analise cada lead com contexto, proximos retornos e acoes rapidas no mesmo fluxo.";
   const handlePageChange = (page: number) => {
@@ -859,7 +839,6 @@ export default function LeadsManager({
     setBulkStatus("");
     setBulkResponsavel("");
     setBulkProximoRetorno("");
-    setBulkArchiveAction("none");
   }, []);
 
   const normalizePhoneNumber = useCallback(
@@ -971,9 +950,6 @@ export default function LeadsManager({
     if (proximoRetorno !== undefined) {
       updates.proximo_retorno = proximoRetorno;
     }
-    if (bulkArchiveAction !== "none") {
-      updates.arquivado = bulkArchiveAction === "archive";
-    }
 
     if (Object.keys(updates).length === 0) return;
 
@@ -1034,29 +1010,6 @@ export default function LeadsManager({
     clearSelection();
   };
 
-  const handleArchive = async (id: string) => {
-    const confirmed = await requestConfirmation({
-      title: "Arquivar lead",
-      description: "Deseja arquivar este lead? Você poderá reativá-lo depois.",
-      confirmLabel: "Arquivar",
-      cancelLabel: "Cancelar",
-    });
-    if (!confirmed) return;
-
-    try {
-      const { error } = await supabase
-        .from("leads")
-        .update({ arquivado: true })
-        .eq("id", id);
-
-      if (error) throw error;
-      loadLeads();
-    } catch (error) {
-      console.error("Erro ao arquivar lead:", error);
-      toast.error("Erro ao arquivar lead.");
-    }
-  };
-
   const handleDeleteLead = async (lead: Lead) => {
     const confirmed = await requestConfirmation({
       title: "Excluir lead",
@@ -1081,29 +1034,6 @@ export default function LeadsManager({
     } catch (error) {
       console.error("Erro ao excluir lead:", error);
       toast.error("Erro ao excluir lead.");
-    }
-  };
-
-  const handleUnarchive = async (id: string) => {
-    const confirmed = await requestConfirmation({
-      title: "Reativar lead",
-      description: "Deseja reativar este lead?",
-      confirmLabel: "Reativar",
-      cancelLabel: "Cancelar",
-    });
-    if (!confirmed) return;
-
-    try {
-      const { error } = await supabase
-        .from("leads")
-        .update({ arquivado: false })
-        .eq("id", id);
-
-      if (error) throw error;
-      loadLeads();
-    } catch (error) {
-      console.error("Erro ao reativar lead:", error);
-      toast.error("Erro ao reativar lead.");
     }
   };
 
@@ -1444,12 +1374,6 @@ export default function LeadsManager({
   }, [viewMode, clearSelection]);
 
   useEffect(() => {
-    if (showArchived) {
-      clearSelection();
-    }
-  }, [showArchived, clearSelection]);
-
-  useEffect(() => {
     if (!canEditLeads) {
       clearSelection();
     }
@@ -1468,7 +1392,6 @@ export default function LeadsManager({
       setBulkStatus("");
       setBulkResponsavel("");
       setBulkProximoRetorno("");
-      setBulkArchiveAction("none");
     }
   }, [selectedLeadIds.length]);
 
@@ -1552,7 +1475,6 @@ export default function LeadsManager({
       >
         <ObserverBanner />
         <LeadsHeader
-          showArchived={showArchived}
           viewMode={viewMode}
           loading={loading}
           lastUpdatedLabel={lastUpdatedLabel}
@@ -1561,7 +1483,6 @@ export default function LeadsManager({
           canEditLeads={canEditLeads}
           onViewModeChange={setViewMode}
           onRefresh={handleRefresh}
-          onToggleArchived={() => setShowArchived((current) => !current)}
           onCreateLead={handleCreateLead}
         />
         <Surface className="space-y-5" data-panel-animate>
@@ -1878,35 +1799,6 @@ export default function LeadsManager({
                       disabled={isBulkUpdating}
                       placeholder="Proximo retorno"
                     />
-                    <div className="w-full xl:w-48">
-                      <FilterSingleSelect
-                        icon={Archive}
-                        value={bulkArchiveAction}
-                        onChange={(value) =>
-                          setBulkArchiveAction(
-                            value as typeof bulkArchiveAction,
-                          )
-                        }
-                        placeholder="Ação de arquivamento"
-                        includePlaceholderOption={false}
-                        size="compact"
-                        disabled={isBulkUpdating}
-                        options={[
-                          {
-                            value: "none",
-                            label: "Ação de arquivamento (opcional)",
-                          },
-                          {
-                            value: "archive",
-                            label: "Arquivar selecionados",
-                          },
-                          {
-                            value: "unarchive",
-                            label: "Reativar selecionados",
-                          },
-                        ]}
-                      />
-                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
@@ -1922,9 +1814,7 @@ export default function LeadsManager({
                         onClick={handleBulkDetailsApply}
                         disabled={
                           isBulkUpdating ||
-                          (!bulkResponsavel &&
-                            !bulkProximoRetorno &&
-                            bulkArchiveAction === "none")
+                          (!bulkResponsavel && !bulkProximoRetorno)
                         }
                         variant="soft"
                         size="sm"
@@ -2032,7 +1922,6 @@ export default function LeadsManager({
                             <Button onClick={() => setSelectedLead(lead)} variant="secondary" size="icon" title="Abrir lead" aria-label="Abrir lead"><MessageCircle className="h-4 w-4" /></Button>
                             {canEditLeads && <Button onClick={() => openReminderScheduler(lead)} variant="soft" size="icon" title="Agendar lembrete" aria-label="Agendar lembrete"><Bell className="h-4 w-4" /></Button>}
                             {canEditLeads && <Button onClick={() => handleConvertToContract(lead)} variant="soft" size="icon" title="Converter em contrato" aria-label="Converter em contrato"><FileText className="h-4 w-4" /></Button>}
-                            {canEditLeads && (!showArchived ? <Button onClick={() => handleArchive(lead.id)} variant="secondary" size="icon" title="Arquivar lead" aria-label="Arquivar lead"><Archive className="h-4 w-4" /></Button> : <Button onClick={() => handleUnarchive(lead.id)} variant="secondary" size="icon" title="Reativar lead" aria-label="Reativar lead"><Users className="h-4 w-4" /></Button>)}
                             {canEditLeads && <Button onClick={() => handleDeleteLead(lead)} variant="danger" size="icon" title="Excluir lead" aria-label="Excluir lead"><Trash2 className="h-4 w-4" /></Button>}
                           </div>
                         </TableCell>
@@ -2215,29 +2104,6 @@ export default function LeadsManager({
                           <Trash2 className="h-4 w-4" />
                           <span className="hidden sm:inline">Excluir</span>
                         </Button>
-                        {!showArchived ? (
-                          <Button
-                            onClick={() => handleArchive(lead.id)}
-                            variant="warning"
-                            size="sm"
-                            className="kds-op-inline-action space-x-0 sm:space-x-1.5 sm:ml-auto"
-                            aria-label="Arquivar lead"
-                          >
-                            <Archive className="h-4 w-4" />
-                            <span className="hidden sm:inline">Arquivar</span>
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => handleUnarchive(lead.id)}
-                            variant="secondary"
-                            size="sm"
-                            className="kds-op-inline-action space-x-0 sm:space-x-1.5 sm:ml-auto"
-                            aria-label="Reativar lead"
-                          >
-                            <Users className="h-4 w-4" />
-                            <span className="hidden sm:inline">Reativar</span>
-                          </Button>
-                        )}
                       </>
                     )}
                   </div>

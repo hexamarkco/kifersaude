@@ -1,11 +1,10 @@
-import { Archive, BookOpen, Clock3, Filter, LayoutList, Plus, RefreshCw, Users } from "lucide-react";
+import { BookOpen, Clock3, Filter, LayoutList, Plus, RefreshCw, Users } from "lucide-react";
 
-import { Badge, Button, OperationalMetricChip, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
+import { Button, OperationalMetricChip, PageHeader, Tabs, getPanelButtonClass } from "../../../design-system";
 import { VIEW_MODE_TABS } from "../shared/leadsManagerConfig";
 import type { LeadsViewMode } from "../shared/leadsManagerTypes";
 
 type LeadsHeaderProps = {
-  showArchived: boolean;
   viewMode: LeadsViewMode;
   loading: boolean;
   lastUpdatedLabel: string;
@@ -14,12 +13,10 @@ type LeadsHeaderProps = {
   canEditLeads: boolean;
   onViewModeChange: (value: LeadsViewMode) => void;
   onRefresh: () => void;
-  onToggleArchived: () => void;
   onCreateLead: () => void;
 };
 
 export function LeadsHeader({
-  showArchived,
   viewMode,
   loading,
   lastUpdatedLabel,
@@ -28,7 +25,6 @@ export function LeadsHeader({
   canEditLeads,
   onViewModeChange,
   onRefresh,
-  onToggleArchived,
   onCreateLead,
 }: LeadsHeaderProps) {
   return (
@@ -39,7 +35,6 @@ export function LeadsHeader({
       data-panel-animate
       actions={(
         <>
-          {showArchived && <Badge tone="accent">Arquivados</Badge>}
           <OperationalMetricChip
             icon={<Users className="h-3.5 w-3.5" />}
             value={filteredLeadCount}
@@ -103,18 +98,6 @@ export function LeadsHeader({
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             <span>Atualizar</span>
-          </Button>
-
-          <Button
-            type="button"
-            onClick={onToggleArchived}
-            variant={showArchived ? "warning" : "soft"}
-            size="md"
-            className="w-full sm:w-auto"
-            aria-pressed={showArchived}
-          >
-            <Archive className="h-4 w-4" />
-            <span>{showArchived ? "Ver ativos" : "Ver arquivados"}</span>
           </Button>
 
           <Button

@@ -899,11 +899,9 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
           ? flow.triggerStatuses.filter((s: unknown) => typeof s === 'string') 
           : [],
         triggerDurationHours:
-          flow?.triggerType === 'inactivity_duration'
-            ? Math.max(24, Number.isFinite(Number(flow?.triggerDurationHours)) ? Number(flow.triggerDurationHours) : 24)
-            : Number.isFinite(Number(flow?.triggerDurationHours)) && Number(flow.triggerDurationHours) >= 1
-              ? Number(flow.triggerDurationHours)
-              : 24,
+          Number.isFinite(Number(flow?.triggerDurationHours)) && Number(flow.triggerDurationHours) >= 1
+            ? Number(flow.triggerDurationHours)
+            : 24,
         triggerActivatedAt:
           typeof flow?.triggerActivatedAt === 'string' && !Number.isNaN(Date.parse(flow.triggerActivatedAt))
             ? flow.triggerActivatedAt

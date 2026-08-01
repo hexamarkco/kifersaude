@@ -78,4 +78,10 @@ else
   supabase db push --password "$DB_PASSWORD"
 fi
 
-echo "=== Migrations aplicadas com sucesso ==="
+echo "=== Verificando pipeline de automacoes (smoke test) ==="
+if ! node scripts/verify-automations.mjs; then
+  echo "[ERRO] Smoke test de automacoes falhou. Revise a saida acima."
+  exit 1
+fi
+
+echo "=== Migrations aplicadas e automacoes verificadas com sucesso ==="

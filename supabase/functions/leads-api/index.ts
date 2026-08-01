@@ -416,6 +416,7 @@ type AutoContactFlowStep = {
   messageSource?: AutoContactFlowMessageSource;
   templateId?: string;
   customMessage?: AutoContactFlowCustomMessage;
+  messages?: Array<{ templateId?: string; custom?: AutoContactFlowCustomMessage }>;
   statusToSet?: string;
   webhookUrl?: string;
   webhookMethod?: 'POST' | 'PUT' | 'PATCH' | 'GET';
@@ -1947,6 +1948,24 @@ const normalizeAutoContactFlowSettings = (settings: any): AutoContactFlowSetting
             messageSource,
             templateId: validTemplateId,
             customMessage: normalizeCustomMessage(step?.customMessage),
+            messages: Array.isArray(step?.messages)
+              ? step.messages
+                  .map((item: any) => {
+                    if (!item || typeof item !== 'object') return null;
+                    if (typeof item.templateId === 'string' && item.templateId.trim()) {
+                      return {
+                        templateId: messageTemplates.some((t) => t.id === item.templateId)
+                          ? item.templateId
+                          : validTemplateId,
+                      };
+                    }
+                    if (item.custom && typeof item.custom === 'object') {
+                      return { custom: normalizeCustomMessage(item.custom) };
+                    }
+                    return null;
+                  })
+                  .filter(Boolean)
+              : undefined,
           };
         }
 
@@ -2505,6 +2524,7 @@ async function scheduleFlowJobs({
   flow,
   scheduling,
   runtimeContext,
+  anchorAt,
 }: {
   supabase: ReturnType<typeof createClient>;
   leadId: string;
@@ -2512,6 +2532,7 @@ async function scheduleFlowJobs({
   flow: AutoContactFlow;
   scheduling: AutoContactSchedulingSettings;
   runtimeContext?: Record<string, string> | null;
+  anchorAt?: Date;
 }): Promise<void> {
   const now = new Date();
   const effectiveScheduling: AutoContactSchedulingSettings = {
@@ -2522,46 +2543,52 @@ async function scheduleFlowJobs({
       flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : scheduling.allowedWeekdays,
     dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
   };
-  let cursor = new Date(now);
-  const jobs = flow.steps.map((step, stepIndex) => {
-    const delaySeconds = getDelaySeconds(step, lead);
-    const desiredAt = new Date(cursor.getTime() + delaySeconds * 1000);
-    const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
-    cursor = scheduledAt;
-    const actionPayload = (() => {
-      switch (step.actionType) {
-        case 'webhook':
-          return {
-            url: step.webhookUrl ?? '',
-            method: step.webhookMethod ?? 'POST',
-            headers: step.webhookHeaders ?? '',
-            body: step.webhookBody ?? '',
-          };
-        case 'create_task':
-          return {
-            title: step.taskTitle ?? '',
-            description: step.taskDescription ?? '',
-            dueHours: step.taskDueHours ?? null,
-            priority: step.taskPriority ?? 'normal',
-          };
-        case 'send_email':
-          return {
-            to: step.emailTo ?? '',
-            cc: step.emailCc ?? '',
-            bcc: step.emailBcc ?? '',
-            subject: step.emailSubject ?? '',
-            body: step.emailBody ?? '',
-          };
-        default:
-          return null;
-      }
-    })();
+
+  const buildActionPayload = (step: AutoContactFlowStep): Record<string, unknown> | null => {
+    switch (step.actionType) {
+      case 'webhook':
+        return {
+          url: step.webhookUrl ?? '',
+          method: step.webhookMethod ?? 'POST',
+          headers: step.webhookHeaders ?? '',
+          body: step.webhookBody ?? '',
+        };
+      case 'create_task':
+        return {
+          title: step.taskTitle ?? '',
+          description: step.taskDescription ?? '',
+          dueHours: step.taskDueHours ?? null,
+          priority: step.taskPriority ?? 'normal',
+        };
+      case 'send_email':
+        return {
+          to: step.emailTo ?? '',
+          cc: step.emailCc ?? '',
+          bcc: step.emailBcc ?? '',
+          subject: step.emailSubject ?? '',
+          body: step.emailBody ?? '',
+        };
+      default:
+        return null;
+    }
+  };
+
+  const buildJobRow = (
+    step: AutoContactFlowStep,
+    stepOrder: number,
+    scheduledAt: Date,
+    actionPayloadOverride?: Record<string, unknown> | null,
+  ) => {
+    const actionPayload = actionPayloadOverride ?? buildActionPayload(step);
     const finalActionPayload = mergeJobActionPayload(actionPayload, runtimeContext ?? null);
+    if (step.actionType === 'send_message' && Array.isArray(step.messages) && step.messages.length > 0) {
+      finalActionPayload.messages = step.messages;
+    }
     return {
       lead_id: leadId,
       flow_id: flow.id,
       step_id: step.id,
-      step_order: stepIndex,
+      step_order: stepOrder,
       action_type: step.actionType,
       message_source: step.messageSource ?? null,
       template_id: step.templateId ?? null,
@@ -2571,7 +2598,21 @@ async function scheduleFlowJobs({
       scheduled_at: scheduledAt.toISOString(),
       status: 'pending',
     };
-  });
+  };
+
+  const firstStep = flow.steps[0];
+  if (!firstStep) return;
+
+  const baseAt = anchorAt ?? now;
+  const firstDelaySeconds = getDelaySeconds(firstStep, lead);
+  let firstScheduledAt = getNextAllowedSendAt(new Date(baseAt.getTime() + firstDelaySeconds * 1000), effectiveScheduling);
+
+  if (firstScheduledAt.getTime() < now.getTime()) {
+    // The lead completed its window in the past (e.g. while the queue was
+    // paused). Spread the send deterministically across the send window so
+    // backlogs are drained individually instead of bursting all at once.
+    firstScheduledAt = getSpreadSendAt(now, leadId, effectiveScheduling);
+  }
 
   await supabase
     .from('auto_contact_flow_jobs')
@@ -2580,9 +2621,163 @@ async function scheduleFlowJobs({
     .eq('flow_id', flow.id)
     .eq('status', 'pending');
 
-  if (jobs.length > 0) {
-    await supabase.from('auto_contact_flow_jobs').insert(jobs);
+  await supabase.from('auto_contact_flow_jobs').insert(buildJobRow(firstStep, 0, firstScheduledAt));
+}
+
+const getLeadSpreadMinutes = (leadId: string, windowMinutes: number): number => {
+  let hash = 0;
+  for (let i = 0; i < leadId.length; i += 1) {
+    hash = (hash * 31 + leadId.charCodeAt(i)) >>> 0;
   }
+  return hash % Math.max(1, windowMinutes);
+};
+
+const getSpreadSendAt = (
+  from: Date,
+  leadId: string,
+  scheduling: AutoContactSchedulingSettings,
+): Date => {
+  const timeZone = scheduling.timezone || 'America/Sao_Paulo';
+  const start = parseHourMinute(scheduling.startHour);
+  const end = parseHourMinute(scheduling.endHour);
+  const windowMinutes = Math.max(
+    60,
+    end.hour * 60 + end.minute - (start.hour * 60 + start.minute),
+  );
+  const spreadMinutes = getLeadSpreadMinutes(leadId, windowMinutes);
+
+  const earliest = getNextAllowedSendAt(new Date(from.getTime() + 60000), scheduling);
+  const zoned = toZonedDate(earliest, timeZone);
+
+  const windowStartUtc = buildDateInTimeZone(
+    {
+      year: zoned.getUTCFullYear(),
+      month: zoned.getUTCMonth(),
+      day: zoned.getUTCDate(),
+      hour: start.hour,
+      minute: start.minute,
+    },
+    timeZone,
+  );
+  const windowEndUtc = buildDateInTimeZone(
+    {
+      year: zoned.getUTCFullYear(),
+      month: zoned.getUTCMonth(),
+      day: zoned.getUTCDate(),
+      hour: end.hour,
+      minute: end.minute,
+    },
+    timeZone,
+  );
+
+  const candidate = new Date(windowStartUtc.getTime() + spreadMinutes * 60000);
+  if (candidate.getTime() >= earliest.getTime() && candidate.getTime() <= windowEndUtc.getTime()) {
+    return candidate;
+  }
+  if (candidate.getTime() < earliest.getTime()) {
+    return earliest;
+  }
+  const nextDayStart = buildDateInTimeZone(
+    {
+      year: zoned.getUTCFullYear(),
+      month: zoned.getUTCMonth(),
+      day: zoned.getUTCDate() + 1,
+      hour: start.hour,
+      minute: start.minute,
+    },
+    timeZone,
+  );
+  return getNextAllowedSendAt(new Date(nextDayStart.getTime() + spreadMinutes * 60000), scheduling);
+};
+
+async function scheduleNextFlowStep({
+  supabase,
+  lead,
+  flow,
+  completedJob,
+  scheduling,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  lead: any;
+  flow: AutoContactFlow;
+  completedJob: any;
+  scheduling: AutoContactSchedulingSettings;
+}): Promise<void> {
+  const nextStep = flow.steps[completedJob.step_order + 1];
+  if (!nextStep) return;
+
+  const { data: existing } = await supabase
+    .from('auto_contact_flow_jobs')
+    .select('id')
+    .eq('lead_id', completedJob.lead_id)
+    .eq('flow_id', flow.id)
+    .eq('step_order', completedJob.step_order + 1)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return;
+
+  const effectiveScheduling: AutoContactSchedulingSettings = {
+    ...scheduling,
+    startHour: flow.scheduling?.startHour ?? scheduling.startHour,
+    endHour: flow.scheduling?.endHour ?? scheduling.endHour,
+    allowedWeekdays:
+      flow.scheduling?.allowedWeekdays?.length ? flow.scheduling.allowedWeekdays : scheduling.allowedWeekdays,
+    dailySendLimit: flow.scheduling?.dailySendLimit ?? null,
+  };
+
+  const delaySeconds = getDelaySeconds(nextStep, lead);
+  const desiredAt = new Date(Date.now() + delaySeconds * 1000);
+  const scheduledAt = getNextAllowedSendAt(desiredAt, effectiveScheduling);
+
+  const actionPayload = (() => {
+    switch (nextStep.actionType) {
+      case 'webhook':
+        return {
+          url: nextStep.webhookUrl ?? '',
+          method: nextStep.webhookMethod ?? 'POST',
+          headers: nextStep.webhookHeaders ?? '',
+          body: nextStep.webhookBody ?? '',
+        };
+      case 'create_task':
+        return {
+          title: nextStep.taskTitle ?? '',
+          description: nextStep.taskDescription ?? '',
+          dueHours: nextStep.taskDueHours ?? null,
+          priority: nextStep.taskPriority ?? 'normal',
+        };
+      case 'send_email':
+        return {
+          to: nextStep.emailTo ?? '',
+          cc: nextStep.emailCc ?? '',
+          bcc: nextStep.emailBcc ?? '',
+          subject: nextStep.emailSubject ?? '',
+          body: nextStep.emailBody ?? '',
+        };
+      default:
+        return null;
+    }
+  })();
+
+  const runtimeContext = getJobRuntimeContext(completedJob.action_payload) ?? {};
+  const finalActionPayload = mergeJobActionPayload(actionPayload, runtimeContext);
+  if (nextStep.actionType === 'send_message' && Array.isArray(nextStep.messages) && nextStep.messages.length > 0) {
+    finalActionPayload.messages = nextStep.messages;
+  }
+
+  await supabase.from('auto_contact_flow_jobs').insert({
+    lead_id: completedJob.lead_id,
+    flow_id: flow.id,
+    step_id: nextStep.id,
+    step_order: completedJob.step_order + 1,
+    action_type: nextStep.actionType,
+    message_source: nextStep.messageSource ?? null,
+    template_id: nextStep.templateId ?? null,
+    custom_message: nextStep.customMessage ?? null,
+    status_to_set: nextStep.statusToSet ?? null,
+    action_payload: finalActionPayload,
+    scheduled_at: scheduledAt.toISOString(),
+    status: 'pending',
+  });
 }
 
 async function cancelFlowJobs({
@@ -2796,7 +2991,7 @@ async function processFlowJobs({
 
           if (cachedUsage.count >= flowDailySendLimit) {
             const nextReference = new Date(end.getTime() + 60000);
-            const nextAvailableAt = getNextAllowedSendAt(nextReference, effectiveScheduling);
+            const nextAvailableAt = getSpreadSendAt(nextReference, job.lead_id, effectiveScheduling);
             await supabase
               .from('auto_contact_flow_jobs')
               .update({
@@ -2814,7 +3009,34 @@ async function processFlowJobs({
           | { contentType: FlowMessageType; content: string | { url: string; caption?: string; filename?: string } }
           | null = null;
 
-        if (job.message_source === 'custom') {
+        const multiMessages = Array.isArray(job.action_payload?.messages)
+          ? (job.action_payload.messages as Array<{ templateId?: string; custom?: AutoContactFlowCustomMessage }>)
+          : null;
+
+        if (multiMessages && multiMessages.length > 0) {
+          for (const item of multiMessages) {
+            const itemPayload = item?.templateId
+              ? (() => {
+                  const template =
+                    settings.messageTemplates.find((t) => t.id === item.templateId) ?? null;
+                  const message = getTemplateMessage(template);
+                  return message.trim()
+                    ? {
+                        contentType: 'text' as const,
+                        content: applyTemplateVariables(message, leadWithRelations, settings.scheduling?.timezone),
+                      }
+                    : null;
+                })()
+              : buildCustomMessagePayload(item?.custom ?? null, leadWithRelations, settings.scheduling?.timezone);
+            if (!itemPayload) continue;
+            await sendAutoContactMessage({
+              supabase,
+              lead: leadWithRelations,
+              contentType: itemPayload.contentType,
+              content: itemPayload.content,
+            });
+          }
+        } else if (job.message_source === 'custom') {
           payload = buildCustomMessagePayload(job.custom_message, leadWithRelations, settings.scheduling?.timezone);
         } else {
           const template =
@@ -2830,16 +3052,18 @@ async function processFlowJobs({
           }
         }
 
-        if (!payload) {
+        if (!payload && !(multiMessages && multiMessages.length > 0)) {
           throw new Error('Conteúdo inválido para envio automático.');
         }
 
-        await sendAutoContactMessage({
-          supabase,
-          lead: leadWithRelations,
-          contentType: payload.contentType,
-          content: payload.content,
-        });
+        if (payload) {
+          await sendAutoContactMessage({
+            supabase,
+            lead: leadWithRelations,
+            contentType: payload.contentType,
+            content: payload.content,
+          });
+        }
 
         const contactNowIso = new Date().toISOString();
         await supabase.from('leads').update({ ultimo_contato: contactNowIso }).eq('id', lead.id);
@@ -3014,6 +3238,14 @@ async function processFlowJobs({
         .from('auto_contact_flow_jobs')
         .update({ status: 'completed', last_error: null })
         .eq('id', job.id);
+
+      await scheduleNextFlowStep({
+        supabase,
+        lead: leadWithRelations,
+        flow,
+        completedJob: job,
+        scheduling: effectiveScheduling,
+      });
 
       if (job.action_type === 'send_message' && flowDailyUsageCacheKey) {
         const cachedUsage = flowDailyUsageCache.get(flowDailyUsageCacheKey);
@@ -3471,6 +3703,7 @@ async function runAutoContactFlowEngine({
       flow: matchingFlow,
       scheduling: settings.scheduling,
       runtimeContext: buildFlowRuntimeContext(matchingFlow, leadWithRelations),
+      anchorAt: new Date(lead.created_at || Date.now()),
     });
 
     await processFlowJobs({
@@ -3981,6 +4214,13 @@ Deno.serve(async (req: Request) => {
         const runtimeContext = buildFlowRuntimeContext(targetFlow, mappedLead) ?? {};
         if (inactivityStartedAt) runtimeContext.inactivity_started_at = inactivityStartedAt;
 
+        const anchorAt = inactivityStartedAt
+          ? new Date(
+              new Date(inactivityStartedAt).getTime() +
+                Math.max(1, Number(targetFlow.triggerDurationHours) || 24) * 3600000,
+            )
+          : new Date();
+
         await scheduleFlowJobs({
           supabase,
           leadId,
@@ -3988,6 +4228,7 @@ Deno.serve(async (req: Request) => {
           flow: targetFlow,
           scheduling: settings.scheduling,
           runtimeContext,
+          anchorAt,
         });
 
         return new Response(JSON.stringify({ success: true, leadId, flowId: targetFlow.id }), {

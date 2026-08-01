@@ -55,6 +55,7 @@ export type AutoContactFlowStep = {
   messageSource?: AutoContactFlowMessageSource;
   templateId?: string;
   customMessage?: AutoContactFlowCustomMessage;
+  messages?: Array<{ templateId?: string; custom?: AutoContactFlowCustomMessage }>;
   statusToSet?: string;
   webhookUrl?: string;
   webhookMethod?: 'POST' | 'PUT' | 'PATCH' | 'GET';
@@ -778,6 +779,24 @@ export const normalizeAutoContactSettings = (rawSettings: Record<string, any> | 
               messageSource,
               templateId: validTemplateId,
               customMessage: normalizeCustomMessage(step?.customMessage),
+              messages: Array.isArray(step?.messages)
+                ? step.messages
+                    .map((item: any) => {
+                      if (!item || typeof item !== 'object') return null;
+                      if (typeof item.templateId === 'string' && item.templateId.trim()) {
+                        return {
+                          templateId: messageTemplates.some((t) => t.id === item.templateId)
+                            ? item.templateId
+                            : validTemplateId,
+                        };
+                      }
+                      if (item.custom && typeof item.custom === 'object') {
+                        return { custom: normalizeCustomMessage(item.custom) };
+                      }
+                      return null;
+                    })
+                    .filter(Boolean)
+                : undefined,
             };
           }
 

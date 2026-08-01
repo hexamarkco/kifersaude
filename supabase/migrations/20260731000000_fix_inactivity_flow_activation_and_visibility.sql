@@ -187,7 +187,7 @@ BEGIN
   IF v_settings IS NULL THEN RETURN; END IF;
 
   v_first_template_id := COALESCE(
-    v_settings->'messageTemplates'->0->>'id',
+    NULLIF(v_settings->'messageTemplates'->0->>'id', ''),
     'template-1'
   );
 
@@ -205,13 +205,13 @@ BEGIN
         v_settings := jsonb_set(
           v_settings,
           ARRAY['flows', v_flow_idx::text, 'steps', v_step_idx::text, 'templateId'],
-          to_jsonb(v_first_template_id),
+          to_jsonb(v_first_template_id::text),
           true
         );
         v_settings := jsonb_set(
           v_settings,
           ARRAY['flows', v_flow_idx::text, 'steps', v_step_idx::text, 'messageSource'],
-          to_jsonb('template'),
+          '"template"'::jsonb,
           true
         );
         v_changed := true;

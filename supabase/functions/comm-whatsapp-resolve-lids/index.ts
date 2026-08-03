@@ -25,6 +25,7 @@ const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 type Report = {
   totalLidChats: number;
   resolved: number;
+  named: number;
   updated: number;
   linked: number;
   skippedOwnNumber: number;
@@ -49,8 +50,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const denied = isServiceRoleRequest(req, serviceRoleKey);
-  if (denied) {
+  if (!isServiceRoleRequest(req, serviceRoleKey)) {
     return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
       status: 401,
       headers: jsonHeaders,
@@ -68,6 +68,7 @@ Deno.serve(async (req: Request) => {
   const report: Report = {
     totalLidChats: 0,
     resolved: 0,
+    named: 0,
     updated: 0,
     linked: 0,
     skippedOwnNumber: 0,
@@ -76,7 +77,6 @@ Deno.serve(async (req: Request) => {
     details: [],
   };
 
-  // Own channel number (skip chats that resolve back to ourselves)
   const { data: channel } = await supabase
     .from('comm_whatsapp_channels')
     .select('phone_number')
@@ -84,11 +84,10 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
   const ownNumber = channel?.phone_number ? normalizeCommWhatsAppPhone(channel.phone_number) : '';
 
-  // All chats without a real phone (mostly @lid)
+  // All @lid chats (phone may already be resolved; names may be missing)
   const { data: chats, error: chatsError } = await supabase
     .from('comm_whatsapp_chats')
     .select('id, external_chat_id, phone_number, display_name, push_name, lead_id')
-    .or('phone_number.is.null,phone_number.eq.')
     .limit(1000);
 
   if (chatsError) {
@@ -121,25 +120,11 @@ Deno.serve(async (req: Request) => {
     };
 
     try {
+      // 1. Resolve the real phone number (may be empty for private contacts)
       const phone = await resolveWhapiLidToPhone({ token, chatId: chat.external_chat_id ?? '' });
-      if (!phone) {
-        report.notFound += 1;
-        entry.status = 'not_found';
-        report.details.push(entry);
-        continue;
-      }
+      const phoneDigits = phone ? normalizeCommWhatsAppPhone(phone) : '';
 
-      entry.phone = phone;
-      const phoneDigits = normalizeCommWhatsAppPhone(phone);
-
-      if (ownNumber && phoneDigits === ownNumber) {
-        report.skippedOwnNumber += 1;
-        entry.status = 'own_number';
-        report.details.push(entry);
-        continue;
-      }
-
-      // Resolve a display name (saved contact first, then chat name / push name)
+      // 2. Always try to resolve a display name (saved contact, then chat/push name)
       let name = '';
       try {
         name = await fetchWhapiContactName({ token, contactId: chat.external_chat_id ?? '' });
@@ -155,15 +140,36 @@ Deno.serve(async (req: Request) => {
       }
       entry.name = name || null;
 
-      const updates: Record<string, unknown> = {
-        phone_number: phoneDigits,
-        phone_digits: phoneDigits,
-      };
-      if (!isValidCommWhatsAppDisplayName(chat.display_name)) {
-        updates.display_name = name || phoneDigits;
+      const updates: Record<string, unknown> = {};
+      let shouldSkip = false;
+
+      if (phoneDigits) {
+        if (ownNumber && phoneDigits === ownNumber) {
+          report.skippedOwnNumber += 1;
+          entry.status = 'own_number';
+          shouldSkip = true;
+        } else {
+          entry.phone = phoneDigits;
+          updates.phone_number = phoneDigits;
+          updates.phone_digits = phoneDigits;
+        }
       }
-      if (!chat.push_name && isValidCommWhatsAppDisplayName(name)) {
-        updates.push_name = name;
+
+      if (isValidCommWhatsAppDisplayName(name)) {
+        if (!chat.push_name) {
+          updates.push_name = name;
+        }
+        if (!isValidCommWhatsAppDisplayName(chat.display_name)) {
+          updates.display_name = name;
+        }
+        if (name) report.named += 1;
+      } else if (!phoneDigits && !isValidCommWhatsAppDisplayName(chat.display_name)) {
+        updates.display_name = 'Contato privado';
+      }
+
+      if (shouldSkip) {
+        report.details.push(entry);
+        continue;
       }
 
       const { error: updateError } = await supabase
@@ -176,12 +182,11 @@ Deno.serve(async (req: Request) => {
         report.details.push(entry);
         continue;
       }
-      report.resolved += 1;
       report.updated += 1;
-      entry.status = 'updated';
+      entry.status = phoneDigits ? (name ? 'resolved_named' : 'resolved') : name ? 'named' : 'noop';
 
-      // Auto-link with a CRM lead by phone lookup keys
-      if (!chat.lead_id) {
+      // 3. Auto-link with a CRM lead by phone lookup keys
+      if (phoneDigits && !chat.lead_id) {
         const chatKeys = getCommWhatsAppPhoneLookupKeys(phoneDigits);
         let matchedLeadId: string | null = null;
         for (const key of chatKeys) {
@@ -205,7 +210,6 @@ Deno.serve(async (req: Request) => {
     } catch (error) {
       report.failed += 1;
       entry.status = 'error';
-      report.details.push(entry);
     }
 
     report.details.push(entry);

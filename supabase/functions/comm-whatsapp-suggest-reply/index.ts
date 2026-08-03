@@ -2,7 +2,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
-import { COMM_WHATSAPP_MODULE, corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
+import {
+  COMM_WHATSAPP_MODULE,
+  corsHeaders,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
+  toTrimmedString,
+} from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
   env: {
@@ -44,7 +49,7 @@ type SystemSettingsRow = {
 
 type LeadRow = {
   id: string;
-  nome: string | null;
+  nome_completo: string | null;
   status: string | null;
   origem: string | null;
   responsavel: string | null;
@@ -148,10 +153,11 @@ const buildTranscriptLine = (message: MessageRow, contactLabel: string, timeZone
   return `${formatTimestamp(message.message_at, timeZone)} ${author}: ${content}`;
 };
 
-const getChatLabel = (chat: ChatRow) => (
+const getChatLabel = (chat: ChatRow, lead: LeadRow | null) => (
   toTrimmedString(chat.saved_contact_name)
-  || toTrimmedString(chat.display_name)
+  || toTrimmedString(lead?.nome_completo)
   || toTrimmedString(chat.push_name)
+  || toTrimmedString(chat.display_name)
   || toTrimmedString(chat.phone_number)
   || 'Cliente'
 );
@@ -366,12 +372,17 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ error: 'Conversa obrigatoria para sugerir resposta.' }), { status: 400, headers: jsonHeaders });
     }
 
+    const chatRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, chatId);
+    if (!chatRoute?.chatId) {
+      return new Response(JSON.stringify({ error: 'Conversa nao encontrada.' }), { status: 404, headers: jsonHeaders });
+    }
+
     // ---- Load chat ----
 
     const { data: chatData, error: chatError } = await supabaseAdmin
       .from('comm_whatsapp_chats')
       .select('id, phone_number, display_name, saved_contact_name, push_name, lead_id')
-      .eq('id', chatId)
+      .eq('id', chatRoute.chatId)
       .maybeSingle();
 
     if (chatError) throw new Error(`Erro ao localizar conversa: ${chatError.message}`);
@@ -387,7 +398,7 @@ Deno.serve(async (req: Request) => {
     if (chat.lead_id) {
       const { data: leadResult } = await supabaseAdmin
         .from('leads')
-        .select('id, nome, status, origem, responsavel, cidade, email')
+        .select('id, nome_completo, status, origem, responsavel, cidade, email')
         .eq('id', chat.lead_id)
         .maybeSingle();
       if (leadResult) leadData = leadResult as LeadRow;
@@ -427,7 +438,7 @@ Deno.serve(async (req: Request) => {
     const systemSettings = (systemSettingsResult.data ?? null) as SystemSettingsRow | null;
     const timeZone = normalizeSystemTimeZone(systemSettings?.timezone);
     const companyName = toTrimmedString(systemSettings?.company_name) || 'Kifer Saude';
-    const contactLabel = getChatLabel(chat);
+    const contactLabel = getChatLabel(chat, leadData);
 
     // ---- Configurable prompt ----
 
@@ -495,7 +506,7 @@ Deno.serve(async (req: Request) => {
       '--- CONTEXTO DO CONTATO ---',
       `Nome: ${contactLabel}`,
       chat.phone_number ? `Telefone: ${chat.phone_number}` : null,
-      leadData?.nome ? `Lead: ${leadData.nome}` : null,
+      leadData?.nome_completo ? `Lead: ${leadData.nome_completo}` : null,
       leadData?.status ? `Status lead: ${leadData.status}` : null,
       leadData?.cidade ? `Cidade: ${leadData.cidade}` : null,
       `Ultima mensagem de: ${lastDirection === 'inbound' ? contactLabel : lastDirection === 'outbound' ? 'VOCE' : 'N/A'}`,

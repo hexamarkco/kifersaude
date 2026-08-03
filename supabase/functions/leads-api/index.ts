@@ -11,6 +11,7 @@ import {
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
+  resolveCommWhatsAppCanonicalChatRoute,
   resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   WHAPI_BASE_URL,
@@ -2591,8 +2592,9 @@ async function scheduleFlowJobs({
     actionPayloadOverride?: Record<string, unknown> | null,
   ) => {
     const actionPayload = actionPayloadOverride ?? buildActionPayload(step);
-    const finalActionPayload = mergeJobActionPayload(actionPayload, runtimeContext ?? null);
+    let finalActionPayload = mergeJobActionPayload(actionPayload, runtimeContext ?? null);
     if (step.actionType === 'send_message' && Array.isArray(step.messages) && step.messages.length > 0) {
+      if (!finalActionPayload) finalActionPayload = {};
       finalActionPayload.messages = step.messages;
     }
     return {
@@ -3415,7 +3417,20 @@ async function sendAutoContactMessage({
     throw new Error('Numero nao possui WhatsApp.');
   }
 
-  const chatId = whatsappCheck.chatId ?? `${whapiPhone}@s.whatsapp.net`;
+  const channel = await ensurePrimaryChannel(supabase);
+  const requestedChatId = whatsappCheck.chatId ?? `${whapiPhone}@s.whatsapp.net`;
+  const chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabase, {
+    channelId: channel.id,
+    externalChatId: requestedChatId,
+  });
+  if (chatRoute.identityConflict) {
+    throw new Error('Identidade WhatsApp exige revisao manual antes de envios automaticos.');
+  }
+  if (lead?.id !== 'flow-test' && chatRoute.leadId && lead?.id && chatRoute.leadId !== lead.id) {
+    throw new Error('A identidade WhatsApp esta vinculada a outro lead.');
+  }
+
+  const chatId = chatRoute.externalChatId;
   let endpoint = '';
   const body: Record<string, unknown> = { to: chatId };
 
@@ -3483,7 +3498,6 @@ async function sendAutoContactMessage({
   }
 
   try {
-    const channel = await ensurePrimaryChannel(supabase);
     const nowIso = new Date().toISOString();
     const media = contentType === 'text' ? null : content as { url: string; caption?: string; filename?: string };
     const textContent = contentType === 'text' ? content as string : media?.caption ?? null;
@@ -3491,9 +3505,9 @@ async function sendAutoContactMessage({
     await persistCommWhatsAppMessage(supabase, {
       channelId: channel.id,
       externalChatId: chatId,
-      phoneNumber: whapiPhone,
-      displayName: lead?.nome_completo || formatPhoneLabel(whapiPhone),
-      pushName: null,
+      phoneNumber: chatRoute.phoneNumber || whapiPhone,
+      displayName: chatRoute.displayName || lead?.nome_completo || formatPhoneLabel(whapiPhone),
+      pushName: chatRoute.pushName,
       lastMessageText: textContent,
       lastMessageDirection: 'outbound',
       lastMessageAt: nowIso,
@@ -3584,38 +3598,15 @@ async function triggerAutoContactForLead({
     return;
   }
 
-  if (!settings.sessionId) {
-    logWithContext('Integração de automação sem Session ID configurado');
-    return;
-  }
-
-  const token = getWhapiToken();
-  if (!token) {
-    logWithContext('Automação de WhatsApp desativada: WHAPI_TOKEN não configurado');
-    return;
-  }
-
   const message = applyTemplateVariables(firstStep.message, lead, settings.scheduling?.timezone);
 
   try {
-    const url = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': token,
-      },
-      body: JSON.stringify({
-        chatId: `${whapiPhone}@s.whatsapp.net`,
-        contentType: 'string',
-        content: message,
-      }),
+    await sendAutoContactMessage({
+      supabase,
+      lead,
+      contentType: 'text',
+      content: message,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'Falha ao enviar automação para o lead');
-    }
 
     logWithContext('Mensagem automática enviada', { leadId: lead.id });
 
@@ -3756,6 +3747,7 @@ async function runAutoContactFlowEngine({
       leadId: lead?.id,
       error: error instanceof Error ? error.message : String(error),
     });
+    throw error;
   }
 }
 
@@ -4347,6 +4339,7 @@ Deno.serve(async (req: Request) => {
       }
 
       await sendAutoContactMessage({
+        supabase,
         lead: testLead,
         contentType: messagePayload.contentType,
         content: messagePayload.content,
@@ -4376,12 +4369,12 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const chatId = body.chatId.trim();
+      const requestedChatId = normalizeWhapiChatId(body.chatId);
       const messages = body.messages
         .filter((msg: unknown) => typeof msg === 'string' && msg.trim())
         .map((msg: string) => msg.trim());
 
-      if (!chatId || messages.length === 0) {
+      if (!requestedChatId || messages.length === 0) {
         return new Response(JSON.stringify({ success: false, error: 'Dados incompletos para envio manual' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -4411,6 +4404,12 @@ Deno.serve(async (req: Request) => {
       const endpoint = `${settings.baseUrl.replace(/\/+$/, '')}/client/sendMessage/${settings.sessionId}`;
 
       try {
+        const channel = await ensurePrimaryChannel(supabase);
+        const chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabase, {
+          channelId: channel.id,
+          externalChatId: requestedChatId,
+        });
+        const chatId = chatRoute.externalChatId;
         await sendWhatsappMessages({ endpoint, chatId, messages });
         logWithContext('Envio manual de automação concluído', { chatId });
 

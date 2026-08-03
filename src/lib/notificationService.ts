@@ -10,7 +10,7 @@ export type InboxUnreadCountCallback = (count: number) => void;
 export type InboxMessageNotification = {
   chatId: string;
   displayName: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
   messagePreview: string;
   messageAt: string | null;
 };
@@ -177,7 +177,7 @@ class NotificationService {
       return;
     }
 
-    if (chat.deleted_at || chat.is_archived || chat.is_muted || chat.last_message_direction !== 'inbound') {
+    if (chat.deleted_at || chat.merged_into_chat_id || chat.is_archived || chat.is_muted || chat.last_message_direction !== 'inbound') {
       return;
     }
 
@@ -225,8 +225,8 @@ class NotificationService {
     const messagePreview = (chat.last_message_text ?? '').replace(/\s+/g, ' ').trim();
     this.inboxMessageCallbacks.forEach(callback => callback({
       chatId: chat.id,
-      displayName: chat.saved_contact_name || chat.push_name || chat.display_name || chat.phone_number,
-      phoneNumber: chat.phone_number,
+      displayName: chat.saved_contact_name || chat.lead_name || chat.display_name || chat.push_name || chat.phone_number || 'Contato privado',
+      phoneNumber: chat.phone_number || null,
       messagePreview: messagePreview || 'Nova mensagem recebida.',
       messageAt: chat.last_message_at ?? null,
     }));

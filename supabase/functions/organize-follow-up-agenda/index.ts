@@ -58,6 +58,7 @@ type ChatRow = {
   lead_id: string | null;
   display_name: string | null;
   saved_contact_name: string | null;
+  push_name: string | null;
   phone_number: string | null;
   unread_count: number | null;
   manual_unread: boolean | null;
@@ -402,8 +403,10 @@ const loadCandidates = async (supabaseAdmin: any, options: OrganizerOptions) => 
   const chatPages = await Promise.all(chunk(leadIds, 100).map(async (batch) => {
     const { data: chatData, error: chatError } = await supabaseAdmin
       .from('comm_whatsapp_chats')
-      .select('id, lead_id, display_name, saved_contact_name, phone_number, unread_count, manual_unread, is_archived, last_message_at, last_message_direction, last_message_text')
+      .select('id, lead_id, display_name, saved_contact_name, push_name, phone_number, unread_count, manual_unread, is_archived, last_message_at, last_message_direction, last_message_text')
       .in('lead_id', batch)
+      .is('merged_into_chat_id', null)
+      .is('deleted_at', null)
       .order('last_message_at', { ascending: false });
     if (chatError) throw new Error(`Falha ao carregar chats: ${chatError.message}`);
     return (chatData ?? []) as ChatRow[];
@@ -426,7 +429,7 @@ const loadCandidates = async (supabaseAdmin: any, options: OrganizerOptions) => 
 const tryAiRankCandidates = async (supabaseAdmin: any, candidates: Candidate[], options: OrganizerOptions) => {
   const compact = candidates.slice(0, MAX_AI_CANDIDATES).map((candidate) => ({
     id: candidate.reminder.id,
-    lead: candidate.lead?.nome_completo || candidate.chat?.display_name || candidate.reminder.titulo,
+    lead: candidate.chat?.saved_contact_name || candidate.lead?.nome_completo || candidate.chat?.push_name || candidate.chat?.display_name || candidate.reminder.titulo,
     dueAt: candidate.reminder.data_lembrete,
     reminderTitle: candidate.reminder.titulo,
     reminderDescription: candidate.reminder.descricao,
@@ -500,7 +503,7 @@ const buildPreview = async (supabaseAdmin: any, options: OrganizerOptions) => {
     const newDateTime = buildIsoAtLocalTime(scheduleDate, options.queueTime);
     dayCount += 1;
     const reasons = candidate.aiReason ? [candidate.aiReason, ...candidate.reasons] : candidate.reasons;
-    const leadName = candidate.lead?.nome_completo || candidate.chat?.display_name || candidate.chat?.saved_contact_name || candidate.reminder.titulo || 'Lead sem nome';
+    const leadName = candidate.chat?.saved_contact_name || candidate.lead?.nome_completo || candidate.chat?.push_name || candidate.chat?.display_name || candidate.reminder.titulo || 'Lead sem nome';
 
     return {
       reminderId: candidate.reminder.id,

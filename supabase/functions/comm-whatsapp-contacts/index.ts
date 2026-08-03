@@ -3,8 +3,6 @@ import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
   addWhapiContact,
-  buildWhapiDirectChatId,
-  cacheCommWhatsAppChatContactName,
   checkWhapiContactIdentity,
   COMM_WHATSAPP_MODULE,
   corsHeaders,
@@ -12,9 +10,10 @@ import {
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractWhapiContactId,
-  extractWhapiContactName,
+  extractWhapiContactPushName,
   extractWhapiContactPhone,
   extractWhapiContactSaved,
+  extractWhapiSavedContactName,
   extractWhapiContactShortName,
   fetchWhapiChatName,
   fetchWhapiContacts,
@@ -22,6 +21,7 @@ import {
   getNowIso,
   isValidCommWhatsAppDisplayName,
   normalizeCommWhatsAppPhone,
+  resolveVerifiedWhapiDirectIdentity,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
 
@@ -56,6 +56,7 @@ type SavedContactRow = {
   phone_digits: string;
   display_name: string;
   short_name: string | null;
+  push_name: string | null;
   saved: boolean;
   last_synced_at: string;
   created_at: string;
@@ -126,9 +127,9 @@ async function syncContactsToCache(params: {
       const contactId = extractWhapiContactId(contact);
       // Only contacts with phonebook: true are truly saved.
       // Non-phonebook contacts are chat-derived and handled separately.
-      const displayName = extractWhapiContactName(contact) || phoneNumber;
+      const displayName = extractWhapiSavedContactName(contact);
 
-      if (!phoneNumber || !contactId) {
+      if (!phoneNumber || !contactId || !displayName) {
         return null;
       }
 
@@ -139,6 +140,7 @@ async function syncContactsToCache(params: {
         phone_digits: phoneNumber,
         display_name: displayName,
         short_name: extractWhapiContactShortName(contact) || null,
+        push_name: extractWhapiContactPushName(contact) || null,
         saved: true,
         last_synced_at: nowIso,
         updated_at: nowIso,
@@ -478,49 +480,7 @@ Deno.serve(async (req: Request) => {
         phoneNumbers,
       });
 
-      const existingKeys = new Set(
-        contacts.flatMap((contact) => getCommWhatsAppPhoneLookupKeys(contact.phone_digits || contact.phone_number)),
-      );
-      const missingPhones = Array.from(new Set(phoneNumbers.map((phoneNumber) => normalizeCommWhatsAppPhone(phoneNumber)).filter(Boolean)))
-        .filter((phoneNumber) => !getCommWhatsAppPhoneLookupKeys(phoneNumber).some((key) => existingKeys.has(key)))
-        .slice(0, 30);
-
-      const chatNameContacts: SavedContactRow[] = [];
-      for (const phoneNumber of missingPhones) {
-        const whapiChatName = await fetchWhapiChatName({ token: settings.token, chatId: buildWhapiDirectChatId(phoneNumber) }).catch(() => '');
-        const isOwnChannelName = channel.connected_user_name && whapiChatName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase();
-        if (!isValidCommWhatsAppDisplayName(whapiChatName) || isOwnChannelName) {
-          continue;
-        }
-
-        const nowIso = getNowIso();
-        await cacheCommWhatsAppChatContactName(supabaseAdmin, {
-          channelId: channel.id,
-          phoneNumber,
-          displayName: whapiChatName,
-        });
-        chatNameContacts.push({
-          id: '',
-          channel_id: channel.id,
-          contact_id: `chat:${phoneNumber}`,
-          phone_number: phoneNumber,
-          phone_digits: phoneNumber,
-          display_name: whapiChatName,
-          short_name: whapiChatName.split(/\s+/).filter(Boolean).slice(0, 2).join(' ') || null,
-          saved: false,
-          last_synced_at: nowIso,
-          created_at: nowIso,
-          updated_at: nowIso,
-        });
-      }
-
-      if (chatNameContacts.length > 0) {
-        await supabaseAdmin.rpc('comm_whatsapp_refresh_channel_chat_identities', {
-          p_channel_id: channel.id,
-        });
-      }
-
-      return new Response(JSON.stringify({ success: true, contacts: [...contacts, ...chatNameContacts] }), {
+      return new Response(JSON.stringify({ success: true, contacts }), {
         status: 200,
         headers: jsonHeaders,
       });
@@ -585,16 +545,29 @@ Deno.serve(async (req: Request) => {
 
       phoneNumber = checkedIdentity.phone;
       const directChatId = checkedIdentity.waId;
+      const verifiedIdentity = await resolveVerifiedWhapiDirectIdentity({
+        token: settings.token,
+        chatId: directChatId,
+      }).catch(() => null);
+
+      if (verifiedIdentity?.verified) {
+        const { error: reconcileError } = await supabaseAdmin.rpc('comm_whatsapp_reconcile_lid_identifier', {
+          p_channel_id: channel.id,
+          p_lid_external_chat_id: verifiedIdentity.lidChatId,
+          p_phone_external_chat_id: verifiedIdentity.phoneChatId,
+          p_mapping_evidence: {
+            round_trip_verified: true,
+            source: 'comm-whatsapp-contacts',
+          },
+        });
+        if (reconcileError) throw new Error(`Erro ao reconciliar identidade WhatsApp: ${reconcileError.message}`);
+      }
+
       if (!savedContactName) {
         const whapiChatName = await fetchWhapiChatName({ token: settings.token, chatId: directChatId }).catch(() => '');
         const isOwnChannelName = channel.connected_user_name && whapiChatName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase();
         if (isValidCommWhatsAppDisplayName(whapiChatName) && !isOwnChannelName) {
           pushName = whapiChatName;
-          await cacheCommWhatsAppChatContactName(supabaseAdmin, {
-            channelId: channel.id,
-            phoneNumber,
-            displayName: whapiChatName,
-          });
         }
       }
 
@@ -614,6 +587,35 @@ Deno.serve(async (req: Request) => {
       const chat = rows[0] ?? null;
       if (!chat) {
         throw new Error('Nao foi possivel iniciar a conversa no WhatsApp.');
+      }
+
+      if (verifiedIdentity?.reason === 'reverse_mismatch') {
+        const dedupeKey = `reverse:${channel.id}:${verifiedIdentity.lidChatId || directChatId}:${verifiedIdentity.phoneChatId || directChatId}`;
+        const { error: conflictError } = await supabaseAdmin
+          .from('comm_whatsapp_identity_conflicts')
+          .upsert({
+            dedupe_key: dedupeKey,
+            channel_id: channel.id,
+            chat_id: chat.id,
+            conflict_type: 'reverse_mapping_conflict',
+            status: 'open',
+            details: {
+              observed_chat_id: directChatId,
+              lid_chat_id: verifiedIdentity.lidChatId || null,
+              phone_chat_id: verifiedIdentity.phoneChatId || null,
+              source: 'comm-whatsapp-contacts',
+            },
+            updated_at: getNowIso(),
+            resolved_at: null,
+            resolved_by: null,
+          }, { onConflict: 'dedupe_key' });
+        if (conflictError) throw new Error(`Erro ao registrar conflito de identidade: ${conflictError.message}`);
+
+        const { error: flagError } = await supabaseAdmin
+          .from('comm_whatsapp_chats')
+          .update({ identity_conflict: true, updated_at: getNowIso() })
+          .eq('id', chat.id);
+        if (flagError) throw new Error(`Erro ao sinalizar conflito de identidade: ${flagError.message}`);
       }
 
       return new Response(JSON.stringify({ success: true, chat }), {

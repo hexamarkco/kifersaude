@@ -1,9 +1,8 @@
 // @ts-expect-error Deno npm import
-import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
+import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
   applyCommWhatsAppMessageMutation,
-  cacheCommWhatsAppChatContactName,
   COMM_WHATSAPP_MODULE,
   corsHeaders,
   ensureCommWhatsAppSettings,
@@ -19,8 +18,6 @@ import {
   extractWhapiMediaMeta,
   fetchWhapiChatMessagesPage,
   fetchWhapiChatName,
-  fetchWhapiContactName,
-  formatPhoneLabel,
   getDirectChatDisplayNameCandidate,
   getNowIso,
   isDirectWhapiChatId,
@@ -32,7 +29,7 @@ import {
   summarizeWhapiMessage,
   toTrimmedString,
   unixTimestampToIso,
-  resolveWhapiLidToPhone,
+  resolveVerifiedWhapiDirectIdentity,
 } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
@@ -47,13 +44,6 @@ type SyncBody = {
   offset?: number;
   count?: number;
   timeTo?: number;
-};
-
-type ChatRow = {
-  id: string;
-  unread_count: number;
-  display_name: string;
-  push_name: string | null;
 };
 
 const isOwnChannelName = (value: string | null | undefined, connectedUserName: string | null | undefined) => {
@@ -120,25 +110,6 @@ const dedupeWhapiHistoryMessages = (messages: Array<Record<string, unknown>>) =>
 
   return [...passthrough, ...byKey.values()];
 };
-
-async function findExistingChat(
-  supabaseAdmin: SupabaseClient,
-  channelId: string,
-  externalChatId: string,
-) {
-  const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .select('id, unread_count, display_name, push_name')
-    .eq('channel_id', channelId)
-    .eq('external_chat_id', externalChatId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Erro ao localizar conversa existente: ${error.message}`);
-  }
-
-  return (data ?? null) as ChatRow | null;
-}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
@@ -210,25 +181,34 @@ Deno.serve(async (req: Request) => {
     const channel = await ensurePrimaryChannel(supabaseAdmin);
     let phoneDigits = extractPhoneFromChatId(externalChatId);
     let canonicalExternalChatId = externalChatId;
-    if (!phoneDigits && isWhapiLidChatId(externalChatId)) {
-      phoneDigits = await resolveWhapiLidToPhone({ token: settings.token, chatId: externalChatId }).catch(() => '');
-      if (phoneDigits) {
-        const phoneChatId = `${phoneDigits}@s.whatsapp.net`;
-        const { data: reconcileData, error: reconcileError } = await supabaseAdmin.rpc('comm_whatsapp_reconcile_lid_identifier', {
-          p_channel_id: channel.id,
-          p_lid_external_chat_id: externalChatId,
-          p_phone_external_chat_id: phoneChatId,
-        });
-        if (!reconcileError && reconcileData) {
-          const reconcileRow = Array.isArray(reconcileData) ? reconcileData[0] : reconcileData;
-          if (reconcileRow?.merged && reconcileRow.external_chat_id) {
-            canonicalExternalChatId = reconcileRow.external_chat_id;
-            phoneDigits = extractPhoneFromChatId(canonicalExternalChatId) || phoneDigits;
-          }
-        }
+    const identity = await resolveVerifiedWhapiDirectIdentity({
+      token: settings.token,
+      chatId: externalChatId,
+    }).catch(() => null);
+
+    if (identity?.verified) {
+      const { data: reconcileData, error: reconcileError } = await supabaseAdmin.rpc('comm_whatsapp_reconcile_lid_identifier', {
+        p_channel_id: channel.id,
+        p_lid_external_chat_id: identity.lidChatId,
+        p_phone_external_chat_id: identity.phoneChatId,
+        p_mapping_evidence: {
+          round_trip_verified: true,
+          source: 'comm-whatsapp-sync-chat',
+        },
+      });
+      if (reconcileError) throw new Error(`Erro ao reconciliar identidade da conversa: ${reconcileError.message}`);
+
+      const reconcileRow = Array.isArray(reconcileData) ? reconcileData[0] : reconcileData;
+      if (!reconcileRow?.merged || !reconcileRow.external_chat_id) {
+        throw new Error(`Identidade nao reconciliada: ${reconcileRow?.conflict_reason || 'sem chat canonico'}.`);
       }
+
+      canonicalExternalChatId = reconcileRow.external_chat_id;
+      phoneDigits = identity.phone;
+    } else if (isWhapiLidChatId(externalChatId)) {
+      phoneDigits = '';
     }
-    const existingChat = await findExistingChat(supabaseAdmin, channel.id, canonicalExternalChatId);
+
     let whapiName = await fetchWhapiChatName({ token: settings.token, chatId: externalChatId }).catch(() => '');
     if (
       whapiName &&
@@ -241,47 +221,53 @@ Deno.serve(async (req: Request) => {
       whapiName = '';
     }
 
-    if (phoneDigits && isValidCommWhatsAppDisplayName(whapiName) && !isOwnChannelName(whapiName, channel.connected_user_name)) {
-      await cacheCommWhatsAppChatContactName(supabaseAdmin, {
-        channelId: channel.id,
-        phoneNumber: phoneDigits,
-        displayName: whapiName,
-      });
-    }
+    const { data: ensuredData, error: ensureError } = await supabaseAdmin.rpc('comm_whatsapp_ensure_observed_chat', {
+      p_channel_id: channel.id,
+      p_external_chat_id: canonicalExternalChatId,
+      p_phone_number: phoneDigits || null,
+      p_push_name: isValidCommWhatsAppDisplayName(whapiName) ? whapiName : null,
+    });
+    if (ensureError) throw new Error(`Nao foi possivel preparar a conversa para sincronizacao: ${ensureError.message}`);
 
-    if (!whapiName && phoneDigits) {
-      whapiName = await fetchWhapiContactName({ token: settings.token, contactId: phoneDigits }).catch(() => '');
-    }
-    const existingLooksLikeOwnName = Boolean(
-      existingChat?.display_name &&
-        channel.connected_user_name &&
-        existingChat.display_name.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase(),
-    );
-    const displayName =
-      whapiName ||
-      (!existingLooksLikeOwnName && existingChat?.display_name && !isPhoneLabelLikeDisplayName(existingChat.display_name)
-        ? existingChat.display_name
-        : formatPhoneLabel(phoneDigits));
+    const chat = (Array.isArray(ensuredData) ? ensuredData[0] : ensuredData) as {
+      id: string;
+      unread_count: number;
+      display_name: string;
+      push_name: string | null;
+    } | null;
+    if (!chat?.id) throw new Error('A conversa canonica nao foi retornada pela preparacao da sincronizacao.');
 
-    const { data: chat, error: chatError } = await supabaseAdmin
-      .from('comm_whatsapp_chats')
-      .upsert(
-        {
+    if (identity?.reason === 'reverse_mismatch') {
+      const dedupeKey = `reverse:${channel.id}:${identity.lidChatId || externalChatId}:${identity.phoneChatId || 'unknown'}`;
+      const { error: conflictError } = await supabaseAdmin
+        .from('comm_whatsapp_identity_conflicts')
+        .upsert({
+          dedupe_key: dedupeKey,
           channel_id: channel.id,
-          external_chat_id: canonicalExternalChatId,
-          phone_number: phoneDigits || '',
-          phone_digits: phoneDigits || '',
-          display_name: displayName,
-          push_name: whapiName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
-        },
-        { onConflict: 'channel_id,external_chat_id' },
-      )
-      .select('id, unread_count, display_name, push_name')
-      .single();
+          chat_id: chat.id,
+          conflict_type: 'reverse_mapping_conflict',
+          status: 'open',
+          details: {
+            observed_chat_id: externalChatId,
+            lid_chat_id: identity.lidChatId || null,
+            phone_chat_id: identity.phoneChatId || null,
+            source: 'comm-whatsapp-sync-chat',
+          },
+          updated_at: getNowIso(),
+          resolved_at: null,
+          resolved_by: null,
+        }, { onConflict: 'dedupe_key' });
+      if (conflictError) throw new Error(`Erro ao registrar conflito de identidade: ${conflictError.message}`);
 
-    if (chatError || !chat) {
-      throw new Error(chatError?.message || 'Nao foi possivel preparar a conversa para sincronizacao.');
+      const { error: flagError } = await supabaseAdmin
+        .from('comm_whatsapp_chats')
+        .update({ identity_conflict: true, updated_at: getNowIso() })
+        .eq('id', chat.id);
+      if (flagError) throw new Error(`Erro ao sinalizar conflito de identidade: ${flagError.message}`);
     }
+
+    const displayName = chat.display_name;
+    const pushName = whapiName || (!isOwnChannelName(chat.push_name, channel.connected_user_name) ? chat.push_name : null);
 
     const messagePage = await fetchWhapiChatMessagesPage({
       token: settings.token,
@@ -410,7 +396,7 @@ Deno.serve(async (req: Request) => {
         externalChatId,
         phoneNumber: phoneDigits,
         displayName,
-        pushName: whapiName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
+        pushName,
         lastMessageText: summaryText,
         lastMessageDirection: direction,
         lastMessageAt: messageAt,

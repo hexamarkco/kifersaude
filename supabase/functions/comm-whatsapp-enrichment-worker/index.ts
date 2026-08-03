@@ -11,11 +11,7 @@ import {
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
   isValidCommWhatsAppDisplayName,
-  isWhapiLidChatId,
-  isWhapiPhoneDirectChatId,
-  normalizeWhapiPhoneChatId,
-  resolveWhapiLidToPhone,
-  resolveWhapiPhoneToLid,
+  resolveVerifiedWhapiDirectIdentity,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
 
@@ -134,38 +130,71 @@ async function processIdentityJob(params: {
   const chatId = toTrimmedString(params.job.chat_id);
   if (!chatId) return;
 
-  const { data: chat, error } = await params.supabaseAdmin
+  const { data: canonicalChatId, error: resolveError } = await params.supabaseAdmin.rpc('comm_whatsapp_resolve_chat_uuid', {
+    p_chat_id: chatId,
+  });
+  if (resolveError) throw new Error(`Erro ao resolver chat canonico: ${resolveError.message}`);
+  if (!toTrimmedString(canonicalChatId)) return;
+
+  const { data: initialChat, error } = await params.supabaseAdmin
     .from('comm_whatsapp_chats')
     .select('id,channel_id,external_chat_id,phone_digits,push_name')
-    .eq('id', chatId)
+    .eq('id', canonicalChatId)
     .maybeSingle();
 
   if (error) throw new Error(`Erro ao carregar chat para enriquecimento: ${error.message}`);
-  if (!chat || !isDirectWhapiChatId(chat.external_chat_id)) return;
+  if (!initialChat || !isDirectWhapiChatId(initialChat.external_chat_id)) return;
 
-  let lidChatId = '';
-  let phoneChatId = '';
+  let chat = initialChat;
+  const identity = await resolveVerifiedWhapiDirectIdentity({
+    token: params.token,
+    chatId: chat.external_chat_id,
+  });
 
-  if (isWhapiLidChatId(chat.external_chat_id)) {
-    const resolvedPhone = await resolveWhapiLidToPhone({ token: params.token, chatId: chat.external_chat_id });
-    if (!resolvedPhone) {
-      throw new Error('LID ainda nao possui mapeamento telefonico confirmado na Whapi.');
-    }
-    lidChatId = chat.external_chat_id;
-    phoneChatId = normalizeWhapiPhoneChatId(resolvedPhone);
-  } else if (isWhapiPhoneDirectChatId(chat.external_chat_id)) {
-    const resolvedLid = await resolveWhapiPhoneToLid({ token: params.token, chatId: chat.external_chat_id });
-    if (resolvedLid) {
-      lidChatId = resolvedLid;
-      phoneChatId = normalizeWhapiPhoneChatId(chat.external_chat_id);
-    }
+  if (identity.reason === 'reverse_mismatch') {
+    const dedupeKey = `reverse:${chat.channel_id}:${identity.lidChatId || chat.external_chat_id}:${identity.phoneChatId || 'unknown'}`;
+    const { error: conflictError } = await params.supabaseAdmin
+      .from('comm_whatsapp_identity_conflicts')
+      .upsert({
+        dedupe_key: dedupeKey,
+        channel_id: chat.channel_id,
+        chat_id: chat.id,
+        conflict_type: 'reverse_mapping_conflict',
+        status: 'open',
+        details: {
+          observed_chat_id: chat.external_chat_id,
+          lid_chat_id: identity.lidChatId || null,
+          phone_chat_id: identity.phoneChatId || null,
+          source: 'comm-whatsapp-enrichment-worker',
+        },
+        updated_at: getNowIso(),
+        resolved_at: null,
+        resolved_by: null,
+      }, { onConflict: 'dedupe_key' });
+    if (conflictError) throw new Error(`Erro ao registrar conflito de identidade: ${conflictError.message}`);
+
+    const { error: flagError } = await params.supabaseAdmin
+      .from('comm_whatsapp_chats')
+      .update({ identity_conflict: true, updated_at: getNowIso() })
+      .eq('id', chat.id);
+    if (flagError) throw new Error(`Erro ao sinalizar conflito de identidade: ${flagError.message}`);
+
+    throw new Error('A Whapi retornou um mapeamento LID/telefone divergente na verificacao reversa.');
   }
 
-  if (lidChatId && phoneChatId) {
+  if (identity.lidChatId && !identity.verified) {
+    throw new Error('LID ainda nao possui mapeamento bidirecional confirmado na Whapi.');
+  }
+
+  if (identity.verified) {
     const { data: reconcileData, error: reconcileError } = await params.supabaseAdmin.rpc('comm_whatsapp_reconcile_lid_identifier', {
       p_channel_id: chat.channel_id,
-      p_lid_external_chat_id: lidChatId,
-      p_phone_external_chat_id: phoneChatId,
+      p_lid_external_chat_id: identity.lidChatId,
+      p_phone_external_chat_id: identity.phoneChatId,
+      p_mapping_evidence: {
+        round_trip_verified: true,
+        source: 'comm-whatsapp-enrichment-worker',
+      },
     });
     if (reconcileError) {
       throw new Error(`Erro ao reconciliar identidade do chat: ${reconcileError.message}`);

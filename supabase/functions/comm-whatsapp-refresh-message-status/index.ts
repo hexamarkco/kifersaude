@@ -14,6 +14,7 @@ import {
   isDirectWhapiChatId,
   isRecord,
   normalizeWhapiChatId,
+  resolveCommWhatsAppCanonicalChatRoute,
   sanitizeWhapiToken,
   stringTimestampToIso,
   toTrimmedString,
@@ -87,25 +88,6 @@ const getStatusTimestamp = (message: Record<string, unknown>) => {
 
   return getNowIso();
 };
-
-async function findChatByExternalId(
-  supabaseAdmin: SupabaseClient,
-  channelId: string,
-  externalChatId: string,
-) {
-  const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .select('id,external_chat_id')
-    .eq('channel_id', channelId)
-    .eq('external_chat_id', externalChatId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Erro ao localizar conversa: ${error.message}`);
-  }
-
-  return (data ?? null) as ChatRow | null;
-}
 
 async function loadRefreshableMessages(
   supabaseAdmin: SupabaseClient,
@@ -250,10 +232,23 @@ Deno.serve(async (req: Request) => {
     }
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
-    const chat = externalChatId ? await findChatByExternalId(supabaseAdmin, channel.id, externalChatId) : null;
+    const chatRoute = externalChatId
+      ? await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+          channelId: channel.id,
+          externalChatId,
+        })
+      : null;
+
+    if (externalChatId && !chatRoute?.chatId && externalMessageIds.length === 0) {
+      return new Response(JSON.stringify({ refreshed: [], checked: 0, updated: 0 }), {
+        status: 200,
+        headers: jsonHeaders,
+      });
+    }
+
     const rows = await loadRefreshableMessages(supabaseAdmin, {
       channelId: channel.id,
-      chatId: chat?.id ?? null,
+      chatId: chatRoute?.chatId ?? null,
       externalMessageIds,
       limit,
     });

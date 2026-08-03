@@ -426,7 +426,7 @@ async function persistMessageFromWebhook(
   if (direction === 'inbound' && !patch) {
     try {
       await supabaseAdmin.rpc('resolve_comm_whatsapp_campaign_stop_on_reply', {
-        p_external_chat_id: externalChatId,
+        p_chat_id: result.chatId,
         p_message_at: messageAt,
       });
     } catch {

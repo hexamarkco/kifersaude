@@ -10,11 +10,14 @@ import {
   ensurePrimaryChannel,
   extractWhapiMessageId,
   formatPhoneLabel,
+  getCommWhatsAppPhoneLookupKeys,
   getNowIso,
   normalizeCommWhatsAppPhone,
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
+  resolveCommWhatsAppCanonicalChatRoute,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
   sanitizeWhapiToken,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -828,21 +831,30 @@ async function activateCampaign(
 
 async function findInboundCampaignChat(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
-  target: Pick<TargetRow, 'phone_digits' | 'sent_at'>,
+  target: Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>,
 ) {
   if (!target.sent_at) {
     return null;
   }
 
-  const { data, error } = await supabaseAdmin
+  const canonicalRoute = target.chat_id
+    ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, target.chat_id)
+    : null;
+  let query = supabaseAdmin
     .from('comm_whatsapp_chats')
     .select('id,last_message_at,last_message_direction')
-    .eq('phone_digits', target.phone_digits)
     .eq('last_message_direction', 'inbound')
     .gt('last_message_at', target.sent_at)
+    .is('merged_into_chat_id', null)
+    .is('deleted_at', null)
     .order('last_message_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+
+  query = canonicalRoute?.chatId
+    ? query.eq('id', canonicalRoute.chatId)
+    : query.eq('phone_digits', target.phone_digits);
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     throw new Error(`Erro ao localizar resposta da campanha: ${error.message}`);
@@ -854,7 +866,7 @@ async function findInboundCampaignChat(
 async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminClient>, campaignId?: string) {
   let query = supabaseAdmin
     .from('comm_whatsapp_campaign_targets')
-    .select('id,campaign_id,lead_id,phone_digits,sent_at,responded_at')
+    .select('id,campaign_id,lead_id,chat_id,phone_digits,sent_at,responded_at')
     .in('status', ['sent', 'scheduled'])
     .not('sent_at', 'is', null)
     .limit(500);
@@ -871,7 +883,7 @@ async function reconcileResponses(supabaseAdmin: ReturnType<typeof createAdminCl
   let responded = 0;
   const stopOnReplyByCampaign = new Map<string, boolean>();
   for (const target of data ?? []) {
-    const chat = await findInboundCampaignChat(supabaseAdmin, target as Pick<TargetRow, 'phone_digits' | 'sent_at'>);
+    const chat = await findInboundCampaignChat(supabaseAdmin, target as Pick<TargetRow, 'chat_id' | 'phone_digits' | 'sent_at'>);
 
     if (!chat) continue;
 
@@ -972,7 +984,7 @@ async function reconcileAcceptedCampaignPersistences(params: {
       const stepIndex = Math.max(Number(payload.stepIndex) || 0, 0);
       const sentAt = toTrimmedString(payload.sentAt) || getNowIso();
       const deliveryStatus = toTrimmedString(payload.deliveryStatus) || 'sent';
-      const externalChatId = buildWhapiDirectChatId(phoneDigits);
+      const externalChatId = toTrimmedString(payload.externalChatId) || buildWhapiDirectChatId(phoneDigits);
       const displayName = toTrimmedString(payload.displayName) || formatPhoneLabel(phoneDigits);
       const persisted = await persistCommWhatsAppMessage(params.supabaseAdmin, {
         channelId: params.channelId,
@@ -1252,11 +1264,11 @@ async function sendTarget(params: {
   senderName: string | null;
 }) {
   const { supabaseAdmin, campaign, target } = params;
-  const phoneDigits = normalizeCommWhatsAppPhone(target.phone_digits || target.phone_number);
-  const chatId = buildWhapiDirectChatId(phoneDigits);
+  let phoneDigits = normalizeCommWhatsAppPhone(target.phone_digits || target.phone_number);
+  const fallbackChatId = buildWhapiDirectChatId(phoneDigits);
   const nowIso = getNowIso();
 
-  if (!phoneDigits || !chatId) {
+  if (!phoneDigits || !fallbackChatId) {
     await updateClaimedTarget(supabaseAdmin, target, {
       status: 'invalid',
       error_message: 'Telefone invalido.',
@@ -1266,6 +1278,33 @@ async function sendTarget(params: {
     });
     return { status: 'invalid' };
   }
+
+  const chatRoute = target.chat_id
+    ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, target.chat_id)
+    : await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+        channelId: params.channelId,
+        externalChatId: fallbackChatId,
+      });
+  const chatId = chatRoute?.externalChatId || fallbackChatId;
+  const targetPhoneKeys = new Set(getCommWhatsAppPhoneLookupKeys(phoneDigits));
+  const routedPhoneMatchesTarget = !chatRoute?.phoneNumber
+    || getCommWhatsAppPhoneLookupKeys(chatRoute.phoneNumber).some((key) => targetPhoneKeys.has(key));
+
+  if (
+    chatRoute?.identityConflict
+    || (chatRoute?.leadId && target.lead_id && chatRoute.leadId !== target.lead_id)
+    || !routedPhoneMatchesTarget
+  ) {
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'failed',
+      error_message: 'Identidade WhatsApp exige revisao manual antes de envios automaticos.',
+      last_attempt_at: nowIso,
+      locked_at: null,
+      lock_token: null,
+    });
+    return { status: 'failed', reason: 'identity_conflict' };
+  }
+  phoneDigits = chatRoute?.phoneNumber || phoneDigits;
 
   const { data: optOut } = await supabaseAdmin
     .from('comm_whatsapp_opt_outs')
@@ -1323,6 +1362,7 @@ async function sendTarget(params: {
   const sendStartedPayload = {
     startedAt: nowIso,
     phoneDigits,
+    externalChatId: chatId,
     messageText: text,
     stepIndex: step.step_index,
   };
@@ -1417,7 +1457,7 @@ async function sendTarget(params: {
   }
 
   const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, externalMessageId);
-  const displayName = lead?.nome_completo || target.display_name || formatPhoneLabel(phoneDigits);
+  const displayName = chatRoute?.displayName || lead?.nome_completo || target.display_name || formatPhoneLabel(phoneDigits);
   const nextSendAt = nextStep ? new Date(Date.now() + getDelayMs(nextStep)).toISOString() : null;
   const targetStatus = nextStep ? 'scheduled' : 'sent';
   const acceptedPayload = {
@@ -1425,6 +1465,7 @@ async function sendTarget(params: {
     deliveryStatus,
     messageText: text,
     phoneDigits,
+    externalChatId: chatId,
     displayName,
     sentAt: nowIso,
     stepIndex: step.step_index,

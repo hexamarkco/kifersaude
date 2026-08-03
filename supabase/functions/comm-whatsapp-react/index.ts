@@ -11,6 +11,7 @@ import {
   getNowIso,
   parseWhapiError,
   readResponsePayload,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
 
@@ -69,11 +70,10 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = (await req.json().catch(() => ({}))) as ReactBody;
-    const chatId = toTrimmedString(body.chatId);
     const messageId = toTrimmedString(body.messageId);
     const emoji = toTrimmedString(body.emoji);
 
-    if (!chatId || !messageId) {
+    if (!messageId) {
       return new Response(JSON.stringify({ error: 'Conversa e mensagem são obrigatórias para reagir.' }), {
         status: 400,
         headers: jsonHeaders,
@@ -96,8 +96,30 @@ Deno.serve(async (req: Request) => {
     }
 
     const channel = await ensurePrimaryChannel(supabaseAdmin);
+    const { data: targetMessage, error: messageError } = await supabaseAdmin
+      .from('comm_whatsapp_messages')
+      .select('chat_id')
+      .eq('channel_id', channel.id)
+      .eq('external_message_id', messageId)
+      .maybeSingle();
+    if (messageError) throw new Error(`Erro ao localizar mensagem para reacao: ${messageError.message}`);
+    if (!targetMessage?.chat_id) {
+      return new Response(JSON.stringify({ error: 'Mensagem nao encontrada para reagir.' }), {
+        status: 404,
+        headers: jsonHeaders,
+      });
+    }
+
+    const chatRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, targetMessage.chat_id);
+    if (!chatRoute) {
+      return new Response(JSON.stringify({ error: 'Conversa da mensagem nao encontrada.' }), {
+        status: 404,
+        headers: jsonHeaders,
+      });
+    }
+
     const whapi = createWhapiClient(settings.token);
-    const response = await whapi.sendReaction(messageId, chatId, emoji || null);
+    const response = await whapi.sendReaction(messageId, chatRoute.externalChatId, emoji || null);
 
     const payload = await readResponsePayload(response);
     if (!response.ok) {

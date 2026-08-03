@@ -489,7 +489,12 @@ const normalizeDashboardMetrics = (value: unknown): CommWhatsAppDashboardMetrics
 };
 
 export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
-  const digits = String(value ?? '').replace(/\D/g, '');
+  const normalized = String(value ?? '').trim();
+  if (/@(?:lid|s\.whatsapp\.net|c\.us|g\.us)$/i.test(normalized)) {
+    return 'Contato privado';
+  }
+
+  const digits = normalized.replace(/\D/g, '');
 
   if (digits.length === 13 && digits.startsWith('55')) {
     return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
@@ -503,7 +508,23 @@ export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
     return 'Contato privado';
   }
 
-  return value?.trim() || 'Contato privado';
+  return normalized || 'Contato privado';
+};
+
+const resolveCanonicalCommWhatsAppChatUuid = async (chatId: string): Promise<string> => {
+  const { data, error } = await supabase.rpc('comm_whatsapp_resolve_chat_uuid' as never, {
+    p_chat_id: chatId,
+  } as never);
+  if (error) {
+    throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel resolver a conversa canonica.'));
+  }
+
+  const resolvedChatId = readString(data);
+  if (!resolvedChatId) {
+    throw new Error('Conversa do WhatsApp nao encontrada.');
+  }
+
+  return resolvedChatId;
 };
 
 const invokeFollowUpAgendaOrganizer = async (body: Record<string, unknown>) => {
@@ -754,7 +775,7 @@ export const commWhatsAppService = {
     await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para atualizar esta conversa.' });
 
     const { data, error } = await supabase.rpc('comm_whatsapp_update_chat_inbox_state', {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_is_archived: typeof options.isArchived === 'boolean' ? options.isArchived : null,
       p_is_muted: typeof options.isMuted === 'boolean' ? options.isMuted : null,
       p_is_pinned: typeof options.isPinned === 'boolean' ? options.isPinned : null,
@@ -776,7 +797,7 @@ export const commWhatsAppService = {
 
   async deleteChat(chatId: string): Promise<CommWhatsAppChat> {
     const { data, error } = await supabase.rpc('comm_whatsapp_delete_chat', {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
     });
 
     if (error) {
@@ -844,7 +865,7 @@ export const commWhatsAppService = {
 
   async getChatLeadPanel(chatId: string): Promise<CommWhatsAppLeadPanel | null> {
     const { data, error } = await supabase.rpc('comm_whatsapp_get_chat_lead_panel', {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
     });
 
     if (error) {
@@ -860,7 +881,7 @@ export const commWhatsAppService = {
 
     const safeLimit = Math.min(Math.max(params.limit ?? 50, 1), 200);
     const { data, error } = await supabase.rpc('comm_whatsapp_get_chat_thread' as never, {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_limit: safeLimit,
     } as never);
 
@@ -901,7 +922,7 @@ export const commWhatsAppService = {
 
   async linkChatLead(chatId: string, leadId: string): Promise<CommWhatsAppChat> {
     const { data, error } = await supabase.rpc('comm_whatsapp_link_chat_lead', {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_lead_id: leadId,
     });
 
@@ -920,7 +941,7 @@ export const commWhatsAppService = {
 
   async unlinkChatLead(chatId: string): Promise<CommWhatsAppChat> {
     const { data, error } = await supabase.rpc('comm_whatsapp_unlink_chat_lead', {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
     });
 
     if (error) {
@@ -938,7 +959,7 @@ export const commWhatsAppService = {
 
   async updateLinkedLeadStatus(chatId: string, newStatus: string): Promise<void> {
     const { error } = await supabase.rpc('comm_whatsapp_update_linked_lead_status', {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_new_status: newStatus,
     });
 
@@ -949,7 +970,7 @@ export const commWhatsAppService = {
 
   async updateLinkedLeadResponsavel(chatId: string, responsavelValue: string): Promise<void> {
     const { error } = await supabase.rpc('comm_whatsapp_update_linked_lead_responsavel', {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_new_responsavel_value: responsavelValue,
     });
 
@@ -1083,6 +1104,8 @@ export const commWhatsAppService = {
         .from('comm_whatsapp_chats')
         .select('*')
         .eq('lead_id', normalizedLeadId)
+        .is('merged_into_chat_id', null)
+        .is('deleted_at', null)
         .order('last_message_at', { ascending: false, nullsFirst: false })
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -1105,6 +1128,8 @@ export const commWhatsAppService = {
       .from('comm_whatsapp_chats')
       .select('*')
       .in('phone_digits', normalizedPhoneDigits)
+      .is('merged_into_chat_id', null)
+      .is('deleted_at', null)
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .order('updated_at', { ascending: false })
       .limit(1);
@@ -1121,7 +1146,7 @@ export const commWhatsAppService = {
 
     const safeLimit = Math.min(Math.max(params.limit ?? 50, 1), 200);
     const { data, error } = await supabase.rpc('comm_whatsapp_list_messages_page', {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_before_message_at: params.before?.messageAt ?? null,
       p_before_id: params.before?.id ?? null,
       p_limit: safeLimit + 1,
@@ -1146,7 +1171,7 @@ export const commWhatsAppService = {
 
     const safeLimit = Math.min(Math.max(params.limit ?? 40, 1), 100);
     const { data, error } = await supabase.rpc('comm_whatsapp_list_chat_media_page' as never, {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_media_type: params.mediaType ?? 'all',
       p_before_message_at: params.before?.messageAt ?? null,
       p_before_id: params.before?.id ?? null,
@@ -1166,7 +1191,7 @@ export const commWhatsAppService = {
 
   async listMessageContext(chatId: string, messageId: string): Promise<CommWhatsAppMessage[]> {
     const { data, error } = await supabase.rpc('comm_whatsapp_list_message_context' as never, {
-      p_chat_id: chatId,
+      p_chat_id: await resolveCanonicalCommWhatsAppChatUuid(chatId),
       p_message_id: messageId,
       p_before_limit: 50,
       p_after_limit: 50,
@@ -1279,6 +1304,7 @@ export const commWhatsAppService = {
 
   async markChatRead(chatId: string, cursor: { messageAt?: string | null; messageId?: string | null } = {}): Promise<CommWhatsAppMarkChatReadResult> {
     await waitForSupabaseSession({ errorMessage: 'Sua sessão expirou. Entre novamente para marcar a conversa como lida.' });
+    const canonicalChatId = await resolveCanonicalCommWhatsAppChatUuid(chatId);
 
     console.debug('[WhatsAppInbox][mark-read][service] rpc:start', {
       chatId,
@@ -1286,7 +1312,7 @@ export const commWhatsAppService = {
     });
 
     const { data, error } = await supabase.rpc('comm_whatsapp_mark_chat_read', {
-      p_chat_id: chatId,
+      p_chat_id: canonicalChatId,
       p_last_seen_message_at: cursor.messageAt ?? null,
       p_last_seen_message_id: cursor.messageId ?? null,
     });
@@ -1312,7 +1338,7 @@ export const commWhatsAppService = {
       // Retry the RPC once — the empty result is often a PostgREST serialization
       // issue with data-modifying CTEs, not a logical failure.
       const { data: retryData, error: retryError } = await supabase.rpc('comm_whatsapp_mark_chat_read', {
-        p_chat_id: chatId,
+        p_chat_id: canonicalChatId,
         p_last_seen_message_at: cursor.messageAt ?? null,
         p_last_seen_message_id: cursor.messageId ?? null,
       });

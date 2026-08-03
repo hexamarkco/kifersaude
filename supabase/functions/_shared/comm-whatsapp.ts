@@ -735,6 +735,7 @@ export const isSentenceLikeDisplayName = (value: string): boolean => {
 export const isValidCommWhatsAppDisplayName = (value: unknown): value is string => {
   const trimmed = toTrimmedString(value);
   if (!trimmed) return false;
+  if (/@(?:lid|s\.whatsapp\.net|c\.us|g\.us)$/i.test(trimmed)) return false;
   if (isPhoneLabelLikeDisplayName(trimmed)) return false;
   if (isSentenceLikeDisplayName(trimmed)) return false;
   return /[\p{L}\p{N}]/u.test(trimmed);
@@ -2288,6 +2289,84 @@ export async function resolveWhapiPhoneToLid(params: {
   return isWhapiLidChatId(lid) ? lid : '';
 }
 
+export type VerifiedWhapiDirectIdentity = {
+  verified: boolean;
+  lidChatId: string;
+  phoneChatId: string;
+  phone: string;
+  reason: 'verified' | 'invalid_chat_id' | 'counterpart_unresolved' | 'reverse_unresolved' | 'reverse_mismatch';
+};
+
+export async function resolveVerifiedWhapiDirectIdentity(params: {
+  token: string;
+  chatId: string;
+}): Promise<VerifiedWhapiDirectIdentity> {
+  const inputChatId = normalizeWhapiChatId(params.chatId);
+  const inputIsLid = isWhapiLidChatId(inputChatId);
+  let lidChatId = '';
+  let phoneChatId = '';
+
+  if (inputIsLid) {
+    lidChatId = inputChatId;
+    const phone = await resolveWhapiLidToPhone({ token: params.token, chatId: lidChatId });
+    phoneChatId = normalizeWhapiPhoneChatId(phone);
+  } else if (isWhapiPhoneDirectChatId(inputChatId)) {
+    phoneChatId = normalizeWhapiPhoneChatId(inputChatId);
+    lidChatId = await resolveWhapiPhoneToLid({ token: params.token, chatId: phoneChatId });
+  } else {
+    return { verified: false, lidChatId: '', phoneChatId: '', phone: '', reason: 'invalid_chat_id' };
+  }
+
+  if (!lidChatId || !phoneChatId) {
+    return {
+      verified: false,
+      lidChatId,
+      phoneChatId,
+      phone: extractPhoneFromChatId(phoneChatId),
+      reason: 'counterpart_unresolved',
+    };
+  }
+
+  const reverseLid = inputIsLid
+    ? await resolveWhapiPhoneToLid({ token: params.token, chatId: phoneChatId })
+    : lidChatId;
+  const reversePhone = inputIsLid
+    ? phoneChatId
+    : normalizeWhapiPhoneChatId(await resolveWhapiLidToPhone({ token: params.token, chatId: lidChatId }));
+
+  if (!reverseLid || !reversePhone) {
+    return {
+      verified: false,
+      lidChatId,
+      phoneChatId,
+      phone: extractPhoneFromChatId(phoneChatId),
+      reason: 'reverse_unresolved',
+    };
+  }
+
+  const phoneLookupKeys = new Set(getCommWhatsAppPhoneLookupKeys(phoneChatId));
+  const reversePhoneIsEquivalent = getCommWhatsAppPhoneLookupKeys(reversePhone)
+    .some((key) => phoneLookupKeys.has(key));
+
+  if (reverseLid.toLowerCase() !== lidChatId.toLowerCase() || !reversePhoneIsEquivalent) {
+    return {
+      verified: false,
+      lidChatId,
+      phoneChatId,
+      phone: extractPhoneFromChatId(phoneChatId),
+      reason: 'reverse_mismatch',
+    };
+  }
+
+  return {
+    verified: true,
+    lidChatId,
+    phoneChatId: reversePhone,
+    phone: extractPhoneFromChatId(reversePhone),
+    reason: 'verified',
+  };
+}
+
 export type WhapiChatMessagesPage = {
   messages: Array<Record<string, unknown>>;
   nextOffset: number;
@@ -2863,6 +2942,102 @@ export async function ensureCommWhatsAppSettings(
     enabled: typeof settings.enabled === 'boolean' ? settings.enabled : false,
     token: getWhapiToken(),
     nonSecretSettings,
+  };
+}
+
+export type CommWhatsAppCanonicalChatRoute = {
+  chatId: string | null;
+  externalChatId: string;
+  phoneNumber: string | null;
+  displayName: string | null;
+  pushName: string | null;
+  leadId: string | null;
+  identityConflict: boolean;
+};
+
+export async function resolveCommWhatsAppCanonicalChatRoute(
+  supabaseAdmin: SupabaseClient,
+  input: { channelId: string; externalChatId: string },
+): Promise<CommWhatsAppCanonicalChatRoute> {
+  const externalChatId = normalizeWhapiChatId(input.externalChatId);
+  if (!input.channelId || !isDirectWhapiChatId(externalChatId)) {
+    throw new Error('Canal ou identificador invalido para resolver a conversa canonica.');
+  }
+
+  const { data: canonicalChatId, error: resolveError } = await supabaseAdmin.rpc(
+    'comm_whatsapp_resolve_canonical_chat_uuid',
+    {
+      p_channel_id: input.channelId,
+      p_external_chat_id: externalChatId,
+    },
+  );
+  if (resolveError) {
+    throw new Error(`Erro ao resolver conversa canonica: ${resolveError.message}`);
+  }
+
+  const chatId = toTrimmedString(canonicalChatId);
+  if (!chatId) {
+    return {
+      chatId: null,
+      externalChatId,
+      phoneNumber: extractPhoneFromChatId(externalChatId) || null,
+      displayName: null,
+      pushName: null,
+      leadId: null,
+      identityConflict: false,
+    };
+  }
+
+  const { data: chat, error: chatError } = await supabaseAdmin
+    .from('comm_whatsapp_chats')
+    .select('id,external_chat_id,phone_digits,display_name,push_name,lead_id,identity_conflict')
+    .eq('id', chatId)
+    .maybeSingle();
+  if (chatError || !chat) {
+    throw new Error(chatError?.message || 'Conversa canonica nao encontrada.');
+  }
+
+  return {
+    chatId: toTrimmedString(chat.id),
+    externalChatId: normalizeWhapiChatId(chat.external_chat_id),
+    phoneNumber: normalizeCommWhatsAppPhone(chat.phone_digits) || null,
+    displayName: toTrimmedString(chat.display_name) || null,
+    pushName: toTrimmedString(chat.push_name) || null,
+    leadId: toTrimmedString(chat.lead_id) || null,
+    identityConflict: chat.identity_conflict === true,
+  };
+}
+
+export async function resolveCommWhatsAppCanonicalChatRouteByUuid(
+  supabaseAdmin: SupabaseClient,
+  chatId: string,
+): Promise<CommWhatsAppCanonicalChatRoute | null> {
+  const requestedChatId = toTrimmedString(chatId);
+  if (!requestedChatId) return null;
+
+  const { data: canonicalChatId, error: resolveError } = await supabaseAdmin.rpc('comm_whatsapp_resolve_chat_uuid', {
+    p_chat_id: requestedChatId,
+  });
+  if (resolveError) throw new Error(`Erro ao resolver UUID canonico da conversa: ${resolveError.message}`);
+
+  const resolvedChatId = toTrimmedString(canonicalChatId);
+  if (!resolvedChatId) return null;
+
+  const { data: chat, error: chatError } = await supabaseAdmin
+    .from('comm_whatsapp_chats')
+    .select('id,external_chat_id,phone_digits,display_name,push_name,lead_id,identity_conflict')
+    .eq('id', resolvedChatId)
+    .maybeSingle();
+  if (chatError || !chat) throw new Error(chatError?.message || 'Conversa canonica nao encontrada.');
+
+  return {
+    chatId: toTrimmedString(chat.id),
+    externalChatId: normalizeWhapiChatId(chat.external_chat_id),
+    phoneNumber: normalizeCommWhatsAppPhone(chat.phone_digits) || null,
+    displayName: toTrimmedString(chat.display_name) || null,
+    pushName: toTrimmedString(chat.push_name) || null,
+    leadId: toTrimmedString(chat.lead_id) || null,
+    identityConflict: chat.identity_conflict === true,
   };
 }
 

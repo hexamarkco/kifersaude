@@ -1,5 +1,24 @@
 BEGIN;
 
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
+
+CREATE OR REPLACE FUNCTION public.comm_whatsapp_is_valid_display_name(p_value text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  WITH normalized AS (
+    SELECT btrim(COALESCE(p_value, '')) AS value
+  )
+  SELECT value <> ''
+    AND value !~* '@(lid|s\.whatsapp\.net|c\.us|g\.us)$'
+    AND regexp_replace(value, '[\s()+-]', '', 'g') !~ '^\+?[0-9]+$'
+    AND value !~ '^[[:space:][:punct:]]+$'
+  FROM normalized;
+$$;
+
 ALTER TABLE public.comm_whatsapp_chats
   ADD COLUMN IF NOT EXISTS merged_into_chat_id uuid,
   ADD COLUMN IF NOT EXISTS lead_link_source text,
@@ -13,12 +32,23 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1
     FROM pg_constraint
-    WHERE conname = 'comm_whatsapp_chats_merged_into_chat_id_fkey'
+    WHERE conname = 'comm_whatsapp_chats_id_channel_id_key'
+      AND conrelid = 'public.comm_whatsapp_chats'::regclass
   ) THEN
     ALTER TABLE public.comm_whatsapp_chats
-      ADD CONSTRAINT comm_whatsapp_chats_merged_into_chat_id_fkey
-      FOREIGN KEY (merged_into_chat_id)
-      REFERENCES public.comm_whatsapp_chats(id)
+      ADD CONSTRAINT comm_whatsapp_chats_id_channel_id_key UNIQUE (id, channel_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'comm_whatsapp_chats_merged_into_channel_fkey'
+      AND conrelid = 'public.comm_whatsapp_chats'::regclass
+  ) THEN
+    ALTER TABLE public.comm_whatsapp_chats
+      ADD CONSTRAINT comm_whatsapp_chats_merged_into_channel_fkey
+      FOREIGN KEY (merged_into_chat_id, channel_id)
+      REFERENCES public.comm_whatsapp_chats(id, channel_id)
       ON DELETE RESTRICT;
   END IF;
 
@@ -26,6 +56,7 @@ BEGIN
     SELECT 1
     FROM pg_constraint
     WHERE conname = 'comm_whatsapp_chats_lead_link_source_check'
+      AND conrelid = 'public.comm_whatsapp_chats'::regclass
   ) THEN
     ALTER TABLE public.comm_whatsapp_chats
       ADD CONSTRAINT comm_whatsapp_chats_lead_link_source_check
@@ -39,19 +70,11 @@ BEGIN
     SELECT 1
     FROM pg_constraint
     WHERE conname = 'comm_whatsapp_chats_not_self_merged_check'
+      AND conrelid = 'public.comm_whatsapp_chats'::regclass
   ) THEN
     ALTER TABLE public.comm_whatsapp_chats
       ADD CONSTRAINT comm_whatsapp_chats_not_self_merged_check
       CHECK (merged_into_chat_id IS NULL OR merged_into_chat_id <> id);
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'comm_whatsapp_chats_id_channel_id_key'
-  ) THEN
-    ALTER TABLE public.comm_whatsapp_chats
-      ADD CONSTRAINT comm_whatsapp_chats_id_channel_id_key UNIQUE (id, channel_id);
   END IF;
 END;
 $$;
@@ -93,6 +116,7 @@ BEGIN
     SELECT 1
     FROM pg_constraint
     WHERE conname = 'comm_whatsapp_chat_identifiers_kind_check'
+      AND conrelid = 'public.comm_whatsapp_chat_identifiers'::regclass
   ) THEN
     ALTER TABLE public.comm_whatsapp_chat_identifiers
       ADD CONSTRAINT comm_whatsapp_chat_identifiers_kind_check
@@ -103,6 +127,7 @@ BEGIN
     SELECT 1
     FROM pg_constraint
     WHERE conname = 'comm_whatsapp_chat_identifiers_channel_chat_fkey'
+      AND conrelid = 'public.comm_whatsapp_chat_identifiers'::regclass
   ) THEN
     ALTER TABLE public.comm_whatsapp_chat_identifiers
       ADD CONSTRAINT comm_whatsapp_chat_identifiers_channel_chat_fkey
@@ -157,6 +182,46 @@ CREATE TABLE IF NOT EXISTS public.comm_whatsapp_chat_merge_log (
 CREATE INDEX IF NOT EXISTS idx_comm_whatsapp_chat_merge_log_run
   ON public.comm_whatsapp_chat_merge_log (run_id, created_at);
 
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'comm_whatsapp_identity_conflicts_channel_chat_fkey'
+      AND conrelid = 'public.comm_whatsapp_identity_conflicts'::regclass
+  ) THEN
+    ALTER TABLE public.comm_whatsapp_identity_conflicts
+      ADD CONSTRAINT comm_whatsapp_identity_conflicts_channel_chat_fkey
+      FOREIGN KEY (chat_id, channel_id)
+      REFERENCES public.comm_whatsapp_chats(id, channel_id)
+      ON DELETE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'comm_whatsapp_chat_merge_log_winner_channel_fkey'
+      AND conrelid = 'public.comm_whatsapp_chat_merge_log'::regclass
+  ) THEN
+    ALTER TABLE public.comm_whatsapp_chat_merge_log
+      ADD CONSTRAINT comm_whatsapp_chat_merge_log_winner_channel_fkey
+      FOREIGN KEY (winner_chat_id, channel_id)
+      REFERENCES public.comm_whatsapp_chats(id, channel_id)
+      ON DELETE RESTRICT;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'comm_whatsapp_chat_merge_log_loser_channel_fkey'
+      AND conrelid = 'public.comm_whatsapp_chat_merge_log'::regclass
+  ) THEN
+    ALTER TABLE public.comm_whatsapp_chat_merge_log
+      ADD CONSTRAINT comm_whatsapp_chat_merge_log_loser_channel_fkey
+      FOREIGN KEY (loser_chat_id, channel_id)
+      REFERENCES public.comm_whatsapp_chats(id, channel_id)
+      ON DELETE RESTRICT;
+  END IF;
+END;
+$$;
+
 ALTER TABLE public.comm_whatsapp_identity_conflicts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.comm_whatsapp_chat_merge_log ENABLE ROW LEVEL SECURITY;
 
@@ -180,6 +245,13 @@ CREATE POLICY "Users view comm whatsapp merge log"
   ON public.comm_whatsapp_chat_merge_log FOR SELECT TO authenticated
   USING (public.current_user_can_view_comm_whatsapp());
 
+COMMIT;
+
+BEGIN;
+
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
+
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_resolve_chat_uuid(p_chat_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql
@@ -196,6 +268,10 @@ DECLARE
 BEGIN
   IF v_chat_id IS NULL THEN
     RETURN NULL;
+  END IF;
+
+  IF auth.role() = 'authenticated' AND NOT public.current_user_can_view_comm_whatsapp() THEN
+    RAISE EXCEPTION 'Permissao insuficiente para consultar conversa.';
   END IF;
 
   FOR v_iteration IN 1..16 LOOP
@@ -252,7 +328,8 @@ BEGIN
   INTO v_chat_id
   FROM public.comm_whatsapp_chat_identifiers identifier
   WHERE identifier.channel_id = p_channel_id
-    AND identifier.external_chat_id = v_external_chat_id;
+    AND identifier.external_chat_id = v_external_chat_id
+    AND identifier.is_verified;
 
   IF v_chat_id IS NULL THEN
     SELECT chat.id
@@ -307,14 +384,22 @@ SET search_path = public
 AS $$
 DECLARE
   v_external_chat_id text := NULLIF(public.normalize_comm_whatsapp_chat_id(p_external_chat_id), '');
-  v_chat_id uuid := public.comm_whatsapp_resolve_chat_uuid(p_chat_id);
+  v_chat_id uuid;
   v_existing_chat_id uuid;
   v_primary_chat_id uuid;
   v_kind text;
 BEGIN
+  v_chat_id := public.comm_whatsapp_resolve_chat_uuid(p_chat_id);
+
   IF p_channel_id IS NULL OR v_chat_id IS NULL OR v_external_chat_id IS NULL THEN
     RAISE EXCEPTION 'Canal, chat e identificador sao obrigatorios.';
   END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('comm-whatsapp-identity:' || p_channel_id::text || ':' || v_external_chat_id, 0)
+  );
+
+  v_chat_id := public.comm_whatsapp_resolve_chat_uuid(p_chat_id);
 
   IF NOT EXISTS (
     SELECT 1 FROM public.comm_whatsapp_chats c
@@ -377,6 +462,22 @@ $$;
 REVOKE ALL ON FUNCTION public.comm_whatsapp_register_chat_identifier(uuid, uuid, text, text, boolean, jsonb) FROM PUBLIC, authenticated;
 GRANT EXECUTE ON FUNCTION public.comm_whatsapp_register_chat_identifier(uuid, uuid, text, text, boolean, jsonb) TO service_role;
 
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM public.comm_whatsapp_chat_identifiers AS identifier
+    JOIN public.comm_whatsapp_chats AS primary_chat
+      ON primary_chat.channel_id = identifier.channel_id
+     AND primary_chat.external_chat_id = identifier.external_chat_id
+    WHERE public.comm_whatsapp_resolve_chat_uuid(identifier.chat_id)
+      IS DISTINCT FROM public.comm_whatsapp_resolve_chat_uuid(primary_chat.id)
+  ) THEN
+    RAISE EXCEPTION 'Conflito entre identificador legado e chat primario; reparo manual obrigatorio.';
+  END IF;
+END;
+$$;
+
 INSERT INTO public.comm_whatsapp_chat_identifiers (
   channel_id, external_chat_id, chat_id, source, identifier_kind,
   is_verified, evidence, last_confirmed_at, last_observed_at
@@ -391,13 +492,17 @@ SELECT
     WHEN chat.external_chat_id ~* '@s\.whatsapp\.net$' THEN 'wa_id'
     ELSE 'other'
   END,
-  false,
-  '{}'::jsonb,
+  true,
+  jsonb_build_object('primary_chat_id', chat.id),
   now(),
   COALESCE(chat.updated_at, chat.created_at, now())
 FROM public.comm_whatsapp_chats chat
 WHERE NULLIF(public.normalize_comm_whatsapp_chat_id(chat.external_chat_id), '') IS NOT NULL
-ON CONFLICT (channel_id, external_chat_id) DO NOTHING;
+ON CONFLICT (channel_id, external_chat_id) DO UPDATE
+SET is_verified = true,
+    evidence = public.comm_whatsapp_chat_identifiers.evidence || EXCLUDED.evidence,
+    last_confirmed_at = now(),
+    last_observed_at = GREATEST(public.comm_whatsapp_chat_identifiers.last_observed_at, EXCLUDED.last_observed_at);
 
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_try_auto_link_chat(
   p_chat_id uuid,
@@ -421,7 +526,17 @@ BEGIN
   WHERE id = public.comm_whatsapp_resolve_chat_uuid(p_chat_id)
   FOR UPDATE;
 
-  IF NOT FOUND OR v_phone IS NULL OR v_chat.lead_id IS NOT NULL OR v_chat.auto_link_blocked THEN
+  IF NOT FOUND
+    OR v_phone IS NULL
+    OR v_chat.lead_id IS NOT NULL
+    OR v_chat.auto_link_blocked
+    OR EXISTS (
+      SELECT 1
+      FROM public.comm_whatsapp_identity_conflicts AS conflict
+      WHERE conflict.chat_id = v_chat.id
+        AND conflict.status = 'open'
+    )
+  THEN
     RETURN false;
   END IF;
 
@@ -433,14 +548,19 @@ BEGIN
       && public.comm_whatsapp_phone_lookup_keys(v_phone);
 
   IF v_match_count = 1 THEN
-    UPDATE public.comm_whatsapp_chats
+    UPDATE public.comm_whatsapp_chats AS chat
     SET lead_id = v_lead_id,
         lead_link_source = COALESCE(NULLIF(btrim(p_source), ''), 'auto_phone'),
         lead_linked_at = now(),
         lead_linked_by = NULL,
-        identity_conflict = false,
+        identity_conflict = EXISTS (
+          SELECT 1
+          FROM public.comm_whatsapp_identity_conflicts AS conflict
+          WHERE conflict.chat_id = chat.id
+            AND conflict.status = 'open'
+        ),
         updated_at = now()
-    WHERE id = v_chat.id;
+    WHERE chat.id = v_chat.id;
 
     UPDATE public.comm_whatsapp_identity_conflicts
     SET status = 'resolved', resolved_at = now(), updated_at = now()
@@ -470,7 +590,9 @@ BEGIN
         resolved_by = NULL;
 
     UPDATE public.comm_whatsapp_chats
-    SET identity_conflict = true, updated_at = now()
+    SET identity_conflict = true,
+        auto_link_blocked = true,
+        updated_at = now()
     WHERE id = v_chat.id;
   END IF;
 
@@ -484,7 +606,8 @@ GRANT EXECUTE ON FUNCTION public.comm_whatsapp_try_auto_link_chat(uuid, text, te
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_reconcile_lid_identifier(
   p_channel_id uuid,
   p_lid_external_chat_id text,
-  p_phone_external_chat_id text
+  p_phone_external_chat_id text,
+  p_mapping_evidence jsonb
 )
 RETURNS TABLE(
   chat_id uuid,
@@ -508,8 +631,14 @@ DECLARE
   v_loser public.comm_whatsapp_chats%ROWTYPE;
   v_selected_lead_id uuid;
   v_selected_lead_source text;
+  v_selected_lead_linked_at timestamptz;
+  v_selected_lead_linked_by uuid;
+  v_winner_previous_lead_id uuid;
+  v_loser_previous_lead_id uuid;
   v_lead_conflict boolean := false;
   v_conflict_reason text;
+  v_connected_user_name text;
+  v_winner_before jsonb;
   v_latest_record record;
   v_preview text;
   v_last_read_at timestamptz;
@@ -518,6 +647,12 @@ DECLARE
   v_counts jsonb := '{}'::jsonb;
   v_run_id uuid := gen_random_uuid();
 BEGIN
+  IF jsonb_typeof(COALESCE(p_mapping_evidence, '{}'::jsonb)) <> 'object'
+    OR COALESCE(p_mapping_evidence ->> 'round_trip_verified', 'false') <> 'true'
+  THEN
+    RAISE EXCEPTION 'Reconciliacao exige evidencia bidirecional confirmada.';
+  END IF;
+
   IF v_lid IS NULL OR v_phone IS NULL OR v_lid !~* '@lid$' OR v_phone !~* '@s\.whatsapp\.net$' THEN
     RAISE EXCEPTION 'Mapeamento LID e WA ID invalido.';
   END IF;
@@ -557,10 +692,16 @@ BEGIN
     SELECT * INTO v_winner
     FROM public.comm_whatsapp_chats WHERE id = v_lid_chat_id FOR UPDATE;
   ELSE
+    PERFORM chat.id
+    FROM public.comm_whatsapp_chats AS chat
+    WHERE chat.id IN (v_lid_chat_id, v_phone_chat_id)
+    ORDER BY chat.id
+    FOR UPDATE;
+
     SELECT * INTO v_lid_chat
-    FROM public.comm_whatsapp_chats WHERE id = v_lid_chat_id FOR UPDATE;
+    FROM public.comm_whatsapp_chats WHERE id = v_lid_chat_id;
     SELECT * INTO v_phone_chat
-    FROM public.comm_whatsapp_chats WHERE id = v_phone_chat_id FOR UPDATE;
+    FROM public.comm_whatsapp_chats WHERE id = v_phone_chat_id;
 
     IF v_lid_chat.channel_id <> p_channel_id OR v_phone_chat.channel_id <> p_channel_id THEN
       RAISE EXCEPTION 'Chats de canais diferentes nao podem ser reconciliados.';
@@ -586,15 +727,28 @@ BEGIN
       v_loser := v_lid_chat;
     END IF;
 
+    v_winner_before := to_jsonb(v_winner);
+    v_winner_previous_lead_id := v_winner.lead_id;
+    v_loser_previous_lead_id := v_loser.lead_id;
+
+    SELECT NULLIF(btrim(channel.connected_user_name), '')
+    INTO v_connected_user_name
+    FROM public.comm_whatsapp_channels AS channel
+    WHERE channel.id = p_channel_id;
+
     IF v_winner.lead_id IS NOT NULL AND v_loser.lead_id IS NOT NULL
       AND v_winner.lead_id <> v_loser.lead_id
     THEN
       IF v_winner.lead_link_source = 'manual' AND v_loser.lead_link_source IS DISTINCT FROM 'manual' THEN
         v_selected_lead_id := v_winner.lead_id;
-        v_selected_lead_source := 'manual';
+        v_selected_lead_source := v_winner.lead_link_source;
+        v_selected_lead_linked_at := v_winner.lead_linked_at;
+        v_selected_lead_linked_by := v_winner.lead_linked_by;
       ELSIF v_loser.lead_link_source = 'manual' AND v_winner.lead_link_source IS DISTINCT FROM 'manual' THEN
         v_selected_lead_id := v_loser.lead_id;
-        v_selected_lead_source := 'manual';
+        v_selected_lead_source := v_loser.lead_link_source;
+        v_selected_lead_linked_at := v_loser.lead_linked_at;
+        v_selected_lead_linked_by := v_loser.lead_linked_by;
       ELSE
         v_selected_lead_id := NULL;
         v_selected_lead_source := NULL;
@@ -607,37 +761,62 @@ BEGIN
         WHEN v_winner.lead_id IS NOT NULL THEN v_winner.lead_link_source
         ELSE v_loser.lead_link_source
       END;
+      v_selected_lead_linked_at := CASE
+        WHEN v_winner.lead_id IS NOT NULL THEN v_winner.lead_linked_at
+        ELSE v_loser.lead_linked_at
+      END;
+      v_selected_lead_linked_by := CASE
+        WHEN v_winner.lead_id IS NOT NULL THEN v_winner.lead_linked_by
+        ELSE v_loser.lead_linked_by
+      END;
     END IF;
 
-    UPDATE public.comm_whatsapp_messages SET chat_id = v_winner.id WHERE chat_id = v_loser.id;
+    UPDATE public.comm_whatsapp_messages AS message
+    SET chat_id = v_winner.id
+    WHERE message.chat_id = v_loser.id;
     GET DIAGNOSTICS v_count = ROW_COUNT;
     v_counts := v_counts || jsonb_build_object('messages', v_count);
 
-    UPDATE public.comm_whatsapp_enrichment_jobs SET chat_id = v_winner.id WHERE chat_id = v_loser.id;
+    UPDATE public.comm_whatsapp_enrichment_jobs AS job
+    SET chat_id = v_winner.id
+    WHERE job.chat_id = v_loser.id;
     GET DIAGNOSTICS v_count = ROW_COUNT;
     v_counts := v_counts || jsonb_build_object('enrichment_jobs', v_count);
 
-    UPDATE public.comm_whatsapp_ai_intent_suggestions SET chat_id = v_winner.id WHERE chat_id = v_loser.id;
+    UPDATE public.comm_whatsapp_ai_intent_suggestions AS suggestion
+    SET chat_id = v_winner.id
+    WHERE suggestion.chat_id = v_loser.id;
     GET DIAGNOSTICS v_count = ROW_COUNT;
     v_counts := v_counts || jsonb_build_object('ai_suggestions', v_count);
 
-    UPDATE public.comm_whatsapp_campaign_targets SET chat_id = v_winner.id WHERE chat_id = v_loser.id;
+    UPDATE public.comm_whatsapp_campaign_targets AS target
+    SET chat_id = v_winner.id
+    WHERE target.chat_id = v_loser.id;
     GET DIAGNOSTICS v_count = ROW_COUNT;
     v_counts := v_counts || jsonb_build_object('campaign_targets', v_count);
 
-    UPDATE public.comm_whatsapp_opt_outs SET source_chat_id = v_winner.id WHERE source_chat_id = v_loser.id;
+    UPDATE public.comm_whatsapp_opt_outs AS opt_out
+    SET source_chat_id = v_winner.id
+    WHERE opt_out.source_chat_id = v_loser.id;
     GET DIAGNOSTICS v_count = ROW_COUNT;
     v_counts := v_counts || jsonb_build_object('opt_outs', v_count);
 
-    UPDATE public.comm_follow_up_audit_log SET chat_id = v_winner.id::text WHERE chat_id = v_loser.id::text;
+    UPDATE public.comm_follow_up_audit_log AS audit
+    SET chat_id = v_winner.id::text
+    WHERE audit.chat_id = v_loser.id::text;
     GET DIAGNOSTICS v_count = ROW_COUNT;
     v_counts := v_counts || jsonb_build_object('follow_up_audit', v_count);
 
-    UPDATE public.comm_whatsapp_chat_identifiers
+    UPDATE public.comm_whatsapp_chat_identifiers AS identifier
     SET chat_id = v_winner.id,
         last_confirmed_at = now(),
         last_observed_at = now()
-    WHERE chat_id = v_loser.id;
+    WHERE identifier.chat_id = v_loser.id;
+
+    UPDATE public.comm_whatsapp_identity_conflicts AS conflict
+    SET chat_id = v_winner.id,
+        updated_at = now()
+    WHERE conflict.chat_id = v_loser.id;
 
     v_last_read_at := CASE
       WHEN v_winner.last_read_at IS NULL AND v_loser.last_read_at IS NULL THEN NULL
@@ -652,15 +831,19 @@ BEGIN
         phone_digits = v_phone_digits,
         lead_id = v_selected_lead_id,
         lead_link_source = v_selected_lead_source,
-        lead_linked_at = CASE WHEN v_selected_lead_id IS NULL THEN NULL ELSE COALESCE(v_winner.lead_linked_at, v_loser.lead_linked_at, now()) END,
-        lead_linked_by = CASE
-          WHEN v_selected_lead_source = 'manual' AND v_winner.lead_link_source = 'manual' THEN v_winner.lead_linked_by
-          WHEN v_selected_lead_source = 'manual' THEN v_loser.lead_linked_by
+        lead_linked_at = CASE WHEN v_selected_lead_id IS NULL THEN NULL ELSE COALESCE(v_selected_lead_linked_at, now()) END,
+        lead_linked_by = CASE WHEN v_selected_lead_id IS NULL THEN NULL ELSE v_selected_lead_linked_by END,
+        auto_link_blocked = v_winner.auto_link_blocked OR v_loser.auto_link_blocked OR v_lead_conflict,
+        identity_conflict = v_winner.identity_conflict OR v_loser.identity_conflict OR v_lead_conflict,
+        push_name = CASE
+          WHEN public.comm_whatsapp_is_valid_display_name(v_winner.push_name)
+            AND (v_connected_user_name IS NULL OR lower(btrim(v_winner.push_name)) <> lower(v_connected_user_name))
+            THEN btrim(v_winner.push_name)
+          WHEN public.comm_whatsapp_is_valid_display_name(v_loser.push_name)
+            AND (v_connected_user_name IS NULL OR lower(btrim(v_loser.push_name)) <> lower(v_connected_user_name))
+            THEN btrim(v_loser.push_name)
           ELSE NULL
         END,
-        auto_link_blocked = v_winner.auto_link_blocked OR v_loser.auto_link_blocked,
-        identity_conflict = v_lead_conflict,
-        push_name = COALESCE(NULLIF(v_winner.push_name, ''), NULLIF(v_loser.push_name, '')),
         saved_contact_name = COALESCE(NULLIF(v_winner.saved_contact_name, ''), NULLIF(v_loser.saved_contact_name, '')),
         last_read_at = v_last_read_at,
         is_archived = v_winner.is_archived OR v_loser.is_archived,
@@ -714,8 +897,8 @@ BEGIN
         v_winner.id,
         'lead_conflict',
         jsonb_build_object(
-          'winner_previous_lead_id', v_winner.lead_id,
-          'loser_previous_lead_id', v_loser.lead_id,
+          'winner_previous_lead_id', v_winner_previous_lead_id,
+          'loser_previous_lead_id', v_loser_previous_lead_id,
           'action', 'unlinked_for_manual_review'
         )
       )
@@ -729,8 +912,8 @@ BEGIN
     )
     VALUES (
       v_run_id, p_channel_id, v_winner.id, v_loser.id, 'verified_lid_phone_mapping',
-      jsonb_build_object('lid', v_lid, 'wa_id', v_phone),
-      to_jsonb(CASE WHEN v_winner.id = v_lid_chat.id THEN v_lid_chat ELSE v_phone_chat END),
+      COALESCE(p_mapping_evidence, '{}'::jsonb) || jsonb_build_object('lid', v_lid, 'wa_id', v_phone),
+      v_winner_before,
       to_jsonb(v_loser),
       v_counts
     );
@@ -752,24 +935,41 @@ BEGIN
     jsonb_build_object('paired_with', v_lid)
   );
 
-  PERFORM public.comm_whatsapp_try_auto_link_chat(v_winner.id, v_phone_digits, 'auto_phone');
+  UPDATE public.comm_whatsapp_identity_conflicts AS conflict
+  SET status = 'resolved',
+      resolved_at = now(),
+      updated_at = now()
+  WHERE conflict.chat_id = v_winner.id
+    AND conflict.status = 'open'
+    AND conflict.conflict_type = 'reverse_mapping_conflict'
+    AND (
+      conflict.dedupe_key = 'reverse:' || p_channel_id::text || ':' || v_lid || ':' || v_phone
+      OR (
+        conflict.details ->> 'lid_chat_id' = v_lid
+        AND conflict.details ->> 'phone_chat_id' = v_phone
+      )
+    );
 
-  SELECT m.text_content, m.message_at, m.direction, m.message_type, m.media_caption
+  IF NOT v_lead_conflict THEN
+    PERFORM public.comm_whatsapp_try_auto_link_chat(v_winner.id, v_phone_digits, 'auto_phone');
+  END IF;
+
+  SELECT
+    m.text_content,
+    m.message_at,
+    m.direction,
+    m.message_type,
+    m.media_caption,
+    public.comm_whatsapp_message_preview_text(m.media_caption, m.text_content, m.message_type) AS preview
   INTO v_latest_record
   FROM public.comm_whatsapp_messages m
   WHERE m.chat_id = v_winner.id
     AND COALESCE(m.delivery_status, '') <> 'deleted'
+    AND public.comm_whatsapp_message_preview_text(m.media_caption, m.text_content, m.message_type) IS NOT NULL
   ORDER BY m.message_at DESC, m.created_at DESC, m.id DESC
   LIMIT 1;
 
-  v_preview := CASE
-    WHEN v_latest_record.message_at IS NOT NULL THEN public.comm_whatsapp_message_preview_text(
-      v_latest_record.media_caption,
-      v_latest_record.text_content,
-      v_latest_record.message_type
-    )
-    ELSE NULL
-  END;
+  v_preview := CASE WHEN v_latest_record.message_at IS NOT NULL THEN v_latest_record.preview ELSE NULL END;
 
   SELECT count(*)::integer INTO v_unread
   FROM public.comm_whatsapp_messages message
@@ -777,6 +977,11 @@ BEGIN
   WHERE message.chat_id = v_winner.id
     AND message.direction = 'inbound'
     AND COALESCE(message.delivery_status, '') <> 'deleted'
+    AND public.comm_whatsapp_message_preview_text(
+      message.media_caption,
+      message.text_content,
+      message.message_type
+    ) IS NOT NULL
     AND (chat.last_read_at IS NULL OR message.message_at > chat.last_read_at);
 
   UPDATE public.comm_whatsapp_chats
@@ -788,14 +993,57 @@ BEGIN
   WHERE id = v_winner.id
   RETURNING * INTO v_winner;
 
+  UPDATE public.comm_whatsapp_chats AS chat
+  SET identity_conflict = EXISTS (
+        SELECT 1
+        FROM public.comm_whatsapp_identity_conflicts AS conflict
+        WHERE conflict.chat_id = chat.id
+          AND conflict.status = 'open'
+      ),
+      updated_at = now()
+  WHERE chat.id = v_winner.id
+  RETURNING * INTO v_winner;
+
   SELECT * INTO v_winner FROM public.comm_whatsapp_refresh_chat_identity(v_winner.id);
 
   RETURN QUERY SELECT v_winner.id, v_winner.external_chat_id, true, v_conflict_reason;
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.comm_whatsapp_reconcile_lid_identifier(uuid, text, text, jsonb) FROM PUBLIC, authenticated;
+GRANT EXECUTE ON FUNCTION public.comm_whatsapp_reconcile_lid_identifier(uuid, text, text, jsonb) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.comm_whatsapp_reconcile_lid_identifier(
+  p_channel_id uuid,
+  p_lid_external_chat_id text,
+  p_phone_external_chat_id text
+)
+RETURNS TABLE(
+  chat_id uuid,
+  external_chat_id text,
+  merged boolean,
+  conflict_reason text
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    NULL::uuid,
+    NULL::text,
+    false,
+    'round_trip_evidence_required'::text;
+$$;
+
 REVOKE ALL ON FUNCTION public.comm_whatsapp_reconcile_lid_identifier(uuid, text, text) FROM PUBLIC, authenticated;
 GRANT EXECUTE ON FUNCTION public.comm_whatsapp_reconcile_lid_identifier(uuid, text, text) TO service_role;
+
+COMMIT;
+
+BEGIN;
+
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
 
 ALTER TABLE public.comm_whatsapp_phone_contacts_cache
   ALTER COLUMN phone_number DROP NOT NULL,
@@ -803,6 +1051,13 @@ ALTER TABLE public.comm_whatsapp_phone_contacts_cache
 
 ALTER TABLE public.comm_whatsapp_phone_contacts_cache
   ADD COLUMN IF NOT EXISTS push_name text;
+
+COMMIT;
+
+BEGIN;
+
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
 
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_refresh_chat_identity(p_chat_id uuid)
 RETURNS SETOF public.comm_whatsapp_chats
@@ -955,13 +1210,22 @@ BEGIN
       lead_linked_at = now(),
       lead_linked_by = auth.uid(),
       auto_link_blocked = false,
-      identity_conflict = false,
       updated_at = now()
   WHERE id = v_chat_id;
 
   UPDATE public.comm_whatsapp_identity_conflicts
   SET status = 'resolved', resolved_at = now(), resolved_by = auth.uid(), updated_at = now()
   WHERE chat_id = v_chat_id AND status = 'open' AND conflict_type IN ('lead_ambiguous', 'lead_conflict');
+
+  UPDATE public.comm_whatsapp_chats AS chat
+  SET identity_conflict = EXISTS (
+        SELECT 1
+        FROM public.comm_whatsapp_identity_conflicts AS conflict
+        WHERE conflict.chat_id = chat.id
+          AND conflict.status = 'open'
+      ),
+      updated_at = now()
+  WHERE chat.id = v_chat_id;
 
   RETURN QUERY SELECT * FROM public.comm_whatsapp_refresh_chat_identity(v_chat_id);
 END;
@@ -1025,7 +1289,11 @@ BEGIN
     RAISE EXCEPTION 'Permissao insuficiente para iniciar conversa.';
   END IF;
 
-  IF v_phone_number IS NULL OR v_external_chat_id !~* '@s\.whatsapp\.net$' THEN
+  IF v_phone_number IS NULL
+    OR v_external_chat_id IS NULL
+    OR v_external_chat_id !~* '@s\.whatsapp\.net$'
+    OR public.normalize_comm_whatsapp_phone(split_part(v_external_chat_id, '@', 1)) <> v_phone_number
+  THEN
     RAISE EXCEPTION 'WA ID canonico obrigatorio para iniciar conversa.';
   END IF;
 
@@ -1033,6 +1301,14 @@ BEGIN
   FROM public.comm_whatsapp_channels
   WHERE slug = 'primary'
   LIMIT 1;
+
+  IF v_channel_id IS NULL THEN
+    RAISE EXCEPTION 'Canal principal do WhatsApp nao encontrado.';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('comm-whatsapp-identity:' || v_channel_id::text || ':' || v_external_chat_id, 0)
+  );
 
   v_chat_id := public.comm_whatsapp_resolve_canonical_chat_uuid(v_channel_id, v_external_chat_id);
 
@@ -1070,9 +1346,19 @@ BEGIN
         push_name = COALESCE(v_push_name, push_name),
         saved_contact_name = COALESCE(v_saved_contact_name, saved_contact_name),
         lead_id = COALESCE(p_lead_id, lead_id),
-        lead_link_source = CASE WHEN p_lead_id IS NULL THEN lead_link_source ELSE 'crm_start' END,
-        lead_linked_at = CASE WHEN p_lead_id IS NULL THEN lead_linked_at ELSE now() END,
-        lead_linked_by = CASE WHEN p_lead_id IS NULL THEN lead_linked_by ELSE auth.uid() END,
+        lead_link_source = CASE
+          WHEN p_lead_id IS NULL THEN lead_link_source
+          WHEN lead_id = p_lead_id AND lead_link_source = 'manual' THEN lead_link_source
+          ELSE 'crm_start'
+        END,
+        lead_linked_at = CASE
+          WHEN p_lead_id IS NULL OR (lead_id = p_lead_id AND lead_link_source = 'manual') THEN lead_linked_at
+          ELSE now()
+        END,
+        lead_linked_by = CASE
+          WHEN p_lead_id IS NULL OR (lead_id = p_lead_id AND lead_link_source = 'manual') THEN lead_linked_by
+          ELSE auth.uid()
+        END,
         updated_at = now()
     WHERE id = v_chat.id
     RETURNING * INTO v_chat;
@@ -1082,12 +1368,226 @@ BEGIN
     v_channel_id, v_chat.id, v_external_chat_id, 'open_or_create', true, '{}'::jsonb
   );
 
+  IF p_lead_id IS NOT NULL THEN
+    UPDATE public.comm_whatsapp_identity_conflicts AS conflict
+    SET status = 'resolved',
+        resolved_at = now(),
+        resolved_by = auth.uid(),
+        updated_at = now()
+    WHERE conflict.chat_id = v_chat.id
+      AND conflict.status = 'open'
+      AND conflict.conflict_type IN ('lead_ambiguous', 'lead_conflict');
+
+    UPDATE public.comm_whatsapp_chats AS chat
+    SET identity_conflict = EXISTS (
+          SELECT 1
+          FROM public.comm_whatsapp_identity_conflicts AS conflict
+          WHERE conflict.chat_id = chat.id
+            AND conflict.status = 'open'
+        ),
+        updated_at = now()
+    WHERE chat.id = v_chat.id;
+  END IF;
+
   RETURN QUERY SELECT * FROM public.comm_whatsapp_refresh_chat_identity(v_chat.id);
 END;
 $$;
 
 REVOKE ALL ON FUNCTION public.comm_whatsapp_open_or_create_chat(text, text, text, text, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.comm_whatsapp_open_or_create_chat(text, text, text, text, uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.comm_whatsapp_ensure_observed_chat(
+  p_channel_id uuid,
+  p_external_chat_id text,
+  p_phone_number text DEFAULT NULL,
+  p_push_name text DEFAULT NULL
+)
+RETURNS SETOF public.comm_whatsapp_chats
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_external_chat_id text := NULLIF(public.normalize_comm_whatsapp_chat_id(p_external_chat_id), '');
+  v_phone_number text := NULLIF(public.normalize_comm_whatsapp_phone(COALESCE(p_phone_number, '')), '');
+  v_push_name text := NULLIF(btrim(COALESCE(p_push_name, '')), '');
+  v_chat_id uuid;
+  v_chat public.comm_whatsapp_chats%ROWTYPE;
+BEGIN
+  IF p_channel_id IS NULL
+    OR v_external_chat_id IS NULL
+    OR v_external_chat_id !~* '(@lid|@s\.whatsapp\.net)$'
+  THEN
+    RAISE EXCEPTION 'Canal e identificador direto observado sao obrigatorios.';
+  END IF;
+
+  IF v_external_chat_id ~* '@s\.whatsapp\.net$' THEN
+    v_phone_number := public.normalize_comm_whatsapp_phone(split_part(v_external_chat_id, '@', 1));
+  ELSIF v_phone_number = regexp_replace(split_part(v_external_chat_id, '@', 1), '\D', '', 'g') THEN
+    v_phone_number := NULL;
+  END IF;
+
+  IF NOT public.comm_whatsapp_is_valid_display_name(v_push_name) THEN
+    v_push_name := NULL;
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('comm-whatsapp-identity:' || p_channel_id::text || ':' || v_external_chat_id, 0)
+  );
+
+  v_chat_id := public.comm_whatsapp_resolve_canonical_chat_uuid(p_channel_id, v_external_chat_id);
+
+  IF v_chat_id IS NULL THEN
+    INSERT INTO public.comm_whatsapp_chats (
+      channel_id,
+      external_chat_id,
+      phone_number,
+      phone_digits,
+      display_name,
+      push_name,
+      last_message_direction
+    )
+    VALUES (
+      p_channel_id,
+      v_external_chat_id,
+      COALESCE(v_phone_number, ''),
+      COALESCE(v_phone_number, ''),
+      COALESCE(
+        v_push_name,
+        CASE WHEN v_phone_number IS NULL THEN NULL ELSE public.comm_whatsapp_format_phone_label(v_phone_number) END,
+        'Contato privado'
+      ),
+      v_push_name,
+      'system'
+    )
+    ON CONFLICT (channel_id, external_chat_id) DO NOTHING;
+
+    v_chat_id := public.comm_whatsapp_resolve_canonical_chat_uuid(p_channel_id, v_external_chat_id);
+  END IF;
+
+  SELECT * INTO v_chat
+  FROM public.comm_whatsapp_chats AS chat
+  WHERE chat.id = v_chat_id
+    AND chat.channel_id = p_channel_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Nao foi possivel garantir o chat observado.';
+  END IF;
+
+  UPDATE public.comm_whatsapp_chats AS chat
+  SET phone_number = COALESCE(v_phone_number, chat.phone_number),
+      phone_digits = COALESCE(v_phone_number, chat.phone_digits),
+      push_name = COALESCE(v_push_name, chat.push_name),
+      updated_at = now()
+  WHERE chat.id = v_chat.id
+  RETURNING * INTO v_chat;
+
+  PERFORM public.comm_whatsapp_register_chat_identifier(
+    p_channel_id,
+    v_chat.id,
+    v_external_chat_id,
+    'provider_observed',
+    true,
+    '{}'::jsonb
+  );
+
+  RETURN QUERY SELECT * FROM public.comm_whatsapp_refresh_chat_identity(v_chat.id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.comm_whatsapp_ensure_observed_chat(uuid, text, text, text) FROM PUBLIC, authenticated;
+GRANT EXECUTE ON FUNCTION public.comm_whatsapp_ensure_observed_chat(uuid, text, text, text) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.resolve_comm_whatsapp_campaign_stop_on_reply(
+  p_chat_id uuid,
+  p_message_at timestamptz
+)
+RETURNS TABLE(target_id uuid, campaign_id uuid)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_chat_id uuid := public.comm_whatsapp_resolve_chat_uuid(p_chat_id);
+  v_phone_digits text;
+BEGIN
+  IF v_chat_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  SELECT NULLIF(btrim(chat.phone_digits), '')
+  INTO v_phone_digits
+  FROM public.comm_whatsapp_chats AS chat
+  WHERE chat.id = v_chat_id;
+
+  RETURN QUERY
+  WITH matched_target AS (
+    SELECT target.id, target.campaign_id
+    FROM public.comm_whatsapp_campaign_targets AS target
+    JOIN public.comm_whatsapp_campaigns AS campaign ON campaign.id = target.campaign_id
+    WHERE (
+        public.comm_whatsapp_resolve_chat_uuid(target.chat_id) = v_chat_id
+        OR (
+          v_phone_digits IS NOT NULL
+          AND public.comm_whatsapp_phone_lookup_keys(target.phone_digits)
+            && public.comm_whatsapp_phone_lookup_keys(v_phone_digits)
+        )
+      )
+      AND campaign.stop_on_reply = true
+      AND target.status IN ('scheduled', 'sent', 'sending')
+      AND target.responded_at IS NULL
+    ORDER BY target.sent_at DESC NULLS LAST
+    LIMIT 1
+  )
+  UPDATE public.comm_whatsapp_campaign_targets AS target
+  SET status = 'responded',
+      responded_at = p_message_at,
+      stopped_at = p_message_at,
+      stopped_reason = 'inbound_reply',
+      chat_id = v_chat_id,
+      updated_at = now()
+  FROM matched_target
+  WHERE target.id = matched_target.id
+  RETURNING matched_target.id, matched_target.campaign_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.resolve_comm_whatsapp_campaign_stop_on_reply(uuid, timestamptz) FROM PUBLIC, authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_comm_whatsapp_campaign_stop_on_reply(uuid, timestamptz) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.resolve_comm_whatsapp_campaign_stop_on_reply(
+  p_external_chat_id text,
+  p_message_at timestamptz
+)
+RETURNS TABLE(target_id uuid, campaign_id uuid)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_channel_id uuid;
+  v_chat_id uuid;
+BEGIN
+  SELECT channel.id
+  INTO v_channel_id
+  FROM public.comm_whatsapp_channels AS channel
+  WHERE channel.slug = 'primary'
+  LIMIT 1;
+
+  v_chat_id := public.comm_whatsapp_resolve_canonical_chat_uuid(v_channel_id, p_external_chat_id);
+  IF v_chat_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT result.target_id, result.campaign_id
+  FROM public.resolve_comm_whatsapp_campaign_stop_on_reply(v_chat_id, p_message_at) AS result;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.resolve_comm_whatsapp_campaign_stop_on_reply(text, timestamptz) FROM PUBLIC, authenticated;
+GRANT EXECUTE ON FUNCTION public.resolve_comm_whatsapp_campaign_stop_on_reply(text, timestamptz) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.comm_whatsapp_persist_message(
   p_channel_id uuid,
@@ -1135,6 +1635,7 @@ DECLARE
   v_input_external_chat_id text := NULLIF(public.normalize_comm_whatsapp_chat_id(p_external_chat_id), '');
   v_resolved_external_chat_id text;
   v_canonical_chat_id uuid;
+  v_next_chat_id uuid;
   v_phone_number text := NULLIF(public.normalize_comm_whatsapp_phone(COALESCE(p_phone_number, '')), '');
   v_display_name text := NULLIF(btrim(COALESCE(p_display_name, '')), '');
   v_direction text := COALESCE(NULLIF(btrim(COALESCE(p_direction, '')), ''), 'system');
@@ -1148,9 +1649,13 @@ DECLARE
   v_lid_digits text;
   v_unread_count integer;
 BEGIN
-  IF v_input_external_chat_id IS NULL THEN
-    RAISE EXCEPTION 'Identificador externo obrigatorio.';
+  IF p_channel_id IS NULL OR v_input_external_chat_id IS NULL THEN
+    RAISE EXCEPTION 'Canal e identificador externo sao obrigatorios.';
   END IF;
+
+  PERFORM pg_advisory_xact_lock(
+    hashtextextended('comm-whatsapp-identity:' || p_channel_id::text || ':' || v_input_external_chat_id, 0)
+  );
 
   v_input_is_lid := v_input_external_chat_id ~* '@lid$';
   v_lid_digits := regexp_replace(split_part(v_input_external_chat_id, '@', 1), '\D', '', 'g');
@@ -1181,10 +1686,38 @@ BEGIN
     v_resolved_external_chat_id,
     COALESCE(v_phone_number, ''),
     COALESCE(v_phone_number, ''),
-    COALESCE(v_display_name, public.comm_whatsapp_format_phone_label(v_phone_number), 'Contato privado'),
+    COALESCE(
+      v_display_name,
+      CASE WHEN v_phone_number IS NULL THEN NULL ELSE public.comm_whatsapp_format_phone_label(v_phone_number) END,
+      'Contato privado'
+    ),
     'system'
   )
   ON CONFLICT (channel_id, external_chat_id) DO NOTHING;
+
+  v_canonical_chat_id := COALESCE(
+    public.comm_whatsapp_resolve_canonical_chat_uuid(p_channel_id, v_input_external_chat_id),
+    public.comm_whatsapp_resolve_canonical_chat_uuid(p_channel_id, v_resolved_external_chat_id)
+  );
+
+  LOOP
+    SELECT
+      chat.merged_into_chat_id,
+      chat.external_chat_id,
+      COALESCE(v_phone_number, NULLIF(btrim(chat.phone_digits), ''))
+    INTO v_next_chat_id, v_resolved_external_chat_id, v_phone_number
+    FROM public.comm_whatsapp_chats AS chat
+    WHERE chat.id = v_canonical_chat_id
+      AND chat.channel_id = p_channel_id
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Chat canonico nao encontrado durante persistencia.';
+    END IF;
+
+    EXIT WHEN v_next_chat_id IS NULL;
+    v_canonical_chat_id := public.comm_whatsapp_resolve_chat_uuid(v_next_chat_id);
+  END LOOP;
 
   SELECT * INTO v_result
   FROM public.comm_whatsapp_persist_message_internal(
@@ -1196,7 +1729,10 @@ BEGIN
     p_media_file_name, p_media_size_bytes, p_media_duration_seconds, p_media_caption
   );
 
-  v_result.chat_id := public.comm_whatsapp_resolve_chat_uuid(v_result.chat_id);
+  IF public.comm_whatsapp_resolve_chat_uuid(v_result.chat_id) IS DISTINCT FROM v_canonical_chat_id THEN
+    RAISE EXCEPTION 'Persistencia retornou chat diferente da identidade canonica bloqueada.';
+  END IF;
+  v_result.chat_id := v_canonical_chat_id;
 
   IF v_input_is_lid AND v_phone_number IS NULL THEN
     UPDATE public.comm_whatsapp_chats chat
@@ -1219,12 +1755,6 @@ BEGIN
     false,
     jsonb_build_object('external_message_id', p_external_message_id)
   );
-
-  IF v_resolved_external_chat_id <> v_input_external_chat_id THEN
-    PERFORM public.comm_whatsapp_register_chat_identifier(
-      p_channel_id, v_result.chat_id, v_resolved_external_chat_id, 'canonical', false, '{}'::jsonb
-    );
-  END IF;
 
   IF v_phone_number IS NOT NULL THEN
     PERFORM public.comm_whatsapp_try_auto_link_chat(v_result.chat_id, v_phone_number, 'auto_phone');
@@ -1293,6 +1823,375 @@ $$;
 REVOKE ALL ON FUNCTION public.comm_whatsapp_list_messages_page(uuid, timestamptz, uuid, integer) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.comm_whatsapp_list_messages_page(uuid, timestamptz, uuid, integer) TO authenticated;
 
+DROP FUNCTION IF EXISTS public.comm_whatsapp_list_chats(text, text, text, text, text, text[], integer, integer);
+
+CREATE OR REPLACE FUNCTION public.comm_whatsapp_list_chats(
+  p_search text DEFAULT NULL,
+  p_activity_filter text DEFAULT 'all',
+  p_lead_filter text DEFAULT 'all',
+  p_saved_filter text DEFAULT 'all',
+  p_archived_filter text DEFAULT 'active',
+  p_lead_status_filters text[] DEFAULT NULL,
+  p_limit integer DEFAULT 80,
+  p_offset integer DEFAULT 0
+)
+RETURNS TABLE(
+  id uuid,
+  channel_id uuid,
+  external_chat_id text,
+  phone_number text,
+  phone_digits text,
+  display_name text,
+  saved_contact_name text,
+  push_name text,
+  lead_id uuid,
+  lead_name text,
+  lead_status text,
+  merged_into_chat_id uuid,
+  lead_link_source text,
+  lead_linked_at timestamptz,
+  lead_linked_by uuid,
+  auto_link_blocked boolean,
+  identity_conflict boolean,
+  is_archived boolean,
+  archived_at timestamptz,
+  is_muted boolean,
+  muted_at timestamptz,
+  is_pinned boolean,
+  pinned_at timestamptz,
+  manual_unread boolean,
+  manual_unread_at timestamptz,
+  last_message_text text,
+  last_message_direction text,
+  last_message_at timestamptz,
+  last_message_delivery_status text,
+  unread_count integer,
+  status text,
+  last_read_at timestamptz,
+  deleted_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+SET statement_timeout = '15s'
+STABLE
+AS $$
+  WITH input AS (
+    SELECT
+      NULLIF(btrim(COALESCE(p_search, '')), '') AS search_text,
+      regexp_replace(COALESCE(p_search, ''), '\D', '', 'g') AS search_digits,
+      lower(NULLIF(btrim(COALESCE(p_activity_filter, 'all')), '')) AS activity_filter,
+      lower(NULLIF(btrim(COALESCE(p_lead_filter, 'all')), '')) AS lead_filter,
+      lower(NULLIF(btrim(COALESCE(p_saved_filter, 'all')), '')) AS saved_filter,
+      lower(NULLIF(btrim(COALESCE(p_archived_filter, 'active')), '')) AS archived_filter,
+      ARRAY(
+        SELECT lower(btrim(value))
+        FROM unnest(COALESCE(p_lead_status_filters, ARRAY[]::text[])) AS value
+        WHERE btrim(value) <> ''
+      ) AS lead_status_filters,
+      LEAST(GREATEST(COALESCE(p_limit, 80), 1), 500) AS safe_limit,
+      GREATEST(COALESCE(p_offset, 0), 0) AS safe_offset
+  ),
+  page AS MATERIALIZED (
+    SELECT
+      chat.*,
+      lead.nome_completo AS resolved_lead_name,
+      COALESCE(status_config.nome, lead.status) AS resolved_lead_status
+    FROM public.comm_whatsapp_chats AS chat
+    LEFT JOIN public.leads AS lead ON lead.id = chat.lead_id
+    LEFT JOIN public.lead_status_config AS status_config ON status_config.id = lead.status_id
+    CROSS JOIN input
+    WHERE public.current_user_can_view_comm_whatsapp()
+      AND chat.deleted_at IS NULL
+      AND chat.merged_into_chat_id IS NULL
+      AND (
+        input.activity_filter IS NULL OR input.activity_filter = 'all'
+        OR (input.activity_filter = 'unread' AND (chat.unread_count > 0 OR chat.manual_unread = true))
+      )
+      AND (
+        input.lead_filter IS NULL OR input.lead_filter = 'all'
+        OR (input.lead_filter = 'with_lead' AND chat.lead_id IS NOT NULL)
+        OR (input.lead_filter = 'without_lead' AND chat.lead_id IS NULL)
+      )
+      AND (
+        input.saved_filter IS NULL OR input.saved_filter = 'all'
+        OR (input.saved_filter = 'saved' AND NULLIF(btrim(chat.saved_contact_name), '') IS NOT NULL)
+        OR (input.saved_filter = 'unsaved' AND NULLIF(btrim(chat.saved_contact_name), '') IS NULL)
+      )
+      AND (
+        input.archived_filter IS NULL OR input.archived_filter = 'all'
+        OR (input.archived_filter = 'active' AND chat.is_archived = false)
+        OR (input.archived_filter = 'archived' AND chat.is_archived = true)
+      )
+      AND (
+        cardinality(input.lead_status_filters) = 0
+        OR lower(COALESCE(status_config.nome, lead.status, '')) = ANY(input.lead_status_filters)
+      )
+      AND (
+        input.search_text IS NULL
+        OR chat.display_name ILIKE '%' || input.search_text || '%'
+        OR chat.saved_contact_name ILIKE '%' || input.search_text || '%'
+        OR chat.push_name ILIKE '%' || input.search_text || '%'
+        OR lead.nome_completo ILIKE '%' || input.search_text || '%'
+        OR chat.phone_number ILIKE '%' || input.search_text || '%'
+        OR (input.search_digits <> '' AND chat.phone_digits ILIKE '%' || input.search_digits || '%')
+      )
+    ORDER BY chat.is_pinned DESC, chat.pinned_at DESC NULLS LAST, chat.last_message_at DESC NULLS LAST, chat.updated_at DESC
+    LIMIT (SELECT safe_limit FROM input)
+    OFFSET (SELECT safe_offset FROM input)
+  ),
+  page_delivery AS MATERIALIZED (
+    SELECT DISTINCT ON (message.chat_id) message.chat_id, message.delivery_status
+    FROM public.comm_whatsapp_messages AS message
+    WHERE message.chat_id IN (SELECT page_chat.id FROM page AS page_chat)
+      AND COALESCE(message.delivery_status, '') <> 'deleted'
+      AND public.comm_whatsapp_message_preview_text(
+        message.media_caption,
+        message.text_content,
+        message.message_type
+      ) IS NOT NULL
+    ORDER BY message.chat_id, message.message_at DESC, message.created_at DESC, message.id DESC
+  )
+  SELECT
+    chat.id,
+    chat.channel_id,
+    chat.external_chat_id,
+    chat.phone_number,
+    chat.phone_digits,
+    COALESCE(
+      NULLIF(btrim(chat.saved_contact_name), ''),
+      NULLIF(btrim(chat.resolved_lead_name), ''),
+      NULLIF(btrim(chat.push_name), ''),
+      NULLIF(btrim(chat.display_name), ''),
+      CASE
+        WHEN NULLIF(btrim(chat.phone_number), '') IS NULL THEN 'Contato privado'
+        ELSE public.comm_whatsapp_format_phone_label(chat.phone_number)
+      END
+    ) AS display_name,
+    chat.saved_contact_name,
+    chat.push_name,
+    chat.lead_id,
+    chat.resolved_lead_name AS lead_name,
+    chat.resolved_lead_status AS lead_status,
+    chat.merged_into_chat_id,
+    chat.lead_link_source,
+    chat.lead_linked_at,
+    chat.lead_linked_by,
+    chat.auto_link_blocked,
+    chat.identity_conflict,
+    chat.is_archived,
+    chat.archived_at,
+    chat.is_muted,
+    chat.muted_at,
+    chat.is_pinned,
+    chat.pinned_at,
+    chat.manual_unread,
+    chat.manual_unread_at,
+    chat.last_message_text,
+    chat.last_message_direction,
+    chat.last_message_at,
+    delivery.delivery_status AS last_message_delivery_status,
+    chat.unread_count,
+    chat.status,
+    chat.last_read_at,
+    chat.deleted_at,
+    chat.created_at,
+    chat.updated_at
+  FROM page AS chat
+  LEFT JOIN page_delivery AS delivery ON delivery.chat_id = chat.id
+  ORDER BY chat.is_pinned DESC, chat.pinned_at DESC NULLS LAST, chat.last_message_at DESC NULLS LAST, chat.updated_at DESC;
+$$;
+
+REVOKE ALL ON FUNCTION public.comm_whatsapp_list_chats(text, text, text, text, text, text[], integer, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.comm_whatsapp_list_chats(text, text, text, text, text, text[], integer, integer) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.comm_whatsapp_get_chat_thread(
+  p_chat_id uuid,
+  p_limit integer DEFAULT 50
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+DECLARE
+  v_limit integer := LEAST(GREATEST(COALESCE(p_limit, 50), 1), 200);
+  v_chat_id uuid := public.comm_whatsapp_resolve_chat_uuid(p_chat_id);
+  v_chat jsonb;
+  v_lead jsonb;
+  v_messages jsonb;
+  v_message_count integer;
+BEGIN
+  IF NOT public.current_user_can_view_comm_whatsapp() THEN
+    RAISE EXCEPTION 'Permissao insuficiente para visualizar conversa do WhatsApp.' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT jsonb_build_object(
+    'id', chat.id,
+    'channel_id', chat.channel_id,
+    'external_chat_id', chat.external_chat_id,
+    'phone_number', chat.phone_number,
+    'phone_digits', chat.phone_digits,
+    'display_name', COALESCE(
+      NULLIF(btrim(saved_contact.display_name), ''),
+      NULLIF(btrim(lead.nome_completo), ''),
+      NULLIF(btrim(chat.push_name), ''),
+      NULLIF(btrim(chat.display_name), ''),
+      CASE
+        WHEN NULLIF(btrim(chat.phone_number), '') IS NULL THEN 'Contato privado'
+        ELSE public.comm_whatsapp_format_phone_label(chat.phone_number)
+      END
+    ),
+    'saved_contact_name', saved_contact.display_name,
+    'push_name', chat.push_name,
+    'lead_id', chat.lead_id,
+    'lead_name', lead.nome_completo,
+    'lead_status', COALESCE(status_config.nome, lead.status),
+    'merged_into_chat_id', chat.merged_into_chat_id,
+    'lead_link_source', chat.lead_link_source,
+    'lead_linked_at', chat.lead_linked_at,
+    'lead_linked_by', chat.lead_linked_by,
+    'auto_link_blocked', chat.auto_link_blocked,
+    'identity_conflict', chat.identity_conflict,
+    'is_archived', chat.is_archived,
+    'archived_at', chat.archived_at,
+    'is_muted', chat.is_muted,
+    'muted_at', chat.muted_at,
+    'is_pinned', chat.is_pinned,
+    'pinned_at', chat.pinned_at,
+    'manual_unread', chat.manual_unread,
+    'manual_unread_at', chat.manual_unread_at,
+    'last_message_text', COALESCE(latest_message.preview_text, chat_preview.preview_text),
+    'last_message_direction', CASE
+      WHEN latest_message.preview_text IS NOT NULL THEN latest_message.direction
+      ELSE COALESCE(NULLIF(btrim(chat.last_message_direction), ''), latest_message.direction)
+    END,
+    'last_message_at', COALESCE(latest_message.message_at, chat.last_message_at),
+    'last_message_delivery_status', latest_message.delivery_status,
+    'unread_count', chat.unread_count,
+    'status', chat.status,
+    'last_read_at', chat.last_read_at,
+    'deleted_at', chat.deleted_at,
+    'created_at', chat.created_at,
+    'updated_at', chat.updated_at
+  )
+  INTO v_chat
+  FROM public.comm_whatsapp_chats AS chat
+  LEFT JOIN public.leads AS lead ON lead.id = chat.lead_id
+  LEFT JOIN public.lead_status_config AS status_config ON status_config.id = lead.status_id
+  LEFT JOIN LATERAL (
+    SELECT NULLIF(btrim(contact.display_name), '') AS display_name
+    FROM public.comm_whatsapp_phone_contacts_cache AS contact
+    WHERE contact.channel_id = chat.channel_id
+      AND contact.saved = true
+      AND public.comm_whatsapp_is_valid_display_name(contact.display_name)
+      AND (
+        public.comm_whatsapp_phone_lookup_keys(contact.phone_digits)
+          && public.comm_whatsapp_phone_lookup_keys(chat.phone_digits)
+        OR EXISTS (
+          SELECT 1
+          FROM public.comm_whatsapp_chat_identifiers AS identifier
+          WHERE identifier.chat_id = chat.id
+            AND identifier.channel_id = chat.channel_id
+            AND identifier.external_chat_id = public.normalize_comm_whatsapp_chat_id(contact.contact_id)
+        )
+      )
+    ORDER BY
+      CASE WHEN contact.contact_id LIKE 'manual:%' THEN 0 ELSE 1 END,
+      contact.updated_at DESC,
+      contact.last_synced_at DESC,
+      contact.id DESC
+    LIMIT 1
+  ) AS saved_contact ON true
+  LEFT JOIN LATERAL (
+    SELECT CASE
+      WHEN public.comm_whatsapp_is_hidden_preview_text(chat.last_message_text, NULL) THEN NULL
+      ELSE NULLIF(btrim(chat.last_message_text), '')
+    END AS preview_text
+  ) AS chat_preview ON true
+  LEFT JOIN LATERAL (
+    SELECT candidate.direction, candidate.message_at, candidate.preview_text, candidate.delivery_status
+    FROM (
+      SELECT
+        message.direction,
+        message.message_at,
+        message.delivery_status,
+        public.comm_whatsapp_message_preview_text(
+          message.media_caption,
+          message.text_content,
+          message.message_type
+        ) AS preview_text,
+        message.created_at,
+        message.id
+      FROM public.comm_whatsapp_messages AS message
+      WHERE message.chat_id = chat.id
+        AND COALESCE(message.delivery_status, '') <> 'deleted'
+    ) AS candidate
+    WHERE candidate.preview_text IS NOT NULL
+    ORDER BY candidate.message_at DESC, candidate.created_at DESC, candidate.id DESC
+    LIMIT 1
+  ) AS latest_message ON true
+  WHERE chat.id = v_chat_id
+    AND chat.deleted_at IS NULL
+    AND chat.merged_into_chat_id IS NULL
+  LIMIT 1;
+
+  IF v_chat IS NULL THEN
+    RAISE EXCEPTION 'Conversa do WhatsApp nao encontrada.' USING ERRCODE = 'P0002';
+  END IF;
+
+  SELECT jsonb_build_object(
+    'id', lead.id,
+    'nome_completo', lead.nome_completo,
+    'telefone', lead.telefone,
+    'observacoes', lead.observacoes,
+    'status_nome', COALESCE(status_config.nome, lead.status),
+    'status_value', COALESCE(status_config.nome, lead.status),
+    'responsavel_label', responsible.label,
+    'responsavel_value', COALESCE(responsible.value, '')
+  )
+  INTO v_lead
+  FROM public.comm_whatsapp_chats AS chat
+  JOIN public.leads AS lead ON lead.id = chat.lead_id
+  LEFT JOIN public.lead_status_config AS status_config ON status_config.id = lead.status_id
+  LEFT JOIN public.lead_responsaveis AS responsible ON responsible.id = lead.responsavel_id
+  WHERE chat.id = v_chat_id;
+
+  WITH ranked AS (
+    SELECT message.*
+    FROM public.comm_whatsapp_messages AS message
+    WHERE message.chat_id = v_chat_id
+    ORDER BY message.message_at DESC, message.id DESC
+    LIMIT v_limit + 1
+  ),
+  page AS (
+    SELECT *
+    FROM ranked
+    ORDER BY message_at DESC, id DESC
+    LIMIT v_limit
+  )
+  SELECT
+    COALESCE(jsonb_agg(to_jsonb(page) ORDER BY page.message_at ASC, page.id ASC), '[]'::jsonb),
+    (SELECT count(*) FROM ranked)
+  INTO v_messages, v_message_count
+  FROM page;
+
+  RETURN jsonb_build_object(
+    'chat', v_chat,
+    'lead', v_lead,
+    'messages', COALESCE(v_messages, '[]'::jsonb),
+    'hasMore', COALESCE(v_message_count, 0) > v_limit,
+    'generatedAt', now()
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.comm_whatsapp_get_chat_thread(uuid, integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.comm_whatsapp_get_chat_thread(uuid, integer) TO authenticated;
+
 CREATE OR REPLACE FUNCTION public.enqueue_comm_whatsapp_message_enrichment()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -1305,8 +2204,24 @@ DECLARE
   v_requeue_identity boolean := false;
 BEGIN
   IF NEW.chat_id IS NOT NULL AND COALESCE(NEW.message_type, '') <> 'action' THEN
-    SELECT chat.external_chat_id ~* '@lid$'
-      AND NULLIF(btrim(COALESCE(chat.phone_digits, '')), '') IS NULL
+    SELECT (
+        chat.external_chat_id ~* '@lid$'
+        AND NOT EXISTS (
+          SELECT 1
+          FROM public.comm_whatsapp_chat_identifiers AS identifier
+          WHERE identifier.chat_id = chat.id
+            AND identifier.channel_id = chat.channel_id
+            AND identifier.identifier_kind = 'wa_id'
+            AND identifier.is_verified
+        )
+      ) OR EXISTS (
+        SELECT 1
+        FROM public.comm_whatsapp_chat_identifiers AS identifier
+        WHERE identifier.chat_id = chat.id
+          AND identifier.channel_id = chat.channel_id
+          AND identifier.identifier_kind = 'lid'
+          AND NOT identifier.is_verified
+      )
     INTO v_requeue_identity
     FROM public.comm_whatsapp_chats chat
     WHERE chat.id = public.comm_whatsapp_resolve_chat_uuid(NEW.chat_id);
@@ -1391,34 +2306,6 @@ BEGIN
 END;
 $$;
 
-INSERT INTO public.comm_whatsapp_enrichment_jobs (
-  kind, channel_id, chat_id, message_id, dedupe_key, payload, status, attempts, next_attempt_at
-)
-SELECT
-  'chat_identity',
-  chat.channel_id,
-  chat.id,
-  NULL,
-  'identity:' || chat.channel_id::text || ':' || chat.id::text,
-  jsonb_build_object('reason', 'identity_model_backfill'),
-  'queued',
-  0,
-  now()
-FROM public.comm_whatsapp_chats chat
-WHERE chat.merged_into_chat_id IS NULL
-  AND chat.external_chat_id ~* '@lid$'
-  AND (
-    NULLIF(btrim(COALESCE(chat.phone_digits, '')), '') IS NULL
-    OR regexp_replace(chat.phone_digits, '\D', '', 'g') = regexp_replace(split_part(chat.external_chat_id, '@', 1), '\D', '', 'g')
-  )
-ON CONFLICT (dedupe_key) DO UPDATE
-SET status = 'queued',
-    attempts = 0,
-    next_attempt_at = now(),
-    completed_at = NULL,
-    last_error = NULL,
-    updated_at = now();
-
 CREATE OR REPLACE FUNCTION public.refresh_comm_whatsapp_identity_after_lead_name_change()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -1447,10 +2334,6 @@ CREATE TRIGGER trg_refresh_comm_whatsapp_identity_after_lead_name
   AFTER UPDATE OF nome_completo ON public.leads
   FOR EACH ROW
   EXECUTE FUNCTION public.refresh_comm_whatsapp_identity_after_lead_name_change();
-
-SELECT public.comm_whatsapp_refresh_chat_identity(chat.id)
-FROM public.comm_whatsapp_chats chat
-WHERE chat.merged_into_chat_id IS NULL;
 
 NOTIFY pgrst, 'reload schema';
 

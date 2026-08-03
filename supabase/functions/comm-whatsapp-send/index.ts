@@ -6,7 +6,6 @@ import {
   COMM_WHATSAPP_MODULE,
   WHAPI_BASE_URL,
   corsHeaders,
-  createWhapiClient,
   ensureCommWhatsAppSettings,
   ensurePrimaryChannel,
   extractPhoneFromChatId,
@@ -21,6 +20,7 @@ import {
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
+  resolveCommWhatsAppCanonicalChatRoute,
   resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
@@ -73,25 +73,6 @@ const createAdminClient = () => {
 
   return createClient(supabaseUrl, serviceRoleKey);
 };
-
-async function resolveChatForSend(
-  supabaseAdmin: ReturnType<typeof createAdminClient>,
-  channelId: string,
-  externalChatId: string,
-) {
-  const { data: existing, error } = await supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .select('display_name, push_name')
-    .eq('channel_id', channelId)
-    .eq('external_chat_id', externalChatId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Erro ao localizar conversa: ${error.message}`);
-  }
-
-  return (existing ?? null) as { display_name: string | null; push_name: string | null } | null;
-}
 
 const normalizeMediaKind = (value: string, mimeType: string): MediaSendKind => {
   const requested = value.trim().toLowerCase();
@@ -634,12 +615,20 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const requestedChatId = chatId;
+    const chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+      channelId: channel.id,
+      externalChatId: requestedChatId,
+    });
+    chatId = chatRoute.externalChatId;
+
     const sendRequest = await reserveSendRequest(supabaseAdmin, {
       channelId: channel.id,
       clientRequestId,
       requestKind: mediaFile ? 'media' : 'text',
       payload: {
         chatId,
+        requestedChatId: requestedChatId === chatId ? null : requestedChatId,
         type: mediaKind || 'text',
         textLength: text.length,
         fileName: mediaFile?.name || null,
@@ -713,16 +702,15 @@ Deno.serve(async (req: Request) => {
         }
 
         const nowIso = getNowIso();
-        const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
-        const phoneDigits = extractPhoneFromChatId(chatId);
+        const phoneDigits = chatRoute.phoneNumber || extractPhoneFromChatId(chatId);
         const summaryText = buildMediaSummary(mediaKind, text);
 
         await persistCommWhatsAppMessage(supabaseAdmin, {
           channelId: channel.id,
           externalChatId: chatId,
           phoneNumber: phoneDigits || null,
-          displayName: existingChat?.display_name || formatPhoneLabel(phoneDigits),
-          pushName: existingChat?.push_name || null,
+          displayName: chatRoute.displayName || formatPhoneLabel(phoneDigits),
+          pushName: chatRoute.pushName,
           lastMessageText: summaryText,
           lastMessageDirection: 'outbound',
           lastMessageAt: nowIso,
@@ -885,8 +873,7 @@ Deno.serve(async (req: Request) => {
       }
     }
     const nowIso = getNowIso();
-    const existingChat = await resolveChatForSend(supabaseAdmin, channel.id, chatId);
-    const phoneDigits = extractPhoneFromChatId(chatId);
+    const phoneDigits = chatRoute.phoneNumber || extractPhoneFromChatId(chatId);
     const summaryText = buildMediaSummary(mediaKind ?? 'document', text);
     const isMediaMessage = Boolean(mediaFile && mediaKind);
 
@@ -894,8 +881,8 @@ Deno.serve(async (req: Request) => {
       channelId: channel.id,
       externalChatId: chatId,
       phoneNumber: phoneDigits || null,
-      displayName: existingChat?.display_name || formatPhoneLabel(phoneDigits),
-      pushName: existingChat?.push_name || null,
+      displayName: chatRoute.displayName || formatPhoneLabel(phoneDigits),
+      pushName: chatRoute.pushName,
       lastMessageText: isMediaMessage ? summaryText : text,
       lastMessageDirection: 'outbound',
       lastMessageAt: nowIso,

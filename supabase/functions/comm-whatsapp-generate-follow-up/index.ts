@@ -2,7 +2,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
-import { COMM_WHATSAPP_MODULE, corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
+import {
+  COMM_WHATSAPP_MODULE,
+  corsHeaders,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
+  toTrimmedString,
+} from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
   env: {
@@ -656,10 +661,10 @@ const getFirstName = (value: string) => value.trim().split(/\s+/)[0] ?? '';
 
 const buildFollowUpLeadContext = (lead: LeadRow | null, chat: ChatRow): FollowUpLeadContext => {
   const nome =
-    toTrimmedString(lead?.nome_completo) ||
     toTrimmedString(chat.saved_contact_name) ||
-    toTrimmedString(chat.display_name) ||
+    toTrimmedString(lead?.nome_completo) ||
     toTrimmedString(chat.push_name) ||
+    toTrimmedString(chat.display_name) ||
     toTrimmedString(chat.phone_number) ||
     'Contato';
 
@@ -980,10 +985,18 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const chatRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, chatId);
+    if (!chatRoute?.chatId) {
+      return new Response(JSON.stringify({ error: 'Conversa do WhatsApp nao encontrada.' }), {
+        status: 404,
+        headers: jsonHeaders,
+      });
+    }
+
     const { data: chatData, error: chatError } = await supabaseAdmin
       .from('comm_whatsapp_chats')
       .select('id, phone_number, display_name, saved_contact_name, push_name, lead_id')
-      .eq('id', chatId)
+      .eq('id', chatRoute.chatId)
       .maybeSingle();
 
     if (chatError) {

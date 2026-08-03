@@ -17,6 +17,8 @@ import {
   persistCommWhatsAppMessage,
   parseWhapiError,
   readResponsePayload,
+  resolveCommWhatsAppCanonicalChatRoute,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
   resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
@@ -169,17 +171,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { data: chat, error: chatError } = await supabaseAdmin
-      .from('comm_whatsapp_chats')
-      .select('id, external_chat_id')
-      .eq('id', message.chat_id)
-      .maybeSingle();
-
-    if (chatError) {
-      throw new Error(`Erro ao localizar conversa da mensagem: ${chatError.message}`);
-    }
-
-    const externalChatId = toTrimmedString(chat?.external_chat_id);
+    const sourceChatRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, message.chat_id);
+    const externalChatId = sourceChatRoute?.externalChatId || '';
     if (!externalChatId) {
       return new Response(JSON.stringify({ error: 'Conversa da mensagem nao encontrada.' }), {
         status: 404,
@@ -284,18 +277,18 @@ Deno.serve(async (req: Request) => {
         ? body.targetChatIds.map((value) => normalizeWhapiChatId(value)).filter(Boolean).slice(0, 20)
         : [];
       const singleTarget = normalizeWhapiChatId(body.targetChatId);
-      const targetChatIds = singleTarget
+      const requestedTargetChatIds = singleTarget
         ? [singleTarget]
         : requestedTargets;
 
-      if (targetChatIds.length === 0) {
+      if (requestedTargetChatIds.length === 0) {
         return new Response(JSON.stringify({ error: 'Conversa de destino invalida para encaminhar.' }), {
           status: 400,
           headers: jsonHeaders,
         });
       }
 
-      for (const targetChatId of targetChatIds) {
+      for (const targetChatId of requestedTargetChatIds) {
         if (!isDirectWhapiChatId(targetChatId)) {
           return new Response(JSON.stringify({ error: 'Conversa de destino invalida para encaminhar.' }), {
             status: 400,
@@ -304,10 +297,21 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      const targetRoutes = await Promise.all(requestedTargetChatIds.map((targetChatId) => (
+        resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+          channelId: channel.id,
+          externalChatId: targetChatId,
+        })
+      )));
+      const uniqueTargetRoutes = Array.from(
+        new Map(targetRoutes.map((route) => [route.externalChatId, route])).values(),
+      );
+
       const whapi = createWhapiClient(token);
       const forwarded: Array<{ targetChatId: string; messageId: string | null; status: string }> = [];
 
-      for (const targetChatId of targetChatIds) {
+      for (const targetRoute of uniqueTargetRoutes) {
+        const targetChatId = targetRoute.externalChatId;
         const response = await whapi.forwardMessage(externalMessageId, JSON.stringify({ to: targetChatId, force: true }), {});
         const payload = await readResponsePayload(response);
 
@@ -321,21 +325,15 @@ Deno.serve(async (req: Request) => {
         const forwardedMessageId = extractWhapiMessageId(payload);
         const deliveryStatus = resolveWhapiOutboundDeliveryStatus(payload, forwardedMessageId);
         const nowIso = getNowIso();
-        const { data: targetChat } = await supabaseAdmin
-          .from('comm_whatsapp_chats')
-          .select('display_name, push_name')
-          .eq('channel_id', channel.id)
-          .eq('external_chat_id', targetChatId)
-          .maybeSingle();
-        const phoneDigits = extractPhoneFromChatId(targetChatId);
+        const phoneDigits = targetRoute.phoneNumber || extractPhoneFromChatId(targetChatId);
         const summaryText = toTrimmedString(message.media_caption) || toTrimmedString(message.text_content) || '[Mensagem encaminhada]';
 
         await persistCommWhatsAppMessage(supabaseAdmin, {
           channelId: channel.id,
           externalChatId: targetChatId,
           phoneNumber: phoneDigits || null,
-          displayName: toTrimmedString(targetChat?.display_name) || formatPhoneLabel(phoneDigits),
-          pushName: toTrimmedString(targetChat?.push_name) || null,
+          displayName: targetRoute.displayName || formatPhoneLabel(phoneDigits),
+          pushName: targetRoute.pushName,
           lastMessageText: summaryText,
           lastMessageDirection: 'outbound',
           lastMessageAt: nowIso,

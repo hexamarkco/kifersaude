@@ -13,6 +13,7 @@ import {
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
   resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
@@ -40,6 +41,7 @@ type SendRequestRow = {
 
 type RetryTargetRow = {
   id: string;
+  chat_id: string;
   external_chat_id: string;
   phone_number: string;
   display_name: string;
@@ -258,6 +260,7 @@ Deno.serve(async (req: Request) => {
       .select(
         `
           id,
+          chat_id,
           message_type,
           media_id,
           media_caption,
@@ -291,6 +294,7 @@ Deno.serve(async (req: Request) => {
 
     const retryTarget: RetryTargetRow = {
       id: toTrimmedString((target as Record<string, unknown>).id),
+      chat_id: toTrimmedString((target as Record<string, unknown>).chat_id),
       external_chat_id: toTrimmedString(chat?.external_chat_id),
       phone_number: toTrimmedString(chat?.phone_number),
       display_name: toTrimmedString(chat?.display_name),
@@ -336,6 +340,18 @@ Deno.serve(async (req: Request) => {
         headers: jsonHeaders,
       });
     }
+
+    const chatRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, retryTarget.chat_id);
+    if (!chatRoute) {
+      return new Response(JSON.stringify({ error: 'Conversa da mensagem nao encontrada.' }), {
+        status: 404,
+        headers: jsonHeaders,
+      });
+    }
+    retryTarget.external_chat_id = chatRoute.externalChatId;
+    retryTarget.phone_number = chatRoute.phoneNumber || retryTarget.phone_number;
+    retryTarget.display_name = chatRoute.displayName || retryTarget.display_name;
+    retryTarget.push_name = chatRoute.pushName;
 
     const retryRequest = await reserveRetryRequest(supabaseAdmin, {
       channelId: channel.id,

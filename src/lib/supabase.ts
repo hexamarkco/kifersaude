@@ -553,6 +553,12 @@ export type CommWhatsAppChat = {
   lead_id?: string | null;
   lead_name?: string | null;
   lead_status?: string | null;
+  merged_into_chat_id: string | null;
+  lead_link_source: 'legacy' | 'manual' | 'crm_start' | 'auto_phone' | 'repair' | null;
+  lead_linked_at: string | null;
+  lead_linked_by: string | null;
+  auto_link_blocked: boolean;
+  identity_conflict: boolean;
   is_archived: boolean;
   archived_at?: string | null;
   is_muted: boolean;
@@ -577,10 +583,11 @@ export type CommWhatsAppPhoneContact = {
   id: string;
   channel_id: string;
   contact_id: string;
-  phone_number: string;
-  phone_digits: string;
+  phone_number: string | null;
+  phone_digits: string | null;
   display_name: string;
   short_name?: string | null;
+  push_name?: string | null;
   saved: boolean;
   last_synced_at: string;
   created_at: string;

@@ -9,8 +9,7 @@ import {
   isValidCommWhatsAppDisplayName,
   normalizeCommWhatsAppPhone,
   normalizePhoneDigits,
-  resolveWhapiLidToPhone,
-  resolveWhapiPhoneToLid,
+  resolveVerifiedWhapiDirectIdentity,
 } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
@@ -104,6 +103,7 @@ Deno.serve(async (req: Request) => {
     .select('id,channel_id,external_chat_id,phone_digits,push_name,display_name,lead_id,deleted_at')
     .eq('channel_id', channel.id)
     .ilike('external_chat_id', '%@lid')
+    .is('merged_into_chat_id', null)
     .order('id', { ascending: true })
     .limit(limit);
 
@@ -147,8 +147,8 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const phone = await resolveWhapiLidToPhone({ token, chatId: externalChatId });
-      if (!phone) {
+      const identity = await resolveVerifiedWhapiDirectIdentity({ token, chatId: externalChatId });
+      if (!identity.phone) {
         if (storedPhone && storedPhone === lidDigits) {
           invalidPhones += 1;
           detail.action = 'clear_invalid_phone';
@@ -176,7 +176,7 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const phoneDigits = normalizeCommWhatsAppPhone(phone);
+      const phoneDigits = normalizeCommWhatsAppPhone(identity.phone);
       detail.phone = phoneDigits;
       resolved += 1;
 
@@ -186,16 +186,45 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const phoneChatId = `${phoneDigits}@s.whatsapp.net`;
-      const reverseLid = await resolveWhapiPhoneToLid({ token, chatId: phoneChatId }).catch(() => '');
-      if (reverseLid && reverseLid !== externalChatId) {
+      const phoneChatId = identity.phoneChatId;
+      if (!identity.verified) {
         conflicts += 1;
         detail.action = 'conflict';
-        detail.error = `Reverse mapping returned ${reverseLid}`;
+        detail.error = `Mapping verification failed: ${identity.reason}`;
+
+        if (apply && identity.reason === 'reverse_mismatch') {
+          const dedupeKey = `reverse:${chat.channel_id}:${identity.lidChatId || externalChatId}:${identity.phoneChatId || 'unknown'}`;
+          const { error: conflictError } = await supabase
+            .from('comm_whatsapp_identity_conflicts')
+            .upsert({
+              dedupe_key: dedupeKey,
+              channel_id: chat.channel_id,
+              chat_id: chat.id,
+              conflict_type: 'reverse_mapping_conflict',
+              status: 'open',
+              details: {
+                observed_chat_id: externalChatId,
+                lid_chat_id: identity.lidChatId || null,
+                phone_chat_id: identity.phoneChatId || null,
+                source: 'comm-whatsapp-resolve-lids',
+              },
+              updated_at: new Date().toISOString(),
+              resolved_at: null,
+              resolved_by: null,
+            }, { onConflict: 'dedupe_key' });
+          if (conflictError) throw conflictError;
+
+          const { error: flagError } = await supabase
+            .from('comm_whatsapp_chats')
+            .update({ identity_conflict: true })
+            .eq('id', chat.id);
+          if (flagError) throw flagError;
+        }
+
         details.push(detail);
         continue;
       }
-      detail.reverseVerified = reverseLid === externalChatId;
+      detail.reverseVerified = true;
       detail.action = 'reconcile';
 
       if (apply) {
@@ -205,6 +234,10 @@ Deno.serve(async (req: Request) => {
             p_channel_id: chat.channel_id,
             p_lid_external_chat_id: externalChatId,
             p_phone_external_chat_id: phoneChatId,
+            p_mapping_evidence: {
+              round_trip_verified: true,
+              source: 'comm-whatsapp-resolve-lids',
+            },
           },
         );
         if (reconcileError) throw reconcileError;

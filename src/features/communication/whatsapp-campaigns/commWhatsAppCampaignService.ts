@@ -219,6 +219,21 @@ const getCount = async (table: string, filters: CountFilter[] = []) => {
   return count ?? 0;
 };
 
+const getPendingAiSuggestionCount = async () => {
+  const { count, error } = await supabase
+    .from('comm_whatsapp_ai_intent_suggestions')
+    .select('id,chat:comm_whatsapp_chats!inner(id)', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .is('chat.deleted_at', null)
+    .is('chat.merged_into_chat_id', null);
+
+  if (error) {
+    throw new Error(getSupabaseErrorMessage(error, 'Nao foi possivel carregar as sugestoes pendentes.'));
+  }
+
+  return count ?? 0;
+};
+
 const getNestedRecord = (value: unknown, key: string): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   const nested = (value as Record<string, unknown>)[key];
@@ -296,7 +311,7 @@ export const commWhatsAppCampaignService = {
       getCount('comm_whatsapp_campaigns', [{ op: 'eq', column: 'status', value: 'draft' }]),
       getCount('comm_whatsapp_campaigns', [{ op: 'eq', column: 'status', value: 'scheduled' }]),
       getCount('comm_whatsapp_campaigns', [{ op: 'in', column: 'status', value: ['queued', 'running', 'paused'] }]),
-      getCount('comm_whatsapp_ai_intent_suggestions', [{ op: 'eq', column: 'status', value: 'pending' }]),
+      getPendingAiSuggestionCount(),
     ]);
 
     return { total, drafts, scheduled, active, aiSuggestionsPending };
@@ -325,8 +340,10 @@ export const commWhatsAppCampaignService = {
   async listPendingAiSuggestions(): Promise<CommWhatsAppAiIntentSuggestion[]> {
     const { data, error } = await supabase
       .from('comm_whatsapp_ai_intent_suggestions')
-      .select('*, chat:comm_whatsapp_chats(display_name,phone_number), campaign:comm_whatsapp_campaigns(name)')
+      .select('*, chat:comm_whatsapp_chats!inner(display_name,phone_number), campaign:comm_whatsapp_campaigns(name)')
       .eq('status', 'pending')
+      .is('chat.deleted_at', null)
+      .is('chat.merged_into_chat_id', null)
       .order('created_at', { ascending: false })
       .limit(20);
 

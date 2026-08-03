@@ -1,4 +1,3 @@
-// @ts-expect-error Deno npm import
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 
 export const corsHeaders = {
@@ -1593,9 +1592,9 @@ export const extractWhapiStarEvent = (
   }
 
   const explicitStarred = firstNonEmpty(action?.starred, message.starred);
-  const starred = explicitStarred === 'true' || explicitStarred === true
+  const starred = explicitStarred === 'true'
     ? true
-    : explicitStarred === 'false' || explicitStarred === false
+    : explicitStarred === 'false'
       ? false
       : normalizedActionType === 'unstar' || normalizedActionType === 'unstarred';
 
@@ -2605,7 +2604,7 @@ const readWhapiMediaBlob = async (response: Response): Promise<Blob> => {
     reader.releaseLock();
   }
 
-  return new Blob(chunks, { type: response.headers.get('content-type') || '' });
+  return new Blob(chunks as BlobPart[], { type: response.headers.get('content-type') || '' });
 };
 
 async function fetchWhapiMediaBlob(params: {
@@ -2953,6 +2952,38 @@ export type CommWhatsAppCanonicalChatRoute = {
   pushName: string | null;
   leadId: string | null;
   identityConflict: boolean;
+  deletedAt: string | null;
+};
+
+type CommWhatsAppCanonicalChatRouteRow = {
+  chat_id?: unknown;
+  external_chat_id?: unknown;
+  phone_number?: unknown;
+  display_name?: unknown;
+  push_name?: unknown;
+  lead_id?: unknown;
+  identity_conflict?: unknown;
+  deleted_at?: unknown;
+};
+
+const parseCommWhatsAppCanonicalChatRoute = (
+  value: unknown,
+): CommWhatsAppCanonicalChatRoute | null => {
+  const row = (Array.isArray(value) ? value[0] : value) as CommWhatsAppCanonicalChatRouteRow | null;
+  const chatId = toTrimmedString(row?.chat_id);
+  const externalChatId = normalizeWhapiChatId(row?.external_chat_id);
+  if (!row || !chatId || !externalChatId) return null;
+
+  return {
+    chatId,
+    externalChatId,
+    phoneNumber: normalizeCommWhatsAppPhone(row.phone_number) || null,
+    displayName: toTrimmedString(row.display_name) || null,
+    pushName: toTrimmedString(row.push_name) || null,
+    leadId: toTrimmedString(row.lead_id) || null,
+    identityConflict: row.identity_conflict === true,
+    deletedAt: toTrimmedString(row.deleted_at) || null,
+  };
 };
 
 export async function resolveCommWhatsAppCanonicalChatRoute(
@@ -2964,19 +2995,20 @@ export async function resolveCommWhatsAppCanonicalChatRoute(
     throw new Error('Canal ou identificador invalido para resolver a conversa canonica.');
   }
 
-  const { data: canonicalChatId, error: resolveError } = await supabaseAdmin.rpc(
-    'comm_whatsapp_resolve_canonical_chat_uuid',
+  const { data, error } = await supabaseAdmin.rpc(
+    'comm_whatsapp_get_canonical_chat_route',
     {
+      p_chat_id: null,
       p_channel_id: input.channelId,
       p_external_chat_id: externalChatId,
     },
   );
-  if (resolveError) {
-    throw new Error(`Erro ao resolver conversa canonica: ${resolveError.message}`);
+  if (error) {
+    throw new Error(`Erro ao resolver conversa canonica: ${error.message}`);
   }
 
-  const chatId = toTrimmedString(canonicalChatId);
-  if (!chatId) {
+  const route = parseCommWhatsAppCanonicalChatRoute(data);
+  if (!route) {
     return {
       chatId: null,
       externalChatId,
@@ -2985,27 +3017,11 @@ export async function resolveCommWhatsAppCanonicalChatRoute(
       pushName: null,
       leadId: null,
       identityConflict: false,
+      deletedAt: null,
     };
   }
 
-  const { data: chat, error: chatError } = await supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .select('id,external_chat_id,phone_digits,display_name,push_name,lead_id,identity_conflict')
-    .eq('id', chatId)
-    .maybeSingle();
-  if (chatError || !chat) {
-    throw new Error(chatError?.message || 'Conversa canonica nao encontrada.');
-  }
-
-  return {
-    chatId: toTrimmedString(chat.id),
-    externalChatId: normalizeWhapiChatId(chat.external_chat_id),
-    phoneNumber: normalizeCommWhatsAppPhone(chat.phone_digits) || null,
-    displayName: toTrimmedString(chat.display_name) || null,
-    pushName: toTrimmedString(chat.push_name) || null,
-    leadId: toTrimmedString(chat.lead_id) || null,
-    identityConflict: chat.identity_conflict === true,
-  };
+  return route;
 }
 
 export async function resolveCommWhatsAppCanonicalChatRouteByUuid(
@@ -3015,30 +3031,14 @@ export async function resolveCommWhatsAppCanonicalChatRouteByUuid(
   const requestedChatId = toTrimmedString(chatId);
   if (!requestedChatId) return null;
 
-  const { data: canonicalChatId, error: resolveError } = await supabaseAdmin.rpc('comm_whatsapp_resolve_chat_uuid', {
+  const { data, error } = await supabaseAdmin.rpc('comm_whatsapp_get_canonical_chat_route', {
     p_chat_id: requestedChatId,
+    p_channel_id: null,
+    p_external_chat_id: null,
   });
-  if (resolveError) throw new Error(`Erro ao resolver UUID canonico da conversa: ${resolveError.message}`);
+  if (error) throw new Error(`Erro ao resolver UUID canonico da conversa: ${error.message}`);
 
-  const resolvedChatId = toTrimmedString(canonicalChatId);
-  if (!resolvedChatId) return null;
-
-  const { data: chat, error: chatError } = await supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .select('id,external_chat_id,phone_digits,display_name,push_name,lead_id,identity_conflict')
-    .eq('id', resolvedChatId)
-    .maybeSingle();
-  if (chatError || !chat) throw new Error(chatError?.message || 'Conversa canonica nao encontrada.');
-
-  return {
-    chatId: toTrimmedString(chat.id),
-    externalChatId: normalizeWhapiChatId(chat.external_chat_id),
-    phoneNumber: normalizeCommWhatsAppPhone(chat.phone_digits) || null,
-    displayName: toTrimmedString(chat.display_name) || null,
-    pushName: toTrimmedString(chat.push_name) || null,
-    leadId: toTrimmedString(chat.lead_id) || null,
-    identityConflict: chat.identity_conflict === true,
-  };
+  return parseCommWhatsAppCanonicalChatRoute(data);
 }
 
 export async function persistCommWhatsAppMessage(

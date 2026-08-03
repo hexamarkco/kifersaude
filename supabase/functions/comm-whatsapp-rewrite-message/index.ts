@@ -1,8 +1,12 @@
-// @ts-expect-error Deno npm import
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
-import { COMM_WHATSAPP_MODULE, corsHeaders, toTrimmedString } from '../_shared/comm-whatsapp.ts';
+import {
+  COMM_WHATSAPP_MODULE,
+  corsHeaders,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
+  toTrimmedString,
+} from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
   env: {
@@ -60,10 +64,13 @@ async function loadConversationContext(supabaseAdmin: SupabaseClient, chatId: st
     return '';
   }
 
+  const route = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, normalizedChatId);
+  if (!route?.chatId) return '';
+
   const { data, error } = await supabaseAdmin
     .from('comm_whatsapp_messages')
     .select('direction,message_type,delivery_status,text_content,media_caption,transcription_text,message_at,sender_name')
-    .eq('chat_id', normalizedChatId)
+    .eq('chat_id', route.chatId)
     .neq('delivery_status', 'deleted')
     .order('message_at', { ascending: false })
     .limit(24);

@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
@@ -475,7 +474,8 @@ const buildPreview = async (supabaseAdmin: any, options: OrganizerOptions) => {
     return new Date(left.reminder.data_lembrete).getTime() - new Date(right.reminder.data_lembrete).getTime();
   });
   const ai = await tryAiRankCandidates(supabaseAdmin, deterministicBase, options);
-  const aiById = new Map(ai.items.map((item) => [item.id, item]));
+  const aiItems = ai.items as Array<{ id: string; score: number; reason: string }>;
+  const aiById = new Map(aiItems.map((item) => [item.id, item]));
   const ranked = deterministicBase
     .map((candidate) => {
       const aiItem = aiById.get(candidate.reminder.id);

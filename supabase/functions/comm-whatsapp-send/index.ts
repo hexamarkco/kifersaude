@@ -1,4 +1,3 @@
-// @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import {
@@ -21,6 +20,7 @@ import {
   persistCommWhatsAppMessage,
   readResponsePayload,
   resolveCommWhatsAppCanonicalChatRoute,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
   resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
@@ -245,7 +245,7 @@ async function reserveSendRequest(
   }
 
   const existingRow = existing as SendRequestRow | null;
-  if (existingRow?.status === 'failed' || isStaleSendingRequest(existingRow)) {
+  if (existingRow && (existingRow.status === 'failed' || isStaleSendingRequest(existingRow))) {
     const { data: retryRow, error: retryError } = await supabaseAdmin
       .from('comm_whatsapp_send_requests')
       .update({
@@ -616,10 +616,16 @@ Deno.serve(async (req: Request) => {
     }
 
     const requestedChatId = chatId;
-    const chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+    let chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
       channelId: channel.id,
       externalChatId: requestedChatId,
     });
+    if (chatRoute.identityConflict) {
+      return new Response(JSON.stringify({ error: 'Identidade WhatsApp exige revisao manual antes do envio.' }), {
+        status: 409,
+        headers: jsonHeaders,
+      });
+    }
     chatId = chatRoute.externalChatId;
 
     const sendRequest = await reserveSendRequest(supabaseAdmin, {
@@ -641,6 +647,25 @@ Deno.serve(async (req: Request) => {
     if (!sendRequest.reserved) {
       return buildDuplicateSendResponse(sendRequest.row);
     }
+
+    const dispatchRoute = chatRoute.chatId
+      ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, chatRoute.chatId)
+      : await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+          channelId: channel.id,
+          externalChatId: chatId,
+        });
+    if (!dispatchRoute || dispatchRoute.identityConflict) {
+      const errorMessage = dispatchRoute
+        ? 'Identidade WhatsApp mudou durante a preparacao e exige revisao manual.'
+        : 'Conversa canonica nao encontrada antes do envio.';
+      await failSendRequest(supabaseAdmin, sendRequest.row?.id, errorMessage);
+      return new Response(JSON.stringify({ error: errorMessage }), {
+        status: 409,
+        headers: jsonHeaders,
+      });
+    }
+    chatRoute = dispatchRoute;
+    chatId = dispatchRoute.externalChatId;
 
     let whapiResponse: Response;
     let uploadedMediaId = '';

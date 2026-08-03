@@ -6,12 +6,14 @@ import {
   extractWhapiMessageId,
   fetchWhapiWithTimeout,
   formatPhoneLabel,
+  getCommWhatsAppPhoneLookupKeys,
   getWhapiToken,
   normalizeWhapiChatId,
   parseWhapiError,
   persistCommWhatsAppMessage,
   readResponsePayload,
   resolveCommWhatsAppCanonicalChatRoute,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
   resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   WHAPI_BASE_URL,
@@ -2490,7 +2492,8 @@ async function getLatestChatMessageAt({
   const { data: chats, error: chatsError } = await supabase
     .from('comm_whatsapp_chats')
     .select('id')
-    .eq('lead_id', leadId);
+    .eq('lead_id', leadId)
+    .is('merged_into_chat_id', null);
 
   if (chatsError || !chats?.length) return null;
 
@@ -3419,18 +3422,25 @@ async function sendAutoContactMessage({
 
   const channel = await ensurePrimaryChannel(supabase);
   const requestedChatId = whatsappCheck.chatId ?? `${whapiPhone}@s.whatsapp.net`;
-  const chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabase, {
+  let chatRoute = await resolveCommWhatsAppCanonicalChatRoute(supabase, {
     channelId: channel.id,
     externalChatId: requestedChatId,
   });
+  const requestedPhoneKeys = new Set(getCommWhatsAppPhoneLookupKeys(whapiPhone));
   if (chatRoute.identityConflict) {
     throw new Error('Identidade WhatsApp exige revisao manual antes de envios automaticos.');
   }
   if (lead?.id !== 'flow-test' && chatRoute.leadId && lead?.id && chatRoute.leadId !== lead.id) {
     throw new Error('A identidade WhatsApp esta vinculada a outro lead.');
   }
+  if (
+    chatRoute.phoneNumber
+    && !getCommWhatsAppPhoneLookupKeys(chatRoute.phoneNumber).some((key) => requestedPhoneKeys.has(key))
+  ) {
+    throw new Error('A identidade WhatsApp resolvida pertence a outro telefone.');
+  }
 
-  const chatId = chatRoute.externalChatId;
+  let chatId = chatRoute.externalChatId;
   let endpoint = '';
   const body: Record<string, unknown> = { to: chatId };
 
@@ -3444,6 +3454,28 @@ async function sendAutoContactMessage({
     if (media.caption) body.caption = media.caption;
     if (media.filename && contentType === 'document') body.filename = media.filename;
   }
+
+  const dispatchRoute = chatRoute.chatId
+    ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabase, chatRoute.chatId)
+    : await resolveCommWhatsAppCanonicalChatRoute(supabase, {
+        channelId: channel.id,
+        externalChatId: chatId,
+      });
+  if (!dispatchRoute || dispatchRoute.identityConflict) {
+    throw new Error('Identidade WhatsApp mudou antes do envio automatico e exige revisao manual.');
+  }
+  if (lead?.id !== 'flow-test' && dispatchRoute.leadId && lead?.id && dispatchRoute.leadId !== lead.id) {
+    throw new Error('A identidade WhatsApp esta vinculada a outro lead.');
+  }
+  if (
+    dispatchRoute.phoneNumber
+    && !getCommWhatsAppPhoneLookupKeys(dispatchRoute.phoneNumber).some((key) => requestedPhoneKeys.has(key))
+  ) {
+    throw new Error('A identidade WhatsApp resolvida pertence a outro telefone.');
+  }
+  chatRoute = dispatchRoute;
+  chatId = dispatchRoute.externalChatId;
+  body.to = chatId;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), WHAPI_REQUEST_TIMEOUT_MS);

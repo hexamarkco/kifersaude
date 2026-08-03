@@ -1,4 +1,3 @@
-// @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser, isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
@@ -18,6 +17,7 @@ import {
   readResponsePayload,
   resolveCommWhatsAppCanonicalChatRoute,
   resolveCommWhatsAppCanonicalChatRouteByUuid,
+  resolveWhapiOutboundDeliveryStatus,
   sanitizeWhapiToken,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -1279,13 +1279,13 @@ async function sendTarget(params: {
     return { status: 'invalid' };
   }
 
-  const chatRoute = target.chat_id
+  let chatRoute = target.chat_id
     ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, target.chat_id)
     : await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
         channelId: params.channelId,
         externalChatId: fallbackChatId,
       });
-  const chatId = chatRoute?.externalChatId || fallbackChatId;
+  let chatId = chatRoute?.externalChatId || fallbackChatId;
   const targetPhoneKeys = new Set(getCommWhatsAppPhoneLookupKeys(phoneDigits));
   const routedPhoneMatchesTarget = !chatRoute?.phoneNumber
     || getCommWhatsAppPhoneLookupKeys(chatRoute.phoneNumber).some((key) => targetPhoneKeys.has(key));
@@ -1388,6 +1388,38 @@ async function sendTarget(params: {
 
   target.attempts = Math.max(Number(dispatchReservation.attempts) || 0, 0);
   const sendStartedEvent = { id: dispatchReservation.event_id };
+
+  const dispatchRoute = chatRoute?.chatId
+    ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabaseAdmin, chatRoute.chatId)
+    : await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+        channelId: params.channelId,
+        externalChatId: chatId,
+      });
+  const dispatchPhoneMatchesTarget = !dispatchRoute?.phoneNumber
+    || getCommWhatsAppPhoneLookupKeys(dispatchRoute.phoneNumber).some((key) => targetPhoneKeys.has(key));
+  if (
+    dispatchRoute?.identityConflict
+    || (dispatchRoute?.leadId && target.lead_id && dispatchRoute.leadId !== target.lead_id)
+    || !dispatchPhoneMatchesTarget
+  ) {
+    const errorMessage = 'Identidade WhatsApp mudou durante a reserva e exige revisao manual.';
+    await resolveCampaignSendStartedEvent(supabaseAdmin, {
+      eventId: sendStartedEvent.id,
+      resolution: 'identity_changed_before_dispatch',
+      dispatchPermitState: 'released',
+    });
+    await updateClaimedTarget(supabaseAdmin, target, {
+      status: 'failed',
+      error_message: errorMessage,
+      last_attempt_at: nowIso,
+      locked_at: null,
+      lock_token: null,
+    });
+    return { status: 'failed', reason: 'identity_conflict' };
+  }
+  chatRoute = dispatchRoute;
+  chatId = dispatchRoute?.externalChatId || chatId;
+  phoneDigits = dispatchRoute?.phoneNumber || phoneDigits;
 
   let response: Response;
   let payload: unknown;

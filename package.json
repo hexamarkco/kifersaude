@@ -19,7 +19,9 @@
     "postinstall": "npm run patch-react-side-effect",
     "verify:automations": "node scripts/verify-automations.mjs",
     "deploy:automations": "bash scripts/run-supabase-migrations.sh && node scripts/verify-automations.mjs",
-    "spread:leads": "node scripts/spread-existing-leads.mjs"
+    "spread:leads": "node scripts/spread-existing-leads.mjs",
+    "repair:whatsapp-identities": "node scripts/reconcile-whatsapp-identities.mjs",
+    "verify:whatsapp-identities": "node scripts/reconcile-whatsapp-identities.mjs --verify-only"
   },
   "engines": {
     "node": ">=20"

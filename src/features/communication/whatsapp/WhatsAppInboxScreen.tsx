@@ -3608,6 +3608,12 @@ export default function WhatsAppInboxScreen() {
 
   const upsertChatLocally = useCallback((nextChat: CommWhatsAppChat) => {
     setChats((current) => {
+      if (nextChat.deleted_at || nextChat.merged_into_chat_id) {
+        const filtered = current.filter((chat) => chat.id !== nextChat.id);
+        chatsSignatureRef.current = buildChatsSignature(filtered);
+        return filtered;
+      }
+
       const previousChat = current.find((chat) => chat.id === nextChat.id) ?? null;
       const stableNextChat = stabilizeChatIdentityForLocalMerge(nextChat, previousChat);
       const hydratedNextChat = preserveUsefulChatPreview(stableNextChat, previousChat);

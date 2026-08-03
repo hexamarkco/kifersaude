@@ -1,4 +1,3 @@
-// @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
@@ -9,6 +8,7 @@ import {
   isValidCommWhatsAppDisplayName,
   normalizeCommWhatsAppPhone,
   normalizePhoneDigits,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
   resolveVerifiedWhapiDirectIdentity,
 } from '../_shared/comm-whatsapp.ts';
 
@@ -148,6 +148,13 @@ Deno.serve(async (req: Request) => {
       }
 
       const identity = await resolveVerifiedWhapiDirectIdentity({ token, chatId: externalChatId });
+      const postLookupRoute = apply
+        ? await resolveCommWhatsAppCanonicalChatRouteByUuid(supabase, chat.id)
+        : null;
+      const writeChatId = postLookupRoute?.chatId || chat.id;
+      if (apply && !postLookupRoute?.chatId) {
+        throw new Error('Chat canonico nao encontrado apos consultar a Whapi.');
+      }
       if (!identity.phone) {
         if (storedPhone && storedPhone === lidDigits) {
           invalidPhones += 1;
@@ -157,16 +164,11 @@ Deno.serve(async (req: Request) => {
             const fallbackName = isValidCommWhatsAppDisplayName(chat.push_name)
               ? String(chat.push_name).trim()
               : 'Contato privado';
-            const { error: clearError } = await supabase
-              .from('comm_whatsapp_chats')
-              .update({ phone_number: '', phone_digits: '', display_name: fallbackName })
-              .eq('id', chat.id);
-            if (clearError) throw clearError;
-
-            const { error: refreshError } = await supabase.rpc('comm_whatsapp_refresh_chat_identity', {
-              p_chat_id: chat.id,
+            const { error: clearError } = await supabase.rpc('comm_whatsapp_clear_invalid_lid_phone', {
+              p_chat_id: writeChatId,
+              p_fallback_name: fallbackName,
             });
-            if (refreshError) throw refreshError;
+            if (clearError) throw clearError;
           }
         } else {
           unresolved += 1;
@@ -199,7 +201,7 @@ Deno.serve(async (req: Request) => {
             .upsert({
               dedupe_key: dedupeKey,
               channel_id: chat.channel_id,
-              chat_id: chat.id,
+              chat_id: writeChatId,
               conflict_type: 'reverse_mapping_conflict',
               status: 'open',
               details: {
@@ -213,12 +215,6 @@ Deno.serve(async (req: Request) => {
               resolved_by: null,
             }, { onConflict: 'dedupe_key' });
           if (conflictError) throw conflictError;
-
-          const { error: flagError } = await supabase
-            .from('comm_whatsapp_chats')
-            .update({ identity_conflict: true })
-            .eq('id', chat.id);
-          if (flagError) throw flagError;
         }
 
         details.push(detail);
@@ -255,18 +251,23 @@ Deno.serve(async (req: Request) => {
         reconciled += 1;
 
         const pushName = await fetchWhapiChatName({ token, chatId: externalChatId }).catch(() => '');
-        if (isValidCommWhatsAppDisplayName(pushName)) {
-          const { error: nameError } = await supabase
-            .from('comm_whatsapp_chats')
-            .update({ push_name: pushName })
-            .eq('id', reconcileRow.chat_id);
-          if (nameError) throw nameError;
+        const postNameLookupRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(supabase, reconcileRow.chat_id);
+        if (!postNameLookupRoute?.chatId) {
+          throw new Error('Chat canonico nao encontrado apos consultar o nome na Whapi.');
         }
-
-        const { error: refreshError } = await supabase.rpc('comm_whatsapp_refresh_chat_identity', {
-          p_chat_id: reconcileRow.chat_id,
-        });
-        if (refreshError) throw refreshError;
+        detail.canonicalChatId = postNameLookupRoute.chatId;
+        if (isValidCommWhatsAppDisplayName(pushName)) {
+          const { error: nameError } = await supabase.rpc('comm_whatsapp_set_chat_push_name', {
+            p_chat_id: postNameLookupRoute.chatId,
+            p_push_name: pushName,
+          });
+          if (nameError) throw nameError;
+        } else {
+          const { error: refreshError } = await supabase.rpc('comm_whatsapp_refresh_chat_identity', {
+            p_chat_id: postNameLookupRoute.chatId,
+          });
+          if (refreshError) throw refreshError;
+        }
       }
     } catch (error) {
       errors += 1;

@@ -1,4 +1,3 @@
-// @ts-expect-error Deno npm import
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.4';
 import {
   applyCommWhatsAppMessageMutation,
@@ -26,6 +25,7 @@ import {
   normalizeCommWhatsAppPhone,
   normalizeWhapiChatId,
   persistCommWhatsAppMessage,
+  resolveCommWhatsAppCanonicalChatRoute,
   stringTimestampToIso,
   summarizeWhapiMessage,
   toTrimmedString,
@@ -46,13 +46,6 @@ type ChannelRow = {
   whapi_channel_id: string | null;
   phone_number: string | null;
   connected_user_name: string | null;
-};
-
-type ChatRow = {
-  id: string;
-  unread_count: number;
-  display_name: string;
-  push_name: string | null;
 };
 
 const isOwnChannelName = (value: string | null | undefined, connectedUserName: string | null | undefined) => {
@@ -177,25 +170,6 @@ async function hasEventReceipt(
   }
 
   return Boolean(data);
-}
-
-async function findExistingChat(
-  supabaseAdmin: SupabaseClient,
-  channelId: string,
-  externalChatId: string,
-) {
-  const { data, error } = await supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .select('id, unread_count, display_name, push_name')
-    .eq('channel_id', channelId)
-    .eq('external_chat_id', externalChatId)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(`Erro ao carregar conversa existente: ${error.message}`);
-  }
-
-  return (data ?? null) as ChatRow | null;
 }
 
 const resolveMessageChatId = (message: Record<string, unknown>): string => {
@@ -330,7 +304,10 @@ async function persistMessageFromWebhook(
     }
   }
 
-  const existingChat = await findExistingChat(supabaseAdmin, channel.id, externalChatId);
+  const existingChat = await resolveCommWhatsAppCanonicalChatRoute(supabaseAdmin, {
+    channelId: channel.id,
+    externalChatId,
+  });
   const direction = message.from_me === true ? 'outbound' : 'inbound';
   const phoneDigits = extractPhoneFromChatId(externalChatId);
   const messageName = getDirectChatDisplayNameCandidate(message, direction);
@@ -348,19 +325,19 @@ async function persistMessageFromWebhook(
     resolvedName = '';
   }
 
-  if (!resolvedName && existingChat?.push_name && !isOwnChannelName(existingChat.push_name, channel.connected_user_name)) {
-    resolvedName = existingChat.push_name;
+  if (!resolvedName && existingChat.pushName && !isOwnChannelName(existingChat.pushName, channel.connected_user_name)) {
+    resolvedName = existingChat.pushName;
   }
 
   const fallbackDisplayName = formatPhoneLabel(phoneDigits);
   const existingLooksLikeOwnName = Boolean(
-    existingChat?.display_name &&
+    existingChat.displayName &&
       channel.connected_user_name &&
-      existingChat.display_name.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase(),
+      existingChat.displayName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase(),
   );
   const displayName =
     resolvedName ||
-    (!existingLooksLikeOwnName && existingChat?.display_name ? existingChat.display_name : fallbackDisplayName);
+    (!existingLooksLikeOwnName && existingChat.displayName ? existingChat.displayName : fallbackDisplayName);
   const messageAt = unixTimestampToIso(message.timestamp) || getNowIso();
   const externalMessageId = toTrimmedString(message.id);
   const deliveryStatus = toTrimmedString(message.status) || (direction === 'inbound' ? 'received' : 'sent');
@@ -376,7 +353,7 @@ async function persistMessageFromWebhook(
     externalChatId,
     phoneNumber: phoneDigits || null,
     displayName,
-    pushName: resolvedName || (!isOwnChannelName(existingChat?.push_name, channel.connected_user_name) ? existingChat?.push_name || null : null),
+    pushName: resolvedName || (!isOwnChannelName(existingChat.pushName, channel.connected_user_name) ? existingChat.pushName : null),
     lastMessageText: summaryText,
     lastMessageDirection: direction,
     lastMessageAt: messageAt,

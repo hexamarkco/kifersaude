@@ -1,4 +1,3 @@
-// @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { authorizeDashboardUser } from '../_shared/dashboard-auth.ts';
 import { generateTextWithRouting } from '../_shared/ai-router.ts';
@@ -139,7 +138,9 @@ const FOLLOW_UP_SITUATION_PRESETS = [
     instruction: 'Cenário: estamos aguardando documentos. Lembre de forma cordial quais documentos faltam, explique que eles são necessários para avançar e ofereça ajuda em caso de dúvida.',
   },
 ] as const;
-const FOLLOW_UP_SITUATION_PRESET_BY_ID = new Map(FOLLOW_UP_SITUATION_PRESETS.map((preset) => [preset.id, preset]));
+const FOLLOW_UP_SITUATION_PRESET_BY_ID: ReadonlyMap<string, (typeof FOLLOW_UP_SITUATION_PRESETS)[number]> = new Map(
+  FOLLOW_UP_SITUATION_PRESETS.map((preset) => [preset.id, preset]),
+);
 
 type FollowUpSalesTechniqueOption = {
   id: string;
@@ -180,7 +181,7 @@ const FOLLOW_UP_SALES_TECHNIQUE_OPTIONS = [
   },
 ] as const satisfies readonly FollowUpSalesTechniqueOption[];
 
-const FOLLOW_UP_SALES_TECHNIQUE_BY_ID = new Map(
+const FOLLOW_UP_SALES_TECHNIQUE_BY_ID: ReadonlyMap<string, FollowUpSalesTechniqueOption> = new Map(
   FOLLOW_UP_SALES_TECHNIQUE_OPTIONS.map((technique) => [technique.id, technique]),
 );
 
@@ -421,7 +422,7 @@ const buildSelectedContextPromptSection = (params: {
 }) => {
   const scenarioLabels = params.situationPresetIds
     .map((presetId) => FOLLOW_UP_SITUATION_PRESET_BY_ID.get(presetId)?.label)
-    .filter((label): label is string => Boolean(label));
+    .filter((label): label is NonNullable<typeof label> => Boolean(label));
   const techniqueLabels = params.salesTechniques.map((technique) => technique.name);
 
   return [
@@ -1146,7 +1147,7 @@ Deno.serve(async (req: Request) => {
         : requestedSalesTechniqueIds;
     const selectedSituationPresetInstructions = effectiveSituationPresetIds
       .map((presetId) => FOLLOW_UP_SITUATION_PRESET_BY_ID.get(presetId)?.instruction)
-      .filter((instruction): instruction is string => Boolean(instruction));
+      .filter((instruction): instruction is NonNullable<typeof instruction> => Boolean(instruction));
     const salesTechniques = normalizeSalesTechniques(effectiveSalesTechniqueIds);
     const salesTechniquesPromptSection = buildSalesTechniquesPromptSection(salesTechniques);
     const generationCustomInstructions = [

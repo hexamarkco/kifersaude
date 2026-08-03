@@ -1,4 +1,3 @@
-// @ts-expect-error Deno npm import
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4';
 import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
@@ -11,6 +10,7 @@ import {
   isDirectWhapiChatId,
   isPhoneLabelLikeDisplayName,
   isValidCommWhatsAppDisplayName,
+  resolveCommWhatsAppCanonicalChatRouteByUuid,
   resolveVerifiedWhapiDirectIdentity,
   toTrimmedString,
 } from '../_shared/comm-whatsapp.ts';
@@ -150,6 +150,15 @@ async function processIdentityJob(params: {
     token: params.token,
     chatId: chat.external_chat_id,
   });
+  const postLookupRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(params.supabaseAdmin, chat.id);
+  if (!postLookupRoute?.chatId) return;
+  chat = {
+    ...chat,
+    id: postLookupRoute.chatId,
+    external_chat_id: postLookupRoute.externalChatId,
+    phone_digits: postLookupRoute.phoneNumber,
+    push_name: postLookupRoute.pushName,
+  };
 
   if (identity.reason === 'reverse_mismatch') {
     const dedupeKey = `reverse:${chat.channel_id}:${identity.lidChatId || chat.external_chat_id}:${identity.phoneChatId || 'unknown'}`;
@@ -172,12 +181,6 @@ async function processIdentityJob(params: {
         resolved_by: null,
       }, { onConflict: 'dedupe_key' });
     if (conflictError) throw new Error(`Erro ao registrar conflito de identidade: ${conflictError.message}`);
-
-    const { error: flagError } = await params.supabaseAdmin
-      .from('comm_whatsapp_chats')
-      .update({ identity_conflict: true, updated_at: getNowIso() })
-      .eq('id', chat.id);
-    if (flagError) throw new Error(`Erro ao sinalizar conflito de identidade: ${flagError.message}`);
 
     throw new Error('A Whapi retornou um mapeamento LID/telefone divergente na verificacao reversa.');
   }
@@ -224,6 +227,16 @@ async function processIdentityJob(params: {
   }
   if (displayName && isPhoneLabelLikeDisplayName(displayName)) displayName = '';
 
+  const postNameLookupRoute = await resolveCommWhatsAppCanonicalChatRouteByUuid(params.supabaseAdmin, chat.id);
+  if (!postNameLookupRoute?.chatId) return;
+  chat = {
+    ...chat,
+    id: postNameLookupRoute.chatId,
+    external_chat_id: postNameLookupRoute.externalChatId,
+    phone_digits: postNameLookupRoute.phoneNumber,
+    push_name: postNameLookupRoute.pushName,
+  };
+
   if (!isValidCommWhatsAppDisplayName(displayName)) {
     const { error: refreshError } = await params.supabaseAdmin.rpc('comm_whatsapp_refresh_chat_identity', {
       p_chat_id: chat.id,
@@ -232,16 +245,11 @@ async function processIdentityJob(params: {
     return;
   }
 
-  const { error: updateError } = await params.supabaseAdmin
-    .from('comm_whatsapp_chats')
-    .update({ push_name: displayName, updated_at: getNowIso() })
-    .eq('id', chat.id);
-  if (updateError) throw new Error(`Erro ao atualizar nome do chat: ${updateError.message}`);
-
-  const { error: refreshError } = await params.supabaseAdmin.rpc('comm_whatsapp_refresh_chat_identity', {
+  const { error: updateError } = await params.supabaseAdmin.rpc('comm_whatsapp_set_chat_push_name', {
     p_chat_id: chat.id,
+    p_push_name: displayName,
   });
-  if (refreshError) throw new Error(`Erro ao atualizar identidade do chat: ${refreshError.message}`);
+  if (updateError) throw new Error(`Erro ao atualizar nome do chat: ${updateError.message}`);
 }
 
 async function processMediaJob(params: {

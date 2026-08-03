@@ -499,7 +499,11 @@ export const formatCommWhatsAppPhoneLabel = (value?: string | null) => {
     return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
   }
 
-  return value?.trim() || 'Numero desconhecido';
+  if (!digits) {
+    return 'Contato privado';
+  }
+
+  return value?.trim() || 'Contato privado';
 };
 
 const invokeFollowUpAgendaOrganizer = async (body: Record<string, unknown>) => {

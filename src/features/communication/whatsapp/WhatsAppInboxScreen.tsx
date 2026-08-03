@@ -1655,7 +1655,7 @@ const getSafeChatDisplayName = (chat: CommWhatsAppChat | null, connectedUserName
     return resolvedLeadName;
   }
 
-  return pushName || formatCommWhatsAppPhoneLabel(chat.phone_number);
+  return pushName || formatCommWhatsAppPhoneLabel(chat.phone_number) || 'Contato privado';
 };
 
 const stabilizeChatIdentityForLocalMerge = (incoming: CommWhatsAppChat, previous?: CommWhatsAppChat | null): CommWhatsAppChat => {

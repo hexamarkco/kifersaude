@@ -2821,6 +2821,15 @@ async function processFlowJobs({
 }): Promise<void> {
   const flowDailyUsageCache = new Map<string, { count: number }>();
   const nowIso = new Date().toISOString();
+
+  // Self-healing: jobs stuck in 'processing' (edge function died mid-send) are
+  // reset to pending so the lead is not blocked forever.
+  await supabase
+    .from('auto_contact_flow_jobs')
+    .update({ status: 'pending', last_error: 'Job reiniciado (processamento interrompido)' })
+    .eq('status', 'processing')
+    .lt('updated_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
+
   let jobsQuery = supabase
     .from('auto_contact_flow_jobs')
     .select('*')

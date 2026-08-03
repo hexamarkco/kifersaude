@@ -121,6 +121,13 @@ BEGIN
           )
           AND NOT EXISTS (
             SELECT 1
+            FROM public.auto_contact_flow_jobs j3
+            WHERE j3.lead_id = l.id
+              AND j3.flow_id = v_flow->>'id'
+              AND j3.status = 'completed'
+          )
+          AND NOT EXISTS (
+            SELECT 1
             FROM public.auto_contact_flow_jobs j2
             WHERE j2.lead_id = l.id
               AND j2.status = 'skipped'
@@ -254,6 +261,10 @@ BEGIN
       AND NOT EXISTS (
         SELECT 1 FROM public.auto_contact_flow_jobs j
         WHERE j.lead_id = l.id AND j.flow_id = flows.f->>'id' AND j.status IN ('pending', 'processing')
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM public.auto_contact_flow_jobs j3
+        WHERE j3.lead_id = l.id AND j3.flow_id = flows.f->>'id' AND j3.status = 'completed'
       )
       AND NOT EXISTS (
         SELECT 1 FROM public.auto_contact_flow_jobs j2

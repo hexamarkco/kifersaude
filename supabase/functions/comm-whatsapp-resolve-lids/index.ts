@@ -4,13 +4,13 @@ import { isServiceRoleRequest } from '../_shared/dashboard-auth.ts';
 import {
   corsHeaders,
   fetchWhapiChatName,
-  fetchWhapiContactName,
-  getCommWhatsAppPhoneLookupKeys,
   getWhapiToken,
   isWhapiLidChatId,
   isValidCommWhatsAppDisplayName,
   normalizeCommWhatsAppPhone,
+  normalizePhoneDigits,
   resolveWhapiLidToPhone,
+  resolveWhapiPhoneToLid,
 } from '../_shared/comm-whatsapp.ts';
 
 declare const Deno: {
@@ -22,21 +22,37 @@ declare const Deno: {
 
 const jsonHeaders = { ...corsHeaders, 'Content-Type': 'application/json' };
 
-type Report = {
-  totalLidChats: number;
-  resolved: number;
-  named: number;
-  updated: number;
-  linked: number;
-  skippedOwnNumber: number;
-  notFound: number;
-  failed: number;
-  details: Array<{ chat: string; phone: string | null; name: string | null; lead: string | null; status: string }>;
+type ResolveRequest = {
+  apply?: boolean;
+  cursor?: string;
+  limit?: number;
+};
+
+type ResolveDetail = {
+  chatId: string;
+  externalChatId: string;
+  phone: string | null;
+  reverseVerified: boolean;
+  action: 'reconcile' | 'clear_invalid_phone' | 'unresolved' | 'skip_own_number' | 'conflict' | 'error';
+  canonicalChatId: string | null;
+  error: string | null;
+};
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return String(error || 'Erro desconhecido.');
 };
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ success: false, error: 'Method not allowed' }), {
+      status: 405,
+      headers: jsonHeaders,
+    });
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -64,32 +80,38 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  const body = (await req.json().catch(() => ({}))) as ResolveRequest;
+  const apply = body.apply === true;
+  const limit = Math.min(Math.max(Math.floor(Number(body.limit) || 50), 1), 200);
+  const cursor = String(body.cursor || '').trim();
   const supabase = createClient(supabaseUrl, serviceRoleKey);
-  const report: Report = {
-    totalLidChats: 0,
-    resolved: 0,
-    named: 0,
-    updated: 0,
-    linked: 0,
-    skippedOwnNumber: 0,
-    notFound: 0,
-    failed: 0,
-    details: [],
-  };
 
-  const { data: channel } = await supabase
+  const { data: channel, error: channelError } = await supabase
     .from('comm_whatsapp_channels')
-    .select('phone_number')
+    .select('id, phone_number')
     .eq('slug', 'primary')
     .maybeSingle();
-  const ownNumber = channel?.phone_number ? normalizeCommWhatsAppPhone(channel.phone_number) : '';
 
-  // All @lid chats (phone may already be resolved; names may be missing)
-  const { data: chats, error: chatsError } = await supabase
+  if (channelError || !channel?.id) {
+    return new Response(JSON.stringify({ success: false, error: channelError?.message || 'Primary channel missing' }), {
+      status: 500,
+      headers: jsonHeaders,
+    });
+  }
+
+  let chatsQuery = supabase
     .from('comm_whatsapp_chats')
-    .select('id, external_chat_id, phone_number, display_name, push_name, lead_id')
-    .limit(1000);
+    .select('id,channel_id,external_chat_id,phone_digits,push_name,display_name,lead_id,deleted_at')
+    .eq('channel_id', channel.id)
+    .ilike('external_chat_id', '%@lid')
+    .order('id', { ascending: true })
+    .limit(limit);
 
+  if (cursor) {
+    chatsQuery = chatsQuery.gt('id', cursor);
+  }
+
+  const { data: chats, error: chatsError } = await chatsQuery;
   if (chatsError) {
     return new Response(JSON.stringify({ success: false, error: chatsError.message }), {
       status: 500,
@@ -97,126 +119,145 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const lidChats = (chats ?? []).filter((chat) => isWhapiLidChatId(chat.external_chat_id));
-  report.totalLidChats = lidChats.length;
+  const ownNumber = normalizeCommWhatsAppPhone(channel.phone_number);
+  const details: ResolveDetail[] = [];
+  let resolved = 0;
+  let reconciled = 0;
+  let invalidPhones = 0;
+  let unresolved = 0;
+  let conflicts = 0;
+  let errors = 0;
 
-  // Pre-build lead lookup keys map
-  const leadKeys = new Map<string, string>();
-  const { data: leads } = await supabase.from('leads').select('id, telefone').limit(5000);
-  for (const lead of leads ?? []) {
-    const keys = getCommWhatsAppPhoneLookupKeys(lead.telefone);
-    for (const key of keys) {
-      if (!leadKeys.has(key)) leadKeys.set(key, lead.id);
-    }
-  }
-
-  for (const chat of lidChats) {
-    const entry: Report['details'][number] = {
-      chat: chat.external_chat_id ?? chat.id,
+  for (const chat of chats ?? []) {
+    const externalChatId = String(chat.external_chat_id || '').trim();
+    const lidDigits = normalizePhoneDigits(externalChatId.replace(/@lid$/i, ''));
+    const storedPhone = normalizePhoneDigits(chat.phone_digits);
+    const detail: ResolveDetail = {
+      chatId: chat.id,
+      externalChatId,
       phone: null,
-      name: null,
-      lead: null,
-      status: 'pending',
+      reverseVerified: false,
+      action: 'unresolved',
+      canonicalChatId: null,
+      error: null,
     };
 
     try {
-      // 1. Resolve the real phone number (may be empty for private contacts)
-      const phone = await resolveWhapiLidToPhone({ token, chatId: chat.external_chat_id ?? '' });
-      const phoneDigits = phone ? normalizeCommWhatsAppPhone(phone) : '';
-
-      // 2. Always try to resolve a display name (saved contact, then chat/push name)
-      let name = '';
-      try {
-        name = await fetchWhapiContactName({ token, contactId: chat.external_chat_id ?? '' });
-      } catch {
-        name = '';
+      if (!isWhapiLidChatId(externalChatId)) {
+        continue;
       }
-      if (!name) {
-        try {
-          name = await fetchWhapiChatName({ token, chatId: chat.external_chat_id ?? '' });
-        } catch {
-          name = '';
-        }
-      }
-      entry.name = name || null;
 
-      const updates: Record<string, unknown> = {};
-      let shouldSkip = false;
+      const phone = await resolveWhapiLidToPhone({ token, chatId: externalChatId });
+      if (!phone) {
+        if (storedPhone && storedPhone === lidDigits) {
+          invalidPhones += 1;
+          detail.action = 'clear_invalid_phone';
 
-      if (phoneDigits) {
-        if (ownNumber && phoneDigits === ownNumber) {
-          report.skippedOwnNumber += 1;
-          entry.status = 'own_number';
-          shouldSkip = true;
+          if (apply) {
+            const fallbackName = isValidCommWhatsAppDisplayName(chat.push_name)
+              ? String(chat.push_name).trim()
+              : 'Contato privado';
+            const { error: clearError } = await supabase
+              .from('comm_whatsapp_chats')
+              .update({ phone_number: '', phone_digits: '', display_name: fallbackName })
+              .eq('id', chat.id);
+            if (clearError) throw clearError;
+
+            const { error: refreshError } = await supabase.rpc('comm_whatsapp_refresh_chat_identity', {
+              p_chat_id: chat.id,
+            });
+            if (refreshError) throw refreshError;
+          }
         } else {
-          entry.phone = phoneDigits;
-          updates.phone_number = phoneDigits;
-          updates.phone_digits = phoneDigits;
+          unresolved += 1;
         }
-      }
 
-      if (isValidCommWhatsAppDisplayName(name)) {
-        if (!chat.push_name) {
-          updates.push_name = name;
-        }
-        if (!isValidCommWhatsAppDisplayName(chat.display_name)) {
-          updates.display_name = name;
-        }
-        if (name) report.named += 1;
-      } else if (!phoneDigits && !isValidCommWhatsAppDisplayName(chat.display_name)) {
-        updates.display_name = 'Contato privado';
-      }
-
-      if (shouldSkip) {
-        report.details.push(entry);
+        details.push(detail);
         continue;
       }
 
-      const { error: updateError } = await supabase
-        .from('comm_whatsapp_chats')
-        .update(updates)
-        .eq('id', chat.id);
-      if (updateError) {
-        report.failed += 1;
-        entry.status = 'update_error';
-        report.details.push(entry);
+      const phoneDigits = normalizeCommWhatsAppPhone(phone);
+      detail.phone = phoneDigits;
+      resolved += 1;
+
+      if (ownNumber && phoneDigits === ownNumber) {
+        detail.action = 'skip_own_number';
+        details.push(detail);
         continue;
       }
-      report.updated += 1;
-      entry.status = phoneDigits ? (name ? 'resolved_named' : 'resolved') : name ? 'named' : 'noop';
 
-      // 3. Auto-link with a CRM lead by phone lookup keys
-      if (phoneDigits && !chat.lead_id) {
-        const chatKeys = getCommWhatsAppPhoneLookupKeys(phoneDigits);
-        let matchedLeadId: string | null = null;
-        for (const key of chatKeys) {
-          const candidate = leadKeys.get(key);
-          if (candidate) {
-            matchedLeadId = candidate;
-            break;
-          }
+      const phoneChatId = `${phoneDigits}@s.whatsapp.net`;
+      const reverseLid = await resolveWhapiPhoneToLid({ token, chatId: phoneChatId }).catch(() => '');
+      if (reverseLid && reverseLid !== externalChatId) {
+        conflicts += 1;
+        detail.action = 'conflict';
+        detail.error = `Reverse mapping returned ${reverseLid}`;
+        details.push(detail);
+        continue;
+      }
+      detail.reverseVerified = reverseLid === externalChatId;
+      detail.action = 'reconcile';
+
+      if (apply) {
+        const { data: reconcileData, error: reconcileError } = await supabase.rpc(
+          'comm_whatsapp_reconcile_lid_identifier',
+          {
+            p_channel_id: chat.channel_id,
+            p_lid_external_chat_id: externalChatId,
+            p_phone_external_chat_id: phoneChatId,
+          },
+        );
+        if (reconcileError) throw reconcileError;
+
+        const reconcileRow = Array.isArray(reconcileData) ? reconcileData[0] : reconcileData;
+        if (!reconcileRow?.merged || !reconcileRow.chat_id) {
+          conflicts += 1;
+          detail.action = 'conflict';
+          detail.error = String(reconcileRow?.conflict_reason || 'Reconciliation did not return a canonical chat.');
+          details.push(detail);
+          continue;
         }
-        if (matchedLeadId) {
-          const { error: linkError } = await supabase
+
+        detail.canonicalChatId = reconcileRow.chat_id;
+        reconciled += 1;
+
+        const pushName = await fetchWhapiChatName({ token, chatId: externalChatId }).catch(() => '');
+        if (isValidCommWhatsAppDisplayName(pushName)) {
+          const { error: nameError } = await supabase
             .from('comm_whatsapp_chats')
-            .update({ lead_id: matchedLeadId })
-            .eq('id', chat.id);
-          if (!linkError) {
-            report.linked += 1;
-            entry.lead = matchedLeadId;
-          }
+            .update({ push_name: pushName })
+            .eq('id', reconcileRow.chat_id);
+          if (nameError) throw nameError;
         }
+
+        const { error: refreshError } = await supabase.rpc('comm_whatsapp_refresh_chat_identity', {
+          p_chat_id: reconcileRow.chat_id,
+        });
+        if (refreshError) throw refreshError;
       }
     } catch (error) {
-      report.failed += 1;
-      entry.status = 'error';
+      errors += 1;
+      detail.action = 'error';
+      detail.error = getErrorMessage(error).slice(0, 500);
     }
 
-    report.details.push(entry);
+    details.push(detail);
   }
 
-  console.log('[resolve-lids] report', JSON.stringify(report));
-  return new Response(JSON.stringify({ success: true, ...report }), {
+  const lastChat = (chats ?? []).at(-1);
+  return new Response(JSON.stringify({
+    success: true,
+    dryRun: !apply,
+    processed: (chats ?? []).length,
+    resolved,
+    reconciled,
+    invalidPhones,
+    unresolved,
+    conflicts,
+    errors,
+    nextCursor: (chats ?? []).length === limit ? lastChat?.id ?? null : null,
+    details,
+  }), {
     status: 200,
     headers: jsonHeaders,
   });

@@ -1302,11 +1302,20 @@ const getJobRuntimeContext = (payload: unknown): Record<string, string> => {
     return {};
   }
 
-  const normalizedWhatsappValid = normalizeBooleanConditionValue(
-    (runtimeContext as Record<string, unknown>).whatsapp_valid,
-  );
+  const rt = runtimeContext as Record<string, unknown>;
 
-  return normalizedWhatsappValid ? { whatsapp_valid: normalizedWhatsappValid } : {};
+  const result: Record<string, string> = {};
+
+  const normalizedWhatsappValid = normalizeBooleanConditionValue(rt.whatsapp_valid);
+  if (normalizedWhatsappValid) {
+    result.whatsapp_valid = normalizedWhatsappValid;
+  }
+
+  if (typeof rt.inactivity_started_at === 'string') {
+    result.inactivity_started_at = rt.inactivity_started_at;
+  }
+
+  return result;
 };
 
 const checkWhatsAppExistence = async (telefone?: string | null): Promise<WhapiContactCheckResult> => {
@@ -2959,8 +2968,10 @@ async function processFlowJobs({
       flow.triggerType === 'inactivity_duration' &&
       job.action_payload &&
       typeof job.action_payload === 'object' &&
-      typeof job.action_payload.inactivity_started_at === 'string'
-        ? job.action_payload.inactivity_started_at
+      (job.action_payload as Record<string, unknown>).runtimeContext &&
+      typeof (job.action_payload as Record<string, unknown>).runtimeContext === 'object' &&
+      typeof ((job.action_payload as Record<string, unknown>).runtimeContext as Record<string, unknown>).inactivity_started_at === 'string'
+        ? ((job.action_payload as Record<string, unknown>).runtimeContext as Record<string, unknown>).inactivity_started_at as string
         : null;
     if (inactivityStartedAt) {
       const latestInboundAt = await getLatestChatMessageAt({
@@ -4217,6 +4228,20 @@ Deno.serve(async (req: Request) => {
             .limit(1);
           if (activeJobs?.length) {
             return new Response(JSON.stringify({ success: true, skipped: true, reason: 'active_inactivity_flow' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+
+          const { data: completedJobs } = await supabase
+            .from('auto_contact_flow_jobs')
+            .select('id')
+            .eq('lead_id', leadId)
+            .eq('flow_id', targetFlow.id)
+            .eq('status', 'completed')
+            .limit(1);
+          if (completedJobs?.length) {
+            return new Response(JSON.stringify({ success: true, skipped: true, reason: 'flow_already_completed' }), {
               status: 200,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             });

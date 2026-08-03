@@ -559,6 +559,17 @@ export const extractPhoneFromChatId = (value: unknown): string => {
   return chatId.replace(/@s\.whatsapp\.net$/i, '').replace(/\D/g, '');
 };
 
+export const normalizeWhapiPhoneChatId = (value: unknown): string => {
+  const raw = toTrimmedString(value);
+  if (!raw || /@lid$/i.test(raw)) return '';
+
+  const chatId = normalizeWhapiChatId(raw);
+  if (!isWhapiPhoneDirectChatId(chatId)) return '';
+
+  const phone = extractPhoneFromChatId(chatId);
+  return phone.length >= 7 && phone.length <= 15 ? `${phone}@s.whatsapp.net` : '';
+};
+
 export const formatPhoneFromDigits = (digits: string): string => {
   if (digits.length === 13 && digits.startsWith('55')) {
     return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
@@ -2054,10 +2065,10 @@ export const extractWhapiContacts = (payload: unknown): Array<Record<string, unk
 export const extractWhapiContactPhone = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
 
-  const candidates = [payload.wa_id, payload.id, payload.phone, payload.contact_id, payload.user, payload.value];
+  const candidates = [payload.phone, payload.wa_id, payload.id, payload.contact_id, payload.user, payload.value];
   for (const candidate of candidates) {
-    const normalized = normalizeCommWhatsAppPhone(candidate);
-    if (normalized) return normalized;
+    const phoneChatId = normalizeWhapiPhoneChatId(candidate);
+    if (phoneChatId) return extractPhoneFromChatId(phoneChatId);
   }
 
   return '';
@@ -2104,7 +2115,14 @@ export const extractWhapiSavedContactName = (payload: unknown): string => {
   if (!isRecord(payload)) return '';
   if (!extractWhapiContactSaved(payload)) return '';
 
-  const candidates = [payload.name, payload.pushname, payload.short, payload.short_name, payload.full_name];
+  const name = toTrimmedString(payload.name);
+  return isValidCommWhatsAppDisplayName(name) ? name : '';
+};
+
+export const extractWhapiContactPushName = (payload: unknown): string => {
+  if (!isRecord(payload)) return '';
+
+  const candidates = [payload.pushname, payload.short, payload.short_name, payload.full_name];
   for (const candidate of candidates) {
     const normalized = toTrimmedString(candidate);
     if (isValidCommWhatsAppDisplayName(normalized)) return normalized;
@@ -2191,8 +2209,28 @@ export async function fetchWhapiContactName(params: {
     return '';
   }
 
-  return extractWhapiContactSaved(payload) ? extractWhapiContactName(payload) : '';
+  return extractWhapiSavedContactName(payload);
 }
+
+export type WhapiContactIdentity = {
+  exists: boolean;
+  waId: string;
+  phone: string;
+};
+
+export const extractWhapiCheckedContactIdentity = (payload: unknown): WhapiContactIdentity => {
+  const [contact] = extractWhapiContacts(payload);
+  if (!contact || toTrimmedString(contact.status).toLowerCase() !== 'valid') {
+    return { exists: false, waId: '', phone: '' };
+  }
+
+  const waId = normalizeWhapiPhoneChatId(contact.wa_id);
+  if (!waId) {
+    return { exists: false, waId: '', phone: '' };
+  }
+
+  return { exists: true, waId, phone: extractPhoneFromChatId(waId) };
+};
 
 export async function resolveWhapiLidToPhone(params: {
   token: string;
@@ -2216,13 +2254,38 @@ export async function resolveWhapiLidToPhone(params: {
   const payload = await readResponsePayload(response);
   if (!isRecord(payload)) return '';
 
-  const candidates = [payload.id, payload.phone, payload.wa_id, payload.contact_id, isRecord(payload.data) ? payload.data.id : null];
-  for (const candidate of candidates) {
-    const phone = extractPhoneFromChatId(candidate) || normalizeCommWhatsAppPhone(candidate);
-    if (phone) return phone;
-  }
+  const resolvedChatId = normalizeWhapiPhoneChatId(payload.id);
+  if (!resolvedChatId) return '';
 
-  return '';
+  const phone = extractPhoneFromChatId(resolvedChatId);
+  const lidDigits = normalizePhoneDigits(chatId.replace(/@lid$/i, ''));
+  return phone && phone !== lidDigits ? phone : '';
+}
+
+export async function resolveWhapiPhoneToLid(params: {
+  token: string;
+  chatId: string;
+}): Promise<string> {
+  const phoneChatId = normalizeWhapiPhoneChatId(params.chatId);
+  if (!phoneChatId) return '';
+
+  const response = await fetchWhapiWithTimeout(
+    `${WHAPI_BASE_URL}/contacts/lids/${encodeURIComponent(phoneChatId)}`,
+    {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${params.token}`,
+      },
+    },
+  );
+  if (!response.ok) return '';
+
+  const payload = await readResponsePayload(response);
+  if (!isRecord(payload)) return '';
+
+  const lid = normalizeWhapiChatId(payload.lid);
+  return isWhapiLidChatId(lid) ? lid : '';
 }
 
 export type WhapiChatMessagesPage = {
@@ -2689,9 +2752,17 @@ export async function checkWhapiContactExists(params: {
   token: string;
   contactId: string;
 }): Promise<boolean> {
+  const identity = await checkWhapiContactIdentity(params);
+  return identity.exists;
+}
+
+export async function checkWhapiContactIdentity(params: {
+  token: string;
+  contactId: string;
+}): Promise<WhapiContactIdentity> {
   const digits = normalizeCommWhatsAppPhone(params.contactId);
   if (!digits) {
-    return false;
+    return { exists: false, waId: '', phone: '' };
   }
 
   const response = await fetchWhapiWithTimeout(`${WHAPI_BASE_URL}/contacts`, {
@@ -2708,13 +2779,11 @@ export async function checkWhapiContactExists(params: {
   }, 10_000);
 
   if (!response.ok) {
-    return false;
+    return { exists: false, waId: '', phone: '' };
   }
 
   const payload = await readResponsePayload(response);
-  const contacts = extractWhapiContacts(payload);
-  const first = contacts[0] ?? null;
-  return toTrimmedString(first?.status).toLowerCase() === 'valid';
+  return extractWhapiCheckedContactIdentity(payload);
 }
 
 export async function ensurePrimaryChannel(

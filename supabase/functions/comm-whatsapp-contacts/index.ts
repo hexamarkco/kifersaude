@@ -5,7 +5,7 @@ import {
   addWhapiContact,
   buildWhapiDirectChatId,
   cacheCommWhatsAppChatContactName,
-  checkWhapiContactExists,
+  checkWhapiContactIdentity,
   COMM_WHATSAPP_MODULE,
   corsHeaders,
   editWhapiContact,
@@ -571,19 +571,20 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      const exists = await checkWhapiContactExists({
+      const checkedIdentity = await checkWhapiContactIdentity({
         token: settings.token,
         contactId: phoneNumber,
       });
 
-      if (!exists) {
+      if (!checkedIdentity.exists || !checkedIdentity.waId) {
         return new Response(JSON.stringify({ error: 'Esse numero nao existe no WhatsApp.' }), {
           status: 400,
           headers: jsonHeaders,
         });
       }
 
-      const directChatId = buildWhapiDirectChatId(phoneNumber);
+      phoneNumber = checkedIdentity.phone;
+      const directChatId = checkedIdentity.waId;
       if (!savedContactName) {
         const whapiChatName = await fetchWhapiChatName({ token: settings.token, chatId: directChatId }).catch(() => '');
         const isOwnChannelName = channel.connected_user_name && whapiChatName.trim().toLowerCase() === channel.connected_user_name.trim().toLowerCase();

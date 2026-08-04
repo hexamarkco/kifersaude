@@ -2625,9 +2625,16 @@ async function scheduleFlowJobs({
 
   if (firstScheduledAt.getTime() < now.getTime()) {
     // The lead completed its window in the past (e.g. while the queue was
-    // paused). Spread the send deterministically across the send window so
-    // backlogs are drained individually instead of bursting all at once.
-    firstScheduledAt = getSpreadSendAt(now, leadId, effectiveScheduling);
+    // paused). Abordagem (lead_created) never spreads: it fires as soon as
+    // detected, respecting the window (now if inside, next opening otherwise).
+    // Fresh eligibility (cron pickup a few minutes late) also fires
+    // immediately; only real backlogs are spread deterministically across the
+    // send window so drains happen individually instead of bursting.
+    const backlogMinutes = (now.getTime() - firstScheduledAt.getTime()) / 60000;
+    firstScheduledAt =
+      flow.triggerType === 'lead_created' || backlogMinutes <= 15
+        ? getNextAllowedSendAt(now, effectiveScheduling)
+        : getSpreadSendAt(now, leadId, effectiveScheduling);
   }
 
   await supabase
@@ -2984,8 +2991,13 @@ async function processFlowJobs({
         leadId: lead.id,
         direction: 'inbound',
       });
-      if (isAfter(latestInboundAt, inactivityStartedAt)) {
-        const reason = 'Cliente respondeu após o início da régua de inatividade';
+      const latestOutboundAt = await getLatestChatMessageAt({
+        supabase,
+        leadId: lead.id,
+        direction: 'outbound',
+      });
+      if (isAfter(latestInboundAt, latestOutboundAt) || isAfter(latestInboundAt, inactivityStartedAt)) {
+        const reason = 'Cliente respondeu após a última mensagem enviada';
         await supabase
           .from('auto_contact_flow_jobs')
           .update({ status: 'skipped', last_error: reason })
@@ -4258,8 +4270,9 @@ Deno.serve(async (req: Request) => {
             });
           }
 
-          const latestActivityAt = await getLatestChatMessageAt({ supabase, leadId });
-          if (isAfter(latestActivityAt, inactivityStartedAt)) {
+          const latestInboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'inbound' });
+          const latestOutboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'outbound' });
+          if (isAfter(latestInboundAt, latestOutboundAt) || isAfter(latestInboundAt, inactivityStartedAt)) {
             return new Response(JSON.stringify({ success: true, skipped: true, reason: 'new_chat_activity' }), {
               status: 200,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' },

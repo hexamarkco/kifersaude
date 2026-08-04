@@ -2990,11 +2990,13 @@ async function processFlowJobs({
         supabase,
         leadId: lead.id,
         direction: 'inbound',
+        visibleOnly: true,
       });
       const latestOutboundAt = await getLatestChatMessageAt({
         supabase,
         leadId: lead.id,
         direction: 'outbound',
+        visibleOnly: true,
       });
       if (isAfter(latestInboundAt, latestOutboundAt) || isAfter(latestInboundAt, inactivityStartedAt)) {
         const reason = 'Cliente respondeu após a última mensagem enviada';
@@ -4270,8 +4272,8 @@ Deno.serve(async (req: Request) => {
             });
           }
 
-          const latestInboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'inbound' });
-          const latestOutboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'outbound' });
+          const latestInboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'inbound', visibleOnly: true });
+          const latestOutboundAt = await getLatestChatMessageAt({ supabase, leadId, direction: 'outbound', visibleOnly: true });
           if (isAfter(latestInboundAt, latestOutboundAt) || isAfter(latestInboundAt, inactivityStartedAt)) {
             return new Response(JSON.stringify({ success: true, skipped: true, reason: 'new_chat_activity' }), {
               status: 200,

@@ -187,12 +187,30 @@ async function main() {
       .eq("status_id", statusConfig.id)
       .or("skip_automation.is.null,skip_automation.eq.false")
       .limit(2000);
+    const ids = (leads || []).map((l) => l.id);
+
+    // Exclui leads cuja ultima mensagem do chat e inbound (cliente aguardando
+    // resposta humana). Leads que ja responderam nao entram na lista; o cron
+    // de inatividade cancela/ignora de qualquer forma (regra sticky).
+    const responded = new Set();
+    for (let i = 0; i < ids.length; i += 100) {
+      const chunk = ids.slice(i, i + 100);
+      const { data: chats } = await supabase
+        .from("comm_whatsapp_chats")
+        .select("lead_id")
+        .in("lead_id", chunk)
+        .eq("last_message_direction", "inbound");
+      for (const c of chats || []) responded.add(c.lead_id);
+    }
+
     leadsByStatus[key] = {
-      leads: (leads || []).map((l) => l.id),
+      leads: ids.filter((id) => !responded.has(id)),
       flow,
       step: (flow.steps || [])[0],
     };
-    console.log(`[spread] ${key}: ${leadsByStatus[key].leads.length} leads`);
+    console.log(
+      `[spread] ${key}: ${leadsByStatus[key].leads.length} leads (${responded.size} excluidos por resposta do cliente)`
+    );
   }
 
   const slots = buildSlots(new Date());

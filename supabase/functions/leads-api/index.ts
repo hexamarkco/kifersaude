@@ -3697,6 +3697,11 @@ async function runAutoContactFlowEngine({
   event?: AutoContactFlowEvent;
 }): Promise<void> {
   try {
+    if ((lead as Record<string, unknown> | null)?.skip_automation === true) {
+      logWithContext('Fluxo automático interrompido por skip_automation', { leadId: lead?.id });
+      return;
+    }
+
     const settings = providedSettings ?? await loadAutoContactFlowSettings(supabase);
     if (!settings || !settings.enabled) {
       logWithContext('Fluxo automático desativado ou não configurado');
@@ -3876,6 +3881,17 @@ Deno.serve(async (req: Request) => {
       if (!record || typeof record !== 'object' || !record.id) {
         return new Response(JSON.stringify({ success: false, error: 'Payload inválido para automação' }), {
           status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      if ((record as Record<string, unknown>).skip_automation === true) {
+        logWithContext('Lead com skip_automation ativo ignorado no auto-contact', {
+          leadId: record.id,
+        });
+
+        return new Response(JSON.stringify({ success: true, skipped: true, reason: 'skip_automation' }), {
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -4203,6 +4219,13 @@ Deno.serve(async (req: Request) => {
         if (!lead) {
           return new Response(JSON.stringify({ success: false, error: 'Lead not found' }), {
             status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (lead.skip_automation === true) {
+          return new Response(JSON.stringify({ success: true, skipped: true, reason: 'skip_automation' }), {
+            status: 200,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }

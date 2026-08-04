@@ -185,6 +185,7 @@ async function main() {
       .from("leads")
       .select("id")
       .eq("status_id", statusConfig.id)
+      .or("skip_automation.is.null,skip_automation.eq.false")
       .limit(2000);
     leadsByStatus[key] = {
       leads: (leads || []).map((l) => l.id),
